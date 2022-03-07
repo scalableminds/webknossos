@@ -208,7 +208,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "dataSet.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
-        _ <- Fox.failure("Nope!")
         convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = !isUint24)
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
 

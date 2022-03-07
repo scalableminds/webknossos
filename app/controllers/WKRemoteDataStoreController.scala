@@ -16,7 +16,7 @@ import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
 import models.job.JobDAO
 import models.organization.OrganizationDAO
-import models.user.{User, UserDAO}
+import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.Full
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
@@ -32,6 +32,7 @@ class WKRemoteDataStoreController @Inject()(
     dataStoreService: DataStoreService,
     dataStoreDAO: DataStoreDAO,
     analyticsService: AnalyticsService,
+    userService: UserService,
     organizationDAO: OrganizationDAO,
     dataSetDAO: DataSetDAO,
     userDAO: UserDAO,
@@ -74,7 +75,8 @@ class WKRemoteDataStoreController @Inject()(
         layerIdentifier.organizationName) ~> NOT_FOUND
       dataSet <- dataSetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataSet.notFound", layerIdentifier.dataSetName)
-      _ <- bool2Fox(dataSet.isPublic) ?~> Messages("dataSet.upload.linkPublicOnly")
+      isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataSet._organization)
+      _ <- Fox.bool2Fox(isTeamManagerOrAdmin || requestingUser.isDatasetManager) ?~> "dataSet.upload.linkRestricted"
     } yield ()
 
   def reportDatasetUpload(name: String,

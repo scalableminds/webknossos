@@ -298,14 +298,13 @@ class UserController @Inject()(userService: UserService,
   private def checkNoSelfDeactivate(user: User, isActive: Boolean)(issuingUser: User): Boolean =
     issuingUser._id != user._id || isActive || user.isDeactivated
 
-  private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean, issuingUser: User): Fox[Unit] = {
+  private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean, issuingUser: User): Fox[Unit] =
     if (!isActive && !issuingUser.isDeactivated) {
       for {
-        activeTasks: List[ObjectId] <- userService.findActiveTasksForUser(user._id)
-        _ <- bool2Fox(activeTasks.isEmpty)
+        activeTasks: List[ObjectId] <- annotationDAO.findActiveTaskIdsForUser(user._id)
+        _ <- bool2Fox(activeTasks.isEmpty) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks.mkString(";")}"
       } yield ()
-     } else Fox.successful(())
-  }
+    } else Fox.successful(())
 
   private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(
       implicit ctx: DBAccessContext): Fox[Unit] =

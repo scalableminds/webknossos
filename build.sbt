@@ -18,6 +18,9 @@ ThisBuild / scalacOptions ++= Seq(
  s"-P:silencer:sourceRoots=${baseDirectory.value.getCanonicalPath}",
   "-P:silencer:pathFilters=(.*target/.*/routes/.*/(ReverseRoutes\\.scala|Routes\\.scala|routes\\.java|JavaScriptReverseRoutes.scala)|.*target/.*\\.template\\.scala)"
 )
+ThisBuild / javacOptions ++= Seq(
+  "-Xlint:unchecked"
+)
 
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 

@@ -31,4 +31,6 @@ class HttpsFileSystem(provider: HttpsFileSystemProvider, uri: URI) extends FileS
   override def getUserPrincipalLookupService: UserPrincipalLookupService = ???
 
   override def newWatchService(): WatchService = ???
+
+  def getKey: String = provider.fileSystemKey(uri)
 }

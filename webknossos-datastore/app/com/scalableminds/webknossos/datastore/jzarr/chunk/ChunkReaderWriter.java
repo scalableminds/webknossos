@@ -80,8 +80,6 @@ public abstract class ChunkReaderWriter {
 
     public abstract Array read(String path) throws IOException;
 
-    public abstract void write(String path, Array array) throws IOException;
-
     protected Array createFilled(final ucar.ma2.DataType dataType) {
         return NetCDF_Util.createFilledArray(dataType, chunkShape, fill);
     }

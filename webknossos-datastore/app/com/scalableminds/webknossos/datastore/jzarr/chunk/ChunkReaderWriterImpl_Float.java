@@ -69,18 +69,4 @@ public class ChunkReaderWriterImpl_Float extends ChunkReaderWriter {
         }
     }
 
-    @Override
-    public void write(String storeKey, Array array) throws IOException {
-        try (
-                final ImageOutputStream iis = new MemoryCacheImageOutputStream(new ByteArrayOutputStream());
-                final InputStream is = new ZarrInputStreamAdapter(iis);
-                final OutputStream os = store.getOutputStream(storeKey)
-        ) {
-            final float[] floats = (float[]) array.get1DJavaArray(DataType.FLOAT);
-            iis.setByteOrder(order);
-            iis.writeFloats(floats, 0, floats.length);
-            iis.seek(0);
-            compressor.compress(is, os);
-        }
-    }
 }

@@ -69,18 +69,4 @@ public class ChunkReaderWriterImpl_Long extends ChunkReaderWriter {
         }
     }
 
-    @Override
-    public void write(String storeKey, Array array) throws IOException {
-        try (
-                final ImageOutputStream iis = new MemoryCacheImageOutputStream(new ByteArrayOutputStream());
-                final InputStream is = new ZarrInputStreamAdapter(iis);
-                final OutputStream os = store.getOutputStream(storeKey)
-        ) {
-            final long[] longs = (long[]) array.get1DJavaArray(DataType.LONG);
-            iis.setByteOrder(order);
-            iis.writeLongs(longs, 0, longs.length);
-            iis.seek(0);
-            compressor.compress(is, os);
-        }
-    }
 }

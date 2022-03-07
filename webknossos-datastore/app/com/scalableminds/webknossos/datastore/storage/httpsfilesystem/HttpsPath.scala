@@ -60,4 +60,8 @@ class HttpsPath(uri: URI, fileSystem: HttpsFileSystem) extends Path {
   override def iterator(): java.util.Iterator[Path] = ???
 
   override def compareTo(path: Path): Int = ???
+
+  def getKey: String = uri.toString
+
+  override def toString: String = s"HttpsPath(${uri.toString})@${hashCode()}"
 }

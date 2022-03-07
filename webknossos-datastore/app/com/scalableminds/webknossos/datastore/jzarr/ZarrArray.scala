@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.jzarr.CompressorFactory.nullCompre
 import com.scalableminds.webknossos.datastore.jzarr.ZarrConstants.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.jzarr.chunk.ChunkReaderWriter
 import com.scalableminds.webknossos.datastore.jzarr.storage.{FileSystemStore, Store}
-import com.scalableminds.webknossos.datastore.jzarr.ucarutils.{NetCDF_Util, PartialDataCopier}
+import com.scalableminds.webknossos.datastore.jzarr.ucarutils.{BytesConverter, NetCDF_Util, PartialDataCopier}
 import ucar.ma2.{InvalidRangeException, Array => Ma2Array}
 
 object ZarrArray {
@@ -74,43 +74,25 @@ class ZarrArray private (relativePath: ZarrPath,
 
   @throws[IOException]
   @throws[InvalidRangeException]
-  def read: Object = read(getShape)
-
-  @throws[IOException]
-  @throws[InvalidRangeException]
-  def read(shape: Array[Int]): Object = read(shape, new Array[Int](shape.length))
+  def readBytes(shape: Array[Int], offset: Array[Int]): Array[Byte] =
+    BytesConverter.toByteArray(read(shape, offset), _dataType, _byteOrder)
 
   @throws[IOException]
   @throws[InvalidRangeException]
   def read(shape: Array[Int], offset: Array[Int]): Object = {
-    val data = ZarrUtils.createDataBuffer(getDataType, shape)
-    read(data, shape, offset)
-    data
-  }
-
-  @throws[IOException]
-  @throws[InvalidRangeException]
-  def read(buffer: Any, bufferShape: Array[Int]): Unit = read(buffer, bufferShape, new Array[Int](bufferShape.length))
-
-  @throws[IOException]
-  @throws[InvalidRangeException]
-  def read(buffer: Any, bufferShape: Array[Int], offset: Array[Int]): Unit = {
-    if (!buffer.getClass.isArray) throw new IOException("Target buffer object is not an array.")
-    val targetSize = java.lang.reflect.Array.getLength(buffer)
-    val expectedSize = ZarrUtils.computeSize(bufferShape)
-    if (targetSize != expectedSize)
-      throw new IOException("Expected target buffer size is " + expectedSize + " but was " + targetSize)
-    val chunkIndices = ZarrUtils.computeChunkIndices(_shape, _chunkShape, bufferShape, offset)
+    val buffer = ZarrUtils.createDataBuffer(getDataType, shape)
+    val chunkIndices = ZarrUtils.computeChunkIndices(_shape, _chunkShape, shape, offset)
     for (chunkIndex <- chunkIndices) {
       val sourceChunk: Ma2Array = getSourceChunkData(chunkIndex)
       val offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
-      if (partialCopyingIsNotNeeded(bufferShape, offsetInChunk))
+      if (partialCopyingIsNotNeeded(shape, offsetInChunk))
         System.arraycopy(sourceChunk.getStorage, 0, buffer, 0, sourceChunk.getSize.toInt)
       else {
-        val target = NetCDF_Util.createArrayWithGivenStorage(buffer, bufferShape)
+        val target = NetCDF_Util.createArrayWithGivenStorage(buffer, shape)
         PartialDataCopier.copy(offsetInChunk, sourceChunk, target)
       }
     }
+    buffer
   }
 
   private def getSourceChunkData(chunkIndex: Array[Int]): Ma2Array = {

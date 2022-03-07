@@ -6,21 +6,37 @@ import java.nio.file.attribute.{BasicFileAttributes, FileAttribute, FileAttribut
 import java.nio.file.spi.FileSystemProvider
 import java.nio.file._
 import java.util
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 
 import com.typesafe.scalalogging.LazyLogging
+import com.upplication.s3fs.S3FileSystem
 
 class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
+  private val fileSystems: ConcurrentHashMap[String, HttpsFileSystem] = new ConcurrentHashMap[String, HttpsFileSystem]
+
   override def getScheme: String = "https"
 
-  override def newFileSystem(uri: URI, map: util.Map[String, _]): FileSystem = {
-    logger.info(s"getFileSystem for ${uri}")
-    new HttpsFileSystem(provider = this, uri = uri)
+  override def newFileSystem(uri: URI, env: util.Map[String, _]): FileSystem = {
+    logger.info(s"newFileSystem for $uri")
+    val key = fileSystemKey(uri)
+    if (fileSystems.containsKey(key)) {
+      throw new FileSystemAlreadyExistsException("File system " + key + " already exists")
+    }
+
+    val fileSystem = new HttpsFileSystem(provider = this, uri = uri)
+
+    fileSystems.put(fileSystem.getKey, fileSystem)
+
+    fileSystem
   }
 
+  def fileSystemKey(uri: URI): String = uri.toString
+
   override def getFileSystem(uri: URI): FileSystem = {
-    // TODO cache existing file systems
-    logger.info(s"getFileSystem for ${uri}")
-    new HttpsFileSystem(provider = this, uri = uri)
+    val key = fileSystemKey(uri)
+    if (fileSystems.containsKey(key)) {
+      fileSystems.get(key)
+    } else this.newFileSystem(uri, null)
   }
 
   override def getPath(uri: URI): Path =

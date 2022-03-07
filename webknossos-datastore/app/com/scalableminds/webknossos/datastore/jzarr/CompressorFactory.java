@@ -338,6 +338,7 @@ public class CompressorFactory {
             BufferSizes bs = cbufferSizes(ByteBuffer.wrap(header));
             int compressedSize = (int) bs.getCbytes();
             int uncompressedSize = (int) bs.getNbytes();
+            //System.out.println("uncompressedSize:" + uncompressedSize);
             byte[] inBytes = Arrays.copyOf(header, compressedSize);
             di.readFully(inBytes, header.length, compressedSize - header.length);
             ByteBuffer outBuffer = ByteBuffer.allocate(uncompressedSize);

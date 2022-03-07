@@ -214,4 +214,3 @@ trait ExtendedController
     with InjectedController
     with ValidationHelpers
     with LazyLogging
-

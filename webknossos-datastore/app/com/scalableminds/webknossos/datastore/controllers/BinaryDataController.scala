@@ -49,6 +49,8 @@ class BinaryDataController @Inject()(
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
+  override def allowRemoteOrigin: Boolean = true
+
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
   isosurfaceServiceHolder.dataStoreIsosurfaceConfig =
     (binaryDataService, mappingService, config.Datastore.Isosurface.timeout, config.Datastore.Isosurface.actorPoolSize)

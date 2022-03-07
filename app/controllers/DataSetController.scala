@@ -6,7 +6,6 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
-import com.scalableminds.webknossos.datastore.controllers.RemoteOriginHelpers
 import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
 import models.binary._
 import models.team.TeamDAO
@@ -39,8 +38,7 @@ class DataSetController @Inject()(userService: UserService,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
-    extends Controller
-    with RemoteOriginHelpers {
+    extends Controller {
 
   private val DefaultThumbnailWidth = 400
   private val DefaultThumbnailHeight = 400
@@ -77,7 +75,6 @@ class DataSetController @Inject()(userService: UserService,
                 w: Option[Int],
                 h: Option[Int]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      AllowRemoteOrigin {
         def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
           val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
           val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
@@ -94,11 +91,11 @@ class DataSetController @Inject()(userService: UserService,
                 .clientFor(dataSet)(GlobalAccessContext)
                 .flatMap(
                   _.requestDataLayerThumbnail(organizationName,
-                                              dataLayerName,
-                                              width,
-                                              height,
-                                              defaultZoomOpt,
-                                              defaultCenterOpt))
+                    dataLayerName,
+                    width,
+                    height,
+                    defaultZoomOpt,
+                    defaultCenterOpt))
                 .map { result =>
                   // We don't want all images to expire at the same time. Therefore, we add some random variation
                   dataSetService.thumbnailCache.insert(
@@ -121,7 +118,6 @@ class DataSetController @Inject()(userService: UserService,
         } yield {
           Ok(image).as("image/jpeg").withHeaders(CACHE_CONTROL -> "public, max-age=86400")
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -145,7 +141,6 @@ class DataSetController @Inject()(userService: UserService,
 
   @ApiOperation(hidden = true, value = "")
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    AllowRemoteOrigin {
       UsingFilters(
         Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
         Filter("isUnreported",
@@ -163,10 +158,9 @@ class DataSetController @Inject()(userService: UserService,
           filtered <- filter.applyOn(dataSets)
           js <- listGrouped(filtered, request.identity) ?~> "dataSet.list.failed"
         } yield {
-          Ok(Json.toJson(js))
+          addRemoteOriginHeaders(Ok(Json.toJson(js)))
         }
       }
-    }
   }
 
   private def listGrouped(datasets: List[DataSet], requestingUser: Option[User])(

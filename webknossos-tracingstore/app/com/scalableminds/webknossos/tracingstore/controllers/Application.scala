@@ -14,9 +14,10 @@ class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: Tra
     implicit ec: ExecutionContext)
     extends Controller {
 
+  override def allowRemoteOrigin: Boolean = true
+
   def health: Action[AnyContent] = Action.async { implicit request =>
     log() {
-      AllowRemoteOrigin {
         for {
           before <- Fox.successful(System.currentTimeMillis())
           _ <- tracingDataStore.healthClient.checkHealth
@@ -26,7 +27,6 @@ class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: Tra
           _ = logger.info(
             s"Answering ok for Tracingstore health check, took ${afterRedis - before} ms (FossilDB ${afterFossil - before} ms, Redis ${afterRedis - afterFossil} ms).")
         } yield Ok("Ok")
-      }
     }
   }
 

@@ -36,14 +36,15 @@ class DataSourceController @Inject()(
     extends Controller
     with FoxImplicits {
 
+  override def allowRemoteOrigin: Boolean = true
+
+
   @ApiOperation(hidden = true, value = "")
   def list(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     {
       accessTokenService.validateAccessForSyncBlock(UserAccessRequest.listDataSources, token) {
-        AllowRemoteOrigin {
           val ds = dataSourceRepository.findAll
           Ok(Json.toJson(ds))
-        }
       }
     }
   }
@@ -58,7 +59,6 @@ class DataSourceController @Inject()(
         accessTokenService.validateAccessForSyncBlock(
           UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
           token) {
-          AllowRemoteOrigin {
             val dsOption: Option[InboxDataSource] =
               dataSourceRepository.find(DataSourceId(dataSetName, organizationName))
             dsOption match {
@@ -68,7 +68,6 @@ class DataSourceController @Inject()(
                 else Ok(Json.toJson(ds))
               case _ => Ok
             }
-          }
         }
       }
     }
@@ -76,11 +75,9 @@ class DataSourceController @Inject()(
   @ApiOperation(hidden = true, value = "")
   def triggerInboxCheckBlocking(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
-      AllowRemoteOrigin {
         for {
           _ <- dataSourceService.checkInbox(verbose = true)
         } yield Ok
-      }
     }
   }
 
@@ -108,7 +105,6 @@ Expects:
   def reserveUpload(token: String): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
-        AllowRemoteOrigin {
           for {
             isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
             _ <- if (!isKnownUpload) {
@@ -117,7 +113,6 @@ Expects:
             } else Fox.successful(())
           } yield Ok
         }
-      }
     }
 
   @ApiOperation(
@@ -153,7 +148,6 @@ Expects:
         )).fill((-1, -1, -1, ""))
 
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
-        AllowRemoteOrigin {
           uploadForm
             .bindFromRequest(request.body.dataParts)
             .fold(
@@ -174,7 +168,6 @@ Expects:
                   }
               }
             )
-        }
       }
     }
 
@@ -206,13 +199,11 @@ Expects:
   def finishUpload(token: String): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
-        AllowRemoteOrigin {
           for {
             (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
             _ <- remoteWebKnossosClient.reportUpload(dataSourceId, dataSetSizeBytes, token) ?~> "reportUpload.failed"
           } yield Ok
         }
-      }
 
   }
 
@@ -245,36 +236,30 @@ Expects:
       }
       dataSourceIdFox.flatMap { dataSourceId =>
         accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), Some(token)) {
-          AllowRemoteOrigin {
             for {
               _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId) ?~> "dataSet.delete.webknossos.failed"
               _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
             } yield Ok
           }
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
   def fetchSampleDataSource(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
-        AllowRemoteOrigin {
           for {
             _ <- sampleDatasetService.initDownload(organizationName, dataSetName, token)
           } yield JsonOk(Json.obj("messages" -> "downloadInitiated"))
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
   def listSampleDataSources(token: Option[String], organizationName: String): Action[AnyContent] = Action.async {
     implicit request =>
-      AllowRemoteOrigin {
         accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources, token) {
           Ok(Json.toJson(sampleDatasetService.listWithStatus(organizationName)))
         }
-      }
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -283,7 +268,6 @@ Expects:
       accessTokenService.validateAccessForSyncBlock(
         UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName)),
         token) {
-        AllowRemoteOrigin {
           for {
             previousDataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)) ?~ Messages(
               "dataSource.notFound") ~> 404
@@ -306,7 +290,6 @@ Expects:
               ))
           }
         }
-      }
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -319,10 +302,8 @@ Expects:
     accessTokenService.validateAccessForSyncBlock(
       UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
       token) {
-      AllowRemoteOrigin {
         Ok(Json.toJson(dataSourceService.exploreMappings(organizationName, dataSetName, dataLayerName)))
       }
-    }
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -335,12 +316,10 @@ Expects:
     accessTokenService.validateAccessForSyncBlock(
       UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
       token) {
-      AllowRemoteOrigin {
         Ok(
           Json.toJson(binaryDataServiceHolder.binaryDataService.agglomerateService
             .exploreAgglomerates(organizationName, dataSetName, dataLayerName)))
       }
-    }
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -354,7 +333,6 @@ Expects:
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
-      AllowRemoteOrigin {
         for {
           skeleton <- binaryDataServiceHolder.binaryDataService.agglomerateService.generateSkeleton(
             organizationName,
@@ -364,7 +342,6 @@ Expects:
             agglomerateId) ?~> "agglomerateSkeleton.failed"
         } yield Ok(skeleton.toByteArray).as("application/x-protobuf")
       }
-    }
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -375,12 +352,10 @@ Expects:
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
-        AllowRemoteOrigin {
           for {
             meshFiles <- meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)
           } yield Ok(Json.toJson(meshFiles))
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -391,7 +366,6 @@ Expects:
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
-        AllowRemoteOrigin {
           for {
             positions <- meshFileService.listMeshChunksForSegment(
               organizationName,
@@ -404,7 +378,6 @@ Expects:
               request.body.segmentId.toString) ~> BAD_REQUEST
           } yield Ok(Json.toJson(positions))
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -415,7 +388,6 @@ Expects:
     Action.async(validateJson[MeshChunkDataRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
-        AllowRemoteOrigin {
           for {
             (data, encoding) <- meshFileService.readMeshChunk(organizationName,
                                                               dataSetName,
@@ -427,7 +399,6 @@ Expects:
             } else Ok(data)
           }
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -435,7 +406,6 @@ Expects:
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName)),
                                         token) {
-        AllowRemoteOrigin {
           for {
             _ <- Fox.successful(())
             dataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
@@ -445,14 +415,12 @@ Expects:
             Ok
           }
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
   def createOrganizationDirectory(token: Option[String], organizationName: String): Action[AnyContent] = Action.async {
     implicit request =>
       accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources, token) {
-        AllowRemoteOrigin {
           val newOrganizationFolder = new File(dataSourceService.dataBaseDir + "/" + organizationName)
           newOrganizationFolder.mkdirs()
           if (newOrganizationFolder.isDirectory)
@@ -460,7 +428,6 @@ Expects:
           else
             BadRequest
         }
-      }
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -470,7 +437,6 @@ Expects:
              layerName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
-        AllowRemoteOrigin {
           val count = binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
           logger.info(
             s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}datasource $organizationName / $dataSetName: closed $count open file handles.")
@@ -481,7 +447,6 @@ Expects:
             _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
           } yield Ok(Json.toJson(reloadedDataSource))
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -489,7 +454,6 @@ Expects:
     Action.async { implicit request =>
       val dataSourceId = DataSourceId(dataSetName, organizationName)
       accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), token) {
-        AllowRemoteOrigin {
           for {
             _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(
               organizationName,
@@ -498,7 +462,6 @@ Expects:
             _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
           } yield Ok
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -509,7 +472,6 @@ Expects:
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
-        AllowRemoteOrigin {
           val connectomeFileNames =
             connectomeFileService.exploreConnectomeFiles(organizationName, dataSetName, dataLayerName)
           for {
@@ -525,7 +487,6 @@ Expects:
               .map(tuple => ConnectomeFileNameWithMappingName(tuple._1, tuple._2))
           } yield Ok(Json.toJson(connectomesWithMappings))
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -536,7 +497,6 @@ Expects:
     Action.async(validateJson[ByAgglomerateIdsRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
-        AllowRemoteOrigin {
           for {
             meshFilePath <- Fox.successful(
               connectomeFileService
@@ -544,7 +504,6 @@ Expects:
             synapses <- connectomeFileService.synapsesForAgglomerates(meshFilePath, request.body.agglomerateIds)
           } yield Ok(Json.toJson(synapses))
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -556,7 +515,6 @@ Expects:
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
-        AllowRemoteOrigin {
           for {
             meshFilePath <- Fox.successful(
               connectomeFileService
@@ -566,7 +524,6 @@ Expects:
                                                                                direction)
           } yield Ok(Json.toJson(agglomerateIds))
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -577,7 +534,6 @@ Expects:
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
-        AllowRemoteOrigin {
           for {
             meshFilePath <- Fox.successful(
               connectomeFileService
@@ -585,7 +541,6 @@ Expects:
             synapsePositions <- connectomeFileService.positionsForSynapses(meshFilePath, request.body.synapseIds)
           } yield Ok(Json.toJson(synapsePositions))
         }
-      }
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -596,7 +551,6 @@ Expects:
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
-        AllowRemoteOrigin {
           for {
             meshFilePath <- Fox.successful(
               connectomeFileService
@@ -604,7 +558,6 @@ Expects:
             synapseTypes <- connectomeFileService.typesForSynapses(meshFilePath, request.body.synapseIds)
           } yield Ok(Json.toJson(synapseTypes))
         }
-      }
     }
 
 }

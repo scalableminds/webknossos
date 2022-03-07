@@ -133,7 +133,7 @@ dataSet.delete.webknossos.failed=Could not delete dataset from webKnossos databa
 dataSet.delete.failed=Could not delete the dataset on disk.
 dataSet.upload.Datastore.restricted=Your organization is not allowed to upload datasets to this datastore. Please choose another datastore.
 dataSet.upload.validation.failed=Failed to validate Dataset information for upload.
-dataSet.upload.linkRestricted=Only layers of existing datasets you are allowed to administrate can be linked
+dataSet.upload.linkRestricted=Can only link layers of datasets that are either public or allowed to be administrated by your account
 dataSet.upload.invalidLinkedLayers=Could not link all requested layers
 dataSet.upload.cancel.failed=Could not cancel the upload.
 

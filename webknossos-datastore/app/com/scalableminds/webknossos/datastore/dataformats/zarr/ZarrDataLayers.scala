@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import com.scalableminds.webknossos.datastore.models.datasource._
 import play.api.libs.json.{Json, OFormat}
 
-case class FileSystemCredentials(username: String, password: String)
+case class FileSystemCredentials(user: String, password: String)
 
 object FileSystemCredentials {
   implicit val jsonFormat: OFormat[FileSystemCredentials] = Json.format[FileSystemCredentials]

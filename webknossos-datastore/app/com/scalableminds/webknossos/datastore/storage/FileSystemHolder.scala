@@ -14,13 +14,16 @@ import scala.collection.mutable
 
 object FileSystemHolder extends LazyLogging {
 
+  private val schemeS3 = "s3"
+  private val schemeHttps = "https"
+
   val fileSystemsCache: mutable.Map[FileSystemSelector, FileSystem] = mutable.HashMap[FileSystemSelector, FileSystem]()
 
-  def findS3Provider: Option[FileSystemProvider] = {
+  def findProvider(scheme: String): Option[FileSystemProvider] = {
     val i = ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator()
     while (i.hasNext) {
       val p = i.next()
-      if (p.getScheme.equalsIgnoreCase("s3")) {
+      if (p.getScheme.equalsIgnoreCase(scheme)) {
         return Some(p)
       }
     }
@@ -39,48 +42,52 @@ object FileSystemHolder extends LazyLogging {
     } else None
 
   private def getOrCreateWithoutCache(fileSystemSelector: FileSystemSelector): Option[FileSystem] =
-    fileSystemSelector.uri.flatMap { uri =>
-      // TODO: check if uri is s3
-      val env = s3CredentialsEnv(fileSystemSelector)
+    fileSystemSelector.uri.flatMap { uriStr =>
+      val uri = URI.create(uriStr)
+      val uriWithUser = insertUserName(uri, fileSystemSelector)
 
-      val s3Uri = URI.create(uri)
-      val s3UriWithKey = fileSystemSelector.credentials.map { c =>
-        new URI(s3Uri.getScheme,
-                c.username,
-                s3Uri.getHost,
-                s3Uri.getPort,
-                s3Uri.getPath,
-                s3Uri.getQuery,
-                s3Uri.getFragment)
-      }.getOrElse(s3Uri)
+      val scheme = uri.getScheme
+      val credentialsEnv = makeCredentialsEnv(fileSystemSelector, scheme)
 
-      logger.info(s"Loading file system for uri $s3Uri")
+      logger.info(s"Loading file system for uri $uri")
 
-      val s3fs: Option[FileSystem] = try {
-        Some(FileSystems.newFileSystem(s3Uri, env, currentThread().getContextClassLoader))
+      val fs: Option[FileSystem] = try {
+        Some(FileSystems.newFileSystem(uri, credentialsEnv, currentThread().getContextClassLoader))
       } catch {
         case _: FileSystemAlreadyExistsException =>
           try {
-            findS3Provider.map(_.getFileSystem(s3UriWithKey))
+            findProvider(uri.getScheme).map(_.getFileSystem(uriWithUser))
           } catch {
             case e2: Exception =>
               logger.error("getFileSytem errored:", e2)
               None
           }
       }
-      logger.info(s"Loaded file system $s3fs for uri $s3Uri")
-      s3fs
+      logger.info(s"Loaded file system $fs for uri $uri")
+      fs
     }
 
-  private def s3CredentialsEnv(fileSystemSelector: FileSystemSelector): ImmutableMap[String, Any] =
+  private def insertUserName(uri: URI, fileSystemSelector: FileSystemSelector): URI =
+    fileSystemSelector.credentials.map { c =>
+      new URI(uri.getScheme, c.user, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
+    }.getOrElse(uri)
+
+  private def makeCredentialsEnv(fileSystemSelector: FileSystemSelector, scheme: String): ImmutableMap[String, Any] =
     fileSystemSelector.credentials.map { credentials =>
-      ImmutableMap
-        .builder[String, Any]
-        .put(com.upplication.s3fs.AmazonS3Factory.ACCESS_KEY, credentials.username)
-        .put(com.upplication.s3fs.AmazonS3Factory.SECRET_KEY, credentials.password)
-        .build
+      if (scheme == schemeS3) {
+        ImmutableMap
+          .builder[String, Any]
+          .put(com.upplication.s3fs.AmazonS3Factory.ACCESS_KEY, credentials.user)
+          .put(com.upplication.s3fs.AmazonS3Factory.SECRET_KEY, credentials.password)
+          .build
+      } else if (scheme == schemeHttps) {
+        ImmutableMap.builder[String, Any].put("user", credentials.user).put("password", credentials.password).build
+      } else {
+        emptyEnv
+      }
     }.getOrElse {
-      ImmutableMap.builder[String, Any].build()
+      emptyEnv
     }
 
+  private def emptyEnv = ImmutableMap.builder[String, Any].build()
 }

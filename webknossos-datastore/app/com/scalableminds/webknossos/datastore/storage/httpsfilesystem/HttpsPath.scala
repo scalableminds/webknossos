@@ -64,4 +64,6 @@ class HttpsPath(uri: URI, fileSystem: HttpsFileSystem) extends Path {
   def getKey: String = uri.toString
 
   override def toString: String = s"HttpsPath(${uri.toString})@${hashCode()}"
+
+  def getBasicAuthCredentials: Option[HttpsBasicAuthCredentials] = fileSystem.getBasicAuthCredentials
 }

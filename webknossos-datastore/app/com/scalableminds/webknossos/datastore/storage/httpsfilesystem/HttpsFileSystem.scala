@@ -6,7 +6,10 @@ import java.nio.file.attribute.UserPrincipalLookupService
 import java.nio.file.spi.FileSystemProvider
 import java.{lang, util}
 
-class HttpsFileSystem(provider: HttpsFileSystemProvider, uri: URI) extends FileSystem {
+class HttpsFileSystem(provider: HttpsFileSystemProvider,
+                      uri: URI,
+                      basicAuthCredentials: Option[HttpsBasicAuthCredentials] = None)
+    extends FileSystem {
   override def provider(): FileSystemProvider = provider
 
   override def close(): Unit = ???
@@ -32,5 +35,7 @@ class HttpsFileSystem(provider: HttpsFileSystemProvider, uri: URI) extends FileS
 
   override def newWatchService(): WatchService = ???
 
-  def getKey: String = provider.fileSystemKey(uri)
+  def getKey: String = provider.fileSystemKey(uri, basicAuthCredentials)
+
+  def getBasicAuthCredentials: Option[HttpsBasicAuthCredentials] = basicAuthCredentials
 }

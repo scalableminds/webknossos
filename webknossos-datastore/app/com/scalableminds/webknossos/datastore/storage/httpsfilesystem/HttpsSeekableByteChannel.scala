@@ -13,7 +13,11 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
   private var _position: Long = 0L
 
   private val uri: URI = path.asInstanceOf[HttpsPath].toUri
-  private val response = Http(uri.toString).asBytes
+  private val response =
+    path.getBasicAuthCredentials.map { credentials =>
+      Http(uri.toString).auth(credentials.user, credentials.password).asBytes
+    }.getOrElse(Http(uri.toString).asBytes)
+
   private var _isOpen: Boolean = true
 
   override def read(byteBuffer: ByteBuffer): Int = {

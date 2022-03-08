@@ -8,6 +8,8 @@ import java.nio.file._
 import java.util
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 
+import com.google.common.collect.ImmutableMap
+import com.scalableminds.webknossos.datastore.dataformats.zarr.FileSystemSelector
 import com.typesafe.scalalogging.LazyLogging
 import com.upplication.s3fs.S3FileSystem
 
@@ -17,26 +19,35 @@ class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
   override def getScheme: String = "https"
 
   override def newFileSystem(uri: URI, env: util.Map[String, _]): FileSystem = {
+    if (uri.getUserInfo != null && uri.getUserInfo.nonEmpty) {
+      throw new Exception("Username was supplied in uri, should be in env instead.")
+    }
     logger.info(s"newFileSystem for $uri")
-    val key = fileSystemKey(uri)
+    val basicAuthCredentials = HttpsBasicAuthCredentials.fromEnvMap(env)
+    val key = fileSystemKey(uri, basicAuthCredentials)
     if (fileSystems.containsKey(key)) {
       throw new FileSystemAlreadyExistsException("File system " + key + " already exists")
     }
 
-    val fileSystem = new HttpsFileSystem(provider = this, uri = uri)
+    val fileSystem = new HttpsFileSystem(provider = this, uri = uri, basicAuthCredentials = basicAuthCredentials)
 
     fileSystems.put(fileSystem.getKey, fileSystem)
 
     fileSystem
   }
 
-  def fileSystemKey(uri: URI): String = uri.toString
+  def fileSystemKey(uri: URI, basicAuthCredentials: Option[HttpsBasicAuthCredentials]): String = {
+    val uriWithUser = basicAuthCredentials.map { c =>
+      new URI(uri.getScheme, c.user, uri.getHost, uri.getPort, uri.getPath, uri.getQuery, uri.getFragment)
+    }.getOrElse(uri)
+    uriWithUser.toString
+  }
 
   override def getFileSystem(uri: URI): FileSystem = {
-    val key = fileSystemKey(uri)
+    val key = fileSystemKey(uri, None)
     if (fileSystems.containsKey(key)) {
       fileSystems.get(key)
-    } else this.newFileSystem(uri, null)
+    } else this.newFileSystem(uri, ImmutableMap.builder[String, Any].build())
   }
 
   override def getPath(uri: URI): Path =

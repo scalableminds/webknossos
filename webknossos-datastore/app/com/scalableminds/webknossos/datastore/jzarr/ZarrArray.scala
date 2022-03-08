@@ -5,9 +5,10 @@ import java.nio.ByteOrder
 import java.nio.file.{Path, Paths}
 import java.util
 
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.jzarr.CompressorFactory.nullCompressor
 import com.scalableminds.webknossos.datastore.jzarr.ZarrConstants.FILENAME_DOT_ZARRAY
-import com.scalableminds.webknossos.datastore.jzarr.chunk.ChunkReaderWriter
+import com.scalableminds.webknossos.datastore.jzarr.chunk.ChunkReader
 import com.scalableminds.webknossos.datastore.jzarr.storage.{FileSystemStore, Store}
 import com.scalableminds.webknossos.datastore.jzarr.ucarutils.{BytesConverter, NetCDF_Util, PartialDataCopier}
 import ucar.ma2.{InvalidRangeException, Array => Ma2Array}
@@ -61,7 +62,7 @@ class ZarrArray private (relativePath: ZarrPath,
                          _store: Store) {
 
   final private val _chunkReaderWriter =
-    ChunkReaderWriter.create(_compressor, _dataType, _byteOrder, _chunkShape, _fillValue, _store)
+    ChunkReader.create(_compressor, _dataType, _byteOrder, _chunkShape, _fillValue, _store)
   final private val _chunkContentsCache = new util.HashMap[String, Ma2Array]
   if (_separator == null) throw new IllegalArgumentException("separator must not be null")
 
@@ -71,6 +72,17 @@ class ZarrArray private (relativePath: ZarrPath,
   def getChunks: Array[Int] = util.Arrays.copyOf(_chunkShape, _chunkShape.length)
   def getFillValue: Number = _fillValue
   def getByteOrder: ByteOrder = _byteOrder
+  @throws[IOException]
+  @throws[InvalidRangeException]
+  def readBytesXYZ(shape: Vec3Int, offset: Vec3Int): Array[Byte] = {
+    // TODO. Determine order. This currently assumes z, y, x are the last three entries
+    val paddingDimensionsCount = _shape.length - 3
+    val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.z :+ offset.y :+ offset.x
+    val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.z :+ shape.y :+ shape.x
+
+    // TODO transpose?
+    readBytes(shapeArray, offsetArray)
+  }
 
   @throws[IOException]
   @throws[InvalidRangeException]

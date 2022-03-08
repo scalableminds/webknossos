@@ -31,15 +31,13 @@ import ucar.ma2.Array;
 import ucar.ma2.DataType;
 
 import javax.imageio.stream.ImageInputStream;
-import javax.imageio.stream.ImageOutputStream;
 import javax.imageio.stream.MemoryCacheImageInputStream;
-import javax.imageio.stream.MemoryCacheImageOutputStream;
 import java.io.*;
 import java.nio.ByteOrder;
 
-public class ChunkReaderWriterImpl_Integer extends ChunkReaderWriter {
+public class ChunkReaderImpl_Float extends ChunkReader {
 
-    public ChunkReaderWriterImpl_Integer(ByteOrder order, Compressor compressor, int[] chunkShape, Number fill, Store store) {
+    public ChunkReaderImpl_Float(ByteOrder order, Compressor compressor, int[] chunkShape, Number fill, Store store) {
         super(order, compressor, chunkShape, fill, store);
     }
 
@@ -53,18 +51,18 @@ public class ChunkReaderWriterImpl_Integer extends ChunkReaderWriter {
                         final ByteArrayOutputStream os = new ByteArrayOutputStream()
                 ) {
                     compressor.uncompress(is, os);
-                    final int[] ints = new int[getSize()];
+                    final float[] floats = new float[getSize()];
                     try (
                             final ByteArrayInputStream bais = new ByteArrayInputStream(os.toByteArray());
                             final ImageInputStream iis = new MemoryCacheImageInputStream(bais)
                     ) {
                         iis.setByteOrder(order);
-                        iis.readFully(ints, 0, ints.length);
+                        iis.readFully(floats, 0, floats.length);
                     }
-                    return Array.factory(DataType.INT, chunkShape, ints);
+                    return Array.factory(DataType.FLOAT, chunkShape, floats);
                 }
             } else {
-                return createFilled(DataType.INT);
+                return createFilled(DataType.FLOAT);
             }
         }
     }

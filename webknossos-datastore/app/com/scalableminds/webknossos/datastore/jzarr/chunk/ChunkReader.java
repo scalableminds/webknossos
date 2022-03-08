@@ -38,7 +38,7 @@ import java.util.Arrays;
 
 import static com.scalableminds.webknossos.datastore.jzarr.ZarrUtils.computeSizeInteger;
 
-public abstract class ChunkReaderWriter {
+public abstract class ChunkReader {
 
     protected final Compressor compressor;
     final int[] chunkShape;
@@ -47,7 +47,7 @@ public abstract class ChunkReaderWriter {
     protected final ByteOrder order;
     private final int size;
 
-    ChunkReaderWriter(ByteOrder order, Compressor compressor, int[] chunkShape, Number fill, Store store) {
+    ChunkReader(ByteOrder order, Compressor compressor, int[] chunkShape, Number fill, Store store) {
         if (compressor != null) {
             this.compressor = compressor;
         } else {
@@ -60,19 +60,19 @@ public abstract class ChunkReaderWriter {
         this.order = order;
     }
 
-    public static ChunkReaderWriter create(Compressor compressor, DataType dataType, ByteOrder order, int[] chunkShape, Number fill, Store store) {
+    public static ChunkReader create(Compressor compressor, DataType dataType, ByteOrder order, int[] chunkShape, Number fill, Store store) {
         if (dataType == DataType.f8) {
-            return new ChunkReaderWriterImpl_Double(order, compressor, chunkShape, fill, store);
+            return new ChunkReaderImpl_Double(order, compressor, chunkShape, fill, store);
         } else if (dataType == DataType.f4) {
-            return new ChunkReaderWriterImpl_Float(order, compressor, chunkShape, fill, store);
+            return new ChunkReaderImpl_Float(order, compressor, chunkShape, fill, store);
         } else if (dataType == DataType.i8) {
-            return new ChunkReaderWriterImpl_Long(order, compressor, chunkShape, fill, store);
+            return new ChunkReaderImpl_Long(order, compressor, chunkShape, fill, store);
         } else if (dataType == DataType.i4 || dataType == DataType.u4) {
-            return new ChunkReaderWriterImpl_Integer(order, compressor, chunkShape, fill, store);
+            return new ChunkReaderImpl_Integer(order, compressor, chunkShape, fill, store);
         } else if (dataType == DataType.i2 || dataType == DataType.u2) {
-            return new ChunkReaderWriterImpl_Short(order, compressor, chunkShape, fill, store);
+            return new ChunkReaderImpl_Short(order, compressor, chunkShape, fill, store);
         } else if (dataType == DataType.i1 || dataType == DataType.u1) {
-            return new ChunkReaderWriterImpl_Byte(compressor, chunkShape, fill, store);
+            return new ChunkReaderImpl_Byte(compressor, chunkShape, fill, store);
         } else {
             throw new IllegalStateException();
         }

@@ -30,41 +30,29 @@ import com.scalableminds.webknossos.datastore.jzarr.storage.Store;
 import ucar.ma2.Array;
 import ucar.ma2.DataType;
 
-import javax.imageio.stream.ImageInputStream;
-import javax.imageio.stream.ImageOutputStream;
-import javax.imageio.stream.MemoryCacheImageInputStream;
-import javax.imageio.stream.MemoryCacheImageOutputStream;
 import java.io.*;
-import java.nio.ByteOrder;
 
-public class ChunkReaderWriterImpl_Double extends ChunkReaderWriter {
+public class ChunkReaderImpl_Byte extends ChunkReader {
 
-    public ChunkReaderWriterImpl_Double(ByteOrder order, Compressor compressor, int[] chunkShape, Number fill, Store store) {
-        super(order, compressor, chunkShape, fill, store);
+    public ChunkReaderImpl_Byte(Compressor compressor, int[] chunkShape, Number fill, Store store) {
+        super(null, compressor, chunkShape, fill, store);
     }
 
     @Override
     public Array read(String storeKey) throws IOException {
         try (
-                InputStream is = store.getInputStream(storeKey)
+                final InputStream is = store.getInputStream(storeKey)
         ) {
             if (is != null) {
                 try (
                         final ByteArrayOutputStream os = new ByteArrayOutputStream()
                 ) {
                     compressor.uncompress(is, os);
-                    final double[] doubles = new double[getSize()];
-                    try (
-                            final ByteArrayInputStream bais = new ByteArrayInputStream(os.toByteArray());
-                            final ImageInputStream iis = new MemoryCacheImageInputStream(bais)
-                    ) {
-                        iis.setByteOrder(order);
-                        iis.readFully(doubles, 0, doubles.length);
-                    }
-                    return Array.factory(DataType.DOUBLE, chunkShape, doubles);
+                    final byte[] b = os.toByteArray();
+                    return Array.factory(DataType.BYTE, chunkShape, b);
                 }
             } else {
-                return createFilled(DataType.DOUBLE);
+                return createFilled(DataType.BYTE);
             }
         }
     }

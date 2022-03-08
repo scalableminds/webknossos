@@ -30,31 +30,40 @@ import com.scalableminds.webknossos.datastore.jzarr.storage.Store;
 import ucar.ma2.Array;
 import ucar.ma2.DataType;
 
+import javax.imageio.stream.ImageInputStream;
+import javax.imageio.stream.MemoryCacheImageInputStream;
 import java.io.*;
+import java.nio.ByteOrder;
 
-public class ChunkReaderWriterImpl_Byte extends ChunkReaderWriter {
+public class ChunkReaderImpl_Short extends ChunkReader {
 
-    public ChunkReaderWriterImpl_Byte(Compressor compressor, int[] chunkShape, Number fill, Store store) {
-        super(null, compressor, chunkShape, fill, store);
+    public ChunkReaderImpl_Short(ByteOrder order, Compressor compressor, int[] chunkShape, Number fill, Store store) {
+        super(order, compressor, chunkShape, fill, store);
     }
 
     @Override
     public Array read(String storeKey) throws IOException {
         try (
-                final InputStream is = store.getInputStream(storeKey)
+                InputStream is = store.getInputStream(storeKey)
         ) {
             if (is != null) {
                 try (
                         final ByteArrayOutputStream os = new ByteArrayOutputStream()
                 ) {
                     compressor.uncompress(is, os);
-                    final byte[] b = os.toByteArray();
-                    return Array.factory(DataType.BYTE, chunkShape, b);
+                    final short[] shorts = new short[getSize()];
+                    try (
+                            final ByteArrayInputStream bais = new ByteArrayInputStream(os.toByteArray());
+                            final ImageInputStream iis = new MemoryCacheImageInputStream(bais)
+                    ) {
+                        iis.setByteOrder(order);
+                        iis.readFully(shorts, 0, shorts.length);
+                    }
+                    return Array.factory(DataType.SHORT, chunkShape, shorts);
                 }
             } else {
-                return createFilled(DataType.BYTE);
+                return createFilled(DataType.SHORT);
             }
         }
     }
-
 }

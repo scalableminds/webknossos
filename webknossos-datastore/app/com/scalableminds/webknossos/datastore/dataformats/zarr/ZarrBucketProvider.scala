@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr
 
 import java.nio.file.FileSystem
 
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCube}
 import com.scalableminds.webknossos.datastore.jzarr.ZarrArray
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -13,10 +14,9 @@ import net.liftweb.common.{Box, Empty, Full}
 class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
 
   def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
-    // TODO pad offset and shape with zeroes and ones depending on axis count
-    val offset = Array(0, 0, bucket.globalZ, bucket.globalY, bucket.globalX)
-    val shape = Array(1, 1, bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
-    Full(zarrArray.readBytes(shape, offset))
+    val shape = Vec3Int(bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
+    val offset = Vec3Int(bucket.globalX, bucket.globalY, bucket.globalZ)
+    Full(zarrArray.readBytesXYZ(shape, offset))
   }
 
   override protected def onFinalize(): Unit = ()

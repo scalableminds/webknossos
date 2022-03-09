@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where deactivated users would still be listed as allowed to access the datasets of their team. [#6070](https://github.com/scalableminds/webknossos/pull/6070)
 - Fix occasionally "disappearing" data. [#6055](https://github.com/scalableminds/webknossos/pull/6055)
 - Fixed a bug where remote-origin headers were omitted in error case. [#6098](https://github.com/scalableminds/webknossos/pull/6098)
+- Fixed a bug where there was a suggested change in the `datasource-config.json` was shown for resolution `1` instead of `[1,1,1]` or vice-versa. [#6104](https://github.com/scalableminds/webknossos/pull/6104)
 
 ### Removed
 - The previously disabled Import Skeleton Button has been removed. The functionality is available via the context menu for datasets with active ID mappings. [#6073](https://github.com/scalableminds/webknossos/pull/6073)

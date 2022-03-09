@@ -156,17 +156,13 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
         s"Sending WS request to $url (ID: $id). " +
           s"RequestBody: '$requestBodyPreview'")
     }
-    request
-      .withMethod("GET")
-      .stream()
-      .map(response => Full(response.bodyAsSource))
-      .recover {
-        case e =>
-          val errorMsg = s"Error sending WS request to $url (ID: $id): " +
-            s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
-          logger.error(errorMsg)
-          Failure(errorMsg)
-      }
+    request.withMethod("GET").stream().map(response => Full(response.bodyAsSource)).recover {
+      case e =>
+        val errorMsg = s"Error sending WS request to $url (ID: $id): " +
+          s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
+        logger.error(errorMsg)
+        Failure(errorMsg)
+    }
   }
 
   private def performRequest: Fox[WSResponse] = {

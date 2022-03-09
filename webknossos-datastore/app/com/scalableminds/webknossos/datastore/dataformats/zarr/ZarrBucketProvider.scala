@@ -25,19 +25,9 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
 
 class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
-    val useLocal = layer.fileSystemSelector.typ == FileSystemType.Local
-    if (useLocal) {
-      val layerPath = readInstruction.baseDir
-        .resolve(readInstruction.dataSource.id.team)
-        .resolve(readInstruction.dataSource.id.name)
-        .resolve(readInstruction.dataLayer.name)
-      logger.info(s"Opening local: ${layerPath}")
-      if (layerPath.toFile.exists()) {
-        Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
-      } else Empty
-    } else {
-      val layerPathOpt = FileSystemHolder.getOrCreate(layer.fileSystemSelector).map { fs: FileSystem =>
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] =
+    layer.remoteSource.map { remoteSource =>
+      val layerPathOpt = FileSystemHolder.getOrCreate(remoteSource).map { fs: FileSystem =>
         fs.getPath(layer.remotePath.getOrElse(""))
       }
       layerPathOpt match {
@@ -46,7 +36,15 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
           logger.info(s"opening: $layerPath")
           Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
       }
+    }.getOrElse {
+      val layerPath = readInstruction.baseDir
+        .resolve(readInstruction.dataSource.id.team)
+        .resolve(readInstruction.dataSource.id.name)
+        .resolve(readInstruction.dataLayer.name)
+      logger.info(s"Opening local: ${layerPath}")
+      if (layerPath.toFile.exists()) {
+        Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
+      } else Empty
     }
-  }
 
 }

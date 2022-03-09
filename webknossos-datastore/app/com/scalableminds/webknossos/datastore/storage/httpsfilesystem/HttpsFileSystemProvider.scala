@@ -9,7 +9,7 @@ import java.util
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 
 import com.google.common.collect.ImmutableMap
-import com.scalableminds.webknossos.datastore.dataformats.zarr.FileSystemSelector
+import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
 import com.typesafe.scalalogging.LazyLogging
 import com.upplication.s3fs.S3FileSystem
 

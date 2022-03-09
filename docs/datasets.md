@@ -1,32 +1,70 @@
 # Managing Datasets
 
-3D image datasets are at the heart of webKnossos.
-[Import datasets](#importing-datasets) by uploading them directly via the UI or by using the file system (self-hosted instances only).
-[Configure the dataset](#edit-dataset) defaults and permissions to your specification.
-[Share your datasets](./sharing.md#dataset-sharing) with the public or with selected users.
+Working with 3D (and 2D) image datasets is at the heart of webKnossos. 
+
+- [Import datasets](#importing-datasets) by uploading them directly via the web UI or by using the file system (self-hosted instances only).
+- [Configure the dataset](#configuring-datasets) defaults and permissions to your specification.
+- [Share your datasets](./sharing.md#dataset-sharing) with the public or with selected users.
+
+[Read the section on file and data formats](./data_formats.md) if you are interested in the technical background and concepts behind webKnossos datasets.
 
 ## Importing Datasets
 
-
 ### Uploading through the web browser
-To import a dataset, you can use the upload functionality within webKnossos.
-For that, click "Add Dataset" in the dashboard.
-Then, drag your data into the form and ensure all form fields are filled.
+The easiest way to get started with working on your datasets is through the webKnossos web interface. You can directly upload your dataset through the browser.
 
-webKnossos uses the WKW-format internally to display your data.
+1. From the *My dataset* tab in the user dashboard, click the *Add Dataset* button.
+2. Provide some metadata information:
+  - a *name* 
+  - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
+  - *scale* of each voxel (in nanometers)
+3. Drag and drop your data into the upload section
+4. Click the *Upload* button
+
+
+webKnossos uses the [WKW-format](./data_formats.md#wkw-datasets) internally to display your data.
 If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
+
 If your data is not in WKW, you can either:
-- upload the data to [webknossos.org](https://webknossos.org) where it will be automatically converted to WKW
-- or [convert](#convert-datasets) your data manually to WKW.
+- upload the data in a supported file format and webKnossos will automatically convert it to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset, the conversion will take some time. You can check the progress at the "Jobs" page or the "My Datasets" page in the dashboard (both will update automatically).
+- [Convert](#converting-datasets) your data manually to WKW.
 
-Read more about the [Data Formats](./data_formats.md) we support and how they should be structured when uploading them.
+In particular, the following file formats are supported for uploading (and conversion):
+- [WKW dataset](#WKW-Datasets)
+- [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (tif, jpg, png, dm3, dm4)
+  - as an extension, multiple folders with image sequences are interpreted as [separate layers](#Multi-Layer-Image-File-Sequence)
+- Single-file images (tif, czi, nifti, raw)
+- KNOSSOS file hierarchy 
+- [Read more about the supported file formats and details](./data_formats.md#conversion-with-webknossosorg)
 
-Once the data is uploaded (and potentially converted) you can to go the Dataset Settings to doublecheck important properties (such as the dataset scale) or to make it public.
+Once the data is uploaded (and potentially converted), you can further configure a dataset [Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
 
-### Convert Datasets
-If your dataset is not yet in WKW format and you don't want to use [webknossos.org](https://webknossos.org) for the conversion, you can also convert it manually.
-The [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber) is a tool that can convert many formats to WKW.
-Read more in the [tools section of the data formats documentation](./data_formats.md#tools).
+### Working with Neuroglancer and BossDB dataset
+On webKnossos.org you can work directly with 
+- datasets in the Neuroglancer precomputed format stored in the Google Cloud
+- datasets provided by a BossDB server
+
+To import these datasets:
+1. From the *My dataset* tab in the user dashboard, click the *Add Dataset* button.
+2. Select the *Add Neuroglancer Dataset* or *Add BossDB Dataset* tab
+3. Provide some metadata information:
+  - a *name* 
+  - a URL or domain/collection identifier to locate the dataset on the remote service
+  - authentication credentials for accessing the resources on the remote service
+4. Click the *Add* button
+
+webKnossos will NOT download/copy any data from these third-party data providers. 
+Rather, any data viewed in webKnossos will be streamed read-only and directly from the remote source. 
+Any other webKnossos feature, e.g., annotations, access rights, will be stored in webKnossos and do not affect these services. 
+
+Note, this may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
+
+### Working with Zarr dataset
+We are working on integrating full Zarr support into webKnossos. If you have datasets in the Zarr format and would like to work with us on building, testing, and refining the Zarr integration into webKnossos then [please contact us](mailto:hello@webknossos.org).
+
+
+### Uploading through the Python API
+For those wishing to automate dataset upload or to do it programmatically, check out the webKnossos [Python library](https://github.com/scalableminds/webknossos-libs). It allows you to create, manage and upload datasets as well. 
 
 ### Uploading through the File System (Self-Hosted Instances Only)
 On self-hosted instances, large datasets can be efficiently imported by placing them directly in the file system:
@@ -34,16 +72,23 @@ On self-hosted instances, large datasets can be efficiently imported by placing 
 * Place the dataset at `<webKnossos directory>/binaryData/<Organization name>/<Dataset name>`. For example `/opt/webknossos/binaryData/Springfield_University/great_dataset`.
 * Go to the [dataset view on the dashboard](./dashboard.md)
 * Use the refresh button on the dashboard or wait for webKnossos to detect the dataset (up to 10min)
-* Click `Import` for your new dataset
-* Complete the [Import screen](#importing-in-webknossos)
+
+Typically webKnossos can infer all the required metadata for a dataset automatically and import datasets automatically on refresh. In some cases, you will need to manually import a dataset and provide more information:
+* On the dashboard, click *Import* for your new dataset
+* Provided the requested properties, such as *scale* and *largestSegmentId*. See the section on [configuring datasets](#configuring-datasets) below for more detailed explanations of these parameters.
+
+!!! info
+    If you uploaded the dataset along with a `datasource-properties.json` metadata file, the dataset will be imported automatically without any additional manual steps.
+
 
 #### Using Symbolic Links (Self-Hosted Instances Only)
 
-You can also use symbolic links to import your data into webKnossos.
-However, when using Docker, the targets of the link also need to be available to the container through mounts.
+When you have direct file system access, you can also use symbolic links to import your data into webKnossos. This might be useful when you want to create new datasets based on potentially very large raw microscopy data and symlink it to one or several segmentation layers.
+
+Note, when using Docker, the targets of the link also need to be available to the container through mounts.
 
 For example, you could have a link from `/opt/webknossos/binaryData/sample_organization/awesome_dataset` to `/cluster/path/to/dataset123`.
-In order to make this dataset available to the Docker container, you need to add `/cluster` as another volume mount.
+To make this dataset available to the Docker container, you need to add `/cluster` as another volume mount.
 You can add this directly to the docker-compose.yml:
 
 ```yaml
@@ -57,23 +102,100 @@ services:
 ...
 ```
 
-### Importing in webKnossos
+### Converting Datasets
+Any dataset uploaded through the web interface at [webknossos.org](https://webknossos.org) is automatically converted for compatibility.
 
-The Import screen allows you to set some properties of your datasets.
-Many properties such as available layers, bounding boxes and datatypes can be detected automatically.
-Some properties may require your manual input, though.
-Most of the time these are **scale** which represents the physical size of one voxel in nanometers and **largestSegmentId** of a segmentation layer.
+For manual conversion, we provide the following software tools and libraries:
+- The [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) is a CLI tool that can convert many formats to WKW. 
+- For other file formats, the [Python webKnossos libray](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
-Once you entered the required properties, you can click the `Import` button to complete the process.
-The dataset is now ready to use.
+See page on [software tooling](./tooling.md) for more.
 
-!!! info
-    If you uploaded the dataset along with a `datasource-properties.json` metadata file the dataset will be imported automatically without any additional manual steps.
+## Configuring Datasets
+You can configure the metadata, permission, and other properties of a dataset at any time. 
+
+Note, any changes made to a dataset may influence the user experience of all users in your organization working with that dataset, e.g., removing access rights working, adding/removing layers, or setting default values for rendering the data.
+
+To make changes, click on the "Settings" action next to a dataset in the "My Datasets" tab of your dashboard.
+Editing these settings requires your account to have enough access rights and permissions. [Read more about this.](./users.md)
+
+### Data Tab
+The *Data* tab contains the settings for correctly reading the dataset as the correct data type (e.g., `uint8`), setting up, and configuring any layers.
+
+- `Scale`: The physical size of a voxel in nanometers, e.g., `11, 11, 24`
+
+For each detected layer:
+- `Bounding Box`: The position and extents of the dataset layer in voxel coordinates. The format is `x, y, z, x_size,y_size, z_size` or respectively `min_x, min_y, min_z, (max_x - min_x), (max_y - min_y), (max_z - min_z)`.
+- `Largest Segment ID`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
+
+The `Advanced` view lets you edit the underlying [JSON configuration](./data_formats.md#wkw-metadata-by-example) directly. Toggle between the `Advanced` and `Simple` page in the upper right. Advanced mode is only recommended for low level access to dataset properties and users familiar with the `datasource-properties.json` format.
+
+webKnossos automatically periodically checks and detects changes to a dataset's metadata (`datasource-properties.json`) on disk (only relevant for self-hosted instances). Before applying these suggestions, users can preview all the new settings (as JSON) and inspect just the detected difference (as JSON).
+
+![Dataset Editing: Data Tab](images/dataset_data.png)
 
 
-### Sample Datasets
+### Sharing & Permissions Tab
+- `Make dataset publicly accessible`: By default, a dataset can only be accessed by users from your organization with the correct access permissions. Turning a dataset to *public* will allow anyone in the general public to view the dataset when sharing a link to the dataset without the need for a webKnossos account. Anyone can start using this dataset to create annotations. Enable this setting if you want to share a dataset in a publication, social media, or any other public website.
+- `Teams allowed to access this dataset`: Defines which [teams of your organization](./users.md) have permission to work with this dataset. By default, no team has access, but users with *admin* and *team manager* roles can see and edit the dataset.
+- `Sharing Link`: A web URL pointing to this dataset for easy sharing that allows any user to view your dataset. The URL contains an access token to allow people to view the dataset without a webKnossos account. The access token is random, and therefore the URL cannot be guessed by visitors. You may also revoke the access token to create a new one. Anyone with a URL containing a revoked token will no longer have access to this dataset. 
+Read more in [the Sharing guide](./sharing.md).
 
-A list of sample datasets is provided with webKnossos. Click `Add a Sample Dataset` on the upload page to access it and choose datasets to be added and imported automatically. The three sample datasets currently available are:
+// Todo add image
+
+### Metadata Tab
+- `Display Name`: A meaningful name for a dataset other than its (automatically assigned) technical name which is usually limited by naming rules of file systems. It is displayed in various parts of webKnossos. The display name may contain special characters and can also be changed without invalidating already created sharing URLs. It can also be useful when sharing datasets with outsiders while "hiding" any internal naming schemes or make it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
+- `Description`: A free-text field for providing more information about your datasets, e.g., authors, paper reference, descriptions, etc. Supports Markdown formatting. The description will be featured in the webKnossos UI when opening a dataset in view mode.
+
+// Todo add image
+
+### View Configuration Tab
+The *View configuration* tab lets you set defaults for viewing this dataset. Anytime a user opens a dataset or creates a new annotation based on this dataset, these default values will be applied. 
+
+Defaults include:
+- `Position`: Default position of the dataset in voxel coordinates. When opening the dataset, users will be located at this position.
+- `Zoom`: Default zoom.
+- `Interpolation`: Whether interpolation should be enabled by default.
+- `Layer Configuration`: Advanced feature to control the default settings on a per-layer basis. It needs to be configured in JSON format. E.g., layer visibility & opacity, color, contrast/brightness/intensity range ("histogram sliders"), and many more.
+
+![Dataset Editing: View Configuration Tab](images/dataset_view_config.png)
+
+Of course, the defaults can all be overwritten and adjusted once a user opens the dataset in the main webKnossos interface and makes changes to any of these settings in his viewports. 
+
+For self-hosted webKnossos instances, there are two ways to set default *View Configuration* settings:
+- in the web UI as described above
+- inside the `datasource_properties.json` on disk
+
+The *View Configuration* from the web UI takes precedence over the `datasource_properties.json`.
+You don't have to set complete *View Configurations* in either option, as webKnossos will fill missing attributes with sensible defaults.
+
+
+// Todo add image
+
+### Delete Tab
+
+Offers an option to delete a dataset and completely removes it from webKnossos. Careful, this can not be undone.
+
+// Todo add image
+
+
+
+## Dataset Sharing
+Read more in the [Sharing guide](./sharing.md#dataset-sharing)
+
+## Using External Datastores
+The system architecture of webKnossos allows for versatile deployment options where you can install a dedicated datastore server directly on your lab's cluster infrastructure.
+This may be useful when dealing with large datasets that should remain in your data center.
+[Please contact us](mailto:hello@webknossos.org) or [write a post](https://forum.image.sc/tag/webknossos), if you require any assistance with your setup.
+
+scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
+[Learn more.](https://scalableminds.com/voxelytics-align)
+
+![Dataset Alignment](https://www.youtube.com/watch?v=yYauIHZcI_4)
+
+## Sample Datasets
+
+For convenience and testing, we provide a list of sample datasets for webKnossos:
 
 - Sample_e2006_wkw: https://static.webknossos.org/data/e2006_wkw.zip
 Raw SBEM data and segmentation (sample cutout, 120MB).
@@ -92,61 +214,3 @@ MRI data (250 MB).
 T1-weighted in vivo human whole brain MRI dataset with an ultrahigh isotropic resolution of 250 μm.
 F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.
 Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32
-
-
-## Edit Dataset
-You can edit the properties of a dataset at any time.
-In addition to the required properties that you need to fill in during import, there are more advanced properties that you can set.
-This screen is similar to the Import screen and split into three tabs:
-
-### Data
-- `Scale`: The physical size of a voxel in nanometers, e.g. `11, 11, 24`
-- `Bounding Box`: The position and extents of the dataset layer in voxel coordinates. The format is `x,y,z,x_size,y_size,z_size` or respectively `min_x,min_y,min_z,(max_x-min_x),(max_y-min_y),(max_z-min_z)`.
-- `Largest Segment ID`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
-
-The `Advanced` view lets you edit the underlying JSON configuration directly.
-
-![Dataset Editing: Data Tab](images/dataset_data.png)
-
-### General
-- `Display Name`: Used as the name of the dataset in the [Gallery view](./sharing.md#public-sharing).
-- `Description`: Contains more information about your datasets including authors, paper reference, descriptions. Supports Markdown formatting. The description will be featured in the [Gallery view](./sharing.md#public-sharing) as well.
-- `Teams allowed to access this dataset`: Defines which [teams of your organization](./users.md) have access to this dataset. By default no team has access but admins and team managers can see and edit the dataset.
-- `Visibility`: Lets you make the dataset available to the general public and shows it in the public [Gallery view](./sharing.md#public-sharing). This will enable any visitor to your webKnossos instance to view the data, even unregistered users.
-- `Sharing Link`: A special URL which allows any user to view your dataset that uses this link. Because of the included random token, the link cannot be guessed by random visitors. You may also revoke the random token and create a new one when you don't want previous users to access your data anymore. Read more in [the Sharing guide](./sharing.md).
-
-![Dataset Editing: General Tab](images/dataset_general.png)
-
-
-### View Configuration
-- `Position`: Default position of the dataset in voxel coordinates. When opening the dataset, users will be located at this position.
-- `Zoom`: Default zoom.
-- `Segmentation Pattern Opacity`: Default opacity of the patterns rendered inside segmentation cells.
-- `Interpolation`: Whether interpolation should be enabled by default.
-- `Layer Configuration`: This is an advanced feature to control the default settings (e.g. alpha, color, intensity range) per layer. It needs to be configured in a JSON format.
-
-![Dataset Editing: View Configuration Tab](images/dataset_view_config.png)
-
-#### View Configuration Hierarchy
-There are two ways to set default View Configuration Settings:
-- inside the `datasource_properties.json`
-- in the `Edit View` for Datasets
-
-The View Configuration from the `Edit View` takes precedence over the `datasource_properties.json`.
-You don't have to set complete View Configurations in neither option, as webKnossos will fill missing attributes with sensible defaults.
-These View Configurations impact the first appearance of the Dataset for all users.
-Each user can further customize their View Configuration in the [Annotation UI Settings](./tracing_ui.md#dataset-settings)
-
-
-## Dataset Sharing
-Read more in the [Sharing guide](./sharing.md#dataset-sharing)
-
-## Using External Datastores
-The system architecture of webKnossos allows for versatile deployment options where you can install a dedicated datastore server directly on your lab's cluster infrastructure.
-This may be useful when dealing with large datasets that should remain in your data center.
-[Please contact us](mailto:hello@webknossos.org) or [write a post](https://forum.image.sc/tag/webknossos), if you require any assistance with your setup.
-
-scalable minds also offers a dataset alignment tool called **Voxelytics Align**.
-[Learn more.](https://scalableminds.com/voxelytics-align)
-
-![Dataset Alignment](https://www.youtube.com/watch?v=yYauIHZcI_4)

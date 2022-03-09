@@ -14,16 +14,16 @@ class Application @Inject()(redisClient: DataStoreRedisStore /*, fileSystemHolde
     implicit ec: ExecutionContext)
     extends Controller {
 
+  override def allowRemoteOrigin: Boolean = true
+
   def health: Action[AnyContent] = Action.async { implicit request =>
     log() {
-      AllowRemoteOrigin {
-        for {
-          before <- Fox.successful(System.currentTimeMillis())
-          _ <- redisClient.checkHealth
-          afterRedis = System.currentTimeMillis()
-          _ = logger.info(s"Answering ok for Datastore health check, took ${afterRedis - before} ms")
-        } yield Ok("Ok")
-      }
+      for {
+        before <- Fox.successful(System.currentTimeMillis())
+        _ <- redisClient.checkHealth
+        afterRedis = System.currentTimeMillis()
+        _ = logger.info(s"Answering ok for Datastore health check, took ${afterRedis - before} ms")
+      } yield Ok("Ok")
     }
   }
 

@@ -122,7 +122,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       );
     } else {
       return (
-        <span style={{ display: "inline-block" }}>
+        <span className={this.props.markdown ? "flex-container" : null}>
           <span
             style={{ margin, display: "inline-block" }}
             className={this.props.onClick != null ? "clickable-text" : null}
@@ -131,6 +131,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           >
             {this.props.markdown ? (
               <Markdown
+                className="flex-item"
                 source={this.props.value}
                 options={{ html: false, breaks: true, linkify: true }}
                 container="span"
@@ -138,18 +139,19 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
             ) : (
               this.props.value
             )}
+            {this.props.disableEditing ? null : (
+              <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
+                <EditOutlined
+                  className={this.props.markdown ? "flex-item" : null}
+                  style={{ iconStyle, marginLeft: 5, display: "inline", whiteSpace: "nowrap" }}
+                  onClick={evt => {
+                    evt.stopPropagation();
+                    this.setState({ isEditing: true });
+                  }}
+                />
+              </Tooltip>
+            )}
           </span>
-          {this.props.disableEditing ? null : (
-            <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
-              <EditOutlined
-                style={iconStyle}
-                onClick={evt => {
-                  evt.stopPropagation();
-                  this.setState({ isEditing: true });
-                }}
-              />
-            </Tooltip>
-          )}
         </span>
       );
     }

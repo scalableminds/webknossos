@@ -179,6 +179,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
         rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataBlocking")
           .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
           .addQueryStringOptional("version", version.map(_.toString))
+          .withLongTimeout
           .getWithBytesResponse
       }
       fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer, Right(tracing), data)
@@ -191,6 +192,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
       data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataBlocking")
         .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
         .addQueryStringOptional("version", version.map(_.toString))
+        .withLongTimeout
         .getWithBytesResponse
     } yield data
   }

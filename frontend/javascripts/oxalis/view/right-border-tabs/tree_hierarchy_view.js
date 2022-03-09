@@ -74,7 +74,7 @@ type Props = {
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onBatchActions: (Array<Action>, string) => void,
-  onToggleHideInactiveTrees: () => void
+  onToggleHideInactiveTrees: () => void,
 };
 
 type State = {
@@ -343,6 +343,16 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             Expand all subgroups
           </Menu.Item>
         ) : null}
+        <Menu.Item
+          key="hideTree"
+          onClick={() => {
+            this.props.onSetActiveGroup(id);
+            this.props.onToggleHideInactiveTrees();
+          }}
+          title="Hide/Show all other trees"
+        >
+          <i className="fas fa-eye" /> Hide/Show all other trees
+        </Menu.Item>
       </Menu>
     );
 
@@ -449,7 +459,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           </Menu.Item>
           <Menu.Item
             key="hideTree"
-            onClick={() => this.props.onToggleHideInactiveTrees()}
+            onClick={() => {
+              this.props.onSetActiveTree(tree.treeId);
+              this.props.onToggleHideInactiveTrees();
+            }}
             title="Hide/Show all other trees"
           >
             <i className="fas fa-eye" /> Hide/Show all other trees

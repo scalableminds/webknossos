@@ -57,6 +57,7 @@ The webKnossos toolbar at the top of the screen contains several tools designed 
 - `Skeleton`: Create skeleton annotations and place nodes with a left mouse click. Read more below.
 
 When the `Skeleton` tool is active, the following modifiers become available:
+
 - `Create new Tree`: Creates a new tree. 
 - `Toggle single node tree mode`: Modifies the behavior of the skeleton annotation tool to create a new tree at each click instead of adding nodes to the active tree. Useful for marking single position objects/seeds, e.g., for marking nuclei. Also called "Soma-clicking mode".
 - `Toggle merger mode`: Modifies the behavior of the skeleton annotation tool to launch the `Merger Mode`. In merger mode skeletons, can be used to "collect" and merge volume segments from an over-segmentation. [Read more about `Merger Mode`](./volume_annotation.md#proof_reading_and_merging_segments).
@@ -127,6 +128,7 @@ Renaming of a group can be done by selecting a group and then entering a new nam
 Common tree operations include splitting and merging trees.
 
 - `Tree splitting` can be done in two ways:
+
   1. Delete the node at which to split. This can be done by right-clicking a node and choosing "Delete this Node". If you have enabled *Classic Controls*, you need to select (*SHIFT + Left Click*) the node first and then delete (*DEL*) it.
   2. Delete an edge between two nodes. Select the first node (*Left Click*), then right-click the second node and select *Delete Edge to this Node*. If you have enabled *Classic Controls*, you need to select the first node with *Shift + Left Click* and then click on the second node with *SHIFT + CTRL + Left Click* on the second node of the edge to delete this connection.
 - `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and right-click on a second one to choose *Create Edge & Merge with this Tree*. When using *Classic Controls*, the second node needs to be selected with *SHIFT + ALT + Left Click* to create an edge between the two.

@@ -17,6 +17,7 @@ It is possible to download all annotations that belong to either a *Project* or 
 ## How To Create Tasks
 
 First, a *Task Type* needs to be created:
+
 1. Open the `Task Types` screen of the admin section and click on `Add Task Type`.
 2. Fill out the form to create the Task Type:
     - Note that the `Description` field supports Markdown formatting.
@@ -25,6 +26,7 @@ First, a *Task Type* needs to be created:
 ![Create a Task Type](./images/tasks_tasktype.png)
 
 Next, you need to set up a *Project*:
+
 1. Open the `Projects` screen of the admin section and click on `Add Project`.
 2. Fill out the form to create the *Project*.
     - Note that you can assign a `Priority` to the Project. A higher value means that Tasks from this Project will be more likely to be assigned to users.
@@ -33,6 +35,7 @@ Next, you need to set up a *Project*:
 ![Create a Project](./images/tasks_project.png)
 
 Now, you are ready to create *Tasks*:
+
 1. Open the `Tasks` screen of the admin section and click on `Add Task`.
 2. Fill out the form create the Task.
     - Enter the starting positions in the lower part of the form.
@@ -56,6 +59,7 @@ Once a user is done working on a task, they can mark the task as `Finished`.
 ![Requesting Tasks in the Dashboard](./images/dashboard_tasks.png)
 
 Finally, you can collect and review the completed data of all annotations within a project:
+
 1. Navigate to the `Project` page
 2. Select to *View* or *Download* all the combined annotations.
 

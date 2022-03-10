@@ -27,9 +27,6 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
-mockRequire("@tensorflow/tfjs", {});
-mockRequire("oxalis/workers/tensorflow.impl", {});
-mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
 const { saveTracingTypeAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");

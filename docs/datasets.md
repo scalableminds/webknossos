@@ -31,6 +31,7 @@ If your data is not in WKW, you can either:
 - [Convert](#converting-datasets) your data manually to WKW.
 
 In particular, the following file formats are supported for uploading (and conversion):
+
 - [WKW dataset](#WKW-Datasets)
 - [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (tif, jpg, png, dm3, dm4)
   - as an extension, multiple folders with image sequences are interpreted as [separate layers](#Multi-Layer-Image-File-Sequence)
@@ -47,6 +48,7 @@ On webKnossos.org you can work directly with
 - datasets provided by a BossDB server
 
 To import these datasets:
+
 1. From the *My dataset* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Neuroglancer Dataset* or *Add BossDB Dataset* tab
 3. Provide some metadata information:

@@ -87,7 +87,6 @@ const defaultState: OxalisState = {
     hoveredSegmentId: 0,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
-    isAutoBrushEnabled: false,
     gpuSetup: {
       smallestCommonBucketCapacity:
         Constants.GPU_FACTOR_MULTIPLIER * Constants.DEFAULT_GPU_MEMORY_FACTOR,

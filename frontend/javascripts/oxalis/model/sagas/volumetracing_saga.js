@@ -15,7 +15,6 @@ import {
   type Saga,
   _takeEvery,
   _takeLatest,
-  _takeLeading,
   call,
   fork,
   put,
@@ -103,9 +102,7 @@ import * as Utils from "libs/utils";
 import VolumeLayer, { getFast3DCoordinateHelper } from "oxalis/model/volumetracing/volumelayer";
 import createProgressCallback from "libs/progress_callback";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import inferSegmentInViewport, {
-  getHalfViewportExtents,
-} from "oxalis/model/sagas/automatic_brush_saga";
+import { getHalfViewportExtents } from "oxalis/model/sagas/saga_selectors";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
@@ -118,7 +115,6 @@ export function* watchVolumeTracingAsync(): Saga<void> {
     copySegmentationLayer,
     "Copying from neighbor slice",
   );
-  yield _takeLeading("INFER_SEGMENT_IN_VIEWPORT", inferSegmentInViewport);
   yield* fork(warnOfTooLowOpacity);
 }
 

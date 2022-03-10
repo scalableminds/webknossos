@@ -67,7 +67,7 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 - `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggeling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview. 
 Disabling the visibility, unloads/frees these resources from your GPU hardware and can make viewing larger datasets more performant. Also, depending on your GPU hardware, there is a physical upper limit for how many layers - typically 16 or more - can be displayed at any time (WebGL limitation). Toggle layers as needed to mitigate this.
 
-//TODO add imaeg of histogram
+![The Histogram overview](images/histogram.png)
 
 #### Color and Segmentation Layers
 In addition to the general layer properties mentioned above, `color` and `segmentation` layers come with a number of other settings:

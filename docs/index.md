@@ -38,7 +38,7 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 
 ![Managing Datasets](./images/dashboard_datasets.png)
 ![Working on Tasks](./images/dashboard_tasks.png)
-![Showcasing Datasets](./images/spotlight.png)
+![Showcasing Datasets](./images/dashboard_featured_publications.png)
 
 # Built for Science
 webKnossos is built for scientists with support by scientists. Our goal is to make image analysis and data exploration accessible and easy to use. 

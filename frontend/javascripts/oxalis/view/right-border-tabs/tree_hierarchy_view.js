@@ -462,6 +462,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             onClick={() => {
               this.props.onSetActiveTree(tree.treeId);
               this.props.onToggleHideInactiveTrees();
+              this.handleTreeDropdownMenuVisibility(tree.treeId, false);
             }}
             title="Hide/Show all other trees"
           >

@@ -92,7 +92,7 @@ case class VolumeTracingLayer(
 
   val mappings: Option[Set[String]] = None
 
-  val resolutions: List[Vec3Int] = if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int(1, 1, 1))
+  val resolutionsVec3Int: List[Vec3Int] = if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int(1, 1, 1))
 
   override def containsResolution(resolution: Vec3Int) =
     true // allow requesting buckets of all resolutions. database takes care of missing.

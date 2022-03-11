@@ -13,10 +13,17 @@ object FileSystemCredentials {
   implicit val jsonFormat: OFormat[FileSystemCredentials] = Json.format[FileSystemCredentials]
 }
 
-case class RemoteSourceDescriptor(uri: String, user: Option[String], password: Option[String]) {}
+/*case class RemoteSourceDescriptor(uri: String, user: Option[String], password: Option[String]) {}
 
 object RemoteSourceDescriptor {
   implicit val jsonFormat: OFormat[RemoteSourceDescriptor] = Json.format[RemoteSourceDescriptor]
+}*/
+
+case class ZarrResolution(resolution: Vec3Int, path: Option[String], credentials: Option[FileSystemCredentials]) {
+
+  lazy val isRemote = false
+  // TODO: check if path is remote
+  lazy val remotePath: Option[String] = path.map(p => new URI(p).getPath)
 }
 
 trait ZarrLayer extends DataLayer {
@@ -25,13 +32,11 @@ trait ZarrLayer extends DataLayer {
 
   lazy val bucketProvider = new ZarrBucketProvider(this)
 
-  def resolutions: List[Vec3Int] = List(Vec3Int(1, 1, 1))
+  def resolutionsVec3Int: List[Vec3Int] = List(Vec3Int(1, 1, 1))
+
+  def resolutions: List[ZarrResolution]
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = 1024
-
-  val remoteSource: Option[RemoteSourceDescriptor]
-
-  lazy val remotePath: Option[String] = remoteSource.map(r => new URI(r.uri).getPath)
 
 }
 
@@ -40,7 +45,7 @@ case class ZarrDataLayer(
     category: Category.Value,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
-    remoteSource: Option[RemoteSourceDescriptor],
+    resolutions: List[ZarrResolution],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends ZarrLayer
@@ -53,9 +58,9 @@ case class ZarrSegmentationLayer(
     name: String,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
+    resolutions: List[ZarrResolution],
     largestSegmentId: Long,
     mappings: Option[Set[String]],
-    remoteSource: Option[RemoteSourceDescriptor],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends SegmentationLayer

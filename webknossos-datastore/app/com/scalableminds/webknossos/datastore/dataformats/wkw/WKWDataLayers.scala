@@ -26,7 +26,7 @@ trait WKWLayer extends DataLayer {
 
   def wkwResolutions: List[WKWResolution]
 
-  def resolutions: List[Vec3Int] = wkwResolutions.map(_.toVec3Int)
+  def resolutionsVec3Int: List[Vec3Int] = wkwResolutions.map(_.toVec3Int)
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int =
     wkwResolutions.find(_.toVec3Int == resolution).map(_.cubeLength).getOrElse(0)

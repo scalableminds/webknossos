@@ -34,7 +34,7 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
 
   lazy val boundingBox: BoundingBox = primary.boundingBox
 
-  val resolutions: List[Vec3Int] = primary.resolutions.union(fallback.resolutions)
+  val resolutionsVec3Int: List[Vec3Int] = primary.resolutionsVec3Int.union(fallback.resolutionsVec3Int)
 
   val elementClass: ElementClass.Value = primary.elementClass
 

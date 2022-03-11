@@ -25,8 +25,9 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
 
 class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] =
-    layer.remoteSource.map { remoteSource =>
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
+    val resolution: Option[ZarrResolution] = layer.resolutions.find(_.resolution == readInstruction.bucket.resolution)
+    resolution.map { resolution =>
       val layerPathOpt = FileSystemHolder.getOrCreate(remoteSource).map { fs: FileSystem =>
         fs.getPath(layer.remotePath.getOrElse(""))
       }
@@ -46,5 +47,6 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
         Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
       } else Empty
     }
+  }
 
 }

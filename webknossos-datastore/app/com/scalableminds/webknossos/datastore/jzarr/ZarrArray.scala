@@ -29,8 +29,7 @@ object ZarrArray {
     open(new ZarrPath(""), store)
 
   @throws[IOException]
-  def open(relativePath: ZarrPath, store: Store)
-  : ZarrArray = {
+  def open(relativePath: ZarrPath, store: Store): ZarrArray = {
     val zarrHeaderPath = relativePath.resolve(FILENAME_DOT_ZARRAY)
     val storageStream = store.getInputStream(zarrHeaderPath.storeKey)
     try {
@@ -76,7 +75,8 @@ class ZarrArray private (relativePath: ZarrPath,
   }
 
   // cache currently limited to 100 MB per array
-  val _chunkContentsCache: ChunkContentsCache = new ChunkContentsCache(maxSizeBytes = 1000 * 1000 * 100, bytesPerEntry = bytesPerChunk)
+  val _chunkContentsCache: ChunkContentsCache =
+    new ChunkContentsCache(maxSizeBytes = 1000 * 1000 * 100, bytesPerEntry = bytesPerChunk)
 
   if (_separator == null) throw new IllegalArgumentException("separator must not be null")
 
@@ -128,9 +128,8 @@ class ZarrArray private (relativePath: ZarrPath,
     _chunkContentsCache.getOrLoad(storeKey)(getSourceChunkData)
   }
 
-  private def getSourceChunkData(chunkStoreKey: String): Ma2Array = {
+  private def getSourceChunkData(chunkStoreKey: String): Ma2Array =
     _chunkReaderWriter.read(chunkStoreKey)
-  }
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =
     chunkIndex.mkString(_separator.getSeparatorChar)

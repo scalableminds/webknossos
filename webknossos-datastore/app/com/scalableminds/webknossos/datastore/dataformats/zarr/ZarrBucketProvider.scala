@@ -26,11 +26,12 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
 class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging {
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
-    val resolution: Option[ZarrResolution] = layer.zarrResolutions.find(_.resolution == readInstruction.bucket.resolution)
+    val resolution: Option[ZarrResolution] =
+      layer.zarrResolutions.find(_.resolution == readInstruction.bucket.resolution)
     resolution.map { resolution =>
       resolution.remoteSource match {
         case Some(remoteSource) => loadRemote(remoteSource)
-        case None => loadLocal(readInstruction, resolution.pathWithFallback)
+        case None               => loadLocal(readInstruction, resolution.pathWithFallback)
       }
     }.getOrElse(Empty)
   }

@@ -184,13 +184,13 @@ object SegmentationLayer {
 }
 
 case class AbstractDataLayer(
-                              name: String,
-                              category: Category.Value,
-                              boundingBox: BoundingBox,
-                              resolutions: List[Vec3Int],
-                              elementClass: ElementClass.Value,
-                              defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                              adminViewConfiguration: Option[LayerViewConfiguration] = None
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    resolutions: List[Vec3Int],
+    elementClass: ElementClass.Value,
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -210,15 +210,15 @@ object AbstractDataLayer {
 }
 
 case class AbstractSegmentationLayer(
-                                      name: String,
-                                      category: Category.Value,
-                                      boundingBox: BoundingBox,
-                                      resolutions: List[Vec3Int],
-                                      elementClass: ElementClass.Value,
-                                      largestSegmentId: Long,
-                                      mappings: Option[Set[String]],
-                                      defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                                      adminViewConfiguration: Option[LayerViewConfiguration] = None
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    resolutions: List[Vec3Int],
+    elementClass: ElementClass.Value,
+    largestSegmentId: Long,
+    mappings: Option[Set[String]],
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {

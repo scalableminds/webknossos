@@ -14,7 +14,7 @@ object FileSystemCredentials {
   implicit val jsonFormat: OFormat[FileSystemCredentials] = Json.format[FileSystemCredentials]
 }
 
-case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Option[String])  {
+case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Option[String]) {
   lazy val remotePath: String = uri.getPath
 }
 
@@ -50,13 +50,13 @@ trait ZarrLayer extends DataLayer {
 }
 
 case class ZarrDataLayer(
-                          name: String,
-                          category: Category.Value,
-                          boundingBox: BoundingBox,
-                          elementClass: ElementClass.Value,
-                          zarrResolutions: List[ZarrResolution],
-                          defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                          adminViewConfiguration: Option[LayerViewConfiguration] = None
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    zarrResolutions: List[ZarrResolution],
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends ZarrLayer
 
 object ZarrDataLayer {
@@ -64,14 +64,14 @@ object ZarrDataLayer {
 }
 
 case class ZarrSegmentationLayer(
-                                  name: String,
-                                  boundingBox: BoundingBox,
-                                  elementClass: ElementClass.Value,
-                                  zarrResolutions: List[ZarrResolution],
-                                  largestSegmentId: Long,
-                                  mappings: Option[Set[String]],
-                                  defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                                  adminViewConfiguration: Option[LayerViewConfiguration] = None
+    name: String,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    zarrResolutions: List[ZarrResolution],
+    largestSegmentId: Long,
+    mappings: Option[Set[String]],
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends SegmentationLayer
     with ZarrLayer
 

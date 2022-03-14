@@ -13,7 +13,7 @@ import scala.util.Using
 object ChunkReader {
   def create(store: Store, header: ZarrHeader): ChunkReader =
     header.dataType match {
-      case ZarrDataType.i1                   => new ByteChunkReader(store, header)
+      case ZarrDataType.i1 | ZarrDataType.u1 => new ByteChunkReader(store, header)
       case ZarrDataType.i2 | ZarrDataType.u2 => new ShortChunkReader(store, header)
       case ZarrDataType.i4 | ZarrDataType.u4 => new IntChunkReader(store, header)
       case ZarrDataType.i8                   => new LongChunkReader(store, header)

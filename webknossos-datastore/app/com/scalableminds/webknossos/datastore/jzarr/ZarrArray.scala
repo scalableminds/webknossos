@@ -11,11 +11,12 @@ import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
 import com.scalableminds.webknossos.datastore.jzarr.chunk.ChunkReader
 import com.scalableminds.webknossos.datastore.jzarr.storage.{FileSystemStore, Store}
 import com.scalableminds.webknossos.datastore.jzarr.ucarutils.{BytesConverter, NetCDF_Util, PartialDataCopier}
+import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{InvalidRangeException, Array => Ma2Array}
 
 import scala.io.Source
 
-object ZarrArray {
+object ZarrArray extends LazyLogging {
   @throws[IOException]
   def open(path: String): ZarrArray =
     open(Paths.get(path))
@@ -37,6 +38,7 @@ object ZarrArray {
         throw new IOException(
           "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
       val headerString = Source.fromInputStream(headerInputStream).mkString
+      logger.info(headerString)
       val header: ZarrHeader = JsonHelper
         .parseJsonToBox[ZarrHeader](headerString)
         .openOrThrowException("Error handling in jzarr currently done via exceptions")
@@ -97,7 +99,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
   private def createDataBuffer(dataType: ZarrDataType, shape: Array[Int]): Object = {
     val size = shape.product
     dataType match {
-      case ZarrDataType.i1                   => new Array[Byte](size)
+      case ZarrDataType.i1 | ZarrDataType.u1 => new Array[Byte](size)
       case ZarrDataType.i2 | ZarrDataType.u2 => new Array[Short](size)
       case ZarrDataType.i4 | ZarrDataType.u4 => new Array[Int](size)
       case ZarrDataType.i8                   => new Array[Long](size)
@@ -117,7 +119,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
     chunkReaderWriter.read(chunkStoreKey)
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =
-    chunkIndex.mkString(header.dimension_separator.getOrElse(DimensionSeparator.DOT).toString)
+    chunkIndex.mkString(header.dimension_separator.toString)
 
   private def partialCopyingIsNotNeeded(bufferShape: Array[Int], offset: Array[Int]): Boolean =
     isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape)
@@ -130,7 +132,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
 
   override def toString: String =
     s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' shape=${header.shape.mkString(",")} chunks=${header.chunks
-      .mkString(",")} dtype=${header.dtype} fillValue=${header.fill_value}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
+      .mkString(",")} dtype=${header.dtype} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
 
   private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.zipWithIndex.map {

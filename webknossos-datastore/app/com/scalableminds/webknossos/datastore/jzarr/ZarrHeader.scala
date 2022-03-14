@@ -14,10 +14,10 @@ case class ZarrHeader(
     zarr_format: Int,
     shape: Array[Int], // shape of the entire array
     chunks: Array[Int], // shape of each chunk
-    compressor: Option[JsObject] = None, // Option[Map[String, Either[Int, String]]],
-    dimension_separator: Option[DimensionSeparator],
+    compressor: Option[Map[String, Either[String, Number]]] = None,
+    dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
     dtype: String,
-    fill_value: String,
+    fill_value: Either[String, Number] = Right(0),
     order: String = "C",
 ) {
   lazy val byteOrder: ByteOrder =
@@ -28,7 +28,7 @@ case class ZarrHeader(
 
   lazy val compressorImpl: Compressor =
     compressor
-      .map(c => CompressorFactory.create(c.asInstanceOf[Map[String, Object]].asJava))
+      .map(c => CompressorFactory.create(mapCompressorParameters(c).asJava))
       .getOrElse(CompressorFactory.nullCompressor)
 
   lazy val dataType: ZarrDataType =
@@ -36,19 +36,25 @@ case class ZarrHeader(
 
   lazy val bytesPerChunk: Int = chunks.toList.product * bytesPerElementFor(dataType)
 
+  def mapCompressorParameters(compresor: Map[String, Either[String, Number]]): Map[String, Object] =
+    compresor.mapValues {
+      case Left(s)  => s.asInstanceOf[Object]
+      case Right(n) => n.asInstanceOf[Object]
+    }
+
   lazy val fillValueNumber: Number = {
-    // TODO: use fill value from string in .zarray
-    dataType match {
-      case ZarrDataType.f4 | ZarrDataType.f8 => 0.0
-      case _                                 => 0
+    fill_value match {
+      case Right(n) => n
+      case Left(_)  => 0 // TODO: parse fill value from string
     }
   }
+
 }
 
 object ZarrHeader {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
-  implicit object numberFormat extends Format[Number] {
+  implicit object NumberFormat extends Format[Number] {
 
     override def reads(json: JsValue): JsResult[Number] =
       json
@@ -64,5 +70,17 @@ object ZarrHeader {
         .getOrElse(JsNumber(number.doubleValue()))
   }
 
-  implicit val jsonFormat: OFormat[ZarrHeader] = Json.format[ZarrHeader]
+  implicit object StringOrNumberFormat extends Format[Either[String, Number]] {
+
+    override def reads(json: JsValue): JsResult[Either[String, Number]] =
+      json.validate[String].map(Left(_)).orElse(json.validate[Number].map(Right(_)))
+
+    override def writes(stringOrNumber: Either[String, Number]): JsValue =
+      stringOrNumber match {
+        case Left(s)  => Json.toJson(s)
+        case Right(n) => Json.toJson(n)
+      }
+  }
+
+  implicit val jsonFormat: OFormat[ZarrHeader] = Json.using[Json.WithDefaultValues].format[ZarrHeader]
 }

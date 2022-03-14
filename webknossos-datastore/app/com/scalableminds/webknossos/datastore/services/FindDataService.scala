@@ -128,7 +128,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
             }).flatten
       }
 
-    resolutionIter(createPositions(dataLayer).distinct, dataLayer.resolutionsVec3Int.sortBy(_.maxDim))
+    resolutionIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
   }
 
   def findPositionWithData(dataSource: DataSource, dataLayer: DataLayer): Fox[Option[(Vec3Int, Vec3Int)]] =
@@ -155,9 +155,9 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       } yield (Math.mean(dataAsDoubles), Math.stdDev(dataAsDoubles))
 
     for {
-      _ <- bool2Fox(dataLayer.resolutionsVec3Int.nonEmpty) ?~> "dataSet.noResolutions"
+      _ <- bool2Fox(dataLayer.resolutions.nonEmpty) ?~> "dataSet.noResolutions"
       meanAndStdDev <- meanAndStdDevForPositions(createPositions(dataLayer, 2).distinct,
-                                                 dataLayer.resolutionsVec3Int.minBy(_.maxDim))
+                                                 dataLayer.resolutions.minBy(_.maxDim))
     } yield meanAndStdDev
   }
 
@@ -211,8 +211,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = !isUint24)
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
 
-    if (dataLayer.resolutionsVec3Int.nonEmpty)
-      histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutionsVec3Int.minBy(_.maxDim))
+    if (dataLayer.resolutions.nonEmpty)
+      histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))
     else
       Fox.empty ?~> "dataSet.noResolutions"
   }

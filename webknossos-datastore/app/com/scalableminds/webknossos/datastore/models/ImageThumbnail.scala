@@ -12,7 +12,7 @@ object ImageThumbnail {
   def bestResolutionExponent(dataLayer: DataLayerLike, zoom: Option[Double]): Int =
     // We're either using the supplied zoom value (higher = zoomed out) or we're using the best resolution
     zoom match {
-      case Some(z) => math.max(0, math.min(math.floor(math.log(z) / math.log(2)).toInt, dataLayer.resolutionsVec3Int.size - 1))
+      case Some(z) => math.max(0, math.min(math.floor(math.log(z) / math.log(2)).toInt, dataLayer.resolutions.size - 1))
       case None    => 0
     }
 

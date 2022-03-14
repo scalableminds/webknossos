@@ -121,9 +121,9 @@ class DataSourceService @Inject()(
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
 
     // Check, that each dimension increases monotonically between different resolutions.
-    val resolutionsByX = dataSource.dataLayers.map(_.resolutionsVec3Int.sortBy(_.x))
-    val resolutionsByY = dataSource.dataLayers.map(_.resolutionsVec3Int.sortBy(_.y))
-    val resolutionsByZ = dataSource.dataLayers.map(_.resolutionsVec3Int.sortBy(_.z))
+    val resolutionsByX = dataSource.dataLayers.map(_.resolutions.sortBy(_.x))
+    val resolutionsByY = dataSource.dataLayers.map(_.resolutions.sortBy(_.y))
+    val resolutionsByZ = dataSource.dataLayers.map(_.resolutions.sortBy(_.z))
 
     val errors = List(
       Check(dataSource.scale.isStrictlyPositive, "DataSource scale is invalid"),

@@ -357,7 +357,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Executi
     val insertQueries = dataLayersOpt match {
       case Some(dataLayers: List[DataLayer]) =>
         dataLayers.flatMap { layer =>
-          layer.resolutionsVec3Int.map { resolution =>
+          layer.resolutions.map { resolution =>
             {
               sqlu"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
                        values(${_dataSet.id}, ${layer.name}, '#${writeStructTuple(resolution.toList.map(_.toString))}')"""

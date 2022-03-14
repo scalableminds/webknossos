@@ -5,25 +5,34 @@ import java.net.URI
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.storage.FileSystemHolder
 import play.api.libs.json.{Json, OFormat}
 
-case class FileSystemCredentials(user: String, password: String)
+case class FileSystemCredentials(user: String, password: Option[String])
 
 object FileSystemCredentials {
   implicit val jsonFormat: OFormat[FileSystemCredentials] = Json.format[FileSystemCredentials]
 }
 
-/*case class RemoteSourceDescriptor(uri: String, user: Option[String], password: Option[String]) {}
-
-object RemoteSourceDescriptor {
-  implicit val jsonFormat: OFormat[RemoteSourceDescriptor] = Json.format[RemoteSourceDescriptor]
-}*/
+case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Option[String])  {
+  lazy val remotePath: String = uri.getPath
+}
 
 case class ZarrResolution(resolution: Vec3Int, path: Option[String], credentials: Option[FileSystemCredentials]) {
 
-  lazy val isRemote = false
-  // TODO: check if path is remote
-  lazy val remotePath: Option[String] = path.map(p => new URI(p).getPath)
+  lazy val pathWithFallback: String = path.getOrElse(s"${resolution.x}-${resolution.y}-${resolution.z}")
+  private lazy val uri: URI = new URI(pathWithFallback)
+  private lazy val isRemote: Boolean = FileSystemHolder.isSupportedRemoteScheme(uri.getScheme)
+  lazy val remoteSource: Option[RemoteSourceDescriptor] =
+    if (isRemote)
+      Some(RemoteSourceDescriptor(uri, credentials.map(_.user), credentials.flatMap(_.password)))
+    else
+      None
+
+}
+
+object ZarrResolution {
+  implicit val jsonFormat: OFormat[ZarrResolution] = Json.format[ZarrResolution]
 }
 
 trait ZarrLayer extends DataLayer {
@@ -32,22 +41,22 @@ trait ZarrLayer extends DataLayer {
 
   lazy val bucketProvider = new ZarrBucketProvider(this)
 
-  def resolutionsVec3Int: List[Vec3Int] = List(Vec3Int(1, 1, 1))
+  def resolutions: List[Vec3Int] = List(Vec3Int(1, 1, 1))
 
-  def resolutions: List[ZarrResolution]
+  def zarrResolutions: List[ZarrResolution]
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = 1024
 
 }
 
 case class ZarrDataLayer(
-    name: String,
-    category: Category.Value,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    resolutions: List[ZarrResolution],
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+                          name: String,
+                          category: Category.Value,
+                          boundingBox: BoundingBox,
+                          elementClass: ElementClass.Value,
+                          zarrResolutions: List[ZarrResolution],
+                          defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                          adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends ZarrLayer
 
 object ZarrDataLayer {
@@ -55,14 +64,14 @@ object ZarrDataLayer {
 }
 
 case class ZarrSegmentationLayer(
-    name: String,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    resolutions: List[ZarrResolution],
-    largestSegmentId: Long,
-    mappings: Option[Set[String]],
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+                                  name: String,
+                                  boundingBox: BoundingBox,
+                                  elementClass: ElementClass.Value,
+                                  zarrResolutions: List[ZarrResolution],
+                                  largestSegmentId: Long,
+                                  mappings: Option[Set[String]],
+                                  defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                                  adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends SegmentationLayer
     with ZarrLayer
 

@@ -17,6 +17,9 @@ object FileSystemHolder extends LazyLogging {
   private val schemeS3 = "s3"
   private val schemeHttps = "https"
 
+  def isSupportedRemoteScheme(uriScheme: String): Boolean =
+    List(schemeS3, schemeHttps).contains(uriScheme)
+
   // TODO use real cache
   val fileSystemsCache: mutable.Map[RemoteSourceDescriptor, FileSystem] =
     mutable.HashMap[RemoteSourceDescriptor, FileSystem]()
@@ -42,7 +45,7 @@ object FileSystemHolder extends LazyLogging {
     }
 
   private def getOrCreateWithoutCache(remoteSource: RemoteSourceDescriptor): Option[FileSystem] = {
-    val uriWithPath = URI.create(remoteSource.uri)
+    val uriWithPath = remoteSource.uri
     val uri = baseUri(uriWithPath)
     val uriWithUser = insertUserName(uri, remoteSource)
 

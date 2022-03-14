@@ -355,7 +355,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       isEditable <- isEditableBy(dataSet, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
-      dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions) ?~> "dataset.list.fetchDataSourceFailed"
+      dataSource: InboxDataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions) ?~> "dataset.list.fetchDataSourceFailed"
       publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_)) ?~> "dataset.list.fetchPublicationFailed"
       publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites) ?~> "dataset.list.publicationWritesFailed"
       worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox

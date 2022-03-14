@@ -75,12 +75,12 @@ trait DataLayerLike {
 
   def boundingBox: BoundingBox
 
-  def resolutionsVec3Int: List[Vec3Int]
+  def resolutions: List[Vec3Int]
 
   def lookUpResolution(resolutionExponent: Int, snapToClosest: Boolean = false): Vec3Int = {
     val resPower = Math.pow(2, resolutionExponent).toInt
-    val matchOpt = resolutionsVec3Int.find(resolution => resolution.maxDim == resPower)
-    if (snapToClosest) matchOpt.getOrElse(resolutionsVec3Int.minBy(resolution => math.abs(resPower - resolution.maxDim)))
+    val matchOpt = resolutions.find(resolution => resolution.maxDim == resPower)
+    if (snapToClosest) matchOpt.getOrElse(resolutions.minBy(resolution => math.abs(resPower - resolution.maxDim)))
     else matchOpt.getOrElse(Vec3Int(resPower, resPower, resPower))
   }
 
@@ -129,7 +129,7 @@ trait DataLayer extends DataLayerLike {
 
   def bucketProvider: BucketProvider
 
-  def containsResolution(resolution: Vec3Int): Boolean = resolutionsVec3Int.contains(resolution)
+  def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 
   def doesContainBucket(bucket: BucketPosition): Boolean =
     boundingBox.intersects(bucket.toHighestResBoundingBox)
@@ -187,7 +187,7 @@ case class AbstractDataLayer(
                               name: String,
                               category: Category.Value,
                               boundingBox: BoundingBox,
-                              resolutionsVec3Int: List[Vec3Int],
+                              resolutions: List[Vec3Int],
                               elementClass: ElementClass.Value,
                               defaultViewConfiguration: Option[LayerViewConfiguration] = None,
                               adminViewConfiguration: Option[LayerViewConfiguration] = None
@@ -200,7 +200,7 @@ object AbstractDataLayer {
       layer.name,
       layer.category,
       layer.boundingBox,
-      layer.resolutionsVec3Int,
+      layer.resolutions,
       layer.elementClass,
       layer.defaultViewConfiguration,
       layer.adminViewConfiguration
@@ -213,7 +213,7 @@ case class AbstractSegmentationLayer(
                                       name: String,
                                       category: Category.Value,
                                       boundingBox: BoundingBox,
-                                      resolutionsVec3Int: List[Vec3Int],
+                                      resolutions: List[Vec3Int],
                                       elementClass: ElementClass.Value,
                                       largestSegmentId: Long,
                                       mappings: Option[Set[String]],
@@ -228,7 +228,7 @@ object AbstractSegmentationLayer {
       layer.name,
       layer.category,
       layer.boundingBox,
-      layer.resolutionsVec3Int,
+      layer.resolutions,
       layer.elementClass,
       layer.largestSegmentId,
       layer.mappings,

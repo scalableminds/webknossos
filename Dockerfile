@@ -1,7 +1,6 @@
 FROM openjdk:8-jdk
 RUN apt-get update \
-  && apt-get -y install postgresql-client \
-  && apt-get -y install libblosc \
+  && apt-get -y install libblosc1 postgresql-client \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos

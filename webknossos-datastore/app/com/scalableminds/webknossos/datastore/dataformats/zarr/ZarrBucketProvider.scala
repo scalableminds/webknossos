@@ -43,7 +43,6 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
     layerPathOpt match {
       case None => Empty
       case Some(layerPath) =>
-        logger.info(s"opening: $layerPath")
         Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
     }
   }
@@ -54,7 +53,6 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
       .resolve(readInstruction.dataSource.id.name)
       .resolve(readInstruction.dataLayer.name)
       .resolve(resolutionPath)
-    logger.info(s"Opening local: ${layerPath}")
     if (layerPath.toFile.exists()) {
       Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
     } else Empty

@@ -25,20 +25,10 @@
  */
 package com.scalableminds.webknossos.datastore.jzarr.ucarutils;
 
-import com.scalableminds.webknossos.datastore.jzarr.DataType;
 import ucar.ma2.Array;
 import ucar.ma2.IndexIterator;
 
 public class NetCDF_Util {
-
-    public static int[] netCDFOrder(int[] ints) {
-        final int length = ints.length;
-        final int[] netCDF = new int[length];
-        for (int i = 0; i < length; i++) {
-            netCDF[i] = ints[length - 1 - i];
-        }
-        return netCDF;
-    }
 
     public static Array createArrayWithGivenStorage(Object storage, int[] shape) {
         final Class<?> aClass = storage.getClass();
@@ -81,20 +71,5 @@ public class NetCDF_Util {
             }
         }
         return array;
-    }
-
-    public static ucar.ma2.DataType getDataType(DataType dataType) {
-        if (dataType == DataType.f8) {
-            return ucar.ma2.DataType.DOUBLE;
-        } else if (dataType == DataType.f4) {
-            return ucar.ma2.DataType.FLOAT;
-        } else if (dataType == DataType.i8 ) {
-            return ucar.ma2.DataType.LONG;
-        } else if (dataType == DataType.i4 || dataType == DataType.u4) {
-            return ucar.ma2.DataType.INT;
-        } else if (dataType == DataType.i2 || dataType == DataType.u2) {
-            return ucar.ma2.DataType.SHORT;
-        }
-        return ucar.ma2.DataType.BYTE;
     }
 }

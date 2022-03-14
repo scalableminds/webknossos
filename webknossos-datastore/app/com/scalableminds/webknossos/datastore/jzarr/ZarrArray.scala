@@ -5,11 +5,13 @@ import java.nio.ByteOrder
 import java.nio.file.{Path, Paths}
 import java.util
 
+import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.jzarr.CompressorFactory.nullCompressor
 import com.scalableminds.webknossos.datastore.jzarr.ZarrConstants.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.jzarr.chunk.ChunkReader
 import com.scalableminds.webknossos.datastore.jzarr.storage.{FileSystemStore, Store}
+import com.scalableminds.webknossos.datastore.jzarr.ucarutils.BytesConverter.bytesPerElementFor
 import com.scalableminds.webknossos.datastore.jzarr.ucarutils.{BytesConverter, NetCDF_Util, PartialDataCopier}
 import ucar.ma2.{InvalidRangeException, Array => Ma2Array}
 
@@ -27,7 +29,8 @@ object ZarrArray {
     open(new ZarrPath(""), store)
 
   @throws[IOException]
-  def open(relativePath: ZarrPath, store: Store): ZarrArray = {
+  def open(relativePath: ZarrPath, store: Store)
+  : ZarrArray = {
     val zarrHeaderPath = relativePath.resolve(FILENAME_DOT_ZARRAY)
     val storageStream = store.getInputStream(zarrHeaderPath.storeKey)
     try {
@@ -51,6 +54,10 @@ object ZarrArray {
   }
 }
 
+class ChunkContentsCache(maxSizeBytes: Int, bytesPerEntry: Int) extends LRUConcurrentCache[String, Ma2Array] {
+  def maxEntries: Int = maxSizeBytes / bytesPerEntry
+}
+
 class ZarrArray private (relativePath: ZarrPath,
                          _shape: Array[Int],
                          _chunkShape: Array[Int],
@@ -63,7 +70,14 @@ class ZarrArray private (relativePath: ZarrPath,
 
   final private val _chunkReaderWriter =
     ChunkReader.create(_compressor, _dataType, _byteOrder, _chunkShape, _fillValue, _store)
-  final private val _chunkContentsCache = new util.HashMap[String, Ma2Array]
+
+  lazy val bytesPerChunk: Int = {
+    _chunkShape.toList.product * bytesPerElementFor(_dataType)
+  }
+
+  // cache currently limited to 100 MB per array
+  val _chunkContentsCache: ChunkContentsCache = new ChunkContentsCache(maxSizeBytes = 1000 * 1000 * 100, bytesPerEntry = bytesPerChunk)
+
   if (_separator == null) throw new IllegalArgumentException("separator must not be null")
 
   def getCompressor: Compressor = _compressor
@@ -95,7 +109,7 @@ class ZarrArray private (relativePath: ZarrPath,
     val buffer = ZarrUtils.createDataBuffer(getDataType, shape)
     val chunkIndices = ZarrUtils.computeChunkIndices(_shape, _chunkShape, shape, offset)
     for (chunkIndex <- chunkIndices) {
-      val sourceChunk: Ma2Array = getSourceChunkData(chunkIndex)
+      val sourceChunk: Ma2Array = getSourceChunkDataWithCache(chunkIndex)
       val offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
       if (partialCopyingIsNotNeeded(shape, offsetInChunk))
         System.arraycopy(sourceChunk.getStorage, 0, buffer, 0, sourceChunk.getSize.toInt)
@@ -107,15 +121,15 @@ class ZarrArray private (relativePath: ZarrPath,
     buffer
   }
 
-  private def getSourceChunkData(chunkIndex: Array[Int]): Ma2Array = {
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Ma2Array = {
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
-    if (_chunkContentsCache.containsKey(chunkFilename)) {
-      return _chunkContentsCache.get(chunkFilename)
-    }
-    val data = _chunkReaderWriter.read(chunkFilePath.storeKey)
-    _chunkContentsCache.put(chunkFilename, data)
-    data
+    val storeKey = chunkFilePath.storeKey
+    _chunkContentsCache.getOrLoad(storeKey)(getSourceChunkData)
+  }
+
+  private def getSourceChunkData(chunkStoreKey: String): Ma2Array = {
+    _chunkReaderWriter.read(chunkStoreKey)
   }
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =

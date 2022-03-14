@@ -45,7 +45,7 @@ trait ZarrLayer extends DataLayer {
 
   def zarrResolutions: List[ZarrResolution]
 
-  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = 1024
+  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
 }
 

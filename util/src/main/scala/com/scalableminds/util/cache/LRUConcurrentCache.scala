@@ -29,6 +29,16 @@ trait LRUConcurrentCache[K, V] {
       Option(cache.get(key))
     }
 
+  def getOrLoad(key: K)(loadFunction: K => V): V = {
+    cache.synchronized {
+      get(key).getOrElse {
+        val value = loadFunction(key)
+        put(key, value)
+        value
+      }
+    }
+  }
+
   def remove(key: K): Unit =
     cache.synchronized {
       val previous = cache.remove(key)

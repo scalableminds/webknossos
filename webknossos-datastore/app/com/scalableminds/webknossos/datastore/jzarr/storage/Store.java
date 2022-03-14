@@ -44,10 +44,6 @@ public interface Store extends Closeable {
 
     InputStream getInputStream(String key) throws IOException;
 
-    OutputStream getOutputStream(String key) throws IOException;
-
-    void delete(String key) throws IOException;
-
     TreeSet<String> getArrayKeys() throws IOException;
 
     TreeSet<String> getGroupKeys() throws IOException;

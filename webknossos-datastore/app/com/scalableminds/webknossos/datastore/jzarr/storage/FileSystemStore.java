@@ -61,50 +61,8 @@ public class FileSystemStore implements Store {
     @Override
     public InputStream getInputStream(String key) throws IOException {
         final Path path = internalRoot.resolve(key);
-        //if (Files.isReadable(path)) {
-            byte[] bytes = Files.readAllBytes(path);
-            return new ByteArrayInputStream(bytes);
-        //}
-        //return null;
-    }
-
-    @Override
-    public OutputStream getOutputStream(String key) {
-        return new ByteArrayOutputStream() {
-            private boolean closed = false;
-
-            @Override
-            public void close() throws IOException {
-                try {
-                    if (!closed) {
-                        final byte[] bytes = this.toByteArray();
-                        final Path filePath = internalRoot.resolve(key);
-                        if (Files.exists(filePath)) {
-                            Files.delete(filePath);
-                        } else {
-                            Files.createDirectories(filePath.getParent());
-                        }
-                        Files.write(filePath, bytes);
-                    }
-                } finally {
-                    closed = true;
-                }
-            }
-        };
-    }
-
-    @Override
-    public void delete(String key) throws IOException {
-        final Path toBeDeleted = internalRoot.resolve(key);
-        if (Files.isDirectory(toBeDeleted)) {
-            ZarrUtils.deleteDirectoryTreeRecursively(toBeDeleted);
-        }
-        if (Files.exists(toBeDeleted)) {
-            Files.delete(toBeDeleted);
-        }
-        if (Files.exists(toBeDeleted) || Files.isDirectory(toBeDeleted)) {
-            throw new IOException("Unable to initialize " + toBeDeleted.toAbsolutePath().toString());
-        }
+        byte[] bytes = Files.readAllBytes(path);
+        return new ByteArrayInputStream(bytes);
     }
 
     @Override

@@ -161,18 +161,6 @@ public final class ZarrUtils {
         }
     }
 
-    public static void writeAttributes(Map<String, Object> attributes, ZarrPath zarrPath, Store store) throws IOException {
-        if (attributes != null && !attributes.isEmpty()) {
-            final ZarrPath attrPath = zarrPath.resolve(FILENAME_DOT_ZATTRS);
-            try (
-                    final OutputStream os = store.getOutputStream(attrPath.storeKey);
-                    final OutputStreamWriter writer = new OutputStreamWriter(os)
-            ) {
-                toJson(attributes, writer, true);
-            }
-        }
-    }
-
     public static Map<String, Object> readAttributes(ZarrPath zarrPath, Store store) throws IOException {
         final ZarrPath attrPath = zarrPath.resolve(FILENAME_DOT_ZATTRS);
         try (InputStream inputStream = store.getInputStream(attrPath.storeKey)) {
@@ -251,40 +239,4 @@ public final class ZarrUtils {
         return path;
     }
 
-    public static void consolidateMetadata(Store store) throws IOException {
-        final LinkedHashMap<String, Object> zdata = new LinkedHashMap<>();
-        final TreeSet<String> keys = new TreeSet<>();
-        keys.addAll(store.getGroupKeys());
-        keys.addAll(store.getArrayKeys());
-
-        for (String key : keys) {
-            if (key == null) continue;
-            key = key.trim();
-            if (!key.equals("")) {
-                key += "/";
-            }
-            final String keyZarray = key + ".zarray";
-            final InputStream zarray = store.getInputStream(keyZarray);
-            if (zarray != null) {
-                zdata.put(keyZarray, fromJson(new InputStreamReader(zarray), HashMap.class));
-            }
-            final String keyZattrs = key + ".zattrs";
-            final InputStream zattrs = store.getInputStream(keyZattrs);
-            if (zattrs != null) {
-                zdata.put(keyZattrs, fromJson(new InputStreamReader(zattrs), HashMap.class));
-            }
-            final String keyZgroup = key + ".zgroup";
-            final InputStream zgroup = store.getInputStream(keyZgroup);
-            if (zgroup != null) {
-                zdata.put(keyZgroup, fromJson(new InputStreamReader(zgroup), HashMap.class));
-            }
-        }
-
-        final LinkedHashMap<String, Object> metadata = new LinkedHashMap<>();
-        metadata.put("metadata", zdata);
-        metadata.put("zarr_consolidated_format", 1);
-        try (final OutputStream metaStream = store.getOutputStream(".zmetadata")) {
-            toJson(metadata, new OutputStreamWriter(metaStream), true);
-        }
-    }
 }

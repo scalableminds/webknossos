@@ -144,7 +144,6 @@ public final class ZarrUtils {
     static synchronized ObjectMapper getObjectMapper() {
         if (objectMapper == null) {
             objectMapper = new ObjectMapper();
-            ZarrHeader.register(objectMapper);
         }
         return objectMapper;
     }
@@ -158,16 +157,6 @@ public final class ZarrUtils {
     public static void ensureDirectory(Path groupPath) throws IOException {
         if (groupPath == null || !Files.isDirectory(groupPath)) {
             throw new IOException("Path '" + groupPath + "' is not a valid path or not a directory.");
-        }
-    }
-
-    public static Map<String, Object> readAttributes(ZarrPath zarrPath, Store store) throws IOException {
-        final ZarrPath attrPath = zarrPath.resolve(FILENAME_DOT_ZATTRS);
-        try (InputStream inputStream = store.getInputStream(attrPath.storeKey)) {
-            if (inputStream == null) {
-                return new HashMap<>();
-            }
-            return fromJson(new InputStreamReader(inputStream), Map.class);
         }
     }
 

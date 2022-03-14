@@ -134,6 +134,7 @@ The information is JSON-encoded in the URL fragment and has the following format
 
 <details>
   <summary>URL Fragment Format</summary>
+  
   ```javascript
   type MappingType = "JSON" | "HDF5";
   type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";

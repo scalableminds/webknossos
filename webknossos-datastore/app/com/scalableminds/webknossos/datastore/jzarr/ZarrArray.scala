@@ -37,7 +37,7 @@ object ZarrArray extends LazyLogging {
       val headerString = Source.fromInputStream(headerInputStream).mkString
       logger.info(headerString)
       val header: ZarrHeader = JsonHelper
-        .parseJsonToBox[ZarrHeader](headerString)
+        .parseJsonToFox[ZarrHeader](headerString)
         .openOrThrowException("Error handling in jzarr currently done via exceptions")
       new ZarrArray(relativePath, store, header)
     } finally if (headerInputStream != null) headerInputStream.close()

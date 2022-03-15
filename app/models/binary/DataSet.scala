@@ -80,10 +80,10 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     for {
       scale <- parseScaleOpt(r.scale)
       defaultViewConfigurationOpt <- Fox.runOptional(r.defaultviewconfiguration)(
-        JsonHelper.parseJsonToBox[DataSetViewConfiguration](_))
+        JsonHelper.parseJsonToFox[DataSetViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
-        JsonHelper.parseJsonToBox[DataSetViewConfiguration](_))
-      details <- Fox.runOptional(r.details)(JsonHelper.parseJsonToBox[JsObject](_))
+        JsonHelper.parseJsonToFox[DataSetViewConfiguration](_))
+      details <- Fox.runOptional(r.details)(JsonHelper.parseJsonToFox[JsObject](_))
     } yield {
       DataSet(
         ObjectId(r._Id),
@@ -392,9 +392,9 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
       resolutions <- Fox.fillOption(standinResolutions)(
         dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer")
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
-        JsonHelper.parseJsonToBox[LayerViewConfiguration](_))
+        JsonHelper.parseJsonToFox[LayerViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
-        JsonHelper.parseJsonToBox[LayerViewConfiguration](_))
+        JsonHelper.parseJsonToFox[LayerViewConfiguration](_))
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>

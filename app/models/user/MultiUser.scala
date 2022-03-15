@@ -35,7 +35,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def parse(r: MultiusersRow): Fox[MultiUser] =
     for {
-      novelUserExperienceInfos <- JsonHelper.parseJsonToBox[JsObject](r.noveluserexperienceinfos).toFox
+      novelUserExperienceInfos <- JsonHelper.parseJsonToFox[JsObject](r.noveluserexperienceinfos).toFox
       theme <- Theme.fromString(r.selectedtheme).toFox
     } yield {
       MultiUser(

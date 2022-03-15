@@ -10,7 +10,6 @@ class DataStoreModule extends AbstractModule {
   val system: ActorSystem = ActorSystem("webknossos-datastore")
 
   override def configure(): Unit = {
-    //bind(classOf[FileSystemHolder]).asEagerSingleton()
     bind(classOf[DataStoreConfig]).asEagerSingleton()
     bind(classOf[DataStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(system)

@@ -18,9 +18,10 @@ case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Opti
   lazy val remotePath: String = uri.getPath
 }
 
-case class ZarrResolution(resolution: Vec3Int, path: Option[String], credentials: Option[FileSystemCredentials]) {
+case class ZarrMag(mag: Vec3Int, path: Option[String], credentials: Option[FileSystemCredentials]) {
 
-  lazy val pathWithFallback: String = path.getOrElse(s"${resolution.x}-${resolution.y}-${resolution.z}")
+  lazy val pathWithFallback: String =
+    path.getOrElse(if (mag.isIsotropic) s"${mag.x}" else s"${mag.x}-${mag.y}-${mag.z}")
   private lazy val uri: URI = new URI(pathWithFallback)
   private lazy val isRemote: Boolean = FileSystemHolder.isSupportedRemoteScheme(uri.getScheme)
   lazy val remoteSource: Option[RemoteSourceDescriptor] =
@@ -31,8 +32,8 @@ case class ZarrResolution(resolution: Vec3Int, path: Option[String], credentials
 
 }
 
-object ZarrResolution {
-  implicit val jsonFormat: OFormat[ZarrResolution] = Json.format[ZarrResolution]
+object ZarrMag extends ResolutionFormatHelper {
+  implicit val jsonFormat: OFormat[ZarrMag] = Json.format[ZarrMag]
 }
 
 trait ZarrLayer extends DataLayer {
@@ -41,9 +42,9 @@ trait ZarrLayer extends DataLayer {
 
   lazy val bucketProvider = new ZarrBucketProvider(this)
 
-  def resolutions: List[Vec3Int] = List(Vec3Int(1, 1, 1))
+  def resolutions: List[Vec3Int] = mags.map(_.mag)
 
-  def zarrResolutions: List[ZarrResolution]
+  def mags: List[ZarrMag]
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
@@ -54,7 +55,7 @@ case class ZarrDataLayer(
     category: Category.Value,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
-    zarrResolutions: List[ZarrResolution],
+    mags: List[ZarrMag],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends ZarrLayer
@@ -67,7 +68,7 @@ case class ZarrSegmentationLayer(
     name: String,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
-    zarrResolutions: List[ZarrResolution],
+    mags: List[ZarrMag],
     largestSegmentId: Long,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,

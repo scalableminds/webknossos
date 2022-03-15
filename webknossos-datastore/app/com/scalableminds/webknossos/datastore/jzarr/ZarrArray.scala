@@ -9,7 +9,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
 import com.typesafe.scalalogging.LazyLogging
-import ucar.ma2.{InvalidRangeException, Array => Ma2Array}
+import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 import scala.io.Source
 
@@ -45,7 +45,7 @@ object ZarrArray extends LazyLogging {
 
 }
 
-class ChunkContentsCache(maxSizeBytes: Int, bytesPerEntry: Int) extends LRUConcurrentCache[String, Ma2Array] {
+class ChunkContentsCache(maxSizeBytes: Int, bytesPerEntry: Int) extends LRUConcurrentCache[String, MultiArray] {
   def maxEntries: Int = maxSizeBytes / bytesPerEntry
 }
 
@@ -81,7 +81,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
     val buffer = createDataBuffer(header.dataType, shape)
     val chunkIndices = ChunkUtils.computeChunkIndices(header.shape, header.chunks, shape, offset)
     for (chunkIndex <- chunkIndices) {
-      val sourceChunk: Ma2Array = getSourceChunkDataWithCache(chunkIndex)
+      val sourceChunk: MultiArray = getSourceChunkDataWithCache(chunkIndex)
       val offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
       if (partialCopyingIsNotNeeded(shape, offsetInChunk))
         System.arraycopy(sourceChunk.getStorage, 0, buffer, 0, sourceChunk.getSize.toInt)
@@ -105,14 +105,14 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
     }
   }
 
-  private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Ma2Array = {
+  private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): MultiArray = {
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
     val storeKey = chunkFilePath.storeKey
     chunkContentsCache.getOrLoad(storeKey)(getSourceChunkData)
   }
 
-  private def getSourceChunkData(chunkStoreKey: String): Ma2Array =
+  private def getSourceChunkData(chunkStoreKey: String): MultiArray =
     chunkReaderWriter.read(chunkStoreKey)
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =

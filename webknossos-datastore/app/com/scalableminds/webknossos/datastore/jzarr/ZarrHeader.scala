@@ -2,19 +2,17 @@ package com.scalableminds.webknossos.datastore.jzarr
 
 import java.nio.ByteOrder
 
+import com.scalableminds.webknossos.datastore.jzarr.BytesConverter.bytesPerElementFor
 import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
-import BytesConverter.bytesPerElementFor
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
-
-import scala.collection.JavaConverters._
 
 case class ZarrHeader(
     zarr_format: Int,
     shape: Array[Int], // shape of the entire array
     chunks: Array[Int], // shape of each chunk
-    compressor: Option[Map[String, Either[String, Number]]] = None,
+    compressor: Option[Map[String, Either[String, Int]]] = None,
     dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
     dtype: String,
     fill_value: Either[String, Number] = Right(0),
@@ -27,20 +25,12 @@ case class ZarrHeader(
     else ByteOrder.BIG_ENDIAN
 
   lazy val compressorImpl: Compressor =
-    compressor
-      .map(c => CompressorFactory.create(mapCompressorParameters(c).asJava))
-      .getOrElse(CompressorFactory.nullCompressor)
+    compressor.map(CompressorFactory.create).getOrElse(CompressorFactory.nullCompressor)
 
   lazy val dataType: ZarrDataType =
     ZarrDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
 
   lazy val bytesPerChunk: Int = chunks.toList.product * bytesPerElementFor(dataType)
-
-  def mapCompressorParameters(compresor: Map[String, Either[String, Number]]): Map[String, Object] =
-    compresor.mapValues {
-      case Left(s)  => s.asInstanceOf[Object]
-      case Right(n) => n.asInstanceOf[Object]
-    }
 
   lazy val fillValueNumber: Number = {
     fill_value match {
@@ -68,6 +58,18 @@ object ZarrHeader {
         .map(JsNumber(_))
         .orElse(tryo(number.floatValue()).map(JsNumber(_)))
         .getOrElse(JsNumber(number.doubleValue()))
+  }
+
+  implicit object StringOrIntFormat extends Format[Either[String, Int]] {
+
+    override def reads(json: JsValue): JsResult[Either[String, Int]] =
+      json.validate[String].map(Left(_)).orElse(json.validate[Int].map(Right(_)))
+
+    override def writes(stringOrInt: Either[String, Int]): JsValue =
+      stringOrInt match {
+        case Left(s)  => Json.toJson(s)
+        case Right(n) => Json.toJson(n)
+      }
   }
 
   implicit object StringOrNumberFormat extends Format[Either[String, Number]] {

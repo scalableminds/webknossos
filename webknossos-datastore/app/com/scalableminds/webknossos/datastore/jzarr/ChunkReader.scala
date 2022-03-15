@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.jzarr
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 
 import javax.imageio.stream.MemoryCacheImageInputStream
-import ucar.ma2.{Array => Ma2Array, DataType => Ma2DataType}
+import ucar.ma2.{Array => MultiArray, DataType => MADataType}
 
 import scala.util.Using
 
@@ -25,7 +25,7 @@ trait ChunkReader {
   lazy val chunkSize: Int = header.chunks.toList.product
 
   @throws[IOException]
-  def read(path: String): Ma2Array
+  def read(path: String): MultiArray
 
   protected def readBytes(path: String): Option[Array[Byte]] =
     Using.Manager { use =>
@@ -36,24 +36,24 @@ trait ChunkReader {
       Some(os.toByteArray)
     }.get
 
-  def createFilled(dataType: Ma2DataType): Ma2Array =
+  def createFilled(dataType: MADataType): MultiArray =
     MultiArrayUtils.createFilledArray(dataType, header.chunks, header.fillValueNumber)
 }
 
 class ByteChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
-  val ma2DataType: Ma2DataType = Ma2DataType.BYTE
+  val ma2DataType: MADataType = MADataType.BYTE
 
-  override def read(path: String): Ma2Array =
+  override def read(path: String): MultiArray =
     readBytes(path).map { bytes =>
-      Ma2Array.factory(ma2DataType, header.chunks, bytes)
+      MultiArray.factory(ma2DataType, header.chunks, bytes)
     }.getOrElse(createFilled(ma2DataType))
 }
 
 class DoubleChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
 
-  val ma2DataType: Ma2DataType = Ma2DataType.DOUBLE
+  val ma2DataType: MADataType = MADataType.DOUBLE
 
-  override def read(path: String): Ma2Array =
+  override def read(path: String): MultiArray =
     Using.Manager { use =>
       readBytes(path).map { bytes =>
         val typedStorage = new Array[Double](chunkSize)
@@ -61,16 +61,16 @@ class DoubleChunkReader(val store: Store, val header: ZarrHeader) extends ChunkR
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        Ma2Array.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }
 
 class ShortChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
 
-  val ma2DataType: Ma2DataType = Ma2DataType.SHORT
+  val ma2DataType: MADataType = MADataType.SHORT
 
-  override def read(path: String): Ma2Array =
+  override def read(path: String): MultiArray =
     Using.Manager { use =>
       readBytes(path).map { bytes =>
         val typedStorage = new Array[Short](chunkSize)
@@ -78,16 +78,16 @@ class ShortChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRe
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        Ma2Array.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }
 
 class IntChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
 
-  val ma2DataType: Ma2DataType = Ma2DataType.INT
+  val ma2DataType: MADataType = MADataType.INT
 
-  override def read(path: String): Ma2Array =
+  override def read(path: String): MultiArray =
     Using.Manager { use =>
       readBytes(path).map { bytes =>
         val typedStorage = new Array[Int](chunkSize)
@@ -95,16 +95,16 @@ class IntChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRead
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        Ma2Array.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }
 
 class LongChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
 
-  val ma2DataType: Ma2DataType = Ma2DataType.LONG
+  val ma2DataType: MADataType = MADataType.LONG
 
-  override def read(path: String): Ma2Array =
+  override def read(path: String): MultiArray =
     Using.Manager { use =>
       readBytes(path).map { bytes =>
         val typedStorage = new Array[Long](chunkSize)
@@ -112,16 +112,16 @@ class LongChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRea
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        Ma2Array.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }
 
 class FloatChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
 
-  val ma2DataType: Ma2DataType = Ma2DataType.FLOAT
+  val ma2DataType: MADataType = MADataType.FLOAT
 
-  override def read(path: String): Ma2Array =
+  override def read(path: String): MultiArray =
     Using.Manager { use =>
       readBytes(path).map { bytes =>
         val typedStorage = new Array[Float](chunkSize)
@@ -129,7 +129,7 @@ class FloatChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRe
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        Ma2Array.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }

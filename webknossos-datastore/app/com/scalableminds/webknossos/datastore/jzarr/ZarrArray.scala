@@ -8,9 +8,6 @@ import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
-import com.scalableminds.webknossos.datastore.jzarr.chunk.ChunkReader
-import com.scalableminds.webknossos.datastore.jzarr.storage.{FileSystemStore, Store}
-import com.scalableminds.webknossos.datastore.jzarr.ucarutils.{BytesConverter, NetCDF_Util, PartialDataCopier}
 import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{InvalidRangeException, Array => Ma2Array}
 
@@ -82,15 +79,15 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
   @throws[InvalidRangeException]
   def read(shape: Array[Int], offset: Array[Int]): Object = {
     val buffer = createDataBuffer(header.dataType, shape)
-    val chunkIndices = ZarrUtils.computeChunkIndices(header.shape, header.chunks, shape, offset)
+    val chunkIndices = ChunkUtils.computeChunkIndices(header.shape, header.chunks, shape, offset)
     for (chunkIndex <- chunkIndices) {
       val sourceChunk: Ma2Array = getSourceChunkDataWithCache(chunkIndex)
       val offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
       if (partialCopyingIsNotNeeded(shape, offsetInChunk))
         System.arraycopy(sourceChunk.getStorage, 0, buffer, 0, sourceChunk.getSize.toInt)
       else {
-        val target = NetCDF_Util.createArrayWithGivenStorage(buffer, shape)
-        PartialDataCopier.copy(offsetInChunk, sourceChunk, target)
+        val target = MultiArrayUtils.createArrayWithGivenStorage(buffer, shape)
+        MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, target)
       }
     }
     buffer
@@ -102,7 +99,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
       case ZarrDataType.i1 | ZarrDataType.u1 => new Array[Byte](size)
       case ZarrDataType.i2 | ZarrDataType.u2 => new Array[Short](size)
       case ZarrDataType.i4 | ZarrDataType.u4 => new Array[Int](size)
-      case ZarrDataType.i8                   => new Array[Long](size)
+      case ZarrDataType.i8 | ZarrDataType.u8 => new Array[Long](size)
       case ZarrDataType.f4                   => new Array[Float](size)
       case ZarrDataType.f8                   => new Array[Double](size)
     }

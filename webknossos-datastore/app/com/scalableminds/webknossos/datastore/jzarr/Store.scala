@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.jzarr.storage
+package com.scalableminds.webknossos.datastore.jzarr
 
 import java.io._
 import java.nio.file.{Files, Path}

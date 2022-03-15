@@ -1,10 +1,7 @@
-package com.scalableminds.webknossos.datastore.jzarr.chunk
+package com.scalableminds.webknossos.datastore.jzarr
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 
-import com.scalableminds.webknossos.datastore.jzarr.storage.Store
-import com.scalableminds.webknossos.datastore.jzarr.ucarutils.NetCDF_Util
-import com.scalableminds.webknossos.datastore.jzarr.{ZarrDataType, ZarrHeader}
 import javax.imageio.stream.MemoryCacheImageInputStream
 import ucar.ma2.{Array => Ma2Array, DataType => Ma2DataType}
 
@@ -16,7 +13,7 @@ object ChunkReader {
       case ZarrDataType.i1 | ZarrDataType.u1 => new ByteChunkReader(store, header)
       case ZarrDataType.i2 | ZarrDataType.u2 => new ShortChunkReader(store, header)
       case ZarrDataType.i4 | ZarrDataType.u4 => new IntChunkReader(store, header)
-      case ZarrDataType.i8                   => new LongChunkReader(store, header)
+      case ZarrDataType.i8 | ZarrDataType.u8 => new LongChunkReader(store, header)
       case ZarrDataType.f4                   => new FloatChunkReader(store, header)
       case ZarrDataType.f8                   => new DoubleChunkReader(store, header)
     }
@@ -40,7 +37,7 @@ trait ChunkReader {
     }.get
 
   def createFilled(dataType: Ma2DataType): Ma2Array =
-    NetCDF_Util.createFilledArray(dataType, header.chunks, header.fillValueNumber)
+    MultiArrayUtils.createFilledArray(dataType, header.chunks, header.fillValueNumber)
 }
 
 class ByteChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {

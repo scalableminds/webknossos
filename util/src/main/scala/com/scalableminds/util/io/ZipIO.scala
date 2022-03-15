@@ -165,10 +165,14 @@ object ZipIO extends LazyLogging {
 
   def withUnziped[A](zip: ZipFile,
                      includeHiddenFiles: Boolean = false,
+                     hiddenFilesWhitelist: List[String] = List(),
                      truncateCommonPrefix: Boolean = false,
                      excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Box[A]): Box[List[A]] = {
 
-    val zipEntries = zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).toList
+    val zipEntries = zip.entries.asScala.filter { e: ZipEntry =>
+      !e.isDirectory && (includeHiddenFiles || !isFileHidden(e) || hiddenFilesWhitelist.contains(
+        Paths.get(e.getName).getFileName.toString))
+    }.toList
 
     val commonPrefix = if (truncateCommonPrefix) {
       val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
@@ -214,17 +218,19 @@ object ZipIO extends LazyLogging {
   def unzipToFolder(file: File,
                     targetDir: Path,
                     includeHiddenFiles: Boolean,
+                    hiddenFilesWhitelist: List[String],
                     truncateCommonPrefix: Boolean,
                     excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
-    tryo(new java.util.zip.ZipFile(file))
-      .flatMap(unzipToFolder(_, targetDir, includeHiddenFiles, truncateCommonPrefix, excludeFromPrefix))
+    tryo(new java.util.zip.ZipFile(file)).flatMap(
+      unzipToFolder(_, targetDir, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix))
 
   def unzipToFolder(zip: ZipFile,
                     targetDir: Path,
                     includeHiddenFiles: Boolean,
+                    hiddenFilesWhitelist: List[String],
                     truncateCommonPrefix: Boolean,
                     excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
-    withUnziped(zip, includeHiddenFiles, truncateCommonPrefix, excludeFromPrefix) { (name, in) =>
+    withUnziped(zip, includeHiddenFiles, hiddenFilesWhitelist, truncateCommonPrefix, excludeFromPrefix) { (name, in) =>
       val path = targetDir.resolve(name)
       if (path.getParent != null) {
         PathUtils.ensureDirectory(path.getParent)

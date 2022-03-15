@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.jzarr;
 
 import java.util.*;
 
-public final class ZarrUtils {
+public final class ChunkUtils {
 
     public static int[][] computeChunkIndices(int[] arrayShape, int[] arrayChunkSize, int[] selectedShape, int[] selectedOffset) {
         final int depth = arrayShape.length;
@@ -37,37 +37,4 @@ public final class ZarrUtils {
         }
         return chunkIndices;
     }
-
-
-    public static String normalizeStoragePath(String path) {
-
-        //replace backslashes with slashes
-        path = path.replace("\\", "/");
-
-        // collapse any repeated slashes
-        while (path.contains("//")) {
-            path = path.replace("//", "/");
-        }
-
-        // ensure no leading slash
-        if (path.startsWith("/")) {
-            path = path.substring(1);
-        }
-
-        // ensure no trailing slash
-        if (path.endsWith("/")) {
-            path = path.substring(0, path.length() - 1);
-        }
-
-        // don't allow path segments with just '.' or '..'
-        final String[] split = path.split("/");
-        for (String s : split) {
-            s = s.trim();
-            if (".".equals(s) || "..".equals(s)) {
-                throw new IllegalArgumentException("path containing '.' or '..' segment not allowed");
-            }
-        }
-        return path;
-    }
-
 }

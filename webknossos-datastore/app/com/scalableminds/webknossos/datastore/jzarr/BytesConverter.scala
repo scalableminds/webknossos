@@ -1,8 +1,7 @@
-package com.scalableminds.webknossos.datastore.jzarr.ucarutils
+package com.scalableminds.webknossos.datastore.jzarr
 
 import java.nio.{ByteBuffer, ByteOrder}
 
-import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
 
 object BytesConverter {
@@ -12,6 +11,7 @@ object BytesConverter {
       case ZarrDataType.f8 => 8
       case ZarrDataType.f4 => 4
       case ZarrDataType.i8 => 8
+      case ZarrDataType.u8 => 8
       case ZarrDataType.i4 => 4
       case ZarrDataType.u4 => 4
       case ZarrDataType.i2 => 2
@@ -35,7 +35,7 @@ object BytesConverter {
         val byteBuffer = makeByteBuffer(arrayTyped.length * bytesPerElement, byteOrder)
         byteBuffer.asIntBuffer().put(arrayTyped)
         byteBuffer.array()
-      case ZarrDataType.i8 => // TODO u8
+      case ZarrDataType.i8 | ZarrDataType.u8 =>
         val arrayTyped = array.asInstanceOf[Array[Long]]
         val byteBuffer = makeByteBuffer(arrayTyped.length * bytesPerElement, byteOrder)
         byteBuffer.asLongBuffer().put(arrayTyped).array()

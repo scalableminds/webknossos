@@ -4,7 +4,7 @@ import java.nio.ByteOrder
 
 import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
-import com.scalableminds.webknossos.datastore.jzarr.ucarutils.BytesConverter.bytesPerElementFor
+import BytesConverter.bytesPerElementFor
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 

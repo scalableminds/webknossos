@@ -66,7 +66,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
+import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import {
   getLayerBoundaries,
   getLayerByName,

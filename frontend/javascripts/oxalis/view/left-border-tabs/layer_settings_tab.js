@@ -58,7 +58,6 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
-  updateTemporarySettingAction,
   updateUserSettingAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
@@ -82,7 +81,6 @@ import Store, {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import features from "features";
 import messages, { settings } from "messages";
 
 import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
@@ -110,9 +108,7 @@ type DatasetSettingsProps = {|
   onUnlinkFallbackLayer: (Tracing, VolumeTracing) => Promise<void>,
   tracing: Tracing,
   task: ?Task,
-  onChangeEnableAutoBrush: (active: boolean) => void,
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void,
-  isAutoBrushEnabled: boolean,
   controlMode: ControlMode,
   isArbitraryMode: boolean,
 |};
@@ -270,35 +266,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       return layerName === otherLayerName ? !isDisabled : isDisabled;
     });
     return isOnlyGivenLayerVisible;
-  };
-
-  handleAutoBrushChange = async (active: boolean) => {
-    this.props.onChangeEnableAutoBrush(active);
-    if (active) {
-      Toast.info(
-        "You enabled the experimental automatic brush feature. Activate the brush tool and use CTRL+Click to use it.",
-      );
-    }
-  };
-
-  maybeGetAutoBrushUi = () => {
-    const { autoBrushReadyDatasets } = features();
-    if (
-      autoBrushReadyDatasets == null ||
-      !autoBrushReadyDatasets.includes(this.props.dataset.name)
-    ) {
-      return null;
-    }
-
-    return (
-      <SwitchSetting
-        label={settings.autoBrush}
-        value={this.props.isAutoBrushEnabled}
-        onChange={value => {
-          this.handleAutoBrushChange(value);
-        }}
-      />
-    );
   };
 
   getEnableDisableLayerSwitch = (
@@ -906,7 +873,6 @@ const mapStateToProps = (state: OxalisState) => ({
   tracing: state.tracing,
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
-  isAutoBrushEnabled: state.temporaryConfiguration.isAutoBrushEnabled,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
 });
 
@@ -928,9 +894,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onSetPosition(position) {
     dispatch(setPositionAction(position));
-  },
-  onChangeEnableAutoBrush(active: boolean) {
-    dispatch(updateTemporarySettingAction("isAutoBrushEnabled", active));
   },
   onChangeShowSkeletons(showSkeletons: boolean) {
     dispatch(setShowSkeletonsAction(showSkeletons));

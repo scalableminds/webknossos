@@ -17,6 +17,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 The toolbar contains frequently used commands, such as saving and sharing, your current position within the dataset, and the ability to switch between various modes for viewing. Further, it provides access to all the tools for annotation, navigation, and more.
 
 The most common buttons are:
+
 - `Settings`: Toggles the visibility of the left-hand side panel with all data and segmentation layers and their respective settings.
 - `Undo` / `Redo`: Undoes the last operation or redoes it if no new changes have been made in the meantime. Undo can only revert changes made in this session (since the moment the annotation view was opened). To revert to older versions use the "Restore Older Version" functionality described later in this list.
 - `Save`: Saves your annotation work. webKnossos automatically saves every 30 seconds.
@@ -32,7 +33,7 @@ Clicking on the position or rotation labels copies the values to the clipboard.
 
 ![The webKnossos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.png)
 
-The toolbar further features aöl available navigation and annotation tools for quick access:
+The toolbar further features all available navigation and annotation tools for quick access:
 
 - `Move`: Navigate around the dataset.
 - `Skeleton`: Create skeleton annotations and place nodes. [Read more about skeleton annotations](./skeleton_annotation.md#tools).
@@ -58,6 +59,7 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 - `Histogram`: The Histogram displays sampled color values of the dataset on a logarithmic scale. The slider below the Histogram can be used to adjust the dynamic range of the displayed values. In order to increase the contrast of data, reduce the dynamic range. To decrease the contrast, widen the range. In order to increase the brightness, move the range to the left. To decrease the brightness, move the range to the right.
 
     Above the the histogram, there are icon buttons to further adjust the histogram or otherwise interact with the layer:
+    
         - `pencil`: Manipulate the min/max value of the histogram range. Clips values above/below these limits. 
         - `vertical line`: Automatically adjust the histogram for best contrast. Contrast estimation is based on the data currently available in your viewport.
         - `circle arrow`: Reload the data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.

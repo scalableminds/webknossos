@@ -65,7 +65,7 @@ class SampleDataSourceService @Inject()(rpc: RPC,
 
   def download(id: DataSourceId): Fox[Unit] =
     for {
-      responseBox <- rpc(availableDatasets(id.name).url).get.futureBox
+      responseBox <- rpc(availableDatasets(id.name).url).withLongTimeout.get.futureBox
       _ = responseBox match {
         case Full(response) =>
           val bytes: ByteString = response.bodyAsBytes

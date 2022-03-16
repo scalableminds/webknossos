@@ -26,7 +26,7 @@ trait ChunkReader {
 
   def readAsCOrder(path: String): MultiArray = {
     val chunkRaw = read(path)
-    if (header.order == "C") chunkRaw else MultiArrayUtils.flipOrder(chunkRaw)
+    if (header.order == "C") chunkRaw else MultiArrayUtils.orderFlippedView(chunkRaw)
   }
 
   @throws[IOException]

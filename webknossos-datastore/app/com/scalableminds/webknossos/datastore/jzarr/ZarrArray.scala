@@ -91,16 +91,17 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
     for (chunkIndex <- chunkIndices) {
       val sourceChunk: MultiArray = getSourceChunkDataWithCache(chunkIndex)
       val offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
-      if (partialCopyingIsNotNeeded(shape, offsetInChunk))
+      if (partialCopyingIsNotNeeded(shape, offsetInChunk)) {
         System.arraycopy(sourceChunk.getStorage, 0, buffer, 0, sourceChunk.getSize.toInt)
-      else {
-        val target = MultiArrayUtils.createArrayWithGivenStorage(buffer, shape)
+      } else {
+        val target =
+          MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(buffer, shape.reverse))
         println(
           s"Copying at global offset ${offset.toList} (offset in chunk: ${offsetInChunk.toList}) from chunk ${chunkIndex.toList} to buffer with shape ${shape.toList}")
         MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, target)
       }
     }
-    MultiArrayUtils.flipOrder(MultiArrayUtils.createArrayWithGivenStorage(buffer, shape)).getStorage
+    buffer
   }
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): MultiArray = {
@@ -114,7 +115,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
     chunkIndex.mkString(header.dimension_separator.toString)
 
   private def partialCopyingIsNotNeeded(bufferShape: Array[Int], offset: Array[Int]): Boolean =
-    isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape)
+    header.order == "F" && isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape)
 
   private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
     util.Arrays.equals(bufferShape, header.chunks)

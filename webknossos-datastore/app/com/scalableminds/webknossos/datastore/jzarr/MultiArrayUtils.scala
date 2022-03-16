@@ -121,48 +121,9 @@ object MultiArrayUtils {
     def set(sourceIterator: IndexIterator, targetIterator: IndexIterator)
   }
 
-  // Flips MultiArray form C order to Fortran order or back
-  def flipOrder(source: MultiArray): MultiArray = {
-    val dataType = source.getDataType
-    val target = MultiArray.factory(dataType, source.getShape.reverse)
-    source.getShape.length match {
-      case 3 => flipOrder3DImpl(source, target)
-      case 4 => flipOrder4DImpl(source, target)
-      case _ => source
-      // TODO typed setter/getter
-    }
-  }
-
-  def flipOrder3DImpl(source: MultiArray, target: MultiArray): MultiArray = {
-    val sourceIndex = source.getIndex
-    val targetIndex = target.getIndex
-    val shape = source.getShape
-    for (sourceX <- 0 to shape(0)) {
-      for (sourceY <- 0 to shape(1)) {
-        for (sourceZ <- 0 to shape(2)) {
-          val value = source.getByte(sourceIndex.set(sourceX, sourceY, sourceZ))
-          target.setByte(targetIndex.set(sourceZ, sourceY, sourceX), value)
-        }
-      }
-    }
-    target
-  }
-
-  def flipOrder4DImpl(source: MultiArray, target: MultiArray): MultiArray = {
-    val sourceIndex = source.getIndex
-    val targetIndex = target.getIndex
-    val shape = source.getShape
-    for (sourceX <- 0 until shape(0)) {
-      for (sourceY <- 0 until shape(1)) {
-        for (sourceZ <- 0 until shape(2)) {
-          for (sourceC <- 0 until shape(3)) {
-            val value = source.getByte(sourceIndex.set(sourceX, sourceY, sourceZ, sourceC))
-            target.setByte(targetIndex.set(sourceC, sourceZ, sourceY, sourceX), value)
-          }
-        }
-      }
-    }
-    target
+  def orderFlippedView(source: MultiArray): MultiArray = {
+    val permutation = source.getShape.indices.reverse.toArray
+    source.permute(permutation)
   }
 
 }

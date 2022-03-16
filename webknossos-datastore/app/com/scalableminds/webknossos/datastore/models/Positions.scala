@@ -61,6 +61,12 @@ case class BucketPosition(
 
   val z: Int = globalZ / bucketLength / resolution.z
 
+  val globalXInMag: Int = globalX / resolution.x
+
+  val globalYInMag: Int = globalY / resolution.y
+
+  val globalZInMag: Int = globalZ / resolution.z
+
   def volume: Int = bucketLength * bucketLength * bucketLength
 
   def toCube(cubeLength: Int): CubePosition =

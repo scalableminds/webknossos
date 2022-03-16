@@ -1,13 +1,23 @@
 package com.scalableminds.webknossos.datastore.jzarr
 
-import ucar.ma2.{Array => MultiArray}
-import ucar.ma2.{DataType => MADataType}
-import ucar.ma2.IndexIterator
-import ucar.ma2.InvalidRangeException
-import ucar.ma2.Range
 import java.util
 
+import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
+import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
+
 object MultiArrayUtils {
+
+  def createDataBuffer(dataType: ZarrDataType, shape: Array[Int]): Object = {
+    val size = shape.product
+    dataType match {
+      case ZarrDataType.i1 | ZarrDataType.u1 => new Array[Byte](size)
+      case ZarrDataType.i2 | ZarrDataType.u2 => new Array[Short](size)
+      case ZarrDataType.i4 | ZarrDataType.u4 => new Array[Int](size)
+      case ZarrDataType.i8 | ZarrDataType.u8 => new Array[Long](size)
+      case ZarrDataType.f4                   => new Array[Float](size)
+      case ZarrDataType.f8                   => new Array[Double](size)
+    }
+  }
 
   def createArrayWithGivenStorage(storage: Any, shape: Array[Int]): MultiArray = {
     val aClass = storage.getClass
@@ -110,4 +120,49 @@ object MultiArrayUtils {
   private trait ValueSetter {
     def set(sourceIterator: IndexIterator, targetIterator: IndexIterator)
   }
+
+  // Flips MultiArray form C order to Fortran order or back
+  def flipOrder(source: MultiArray): MultiArray = {
+    val dataType = source.getDataType
+    val target = MultiArray.factory(dataType, source.getShape.reverse)
+    source.getShape.length match {
+      case 3 => flipOrder3DImpl(source, target)
+      case 4 => flipOrder4DImpl(source, target)
+      case _ => source
+      // TODO typed setter/getter
+    }
+  }
+
+  def flipOrder3DImpl(source: MultiArray, target: MultiArray): MultiArray = {
+    val sourceIndex = source.getIndex
+    val targetIndex = target.getIndex
+    val shape = source.getShape
+    for (sourceX <- 0 to shape(0)) {
+      for (sourceY <- 0 to shape(1)) {
+        for (sourceZ <- 0 to shape(2)) {
+          val value = source.getByte(sourceIndex.set(sourceX, sourceY, sourceZ))
+          target.setByte(targetIndex.set(sourceZ, sourceY, sourceX), value)
+        }
+      }
+    }
+    target
+  }
+
+  def flipOrder4DImpl(source: MultiArray, target: MultiArray): MultiArray = {
+    val sourceIndex = source.getIndex
+    val targetIndex = target.getIndex
+    val shape = source.getShape
+    for (sourceX <- 0 until shape(0)) {
+      for (sourceY <- 0 until shape(1)) {
+        for (sourceZ <- 0 until shape(2)) {
+          for (sourceC <- 0 until shape(3)) {
+            val value = source.getByte(sourceIndex.set(sourceX, sourceY, sourceZ, sourceC))
+            target.setByte(targetIndex.set(sourceC, sourceZ, sourceY, sourceX), value)
+          }
+        }
+      }
+    }
+    target
+  }
+
 }

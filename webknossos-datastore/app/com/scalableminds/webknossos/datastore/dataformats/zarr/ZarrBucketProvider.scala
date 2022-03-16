@@ -17,7 +17,7 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging with Rate
 
   def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
     val shape = Vec3Int(bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
-    val offset = Vec3Int(bucket.globalX, bucket.globalY, bucket.globalZ)
+    val offset = Vec3Int(bucket.globalXInMag, bucket.globalYInMag, bucket.globalZInMag)
     tryo(onError = e => logError(e))(zarrArray.readBytesXYZ(shape, offset))
   }
 

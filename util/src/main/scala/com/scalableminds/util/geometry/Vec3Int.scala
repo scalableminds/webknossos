@@ -42,6 +42,8 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
       y <- func(y, other.y)
       z <- func(z, other.z)
     } yield Vec3Int(x, y, z)
+
+  def product: Int = x * y * z
 }
 
 object Vec3Int {

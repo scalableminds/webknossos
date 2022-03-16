@@ -39,6 +39,12 @@ case class ZarrHeader(
     }
   }
 
+  lazy val chunkShapeOrdered: Array[Int] = {
+    if (order == "C") {
+      chunks
+    } else chunks.reverse
+  }
+
 }
 
 object ZarrHeader {

@@ -24,6 +24,11 @@ trait ChunkReader {
   val store: Store
   lazy val chunkSize: Int = header.chunks.toList.product
 
+  def readAsCOrder(path: String): MultiArray = {
+    val chunkRaw = read(path)
+    if (header.order == "C") chunkRaw else MultiArrayUtils.flipOrder(chunkRaw)
+  }
+
   @throws[IOException]
   def read(path: String): MultiArray
 
@@ -37,7 +42,7 @@ trait ChunkReader {
     }.get
 
   def createFilled(dataType: MADataType): MultiArray =
-    MultiArrayUtils.createFilledArray(dataType, header.chunks, header.fillValueNumber)
+    MultiArrayUtils.createFilledArray(dataType, header.chunkShapeOrdered, header.fillValueNumber)
 }
 
 class ByteChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
@@ -45,7 +50,7 @@ class ByteChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRea
 
   override def read(path: String): MultiArray =
     readBytes(path).map { bytes =>
-      MultiArray.factory(ma2DataType, header.chunks, bytes)
+      MultiArray.factory(ma2DataType, header.chunkShapeOrdered, bytes)
     }.getOrElse(createFilled(ma2DataType))
 }
 
@@ -61,7 +66,7 @@ class DoubleChunkReader(val store: Store, val header: ZarrHeader) extends ChunkR
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }
@@ -78,7 +83,7 @@ class ShortChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRe
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }
@@ -95,7 +100,7 @@ class IntChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRead
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }
@@ -112,7 +117,7 @@ class LongChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRea
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }
@@ -129,7 +134,7 @@ class FloatChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRe
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunks, typedStorage)
+        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get
 }

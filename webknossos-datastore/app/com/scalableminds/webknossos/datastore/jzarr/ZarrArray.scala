@@ -6,7 +6,6 @@ import java.util
 
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
@@ -59,7 +58,7 @@ class ChunkContentsCache(maxSizeBytes: Int, bytesPerEntry: Int) extends LRUConcu
   def maxEntries: Int = maxSizeBytes / bytesPerEntry
 }
 
-class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
+class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extends LazyLogging {
 
   final private val chunkReaderWriter =
     ChunkReader.create(store, header)
@@ -76,7 +75,6 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
     val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
     val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
 
-    // TODO transpose?
     readBytes(shapeArray, offsetArray)
   }
 
@@ -88,7 +86,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
   @throws[IOException]
   @throws[InvalidRangeException]
   def read(shape: Array[Int], offset: Array[Int]): Object = {
-    val buffer = createDataBuffer(header.dataType, shape)
+    val buffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
     val chunkIndices = ChunkUtils.computeChunkIndices(header.shape, header.chunks, shape, offset)
     for (chunkIndex <- chunkIndices) {
       val sourceChunk: MultiArray = getSourceChunkDataWithCache(chunkIndex)
@@ -102,26 +100,14 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
         MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, target)
       }
     }
-    buffer
-  }
-
-  private def createDataBuffer(dataType: ZarrDataType, shape: Array[Int]): Object = {
-    val size = shape.product
-    dataType match {
-      case ZarrDataType.i1 | ZarrDataType.u1 => new Array[Byte](size)
-      case ZarrDataType.i2 | ZarrDataType.u2 => new Array[Short](size)
-      case ZarrDataType.i4 | ZarrDataType.u4 => new Array[Int](size)
-      case ZarrDataType.i8 | ZarrDataType.u8 => new Array[Long](size)
-      case ZarrDataType.f4                   => new Array[Float](size)
-      case ZarrDataType.f8                   => new Array[Double](size)
-    }
+    MultiArrayUtils.flipOrder(MultiArrayUtils.createArrayWithGivenStorage(buffer, shape)).getStorage
   }
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): MultiArray = {
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
     val storeKey = chunkFilePath.storeKey
-    chunkContentsCache.getOrLoad(storeKey)(chunkReaderWriter.read)
+    chunkContentsCache.getOrLoad(storeKey)(chunkReaderWriter.readAsCOrder)
   }
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =

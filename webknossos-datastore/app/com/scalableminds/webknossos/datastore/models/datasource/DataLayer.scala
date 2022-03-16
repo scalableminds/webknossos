@@ -238,14 +238,12 @@ object AbstractSegmentationLayer {
 
 trait ResolutionFormatHelper {
 
-  implicit object resolutionFormat extends Format[Either[Int, Vec3Int]] {
+  implicit object resolutionFormat extends Format[Vec3Int] {
 
-    override def reads(json: JsValue): JsResult[Either[Int, Vec3Int]] =
-      json.validate[Int].map[Either[Int, Vec3Int]](Left(_)).orElse(json.validate[Vec3Int].map(Right(_)))
+    override def reads(json: JsValue): JsResult[Vec3Int] =
+      json.validate[Int].map(result => Vec3Int(result, result, result)).orElse(Vec3Int.Vec3IntReads.reads(json))
 
-    override def writes(resolution: Either[Int, Vec3Int]): JsValue = resolution match {
-      case Left(r)  => JsNumber(r)
-      case Right(r) => Vec3Int.Vec3IntWrites.writes(r)
-    }
+    override def writes(resolution: Vec3Int): JsValue =
+      Vec3Int.Vec3IntWrites.writes(resolution)
   }
 }

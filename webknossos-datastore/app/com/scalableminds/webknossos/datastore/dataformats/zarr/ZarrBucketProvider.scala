@@ -3,27 +3,29 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr
 import java.nio.file.FileSystem
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCube}
 import com.scalableminds.webknossos.datastore.jzarr.ZarrArray
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.FileSystemHolder
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Box, Empty}
 
-class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
+class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging with RateLimitedErrorLogging {
 
   def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
     val shape = Vec3Int(bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
     val offset = Vec3Int(bucket.globalX, bucket.globalY, bucket.globalZ)
-    Full(zarrArray.readBytesXYZ(shape, offset))
+    tryo(onError = e => logError(e))(zarrArray.readBytesXYZ(shape, offset))
   }
 
   override protected def onFinalize(): Unit = ()
 
 }
 
-class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging {
+class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging with RateLimitedErrorLogging {
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
     val resolution: Option[ZarrMag] =
@@ -43,7 +45,7 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
     layerPathOpt match {
       case None => Empty
       case Some(layerPath) =>
-        Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
+        tryo(onError = e => logError(e))(ZarrArray.open(layerPath)).map(new ZarrCube(_))
     }
   }
 
@@ -54,7 +56,7 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
       .resolve(readInstruction.dataLayer.name)
       .resolve(resolutionPath)
     if (layerPath.toFile.exists()) {
-      Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
+      tryo(onError = e => logError(e))(ZarrArray.open(layerPath)).map(new ZarrCube(_))
     } else Empty
   }
 

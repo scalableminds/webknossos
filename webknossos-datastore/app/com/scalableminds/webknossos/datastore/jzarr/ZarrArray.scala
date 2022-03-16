@@ -6,14 +6,16 @@ import java.util
 
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
 import com.typesafe.scalalogging.LazyLogging
+import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 import scala.io.Source
 
 object ZarrArray extends LazyLogging {
+  private val chunkSizeLimitBytes = 64 * 1024 * 1024
+
   @throws[IOException]
   def open(path: String): ZarrArray =
     open(Paths.get(path))
@@ -36,9 +38,17 @@ object ZarrArray extends LazyLogging {
           "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
       val headerString = Source.fromInputStream(headerInputStream).mkString
       logger.info(headerString)
-      val header: ZarrHeader = JsonHelper
-        .parseJsonToFox[ZarrHeader](headerString)
-        .openOrThrowException("Error handling in jzarr currently done via exceptions")
+      val header: ZarrHeader =
+        Json.parse(headerString).validate[ZarrHeader] match {
+          case JsSuccess(parsedHeader, _) =>
+            parsedHeader
+          case errors: JsError =>
+            throw new Exception("Validating json as zarr header failed: " + JsError.toJson(errors).toString())
+        }
+      if (header.bytesPerChunk > chunkSizeLimitBytes) {
+        throw new IllegalArgumentException(
+          f"Chunk size of this Zarr Array exceeds limit of $chunkSizeLimitBytes, got ${header.bytesPerChunk}")
+      }
       new ZarrArray(relativePath, store, header)
     } finally if (headerInputStream != null) headerInputStream.close()
   }
@@ -61,10 +71,10 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
   @throws[IOException]
   @throws[InvalidRangeException]
   def readBytesXYZ(shape: Vec3Int, offset: Vec3Int): Array[Byte] = {
-    // TODO. Determine order. This currently assumes z, y, x are the last three entries
+    // Assumes that the last three dimensions of the array are x, y, z
     val paddingDimensionsCount = header.shape.length - 3
-    val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.z :+ offset.y :+ offset.x
-    val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.z :+ shape.y :+ shape.x
+    val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
+    val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
 
     // TODO transpose?
     readBytes(shapeArray, offsetArray)
@@ -87,6 +97,8 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
         System.arraycopy(sourceChunk.getStorage, 0, buffer, 0, sourceChunk.getSize.toInt)
       else {
         val target = MultiArrayUtils.createArrayWithGivenStorage(buffer, shape)
+        println(
+          s"Copying at global offset ${offset.toList} (offset in chunk: ${offsetInChunk.toList}) from chunk ${chunkIndex.toList} to buffer with shape ${shape.toList}")
         MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, target)
       }
     }
@@ -109,11 +121,8 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
     val storeKey = chunkFilePath.storeKey
-    chunkContentsCache.getOrLoad(storeKey)(getSourceChunkData)
+    chunkContentsCache.getOrLoad(storeKey)(chunkReaderWriter.read)
   }
-
-  private def getSourceChunkData(chunkStoreKey: String): MultiArray =
-    chunkReaderWriter.read(chunkStoreKey)
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =
     chunkIndex.mkString(header.dimension_separator.toString)
@@ -134,6 +143,6 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) {
   private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.zipWithIndex.map {
       case (chunkIndexInDim, dim) =>
-        -(chunkIndexInDim * header.chunks(dim) - globalOffset(dim))
+        globalOffset(dim) - (chunkIndexInDim * header.chunks(dim))
     }
 }

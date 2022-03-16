@@ -327,9 +327,6 @@ export class DrawTool {
           // Should select cell. Do nothing, since case is covered by leftClick.
           return;
         }
-        if (event.ctrlKey && VolumeHandlers.isAutomaticBrushEnabled()) {
-          return;
-        }
         if (event.ctrlKey && event.shiftKey) {
           VolumeHandlers.handleEraseStart(pos, plane);
           return;
@@ -383,8 +380,6 @@ export class DrawTool {
           VolumeHandlers.handlePickCell(pos);
         } else if (shouldErase) {
           // Do nothing. This case is covered by leftMouseDown.
-        } else if (event.metaKey) {
-          VolumeHandlers.handleAutoBrush(pos);
         }
       },
 
@@ -516,12 +511,9 @@ export class FillCellTool {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         const shouldPickCell = event.shiftKey && !event.ctrlKey;
-        const shouldAutoBrush = event.metaKey && VolumeHandlers.isAutomaticBrushEnabled();
 
         if (shouldPickCell) {
           VolumeHandlers.handlePickCell(pos);
-        } else if (shouldAutoBrush) {
-          VolumeHandlers.handleAutoBrush(pos);
         } else {
           VolumeHandlers.handleFloodFill(pos, plane);
         }

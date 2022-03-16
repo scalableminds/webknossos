@@ -419,7 +419,7 @@ export type MeshMetaData = {|
 export type AnnotationViewConfiguration = {
   layers: {
     [layerName: string]: {
-      visibility: boolean,
+      isDisabled: boolean,
     },
   },
 };
@@ -561,7 +561,6 @@ export type APIFeatureToggles = {
   +discussionBoardRequiresAdmin: boolean,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +autoBrushReadyDatasets: Array<string>,
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
   +allowDeleteDatasets: boolean,
@@ -570,6 +569,7 @@ export type APIFeatureToggles = {
   +exportTiffMaxVolumeMVx: number,
   +exportTiffMaxEdgeLengthVx: number,
   +defaultToLegacyBindings: boolean,
+  +optInTabs?: Array<string>,
 };
 
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
@@ -711,3 +711,8 @@ export type APIMeshFile = {|
   meshFileName: string,
   mappingName?: ?string,
 |};
+
+export type APIConnectomeFile = {
+  connectomeFileName: string,
+  mappingName: string,
+};

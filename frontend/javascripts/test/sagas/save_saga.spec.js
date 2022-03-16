@@ -21,9 +21,6 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
-mockRequire("@tensorflow/tfjs", {});
-mockRequire("oxalis/workers/tensorflow.impl", {});
-mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
@@ -103,7 +100,7 @@ test("SaveSaga should send update actions", t => {
   saga.next(); // select state
   expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   saga.next(); // race
-  saga.next(SaveActions.pushSaveQueueTransaction(updateActions));
+  saga.next({ forcePush: SaveActions.saveNowAction() });
   saga.next(); // select state
   expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, TRACING_TYPE, tracingId));
   saga.next(); // select state
@@ -197,7 +194,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
   t.true(saga.next().done);
 });
 
-test("SaveSaga should send update actions right away", t => {
+test("SaveSaga should send update actions right away and try to reach a state where all updates are saved", t => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
 
@@ -207,10 +204,25 @@ test("SaveSaga should send update actions right away", t => {
   saga.next(); // select state
   expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   saga.next(); // race
-  saga.next(SaveActions.saveNowAction()); // put setSaveBusyAction
+  saga.next({ forcePush: SaveActions.saveNowAction() }); // put setSaveBusyAction
   saga.next(); // select state
   saga.next(saveQueue); // call sendRequestToServer
   saga.next(); // select state
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
+});
+
+test("SaveSaga should not try to reach state with all actions being saved when saving is triggered by a timeout", t => {
+  const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
+  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
+
+  const saga = pushTracingTypeAsync(TRACING_TYPE, tracingId);
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTION));
+  saga.next();
+  saga.next(); // select state
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
+  saga.next(); // race
+  saga.next({ timeout: "a placeholder" }); // put setSaveBusyAction
+  saga.next(saveQueue); // call sendRequestToServer
   expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
 });
 

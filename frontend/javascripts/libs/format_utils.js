@@ -1,5 +1,6 @@
 // @flow
 import moment from "moment";
+import { presetPalettes } from "@ant-design/colors";
 
 import { Unicode, type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
@@ -18,17 +19,31 @@ const COLOR_MAP: Array<string> = [
   "#60e0ac",
 ];
 
-export function stringToColor(role: string): string {
-  const hash = hashString(role);
+// Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
+const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);
+
+export function stringToColor(string: string): string {
+  const hash = hashString(string, COLOR_MAP.length);
   return COLOR_MAP[hash];
 }
 
-function hashString(string: string): number {
+export function stringToAntdColorPreset(string: string): string {
+  const hash = hashString(string, COLOR_MAP_ANTD.length);
+  return COLOR_MAP_ANTD[hash];
+}
+
+export function stringToAntdColorPresetRgb(string: string): Vector3 {
+  const presetString = stringToAntdColorPreset(string);
+  // This will be a hex code, see https://www.npmjs.com/package/@ant-design/colors
+  return Utils.hexToRgb(presetPalettes[presetString].primary);
+}
+
+function hashString(string: string, max: number): number {
   let hash = 0;
   for (let i = 0; i < string.length; i++) {
     hash += string.charCodeAt(i);
   }
-  return hash % COLOR_MAP.length;
+  return hash % max;
 }
 
 export function formatTuple(tuple: ?(Array<number> | Vector3 | Vector6)) {
@@ -59,14 +74,37 @@ export function formatScale(scaleArr: ?Vector3, roundTo?: number = 2): string {
   }
 }
 
+const nmFactorToUnit = new Map([
+  [1e-3, "pm"],
+  [1, "nm"],
+  [1e3, "µm"],
+  [1e6, "mm"],
+  [1e9, "m"],
+  [1e12, "km"],
+]);
+const sortedNmFactors = Array.from(nmFactorToUnit.keys()).sort((a, b) => a - b);
+
 export function formatNumberToLength(lengthInNm: number): string {
-  if (lengthInNm < 1000) {
-    return `${lengthInNm.toFixed(0)}${ThinSpace}nm`;
-  } else if (lengthInNm < 1000000) {
-    return `${(lengthInNm / 1000).toFixed(1)}${ThinSpace}µm`;
-  } else {
-    return `${(lengthInNm / 1000000).toFixed(1)}${ThinSpace}mm`;
+  const closestFactor = findClosestLengthUnitFactor(lengthInNm);
+  const unit = nmFactorToUnit.get(closestFactor);
+  if (unit == null) {
+    throw new Error("Couldn't look up appropriate length unit.");
   }
+  const lengthInUnit = lengthInNm / closestFactor;
+  if (lengthInUnit !== Math.floor(lengthInUnit)) {
+    return `${lengthInUnit.toFixed(1)}${ThinSpace}${unit}`;
+  }
+  return `${lengthInUnit}${ThinSpace}${unit}`;
+}
+
+export function findClosestLengthUnitFactor(lengthInNm: number): number {
+  let closestFactor = sortedNmFactors[0];
+  for (const factor of sortedNmFactors) {
+    if (lengthInNm >= factor) {
+      closestFactor = factor;
+    }
+  }
+  return closestFactor;
 }
 
 export function formatLengthAsVx(lengthInVx: number, roundTo?: number = 2): string {

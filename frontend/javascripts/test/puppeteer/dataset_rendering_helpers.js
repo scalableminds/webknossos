@@ -2,13 +2,14 @@
 /* eslint no-await-in-loop: 0 */
 import urljoin from "url-join";
 
-import type { DatasetConfiguration } from "oxalis/store";
+import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
+import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 
 export const { WK_AUTH_TOKEN } = process.env;
 if (!WK_AUTH_TOKEN) {
@@ -36,7 +37,7 @@ export async function screenshotDataset(
   baseUrl: string,
   datasetId: APIDatasetId,
   optionalViewOverride: ?string,
-  optionalDatasetConfigOverride: ?DatasetConfiguration,
+  optionalDatasetConfigOverride: ?PartialDatasetConfiguration,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(
@@ -106,6 +107,7 @@ export async function screenshotSandboxWithMappingLink(
 }
 
 async function waitForMappingEnabled(page: Page) {
+  console.log("Waiting for mapping to be enabled");
   let isMappingEnabled;
   while (!isMappingEnabled) {
     await page.waitForTimeout(5000);
@@ -113,6 +115,7 @@ async function waitForMappingEnabled(page: Page) {
       "webknossos.apiReady().then(async api => api.data.isMappingEnabled())",
     );
   }
+  console.log("Mapping was enabled");
 }
 
 async function waitForTracingViewLoad(page: Page) {
@@ -124,17 +127,29 @@ async function waitForTracingViewLoad(page: Page) {
 }
 
 async function waitForRenderingFinish(page: Page) {
+  const width = 1920;
+  const height = 1080;
   let currentShot;
   let lastShot = await page.screenshot({ fullPage: true });
   let changedPixels = Infinity;
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
-  while (currentShot == null || changedPixels > 0) {
+  while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
+    console.log(`Waiting for rendering to finish. Changed pixels: ${changedPixels}`);
     await page.waitForTimeout(10000);
     currentShot = await page.screenshot({ fullPage: true });
     if (lastShot != null) {
-      changedPixels = pixelmatch(lastShot, currentShot, {}, 1920, 1080, {
-        threshold: 0.0,
-      });
+      changedPixels = pixelmatch(
+        // The buffers need to be converted to png before comparing them
+        // as they might have different lengths, otherwise (probably due to different png encodings)
+        (await bufferToPng(lastShot, width, height)).data,
+        (await bufferToPng(currentShot, width, height)).data,
+        null,
+        width,
+        height,
+        {
+          threshold: 0.0,
+        },
+      );
     }
     lastShot = currentShot;
   }
@@ -147,12 +162,16 @@ async function openTracingView(
   optionalViewOverride: ?string,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
-  await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`), {
+  const url = urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`);
+  console.log(`Opening tracing view at ${url}`);
+  await page.goto(url, {
     timeout: 0,
   });
 
   await waitForTracingViewLoad(page);
+  console.log("Loaded tracing view");
   await waitForRenderingFinish(page);
+  console.log("Finished rendering tracing view");
 }
 
 async function openSandboxView(
@@ -162,21 +181,23 @@ async function openSandboxView(
   optionalViewOverride: ?string,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
-  await page.goto(
-    urljoin(
-      baseUrl,
-      `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
-    ),
-    {
-      timeout: 0,
-    },
+  const url = urljoin(
+    baseUrl,
+    `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
   );
+  console.log(`Opening sandbox tracing view at ${url}`);
+  await page.goto(url, {
+    timeout: 0,
+  });
 
   await waitForTracingViewLoad(page);
+  console.log("Loaded tracing view");
   await waitForRenderingFinish(page);
+  console.log("Finished rendering tracing view");
 }
 
 async function screenshotTracingView(page: Page): Promise<Screenshot> {
+  console.log("Screenshot tracing view");
   // Take screenshots of the other rendered planes
   const PLANE_IDS = [
     "#inputcatcher_TDView",

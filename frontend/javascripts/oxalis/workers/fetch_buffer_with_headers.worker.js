@@ -2,7 +2,7 @@
 
 import handleStatus from "libs/handle_http_status";
 
-import { expose } from "./comlink_wrapper";
+import { expose, transfer } from "./comlink_wrapper";
 
 function fetchBufferWithHeaders(
   url: RequestInfo,
@@ -17,10 +17,13 @@ function fetchBufferWithHeaders(
       for (const [key, value] of headers.entries()) {
         headerObject[key] = value;
       }
-      return {
-        buffer,
-        headers: headerObject,
-      };
+      return transfer(
+        {
+          buffer,
+          headers: headerObject,
+        },
+        [buffer],
+      );
     });
 }
 

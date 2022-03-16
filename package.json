@@ -45,6 +45,7 @@
     "eslint-plugin-jsx-a11y": "^6.1.2",
     "eslint-plugin-react": "^7.12.4",
     "eslint-plugin-react-hooks": "^1.0.1",
+    "eslint_d": "^11.1.1",
     "espree": "^3.5.4",
     "flow-bin": "^0.133.0",
     "flow-coverage-report": "^0.8.0",
@@ -62,11 +63,11 @@
     "node-fetch": "^2.6.7",
     "nyc": "^13.3.0",
     "pg": "^7.4.1",
-    "pixelmatch": "^4.0.2",
+    "pixelmatch": "^5.2.0",
     "pngjs": "^3.3.3",
     "prettier": "1.16.4",
     "proto-loader6": "^0.4.0",
-    "puppeteer": "^11.0.0",
+    "puppeteer": "^13.3.2",
     "randomstring": "^1.1.5",
     "react-test-renderer": "^16.8.0",
     "redux-mock-store": "^1.2.2",
@@ -105,6 +106,7 @@
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --cache --quiet frontend/javascripts/ tools/",
+    "lintd": "node_modules/.bin/eslint_d --cache --quiet frontend/javascripts/ tools/ # lintd uses a daemon for better speed (especially useful for hooking up to editors)",
     "lint-no-cache": "node_modules/.bin/eslint --quiet frontend/javascripts/ tools/",
     "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",
     "pretty-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
@@ -128,12 +130,12 @@
   },
   "dependencies": {
     "@airbrake/browser": "^2.1.7",
+    "@ant-design/colors": "^6.0.0",
     "@ant-design/compatible": "^1.0.8",
     "@ant-design/icons": "^4.6.2",
     "@fortawesome/fontawesome-free": "^5.14.0",
     "@rehooks/document-title": "^1.0.2",
     "@scalableminds/prop-types": "^15.6.1",
-    "@tensorflow/tfjs": "^1.0.0",
     "@use-it/interval": "^1.0.0",
     "Enumjs": "https://github.com/ryan953/Enumjs#master",
     "antd": "^4.15.0",
@@ -199,7 +201,7 @@
   },
   "ava": {
     "files": [
-      "./public/test-bundle/**/*.{js,jsx}"
+      "./public-test/test-bundle/**/*.{js,jsx}"
     ],
     "ignoredByWatcher": [
       "./binaryData/**/*.*"
@@ -214,7 +216,7 @@
     "sourceMap": false,
     "instrument": false,
     "exclude": [
-      "public/test-bundle/test/**/*.*",
+      "public-test/test-bundle/test/**/*.*",
       "frontend/javascripts/test/**/*.*"
     ]
   }

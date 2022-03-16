@@ -662,18 +662,30 @@ export function* pushTracingTypeAsync(
       // Save queue is empty, wait for push event
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
-    yield* race({
+    const { forcePush } = yield* race({
       timeout: _delay(PUSH_THROTTLE_TIME),
       forcePush: _take("SAVE_NOW"),
     });
     yield* put(setSaveBusyAction(true, tracingType));
-    while (true) {
-      // Send batches to the server until the save queue is empty
+    if (forcePush) {
+      while (true) {
+        // Send batches to the server until the save queue is empty.
+        saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
+        if (saveQueue.length > 0) {
+          yield* call(sendRequestToServer, tracingType, tracingId);
+        } else {
+          break;
+        }
+      }
+    } else {
       saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
       if (saveQueue.length > 0) {
+        // Saving the tracing automatically (via timeout) only saves the current state.
+        // It does not require to reach an empty saveQueue. This is especially
+        // important when the auto-saving happens during continuous movements.
+        // Always draining the save queue completely would mean that save
+        // requests are sent as long as the user moves.
         yield* call(sendRequestToServer, tracingType, tracingId);
-      } else {
-        break;
       }
     }
     yield* put(setSaveBusyAction(false, tracingType));

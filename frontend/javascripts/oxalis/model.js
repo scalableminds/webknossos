@@ -6,6 +6,7 @@ import {} from "oxalis/model/actions/settings_actions";
 
 import _ from "lodash";
 
+import { COMPRESSING_BATCH_SIZE } from "oxalis/model/bucket_data_handling/pushqueue";
 import { type Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
@@ -88,8 +89,7 @@ export class OxalisModel {
   }
 
   getAllLayers(): Array<DataLayer> {
-    // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
-    return Object.values(this.dataLayers);
+    return Utils.values(this.dataLayers);
   }
 
   getColorLayers(): Array<DataLayer> {
@@ -100,22 +100,18 @@ export class OxalisModel {
   }
 
   getSegmentationLayers(): Array<DataLayer> {
-    return Object.keys(this.dataLayers)
-      .map(k => this.dataLayers[k])
-      .filter(
-        dataLayer =>
-          getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
-      );
+    return Utils.values(this.dataLayers).filter(
+      dataLayer =>
+        getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
+    );
   }
 
   getSegmentationTracingLayers(): Array<DataLayer> {
-    return Object.keys(this.dataLayers)
-      .map(k => this.dataLayers[k])
-      .filter(dataLayer => {
-        const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
+    return Utils.values(this.dataLayers).filter(dataLayer => {
+      const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
 
-        return layer.category === "segmentation" && layer.tracingId != null;
-      });
+      return layer.category === "segmentation" && layer.tracingId != null;
+    });
   }
 
   getSomeSegmentationLayer(): ?DataLayer {
@@ -176,7 +172,7 @@ export class OxalisModel {
     return layer;
   }
 
-  getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
+  getCurrentlyRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
     const state = Store.getState();
     const zoomStep = getRequestLogZoomStep(state);
 
@@ -186,7 +182,25 @@ export class OxalisModel {
 
     // Depending on the zoom value, which magnifications are loaded and other settings,
     // the currently rendered zoom step has to be determined.
-    const renderedZoomStep = cube.getNextUsableZoomStepForPosition(position, zoomStep);
+    const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(position, zoomStep);
+
+    return renderedZoomStep;
+  }
+
+  async getUltimatelyRenderedZoomStepAtPosition(
+    layerName: string,
+    position: Vector3,
+  ): Promise<number> {
+    const state = Store.getState();
+    const zoomStep = getRequestLogZoomStep(state);
+    const cube = this.getCubeByLayerName(layerName);
+
+    // Depending on the zoom value, the available magnifications and other settings,
+    // the ultimately rendered zoom step has to be determined.
+    const renderedZoomStep = await cube.getNextUltimatelyUsableZoomStepForPosition(
+      position,
+      zoomStep,
+    );
 
     return renderedZoomStep;
   }
@@ -206,7 +220,7 @@ export class OxalisModel {
 
     const segmentationLayerName = segmentationLayer.name;
     const { cube } = segmentationLayer;
-    const renderedZoomStepForMousePosition = this.getRenderedZoomStepAtPosition(
+    const renderedZoomStepForMousePosition = this.getCurrentlyRenderedZoomStepAtPosition(
       segmentationLayerName,
       globalMousePosition,
     );
@@ -262,6 +276,22 @@ export class OxalisModel {
       true,
     );
     return storeStateSaved && pushQueuesSaved;
+  }
+
+  getPushQueueStats() {
+    const compressingBucketCount = _.sum(
+      Utils.values(this.dataLayers).map(
+        dataLayer => dataLayer.pushQueue.compressionTaskQueue.tasks.length * COMPRESSING_BATCH_SIZE,
+      ),
+    );
+    const waitingForCompressionBucketCount = _.sum(
+      Utils.values(this.dataLayers).map(dataLayer => dataLayer.pushQueue.pendingQueue.size),
+    );
+
+    return {
+      compressingBucketCount,
+      waitingForCompressionBucketCount,
+    };
   }
 
   forceSave = () => {

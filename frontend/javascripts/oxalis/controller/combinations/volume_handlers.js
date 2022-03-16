@@ -11,7 +11,6 @@ import {
   addToLayerAction,
   finishEditingAction,
   setContourTracingModeAction,
-  inferSegmentationInViewportAction,
   setActiveCellAction,
   resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -19,15 +18,6 @@ import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import api from "oxalis/api/internal_api";
-import window from "libs/window";
-
-// TODO: Build proper UI for this
-window.isAutomaticBrushEnabled = false;
-export function isAutomaticBrushEnabled() {
-  return (
-    window.isAutomaticBrushEnabled || Store.getState().temporaryConfiguration.isAutoBrushEnabled
-  );
-}
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
@@ -56,6 +46,9 @@ export function handlePickCell(pos: Point2) {
 }
 
 export function getSegmentIdForPosition(globalPos: Vector3) {
+  // This function will return the currently loaded segment ID for a given position.
+  // If the corresponding bucket is not loaded at the moment, the return value will be 0.
+  // See getSegmentIdForPositionAsync if the bucket loading should be awaited before returning the ID.
   const layer = Model.getVisibleSegmentationLayer();
   if (!layer) {
     return 0;
@@ -67,6 +60,28 @@ export function getSegmentIdForPosition(globalPos: Vector3) {
     segmentationLayerName,
     globalPos,
   );
+  return segmentationCube.getMappedDataValue(globalPos, renderedZoomStepForCameraPosition);
+}
+
+export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
+  // This function will return the segment ID for a given position, awaiting the loading
+  // of the corresponding bucket.
+  // See getSegmentIdForPosition if the bucket loading should not be awaited.
+  const layer = Model.getVisibleSegmentationLayer();
+  if (!layer) {
+    return 0;
+  }
+  const segmentationCube = layer.cube;
+  const segmentationLayerName = layer.name;
+
+  const renderedZoomStepForCameraPosition = await api.data.getUltimatelyRenderedZoomStepAtPosition(
+    segmentationLayerName,
+    globalPos,
+  );
+
+  // Make sure the corresponding bucket is loaded
+  await api.data.getDataValue(segmentationLayerName, globalPos, renderedZoomStepForCameraPosition);
+
   return segmentationCube.getMappedDataValue(globalPos, renderedZoomStepForCameraPosition);
 }
 
@@ -84,13 +99,6 @@ export function handleFloodFill(pos: Point2, plane: OrthoView) {
 
 export function handleFloodFillFromGlobalPosition(globalPos: Vector3, plane: OrthoView) {
   Store.dispatch(floodFillAction(globalPos, plane));
-}
-
-export function handleAutoBrush(pos: Point2) {
-  if (!isAutomaticBrushEnabled()) {
-    return;
-  }
-  Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(Store.getState(), pos)));
 }
 
 const MAX_BRUSH_CHANGE_VALUE = 5;

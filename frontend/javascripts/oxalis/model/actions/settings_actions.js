@@ -10,6 +10,8 @@ import type {
   MappingType,
 } from "oxalis/store";
 
+import Deferred from "libs/deferred";
+
 export type UpdateUserSettingAction = {
   type: "UPDATE_USER_SETTING",
   propertyName: $Keys<UserConfiguration>,
@@ -44,6 +46,12 @@ type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: ViewMode };
 type SetHistogramDataAction = {
   type: "SET_HISTOGRAM_DATA",
   histogramData: HistogramDataForAllLayers,
+};
+export type ClipHistogramAction = {
+  type: "CLIP_HISTOGRAM",
+  layerName: string,
+  shouldAdjustClipRange: boolean,
+  callback?: () => void,
 };
 type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
@@ -157,6 +165,30 @@ export const setHistogramDataAction = (
   type: "SET_HISTOGRAM_DATA",
   histogramData,
 });
+
+export const clipHistogramAction = (
+  layerName: string,
+  shouldAdjustClipRange: boolean,
+  callback?: () => void,
+): ClipHistogramAction => ({
+  type: "CLIP_HISTOGRAM",
+  layerName,
+  shouldAdjustClipRange,
+  callback,
+});
+
+export const dispatchClipHistogramAsync = async (
+  layerName: string,
+  shouldAdjustClipRange: boolean,
+  dispatch: any => any,
+): Promise<void> => {
+  const readyDeferred = new Deferred();
+  const action = clipHistogramAction(layerName, shouldAdjustClipRange, () =>
+    readyDeferred.resolve(),
+  );
+  dispatch(action);
+  await readyDeferred.promise();
+};
 
 export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingAction => ({
   type: "SET_FLIGHTMODE_RECORDING",

@@ -6,10 +6,7 @@ import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import SaveSagas, { toggleErrorHighlighting } from "oxalis/model/sagas/save_saga";
 import AnnotationSagas from "oxalis/model/sagas/annotation_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
-import {
-  watchSkeletonTracingAsync,
-  watchAgglomerateLoading,
-} from "oxalis/model/sagas/skeletontracing_saga";
+import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
 import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
 import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
@@ -17,7 +14,8 @@ import { watchMaximumRenderableLayers } from "oxalis/model/sagas/dataset_saga";
 import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
 import SettingsSaga from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
-import HistogramSaga from "oxalis/model/sagas/load_histogram_data_saga";
+import loadHistogramDataSaga from "oxalis/model/sagas/load_histogram_data_saga";
+import listenToClipHistogramSaga from "oxalis/model/sagas/clip_histogram_saga";
 import MappingSaga from "oxalis/model/sagas/mapping_saga";
 
 let rootSagaCrashed = false;
@@ -39,15 +37,15 @@ function* restartableSaga(): Saga<void> {
     yield _all([
       _call(warnAboutMagRestriction),
       _call(SettingsSaga),
-      _call(watchSkeletonTracingAsync),
-      _call(HistogramSaga),
+      ...SkeletontracingSagas.map(saga => _call(saga)),
+      _call(listenToClipHistogramSaga),
+      _call(loadHistogramDataSaga),
       _call(watchDataRelevantChanges),
       _call(isosurfaceSaga),
       _call(watchTasksAsync),
       _call(handleMeshChanges),
       _call(watchMaximumRenderableLayers),
       _call(MappingSaga),
-      _call(watchAgglomerateLoading),
       _call(watchToolDeselection),
       ...AnnotationSagas.map(saga => _call(saga)),
       ...SaveSagas.map(saga => _call(saga)),

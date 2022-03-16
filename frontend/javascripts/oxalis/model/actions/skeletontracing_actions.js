@@ -136,6 +136,12 @@ export type LoadAgglomerateSkeletonAction = {
   mappingName: string,
   agglomerateId: number,
 };
+export type RemoveAgglomerateSkeletonAction = {
+  type: "REMOVE_AGGLOMERATE_SKELETON",
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+};
 type NoAction = { type: "NONE" };
 
 export type SkeletonTracingAction =
@@ -181,7 +187,8 @@ export type SkeletonTracingAction =
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
   | UpdateNavigationListAction
-  | LoadAgglomerateSkeletonAction;
+  | LoadAgglomerateSkeletonAction
+  | RemoveAgglomerateSkeletonAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -574,6 +581,17 @@ export const loadAgglomerateSkeletonAction = (
   agglomerateId: number,
 ): LoadAgglomerateSkeletonAction => ({
   type: "LOAD_AGGLOMERATE_SKELETON",
+  layerName,
+  mappingName,
+  agglomerateId,
+});
+
+export const removeAgglomerateSkeletonAction = (
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+): RemoveAgglomerateSkeletonAction => ({
+  type: "REMOVE_AGGLOMERATE_SKELETON",
   layerName,
   mappingName,
   agglomerateId,

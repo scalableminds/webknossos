@@ -1,12 +1,13 @@
-# Installation on your own Server
+# Installation on your Server
+The easiest way to get started with webKnossos is to get an account on [webKnossso.org](https://webknossos.org).
 
 webKnossos is open-source, so you can install it on your own server.
 We recommend a server with at least 4 CPU cores, 16 GB RAM, and as much disk space as you require for your datasets.
 
 As prerequisites, you need to install [Docker](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) on your server. Docker 17+ and Docker Compose 1.18+ are required.
 
-This tutorial shows how to install webKnossos on a fresh VM which is available over the public internet and has a domain name (or a subdomain) already configured.
-webKnossos will then be available with over a secured connection (HTTPS) with automatic certificate management.
+This tutorial shows how to install webKnossos on a fresh VM, which is available over the public internet and has a domain name (or a subdomain) already configured.
+webKnossos will then be available over a secured connection (HTTPS) with automatic certificate management.
 
 ```bash
 # Create a new folder for webknossos
@@ -47,12 +48,12 @@ docker-compose down
     This setup does not support regular backups or monitoring.
     Please check out [our paid service plans](https://webknossos.org/pricing) if you require any assistance with your production setup.
 
-For installations on localhost, please refer to the [Code Readme](code-readme.md#docker).
+For installations on localhost, please refer to the [Readme](https://github.com/scalableminds/webknossos#docker).
 
 ### Onboarding
 When starting with webKnossos you first need to create an organization.
 An organization represents your lab in webKnossos and handles permissions for users and datasets.
-Choose a descriptive name for your organization, e.g. "The University of Springfield", "Simpsons Lab" or "Neuroscience Department".
+Choose a descriptive name for your organization, e.g., "The University of Springfield", "Simpsons Lab" or "Neuroscience Department".
 
 ![Create your organization](./images/onboarding_organization.png)
 

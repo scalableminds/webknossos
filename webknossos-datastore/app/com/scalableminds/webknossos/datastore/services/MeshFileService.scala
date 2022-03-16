@@ -2,12 +2,11 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.{Path, Paths}
 
-import ch.systemsx.cisd.hdf5.HDF5FactoryProvider
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.{CachedMeshFile, MeshFileCache}
+import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import net.liftweb.common.Box
@@ -31,7 +30,7 @@ object ListMeshChunksRequest {
 
 case class MeshChunkDataRequest(
     meshFile: String,
-    position: Point3D,
+    position: Vec3Int,
     segmentId: Long
 )
 
@@ -57,7 +56,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   private val meshFileExtension = "hdf5"
   private val defaultLevelOfDetail = 0
 
-  private lazy val meshFileCache = new MeshFileCache(30)
+  private lazy val meshFileCache = new Hdf5FileCache(30)
 
   def exploreMeshFiles(organizationName: String,
                        dataSetName: String,
@@ -87,7 +86,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
    */
   def mappingNameForMeshFile(meshFilePath: Path): Fox[String] =
     for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.fromPath) } ?~> "mesh.file.open.failed"
       mappingName <- tryo { _: Throwable =>
         cachedMeshFile.finishAccess()
       } { cachedMeshFile.reader.string().getAttr("/", "metadata/mapping_name") } ?~> "mesh.file.readEncoding.failed"
@@ -97,7 +96,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,
                                dataLayerName: String,
-                               listMeshChunksRequest: ListMeshChunksRequest): Fox[List[Point3D]] = {
+                               listMeshChunksRequest: ListMeshChunksRequest): Fox[List[Vec3Int]] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
@@ -107,7 +106,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
 
     for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.fromPath) } ?~> "mesh.file.open.failed"
       chunkPositionLiterals <- tryo { _: Throwable =>
         cachedMeshFile.finishAccess()
       } {
@@ -133,7 +132,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .resolve(meshesDir)
       .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
     for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.fromPath) } ?~> "mesh.file.open.failed"
       encoding <- tryo { _: Throwable =>
         cachedMeshFile.finishAccess()
       } { cachedMeshFile.reader.string().getAttr("/", "metadata/encoding") } ?~> "mesh.file.readEncoding.failed"
@@ -145,20 +144,15 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } yield (data, encoding)
   }
 
-  private def positionLiteral(position: Point3D) =
+  private def positionLiteral(position: Vec3Int) =
     s"${position.x}_${position.y}_${position.z}"
 
-  private def parsePositionLiteral(positionLiteral: String): Fox[Point3D] = {
+  private def parsePositionLiteral(positionLiteral: String): Fox[Vec3Int] = {
     val split = positionLiteral.split("_").toList
     for {
       _ <- bool2Fox(split.length == 3)
       asInts <- tryo { split.map(_.toInt) }
-    } yield Point3D(asInts.head, asInts(1), asInts(2))
-  }
-
-  def initHDFReader(meshFilePath: Path): CachedMeshFile = {
-    val reader = HDF5FactoryProvider.get.openForReading(meshFilePath.toFile)
-    CachedMeshFile(reader)
+    } yield Vec3Int(asInts.head, asInts(1), asInts(2))
   }
 
 }

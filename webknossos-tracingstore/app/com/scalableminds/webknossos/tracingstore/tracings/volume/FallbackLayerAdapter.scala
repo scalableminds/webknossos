@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -34,13 +34,13 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
 
   lazy val boundingBox: BoundingBox = primary.boundingBox
 
-  val resolutions: List[Point3D] = primary.resolutions.union(fallback.resolutions)
+  val resolutions: List[Vec3Int] = primary.resolutions.union(fallback.resolutions)
 
   val elementClass: ElementClass.Value = primary.elementClass
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
-  def lengthOfUnderlyingCubes(resolution: Point3D): Int = fallback.lengthOfUnderlyingCubes(resolution)
+  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = fallback.lengthOfUnderlyingCubes(resolution)
 
   val largestSegmentId: Long = math.max(primary.largestSegmentId, fallback.largestSegmentId)
 

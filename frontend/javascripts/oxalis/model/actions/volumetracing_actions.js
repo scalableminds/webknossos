@@ -23,6 +23,13 @@ type FloodFillAction = {
   planeId: OrthoView,
   callback?: () => void,
 };
+
+export type PerformMinCutAction = {
+  type: "PERFORM_MIN_CUT",
+  treeId: number,
+  boundingBoxId?: number,
+};
+
 type FinishEditingAction = { type: "FINISH_EDITING" };
 export type SetActiveCellAction = {
   type: "SET_ACTIVE_CELL",
@@ -59,10 +66,6 @@ export type FinishAnnotationStrokeAction = { type: "FINISH_ANNOTATION_STROKE", t
 type SetMousePositionAction = { type: "SET_MOUSE_POSITION", position: ?Vector2 };
 type HideBrushAction = { type: "HIDE_BRUSH" };
 type SetContourTracingModeAction = { type: "SET_CONTOUR_TRACING_MODE", mode: ContourMode };
-export type InferSegmentationInViewportAction = {
-  type: "INFER_SEGMENT_IN_VIEWPORT",
-  position: Vector3,
-};
 export type ImportVolumeTracingAction = { type: "IMPORT_VOLUMETRACING" };
 export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
 export type SetSegmentsAction = {
@@ -85,6 +88,7 @@ export type VolumeTracingAction =
   | StartEditingAction
   | AddToLayerAction
   | FloodFillAction
+  | PerformMinCutAction
   | FinishEditingAction
   | SetActiveCellAction
   | ClickSegmentAction
@@ -94,7 +98,6 @@ export type VolumeTracingAction =
   | SetMousePositionAction
   | HideBrushAction
   | CopySegmentationLayerAction
-  | InferSegmentationInViewportAction
   | SetContourTracingModeAction
   | SetSegmentsAction
   | UpdateSegmentAction
@@ -144,6 +147,15 @@ export const floodFillAction = (
   position,
   planeId,
   callback,
+});
+
+export const performMinCutAction = (
+  treeId: number,
+  boundingBoxId?: number,
+): PerformMinCutAction => ({
+  type: "PERFORM_MIN_CUT",
+  treeId,
+  boundingBoxId,
 });
 
 export const finishEditingAction = (): FinishEditingAction => ({
@@ -230,13 +242,6 @@ export const addBucketToUndoAction = (
   maybeUnmergedBucketLoadedPromise,
   pendingOperations: pendingOperations.slice(),
   tracingId,
-});
-
-export const inferSegmentationInViewportAction = (
-  position: Vector3,
-): InferSegmentationInViewportAction => ({
-  type: "INFER_SEGMENT_IN_VIEWPORT",
-  position,
 });
 
 export const importVolumeTracingAction = (): ImportVolumeTracingAction => ({

@@ -142,7 +142,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     for {
       teamIdValidated <- ObjectId.parse(teamId)
       team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
-      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)
+      users <- userDAO.findAllByTeams(List(team._id))
       nonUnlistedUsers = users.filter(!_.isUnlisted)
       nonAdminUsers <- Fox.filterNot(nonUnlistedUsers)(u => userService.isTeamManagerOrAdminOf(u, teamIdValidated))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)

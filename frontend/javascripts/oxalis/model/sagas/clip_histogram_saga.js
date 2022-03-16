@@ -20,7 +20,7 @@ function onThresholdChange(layerName: string, [firstVal, secVal]: [number, numbe
   }
 }
 
-async function getClippingValues(layerName: string, thresholdRatio: number = 0.03) {
+async function getClippingValues(layerName: string, thresholdRatio: number = 0.005) {
   const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
 

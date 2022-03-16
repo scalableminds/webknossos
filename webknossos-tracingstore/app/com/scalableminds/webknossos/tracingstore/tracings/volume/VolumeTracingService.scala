@@ -186,10 +186,14 @@ class VolumeTracingService @Inject()(
   def initializeWithData(tracingId: String,
                          tracing: VolumeTracing,
                          initialData: File,
-                         resolutionRestrictions: ResolutionRestrictions): Box[Set[Vec3Int]] = {
+                         resolutionRestrictions: ResolutionRestrictions): Fox[Set[Vec3Int]] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
     }
+
+    val resolutionSet = resolutionSetFromZipfile(initialData)
+    // if none of the tracings contained any volume data. do not save buckets, use full resolution list
+    if (resolutionSet.isEmpty) return getRequiredMags(tracing).map(_.toSet)
 
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val savedResolutions = new mutable.HashSet[Vec3Int]()

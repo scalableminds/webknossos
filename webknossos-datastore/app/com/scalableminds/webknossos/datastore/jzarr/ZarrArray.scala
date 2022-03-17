@@ -45,11 +45,11 @@ object ZarrArray extends LazyLogging {
 
 class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extends LazyLogging {
 
-  final private val chunkReaderWriter =
+  private val chunkReader =
     ChunkReader.create(store, header)
 
   // cache currently limited to 100 MB per array
-  lazy val chunkContentsCache: ChunkContentsCache =
+  private lazy val chunkContentsCache: ChunkContentsCache =
     new ChunkContentsCache(maxSizeBytes = 1000 * 1000 * 100, bytesPerEntry = header.bytesPerChunk)
 
   // @return Byte array in fortran-order with little-endian values
@@ -67,19 +67,21 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   // @return Byte array in fortran-order with little-endian values
   @throws[IOException]
   @throws[InvalidRangeException]
-  def readBytes(shape: Array[Int], offset: Array[Int]): Array[Byte] =
-    BytesConverter.toByteArray(readAsFortranOrder(shape, offset), header.dataType, ByteOrder.LITTLE_ENDIAN)
+  def readBytes(shape: Array[Int], offset: Array[Int]): Array[Byte] = {
+    val typedData = readAsFortranOrder(shape, offset)
+    BytesConverter.toByteArray(typedData, header.dataType, ByteOrder.LITTLE_ENDIAN)
+  }
 
   @throws[IOException]
   @throws[InvalidRangeException]
   def readAsFortranOrder(shape: Array[Int], offset: Array[Int]): Object = {
     val buffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
     val chunkIndices = ChunkUtils.computeChunkIndices(header.shape, header.chunks, shape, offset)
-    for (chunkIndex <- chunkIndices) {
+    chunkIndices.foreach { chunkIndex: Array[Int] =>
       val sourceChunk: MultiArray = getSourceChunkDataWithCache(chunkIndex)
       val offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
       if (partialCopyingIsNotNeeded(shape, offsetInChunk)) {
-        System.arraycopy(sourceChunk.getStorage, 0, buffer, 0, sourceChunk.getSize.toInt)
+        return sourceChunk.getStorage
       } else {
         val sourceChunkInCOrder: MultiArray =
           if (header.order == ArrayOrder.C)
@@ -97,7 +99,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
     val storeKey = chunkFilePath.storeKey
-    chunkContentsCache.getOrLoadAndPut(storeKey)(chunkReaderWriter.read)
+    chunkContentsCache.getOrLoadAndPut(storeKey)(chunkReader.read)
   }
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =

@@ -1,2 +1,1 @@
-com.upplication.s3fs.S3FileSystemProvider
-com.scalableminds.webknossos.datastore.storage.httpsfilesystem.HttpsFileSystemProvider
+conf/META-INF/services/java.nio.file.spi.FileSystemProvider

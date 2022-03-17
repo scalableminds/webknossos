@@ -36,11 +36,6 @@ abstract class Compressor {
 object CompressorFactory {
   val nullCompressor = new CompressorFactory.NullCompressor
 
-  def getDefaultCompressorProperties: Map[String, Either[String, Int]] =
-    BloscCompressor.defaultProperties
-
-  def createDefaultCompressor: Compressor = create(getDefaultCompressorProperties)
-
   def create(properties: Map[String, Either[String, Int]]): Compressor =
     properties("id") match {
       case Left(id) => create(id, properties)
@@ -111,7 +106,6 @@ object CompressorFactory {
     val defaultBlocksize = 0
     val supportedShuffle: List[Int] = List(NOSHUFFLE, BYTESHUFFLE, BITSHUFFLE)
     val supportedCnames: List[String] = List("zstd", "blosclz", defaultCname, "lz4hc", "zlib")
-    val defaultProperties: Map[String, Either[String, Int]] = Map[String, Either[String, Int]]("id" -> Left("blosc"))
   }
 
   class BloscCompressor(val properties: Map[String, Either[String, Int]]) extends Compressor {

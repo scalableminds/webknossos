@@ -11,15 +11,11 @@ ThisBuild / scalacOptions ++= Seq(
   "-target:jvm-1.8",
   "-feature",
   "-deprecation",
-  "-nobootcp",
   "-language:implicitConversions",
   "-language:postfixOps",
   "-Xlint:unused",
  s"-P:silencer:sourceRoots=${baseDirectory.value.getCanonicalPath}",
   "-P:silencer:pathFilters=(.*target/.*/routes/.*/(ReverseRoutes\\.scala|Routes\\.scala|routes\\.java|JavaScriptReverseRoutes.scala)|.*target/.*\\.template\\.scala)"
-)
-ThisBuild / javacOptions ++= Seq(
-  "-Xlint:unchecked"
 )
 
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)

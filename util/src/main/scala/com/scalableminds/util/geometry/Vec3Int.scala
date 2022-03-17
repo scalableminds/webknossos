@@ -70,6 +70,8 @@ object Vec3Int {
   def fromList(l: List[Int]) =
     fromArray(l.toArray)
 
+  def full(i: Int): Vec3Int = Vec3Int(i, i, i)
+
   implicit object Vec3IntReads extends Reads[Vec3Int] {
     def reads(json: JsValue) = json match {
       case JsArray(ts) if ts.size == 3 =>

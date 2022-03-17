@@ -7,44 +7,34 @@ import java.nio.file.{FileSystem, FileSystemAlreadyExistsException, FileSystems}
 import java.util.ServiceLoader
 
 import com.google.common.collect.ImmutableMap
+import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.collection.mutable
+class FileSystemsCache(val maxEntries: Int) extends LRUConcurrentCache[RemoteSourceDescriptor, FileSystem]
+class FileSystemsProvidersCache(val maxEntries: Int) extends LRUConcurrentCache[String, FileSystemProvider]
 
-object FileSystemHolder extends LazyLogging {
+object FileSystemsHolder extends LazyLogging {
 
   private val schemeS3 = "s3"
   private val schemeHttps = "https"
 
+  private val fileSystemsCache = new FileSystemsCache(maxEntries = 100)
+  private val fileSystemsProvidersCache = new FileSystemsProvidersCache(maxEntries = 100)
+
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
     List(schemeS3, schemeHttps).contains(uriScheme)
 
-  // TODO use real cache
-  val fileSystemsCache: mutable.Map[RemoteSourceDescriptor, FileSystem] =
-    mutable.HashMap[RemoteSourceDescriptor, FileSystem]()
-
-  def findProvider(scheme: String): Option[FileSystemProvider] = {
-    val i = ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator()
-    while (i.hasNext) {
-      val p = i.next()
-      if (p.getScheme.equalsIgnoreCase(scheme)) {
-        return Some(p)
-      }
-    }
-    None
-  }
-
   def getOrCreate(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
-    fileSystemsCache.get(remoteSource) match {
-      case Some(fs) => Some(fs)
-      case None =>
-        val fsOpt = getOrCreateWithoutCache(remoteSource)
-        fsOpt.foreach(fileSystemsCache.put(remoteSource, _))
-        fsOpt
-    }
+    fileSystemsCache.getOrLoadOptional(remoteSource)(loadFromProvider)
 
-  private def getOrCreateWithoutCache(remoteSource: RemoteSourceDescriptor): Option[FileSystem] = {
+  private def loadFromProvider(remoteSource: RemoteSourceDescriptor): Option[FileSystem] = {
+    /*
+     * The FileSystemProviders can have their own cache for file systems.
+     * Those will error on create if the file system already exists
+     * Quirk: They include the user name in the key. This is not supported for newFileSystem but is for getFileSystem
+     * Hence this has to be called in two different ways here
+     */
     val uriWithPath = remoteSource.uri
     val uri = baseUri(uriWithPath)
     val uriWithUser = insertUserName(uri, remoteSource)
@@ -52,22 +42,18 @@ object FileSystemHolder extends LazyLogging {
     val scheme = uri.getScheme
     val credentialsEnv = makeCredentialsEnv(remoteSource, scheme)
 
-    logger.info(s"Loading file system for uri $uri")
-
-    val fs: Option[FileSystem] = try {
+    try {
       Some(FileSystems.newFileSystem(uri, credentialsEnv, currentThread().getContextClassLoader))
     } catch {
       case _: FileSystemAlreadyExistsException =>
         try {
-          findProvider(uri.getScheme).map(_.getFileSystem(uriWithUser))
+          findProviderWithCache(uri.getScheme).map(_.getFileSystem(uriWithUser))
         } catch {
           case e2: Exception =>
-            logger.error("getFileSytem errored:", e2)
+            logger.error(s"getFileSytem errored for ${uriWithUser.toString}:", e2)
             None
         }
     }
-    logger.info(s"Loaded file system $fs for uri $uri")
-    fs
   }
 
   private def insertUserName(uri: URI, remoteSource: RemoteSourceDescriptor): URI =
@@ -94,5 +80,21 @@ object FileSystemHolder extends LazyLogging {
       } else emptyEnv
     }).getOrElse(emptyEnv)
 
-  private def emptyEnv = ImmutableMap.builder[String, Any].build()
+  private def emptyEnv: ImmutableMap[String, Any] = ImmutableMap.builder[String, Any].build()
+
+  private def findProviderWithCache(scheme: String): Option[FileSystemProvider] =
+    fileSystemsProvidersCache.getOrLoadOptional(scheme: String)(findProvider)
+
+  private def findProvider(scheme: String): Option[FileSystemProvider] = {
+    val providersIterator =
+      ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator()
+    while (providersIterator.hasNext) {
+      val provider = providersIterator.next()
+      if (provider.getScheme.equalsIgnoreCase(scheme)) {
+        return Some(provider)
+      }
+    }
+    None
+  }
+
 }

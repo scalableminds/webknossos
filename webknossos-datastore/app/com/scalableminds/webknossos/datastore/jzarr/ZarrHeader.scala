@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.jzarr
 
 import java.nio.ByteOrder
 
+import com.scalableminds.webknossos.datastore.jzarr.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.jzarr.BytesConverter.bytesPerElementFor
 import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
@@ -9,15 +10,16 @@ import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
 case class ZarrHeader(
-    zarr_format: Int,
+    zarr_format: Int, // format version number
     shape: Array[Int], // shape of the entire array
     chunks: Array[Int], // shape of each chunk
-    compressor: Option[Map[String, Either[String, Int]]] = None,
+    compressor: Option[Map[String, Either[String, Int]]] = None, // specifies compressor to use, with parameters
     dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
     dtype: String,
     fill_value: Either[String, Number] = Right(0),
-    order: String = "C",
+    order: ArrayOrder
 ) {
+
   lazy val byteOrder: ByteOrder =
     if (dtype.startsWith(">")) ByteOrder.BIG_ENDIAN
     else if (dtype.startsWith("<")) ByteOrder.LITTLE_ENDIAN
@@ -32,18 +34,16 @@ case class ZarrHeader(
 
   lazy val bytesPerChunk: Int = chunks.toList.product * bytesPerElementFor(dataType)
 
-  lazy val fillValueNumber: Number = {
+  lazy val fillValueNumber: Number =
     fill_value match {
       case Right(n) => n
-      case Left(_)  => 0 // TODO: parse fill value from string
+      case Left(_)  => 0 // parsing fill value from string not currently supported
     }
-  }
 
-  lazy val chunkShapeOrdered: Array[Int] = {
-    if (order == "C") {
+  lazy val chunkShapeOrdered: Array[Int] =
+    if (order == ArrayOrder.C) {
       chunks
     } else chunks.reverse
-  }
 
 }
 

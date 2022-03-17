@@ -22,7 +22,6 @@ class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
     if (uri.getUserInfo != null && uri.getUserInfo.nonEmpty) {
       throw new Exception("Username was supplied in uri, should be in env instead.")
     }
-    logger.info(s"newFileSystem for $uri")
     val basicAuthCredentials = HttpsBasicAuthCredentials.fromEnvMap(env)
     val key = fileSystemKey(uri, basicAuthCredentials)
     if (fileSystems.containsKey(key)) {

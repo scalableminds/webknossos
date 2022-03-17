@@ -4,7 +4,6 @@ import java.io.IOException
 import java.nio.file.{Path, Paths}
 import java.util
 
-import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
@@ -36,7 +35,6 @@ object ZarrArray extends LazyLogging {
         throw new IOException(
           "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
       val headerString = Source.fromInputStream(headerInputStream).mkString
-      logger.info(headerString)
       val header: ZarrHeader =
         Json.parse(headerString).validate[ZarrHeader] match {
           case JsSuccess(parsedHeader, _) =>
@@ -54,10 +52,6 @@ object ZarrArray extends LazyLogging {
 
 }
 
-class ChunkContentsCache(maxSizeBytes: Int, bytesPerEntry: Int) extends LRUConcurrentCache[String, MultiArray] {
-  def maxEntries: Int = maxSizeBytes / bytesPerEntry
-}
-
 class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extends LazyLogging {
 
   final private val chunkReaderWriter =
@@ -67,6 +61,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   lazy val chunkContentsCache: ChunkContentsCache =
     new ChunkContentsCache(maxSizeBytes = 1000 * 1000 * 100, bytesPerEntry = header.bytesPerChunk)
 
+  // @return Byte array in fortran-order with little-endian values
   @throws[IOException]
   @throws[InvalidRangeException]
   def readBytesXYZ(shape: Vec3Int, offset: Vec3Int): Array[Byte] = {
@@ -78,14 +73,15 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
     readBytes(shapeArray, offsetArray)
   }
 
+  // @return Byte array in fortran-order with little-endian values
   @throws[IOException]
   @throws[InvalidRangeException]
   def readBytes(shape: Array[Int], offset: Array[Int]): Array[Byte] =
-    BytesConverter.toByteArray(read(shape, offset), header.dataType, header.byteOrder)
+    BytesConverter.toByteArray(readAsFortranOrder(shape, offset), header.dataType, header.byteOrder)
 
   @throws[IOException]
   @throws[InvalidRangeException]
-  def read(shape: Array[Int], offset: Array[Int]): Object = {
+  def readAsFortranOrder(shape: Array[Int], offset: Array[Int]): Object = {
     val buffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
     val chunkIndices = ChunkUtils.computeChunkIndices(header.shape, header.chunks, shape, offset)
     for (chunkIndex <- chunkIndices) {
@@ -94,11 +90,13 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
       if (partialCopyingIsNotNeeded(shape, offsetInChunk)) {
         System.arraycopy(sourceChunk.getStorage, 0, buffer, 0, sourceChunk.getSize.toInt)
       } else {
-        val target =
+        val sourceChunkInCOrder: MultiArray =
+          if (header.order == ArrayOrder.C)
+            sourceChunk
+          else MultiArrayUtils.orderFlippedView(sourceChunk)
+        val targetInCOrder: MultiArray =
           MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(buffer, shape.reverse))
-        println(
-          s"Copying at global offset ${offset.toList} (offset in chunk: ${offsetInChunk.toList}) from chunk ${chunkIndex.toList} to buffer with shape ${shape.toList}")
-        MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, target)
+        MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
       }
     }
     buffer
@@ -108,14 +106,14 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
     val storeKey = chunkFilePath.storeKey
-    chunkContentsCache.getOrLoad(storeKey)(chunkReaderWriter.readAsCOrder)
+    chunkContentsCache.getOrLoad(storeKey)(chunkReaderWriter.read)
   }
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =
     chunkIndex.mkString(header.dimension_separator.toString)
 
   private def partialCopyingIsNotNeeded(bufferShape: Array[Int], offset: Array[Int]): Boolean =
-    header.order == "F" && isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape)
+    header.order == ArrayOrder.F && isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape)
 
   private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
     util.Arrays.equals(bufferShape, header.chunks)
@@ -123,13 +121,13 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   private def isZeroOffset(offset: Array[Int]): Boolean =
     util.Arrays.equals(offset, new Array[Int](offset.length))
 
+  private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
+    chunkIndex.indices.map { dim =>
+      globalOffset(dim) - (chunkIndex(dim) * header.chunks(dim))
+    }.toArray
+
   override def toString: String =
     s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' shape=${header.shape.mkString(",")} chunks=${header.chunks
       .mkString(",")} dtype=${header.dtype} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
 
-  private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
-    chunkIndex.zipWithIndex.map {
-      case (chunkIndexInDim, dim) =>
-        globalOffset(dim) - (chunkIndexInDim * header.chunks(dim))
-    }
 }

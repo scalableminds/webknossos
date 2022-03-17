@@ -24,11 +24,6 @@ trait ChunkReader {
   val store: Store
   lazy val chunkSize: Int = header.chunks.toList.product
 
-  def readAsCOrder(path: String): MultiArray = {
-    val chunkRaw = read(path)
-    if (header.order == "C") chunkRaw else MultiArrayUtils.orderFlippedView(chunkRaw)
-  }
-
   @throws[IOException]
   def read(path: String): MultiArray
 

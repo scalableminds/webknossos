@@ -5,7 +5,7 @@ import java.net.URI
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.FileSystemHolder
+import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import play.api.libs.json.{Json, OFormat}
 
 case class FileSystemCredentials(user: String, password: Option[String])
@@ -23,7 +23,7 @@ case class ZarrMag(mag: Vec3Int, path: Option[String], credentials: Option[FileS
   lazy val pathWithFallback: String =
     path.getOrElse(if (mag.isIsotropic) s"${mag.x}" else s"${mag.x}-${mag.y}-${mag.z}")
   private lazy val uri: URI = new URI(pathWithFallback)
-  private lazy val isRemote: Boolean = FileSystemHolder.isSupportedRemoteScheme(uri.getScheme)
+  private lazy val isRemote: Boolean = FileSystemsHolder.isSupportedRemoteScheme(uri.getScheme)
   lazy val remoteSource: Option[RemoteSourceDescriptor] =
     if (isRemote)
       Some(RemoteSourceDescriptor(uri, credentials.map(_.user), credentials.flatMap(_.password)))

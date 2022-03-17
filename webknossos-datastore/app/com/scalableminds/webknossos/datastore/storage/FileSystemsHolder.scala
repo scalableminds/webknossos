@@ -26,14 +26,16 @@ object FileSystemsHolder extends LazyLogging {
     List(schemeS3, schemeHttps).contains(uriScheme)
 
   def getOrCreate(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
-    fileSystemsCache.getOrLoadOptional(remoteSource)(loadFromProvider)
+    fileSystemsCache.getOrLoadAndPutOptional(remoteSource)(loadFromProvider)
 
   private def loadFromProvider(remoteSource: RemoteSourceDescriptor): Option[FileSystem] = {
     /*
      * The FileSystemProviders can have their own cache for file systems.
-     * Those will error on create if the file system already exists
-     * Quirk: They include the user name in the key. This is not supported for newFileSystem but is for getFileSystem
-     * Hence this has to be called in two different ways here
+     * Those will error on create if the file system already exists.
+     * Quirk: They include the user name in the key.
+     * This is not supported for newFileSystem but is for getFileSystem.
+     * Conversely, getFileSystem cannot be called with the credentials env.
+     * Hence this has to be called in two different ways here.
      */
     val uriWithPath = remoteSource.uri
     val uri = baseUri(uriWithPath)
@@ -83,7 +85,7 @@ object FileSystemsHolder extends LazyLogging {
   private def emptyEnv: ImmutableMap[String, Any] = ImmutableMap.builder[String, Any].build()
 
   private def findProviderWithCache(scheme: String): Option[FileSystemProvider] =
-    fileSystemsProvidersCache.getOrLoadOptional(scheme: String)(findProvider)
+    fileSystemsProvidersCache.getOrLoadAndPutOptional(scheme: String)(findProvider)
 
   private def findProvider(scheme: String): Option[FileSystemProvider] = {
     val providersIterator =

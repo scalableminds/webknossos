@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
-import java.nio.file.FileSystem
+import java.nio.file.{FileSystem, Path}
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCube}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
 import com.scalableminds.webknossos.datastore.jzarr.ZarrArray
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
@@ -13,7 +13,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty}
 
-class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging with RateLimitedErrorLogging {
+class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLogging with RateLimitedErrorLogging {
 
   def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
@@ -27,37 +27,38 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging with Rate
 
 class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging with RateLimitedErrorLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCubeHandle] = {
     val zarrMagOpt: Option[ZarrMag] =
       layer.mags.find(_.mag == readInstruction.bucket.resolution)
-    zarrMagOpt.map { zarrMag =>
+
+    val magPathOpt: Option[Path] = zarrMagOpt.flatMap { zarrMag =>
       zarrMag.remoteSource match {
-        case Some(remoteSource) => loadRemote(remoteSource)
-        case None               => loadLocal(readInstruction, zarrMag.pathWithFallback)
+        case Some(remoteSource) => remotePathFrom(remoteSource)
+        case None               => localPathFrom(readInstruction, zarrMag.pathWithFallback)
       }
-    }.getOrElse(Empty)
+    }
+
+    magPathOpt match {
+      case None => Empty
+      case Some(magPath) =>
+        tryo(onError = e => logError(e))(ZarrArray.open(magPath)).map(new ZarrCubeHandle(_))
+    }
   }
 
-  private def loadRemote(remoteSource: RemoteSourceDescriptor): Box[ZarrCube] = {
-    val layerPathOpt = FileSystemsHolder.getOrCreate(remoteSource).map { fileSystem: FileSystem =>
+  private def remotePathFrom(remoteSource: RemoteSourceDescriptor): Option[Path] =
+    FileSystemsHolder.getOrCreate(remoteSource).map { fileSystem: FileSystem =>
       fileSystem.getPath(remoteSource.remotePath)
     }
-    layerPathOpt match {
-      case None => Empty
-      case Some(layerPath) =>
-        tryo(onError = e => logError(e))(ZarrArray.open(layerPath)).map(new ZarrCube(_))
-    }
-  }
 
-  private def loadLocal(readInstruction: DataReadInstruction, magPath: String): Box[ZarrCube] = {
-    val layerPath = readInstruction.baseDir
+  private def localPathFrom(readInstruction: DataReadInstruction, relativeMagPath: String): Option[Path] = {
+    val magPath = readInstruction.baseDir
       .resolve(readInstruction.dataSource.id.team)
       .resolve(readInstruction.dataSource.id.name)
       .resolve(readInstruction.dataLayer.name)
-      .resolve(magPath)
-    if (layerPath.toFile.exists()) {
-      tryo(onError = e => logError(e))(ZarrArray.open(layerPath)).map(new ZarrCube(_))
-    } else Empty
+      .resolve(relativeMagPath)
+    if (magPath.toFile.exists()) {
+      Some(magPath)
+    } else None
   }
 
 }

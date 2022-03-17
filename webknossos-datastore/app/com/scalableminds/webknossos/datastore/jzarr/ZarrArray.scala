@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.jzarr
 
 import java.io.IOException
-import java.nio.file.{Path, Paths}
+import java.nio.ByteOrder
+import java.nio.file.Path
 import java.util
 
 import com.scalableminds.util.geometry.Vec3Int
@@ -15,20 +16,10 @@ object ZarrArray extends LazyLogging {
   private val chunkSizeLimitBytes = 64 * 1024 * 1024
 
   @throws[IOException]
-  def open(path: String): ZarrArray =
-    open(Paths.get(path))
-
-  @throws[IOException]
-  def open(fileSystemPath: Path): ZarrArray =
-    open(new FileSystemStore(fileSystemPath))
-
-  @throws[IOException]
-  def open(store: Store): ZarrArray =
-    open(new ZarrPath(""), store)
-
-  @throws[IOException]
-  def open(relativePath: ZarrPath, store: Store): ZarrArray = {
-    val headerPath = relativePath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
+  def open(path: Path): ZarrArray = {
+    val store = new FileSystemStore(path)
+    val rootPath = new ZarrPath("")
+    val headerPath = rootPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
     val headerInputStream = store.getInputStream(headerPath.storeKey)
     try {
       if (headerInputStream == null)
@@ -46,7 +37,7 @@ object ZarrArray extends LazyLogging {
         throw new IllegalArgumentException(
           f"Chunk size of this Zarr Array exceeds limit of $chunkSizeLimitBytes, got ${header.bytesPerChunk}")
       }
-      new ZarrArray(relativePath, store, header)
+      new ZarrArray(rootPath, store, header)
     } finally if (headerInputStream != null) headerInputStream.close()
   }
 
@@ -77,7 +68,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   @throws[IOException]
   @throws[InvalidRangeException]
   def readBytes(shape: Array[Int], offset: Array[Int]): Array[Byte] =
-    BytesConverter.toByteArray(readAsFortranOrder(shape, offset), header.dataType, header.byteOrder)
+    BytesConverter.toByteArray(readAsFortranOrder(shape, offset), header.dataType, ByteOrder.LITTLE_ENDIAN)
 
   @throws[IOException]
   @throws[InvalidRangeException]
@@ -106,7 +97,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
     val chunkFilename = getChunkFilename(chunkIndex)
     val chunkFilePath = relativePath.resolve(chunkFilename)
     val storeKey = chunkFilePath.storeKey
-    chunkContentsCache.getOrLoad(storeKey)(chunkReaderWriter.read)
+    chunkContentsCache.getOrLoadAndPut(storeKey)(chunkReaderWriter.read)
   }
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =

@@ -54,9 +54,6 @@ object BytesConverter {
   }
 
   private def makeByteBuffer(lengthBytes: Int, byteOrder: ByteOrder) =
-    ByteBuffer.allocate(lengthBytes).order(invertByteOrder(byteOrder))
-
-  private def invertByteOrder(byteOrder: ByteOrder) =
-    if (byteOrder == ByteOrder.BIG_ENDIAN) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
+    ByteBuffer.allocate(lengthBytes).order(byteOrder)
 
 }

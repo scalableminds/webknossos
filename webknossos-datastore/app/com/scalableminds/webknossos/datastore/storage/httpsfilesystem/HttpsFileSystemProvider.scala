@@ -6,12 +6,10 @@ import java.nio.file.attribute.{BasicFileAttributes, FileAttribute, FileAttribut
 import java.nio.file.spi.FileSystemProvider
 import java.nio.file._
 import java.util
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
+import java.util.concurrent.ConcurrentHashMap
 
 import com.google.common.collect.ImmutableMap
-import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
 import com.typesafe.scalalogging.LazyLogging
-import com.upplication.s3fs.S3FileSystem
 
 class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
   private val fileSystems: ConcurrentHashMap[String, HttpsFileSystem] = new ConcurrentHashMap[String, HttpsFileSystem]

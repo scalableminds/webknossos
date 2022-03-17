@@ -67,13 +67,13 @@ trait RequestLogging extends AbstractRequestLogging {
 trait RateLimitedErrorLogging extends LazyLogging {
   // Allows to log errors that occur many times only once (per lifetime of the class)
 
-  private val loggedErrorClasses = scala.collection.mutable.Set[String]()
+  private val loggedErrorMessages = scala.collection.mutable.Set[String]()
 
   protected def logError(t: Throwable): Unit =
     t match {
       case e: Exception =>
-        if (!loggedErrorClasses.contains(e.getMessage)) {
-          loggedErrorClasses.add(e.getMessage)
+        if (!loggedErrorMessages.contains(e.getMessage)) {
+          loggedErrorMessages.add(e.getMessage)
           val sw = new StringWriter
           e.printStackTrace(new PrintWriter(sw))
           logger.error(sw.toString)

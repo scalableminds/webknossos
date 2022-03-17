@@ -224,10 +224,10 @@ export function* collectUndoStates(): Saga<void> {
     "REDO",
   ]);
 
-  window.counter = 0;
+  let loopCounter = 0;
   while (true) {
-    window.counter++;
-    if (window.counter % 100 === 0) {
+    loopCounter++;
+    if (loopCounter % 100 === 0) {
       yield _delay(0);
     }
     const currentAction = yield* take(actionChannel);

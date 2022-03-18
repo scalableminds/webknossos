@@ -191,10 +191,6 @@ class VolumeTracingService @Inject()(
       return Failure("Tracing has already been edited.")
     }
 
-    val resolutionSet = resolutionSetFromZipfile(initialData)
-    // if none of the tracings contained any volume data. do not save buckets, use full resolution list
-    if (resolutionSet.isEmpty) return getRequiredMags(tracing).map(_.toSet)
-
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val savedResolutions = new mutable.HashSet[Vec3Int]()
 
@@ -206,6 +202,9 @@ class VolumeTracingService @Inject()(
         saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
       }
     }
+    // if none of the tracings contained any volume data. do not save buckets, use full resolution list
+    if (savedResolutions.isEmpty) return getRequiredMags(tracing).map(_.toSet)
+
     unzipResult.map(_ => savedResolutions.toSet)
   }
 

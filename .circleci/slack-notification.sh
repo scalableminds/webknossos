@@ -16,7 +16,7 @@ if [ "${CIRCLE_BRANCH}" == "master" ] ; then
     author=${author/tmbo/<@tmbo>}
     author=${author/valentin-pinkau/<@valentin>}
     author=${author/youri-k/<@youri>}
-    author=${author/Dagobert42/<@Arthur Hilbert>}
+    author=${author/Dagobert42/<@Arthur>}
     author=${author/leowe/<@leowe>}
     channel="webknossos-bots"
     commitmsg="$(git log --format=%s -n 1)"

@@ -172,6 +172,20 @@ class JobListView extends React.PureComponent<Props, State> {
           </Link>{" "}
         </span>
       );
+    } else if (
+      job.type === "apply_merger_mode" &&
+      job.organizationName &&
+      job.datasetName &&
+      job.layerName
+    ) {
+      return (
+        <span>
+          Applied merger mode to layer {job.layerName} of{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
     } else {
       return <span>{job.type}</span>;
     }

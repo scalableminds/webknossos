@@ -1089,9 +1089,10 @@ export function startApplyMergerModeJob(
   datasetName: string,
   layerName: string,
   annotationId: string,
-): Promise<APIJob> {
+  annotationType: APIAnnotationType,
+  ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/applyMergerMode/${organizationName}/${datasetName}?layerName=${layerName}&annotationId=${annotationId}`,
+    `/api/jobs/run/applyMergerMode/${organizationName}/${datasetName}?layerName=${layerName}&annotationId=${annotationId}&annotationType=${annotationType}`,
     {
       method: "POST",
     },

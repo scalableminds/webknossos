@@ -1,6 +1,6 @@
 // @flow
 import React, { useEffect, useState, type Node } from "react";
-import { type APIDataset, type APIJob } from "types/api_flow_types";
+import { type APIJob } from "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
 import {
   startNucleiInferralJob,
@@ -9,6 +9,7 @@ import {
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
 import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import { type UserBoundingBox } from "oxalis/store";
@@ -27,7 +28,6 @@ type Props = {
 };
 type StartingJobModalProps = {
   ...Props,
-  dataset: APIDataset,
   jobApiCall: (string, ?UserBoundingBox) => Promise<?APIJob>,
   jobName: string,
   description: Node,
@@ -38,20 +38,21 @@ type StartingJobModalProps = {
 function StartingJobModal(props: StartingJobModalProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
-  const { dataset, handleClose, jobName, description, jobApiCall } = props;
+  const { handleClose, jobName, description, jobApiCall } = props;
   const userBoundingBoxes = useSelector(state => getUserBoundingBoxesFromState(state));
+  const tracing = useSelector(store => store.tracing);
   const [selectedLayerName, setSelectedLayerName] = useState<?string>(null);
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<?UserBoundingBox>(null);
-  const layerNames = (chooseSegmentationLayer
-    ? getSegmentationLayers(dataset)
-    : getColorLayers(dataset)
-  ).map(layer => layer.name);
+  const layers = useSelector(state =>
+    chooseSegmentationLayer ? getSegmentationLayers(state.dataset) : getColorLayers(state.dataset),
+  );
+
   useEffect(() => {
-    if (layerNames.length === 1) {
-      setSelectedLayerName(layerNames[0]);
+    if (layers.length === 1) {
+      setSelectedLayerName(layers[0].name);
     }
   });
-  if (layerNames.length < 1) {
+  if (layers.length < 1) {
     return null;
   }
   const onChangeBoundingBox = (selectedBBoxId: number) => {
@@ -92,9 +93,8 @@ function StartingJobModal(props: StartingJobModalProps) {
       handleClose();
     }
   };
-
-  const ColorLayerSelection = (): Node =>
-    layerNames.length > 1 ? (
+  const LayerSelection = (): Node =>
+    layers.length > 1 ? (
       <React.Fragment>
         <p>Please select the layer that should be used for this job.</p>
         <div style={{ textAlign: "center" }}>
@@ -109,11 +109,17 @@ function StartingJobModal(props: StartingJobModalProps) {
               option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }
           >
-            {layerNames.map(layerName => (
-              <Select.Option key={layerName} value={layerName}>
-                {layerName}
-              </Select.Option>
-            ))}
+            {layers.map(layer => {
+              const readableName =
+                layer.tracingId != null
+                  ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+                  : layer.name;
+              return (
+                <Select.Option key={readableName} value={readableName}>
+                  {readableName}
+                </Select.Option>
+              );
+            })}
           </Select>
         </div>
         <br />
@@ -193,7 +199,7 @@ function StartingJobModal(props: StartingJobModalProps) {
         />
       </div>
       <br />
-      <ColorLayerSelection />
+      <LayerSelection />
       <BoundingBoxSelection />
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" disabled={hasUnselectedOptions} onClick={startJob}>
@@ -208,7 +214,6 @@ export function NucleiInferralModal({ handleClose }: Props) {
   const dataset = useSelector(state => state.dataset);
   return (
     <StartingJobModal
-      dataset={dataset}
       handleClose={handleClose}
       jobName="nuclei inferral"
       jobApiCall={colorLayerName =>
@@ -239,7 +244,6 @@ export function NeuronInferralModal({ handleClose }: Props) {
   const dataset = useSelector(state => state.dataset);
   return (
     <StartingJobModal
-      dataset={dataset}
       handleClose={handleClose}
       jobName="neuron inferral"
       isBoundingBoxConfigurable
@@ -278,10 +282,9 @@ export function NeuronInferralModal({ handleClose }: Props) {
 
 export function ApplyMergerModeModal({ handleClose }: Props) {
   const dataset = useSelector(state => state.dataset);
-  const annotationId = useSelector(store => store.tracing.annotationId);
+  const tracing = useSelector(store => store.tracing);
   return (
     <StartingJobModal
-      dataset={dataset}
       handleClose={handleClose}
       jobName="apply merger mode"
       chooseSegmentationLayer
@@ -290,7 +293,8 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
           dataset.owningOrganization,
           dataset.name,
           segmentationLayer,
-          annotationId,
+          tracing.annotationId,
+          tracing.annotationType,
         )
       }
       description={

@@ -77,13 +77,11 @@ export function getVolumeDescriptorById(
   annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
   tracingId: string,
 ): AnnotationLayerDescriptor {
-  const descriptors = getVolumeDescriptors(annotation).filter(
-    layer => layer.tracingId === tracingId,
-  );
-  if (descriptors.length === 0) {
+  const descriptor = getVolumeDescriptors(annotation).find(layer => layer.tracingId === tracingId);
+  if (descriptor == null) {
     throw new Error(`Could not find volume descriptor with id ${tracingId}`);
   }
-  return descriptors[0];
+  return descriptor;
 }
 
 export function getReadableNameByVolumeTracingId(

@@ -261,7 +261,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
     def runApplyMergerModeJob(organizationName: String,
                          dataSetName: String,
                          layerName: String,
-                         annotationId: String): Action[AnyContent] =
+                         annotationId: String,
+                         annotationType: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -281,6 +282,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
             "user_auth_token" -> userAuthToken.id,
             "annotation_id" -> annotationId,
+            "annotation_type" -> annotationType
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunApplyMergerMode"
           js <- jobService.publicWrites(job)

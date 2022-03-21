@@ -39,6 +39,7 @@ import {
   shuffleTreeColorAction,
   setTreeGroupAction,
   deleteTreeAction,
+  toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -73,6 +74,7 @@ type Props = {
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onBatchActions: (Array<Action>, string) => void,
+  onToggleHideInactiveTrees: () => void,
 };
 
 type State = {
@@ -341,6 +343,16 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             Expand all subgroups
           </Menu.Item>
         ) : null}
+        <Menu.Item
+          key="hideTree"
+          onClick={() => {
+            this.props.onSetActiveGroup(id);
+            this.props.onToggleHideInactiveTrees();
+          }}
+          title="Hide/Show all other trees"
+        >
+          <i className="fas fa-eye" /> Hide/Show all other trees
+        </Menu.Item>
       </Menu>
     );
 
@@ -444,6 +456,17 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             title="Measure Skeleton Length"
           >
             <i className="fas fa-ruler" /> Measure Skeleton Length
+          </Menu.Item>
+          <Menu.Item
+            key="hideTree"
+            onClick={() => {
+              this.props.onSetActiveTree(tree.treeId);
+              this.props.onToggleHideInactiveTrees();
+              this.handleTreeDropdownMenuVisibility(tree.treeId, false);
+            }}
+            title="Hide/Show all other trees"
+          >
+            <i className="fas fa-eye" /> Hide/Show all other trees
           </Menu.Item>
         </Menu>
       );
@@ -585,6 +608,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onBatchActions(actions, actionName) {
     dispatch(batchActions(actions, actionName));
+  },
+  onToggleHideInactiveTrees() {
+    dispatch(toggleInactiveTreesAction());
   },
 });
 

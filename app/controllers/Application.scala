@@ -3,7 +3,6 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import javax.inject.Inject
@@ -23,8 +22,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
                             storeModules: StoreModules,
-                            sil: Silhouette[WkEnv],
-                            rpc: RPC)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   @ApiOperation(value = "Information about the version of webKnossos")

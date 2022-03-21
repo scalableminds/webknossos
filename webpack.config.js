@@ -12,8 +12,6 @@ module.exports = function(env = {}) {
   const protoPath = path.join(__dirname, "webknossos-datastore/proto/");
   const publicPath = "/assets/bundle/";
 
-  fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), String(process.pid), "utf8");
-
   const plugins = [
     new webpack.DefinePlugin({
       "process.env.NODE_ENV": env.production ? '"production"' : '"development"',

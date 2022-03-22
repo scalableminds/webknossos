@@ -367,6 +367,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
             new File(file.toString),
             unpackToDir,
             includeHiddenFiles = false,
+            hiddenFilesWhitelist = List(".zarray"),
             truncateCommonPrefix = true,
             Some(excludeFromPrefix)
           )

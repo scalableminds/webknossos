@@ -42,6 +42,8 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
       y <- func(y, other.y)
       z <- func(z, other.z)
     } yield Vec3Int(x, y, z)
+
+  def product: Int = x * y * z
 }
 
 object Vec3Int {
@@ -67,6 +69,8 @@ object Vec3Int {
 
   def fromList(l: List[Int]) =
     fromArray(l.toArray)
+
+  def full(i: Int): Vec3Int = Vec3Int(i, i, i)
 
   implicit object Vec3IntReads extends Reads[Vec3Int] {
     def reads(json: JsValue) = json match {

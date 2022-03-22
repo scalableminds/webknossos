@@ -41,11 +41,10 @@ function StartingJobModal(props: StartingJobModalProps) {
   const { handleClose, jobName, description, jobApiCall } = props;
   const userBoundingBoxes = useSelector(state => getUserBoundingBoxesFromState(state));
   const tracing = useSelector(store => store.tracing);
+  const dataset = useSelector(store => store.dataset);
   const [selectedLayerName, setSelectedLayerName] = useState<?string>(null);
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<?UserBoundingBox>(null);
-  const layers = useSelector(state =>
-    chooseSegmentationLayer ? getSegmentationLayers(state.dataset) : getColorLayers(state.dataset),
-  );
+  const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
 
   useEffect(() => {
     if (layers.length === 1) {
@@ -288,7 +287,7 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
       handleClose={handleClose}
       jobName="apply merger mode"
       chooseSegmentationLayer
-      jobApiCall={async segmentationLayer =>
+      jobApiCall={segmentationLayer =>
         startApplyMergerModeJob(
           dataset.owningOrganization,
           dataset.name,

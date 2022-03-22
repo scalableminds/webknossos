@@ -115,15 +115,24 @@ const RadioButtonWithTooltip = ({
   title,
   disabledTitle,
   disabled,
+  onClick,
   ...props
 }: {
   title: string,
   disabledTitle?: string,
   disabled?: boolean,
+  onClick?: Function,
 }) => (
   <Tooltip title={disabled ? disabledTitle : title}>
     {/* $FlowIgnore[cannot-spread-inexact] */}
-    <Radio.Button disabled={disabled} {...props} />
+    <Radio.Button
+      disabled={disabled}
+      {...props}
+      onClick={evt => {
+        if (document.activeElement) document.activeElement.blur();
+        if (onClick) onClick(evt);
+      }}
+    />
   </Tooltip>
 );
 
@@ -440,11 +449,7 @@ export default function ToolbarView() {
   const showEraseBrushTool = !showEraseTraceTool;
 
   return (
-    <div
-      onClick={() => {
-        if (document.activeElement) document.activeElement.blur();
-      }}
-    >
+    <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
         <RadioButtonWithTooltip
           title={moveToolDescription}
@@ -628,7 +633,7 @@ export default function ToolbarView() {
         isControlPressed={isControlPressed}
         isShiftPressed={isShiftPressed}
       />
-    </div>
+    </>
   );
 }
 

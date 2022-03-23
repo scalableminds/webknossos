@@ -5,11 +5,12 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKW
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrDataLayer
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, tracing = Value
+  val wkw, zarr, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {
@@ -152,6 +153,7 @@ object DataLayer {
         layer <- (dataFormat, category) match {
           case (DataFormat.wkw, Category.segmentation) => json.validate[WKWSegmentationLayer]
           case (DataFormat.wkw, _)                     => json.validate[WKWDataLayer]
+          case (DataFormat.zarr, _)                    => json.validate[ZarrDataLayer]
           case _                                       => json.validate[WKWDataLayer]
         }
       } yield {
@@ -162,6 +164,7 @@ object DataLayer {
       (layer match {
         case l: WKWDataLayer         => WKWDataLayer.jsonFormat.writes(l)
         case l: WKWSegmentationLayer => WKWSegmentationLayer.jsonFormat.writes(l)
+        case l: ZarrDataLayer        => ZarrDataLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat

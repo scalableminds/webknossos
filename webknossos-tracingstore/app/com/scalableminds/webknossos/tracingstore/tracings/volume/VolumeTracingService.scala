@@ -202,7 +202,7 @@ class VolumeTracingService @Inject()(
         saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
       }
     }
-    // if none of the tracings contained any volume data. do not save buckets, use full resolution list
+    // if none of the tracings contained any volume data, use the dataset’s full resolution list
     if (savedResolutions.isEmpty) return getRequiredMags(tracing).map(_.toSet)
 
     unzipResult.map(_ => savedResolutions.toSet)

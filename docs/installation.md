@@ -78,4 +78,3 @@ By default, datasets are visible to all users in your organization.
 However, webKnossos includes fine-grained permissions to assign datasets to groups of users.
 
 ![Upload your first dataset](./images/onboarding_data1.png)
-![Confirm the dataset properties](./images/onboarding_data2.png)

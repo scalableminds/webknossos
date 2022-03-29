@@ -32,13 +32,13 @@ Most skeleton annotation operations and keyboard shortcuts are tailored for the 
 Oblique mode presents an arbitrarily-resliced view through the data.
 In contrast to Orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible.
 
-![Viewport in Oblique Mode](./images/tracing_ui_obliquemode.png)
+![Viewport in Oblique Mode showing an arbitrarily-resliced view through the data.](./images/tracing_ui_obliquemode.png)
 
 #### Flight Mode
 Flight mode also allows a resliced view through the data.
 In contrast to Oblique mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere.
 
-![Annotate neurons efficiently in Flight mode](./images/tracing_ui_flightmode.jpg)
+![Annotate processes, e.g. neurites, efficiently in Flight mode](./images/tracing_ui_flightmode.jpg)
 
 Spherical projection is especially useful when rotating the camera, as pixels close to the center of the screen move in a predictable manner.
 Interactions and movements in Flight mode feel similar to First-Person-View (FPV) games.

@@ -88,6 +88,10 @@ import * as Utils from "libs/utils";
 import constants, { ControlModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import messages from "messages";
 import window from "libs/window";
+import {
+  setActiveConnectomeAgglomerateIdsAction,
+  updateCurrentConnectomeFileAction,
+} from "oxalis/model/actions/connectome_actions";
 
 export const HANDLED_ERROR = "error_was_handled";
 
@@ -687,6 +691,18 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
             ),
           );
         }
+      }
+    }
+
+    if (layerState.connectomeInfo != null) {
+      const { connectomeName, agglomerateIdsToImport } = layerState.connectomeInfo;
+
+      Store.dispatch(updateCurrentConnectomeFileAction(effectiveLayerName, connectomeName));
+
+      if (agglomerateIdsToImport != null) {
+        Store.dispatch(
+          setActiveConnectomeAgglomerateIdsAction(effectiveLayerName, agglomerateIdsToImport),
+        );
       }
     }
   }

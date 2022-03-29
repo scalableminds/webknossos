@@ -96,6 +96,7 @@ const defaultState: OxalisState = {
     },
     preferredQualityForMeshPrecomputation: 2,
     preferredQualityForMeshAdHocComputation: 2,
+    lastVisibleSegmentationLayerName: null,
   },
   task: null,
   dataset: {

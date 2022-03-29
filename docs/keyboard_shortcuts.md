@@ -49,6 +49,7 @@ Note that skeleton-specific mouse actions are usually only available when the sk
 | Left Click                            | Create New Node                             |
 | Left Click                            | Select Node (Mark as Active Node) under cursor  |
 | Left Drag                             | Move node under cursor                |
+| Right Click (on node)                 | Bring up the context-menu with further actions                |
 | C                                     | Create New Tree                             |
 | CTRL + .                              | Navigate to the next Node (Mark as Active)|
 | CTRL + ,                              | Navigate to previous Node (Mark as Active) |
@@ -93,6 +94,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | Key Binding                       | Operation                                                   |
 | --------------------------------- | ----------------------------------------------------------- |
 | Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Segment (Trace / Brush Mode) |
+| Right Click                       | Bring up context-menu with further actions                     |
 | SHIFT + Left Click                | Select Active Segment                                          |
 | CTRL + Left Mouse Drag            | Add Voxels To Current Segment while inverting the overwrite-mode (see toolbar for overwrite-mode) |
 | CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Segment                                     |

@@ -129,7 +129,7 @@ uniform float viewportScale;
 uniform float activeNodeId;
 uniform float activeTreeId;
 uniform float overrideParticleSize; // node radius for equally size nodes
-uniform int overrideNodeRadius; // bool activates equaly node radius for all nodes
+uniform int overrideNodeRadius; // bool activates equal node radius for all nodes
 uniform int isPicking; // bool indicates whether we are currently rendering for node picking
 uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
 uniform float highlightCommentedNodes;

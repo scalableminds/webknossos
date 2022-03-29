@@ -29,6 +29,11 @@ export function values<K, V>(o: { [K]: V }): Array<V> {
   return Object.values(o);
 }
 
+export function entries<K, V>(o: { [K]: V }): Array<[K, V]> {
+  // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
+  return Object.entries(o);
+}
+
 export function map2<A, B>(fn: (A, number) => B, tuple: [A, A]): [B, B] {
   const [x, y] = tuple;
   return [fn(x, 0), fn(y, 1)];
@@ -89,6 +94,10 @@ function cheapSort<T: string | number>(valueA: T, valueB: T): -1 | 0 | 1 {
   // $FlowFixMe[invalid-compare] It is not possible to express that valueA and valueB have the very same type
   if (valueA > valueB) return 1;
   return 0;
+}
+
+export function unique<T>(array: Array<T>): Array<T> {
+  return [...new Set(array)];
 }
 
 export function enforce<A, B>(fn: A => B): (?A) => B {

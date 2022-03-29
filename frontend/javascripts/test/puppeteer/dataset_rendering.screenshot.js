@@ -1,5 +1,5 @@
 // @flow
-import type { DatasetConfiguration } from "oxalis/store";
+import type { PartialDatasetConfiguration } from "oxalis/store";
 import anyTest, { type TestInterface } from "ava";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import path from "path";
@@ -82,6 +82,7 @@ const datasetNames = [
   "ROI2017_wkw_fallback",
   "float_test_dataset",
   "Multi-Channel-Test",
+  "connectome_file_test_dataset",
 ];
 
 const viewOverrides: { [key: string]: string } = {
@@ -93,29 +94,28 @@ const viewOverrides: { [key: string]: string } = {
     '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.5,"stateByLayer":{"segmentation":{"mappingInfo":{"mappingName":"agglomerate_view_70","mappingType":"HDF5","agglomerateIdsToImport":[1, 6]}}}}',
   "test-agglomerate-file-with-meshes":
     '{"position":[63,67,118],"mode":"orthogonal","zoomStep":0.826,"stateByLayer":{"segmentation":{"meshInfo":{"meshFileName":"meshfile-with-name","meshes":[{"segmentId":4,"seedPosition":[64,75,118],"isPrecomputed":true,"meshFileName":"meshfile-with-name"},{"segmentId":12,"seedPosition":[107,125,118],"isPrecomputed":false,"mappingName":"agglomerate_view_70","mappingType":"HDF5"},{"segmentId":79,"seedPosition":[110,78,118],"isPrecomputed":false,"mappingName":null,"mappingType":null}]}}}}',
+  connectome_file_test_dataset:
+    '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.734,"stateByLayer":{"segmentation":{"connectomeInfo":{"connectomeName":"connectome","agglomerateIdsToImport":[1]}}}}',
 };
 
-const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
+const datasetConfigOverrides: { [key: string]: PartialDatasetConfiguration } = {
   ROI2017_wkw_fallback: {
-    fourBit: false,
-    interpolation: true,
     layers: {
       color: {
-        color: [255, 255, 255],
-        contrast: 1,
-        brightness: 0,
         alpha: 100,
         intensityRange: [0, 255],
         min: 0,
         max: 255,
-        isDisabled: false,
-        isInverted: false,
-        isInEditMode: false,
       },
     },
-    renderMissingDataBlack: false,
     segmentationPatternOpacity: 50,
     loadingStrategy: "BEST_QUALITY_FIRST",
+  },
+  connectome_file_test_dataset: {
+    layers: {
+      another_segmentation: { isDisabled: true },
+      segmentation: { isDisabled: false },
+    },
   },
 };
 

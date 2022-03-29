@@ -2,7 +2,7 @@
 /* eslint no-await-in-loop: 0 */
 import urljoin from "url-join";
 
-import type { DatasetConfiguration } from "oxalis/store";
+import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
@@ -37,7 +37,7 @@ export async function screenshotDataset(
   baseUrl: string,
   datasetId: APIDatasetId,
   optionalViewOverride: ?string,
-  optionalDatasetConfigOverride: ?DatasetConfiguration,
+  optionalDatasetConfigOverride: ?PartialDatasetConfiguration,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(
@@ -163,11 +163,11 @@ async function openTracingView(
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
   const url = urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`);
+  console.log(`Opening tracing view at ${url}`);
   await page.goto(url, {
     timeout: 0,
   });
 
-  console.log(`Opening tracing view at ${url}`);
   await waitForTracingViewLoad(page);
   console.log("Loaded tracing view");
   await waitForRenderingFinish(page);
@@ -185,11 +185,11 @@ async function openSandboxView(
     baseUrl,
     `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
   );
+  console.log(`Opening sandbox tracing view at ${url}`);
   await page.goto(url, {
     timeout: 0,
   });
 
-  console.log(`Opening sandbox tracing view at ${url}`);
   await waitForTracingViewLoad(page);
   console.log("Loaded tracing view");
   await waitForRenderingFinish(page);

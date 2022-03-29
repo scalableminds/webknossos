@@ -35,7 +35,6 @@ export const settings = {
   loadingStrategy: "Loading Strategy",
   mergerMode: "Merger Mode",
   gpuMemoryFactor: "Hardware Utilization",
-  autoBrush: "Automatic Brush (Beta)",
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
 };
@@ -290,7 +289,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.finish": "Are you sure you want to permanently finish this annotation?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.no_fallback_data_included":
-    "This download does only include the volume data annotated in this annotation. The fallback volume data is excluded.",
+    "This download only includes the volume data annotated in this annotation. The fallback volume data is excluded.",
   "annotation.was_re_opened": "Annotation was reopened",
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.was_edited": "Successfully updated annotation",

@@ -11,7 +11,6 @@ import {
   addToLayerAction,
   finishEditingAction,
   setContourTracingModeAction,
-  inferSegmentationInViewportAction,
   setActiveCellAction,
   resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -19,15 +18,6 @@ import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import api from "oxalis/api/internal_api";
-import window from "libs/window";
-
-// TODO: Build proper UI for this
-window.isAutomaticBrushEnabled = false;
-export function isAutomaticBrushEnabled() {
-  return (
-    window.isAutomaticBrushEnabled || Store.getState().temporaryConfiguration.isAutoBrushEnabled
-  );
-}
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
@@ -109,13 +99,6 @@ export function handleFloodFill(pos: Point2, plane: OrthoView) {
 
 export function handleFloodFillFromGlobalPosition(globalPos: Vector3, plane: OrthoView) {
   Store.dispatch(floodFillAction(globalPos, plane));
-}
-
-export function handleAutoBrush(pos: Point2) {
-  if (!isAutomaticBrushEnabled()) {
-    return;
-  }
-  Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(Store.getState(), pos)));
 }
 
 const MAX_BRUSH_CHANGE_VALUE = 5;

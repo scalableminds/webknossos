@@ -7,6 +7,7 @@ The webKnosso-wrap (WKW) container format is used for all internal voxel data re
 Any dataset uploaded to webKnossos.org, will automatically be converted to WKW on upload - given its source file format is supported by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html) or use a custom script based on the [webKnossos Python libray](https://docs.webknossos.org/webknossos-py/index.html).
 
 Additionally, webKnossos.org supports connecting and loading data from:
+
 - Neuroglancer Pre-Computed Dataset stored on Google Cloud
 - BossDB
 
@@ -321,6 +322,7 @@ Groups can be freely nested inside each other.
 webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerate" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
 
 webKnossos supports two formats for these agglomerates:
+
 - JSON -> `mappings` directory
 - HDF5 -> `agglomerates` directory
  (JSON-format) or `agglomerates` directory (HDF5-format) :

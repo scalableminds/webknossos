@@ -13,7 +13,7 @@ const app = express();
 
 const ROOT = path.resolve(path.join(__dirname, "..", ".."));
 const PORT = parseInt(process.env.PORT || 9000, 10);
-const HOST = `http://localhost:${PORT}`;
+const HOST = `http://127.0.0.1:${PORT}`;
 const loggingPrefix = "Proxy:";
 
 function makeEnv(port, host) {
@@ -96,11 +96,11 @@ proxy.on("error", (err, req, res) => {
 });
 
 function toBackend(req, res) {
-  proxy.web(req, res, { target: `http://localhost:${PORT + 1}` });
+  proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 1}` });
 }
 
 function toWebpackDev(req, res) {
-  proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
+  proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 2}` });
 }
 
 app.all("/assets/bundle/*", toWebpackDev);

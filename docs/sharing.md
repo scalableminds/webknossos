@@ -3,10 +3,12 @@ webKnossos is built for working collaboratively and sharing your work with colle
 Anything in webKnossos can be shared: the raw datasets, any skeleton or volume annotations, or complex segmentations.
 
 When speaking about collaboration and sharing, we imagine two scenarios supported by webKnossos:
+
 1. Sharing data with outsiders - anyone who is not a member of your webKnossos organization, e.g., colleagues from other institutes, reviewers, publishers, a paper publication, and the research community as a whole.
 2. Share data within your organization to collaborate with other members/co-workers
 
 Since webKnossos is a web platform, most resources can be shared as a web link/URL. This makes it super easy to integrate webKnossos in your existing communication workflows, e.g.:
+
 - send collaborators an *email* containing a link to specific, interesting data location or annotations
 - include a link in a *publication* so readers can have direct access to the data to see for themselves
 - share a link through *Slack*, *MS Teams*, or any other messenger service
@@ -27,6 +29,7 @@ webKnossos sharing is tightly integrated with user permissions and access rights
  The the sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.
 
  Sharing a dataset is useful for multiple scenarios: 
+ 
  - You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@webknossos.org)) to create these shortlinks.
  - You created an interesting, highly-accurate segmentation layer for an existing dataset and want to share it for your publication.
  - You have worked and published several datasets over the years and want to have a single gallery for all your public datasets.
@@ -193,6 +196,7 @@ In addition to sharing your annotation via a link, you can also share your annot
 This is the simplest way to share an annotation with a whole team.
 
 To share an annotation with a certain team, follow these steps:
+
 1. Open your annotation
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Under *Team Sharing*, select the teams from the dropdown menu.

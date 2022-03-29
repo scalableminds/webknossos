@@ -17,6 +17,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 The toolbar contains frequently used commands, such as saving and sharing, your current position within the dataset, and the ability to switch between various modes for viewing. Further, it provides access to all the tools for annotation, navigation, and more.
 
 The most common buttons are:
+
 - `Settings`: Toggles the visibility of the left-hand side panel with all data and segmentation layers and their respective settings.
 - `Undo` / `Redo`: Undoes the last operation or redoes it if no new changes have been made in the meantime. Undo can only revert changes made in this session (since the moment the annotation view was opened). To revert to older versions use the "Restore Older Version" functionality described later in this list.
 - `Save`: Saves your annotation work. webKnossos automatically saves every 30 seconds.
@@ -32,7 +33,7 @@ Clicking on the position or rotation labels copies the values to the clipboard.
 
 ![The webKnossos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.png)
 
-The toolbar further features also available navigation and annotation tools for quick access:
+The toolbar further features all available navigation and annotation tools for quick access:
 
 - `Move`: Navigate around the dataset.
 - `Skeleton`: Create skeleton annotations and place nodes. [Read more about skeleton annotations](./skeleton_annotation.md#tools).
@@ -58,6 +59,7 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 - `Histogram`: The Histogram displays sampled color values of the dataset on a logarithmic scale. The slider below the Histogram can be used to adjust the dynamic range of the displayed values. In order to increase the contrast of data, reduce the dynamic range. To decrease the contrast, widen the range. In order to increase the brightness, move the range to the left. To decrease the brightness, move the range to the right.
 
     Above the the histogram, there are icon buttons to further adjust the histogram or otherwise interact with the layer:
+    
         - `pencil`: Manipulate the min/max value of the histogram range. Clips values above/below these limits. 
         - `vertical line`: Automatically adjust the histogram for best contrast. Contrast estimation is based on the data currently available in your viewport.
         - `circle arrow`: Reload the data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
@@ -99,7 +101,7 @@ Note, not all control/viewport settings are available in every annotation mode.
 
 - `d/f-Switching`: If d/f switching is disabled, moving through the dataset with `f` will always go *f*orward by *increasing* the coordinate orthogonal to the current slice. Correspondingly, `d` will move backwards by decreasing that coordinate. However, if d/f is enabled, the meaning of "forward" and "backward" will change depending on how you create nodes. For example, when a node is placed at z == 100 and afterwards another node is created at z == 90, z will be *decreased* when going forward.
 
-- `Classic Controls`: Disabled by default to provide the best webKnossos user experience. When enabled, several keyboard shortcuts and mouse interactions change to maintain backward compatibility for long-time users.  See also the section on [Classic Keyboard Controls](./keyboard_shortcuts#Classic_Controls).
+- `Classic Controls`: Disabled by default to provide the best webKnossos user experience. When enabled, several keyboard shortcuts and mouse interactions change to maintain backward compatibility for long-time users.  See also the section on [Classic Keyboard Controls](./keyboard_shortcuts.md#Classic_Controls).
 
 #### Viewport Options / Flight Options
 - `Zoom`: The zoom factor for viewing the dataset. A low value moves the camera really close to the data, showing many details. A high value, will you show more of the dataset but with fewer details and is great for getting an overview or moving around quickly.

@@ -4,7 +4,6 @@ import java.io.File
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -44,7 +43,6 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                nmlService: AnnotationUploadService,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with ResultBox
     with ProtoGeometryImplicits
     with FoxImplicits {
 

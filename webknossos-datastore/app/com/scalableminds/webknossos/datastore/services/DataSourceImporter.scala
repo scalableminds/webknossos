@@ -61,13 +61,13 @@ trait DataSourceImporter {
     }
   }
 
-  protected def parseResolutionName(path: Path): Option[Either[Int, Vec3Int]] =
+  protected def parseResolutionName(path: Path): Option[Vec3Int] =
     path.getFileName.toString.toIntOpt match {
-      case Some(resolutionInt) => Some(Left(resolutionInt))
+      case Some(resolutionInt) => Some(Vec3Int(resolutionInt, resolutionInt, resolutionInt))
       case None =>
         val pattern = """(\d+)-(\d+)-(\d+)""".r
         path.getFileName.toString match {
-          case pattern(x, y, z) => Some(Right(Vec3Int(x.toInt, y.toInt, z.toInt)))
+          case pattern(x, y, z) => Some(Vec3Int(x.toInt, y.toInt, z.toInt))
           case _                => None
         }
     }
@@ -75,10 +75,7 @@ trait DataSourceImporter {
   protected def resolutionDirFilter(path: Path): Boolean = parseResolutionName(path).isDefined
 
   protected def resolutionDirSortingKey(path: Path): Int =
-    parseResolutionName(path).get match {
-      case Left(int)    => int
-      case Right(point) => point.maxDim
-    }
+    parseResolutionName(path).get.maxDim
 
   protected def exploreMappings(baseDir: Path): Option[Set[String]] = MappingProvider.exploreMappings(baseDir)
 

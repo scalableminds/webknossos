@@ -99,6 +99,7 @@ After that time or by default for any other inactive users, the `Users` list onl
 
 
 When activating new users, a popup opens for
+
   - team assignment
   - access role assignment
 

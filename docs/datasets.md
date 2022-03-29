@@ -205,23 +205,23 @@ scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
 
 For convenience and testing, we provide a list of sample datasets for webKnossos:
 
-- Sample_e2006_wkw: 
-  - [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)
-  - Raw SBEM data and segmentation (sample cutout, 120MB).
-  Connectomic reconstruction of the inner plexiform layer in the mouse retina.
-  - M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.
-  - Nature. 08 August 2013. [https://doi.org/10.1038/nature12346](https://doi.org/10.1038/nature12346)
+- **Sample_e2006_wkw**  
+  [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)  
+  Raw SBEM data and segmentation (sample cutout, 120MB).  
+  Connectomic reconstruction of the inner plexiform layer in the mouse retina.  
+  M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.  
+  Nature. 08 August 2013. [https://doi.org/10.1038/nature12346](https://doi.org/10.1038/nature12346)
 
-- Sample_FD0144_wkw: 
-  - [https://static.webknossos.org/data/FD0144_wkw.zip](https://static.webknossos.org/data/FD0144_wkw.zip)
-  - Raw SBEM data and segmentation (sample cutout, 316 MB).
-  - FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.
-  - F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.
-  - eLife. 14 August 2018. [https://doi.org/10.7554/eLife.38976](https://doi.org/10.7554/eLife.38976)
+- **Sample_FD0144_wkw**  
+  Raw SBEM data and segmentation (sample cutout, 316 MB).  
+  [https://static.webknossos.org/data/FD0144_wkw.zip](https://static.webknossos.org/data/FD0144_wkw.zip)  
+  FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.  
+  F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.  
+  eLife. 14 August 2018. [https://doi.org/10.7554/eLife.38976](https://doi.org/10.7554/eLife.38976)
 
-- Sample_MPRAGE_250um: 
-  - [https://static.webknossos.org/data/MPRAGE_250um.zip](https://static.webknossos.org/data/MPRAGE_250um.zip)
-  - MRI data (250 MB).
-  - T1-weighted in vivo human whole brain MRI dataset with an ultrahigh isotropic resolution of 250 μm.
-  - F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.
-  - Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32
+* **Sample_MPRAGE_250um**  
+  MRI data (250 MB).  
+  [https://static.webknossos.org/data/MPRAGE_250um.zip](https://static.webknossos.org/data/MPRAGE_250um.zip)  
+  T1-weighted in vivo human whole brain MRI dataset with an ultrahigh isotropic resolution of 250 μm.
+  F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.  
+  Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32

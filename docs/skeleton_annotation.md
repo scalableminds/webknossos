@@ -171,16 +171,16 @@ webKnossos has a context menu that can be opened via *Right Click* (or *Shift + 
 Example operations include (but are not limited to):
 
 - Clicking on a node:
-  - measuring the path length of the active node to the selected node
-  - node deletion
-  - tree merging & splitting
-  - and many more
+    - measuring the path length of the active node to the selected node
+    - node deletion
+    - tree merging & splitting
+    - and many more
 - Clicking on a volume segmentation:
-  - compute or load its 3D mesh
-  - flood-filling the segment (assigning a new ID)
+    - compute or load its 3D mesh
+    - flood-filling the segment (assigning a new ID)
 - Clicking on the background data:
-  - Creating a new node or tree
-  - Creating a new bounding box
+    - Creating a new node or tree
+    - Creating a new bounding box
 
 
 ### Importing & Exporting NML Files

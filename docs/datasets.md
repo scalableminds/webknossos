@@ -150,13 +150,13 @@ webKnossos automatically periodically checks and detects changes to a dataset's 
 - `Sharing Link`: A web URL pointing to this dataset for easy sharing that allows any user to view your dataset. The URL contains an access token to allow people to view the dataset without a webKnossos account. The access token is random, and therefore the URL cannot be guessed by visitors. You may also revoke the access token to create a new one. Anyone with a URL containing a revoked token will no longer have access to this dataset. 
 Read more in [the Sharing guide](./sharing.md).
 
-// Todo add image
+![Dataset Editing: Sharing Tab](images/sharing_tab.png)
 
 ### Metadata Tab
 - `Display Name`: A meaningful name for a dataset other than its (automatically assigned) technical name which is usually limited by naming rules of file systems. It is displayed in various parts of webKnossos. The display name may contain special characters and can also be changed without invalidating already created sharing URLs. It can also be useful when sharing datasets with outsiders while "hiding" any internal naming schemes or make it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
 - `Description`: A free-text field for providing more information about your datasets, e.g., authors, paper reference, descriptions, etc. Supports Markdown formatting. The description will be featured in the webKnossos UI when opening a dataset in view mode.
 
-// Todo add image
+![Dataset Editing: Metadata Tab](images/metadata_tab.png)
 
 ### View Configuration Tab
 The *View configuration* tab lets you set defaults for viewing this dataset. Anytime a user opens a dataset or creates a new annotation based on this dataset, these default values will be applied. 
@@ -181,14 +181,11 @@ The *View Configuration* from the web UI takes precedence over the `datasource_p
 You don't have to set complete *View Configurations* in either option, as webKnossos will fill missing attributes with sensible defaults.
 
 
-// Todo add image
-
 ### Delete Tab
 
-Offers an option to delete a dataset and completely removes it from webKnossos. Careful, this can not be undone.
+Offers an option to delete a dataset and completely removes it from webKnossos. Careful, this can not be undone!
 
-// Todo add image
-
+![Dataset Editing: Delete Tab](images/delete_tab.png)
 
 
 ## Dataset Sharing
@@ -208,23 +205,23 @@ scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
 
 For convenience and testing, we provide a list of sample datasets for webKnossos:
 
-- Sample_e2006_wkw: 
-  - [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)
-  - Raw SBEM data and segmentation (sample cutout, 120MB).
-  Connectomic reconstruction of the inner plexiform layer in the mouse retina.
-  - M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.
-  - Nature. 08 August 2013. [https://doi.org/10.1038/nature12346](https://doi.org/10.1038/nature12346)
+- **Sample_e2006_wkw**  
+  [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)  
+  Raw SBEM data and segmentation (sample cutout, 120MB).  
+  Connectomic reconstruction of the inner plexiform layer in the mouse retina.  
+  M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.  
+  Nature. 08 August 2013. [https://doi.org/10.1038/nature12346](https://doi.org/10.1038/nature12346)
 
-- Sample_FD0144_wkw: 
-  - [https://static.webknossos.org/data/FD0144_wkw.zip](https://static.webknossos.org/data/FD0144_wkw.zip)
-  - Raw SBEM data and segmentation (sample cutout, 316 MB).
-  - FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.
-  - F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.
-  - eLife. 14 August 2018. [https://doi.org/10.7554/eLife.38976](https://doi.org/10.7554/eLife.38976)
+- **Sample_FD0144_wkw**  
+  Raw SBEM data and segmentation (sample cutout, 316 MB).  
+  [https://static.webknossos.org/data/FD0144_wkw.zip](https://static.webknossos.org/data/FD0144_wkw.zip)  
+  FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.  
+  F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.  
+  eLife. 14 August 2018. [https://doi.org/10.7554/eLife.38976](https://doi.org/10.7554/eLife.38976)
 
-- Sample_MPRAGE_250um: 
-  - [https://static.webknossos.org/data/MPRAGE_250um.zip](https://static.webknossos.org/data/MPRAGE_250um.zip)
-  - MRI data (250 MB).
-  - T1-weighted in vivo human whole brain MRI dataset with an ultrahigh isotropic resolution of 250 μm.
-  - F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.
-  - Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32
+* **Sample_MPRAGE_250um**  
+  MRI data (250 MB).  
+  [https://static.webknossos.org/data/MPRAGE_250um.zip](https://static.webknossos.org/data/MPRAGE_250um.zip)  
+  T1-weighted in vivo human whole brain MRI dataset with an ultrahigh isotropic resolution of 250 μm.
+  F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.  
+  Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32

@@ -15,14 +15,16 @@ As a first trial, webKnossos includes nuclei segmentation. This analysis is desi
 
 You can launch the nuclei inferral from the `Info` tab in the right-hand side panel. Use the `Process Dataset` link to start the analysis.
 
+![Nuclei segmentations can be launched from the Info tab.](images/process_dataset.png)
+
 Computation time for this analysis depends directly on the size of your dataset. 
 Expect a few hours for medium-sized volumetric EM datasets. 
-The finished analysis will be available as a new dataset from your dashboard. You can monitor the status and progress of the analysis job from the `Processing Jobs` section of the `Administration` menu at the top of the screen.
+The finished analysis will be available as a new dataset from your dashboard. You can monitor the status and progress of the [analysis job from the `Processing Jobs` section of the `Administration` menu at the top of the screen](./jobs.md).
 
-/todo add screenshot of nuclei classification
-/todo add screenshot of jobs list
+![Starting a new nuclei segmentation.](images/nuclei_segmentation_start.png)
+![Monitor the nuclei segmentation progress from the Jobs page.](images/nuclei_segmentation_job.png)
 
 ## Custom Analysis
 At the moment, webKnossos can not be used to train a custom classifier itself. This might be something that we add in the future if there is enough interest in this.
 
-If you are interested in specialized, automated analysis, image segmentation, object detection etc. than feel to [contact us](mailto:hello@webknossos.org). The webKnossos development teams offers [commercial analysis services for](https://webknossos.org/services/automated-segmentation) that. 
+If you are interested in specialized, automated analysis, image segmentation, object detection etc. than feel free to [contact us](mailto:hello@webknossos.org). The webKnossos development teams offers [commercial analysis services for](https://webknossos.org/services/automated-segmentation) that. 

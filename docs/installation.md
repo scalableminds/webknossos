@@ -44,9 +44,8 @@ docker-compose up -d webknossos nginx nginx-letsencrypt
 docker-compose down
 ```
 
-!!! info
-    This setup does not support regular backups or monitoring.
-    Please check out [our paid service plans](https://webknossos.org/pricing) if you require any assistance with your production setup.
+**This setup does not support regular backups or monitoring.
+    Please check out [our paid service plans](https://webknossos.org/pricing) if you require any assistance with your production setup.**
 
 For installations on localhost, please refer to the [Readme](https://github.com/scalableminds/webknossos#docker).
 
@@ -79,4 +78,4 @@ By default, datasets are visible to all users in your organization.
 However, webKnossos includes fine-grained permissions to assign datasets to groups of users.
 
 ![Upload your first dataset](./images/onboarding_data1.png)
-![Confirm the dataset properties](./images/onboarding_data2.png)
+![Confirm the detected dataset properties](./images/onboarding_data2.png)

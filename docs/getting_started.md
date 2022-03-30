@@ -17,7 +17,6 @@ For more data storage, check out the [pricing page for paid plans](https://webkn
 
 If you are looking for on-premise hosting at your institute or custom solutions, [please reach out to us](mailto:hello@webknossos.org).
 
-
 ## Explore Published Datasets
 [webknossos.org](https://webknossos.org) comes with a large number of published community datasets available for you to explore.
 To get started, navigate to the `Featured Publications` tab on your [dashboard](./dashboard.md).
@@ -26,7 +25,11 @@ Click on the dataset name to open the dataset.
 
 ![The list of available datasets](./images/getting_started-datasets.png)
 
-Once you are in the "View" mode (read-only), you are presented with three orthogonal views and one 3D viewport.
+Any webKnossos dataset can be opened for read-only viewing ("View" mode) or in editor-mode to create a new skeleton and/or volume annotation. 
+The main webKnossos user interface consists of three orthogonal viewports slicing the data along the major axis and a 3D viewport. Read more about the UI in the section [about the UI](./tracing_ui.md).
+
+![The webKnossos user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.png)
+
 You can use the following shortcuts to navigate the data.
 See the full list of [gestures and keyboard shortcuts](./keyboard_shortcuts.md) for advanced use.
 

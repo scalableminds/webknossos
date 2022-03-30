@@ -482,7 +482,7 @@ function* copySegmentationLayer(action: Action): Saga<void> {
     if (templateLabelValue === activeCellId) {
       const currentLabelValue = cube.getDataValue(voxelTargetAddress, null, labeledZoomStep);
 
-      // Do not overwrite already labelled voxels
+      // Do not overwrite already labeled voxels
       if (currentLabelValue === 0) {
         const bucket = cube.getOrCreateBucket(
           cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
@@ -504,6 +504,8 @@ function* copySegmentationLayer(action: Action): Saga<void> {
     }
   }
 
+  const thirdDim = dimensionIndices[2];
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
   let direction = 1;
   const useDynamicSpaceDirection = yield* select(
@@ -511,26 +513,30 @@ function* copySegmentationLayer(action: Action): Saga<void> {
   );
   if (useDynamicSpaceDirection) {
     const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
-    direction = spaceDirectionOrtho[dimensionIndices[2]];
+    direction = spaceDirectionOrtho[thirdDim];
   }
 
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;
   for (let x = tx - halfViewportExtentX; x < tx + halfViewportExtentX; x++) {
     for (let y = ty - halfViewportExtentY; y < ty + halfViewportExtentY; y++) {
+      // When using this tool in more coarse resolutions, the distance to the previous/next slice might be larger than 1
+      const previousZ = z + direction * directionInverter * labeledResolution[thirdDim];
       copyVoxelLabel(
-        Dimensions.transDim([x, y, tz + direction * directionInverter], activeViewport),
+        Dimensions.transDim([x, y, previousZ], activeViewport),
         Dimensions.transDim([x, y, z], activeViewport),
       );
     }
   }
 
-  const thirdDim = dimensionIndices[2];
+  // applyVoxelMap assumes get3DAddress to be local to the corresponding bucket (so in the labeled resolution as well)
+  const zInLabeledResolution =
+    Math.floor(tz / labeledResolution[thirdDim]) % Constants.BUCKET_WIDTH;
   applyVoxelMap(
     labeledVoxelMapOfCopiedVoxel,
     cube,
     activeCellId,
-    getFast3DCoordinateHelper(activeViewport, z),
+    getFast3DCoordinateHelper(activeViewport, zInLabeledResolution),
     1,
     thirdDim,
     false,

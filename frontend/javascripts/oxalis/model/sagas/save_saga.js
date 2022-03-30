@@ -228,6 +228,8 @@ export function* collectUndoStates(): Saga<void> {
   while (true) {
     loopCounter++;
     if (loopCounter % 100 === 0) {
+      // See https://github.com/scalableminds/webknossos/pull/6076 for an explanation
+      // of this delay call.
       yield _delay(0);
     }
     const currentAction = yield* take(actionChannel);
@@ -664,8 +666,10 @@ export function* pushTracingTypeAsync(
 
     saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
     if (saveQueue.length === 0) {
-      // Save queue is empty, wait for push event
+      // See https://github.com/scalableminds/webknossos/pull/6076 for an explanation
+      // of this delay call.
       yield _delay(0);
+      // Save queue is empty, wait for push event
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
     const { forcePush } = yield* race({

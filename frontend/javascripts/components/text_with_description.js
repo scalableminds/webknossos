@@ -28,29 +28,35 @@ class TextWithDescription extends React.PureComponent<Props> {
 
     return (
       <React.Fragment>
-        {isEditable ? (
-          // $FlowIssue[incompatible-type]
-          <EditableTextLabel {...editableProps} />
-        ) : (
-          <span style={{ margin: "0 10px", display: "inline-block" }}>
-            {this.props.markdown ? (
-              <Markdown
-                source={this.props.value}
-                options={{ html: false, breaks: true, linkify: true }}
-                container="span"
-              />
+        <span className={hasDescription ? "flex-container" : null} style={{ alignItems: "center" }}>
+          <span className={hasDescription ? "flex-item" : null} style={{ flexGrow: 0 }}>
+            {hasDescription ? (
+              <Tooltip title="Show description" placement="bottom">
+                <Popover title="Description" trigger="click" content={markdownDescription}>
+                  <i className="fas fa-align-justify" style={{ cursor: "pointer" }} />
+                </Popover>
+              </Tooltip>
+            ) : null}
+          </span>
+          <span className={hasDescription ? "flex-item" : null}>
+            {isEditable ? (
+              // $FlowIssue[incompatible-type]
+              <EditableTextLabel {...editableProps} />
             ) : (
-              this.props.value
+              <span style={{ margin: "0 10px", display: "inline-block" }}>
+                {this.props.markdown ? (
+                  <Markdown
+                    source={this.props.value}
+                    options={{ html: false, breaks: true, linkify: true }}
+                    container="span"
+                  />
+                ) : (
+                  this.props.value
+                )}
+              </span>
             )}
           </span>
-        )}
-        {hasDescription ? (
-          <Tooltip title="Show description" placement="bottom">
-            <Popover title="Description" trigger="click" content={markdownDescription}>
-              <i className="fas fa-align-justify" style={{ cursor: "pointer" }} />
-            </Popover>
-          </Tooltip>
-        ) : null}
+        </span>
       </React.Fragment>
     );
   }

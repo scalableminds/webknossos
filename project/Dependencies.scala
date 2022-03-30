@@ -43,6 +43,9 @@ object Dependencies {
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
   private val swagger = "io.swagger" %% "swagger-play2" % "1.7.1"
   private val jhdf = "cisd" % "jhdf5" % "19.04.0"
+  private val jzarr = "com.bc.zarr" % "jzarr" % "0.3.5"
+  private val s3fs = "org.lasersonlab" % "s3fs" % "2.2.3"
+  private val scalajHttp = "org.scalaj" %% "scalaj-http" % "2.4.2"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",
@@ -83,7 +86,10 @@ object Dependencies {
     spire,
     akkaHttp,
     redis,
-    jhdf
+    jhdf,
+    jzarr,
+    s3fs,
+    scalajHttp
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

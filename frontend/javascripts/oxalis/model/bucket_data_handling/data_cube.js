@@ -664,7 +664,17 @@ class DataCube {
     this.pushQueue.push();
   }
 
-  isZoomStepRenderableForVoxel(voxel: Vector3, zoomStep: number = 0): boolean {
+  async isZoomStepUltimatelyRenderableForVoxel(
+    voxel: Vector3,
+    zoomStep: number = 0,
+  ): Promise<boolean> {
+    // Make sure the respective bucket is loaded before checking whether the zoomStep
+    // is currently renderable for this voxel.
+    await this.getLoadedBucket(this.positionToZoomedAddress(voxel, zoomStep));
+    return this.isZoomStepCurrentlyRenderableForVoxel(voxel, zoomStep);
+  }
+
+  isZoomStepCurrentlyRenderableForVoxel(voxel: Vector3, zoomStep: number = 0): boolean {
     // When this method returns false, this means that the next resolution (if it exists)
     // needs to be examined for rendering.
 
@@ -697,13 +707,30 @@ class DataCube {
     return false;
   }
 
-  getNextUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
+  getNextCurrentlyUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
     const resolutions = getResolutions(Store.getState().dataset);
     let usableZoomStep = zoomStep;
     while (
       position &&
       usableZoomStep < resolutions.length - 1 &&
-      !this.isZoomStepRenderableForVoxel(position, usableZoomStep)
+      !this.isZoomStepCurrentlyRenderableForVoxel(position, usableZoomStep)
+    ) {
+      usableZoomStep++;
+    }
+    return usableZoomStep;
+  }
+
+  async getNextUltimatelyUsableZoomStepForPosition(
+    position: Vector3,
+    zoomStep: number,
+  ): Promise<number> {
+    const resolutions = getResolutions(Store.getState().dataset);
+    let usableZoomStep = zoomStep;
+    while (
+      position &&
+      usableZoomStep < resolutions.length - 1 &&
+      // eslint-disable-next-line no-await-in-loop
+      !(await this.isZoomStepUltimatelyRenderableForVoxel(position, usableZoomStep))
     ) {
       usableZoomStep++;
     }

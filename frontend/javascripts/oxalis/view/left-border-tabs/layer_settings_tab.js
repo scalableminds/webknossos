@@ -58,11 +58,10 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
-  updateTemporarySettingAction,
   updateUserSettingAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
-  clipHistogramAction,
+  dispatchClipHistogramAsync,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
@@ -82,7 +81,6 @@ import Store, {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import features from "features";
 import messages, { settings } from "messages";
 
 import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
@@ -100,7 +98,7 @@ type DatasetSettingsProps = {|
     propertyName: $Keys<DatasetLayerConfiguration>,
     value: any,
   ) => void,
-  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => void,
+  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => Promise<void>,
   histogramData: HistogramDataForAllLayers,
   onChangeRadius: (value: number) => void,
   onChangeShowSkeletons: boolean => void,
@@ -110,9 +108,7 @@ type DatasetSettingsProps = {|
   onUnlinkFallbackLayer: (Tracing, VolumeTracing) => Promise<void>,
   tracing: Tracing,
   task: ?Task,
-  onChangeEnableAutoBrush: (active: boolean) => void,
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void,
-  isAutoBrushEnabled: boolean,
   controlMode: ControlMode,
   isArbitraryMode: boolean,
 |};
@@ -166,9 +162,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               : () => Promise.resolve()
           }
           style={{
-            position: "absolute",
-            top: 4,
-            right: -8,
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
         />
@@ -185,9 +178,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           icon={<ReloadOutlined />}
           onClick={() => this.reloadLayerData(layerName)}
           style={{
-            position: "absolute",
-            top: 4,
-            right: 14,
             cursor: "pointer",
           }}
         />
@@ -202,9 +192,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           this.removeFallbackLayer(volumeTracing);
         }}
         style={{
-          position: "absolute",
-          top: 4,
-          right: 36,
           cursor: "pointer",
         }}
       />
@@ -238,9 +225,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         <EditOutlined
           onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
           style={{
-            position: "absolute",
-            top: 4,
-            right: 36,
             cursor: "pointer",
             color: isInEditMode ? "var(--ant-primary)" : null,
           }}
@@ -256,11 +240,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
     return (
       <Tooltip title={tooltipText}>
-        <VerticalAlignMiddleOutlined
+        <AsyncIconButton
+          icon={<VerticalAlignMiddleOutlined />}
           style={{
-            position: "absolute",
-            top: 4,
-            right: 58,
             cursor: "pointer",
             transform: "rotate(90deg)",
           }}
@@ -284,35 +266,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       return layerName === otherLayerName ? !isDisabled : isDisabled;
     });
     return isOnlyGivenLayerVisible;
-  };
-
-  handleAutoBrushChange = async (active: boolean) => {
-    this.props.onChangeEnableAutoBrush(active);
-    if (active) {
-      Toast.info(
-        "You enabled the experimental automatic brush feature. Activate the brush tool and use CTRL+Click to use it.",
-      );
-    }
-  };
-
-  maybeGetAutoBrushUi = () => {
-    const { autoBrushReadyDatasets } = features();
-    if (
-      autoBrushReadyDatasets == null ||
-      !autoBrushReadyDatasets.includes(this.props.dataset.name)
-    ) {
-      return null;
-    }
-
-    return (
-      <SwitchSetting
-        label={settings.autoBrush}
-        value={this.props.isAutoBrushEnabled}
-        onChange={value => {
-          this.handleAutoBrushChange(value);
-        }}
-      />
-    );
   };
 
   getEnableDisableLayerSwitch = (
@@ -409,102 +362,117 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : layerName;
 
     return (
-      <Row>
-        <Col span={24}>
-          {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
-          <span style={{ fontWeight: 700, wordWrap: "break-word" }}>
-            {volumeDescriptor != null ? (
-              <EditableTextLabel
-                margin="0 10px 0 0"
-                width={150}
-                value={readableName}
-                onChange={newName => {
-                  this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, { name: newName });
-                }}
-                label="Volume Layer Name"
-              />
-            ) : (
-              layerName
-            )}
-          </span>
-
-          <Tooltip
-            overlayStyle={{ maxWidth: 800 }}
-            title={
-              <div>
-                <div>Data Type: {elementClass}</div>
-                <div>
-                  Available resolutions:
-                  <ul>
-                    {resolutions.map(r => (
-                      <li key={r.join()}>{r.join("-")}</li>
-                    ))}
-                  </ul>
-                </div>
-                Bounding Box:
-                <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
-                  <tr>
-                    <td />
-                    <td style={{ fontSize: 10 }}>X</td>
-                    <td style={{ fontSize: 10 }}>Y</td>
-                    <td style={{ fontSize: 10 }}>Z</td>
-                  </tr>
-
-                  <tr>
-                    <td style={{ fontSize: 10 }}>Min</td>
-                    <td>{layer.boundingBox.topLeft[0]} </td>
-                    <td>{layer.boundingBox.topLeft[1]} </td>
-                    <td>{layer.boundingBox.topLeft[2]}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontSize: 10 }}>Max</td>
-                    <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
-                    <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
-                    <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontSize: 10 }}>Size</td>
-                    <td>{layer.boundingBox.width} </td>
-                    <td>{layer.boundingBox.height} </td>
-                    <td>{layer.boundingBox.depth}</td>
-                  </tr>
-                </table>
-              </div>
-            }
-            placement="left"
-          >
-            <InfoCircleOutlined style={{ marginLeft: 4 }} />
-          </Tooltip>
-          {isVolumeTracing ? (
+      <div className="flex-container">
+        {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
+        <div className="flex-item" style={{ fontWeight: 700, paddingRight: 5 }}>
+          {volumeDescriptor != null ? (
+            <EditableTextLabel
+              margin="0 10px 0 0"
+              width={150}
+              value={readableName}
+              onChange={newName => {
+                this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, { name: newName });
+              }}
+              label="Volume Layer Name"
+            />
+          ) : (
+            layerName
+          )}
+        </div>
+        <div className="flex-container" style={{ paddingRight: 5 }}>
+          <div className="flex-item">
             <Tooltip
-              title={`This layer is a volume annotation.${
-                maybeFallbackLayer
-                  ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
-                  : ""
-              }`}
+              overlayStyle={{ maxWidth: 800 }}
+              title={
+                <div>
+                  <div>Data Type: {elementClass}</div>
+                  <div>
+                    Available resolutions:
+                    <ul>
+                      {resolutions.map(r => (
+                        <li key={r.join()}>{r.join("-")}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  Bounding Box:
+                  <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
+                    <tr>
+                      <td />
+                      <td style={{ fontSize: 10 }}>X</td>
+                      <td style={{ fontSize: 10 }}>Y</td>
+                      <td style={{ fontSize: 10 }}>Z</td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontSize: 10 }}>Min</td>
+                      <td>{layer.boundingBox.topLeft[0]} </td>
+                      <td>{layer.boundingBox.topLeft[1]} </td>
+                      <td>{layer.boundingBox.topLeft[2]}</td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontSize: 10 }}>Max</td>
+                      <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
+                      <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
+                      <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
+                    </tr>
+                    <tr>
+                      <td style={{ fontSize: 10 }}>Size</td>
+                      <td>{layer.boundingBox.width} </td>
+                      <td>{layer.boundingBox.height} </td>
+                      <td>{layer.boundingBox.depth}</td>
+                    </tr>
+                  </table>
+                </div>
+              }
               placement="left"
             >
-              <i className="fas fa-paint-brush" style={{ opacity: 0.7 }} />
+              <InfoCircleOutlined />
             </Tooltip>
-          ) : null}
-
-          {intensityRange[0] === intensityRange[1] && !isDisabled ? (
-            <Tooltip
-              title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
+          </div>
+          <div className="flex-item">
+            {isVolumeTracing ? (
+              <Tooltip
+                title={`This layer is a volume annotation.${
+                  maybeFallbackLayer
+                    ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
+                    : ""
+                }`}
+                placement="left"
+              >
+                <i className="fas fa-paint-brush" style={{ opacity: 0.7 }} />
+              </Tooltip>
+            ) : null}
+          </div>
+          <div className="flex-item">
+            {intensityRange[0] === intensityRange[1] && !isDisabled ? (
+              <Tooltip
+                title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}
-            >
-              <WarningOutlined style={{ color: "var(--ant-warning)" }} />
-            </Tooltip>
-          ) : null}
-          {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
+              >
+                <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+              </Tooltip>
+            ) : null}
+            {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
+          </div>
+        </div>
 
-          {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
-          {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
-          {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
-          {this.getReloadDataButton(layerName)}
-          {maybeVolumeTracing && hasFallbackLayer ? this.getDeleteButton(maybeVolumeTracing) : null}
-        </Col>
-      </Row>
+        <div className="flex-container">
+          <div className="flex-item">
+            {maybeVolumeTracing && hasFallbackLayer
+              ? this.getDeleteButton(maybeVolumeTracing)
+              : null}
+          </div>
+          <div className="flex-item">
+            {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
+          </div>
+          <div className="flex-item">
+            {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
+          </div>
+          <div className="flex-item">
+            {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
+          </div>
+          <div className="flex-item">{this.getReloadDataButton(layerName)}</div>
+        </div>
+      </div>
     );
   };
 
@@ -535,9 +503,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               )
             }
             style={{
-              position: "absolute",
-              top: 0,
-              right: -2,
+              top: 4,
+              right: 0,
               marginTop: 0,
               display: "inline-flex",
             }}
@@ -714,7 +681,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <Tooltip title="Open Dialog to Downsample Volume Data">
-        <LinkButton onClick={this.showDownsampleVolumeModal}>
+        <LinkButton onClick={() => this.showDownsampleVolumeModal(volumeTracing)}>
           <img
             src="/assets/images/icon-downsampling.svg"
             style={{
@@ -906,7 +873,6 @@ const mapStateToProps = (state: OxalisState) => ({
   tracing: state.tracing,
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
-  isAutoBrushEnabled: state.temporaryConfiguration.isAutoBrushEnabled,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
 });
 
@@ -921,16 +887,13 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
   },
   onClipHistogram(layerName, shouldAdjustClipRange) {
-    dispatch(clipHistogramAction(layerName, shouldAdjustClipRange));
+    return dispatchClipHistogramAsync(layerName, shouldAdjustClipRange, dispatch);
   },
   onChangeRadius(radius: number) {
     dispatch(setNodeRadiusAction(radius));
   },
   onSetPosition(position) {
     dispatch(setPositionAction(position));
-  },
-  onChangeEnableAutoBrush(active: boolean) {
-    dispatch(updateTemporarySettingAction("isAutoBrushEnabled", active));
   },
   onChangeShowSkeletons(showSkeletons: boolean) {
     dispatch(setShowSkeletonsAction(showSkeletons));

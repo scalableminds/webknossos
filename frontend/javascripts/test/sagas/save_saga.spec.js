@@ -21,9 +21,6 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
-mockRequire("@tensorflow/tfjs", {});
-mockRequire("oxalis/workers/tensorflow.impl", {});
-mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");

@@ -224,6 +224,17 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
+  def findActiveTaskIdsForUser(userId: ObjectId): Fox[List[ObjectId]] = {
+
+    val stateQuery = getStateQuery(isFinished = Some(false))
+    for {
+      r <- run(sql"""select _task from #$existingCollectionName
+             where _user = ${userId.id} and typ = '#${AnnotationType.Task.toString}' and #$stateQuery""".as[String])
+      r <- Fox.serialCombined(r.toList)(ObjectId.parse(_))
+    } yield r
+
+  }
+
   def countAllFor(userId: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType)(
       implicit ctx: DBAccessContext): Fox[Int] = {
     val stateQuery = getStateQuery(isFinished)

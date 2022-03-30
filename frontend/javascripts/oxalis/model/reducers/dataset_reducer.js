@@ -28,6 +28,13 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           availableMeshFiles: null,
           currentMeshFile: null,
           segments: new DiffableMap(),
+          connectomeData: {
+            availableConnectomeFiles: null,
+            currentConnectomeFile: null,
+            pendingConnectomeFileName: null,
+            activeAgglomerateIds: [],
+            skeleton: null,
+          },
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

@@ -30,6 +30,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     this
   }
 
+  def withLongTimeout: RPCRequest = {
+    request = request.withRequestTimeout(2 hours)
+    this
+  }
+
   def silent: RPCRequest = {
     verbose = false
     this
@@ -59,7 +64,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   }
 
   def getWithBytesResponse: Fox[Array[Byte]] = {
-    request = request.withMethod("GET").withRequestTimeout(30 minutes)
+    request = request.withMethod("GET")
     extractBytesResponse(performRequest)
   }
 
@@ -151,18 +156,13 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
         s"Sending WS request to $url (ID: $id). " +
           s"RequestBody: '$requestBodyPreview'")
     }
-    request
-      .withMethod("GET")
-      .withRequestTimeout(Duration.Inf)
-      .stream()
-      .map(response => Full(response.bodyAsSource))
-      .recover {
-        case e =>
-          val errorMsg = s"Error sending WS request to $url (ID: $id): " +
-            s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
-          logger.error(errorMsg)
-          Failure(errorMsg)
-      }
+    request.withMethod("GET").stream().map(response => Full(response.bodyAsSource)).recover {
+      case e =>
+        val errorMsg = s"Error sending WS request to $url (ID: $id): " +
+          s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
+        logger.error(errorMsg)
+        Failure(errorMsg)
+    }
   }
 
   private def performRequest: Fox[WSResponse] = {

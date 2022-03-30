@@ -5,6 +5,9 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [22.04.0](https://github.com/scalableminds/webknossos/releases/tag/22.04.0) - 2022-03-22
+[Commits](https://github.com/scalableminds/webknossos/compare/22.03.0...22.04.0)
+
 ## [22.03.0](https://github.com/scalableminds/webknossos/releases/tag/22.03.0) - 2022-02-21
 [Commits](https://github.com/scalableminds/webknossos/compare/22.02.0...22.03.0)
 - The config field `googleAnalytics.trackingId` needs to be changed to [GA4 measurement id](https://support.google.com/analytics/answer/10089681), if used.

@@ -5,7 +5,12 @@ import { Dropdown, Menu, notification, Tooltip, Popover, Input } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import React, { useEffect, type Node } from "react";
 
-import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
+import type {
+  APIConnectomeFile,
+  APIDataset,
+  APIDataLayer,
+  APIMeshFile,
+} from "types/api_flow_types";
 import type {
   ActiveMappingInfo,
   OxalisState,
@@ -43,9 +48,9 @@ import {
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentIdForPosition,
+  getSegmentIdForPositionAsync,
   handleFloodFillFromGlobalPosition,
 } from "oxalis/controller/combinations/volume_handlers";
 import {
@@ -54,7 +59,9 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   hasAgglomerateMapping,
+  hasConnectomeFile,
   loadAgglomerateSkeletonAtPosition,
+  loadSynapsesOfAgglomerateAtPosition,
 } from "oxalis/controller/combinations/segmentation_handlers";
 import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
 import {
@@ -111,8 +118,8 @@ type StateProps = {|
   datasetScale: Vector3,
   visibleSegmentationLayer: ?APIDataLayer,
   dataset: APIDataset,
-  zoomStep: number,
   currentMeshFile: ?APIMeshFile,
+  currentConnectomeFile: ?APIConnectomeFile,
   volumeTracing: ?VolumeTracing,
   activeTool: AnnotationTool,
   useLegacyBindings: boolean,
@@ -534,15 +541,16 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     visibleSegmentationLayer,
     dataset,
     currentMeshFile,
+    currentConnectomeFile,
     hideContextMenu,
     setActiveCell,
     mappingInfo,
-    zoomStep,
     infoRows,
   } = props;
 
   const dispatch = useDispatch();
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
+  const isConnectomeMappingEnabled = useSelector(hasConnectomeFile);
   useEffect(() => {
     (async () => {
       await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
@@ -550,31 +558,28 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   }, [visibleSegmentationLayer, dataset]);
 
   const loadPrecomputedMesh = async () => {
-    if (!currentMeshFile) return;
+    if (!currentMeshFile || !visibleSegmentationLayer) return;
 
-    if (visibleSegmentationLayer) {
-      // Make sure the corresponding bucket is loaded
-      await api.data.getDataValue(visibleSegmentationLayer.name, globalPosition, zoomStep);
-      const id = getSegmentIdForPosition(globalPosition);
-      if (id === 0) {
-        Toast.info("No segment found at the clicked position");
-        return;
-      }
-
-      dispatch(loadPrecomputedMeshAction(id, globalPosition, currentMeshFile.meshFileName));
+    // Ensure that the segment ID is loaded, since a mapping might have been activated
+    // shortly before
+    const segmentId = await getSegmentIdForPositionAsync(globalPosition);
+    if (segmentId === 0) {
+      Toast.info("No segment found at the clicked position");
+      return;
     }
+    dispatch(loadPrecomputedMeshAction(segmentId, globalPosition, currentMeshFile.meshFileName));
   };
 
   const computeMeshAdHoc = () => {
     if (!visibleSegmentationLayer) {
       return;
     }
-    const id = getSegmentIdForPosition(globalPosition);
-    if (id === 0) {
+    const segmentId = getSegmentIdForPosition(globalPosition);
+    if (segmentId === 0) {
       Toast.info("No segment found at the clicked position");
       return;
     }
-    dispatch(loadAdHocMeshAction(id, globalPosition));
+    dispatch(loadAdHocMeshAction(segmentId, globalPosition));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
@@ -605,7 +610,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
             {isAgglomerateMappingEnabled.value ? (
               <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
             ) : (
-              <Tooltip title="Requires an active ID Mapping">
+              <Tooltip title={isAgglomerateMappingEnabled.reason}>
                 <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
               </Tooltip>
             )}
@@ -613,14 +618,43 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
         ]
       : [];
 
-  const layerName = visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null;
+  const segmentationLayerName =
+    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null;
+  const connectomeFileMappingName =
+    currentConnectomeFile != null ? currentConnectomeFile.mappingName : undefined;
+  const loadSynapsesItem = (
+    <MenuItemWithMappingActivationConfirmation
+      className="node-context-menu-item"
+      key="load-synapses"
+      disabled={!isConnectomeMappingEnabled.value}
+      onClick={() => loadSynapsesOfAgglomerateAtPosition(globalPosition)}
+      mappingName={connectomeFileMappingName}
+      descriptor="connectome file"
+      layerName={segmentationLayerName}
+      mappingInfo={mappingInfo}
+    >
+      {isConnectomeMappingEnabled.value ? (
+        "Import Agglomerate and Synapses"
+      ) : (
+        <Tooltip title={isConnectomeMappingEnabled.reason}>Import Agglomerate and Synapses</Tooltip>
+      )}
+    </MenuItemWithMappingActivationConfirmation>
+  );
+
+  if (visibleSegmentationLayer != null) {
+    // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action
+    skeletonActions.push(loadSynapsesItem);
+  }
+
+  const meshFileMappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
   const loadPrecomputedMeshItem = (
     <MenuItemWithMappingActivationConfirmation
       key="load-precomputed-mesh"
       onClick={loadPrecomputedMesh}
       disabled={!currentMeshFile}
-      currentMeshFile={currentMeshFile}
-      layerName={layerName}
+      mappingName={meshFileMappingName}
+      descriptor="mesh file"
+      layerName={segmentationLayerName}
       mappingInfo={mappingInfo}
     >
       Load Mesh (precomputed)
@@ -965,10 +999,14 @@ function mapStateToProps(state: OxalisState): StateProps {
     activeTool: state.uiInformation.activeTool,
     dataset: state.dataset,
     visibleSegmentationLayer: getVisibleSegmentationLayer(state),
-    zoomStep: getRequestLogZoomStep(state),
     currentMeshFile:
       visibleSegmentationLayer != null
         ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+        : null,
+    currentConnectomeFile:
+      visibleSegmentationLayer != null
+        ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+            .currentConnectomeFile
         : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
     userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],

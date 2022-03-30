@@ -60,16 +60,16 @@ trait PathUtils extends LazyLogging {
     } catch {
       case _: AccessDeniedException =>
         val errorMsg = s"Error access denied. Directory: ${directory.toAbsolutePath}"
-        logger.error(errorMsg)
+        logger.warn(errorMsg)
         Failure(errorMsg)
       case _: NoSuchFileException =>
         val errorMsg = s"No such directory. Directory: ${directory.toAbsolutePath}"
-        logger.error(errorMsg)
+        logger.warn(errorMsg)
         Failure(errorMsg)
       case ex: Exception =>
         val errorMsg =
           s"Error: ${ex.getClass.getCanonicalName} - ${ex.getMessage}. Directory: ${directory.toAbsolutePath}"
-        logger.error(ex.getClass.getCanonicalName)
+        logger.warn(ex.getClass.getCanonicalName)
         Failure(errorMsg)
     }
 

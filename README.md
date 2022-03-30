@@ -14,7 +14,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 [![](https://img.shields.io/github/license/scalableminds/webknossos.svg?colorB=success)](https://github.com/scalableminds/webknossos/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/url/http/webknossos.svg?style=social)](https://twitter.com/webknossos)
 
-## Demo
+## website and hosted version
 [https://webknossos.org/](https://webknossos.org/)
 
 ## Features

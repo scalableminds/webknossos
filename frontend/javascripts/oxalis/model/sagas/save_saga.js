@@ -659,16 +659,22 @@ export function* pushTracingTypeAsync(
   yield* take("WK_READY");
 
   yield* put(setLastSaveTimestampAction(tracingType, tracingId));
+
+  let loopCounter = 0;
   while (true) {
+    loopCounter++;
+
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
     // could have been triggered during the call to sendRequestToServer
 
     saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
     if (saveQueue.length === 0) {
-      // See https://github.com/scalableminds/webknossos/pull/6076 for an explanation
-      // of this delay call.
-      yield _delay(0);
+      if (loopCounter % 100 === 0) {
+        // See https://github.com/scalableminds/webknossos/pull/6076 for an explanation
+        // of this delay call.
+        yield _delay(0);
+      }
       // Save queue is empty, wait for push event
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }

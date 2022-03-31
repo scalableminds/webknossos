@@ -1,13 +1,13 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, SafeCachable}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty}
 
-class WKWCube(wkwFile: WKWFile) extends SafeCachable {
+class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle {
 
   def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
     val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
@@ -23,7 +23,7 @@ class WKWCube(wkwFile: WKWFile) extends SafeCachable {
 
 class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataFormatHelper with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCube] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCubeHandle] = {
     val wkwFile = wkwFilePath(
       readInstruction.cube,
       Some(readInstruction.dataSource.id),
@@ -33,7 +33,7 @@ class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataForm
     ).toFile
 
     if (wkwFile.exists()) {
-      WKWFile(wkwFile).map(new WKWCube(_))
+      WKWFile(wkwFile).map(new WKWCubeHandle(_))
     } else {
       val wkwFileAnisotropic = wkwFilePath(
         readInstruction.cube,
@@ -43,7 +43,7 @@ class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataForm
         resolutionAsTriple = Some(true)
       ).toFile
       if (wkwFileAnisotropic.exists) {
-        WKWFile(wkwFileAnisotropic).map(new WKWCube(_))
+        WKWFile(wkwFileAnisotropic).map(new WKWCubeHandle(_))
       } else {
         Empty
       }

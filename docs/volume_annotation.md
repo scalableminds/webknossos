@@ -42,7 +42,7 @@ webKnossos support proof-reading of segments from automatic segmentation. With "
 
 The "merger mode" is available in skeleton and hybrid annotation mode. Mark connected segments by right-clicking and placing nodes in the corresponding segments to merge them together. Several segments can be combined by making sure that all "correcting nodes" are part of the same tree.
 
-"Merger mode" can be enabled in the settings under "Nodes & Trees" with the option "Enable Merger Mode". As soon as you enable it, all already existing trees will be used to form merged segments.
+Select the Skeleton tool from the toolbar and enable the "Merger mode" option (double arrow icon).As soon as you enable it, all already existing trees will be used to form merged segments.
 
 To fix split errors see section on flood filling below.
 

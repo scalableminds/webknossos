@@ -13,13 +13,13 @@ Example workflows:
 These workflows are executed in background worker tasks as so-called *processing jobs*. 
 
 ## Listing Processing Jobs
-A list of all past and currently running jobs can be found from the administration menu in the navbar (Admin -> *Processing Jobs*).
+A list of all past and currently running jobs can be found from the administration menu in the navbar (Admininstration -> *Processing Jobs*).
 
 Depending on the job workflow you may:
 
 - view the resulting resource, e.g., a new segmentation 
 - download the data, e.g., Tiff export
 
-We constantly monitor job executions. In rare cases jobs can fail and we aim to re-run them as quickly as possible. In case you run into any trouble please [contact us](mailto:hello@webknossos.org).
+![Overview of the Jobs page](./images/jobs.jpeg)
 
-// todo image of Jobs page
+We constantly monitor job executions. In rare cases jobs can fail and we aim to re-run them as quickly as possible. In case you run into any trouble please [contact us](mailto:hello@webknossos.org).

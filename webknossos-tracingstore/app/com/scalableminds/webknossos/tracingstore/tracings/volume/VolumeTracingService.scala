@@ -186,7 +186,7 @@ class VolumeTracingService @Inject()(
   def initializeWithData(tracingId: String,
                          tracing: VolumeTracing,
                          initialData: File,
-                         resolutionRestrictions: ResolutionRestrictions): Box[Set[Vec3Int]] = {
+                         resolutionRestrictions: ResolutionRestrictions): Fox[Set[Vec3Int]] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
     }
@@ -202,6 +202,9 @@ class VolumeTracingService @Inject()(
         saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
       }
     }
+    // if none of the tracings contained any volume data, use the dataset’s full resolution list
+    if (savedResolutions.isEmpty) return getRequiredMags(tracing).map(_.toSet)
+
     unzipResult.map(_ => savedResolutions.toSet)
   }
 

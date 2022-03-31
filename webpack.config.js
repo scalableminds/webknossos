@@ -61,9 +61,9 @@ module.exports = function(env = {}) {
 
   return {
     entry: {
-      main: "main.js",
-      light: "style_light.js",
-      dark: "style_dark.js",
+      main: "main.tsx",
+      light: "style_light.ts",
+      dark: "style_dark.ts",
     },
     mode: env.production ? "production" : "development",
     output: {
@@ -84,9 +84,9 @@ module.exports = function(env = {}) {
           },
         },
         {
-          test: /\.js$/,
+          test: /\.tsx?$/,
           exclude: /(node_modules|bower_components)/,
-          use: "babel-loader",
+          use: "ts-loader",
         },
         {
           test: /\.less$/,

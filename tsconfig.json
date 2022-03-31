@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "module": "ES6",
+    "noImplicitAny": true,
+    "removeComments": true,
+    "sourceMap": true,
+    "moduleResolution":"node",
+    "outDir": "build",
+    "jsx": "react",
+    "strict": true,
+    "target": "es2020",
+    "types": [], //reconsider this later
+    "skipLibCheck": true, //reconsider this later
+    "allowSyntheticDefaultImports":true,
+    "baseUrl": "./frontend/javascripts",
+    "paths": {
+        "*": ["*", "./frontend/javascripts/*", "frontend/javascripts/*"],
+        "oxalis/*": ["./oxalis/*"],
+        "libs/*": ["./libs/*"],
+        "dashboard/*": ["./dashboard/*"],
+        "components/*": ["./components/*"],
+        "admin/*": ["./admin/*"],
+        "types/*": ["./types/*"],
+    }
+  },
+  "include": ["frontend/javascripts/**/*.ts", "frontend/javascripts/**/*.d.ts", "frontend/javascripts/**/*.tsx"],
+  "exclude": ["node_modules/**/*", "frontend/**/*.spec.ts"]
+}

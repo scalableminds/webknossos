@@ -75,18 +75,19 @@ module.exports = function(env = {}) {
     module: {
       rules: [
         {
-          test: /\.worker\.js$/,
-          use: {
-            loader: "worker-loader",
+          test: /\.worker\.ts$/,
+          use: [{
+            loader: "babel-loader",
             options: {
               filename: "[name].[contenthash].worker.js",
             },
-          },
+          }
+        ]
         },
         {
           test: /\.tsx?$/,
           exclude: /(node_modules|bower_components)/,
-          use: "ts-loader",
+          use: "babel-loader",
         },
         {
           test: /\.less$/,
@@ -142,6 +143,7 @@ module.exports = function(env = {}) {
       alias: {
         react: path.resolve("./node_modules/react"),
       },
+      extensions: ['.ts', '.tsx', '.js', '.json'],
       fallback: {
         // Needed for jsonschema
         url: require.resolve("url/"),

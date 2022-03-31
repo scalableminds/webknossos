@@ -1,26 +1,30 @@
 // @flow
-import React, { useEffect, useState, type Node } from "react";
-import { type APIJob } from "types/api_flow_types";
-import { Modal, Select, Button } from "antd";
+import React, { type Node } from "react";
+import type { APIJob, APIDataLayer } from "types/api_flow_types";
+import { Modal, Select, Button, Form } from "antd";
 import {
   startNucleiInferralJob,
   startNeuronInferralJob,
   startApplyMergerModeJob,
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
+import { DatasetNameFormItem } from "admin/dataset/dataset_components";
 import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import { type UserBoundingBox } from "oxalis/store";
 import { Unicode, type Vector3 } from "oxalis/constants";
+import Model from "oxalis/model";
 import { capitalizeWords, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 
 const { ThinSpace } = Unicode;
 
 const jobNameToImagePath = {
   "neuron inferral": "neuron_inferral_example.jpg",
   "nuclei inferral": "nuclei_inferral_example.jpg",
+  "apply merger mode": "apply_merger_mode_example.jpg",
 };
 
 type Props = {
@@ -28,11 +32,12 @@ type Props = {
 };
 type StartingJobModalProps = {
   ...Props,
-  jobApiCall: (string, ?UserBoundingBox) => Promise<?APIJob>,
+  jobApiCall: (string, APIDataLayer, ?UserBoundingBox) => Promise<?APIJob>,
   jobName: string,
   description: Node,
   isBoundingBoxConfigurable?: boolean,
   chooseSegmentationLayer?: boolean,
+  suggestedDatasetSuffix: string,
 };
 
 function StartingJobModal(props: StartingJobModalProps) {
@@ -42,34 +47,26 @@ function StartingJobModal(props: StartingJobModalProps) {
   const userBoundingBoxes = useSelector(state => getUserBoundingBoxesFromState(state));
   const tracing = useSelector(store => store.tracing);
   const dataset = useSelector(store => store.dataset);
-  const [selectedLayerName, setSelectedLayerName] = useState<?string>(null);
-  const [selectedBoundingBox, setSelectedBoundingBox] = useState<?UserBoundingBox>(null);
+  const activeUser = useSelector(state => state.activeUser);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
 
-  useEffect(() => {
-    if (layers.length === 1) {
-      setSelectedLayerName(layers[0].name);
-    }
-  });
-  if (layers.length < 1) {
-    return null;
-  }
-  const onChangeBoundingBox = (selectedBBoxId: number) => {
-    const selectedBBox = userBoundingBoxes.find(bbox => bbox.id === selectedBBoxId);
-    if (selectedBBox) {
-      setSelectedBoundingBox(selectedBBox);
-    }
-  };
-  const startJob = async () => {
-    if (selectedLayerName == null) {
+  const startJob = async ({ layerName, boundingBoxId, name: newDatasetName }) => {
+    const selectedLayer = layers.find(layer => layer.name === layerName);
+    const selectedBoundingBox = userBoundingBoxes.find(bbox => bbox.id === boundingBoxId);
+    if (
+      selectedLayer == null ||
+      newDatasetName == null ||
+      (isBoundingBoxConfigurable && selectedBoundingBox == null)
+    ) {
       return;
     }
     try {
+      await Model.ensureSavedState();
       let apiJob;
       if (isBoundingBoxConfigurable) {
-        apiJob = await jobApiCall(selectedLayerName, selectedBoundingBox);
+        apiJob = await jobApiCall(newDatasetName, selectedLayer, selectedBoundingBox);
       } else {
-        apiJob = await jobApiCall(selectedLayerName);
+        apiJob = await jobApiCall(newDatasetName, selectedLayer);
       }
       if (!apiJob) {
         return;
@@ -92,39 +89,43 @@ function StartingJobModal(props: StartingJobModalProps) {
       handleClose();
     }
   };
-  const LayerSelection = (): Node =>
-    layers.length > 1 ? (
-      <React.Fragment>
-        <p>Please select the layer that should be used for this job.</p>
-        <div style={{ textAlign: "center" }}>
-          <Select
-            showSearch
-            style={{ width: 300 }}
-            placeholder="Select a color layer"
-            optionFilterProp="children"
-            value={selectedLayerName}
-            onChange={setSelectedLayerName}
-            filterOption={(input, option) =>
-              option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-            }
-          >
-            {layers.map(layer => {
-              const readableName =
-                layer.tracingId != null
-                  ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
-                  : layer.name;
-              return (
-                <Select.Option key={readableName} value={readableName}>
-                  {readableName}
-                </Select.Option>
-              );
-            })}
-          </Select>
-        </div>
-        <br />
-      </React.Fragment>
-    ) : null;
-
+  const LayerSelectionFromItem = (): Node => {
+    const layerType = chooseSegmentationLayer ? "segmentation layer" : "color layer";
+    return (
+      <Form.Item
+        label={layerType}
+        name="layerName"
+        rules={[
+          {
+            required: true,
+            message: `Please the ${layerType} that should be used for this job.`,
+          },
+        ]}
+        hidden={layers.length === 1}
+      >
+        <Select
+          showSearch
+          placeholder={`Select a ${layerType}`}
+          optionFilterProp="children"
+          filterOption={(input, option) =>
+            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+          }
+        >
+          {layers.map(layer => {
+            const readableName =
+              layer.tracingId != null
+                ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+                : layer.name;
+            return (
+              <Select.Option key={layer.name} value={layer.name}>
+                {readableName}
+              </Select.Option>
+            );
+          })}
+        </Select>
+      </Form.Item>
+    );
+  };
   const renderUserBoundingBox = (bbox: ?UserBoundingBox) => {
     if (!bbox) {
       return null;
@@ -145,40 +146,42 @@ function StartingJobModal(props: StartingJobModalProps) {
       </>
     );
   };
-  const BoundingBoxSelection = (): Node =>
-    isBoundingBoxConfigurable ? (
-      <React.Fragment>
-        <p>
-          Please select the bounding box for which the inferral should be computed. Note that large
-          bounding boxes can take very long. You can create a new bounding box for the desired
-          volume with the bounding box tool in the toolbar at the top. The created bounding boxes
-          will be listed below.
-        </p>
-        <div style={{ textAlign: "center" }}>
-          <Select
-            showSearch
-            style={{ width: 400 }}
-            placeholder="Select a bounding box"
-            optionFilterProp="children"
-            value={renderUserBoundingBox(selectedBoundingBox)}
-            onChange={onChangeBoundingBox}
-            filterOption={(input, option) =>
-              option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-            }
-          >
-            {userBoundingBoxes.map(userBB => (
-              <Select.Option key={userBB.id} value={userBB.id}>
-                {renderUserBoundingBox(userBB)}
-              </Select.Option>
-            ))}
-          </Select>
-        </div>
-        <br />
-      </React.Fragment>
-    ) : null;
-
-  const hasUnselectedOptions =
-    selectedLayerName == null || (isBoundingBoxConfigurable && selectedBoundingBox == null);
+  const BoundingBoxSelectionFormItem = (): Node => (
+    <div style={isBoundingBoxConfigurable ? {} : { display: "none" }}>
+      <p>
+        Please select the bounding box for which the inferral should be computed. Note that large
+        bounding boxes can take very long. You can create a new bounding box for the desired volume
+        with the bounding box tool in the toolbar at the top. The created bounding boxes will be
+        listed below.
+      </p>
+      <Form.Item
+        label="Bounding Box"
+        name="boundingBoxId"
+        rules={[
+          {
+            required: isBoundingBoxConfigurable,
+            message: "Please select the bounding box for which the inferral should be computed.",
+          },
+        ]}
+        hidden={!isBoundingBoxConfigurable}
+      >
+        <Select
+          showSearch
+          placeholder="Select a bounding box"
+          optionFilterProp="children"
+          filterOption={(input, option) =>
+            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+          }
+        >
+          {userBoundingBoxes.map(userBB => (
+            <Select.Option key={userBB.id} value={userBB.id}>
+              {renderUserBoundingBox(userBB)}
+            </Select.Option>
+          ))}
+        </Select>
+      </Form.Item>
+    </div>
+  );
 
   return (
     <Modal
@@ -198,13 +201,28 @@ function StartingJobModal(props: StartingJobModalProps) {
         />
       </div>
       <br />
-      <LayerSelection />
-      <BoundingBoxSelection />
-      <div style={{ textAlign: "center" }}>
-        <Button type="primary" size="large" disabled={hasUnselectedOptions} onClick={startJob}>
-          Start {capitalizeWords(jobName)}
-        </Button>
-      </div>
+      <Form
+        onFinish={startJob}
+        layout="vertical"
+        initialValues={{
+          layerName: layers.length === 1 ? layers[0].name : null,
+          boundingBoxId: null,
+        }}
+      >
+        <DatasetNameFormItem
+          label="New Dataset Name"
+          activeUser={activeUser}
+          initialName={`${dataset.name}_${props.suggestedDatasetSuffix}`}
+        />
+        <LayerSelectionFromItem />
+        <BoundingBoxSelectionFormItem />
+
+        <div style={{ textAlign: "center" }}>
+          <Button type="primary" size="large" htmlType="submit">
+            Start {capitalizeWords(jobName)}
+          </Button>
+        </div>
+      </Form>
     </Modal>
   );
 }
@@ -215,8 +233,15 @@ export function NucleiInferralModal({ handleClose }: Props) {
     <StartingJobModal
       handleClose={handleClose}
       jobName="nuclei inferral"
-      jobApiCall={colorLayerName =>
-        startNucleiInferralJob(dataset.owningOrganization, dataset.name, colorLayerName)
+      suggestedDatasetSuffix="with_nuclei"
+      jobApiCall={async (newDatasetName, colorLayer) =>
+        // TODO
+        startNucleiInferralJob(
+          dataset.owningOrganization,
+          dataset.name,
+          colorLayer.name,
+          newDatasetName,
+        )
       }
       description={
         <>
@@ -245,17 +270,20 @@ export function NeuronInferralModal({ handleClose }: Props) {
     <StartingJobModal
       handleClose={handleClose}
       jobName="neuron inferral"
+      suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
-      jobApiCall={async (colorLayerName, boundingBox) => {
+      jobApiCall={async (newDatasetName, colorLayer, boundingBox) => {
         if (!boundingBox) {
           return Promise.resolve();
         }
+        // TODO
         const bbox = computeArrayFromBoundingBox(boundingBox.boundingBox);
         return startNeuronInferralJob(
           dataset.owningOrganization,
           dataset.name,
-          colorLayerName,
+          colorLayer.name,
           bbox,
+          newDatasetName,
         );
       }}
       description={
@@ -286,16 +314,24 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
     <StartingJobModal
       handleClose={handleClose}
       jobName="apply merger mode"
+      suggestedDatasetSuffix="with_merged_segmentation"
       chooseSegmentationLayer
-      jobApiCall={segmentationLayer =>
-        startApplyMergerModeJob(
+      jobApiCall={async (newDatasetName, segmentationLayer) => {
+        const volumeLayerName =
+          segmentationLayer.tracingId != null
+            ? getReadableNameByVolumeTracingId(tracing, segmentationLayer.tracingId)
+            : null;
+        const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
+        return startApplyMergerModeJob(
           dataset.owningOrganization,
           dataset.name,
-          segmentationLayer,
+          baseSegmentationName,
+          volumeLayerName,
+          newDatasetName,
           tracing.annotationId,
           tracing.annotationType,
-        )
-      }
+        );
+      }}
       description={
         <>
           <p>

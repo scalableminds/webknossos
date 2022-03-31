@@ -1046,9 +1046,10 @@ export function startNucleiInferralJob(
   organizationName: string,
   datasetName: string,
   layerName: string,
+  newDatasetName: string,
 ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}`,
+    `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}&newDatasetName=${newDatasetName}`,
     {
       method: "POST",
     },
@@ -1060,11 +1061,12 @@ export function startNeuronInferralJob(
   datasetName: string,
   layerName: string,
   bbox: Vector6,
+  newDatasetName: string,
 ): Promise<APIJob> {
   return Request.receiveJSON(
     `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?layerName=${layerName}&bbox=${bbox.join(
       ",",
-    )}`,
+    )}&newDatasetName=${newDatasetName}`,
   );
 }
 
@@ -1087,12 +1089,15 @@ export function startGlobalizeFloodfillsJob(
 export function startApplyMergerModeJob(
   organizationName: string,
   datasetName: string,
-  layerName: string,
+  fallbackLayerName: string,
+  volumeLayerName: ?string,
+  newDatasetName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
-  ): Promise<APIJob> {
+): Promise<APIJob> {
+  const volumeLayerArg = volumeLayerName != null ? `&volumeLayerName=${volumeLayerName}` : "";
   return Request.receiveJSON(
-    `/api/jobs/run/applyMergerMode/${organizationName}/${datasetName}?layerName=${layerName}&annotationId=${annotationId}&annotationType=${annotationType}`,
+    `/api/jobs/run/applyMergerMode/${organizationName}/${datasetName}?fallbackLayerName=${fallbackLayerName}${volumeLayerArg}&annotationId=${annotationId}&annotationType=${annotationType}&newDatasetName=${newDatasetName}`,
     {
       method: "POST",
     },

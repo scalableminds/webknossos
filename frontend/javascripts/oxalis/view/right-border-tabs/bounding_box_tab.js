@@ -60,7 +60,7 @@ function StartGlobalizeFloodfillsModal({
 
     Toast.info(
       <React.Fragment>
-        The globilization of the floodfill operation(s) has been started. For large datasets, this
+        The globalization of the floodfill operation(s) has been started. For large datasets, this
         may take a while. Closing this tab will not stop the computation.
         <br />
         See{" "}
@@ -83,7 +83,11 @@ function StartGlobalizeFloodfillsModal({
       </p>
 
       <Form onFinish={handleSubmit} layout="vertical">
-        <DatasetNameFormItem activeUser={activeUser} initialName={initialName} />
+        <DatasetNameFormItem
+          activeUser={activeUser}
+          initialName={initialName}
+          label="New Dataset Name"
+        />
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
           <Button size="large" type="primary" htmlType="submit">

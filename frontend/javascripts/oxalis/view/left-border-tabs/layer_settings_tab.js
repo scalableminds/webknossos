@@ -396,30 +396,32 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   </div>
                   Bounding Box:
                   <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
-                    <tr>
-                      <td />
-                      <td style={{ fontSize: 10 }}>X</td>
-                      <td style={{ fontSize: 10 }}>Y</td>
-                      <td style={{ fontSize: 10 }}>Z</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontSize: 10 }}>Min</td>
-                      <td>{layer.boundingBox.topLeft[0]} </td>
-                      <td>{layer.boundingBox.topLeft[1]} </td>
-                      <td>{layer.boundingBox.topLeft[2]}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontSize: 10 }}>Max</td>
-                      <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
-                      <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
-                      <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontSize: 10 }}>Size</td>
-                      <td>{layer.boundingBox.width} </td>
-                      <td>{layer.boundingBox.height} </td>
-                      <td>{layer.boundingBox.depth}</td>
-                    </tr>
+                    <tbody>
+                      <tr>
+                        <td />
+                        <td style={{ fontSize: 10 }}>X</td>
+                        <td style={{ fontSize: 10 }}>Y</td>
+                        <td style={{ fontSize: 10 }}>Z</td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontSize: 10 }}>Min</td>
+                        <td>{layer.boundingBox.topLeft[0]} </td>
+                        <td>{layer.boundingBox.topLeft[1]} </td>
+                        <td>{layer.boundingBox.topLeft[2]}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontSize: 10 }}>Max</td>
+                        <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
+                        <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
+                        <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontSize: 10 }}>Size</td>
+                        <td>{layer.boundingBox.width} </td>
+                        <td>{layer.boundingBox.height} </td>
+                        <td>{layer.boundingBox.depth}</td>
+                      </tr>
+                    </tbody>
                   </table>
                 </div>
               }

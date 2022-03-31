@@ -199,6 +199,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
             .value()
         : dataSourceSortedByRank;
 
+    const accessPermissionFilters = _.uniqBy(
+      [
+        { text: "public", value: "public" },
+        ...sortedDataSource.flatMap(dataset =>
+          dataset.allowedTeams.map(team => ({ text: team.name, value: team.name })),
+        ),
+      ],
+      "text",
+    );
+
     return (
       <FixedExpandableTable
         dataSource={sortedDataSource}
@@ -239,11 +249,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Tags"
           dataIndex="tags"
           key="tags"
-          width={280}
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
             dataset.isActive ? (
-              <div>
+              <div style={{maxWidth: 280}}>
                 {tags.map(tag => (
                   <CategorizationLabel
                     tag={tag}
@@ -288,60 +297,52 @@ class DatasetTable extends React.PureComponent<Props, State> {
         />
 
         <Column
-          title="Allowed Teams"
+          title="Access Permissions"
           dataIndex="allowedTeams"
           key="allowedTeams"
-          width={230}
-          render={(teams: Array<APITeam>, dataset: APIMaybeUnimportedDataset) =>
-            teams.map(team => (
-              <Tag
-                color={stringToColor(team.name)}
-                key={`allowed_teams_${dataset.name}_${team.name}`}
-              >
-                {team.name}
-              </Tag>
-            ))
-          }
-        />
-        <Column
-          title="Active"
-          dataIndex="isActive"
-          key="isActive"
-          width={130}
-          sorter={(a, b) => a.isActive - b.isActive}
-          sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
-          render={(isActive: boolean) =>
-            isActive ? (
-              <CheckCircleOutlined style={{ fontSize: 20 }} />
-            ) : (
-              <CloseCircleOutlined style={{ fontSize: 20 }} />
-            )
-          }
-        />
-        <Column
-          title="Public"
-          dataIndex="isPublic"
-          key="isPublic"
-          width={130}
-          sorter={(a, b) => a.isPublic - b.isPublic}
-          sortOrder={sortedInfo.columnKey === "isPublic" && sortedInfo.order}
-          render={(isPublic: boolean) =>
-            isPublic ? (
-              <CheckCircleOutlined style={{ fontSize: 20 }} />
-            ) : (
-              <CloseCircleOutlined style={{ fontSize: 20 }} />
-            )
-          }
+          filters={accessPermissionFilters}
+          onFilter={(value, dataset) => dataset.allowedTeams.some(team => team.name === value)}
+          render={(teams: Array<APITeam>, dataset: APIMaybeUnimportedDataset) => {
+            let permittedTeams = [...teams];
+            if (dataset.isPublic) {
+              permittedTeams.push({ name: "public" });
+            }
+
+            return permittedTeams.map(team => (
+              <div>
+                <Tag
+                  style={{
+                    maxWidth: 200,
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                  }}
+                  color={stringToColor(team.name)}
+                  key={`allowed_teams_${dataset.name}_${team.name}`}
+                >
+                  {team.name}
+                </Tag>
+              </div>
+            ));
+          }}
         />
         <Column
           title="Data Layers"
           key="dataLayers"
           dataIndex="dataSource.dataLayers"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <div style={{ maxWidth: 300 }}>
+            <div style={{ maxWidth: 250 }}>
               {(dataset.isActive ? dataset.dataSource.dataLayers : []).map(layer => (
-                <Tag key={layer.name}>
-                  {layer.category} - {layer.elementClass}
+                <Tag
+                  key={layer.name}
+                  style={{
+                    maxWidth: 250,
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {layer.name} - {layer.elementClass}
                 </Tag>
               ))}
             </div>

@@ -126,7 +126,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
-  def runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String]): Action[AnyContent] =
+  def runInferNucleiJob(organizationName: String, dataSetName: String, layerName: String,  newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -142,6 +142,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "layer_name" -> layerName,
+            "new_dataset_name" -> newDatasetName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNucleiInferral"
@@ -153,7 +154,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
   def runInferNeuronsJob(organizationName: String,
                          dataSetName: String,
                          layerName: String,
-                         bbox: String): Action[AnyContent] =
+                         bbox: String,
+                         newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -167,6 +169,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
+            "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
             "bbox" -> bbox,
@@ -260,9 +263,11 @@ class JobsController @Inject()(jobDAO: JobDAO,
 
     def runApplyMergerModeJob(organizationName: String,
                          dataSetName: String,
-                         layerName: String,
+                         fallbackLayerName: String,
                          annotationId: String,
-                         annotationType: String): Action[AnyContent] =
+                         annotationType: String,
+                         newDatasetName: String, 
+                         volumeLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -278,11 +283,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
-            "layer_name" -> layerName,
+            "fallback_layer_name" -> fallbackLayerName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
             "user_auth_token" -> userAuthToken.id,
             "annotation_id" -> annotationId,
-            "annotation_type" -> annotationType
+            "annotation_type" -> annotationType,
+            "new_dataset_name" -> newDatasetName,
+            "volume_layer_name" -> volumeLayerName
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunApplyMergerMode"
           js <- jobService.publicWrites(job)

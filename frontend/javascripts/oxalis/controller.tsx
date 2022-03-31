@@ -1,7 +1,10 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
 import { AsyncButton } from "components/async_clickables";
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
@@ -55,7 +58,9 @@ type State = {
 };
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'keyboardNoLoop' has no initializer and i... Remove this comment to see the full error message
   keyboardNoLoop: InputKeyboardNoLoop;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isMounted' has no initializer and is not... Remove this comment to see the full error message
   isMounted: boolean;
   state = {
     gotUnhandledError: false,
@@ -140,6 +145,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   modelFetchDone() {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newLocation' implicitly has an 'any' ty... Remove this comment to see the full error message
     const beforeUnload = (newLocation, action) => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
@@ -148,8 +154,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         const stateSaved = Model.stateSaved();
 
         if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'onbeforeunload' does not exist on type '... Remove this comment to see the full error message
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'setTimeout' does not exist on type '(Win... Remove this comment to see the full error message
           window.setTimeout(() => {
             if (!this.isMounted) {
               return;
@@ -157,6 +165,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
             Store.dispatch(saveNowAction());
             // restore the event handler in case a user chose to stay on the page
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'onbeforeunload' does not exist on type '... Remove this comment to see the full error message
             window.onbeforeunload = beforeUnload;
           }, 500);
           return messages["save.leave_page_unfinished"];
@@ -167,11 +176,13 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     };
 
     this.props.history.block(beforeUnload);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'onbeforeunload' does not exist on type '... Remove this comment to see the full error message
     window.onbeforeunload = beforeUnload;
     UrlManager.startUrlUpdater();
     initializeSceneController();
     this.initKeyboard();
     this.initTaskScript();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type '(Win... Remove this comment to see the full error message
     window.webknossos = new ApiLoader(Model);
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
@@ -206,13 +217,16 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   isWebGlSupported() {
     return (
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'WebGLRenderingContext' does not exist on... Remove this comment to see the full error message
       window.WebGLRenderingContext &&
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
       document.createElement("canvas").getContext("experimental-webgl")
     );
   }
 
   initKeyboard() {
     // avoid scrolling while pressing space
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
@@ -227,8 +241,11 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     if (controlMode !== ControlModeEnum.VIEW) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
         "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
         "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
         m: () => {
           // rotate allowed modes
@@ -237,17 +254,20 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
         "super + s": (event) => {
           event.preventDefault();
           event.stopPropagation();
           Model.forceSave();
         },
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
         "ctrl + s": (event) => {
           event.preventDefault();
           event.stopPropagation();
           Model.forceSave();
         },
         // Undo
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
         "super + z": (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -255,6 +275,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         },
         "ctrl + z": () => Store.dispatch(undoAction()),
         // Redo
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
         "super + y": (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -264,6 +285,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       });
     }
 
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'leastRecentlyUsedSegmentationLayer' impl... Remove this comment to see the full error message
     let leastRecentlyUsedSegmentationLayer = null;
 
     _.extend(keyboardControls, {
@@ -274,10 +296,12 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         if (segmentationLayer != null) {
           // If there is a visible segmentation layer, disable and remember it.
           leastRecentlyUsedSegmentationLayer = segmentationLayer;
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'leastRecentlyUsedSegmentationLayer' impl... Remove this comment to see the full error message
         } else if (leastRecentlyUsedSegmentationLayer != null) {
           // If no segmentation layer is visible, use the least recently toggled
           // layer (note that toggling the layer via the switch-button won't update
           // the local variable here).
+          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'leastRecentlyUsedSegmentationLayer' impl... Remove this comment to see the full error message
           segmentationLayer = leastRecentlyUsedSegmentationLayer;
         } else {
           // As a fallback, simply use some segmentation layer
@@ -306,12 +330,14 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     const { gotUnhandledError, organizationToSwitchTo } = this.state;
     const switchToOwningOrganizationButton = (
       <AsyncButton
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; type: string; style: { m... Remove this comment to see the full error message
         type="primary"
         style={{
           marginRight: 26,
         }}
         onClick={async () => {
           if (organizationToSwitchTo != null) {
+            // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
             await switchToOrganization(organizationToSwitchTo.name);
           }
         }}
@@ -325,6 +351,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     } else if (status === "failedLoading" && user != null) {
       const message =
         organizationToSwitchTo != null
+          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           ? `This dataset belongs to the organization ${organizationToSwitchTo.displayName} which is currently not your active organization. Do you want to switch to that organization?`
           : "Either the dataset does not exist or you do not have the necessary access rights.";
       return (
@@ -357,6 +384,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       return (
         <div className="cover-whole-screen">
           <Row
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
             type="flex"
             justify="center"
             style={{
@@ -412,4 +440,5 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Controller));

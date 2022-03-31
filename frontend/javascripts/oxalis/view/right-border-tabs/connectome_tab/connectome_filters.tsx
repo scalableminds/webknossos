@@ -1,3 +1,4 @@
+// @flow
 import { Checkbox, Divider, Popover, Tooltip } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import React from "react";
@@ -60,6 +61,7 @@ type State = {
 };
 
 class ConnectomeFilters extends React.Component<Props, State> {
+  // @ts-expect-error ts-migrate(2416) FIXME: Property 'state' in type 'ConnectomeFilters' is no... Remove this comment to see the full error message
   state = {
     filters: defaultFilters,
   };
@@ -69,6 +71,7 @@ class ConnectomeFilters extends React.Component<Props, State> {
 
     if (prevProps.availableSynapseTypes !== this.props.availableSynapseTypes) {
       // Avoid using outdated filters in the call to updateFilteredConnectomeData
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ synapseTypes: string[]; synapseDirections:... Remove this comment to see the full error message
       filters = this.updateFilters(prevProps.availableSynapseTypes);
     }
 
@@ -76,12 +79,14 @@ class ConnectomeFilters extends React.Component<Props, State> {
       prevProps.connectomeData !== this.props.connectomeData ||
       prevState.filters !== this.state.filters
     ) {
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ synapseTypes: never[]; synapse... Remove this comment to see the full error message
       this.updateFilteredConnectomeData(filters);
     }
   }
 
   resetFilters = () => {
     this.setState({
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ synapseTypes: string[]; synapseDirections:... Remove this comment to see the full error message
       filters: { ...defaultFilters, synapseTypes: this.props.availableSynapseTypes },
     });
   };
@@ -102,6 +107,7 @@ class ConnectomeFilters extends React.Component<Props, State> {
       synapseTypes: [...validOldSynapseTypes, ...newlyAddedSynapseTypes],
     };
     this.setState({
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ synapseTypes: string[]; synapseDirections:... Remove this comment to see the full error message
       filters: newFilters,
     });
     return newFilters;
@@ -122,15 +128,18 @@ class ConnectomeFilters extends React.Component<Props, State> {
       filters: { ...oldState.filters, synapseDirections },
     }));
   };
+
   onChangeSynapseTypeFilter = (synapseTypes: Array<string>) => {
     this.setState((oldState) => ({
       filters: { ...oldState.filters, synapseTypes },
     }));
   };
+
   getFilterSettings = () => {
     const { availableSynapseTypes } = this.props;
     const { filters } = this.state;
     const synapseDirectionOptions = Object.keys(directionCaptions).map((direction) => ({
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       label: directionCaptions[direction],
       value: direction,
     }));
@@ -148,6 +157,7 @@ class ConnectomeFilters extends React.Component<Props, State> {
           Filters
         </h4>
         <ButtonComponent
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{
             float: "right",
           }}
@@ -164,12 +174,14 @@ class ConnectomeFilters extends React.Component<Props, State> {
         <Checkbox.Group
           options={synapseDirectionOptions}
           value={filters.synapseDirections}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '(synapseDirections: Array<SynapseDirection>)... Remove this comment to see the full error message
           onChange={this.onChangeSynapseDirectionFilter}
         />
         <h4>by Synapse Type</h4>
         <Checkbox.Group
           options={synapseTypeOptions}
           value={filters.synapseTypes}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '(synapseTypes: Array<string>) => void' is no... Remove this comment to see the full error message
           onChange={this.onChangeSynapseTypeFilter}
         />
       </div>
@@ -187,6 +199,7 @@ class ConnectomeFilters extends React.Component<Props, State> {
     return (
       <Tooltip title="Configure Filters">
         <Popover content={this.getFilterSettings} trigger="click">
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           <ButtonComponent disabled={disabled || !isSynapseTypeFilterAvailable}>
             <FilterOutlined
               style={

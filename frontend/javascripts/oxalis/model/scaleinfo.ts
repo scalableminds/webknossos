@@ -1,3 +1,4 @@
+// @flow
 import type { Vector3 } from "oxalis/constants";
 export function getBaseVoxel(dataSetScale: Vector3): number {
   // base voxel should be a cube with highest resolution
@@ -17,6 +18,7 @@ export function getVoxelPerNM(dataSetScale: Vector3): Vector3 {
     voxelPerNM[i] = 1 / dataSetScale[i];
   }
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return voxelPerNM;
 }
 export function voxelToNm(dataSetScale: Vector3, posArray: Vector3): Vector3 {
@@ -26,5 +28,6 @@ export function voxelToNm(dataSetScale: Vector3, posArray: Vector3): Vector3 {
     result[i] = posArray[i] * dataSetScale[i];
   }
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return result;
 }

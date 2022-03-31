@@ -1,8 +1,13 @@
+// @flow
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'deep... Remove this comment to see the full error message
 import deepForEach from "deep-for-each";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'enzy... Remove this comment to see the full error message
 import { configure } from "enzyme";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import fs from "fs";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'shel... Remove this comment to see the full error message
 import shell from "shelljs";
 const requests = [];
 const tokenUserA =
@@ -41,6 +46,7 @@ export function replaceVolatileValues(obj: Record<string, any> | null | undefine
   // Replace volatile properties with deterministic values
   const newObj = _.cloneDeep(obj);
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
   deepForEach(newObj, (value, key, arrOrObj) => {
     if (volatileKeys.includes(key)) {
       arrOrObj[key] = key;
@@ -52,10 +58,12 @@ export function replaceVolatileValues(obj: Record<string, any> | null | undefine
 global.fetch = function fetchWrapper(url, options) {
   let newUrl = url;
 
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'indexOf' does not exist on type 'Request... Remove this comment to see the full error message
   if (url.indexOf("http:") === -1) {
     newUrl = `http://localhost:9000${url}`;
   }
 
+  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   options.headers.set("X-Auth-Token", currToken);
   const promise = fetch(newUrl, options);
   requests.push(promise);
@@ -66,6 +74,7 @@ global.fetch = function fetchWrapper(url, options) {
 global.Headers = Headers;
 global.Request = Request;
 global.Response = Response;
+// @ts-expect-error ts-migrate(2551) FIXME: Property 'FetchError' does not exist on type 'Glob... Remove this comment to see the full error message
 global.FetchError = FetchError;
 
 const { JSDOM } = require("jsdom");
@@ -77,11 +86,13 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
 });
 const { window } = jsdom;
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'src' implicitly has an 'any' type.
 function copyProps(src, target) {
   const props = {};
   Object.getOwnPropertyNames(src)
     .filter((prop) => typeof target[prop] === "undefined")
     .forEach((prop) => {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       props[prop] = Object.getOwnPropertyDescriptor(src, prop);
     });
   Object.defineProperties(target, props);
@@ -90,9 +101,11 @@ function copyProps(src, target) {
 global.window = window;
 global.document = window.document;
 global.localStorage = {
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'undefined' is not assignable to type 'string... Remove this comment to see the full error message
   getItem: () => undefined,
   setItem: () => undefined,
 };
+// @ts-expect-error ts-migrate(2740) FIXME: Type '{ userAgent: string; }' is missing the follo... Remove this comment to see the full error message
 global.navigator = {
   userAgent: "node.js",
 };

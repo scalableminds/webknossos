@@ -1,3 +1,4 @@
+// @flow
 import { Modal } from "antd";
 import React from "react";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
@@ -557,6 +558,7 @@ export const deleteActiveNodeAsUserAction = (
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   return getActiveNode(skeletonTracing)
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     .map((activeNode) => {
       const nodeId = activeNode.id;
 
@@ -579,6 +581,7 @@ export const deleteActiveNodeAsUserAction = (
 };
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
 function confirmDeletingInitialNode(id) {
   Modal.confirm({
     title: messages["tracing.delete_tree_with_initial_node"],
@@ -591,6 +594,7 @@ function confirmDeletingInitialNode(id) {
 export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
   getTree(skeletonTracing, treeId).map((tree) => {
     if (state.task != null && tree.nodes.has(1)) {
       confirmDeletingInitialNode(treeId);
@@ -598,6 +602,7 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
       Store.dispatch(deleteTreeAction(treeId));
     } else {
       renderIndependently((destroy) => (
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         <RemoveTreeModal onOk={() => Store.dispatch(deleteTreeAction(treeId))} destroy={destroy} />
       ));
     }

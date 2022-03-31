@@ -1,3 +1,4 @@
+// @flow
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -62,10 +63,12 @@ class SaveButton extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // Polling can be removed once VolumeMode saving is reactive
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setInterval' does not exist on type '(Wi... Remove this comment to see the full error message
     this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVE_POLLING_INTERVAL);
   }
 
   componentWillUnmount() {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'clearInterval' does not exist on type '(... Remove this comment to see the full error message
     window.clearInterval(this.savedPollingInterval);
   }
 
@@ -73,6 +76,7 @@ class SaveButton extends React.PureComponent<Props, State> {
     const isStateSaved = Model.stateSaved();
     const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(Store.getState().save.queue);
     const unsavedDuration =
+      // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
       oldestUnsavedTimestamp != null ? new Date() - oldestUnsavedTimestamp : 0;
     const showUnsavedWarning = unsavedDuration > UNSAVED_WARNING_THRESHOLD;
 
@@ -114,6 +118,7 @@ class SaveButton extends React.PureComponent<Props, State> {
     return (
       <ButtonComponent
         key="save-button"
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         type="primary"
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
@@ -157,6 +162,7 @@ class SaveButton extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'saveQueue' implicitly has an 'any' type... Remove this comment to see the full error message
 function getOldestUnsavedTimestamp(saveQueue): number | null | undefined {
   let oldestUnsavedTimestamp;
 
@@ -165,7 +171,9 @@ function getOldestUnsavedTimestamp(saveQueue): number | null | undefined {
   }
 
   for (const volumeQueue of Utils.values(saveQueue.volumes)) {
+    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     if (volumeQueue.length > 0) {
+      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       const oldestVolumeTimestamp = volumeQueue[0].timestamp;
       oldestUnsavedTimestamp = Math.min(
         oldestUnsavedTimestamp != null ? oldestUnsavedTimestamp : Infinity,
@@ -190,4 +198,5 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(SaveButton);

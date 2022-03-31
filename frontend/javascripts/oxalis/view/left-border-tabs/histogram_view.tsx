@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys, $ElementType } from "utility-types";
 import type { Dispatch } from "redux";
 import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
@@ -84,9 +86,13 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     }
 
     const ctx = this.canvasRef.getContext("2d");
+    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     ctx.translate(0, canvasHeight);
+    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     ctx.scale(1, -1);
+    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     ctx.lineWidth = 1;
+    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     ctx.lineJoin = "round";
     this.updateCanvas();
   }
@@ -114,6 +120,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     }
 
     const ctx = this.canvasRef.getContext("2d");
+    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     const { min, max } = getMinAndMax(this.props);
     const { data } = this.props;
@@ -134,12 +141,14 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
 
     for (const [i, histogram] of data.entries()) {
       const color = this.props.data.length > 1 ? uint24Colors[i] : uint24Colors[2];
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'CanvasRenderingContext2D | null'... Remove this comment to see the full error message
       this.drawHistogram(ctx, histogram, maxValue, color, min, max);
     }
   }
 
   getPrecision = () =>
     Math.max(getPrecisionOf(this.state.currentMin), getPrecisionOf(this.state.currentMax)) + 3;
+
   drawHistogram = (
     ctx: CanvasRenderingContext2D,
     histogram: $ElementType<APIHistogramData, number>,
@@ -157,6 +166,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.strokeStyle = `rgba(${color.join(",")})`;
     ctx.beginPath();
     // Scale data to the height of the histogram canvas.
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
     const downscaledData = elementCounts.map((value) => (value / maxValue) * canvasHeight);
     const activeRegion = new Path2D();
     ctx.moveTo(0, 0);
@@ -183,6 +193,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };
+
   onThresholdChange = ([firstVal, secVal]: [number, number]) => {
     const { layerName } = this.props;
 
@@ -192,13 +203,16 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       this.props.onChangeLayer(layerName, "intensityRange", [secVal, firstVal]);
     }
   };
+
   tipFormatter = (value: number) =>
     value > 10000 ? value.toExponential() : roundTo(value, this.getPrecision()).toString();
+
   // eslint-disable-next-line react/sort-comp
   updateMinimumDebounced = _.debounce(
     (value, layerName) => this.props.onChangeLayer(layerName, "min", value),
     500,
   );
+
   updateMaximumDebounced = _.debounce(
     (value, layerName) => this.props.onChangeLayer(layerName, "max", value),
     500,
@@ -234,6 +248,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           onChange={this.onThresholdChange}
           onAfterChange={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string' is not assignable... Remove this comment to see the full error message
           tipFormatter={this.tipFormatter}
           style={{
             width: canvasWidth,
@@ -243,6 +258,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
         />
         {isInEditMode ? (
           <Row
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; type: string; align: ... Remove this comment to see the full error message
             type="flex"
             align="middle"
             style={{
@@ -261,6 +277,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   defaultValue={currentMin}
                   value={currentMin}
                   onChange={(value) => {
+                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
                     value = parseFloat(value);
 
                     if (value <= maxRange) {
@@ -294,6 +311,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   defaultValue={currentMax}
                   value={currentMax}
                   onChange={(value) => {
+                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
                     value = parseFloat(value);
 
                     if (value >= minRange) {
@@ -315,9 +333,11 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerName' implicitly has an 'any' type... Remove this comment to see the full error message
   onChangeLayer(layerName, propertyName, value) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<HistogramProps, OwnProps, _, _, _, _>(null, mapDispatchToProps)(Histogram);

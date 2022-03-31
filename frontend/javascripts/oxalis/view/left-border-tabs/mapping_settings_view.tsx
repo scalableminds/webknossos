@@ -2,6 +2,7 @@ import { Select } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import debounceRender from "react-debounce-render";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import type { OrthoView, Vector3 } from "oxalis/constants";
@@ -64,6 +65,7 @@ type State = {
   didRefreshMappingList: boolean;
 };
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'h' implicitly has an 'any' type.
 const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 
 export const convertCellIdToCSS = (
@@ -71,14 +73,17 @@ export const convertCellIdToCSS = (
   customColors: Array<number> | null | undefined,
   alpha?: number,
 ) =>
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
   id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
 const hasSegmentation = () => Model.getVisibleSegmentationLayer() != null;
 
 const needle = "##";
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mappingName' implicitly has an 'any' ty... Remove this comment to see the full error message
 const packMappingNameAndCategory = (mappingName, category) => `${category}${needle}${mappingName}`;
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'packedString' implicitly has an 'any' t... Remove this comment to see the full error message
 const unpackMappingNameAndCategory = (packedString) => {
   const needlePos = packedString.indexOf(needle);
   const categoryName = packedString.slice(0, needlePos);
@@ -99,6 +104,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     }
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'prevProps' implicitly has an 'any' type... Remove this comment to see the full error message
   componentDidUpdate(prevProps) {
     if (this.props.isMappingEnabled !== prevProps.isMappingEnabled) {
       this.refreshLayerMappings();
@@ -118,6 +124,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     this.props.setMapping(this.props.layerName, mappingName, mappingType, {
       showLoadingIndicator: true,
     });
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
     if (document.activeElement) document.activeElement.blur();
   };
 
@@ -143,7 +150,9 @@ class MappingSettingsView extends React.Component<Props, State> {
         : segmentationLayer.name,
     ];
     const [mappings, agglomerates] = await Promise.all([
+      // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
       getMappingsForDatasetLayer(...params),
+      // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
       getAgglomeratesForDatasetLayer(...params),
     ]);
     this.props.setAvailableMappingsForLayer(segmentationLayer.name, mappings, agglomerates);
@@ -189,11 +198,13 @@ class MappingSettingsView extends React.Component<Props, State> {
           }
         : {};
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'optionStrings' implicitly has an 'any' ... Remove this comment to see the full error message
     const renderCategoryOptions = (optionStrings, category) => {
       const useGroups = availableMappings.length > 0 && availableAgglomerates.length > 0;
       const elements = optionStrings
         .slice()
         .sort(Utils.localeCompareBy([] as Array<string>, (optionString) => optionString))
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'optionString' implicitly has an 'any' t... Remove this comment to see the full error message
         .map((optionString) => (
           <Option
             key={packMappingNameAndCategory(optionString, category)}
@@ -299,6 +310,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
 
 const debounceTime = 100;
 const maxWait = 500;
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,

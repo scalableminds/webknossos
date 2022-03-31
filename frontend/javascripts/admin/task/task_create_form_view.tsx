@@ -1,4 +1,6 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import {
@@ -44,7 +46,9 @@ import {
 import { tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
 import Enum from "Enumjs";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 const FormItem = Form.Item;
@@ -126,8 +130,11 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
 }
 export function handleTaskCreationResponse(response: TaskCreationResponseContainer) {
   const { tasks, warnings } = response;
+  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'successfulTasks' implicitly has type 'an... Remove this comment to see the full error message
   const successfulTasks = [];
+  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'failedTasks' implicitly has type 'any[]'... Remove this comment to see the full error message
   const failedTasks = [];
+  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'teamName' implicitly has type 'any' in s... Remove this comment to see the full error message
   let teamName = null;
   const subHeadingStyle = {
     fontWeight: "bold",
@@ -138,6 +145,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
   };
   tasks.forEach((taskResponse: TaskCreationResponse, i: number) => {
     if (taskResponse.status === 200 && taskResponse.success) {
+      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'teamName' implicitly has an 'any' type.
       if (!teamName) {
         teamName = taskResponse.success.team;
       }
@@ -148,6 +156,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
     }
   });
 
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'successfulTasks' implicitly has an 'any[... Remove this comment to see the full error message
   const allProjectNames = _.uniq(successfulTasks.map((task) => task.projectName));
 
   if (allProjectNames.length > 1) {
@@ -176,12 +185,14 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
         </div>
       </div>
     ) : null;
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'failedTasks' implicitly has an 'any[]' t... Remove this comment to see the full error message
   const failedTasksAsString = failedTasks.join("");
   const successfulTasksContent =
     successfulTasks.length <= maxDisplayedTasksCount ? (
       <pre>
         taskId,filename,position
         <br />
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'successfulTasks' implicitly has an 'any[... Remove this comment to see the full error message
         {successfulTasks.map((task) => taskToShortText(task)).join("\n")}
       </pre>
     ) : (
@@ -253,6 +264,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
 }
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {
+  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
   formRef = React.createRef<typeof FormInstance>();
   state = {
     datasets: [],
@@ -322,6 +334,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     };
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   onFinish = async (formValues) => {
     formValues.boundingBox = formValues.boundingBox
       ? this.transformBoundingBox(formValues.boundingBox)
@@ -343,6 +356,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           // Workaround: Antd replaces file objects in the formValues with a wrapper file
           // The original file object is contained in the originFileObj property
           // This is most likely not intentional and may change in a future Antd version
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'wrapperFile' implicitly has an 'any' ty... Remove this comment to see the full error message
           formValues.nmlFiles = formValues.nmlFiles.map((wrapperFile) => wrapperFile.originFileObj);
           response = await createTaskFromNML(formValues);
         } else {
@@ -678,9 +692,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               <FormItem label="Task Specification" hasFeedback>
                 <RadioGroup
                   value={this.state.specificationType}
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(evt: React.SyntheticEvent<any>) => void' is... Remove this comment to see the full error message
                   onChange={(evt: React.SyntheticEvent<any>) =>
                     this.setState({
                       // $FlowIssue[incompatible-call] Inference for enum.coalesce does not work properly anymore? Flow update might help
+                      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
                       specificationType: Enum.coalesce(SpecificationEnum, evt.target.value),
                     })
                   }
@@ -712,4 +728,5 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TaskCreateFormView' is no... Remove this comment to see the full error message
 export default withRouter(TaskCreateFormView);

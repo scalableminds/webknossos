@@ -1,3 +1,4 @@
+// @flow
 import * as React from "react";
 import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
@@ -50,17 +51,25 @@ class ArbitraryController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
   // Arbitrary Controller: Responsible for Arbitrary Modes
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'arbitraryView' has no initializer and is... Remove this comment to see the full error message
   arbitraryView: ArbitraryView;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
   isStarted: boolean;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
   crosshair: Crosshair;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastNodeMatrix' has no initializer and i... Remove this comment to see the full error message
   lastNodeMatrix: Matrix4x4;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'input' has no initializer and is not def... Remove this comment to see the full error message
   input: {
     mouseController: InputMouse | null | undefined;
     keyboard?: InputKeyboard;
     keyboardLoopDelayed?: InputKeyboard;
     keyboardNoLoop?: InputKeyboardNoLoop;
   };
+
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
 
   componentDidMount() {
@@ -116,52 +125,66 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.input.keyboard = new InputKeyboard({
       // KeyboardJS is sensitive to ordering (complex combos first)
       // Move
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       space: (timeFactor) => {
         this.setRecord(true);
         this.move(timeFactor);
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       "ctrl + space": (timeFactor) => {
         this.setRecord(true);
         this.move(-timeFactor);
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       f: (timeFactor) => {
         this.setRecord(false);
         this.move(timeFactor);
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       d: (timeFactor) => {
         this.setRecord(false);
         this.move(-timeFactor);
       },
       // Rotate at centre
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       "shift + left": (timeFactor) => {
         Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor));
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       "shift + right": (timeFactor) => {
         Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor));
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       "shift + up": (timeFactor) => {
         Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor));
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       "shift + down": (timeFactor) => {
         Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor));
       },
       // Rotate in distance
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       left: (timeFactor) => {
         Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       right: (timeFactor) => {
         Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       up: (timeFactor) => {
         Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       down: (timeFactor) => {
         Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
       },
       // Zoom in/out
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
       i: () => {
         Store.dispatch(zoomInAction());
       },
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
       o: () => {
         Store.dispatch(zoomOutAction());
       },
@@ -169,7 +192,9 @@ class ArbitraryController extends React.PureComponent<Props> {
     // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
+        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         h: () => this.changeMoveValue(25),
+        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         g: () => this.changeMoveValue(-25),
       },
       {
@@ -196,6 +221,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           return;
         }
 
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
         getActiveNode(skeletonTracing).map((activeNode) =>
           api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
         );
@@ -205,6 +231,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       // Rotate view by 180 deg
       r: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
         window.needsRerender = true;
       },
       // Delete active node and recenter last node
@@ -236,6 +263,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     Utils.zipMaybe(getActiveNode(skeletonTracing), getMaxNodeId(skeletonTracing)).map(
+      // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeNode' implicitly has an 'an... Remove this comment to see the full error message
       ([activeNode, maxNodeId]) => {
         if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
           return;
@@ -308,8 +336,10 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.plane = new ArbitraryPlane();
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'ArbitraryPlane' is not assignabl... Remove this comment to see the full error message
     this.arbitraryView.addGeometry(this.plane);
     this.arbitraryView.setArbitraryPlane(this.plane);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Crosshair' is not assignable to ... Remove this comment to see the full error message
     this.arbitraryView.addGeometry(this.crosshair);
     this.bindToEvents();
     this.initKeyboard();

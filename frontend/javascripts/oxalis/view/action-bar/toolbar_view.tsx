@@ -50,9 +50,13 @@ const imgStyleForSpaceyIcons = {
 };
 
 function getSkeletonToolHint(
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTool' implicitly has an 'any' typ... Remove this comment to see the full error message
   activeTool,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isShiftPressed' implicitly has an 'any'... Remove this comment to see the full error message
   isShiftPressed,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isControlPressed' implicitly has an 'an... Remove this comment to see the full error message
   isControlPressed,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isAltPressed' implicitly has an 'any' t... Remove this comment to see the full error message
   isAltPressed,
 ): string | null | undefined {
   if (activeTool !== AnnotationToolEnum.SKELETON) {
@@ -82,6 +86,7 @@ function getSkeletonToolHint(
   return null;
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'overwriteMode' implicitly has an 'any' ... Remove this comment to see the full error message
 function toggleOverwriteMode(overwriteMode) {
   if (overwriteMode === OverwriteModeEnum.OVERWRITE_ALL) {
     return OverwriteModeEnum.OVERWRITE_EMPTY;
@@ -134,9 +139,11 @@ const RadioButtonWithTooltip = ({
   </Tooltip>
 );
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isControlPressed' implicitly has ... Remove this comment to see the full error message
 function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
   const overwriteMode = useSelector((state) => state.userConfiguration.overwriteMode);
   const previousIsControlPressed = usePrevious(isControlPressed);
   const previousIsShiftPressed = usePrevious(isShiftPressed);
@@ -173,6 +180,7 @@ function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
   return (
     <Radio.Group
       value={overwriteMode}
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: {    target: {        value: Overwri... Remove this comment to see the full error message
       onChange={handleSetOverwriteMode}
       style={{
         marginLeft: 10,
@@ -199,8 +207,10 @@ function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
 function AdditionalSkeletonModesButtons() {
   const dispatch = useDispatch();
   const isMergerModeEnabled = useSelector(
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
     (state) => state.temporaryConfiguration.isMergerModeEnabled,
   );
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
   const isNewNodeNewTreeModeOn = useSelector((state) => state.userConfiguration.newNodeNewTree);
 
   const toggleNewNodeNewTreeMode = () =>
@@ -218,6 +228,7 @@ function AdditionalSkeletonModesButtons() {
     <React.Fragment>
       <Tooltip title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree.">
         <ButtonComponent
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={newNodeNewTreeModeButtonStyle}
           value="active"
           onClick={toggleNewNodeNewTreeMode}
@@ -230,6 +241,7 @@ function AdditionalSkeletonModesButtons() {
         </ButtonComponent>
       </Tooltip>
       <Tooltip title="Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.">
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         <ButtonComponent style={mergerModeButtonStyle} value="active" onClick={toggleMergerMode}>
           <img
             style={imgStyleForSpaceyIcons}
@@ -242,15 +254,18 @@ function AdditionalSkeletonModesButtons() {
   );
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'volumeTracing' implicitly has an 'any' ... Remove this comment to see the full error message
 const mapId = (volumeTracing, id) => {
   const { cube } = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   return cube.mapId(id);
 };
 
 function CreateCellButton() {
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
   const volumeTracing = useSelector((state) => getActiveSegmentationTracing(state));
   const unmappedActiveCellId = volumeTracing != null ? volumeTracing.activeCellId : 0;
   const { mappingStatus, mappingColors } = useSelector((state) =>
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
     getMappingInfoForVolumeTracing(state, volumeTracing != null ? volumeTracing.tracingId : null),
   );
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
@@ -278,6 +293,7 @@ function CreateCellButton() {
       >
         <ButtonComponent
           onClick={handleCreateCell}
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{
             width: 36,
             paddingLeft: 10,
@@ -295,6 +311,7 @@ function CreateNewBoundingBoxButton() {
     <Tooltip title="Create a new bounding box centered around the current position.">
       <ButtonComponent
         onClick={handleAddNewUserBoundingBox}
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         style={{
           paddingLeft: 9,
           paddingRight: 9,
@@ -312,13 +329,16 @@ function CreateNewBoundingBoxButton() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
   const activeTree = useSelector((state) => toNullable(getActiveTree(state.tracing.skeleton)));
   const rgbColorString =
     activeTree != null
+      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
       : "transparent";
   const activeTreeHint =
     activeTree != null
+      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       ? `The active tree id is ${activeTree.treeId}.`
       : "No tree is currently selected";
 
@@ -336,6 +356,7 @@ function CreateTreeButton() {
       <Tooltip title={`Create a new Tree (C) – ${activeTreeHint}`}>
         <ButtonComponent
           onClick={handleCreateTree}
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{ ...narrowButtonStyle, paddingRight: 5 }}
         >
           <i
@@ -362,7 +383,9 @@ function CreateTreeButton() {
 }
 
 function ChangeBrushSizeButton() {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
   const brushSize = useSelector((state) => state.userConfiguration.brushSize);
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
   const maximumBrushSize = useSelector((state) => getMaximumBrushSize(state));
   return (
     <Tooltip title="Change the brush size">
@@ -385,6 +408,7 @@ function ChangeBrushSizeButton() {
               roundTo={0}
               min={userSettings.brushSize.minimum}
               max={maximumBrushSize}
+              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               step={5}
               spans={[0, 14, 10]}
               value={brushSize}
@@ -399,6 +423,7 @@ function ChangeBrushSizeButton() {
         }}
       >
         <ButtonComponent
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{
             width: 36,
             padding: 0,
@@ -420,11 +445,16 @@ function ChangeBrushSizeButton() {
 }
 
 export default function ToolbarView() {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
   const hasVolume = useSelector((state) => state.tracing.volumes.length > 0);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
   const hasSkeleton = useSelector((state) => state.tracing.skeleton != null);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
   const viewMode = useSelector((state) => state.temporaryConfiguration.viewMode);
   const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
   const useLegacyBindings = useSelector((state) => state.userConfiguration.useLegacyBindings);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'uiInformation' does not exist on type 'D... Remove this comment to see the full error message
   const activeTool = useSelector((state) => state.uiInformation.activeTool);
   const maybeResolutionWithZoomStep = useSelector(
     getRenderableResolutionForActiveSegmentationTracing,
@@ -499,6 +529,7 @@ export default function ToolbarView() {
         </RadioButtonWithTooltip>
 
         {hasSkeleton ? (
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; title: string; disabled... Remove this comment to see the full error message
           <RadioButtonWithTooltip
             title={skeletonToolDescription}
             disabledTitle=""
@@ -675,10 +706,15 @@ export default function ToolbarView() {
 }
 
 function ToolSpecificSettings({
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'hasSkeleton' implicitly has an 'a... Remove this comment to see the full error message
   hasSkeleton,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'adaptedActiveTool' implicitly has... Remove this comment to see the full error message
   adaptedActiveTool,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isVolumeSupported' implicitly has... Remove this comment to see the full error message
   isVolumeSupported,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isControlPressed' implicitly has ... Remove this comment to see the full error message
   isControlPressed,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isShiftPressed' implicitly has an... Remove this comment to see the full error message
   isShiftPressed,
 }) {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
@@ -748,6 +784,7 @@ const handleSetFillMode = (event: {
 };
 
 function FillModeSwitch() {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
   const fillMode = useSelector((state) => state.userConfiguration.fillMode);
   return (
     <Radio.Group

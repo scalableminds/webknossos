@@ -1,3 +1,4 @@
+// @flow
 import { Button } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -42,6 +43,7 @@ export function AsyncButton(props: Props) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   const { children, hideContentWhenLoading, ...rest } = props;
   const effectiveChildren = hideContentWhenLoading && isLoading ? null : children;
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'boolean | ((event: SyntheticEvent<Element, E... Remove this comment to see the full error message
   // eslint-disable-next-line react/no-children-prop
   return <Button {...rest} children={effectiveChildren} loading={isLoading} onClick={onClick} />;
 }
@@ -61,6 +63,7 @@ export function AsyncLink(
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   const icon = isLoading ? <LoadingOutlined key="loading-icon" /> : props.icon;
   return (
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'boolean | ((event: SyntheticEvent<Element, E... Remove this comment to see the full error message
     <a {...props} onClick={onClick} className={isLoading ? "link-in-progress" : null}>
       {icon}
       {props.children}

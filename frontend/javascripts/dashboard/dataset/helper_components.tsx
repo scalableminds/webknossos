@@ -1,3 +1,4 @@
+// @flow
 import { Alert, Form, Tooltip, Modal } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -55,6 +56,7 @@ export class RetryingErrorBoundary extends React.Component<
   }
 > {
   constructor() {
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1-2 arguments, but got 0.
     super();
     this.state = {
       error: null,

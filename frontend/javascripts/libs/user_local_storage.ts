@@ -1,5 +1,7 @@
+// @flow
 import Store from "oxalis/store";
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'key' implicitly has an 'any' type.
 function prefixKey(key, isOrganizationSpecific) {
   const { activeUser } = Store.getState();
   let prefix;

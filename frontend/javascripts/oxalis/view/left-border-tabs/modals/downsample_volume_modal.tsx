@@ -24,6 +24,7 @@ export default function DownsampleVolumeModal({
   return (
     <Modal
       title="Downsample Volume Annotation"
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '(() => void) | null' is not assignable to ty... Remove this comment to see the full error message
       onCancel={isDownsampling ? null : hideDownsampleVolumeModal}
       footer={null}
       width={800}

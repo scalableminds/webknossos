@@ -1,3 +1,4 @@
+// @flow
 import type { Vector3 } from "oxalis/constants";
 import { getLayerBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import ConnectionInfo from "oxalis/model/data_connection_info";
@@ -31,8 +32,10 @@ class DataLayer {
   ) {
     this.connectionInfo = connectionInfo;
     this.name = layerInfo.name;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
     this.fallbackLayer = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
     this.fallbackLayerInfo =
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayerInfo' does not exist on typ... Remove this comment to see the full error message
       layerInfo.fallbackLayerInfo != null ? layerInfo.fallbackLayerInfo : null;
     this.isSegmentation = layerInfo.category === "segmentation";
     this.resolutions = layerInfo.resolutions;

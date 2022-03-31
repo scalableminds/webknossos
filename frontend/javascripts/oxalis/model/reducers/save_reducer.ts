@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $ElementType } from "utility-types";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -13,6 +15,7 @@ import { updateVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer
 import Date from "libs/date";
 import * as Utils from "libs/utils";
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
 function updateQueueObj(action, oldQueueObj, newQueue) {
   if (action.tracingType === "skeleton") {
     return { ...oldQueueObj, skeleton: newQueue };
@@ -26,6 +29,7 @@ export function getTotalSaveQueueLength(queueObj: $ElementType<SaveState, "queue
     queueObj.skeleton.length +
     _.sum(
       Utils.values(queueObj.volumes).map(
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(volumeQueue: Array<SaveQueueEnt... Remove this comment to see the full error message
         (volumeQueue: Array<SaveQueueEntry>) => volumeQueue.length,
       ),
     )
@@ -46,6 +50,7 @@ function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
   });
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
 function updateLastSaveTimestamp(state, action) {
   if (action.tracingType === "skeleton") {
     return updateKey2(state, "save", "lastSaveTimestamp", {
@@ -86,6 +91,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
         const oldQueue = selectQueue(state, action.tracingType, action.tracingId);
         const newQueue = oldQueue.concat(
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           updateActionChunks.map((actions, transactionGroupIndex) => ({
             // Placeholder, the version number will be updated before sending to the server
             version: -1,

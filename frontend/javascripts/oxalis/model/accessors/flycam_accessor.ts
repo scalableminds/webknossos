@@ -1,5 +1,7 @@
+// @flow
 import * as THREE from "three";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import type { Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import type { Matrix4x4 } from "libs/mjs";
@@ -44,6 +46,7 @@ function calculateTotalBucketCountForZoomLevel(
   let minPerDim = [Infinity, Infinity, Infinity];
   let maxPerDim = [0, 0, 0];
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucketAddress' implicitly has an 'any' ... Remove this comment to see the full error message
   const enqueueFunction = (bucketAddress) => {
     minPerDim = minPerDim.map((el, index) => Math.min(el, bucketAddress[index]));
     maxPerDim = maxPerDim.map((el, index) => Math.max(el, bucketAddress[index]));
@@ -55,6 +58,7 @@ function calculateTotalBucketCountForZoomLevel(
   const anchorPoint = [0, 0, 0, 0];
   const subBucketLocality = [1, 1, 1];
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
   const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
   const dummyMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
   const matrix = M4x4.scale1(zoomFactor, dummyMatrix);
@@ -62,6 +66,7 @@ function calculateTotalBucketCountForZoomLevel(
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
     determineBucketsForOblique(
       resolutions,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       position,
       enqueueFunction,
       matrix,
@@ -71,6 +76,7 @@ function calculateTotalBucketCountForZoomLevel(
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
       resolutions,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       position,
       sphericalCapRadius,
       enqueueFunction,
@@ -84,6 +90,7 @@ function calculateTotalBucketCountForZoomLevel(
       enqueueFunction,
       loadingStrategy,
       logZoomStep,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       anchorPoint,
       areas,
       subBucketLocality,
@@ -293,9 +300,11 @@ export function getValidTaskZoomRange(
   const { resolutionRestrictions } = state.tracing.restrictions;
 
   if (!respectRestriction) {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type '[number... Remove this comment to see the full error message
     return defaultRange;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
   function getMinMax(value, isMin) {
     const idx = isMin ? 0 : 1;
     return (

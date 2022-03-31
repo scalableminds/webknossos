@@ -103,6 +103,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         changed: false,
       };
     });
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ domain: string; value: number ... Remove this comment to see the full error message
     return this.sortEntries(tableEntries);
   };
   updateAllUsers = async () => {
@@ -122,6 +123,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         Object.keys(newExperiences)
           .sort(Utils.localeCompareBy([] as Array<string>, (domain) => domain.toLowerCase()))
           .forEach((key) => {
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             orderedExperiences[key] = newExperiences[key];
           });
         const newUser = { ...user, experiences: orderedExperiences };
@@ -269,6 +271,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
               row: HighlightableRow,
             },
           }}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '(record: TableEntry) => { shouldHighlight: b... Remove this comment to see the full error message
           onRow={(record) => ({
             shouldHighlight: record.domain === this.state.domainToEdit,
           })}
@@ -310,6 +313,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                   >
                     <Badge
                       count={record.sharedByCount}
+                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ backgroundColor: "var(--ant-success)"; } |... Remove this comment to see the full error message
                       style={
                         isSharedByAll
                           ? {
@@ -355,6 +359,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                         ? this.state.tableEntries[index].value
                         : ""
                     }
+                    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | ""' is not assignable t... Remove this comment to see the full error message
                     onChange={(value) => this.setValueOfEntry(index, value)}
                     type="number"
                   />
@@ -403,6 +408,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
               >
                 <Tag
                   style={{
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ magin: number; marginTop: number; }' is no... Remove this comment to see the full error message
                     magin: 8,
                     marginTop: 10,
                   }}

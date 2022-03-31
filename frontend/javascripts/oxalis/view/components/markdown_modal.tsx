@@ -1,4 +1,6 @@
+// @flow
 import { Alert, Modal, Button, Row, Col } from "antd";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
 import InputComponent from "oxalis/view/components/input_component";
@@ -71,6 +73,7 @@ export function MarkdownModal({
             value={source}
             placeholder={`Add ${label}`}
             onChange={onChange}
+            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             rows={5}
             autoSize={{
               minRows: 5,

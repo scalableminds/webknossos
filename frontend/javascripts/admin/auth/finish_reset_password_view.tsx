@@ -1,3 +1,4 @@
+// @flow
 import React from "react";
 import { withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row } from "antd";
@@ -5,6 +6,7 @@ import { LockOutlined } from "@ant-design/icons";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -33,6 +35,7 @@ function FinishResetPasswordView(props: Props) {
     });
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
   function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
     const otherFieldValue = form.getFieldValue(otherPasswordFieldKey);
 
@@ -50,6 +53,7 @@ function FinishResetPasswordView(props: Props) {
 
   return (
     <Row
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
       type="flex"
       justify="center"
       style={{
@@ -135,4 +139,5 @@ function FinishResetPasswordView(props: Props) {
   );
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: Props) => Element' is no... Remove this comment to see the full error message
 export default withRouter(FinishResetPasswordView);

@@ -12,6 +12,7 @@ export const requestOptionsTransferHandler = {
 
     if (obj.headers && clone.headers) {
       const headers: Array<[string, string]> = Array.from(obj.headers.entries());
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '[string, string][]' is missing the following... Remove this comment to see the full error message
       clone.headers = headers;
     }
 
@@ -29,6 +30,7 @@ export const requestOptionsTransferHandler = {
       }
     }
 
+    // @ts-expect-error ts-migrate(2740) FIXME: Type 'Headers' is missing the following properties... Remove this comment to see the full error message
     clone.headers = headers;
     const cloneWithCorrectType = clone as any as RequestOptionsWithParsedHeaders;
     return cloneWithCorrectType;
@@ -66,6 +68,7 @@ export const throwTransferHandlerWithResponseSupport = {
           stack: value.stack,
         },
       };
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isError: boolean; value: { message: string... Remove this comment to see the full error message
       return [serialized, []];
     } else {
       // Convert the error response.
@@ -74,6 +77,7 @@ export const throwTransferHandlerWithResponseSupport = {
         statusText: value.statusText,
         headers: [],
       };
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '[string, string][]' is not assignable to typ... Remove this comment to see the full error message
       clone.headers = Array.from(value.headers.entries());
       return [
         {

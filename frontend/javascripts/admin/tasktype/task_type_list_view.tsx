@@ -1,7 +1,11 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal } from "antd";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
 import _ from "lodash";
@@ -72,9 +76,11 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
 
   handleSearch = (event: React.SyntheticEvent): void => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
+
   deleteTaskType = (taskType: APITaskType) => {
     Modal.confirm({
       title: messages["taskType.delete"],
@@ -117,6 +123,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
       <div className="container">
         <div
           style={{
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTag: number; }' is not assignable to... Remove this comment to see the full error message
             marginTag: 20,
           }}
         >
@@ -156,6 +163,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
               }}
               style={{
                 marginTop: 30,
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
                 marginBotton: 30,
               }}
               locale={{
@@ -213,18 +221,22 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 width={200}
                 render={(settings, taskType) =>
                   [
+                    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                     taskType.tracingType === "skeleton" || taskType.tracingType === "hybrid" ? (
                       <Tag color="green" key="tracingType">
                         skeleton
                       </Tag>
                     ) : null,
+                    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                     taskType.tracingType === "volume" || taskType.tracingType === "hybrid" ? (
                       <Tag color="orange" key="tracingType">
                         volume
                       </Tag>
                     ) : null,
                   ].concat(
+                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mode' implicitly has an 'any' type.
                     settings.allowedModes.map((mode) => (
+                      // @ts-expect-error ts-migrate(2322) FIXME: Type '"blue" | null' is not assignable to type 'Li... Remove this comment to see the full error message
                       <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
                         {mode}
                       </Tag>
@@ -284,6 +296,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                     </Link>
                     <br />
                     <AsyncLink
+                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
                       href="#"
                       onClick={() => {
                         const includesVolumeData = taskType.tracingType !== "skeleton";
@@ -310,4 +323,5 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TaskTypeListView' is not ... Remove this comment to see the full error message
 export default withRouter(TaskTypeListView);

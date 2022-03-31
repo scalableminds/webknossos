@@ -1,7 +1,11 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import type { MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
@@ -44,22 +48,33 @@ class SceneController {
   current: number;
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'datasetBoundingBox' has no initializer a... Remove this comment to see the full error message
   datasetBoundingBox: Cube;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxGroup' has no initializer... Remove this comment to see the full error message
   userBoundingBoxGroup: typeof THREE.Group;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxes' has no initializer an... Remove this comment to see the full error message
   userBoundingBoxes: Array<Cube>;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'planes' has no initializer and is not de... Remove this comment to see the full error message
   planes: OrthoViewMap<Plane>;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
   rootNode: typeof THREE.Object3D;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'renderer' has no initializer and is not ... Remove this comment to see the full error message
   renderer: typeof THREE.WebGLRenderer;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'scene' has no initializer and is not def... Remove this comment to see the full error message
   scene: typeof THREE.Scene;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootGroup' has no initializer and is not... Remove this comment to see the full error message
   rootGroup: typeof THREE.Object3D;
   // Group for all meshes including a light.
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'meshesRootGroup' has no initializer and ... Remove this comment to see the full error message
   meshesRootGroup: typeof THREE.Object3D;
   stlMeshes: Record<string, typeof THREE.Mesh> = {};
   // isosurfacesRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isosurfacesRootGroup' has no initializer... Remove this comment to see the full error message
   isosurfacesRootGroup: typeof THREE.Group;
   isosurfacesGroupsPerSegmentationId: Record<number, typeof THREE.Group> = {};
 
@@ -81,23 +96,33 @@ class SceneController {
     this.renderer = getRenderer();
     this.createMeshes();
     this.bindToEvents();
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Scene' is missing the following properties f... Remove this comment to see the full error message
     this.scene = new THREE.Scene();
     // Because the voxel coordinates do not have a cube shape but are distorted,
     // we need to distort the entire scene to provide an illustration that is
     // proportional to the actual size in nm.
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Object3D' is missing the following propertie... Remove this comment to see the full error message
     this.rootGroup = new THREE.Object3D();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
     this.rootGroup.add(this.getRootNode());
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Group' is missing the following properties f... Remove this comment to see the full error message
     this.isosurfacesRootGroup = new THREE.Group();
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Group' is missing the following properties f... Remove this comment to see the full error message
     this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
     // The dimension(s) with the highest resolution will not be distorted
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'scale' does not exist on type 'typeof Ob... Remove this comment to see the full error message
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message
     this.scene.add(this.rootGroup);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message
     this.scene.add(this.isosurfacesRootGroup);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message
     this.scene.add(this.meshesRootGroup);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
     this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();
     this.setupDebuggingMethods();
@@ -106,6 +131,7 @@ class SceneController {
   setupDebuggingMethods() {
     // These methods are attached to window, since we would run into circular import errors
     // otherwise.
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addBucketMesh' does not exist on type '(... Remove this comment to see the full error message
     window.addBucketMesh = (position: Vector3, zoomStep: number, optColor?: string) => {
       const bucketExtent = constants.BUCKET_WIDTH * 2 ** zoomStep;
       const bucketSize = [bucketExtent, bucketExtent, bucketExtent];
@@ -119,10 +145,12 @@ class SceneController {
       cube.position.x = position[0] + bucketSize[0] / 2;
       cube.position.y = position[1] + bucketSize[1] / 2;
       cube.position.z = position[2] + bucketSize[2] / 2;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
       this.rootNode.add(cube);
       return cube;
     };
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addVoxelMesh' does not exist on type '(W... Remove this comment to see the full error message
     window.addVoxelMesh = (position: Vector3, _cubeLength: Vector3, optColor?: string) => {
       // Shrink voxels a bit so that it's easier to identify individual voxels.
       const cubeLength = _cubeLength.map((el) => el * 0.9);
@@ -136,12 +164,15 @@ class SceneController {
       cube.position.x = position[0] + cubeLength[0] / 2;
       cube.position.y = position[1] + cubeLength[1] / 2;
       cube.position.z = position[2] + cubeLength[2] / 2;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
       this.rootNode.add(cube);
       return cube;
     };
 
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'renderedLines' implicitly has type 'any[... Remove this comment to see the full error message
     let renderedLines = [];
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addLine' does not exist on type '(Window... Remove this comment to see the full error message
     window.addLine = (a: Vector3, b: Vector3) => {
       const material = new THREE.LineBasicMaterial({
         color: 0x0000ff,
@@ -151,22 +182,28 @@ class SceneController {
       points.push(new THREE.Vector3(...b));
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
       const line = new THREE.Line(geometry, material);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
       this.rootNode.add(line);
       renderedLines.push(line);
     };
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeLines' does not exist on type '(Wi... Remove this comment to see the full error message
     window.removeLines = () => {
+      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'renderedLines' implicitly has an 'any[]'... Remove this comment to see the full error message
       for (const line of renderedLines) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof O... Remove this comment to see the full error message
         this.rootNode.remove(line);
       }
 
       renderedLines = [];
     };
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeBucketMesh' does not exist on type... Remove this comment to see the full error message
     window.removeBucketMesh = (mesh: typeof THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
   getIsosurfaceGeometry(cellId: number): typeof THREE.Geometry {
+    // @ts-expect-error ts-migrate(2419) FIXME: Types of construct signatures are incompatible.
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
@@ -178,6 +215,7 @@ class SceneController {
     });
     meshMaterial.side = THREE.DoubleSide;
     meshMaterial.transparent = true;
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof Geometry' is not assignab... Remove this comment to see the full error message
     const mesh = new THREE.Mesh(geometry, meshMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -192,6 +230,7 @@ class SceneController {
         500,
       )
       .onUpdate(function onUpdate() {
+        // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
         meshMaterial.opacity = this.opacity;
         app.vent.trigger("rerender");
       })
@@ -207,13 +246,17 @@ class SceneController {
       return;
     }
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'computeVertexNormals' does not exist on ... Remove this comment to see the full error message
     geometry.computeVertexNormals();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'computeFaceNormals' does not exist on ty... Remove this comment to see the full error message
     geometry.computeFaceNormals();
 
     const meshNumber = _.size(this.stlMeshes);
 
     const mesh = this.constructSceneMesh(meshNumber, geometry);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
     this.meshesRootGroup.add(mesh);
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Mesh' is missing the following properties fr... Remove this comment to see the full error message
     this.stlMeshes[id] = mesh;
     this.updateMeshPostion(id, position);
   }
@@ -222,16 +265,22 @@ class SceneController {
     let geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
     // convert to normal (unbuffered) geometry to merge vertices
+    // @ts-expect-error ts-migrate(2740) FIXME: Type 'Geometry' is missing the following propertie... Remove this comment to see the full error message
     geometry = new THREE.Geometry().fromBufferGeometry(geometry);
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceMergeVertices' does not exis... Remove this comment to see the full error message
     if (window.__isosurfaceMergeVertices) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'mergeVertices' does not exist on type 'B... Remove this comment to see the full error message
       geometry.mergeVertices();
     }
 
     geometry.computeVertexNormals();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'computeFaceNormals' does not exist on ty... Remove this comment to see the full error message
     geometry.computeFaceNormals();
     // and back to a BufferGeometry
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'BufferGeometry' is not assignabl... Remove this comment to see the full error message
     geometry = new THREE.BufferGeometry().fromGeometry(geometry);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'BufferGeometry' is not assignabl... Remove this comment to see the full error message
     this.addIsosurfaceFromGeometry(geometry, segmentationId);
   }
 
@@ -240,11 +289,15 @@ class SceneController {
 
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       const newGroup = new THREE.Group();
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Group' is not assignable to type 'typeof Gro... Remove this comment to see the full error message
       this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Grou... Remove this comment to see the full error message
       this.isosurfacesRootGroup.add(newGroup);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'cellId' does not exist on type 'Group'.
       newGroup.cellId = segmentationId;
     }
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Grou... Remove this comment to see the full error message
     this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
 
@@ -254,7 +307,9 @@ class SceneController {
     }
 
     const group = this.isosurfacesGroupsPerSegmentationId[segmentationId];
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof G... Remove this comment to see the full error message
     this.isosurfacesRootGroup.remove(group);
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'typeof Grou... Remove this comment to see the full error message
     this.isosurfacesGroupsPerSegmentationId[segmentationId] = null;
   }
 
@@ -264,35 +319,46 @@ class SceneController {
     // so that the light moves along the cam.
     const ambientLightForIsosurfaces = new THREE.AmbientLight(0x404040, 15); // soft white light
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Grou... Remove this comment to see the full error message
     this.isosurfacesRootGroup.add(ambientLightForIsosurfaces);
     const ambientLightForMeshes = new THREE.AmbientLight(0x404040, 15); // soft white light
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
     this.meshesRootGroup.add(ambientLightForMeshes);
   }
 
   removeSTL(id: string): void {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof O... Remove this comment to see the full error message
     this.meshesRootGroup.remove(this.stlMeshes[id]);
   }
 
   setMeshVisibility(id: string, visibility: boolean): void {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.stlMeshes[id].visible = visibility;
   }
 
   setIsosurfaceVisibility(id: number, visibility: boolean): void {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.isosurfacesGroupsPerSegmentationId[id].visible = visibility;
   }
 
   updateMeshPostion(id: string, position: Vector3): void {
     const [x, y, z] = position;
     const mesh = this.stlMeshes[id];
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     mesh.position.x = x;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     mesh.position.y = y;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     mesh.position.z = z;
   }
 
   createMeshes(): void {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Object3D' is not assignable to type 'typeof ... Remove this comment to see the full error message
     this.rootNode = new THREE.Object3D();
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Group' is not assignable to type 'typeof Gro... Remove this comment to see the full error message
     this.userBoundingBoxGroup = new THREE.Group();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
     this.rootNode.add(this.userBoundingBoxGroup);
     this.userBoundingBoxes = [];
     const state = Store.getState();
@@ -305,12 +371,14 @@ class SceneController {
       showCrossSections: true,
       isHighlighted: false,
     });
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
     this.datasetBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
     const taskBoundingBox = getSomeTracing(state.tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
     if (state.tracing.volumes.length > 0) {
       this.contour = new ContourGeometry();
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
       this.contour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
     }
 
@@ -323,11 +391,15 @@ class SceneController {
       [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
       [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
     };
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Euler' is not assignable to para... Remove this comment to see the full error message
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Euler' is not assignable to para... Remove this comment to see the full error message
     this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Euler' is not assignable to para... Remove this comment to see the full error message
     this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
       plane.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
     }
 
@@ -341,8 +413,11 @@ class SceneController {
   ): number {
     const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);
     const skeletonGroup = skeleton.getRootGroup();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'typeof Objec... Remove this comment to see the full error message
     this.skeletons[skeletonGroup.id] = skeleton;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
     this.rootNode.add(skeletonGroup);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'typeof Objec... Remove this comment to see the full error message
     return skeletonGroup.id;
   }
 
@@ -351,12 +426,14 @@ class SceneController {
     const skeletonGroup = skeleton.getRootGroup();
     skeleton.destroy();
     delete this.skeletons[skeletonId];
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof O... Remove this comment to see the full error message
     this.rootNode.remove(skeletonGroup);
   }
 
   buildTaskingBoundingBox(taskBoundingBox: BoundingBoxType | null | undefined): void {
     if (taskBoundingBox != null) {
       if (this.taskBoundingBox != null) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof O... Remove this comment to see the full error message
         this.taskBoundingBox.getMeshes().forEach((mesh) => this.rootNode.remove(mesh));
       }
 
@@ -368,6 +445,7 @@ class SceneController {
         showCrossSections: true,
         isHighlighted: false,
       });
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
       this.taskBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
 
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
@@ -390,6 +468,7 @@ class SceneController {
 
     Utils.__guard__(this.taskBoundingBox, (x) => x.updateForCam(id));
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
 
     if (id !== OrthoViews.TDView) {
@@ -444,6 +523,7 @@ class SceneController {
       optArbitraryPlane.updateAnchorPoints(anchorPoint);
     } else {
       for (const currentPlane of _.values(this.planes)) {
+        // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
         currentPlane.updateAnchorPoints(anchorPoint);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
@@ -496,17 +576,22 @@ class SceneController {
       const bbCube = new Cube({
         min,
         max,
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
         color: Utils.rgbToInt(bbColor),
         showCrossSections: true,
         id,
         isHighlighted: this.highlightedBBoxId === id,
       });
       bbCube.setVisibility(isVisible);
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof Line' is not assignable t... Remove this comment to see the full error message
       bbCube.getMeshes().forEach((mesh) => newUserBoundingBoxGroup.add(mesh));
       return bbCube;
     });
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof O... Remove this comment to see the full error message
     this.rootNode.remove(this.userBoundingBoxGroup);
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Group' is not assignable to type 'typeof Gro... Remove this comment to see the full error message
     this.userBoundingBoxGroup = newUserBoundingBoxGroup;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
@@ -537,6 +622,7 @@ class SceneController {
   setSkeletonGroupVisibility(isVisible: boolean) {
     // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
     Object.values(this.skeletons).forEach((skeleton: Skeleton) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
       skeleton.getRootGroup().visible = isVisible;
     });
   }
@@ -547,11 +633,13 @@ class SceneController {
     }
 
     this.datasetBoundingBox.setVisibility(false);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.userBoundingBoxGroup.visible = false;
 
     Utils.__guard__(this.taskBoundingBox, (x) => x.setVisibility(false));
 
     if (this.isosurfacesRootGroup != null) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
       this.isosurfacesRootGroup.visible = false;
     }
   }
@@ -562,6 +650,7 @@ class SceneController {
     }
 
     this.datasetBoundingBox.setVisibility(true);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.userBoundingBoxGroup.visible = true;
 
     Utils.__guard__(this.taskBoundingBox, (x) => x.setVisibility(true));

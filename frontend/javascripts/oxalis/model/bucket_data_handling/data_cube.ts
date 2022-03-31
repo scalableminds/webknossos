@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
@@ -73,8 +75,11 @@ class DataCube {
   bucketIterator: number = 0;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'pullQueue' has no initializer and is not... Remove this comment to see the full error message
   pullQueue: PullQueue;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'pushQueue' has no initializer and is not... Remove this comment to see the full error message
   pushQueue: PushQueue;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'temporalBucketManager' has no initialize... Remove this comment to see the full error message
   temporalBucketManager: TemporalBucketManager;
   isSegmentation: boolean;
   elementClass: ElementClass;
@@ -120,6 +125,7 @@ class DataCube {
       Math.ceil(this.upperBoundary[1] / constants.BUCKET_WIDTH),
       Math.ceil(this.upperBoundary[2] / constants.BUCKET_WIDTH),
     ];
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
     this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
 
     for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
@@ -128,6 +134,7 @@ class DataCube {
         Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
         Math.ceil(cubeBoundary[2] / resolution[2]) + 1,
       ];
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       this.cubes[resolutionIndex] = new CubeEntry(zoomedCubeBoundary);
     }
 
@@ -457,7 +464,9 @@ class DataCube {
         bucketsWithLabeledVoxelsMap,
         wasBoundingBoxExceeded: false,
         coveredBoundingBox: {
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
           min: coveredBBoxMin,
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
           max: coveredBBoxMax,
         },
       };
@@ -477,7 +486,9 @@ class DataCube {
         bucketsWithLabeledVoxelsMap,
         wasBoundingBoxExceeded: false,
         coveredBoundingBox: {
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
           min: coveredBBoxMin,
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
           max: coveredBBoxMax,
         },
       };
@@ -491,6 +502,7 @@ class DataCube {
 
     // Iterate over all buckets within the area and flood fill each of them.
     while (bucketsWithXyzSeedsToFill.length > 0) {
+      // @ts-expect-error ts-migrate(2488) FIXME: Type '[DataBucket, Vector3] | undefined' must have... Remove this comment to see the full error message
       const [currentBucket, initialXyzVoxelInBucket] = bucketsWithXyzSeedsToFill.pop();
       const currentBucketBoundingBox = currentBucket.getBoundingBox();
       const currentGlobalBucketPosition = currentBucket.getGlobalPosition();
@@ -554,12 +566,13 @@ class DataCube {
       const resolutions = getResolutions(Store.getState().dataset);
       const currentResolution = resolutions[currentBucket.zoomedAddress[3]];
 
+      // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'firstCoord' implicitly has an 'an... Remove this comment to see the full error message
       const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]) => {
         // Convert bucket local W coordinate to global W (both mag-dependent)
         const w = dimensionIndices[2];
         thirdCoord += currentBucket.getTopLeftInMag()[w];
         // Convert mag-dependent W to mag-independent W
-        thirdCoord = thirdCoord * currentResolution[w];
+        thirdCoord *= currentResolution[w];
 
         if (!currentLabeledVoxelMap.has(thirdCoord)) {
           currentLabeledVoxelMap.set(
@@ -663,7 +676,9 @@ class DataCube {
       bucketsWithLabeledVoxelsMap,
       wasBoundingBoxExceeded,
       coveredBoundingBox: {
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
         min: coveredBBoxMin,
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
         max: coveredBBoxMax,
       },
     };
@@ -810,6 +825,7 @@ class DataCube {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     return voxelOffset;
   }
 

@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import type { Action } from "oxalis/model/actions/actions";
 import { MappingStatusEnum } from "oxalis/constants";
@@ -9,6 +11,7 @@ import {
   getVisibleSegmentationLayers,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/helpers/deep_update"' has no... Remove this comment to see the full error message
 import type { StateShape1 } from "oxalis/model/helpers/deep_update";
 import { updateKey, updateKey3 } from "oxalis/model/helpers/deep_update";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -89,6 +92,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_USER_SETTING": {
       const { propertyName } = action;
       let { value } = action;
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       const settingSpec = userSettings[propertyName];
 
       if (settingSpec != null && settingSpec.type === "number") {
@@ -126,6 +130,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "TOGGLE_TEMPORARY_SETTING": {
       const { propertyName } = action;
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       const value: any = !state.temporaryConfiguration[propertyName];
       // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateTemporaryConfig(state, {

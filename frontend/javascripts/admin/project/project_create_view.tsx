@@ -1,3 +1,4 @@
+// @flow
 import { Form, Input, Select, Button, Card, InputNumber, Checkbox, Spin } from "antd";
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
@@ -26,6 +27,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
   const history = useHistory();
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeUser' does not exist on type 'Defa... Remove this comment to see the full error message
   const activeUser = useSelector((state) => enforceActiveUser(state.activeUser));
   useEffect(() => {
     fetchData();
@@ -53,6 +55,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
     form.setFieldsValue(defaultFormValues);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleSubmit = async (formValues) => {
     if (projectId) {
       await updateProject(projectId, formValues);
@@ -81,6 +84,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
             rules={[
               {
                 required: true,
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'RegExp | ... Remove this comment to see the full error message
                 pattern: "^[a-zA-Z0-9_-]*$",
                 message: "The project name must not contain whitespace or special characters.",
               },
@@ -174,6 +178,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
           </FormItem>
 
           <FormItemWithInfo
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string; label: st... Remove this comment to see the full error message
             name="isBlacklistedFromReport"
             label="Visibility in Project Progress View"
             info="If checked, the project will not be listed in the project progress view."

@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
@@ -157,6 +158,7 @@ export function setDirectionReducer(state: OxalisState, direction: Vector3) {
         $set: direction,
       },
       spaceDirectionOrtho: {
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '(1 | -1)[]' is not assignable to type '[1 | ... Remove this comment to see the full error message
         $set: spaceDirectionOrtho,
       },
     },
@@ -293,6 +295,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
           delta[dim] *= state.flycam.spaceDirectionOrtho[dim];
         }
 
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
         return moveReducer(state, delta);
       }
 

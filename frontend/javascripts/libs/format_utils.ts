@@ -1,3 +1,4 @@
+// @flow
 import moment from "moment";
 import { presetPalettes } from "@ant-design/colors";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -28,6 +29,7 @@ export function stringToAntdColorPreset(string: string): string {
 export function stringToAntdColorPresetRgb(string: string): Vector3 {
   const presetString = stringToAntdColorPreset(string);
   // This will be a hex code, see https://www.npmjs.com/package/@ant-design/colors
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
   return Utils.hexToRgb(presetPalettes[presetString].primary);
 }
 
@@ -56,9 +58,11 @@ export function formatScale(scaleArr: Vector3 | null | undefined, roundTo: numbe
     const smallestValue = Math.min(...scaleArr);
 
     if (smallestValue > 1000000) {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       scaleArrAdjusted = scaleArr.map((value) => value / 1000000);
       unit = "mm³";
     } else if (smallestValue > 1000) {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       scaleArrAdjusted = scaleArr.map((value) => value / 1000);
       unit = "µm³";
     }

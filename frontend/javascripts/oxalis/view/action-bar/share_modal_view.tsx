@@ -30,6 +30,7 @@ type Props = {
   annotationId: string;
 };
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'children' implicitly has an 'any'... Remove this comment to see the full error message
 function Hint({ children, style }) {
   return (
     <div style={{ ...style, marginBottom: 12, fontSize: 12, color: "var(--ant-text-secondary)" }}>
@@ -71,7 +72,9 @@ export async function copyUrlToClipboard(url: string) {
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
   const annotationVisibility = useSelector((state) => state.tracing.visibility);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
   const controlMode = useSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
@@ -111,6 +114,7 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 
   return (
     <ButtonComponent
+      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       icon={<ShareAltOutlined />}
       title={messages["tracing.copy_sharing_link"]}
       onClick={copySharingUrl}
@@ -120,8 +124,11 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 }
 export default function ShareModalView(props: Props) {
   const { isVisible, onOk, annotationType, annotationId } = props;
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'Default... Remove this comment to see the full error message
   const dataset = useSelector((state) => state.dataset);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
   const annotationVisibility = useSelector((state) => state.tracing.visibility);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
   const restrictions = useSelector((state) => state.tracing.restrictions);
   const [visibility, setVisibility] = useState(annotationVisibility);
   const [sharedTeams, setSharedTeams] = useState([]);
@@ -133,6 +140,7 @@ export default function ShareModalView(props: Props) {
     const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId, {
       showErrorToast: false,
     });
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'APITeam[]' is not assignable to ... Remove this comment to see the full error message
     setSharedTeams(fetchedSharedTeams);
   };
 
@@ -141,6 +149,7 @@ export default function ShareModalView(props: Props) {
   }, [annotationType, annotationId]);
 
   const handleCheckboxChange = (event: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     setVisibility(event.target.value as any as APIAnnotationVisibility);
   };
 
@@ -154,6 +163,7 @@ export default function ShareModalView(props: Props) {
       await updateTeamsForSharedAnnotation(
         annotationType,
         annotationId,
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
         sharedTeams.map((team) => team.id),
       );
       Toast.success(messages["annotation.shared_teams_edited"]);
@@ -327,6 +337,7 @@ export default function ShareModalView(props: Props) {
             mode="multiple"
             allowNonEditableTeams
             value={sharedTeams}
+            // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'APITeam[]' is not assignable to ... Remove this comment to see the full error message
             onChange={(value) => setSharedTeams(_.flatten([value]))}
             disabled={!hasUpdatePermissions || visibility === "Private"}
           />

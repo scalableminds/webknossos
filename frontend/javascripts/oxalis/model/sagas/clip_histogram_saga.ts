@@ -1,4 +1,6 @@
+// @flow
 import Store from "oxalis/store";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { _takeEvery } from "oxalis/model/sagas/effect-generators";
 import type { ClipHistogramAction } from "oxalis/model/actions/settings_actions";
@@ -25,6 +27,7 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
     api.data.getViewportData(OrthoViews.PLANE_XZ, layerName),
     api.data.getViewportData(OrthoViews.PLANE_YZ, layerName),
   ]);
+  // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
   const dataForAllViewPorts = new TypedArrayClass(
     cuboidXY.length + cuboidXZ.length + cuboidYZ.length,
   );

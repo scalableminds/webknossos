@@ -1,3 +1,4 @@
+// @flow
 import {
   CloseOutlined,
   CloudUploadOutlined,
@@ -123,6 +124,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                   onClick={() => {
                     renderIndependently((destroy) => (
                       <InviteUsersModal
+                        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                         organizationName={activeUser.organization}
                         destroy={destroy}
                       />

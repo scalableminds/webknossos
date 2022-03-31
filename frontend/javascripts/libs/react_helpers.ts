@@ -1,3 +1,4 @@
+// @flow
 import { useState, useEffect, useRef } from "react";
 import { useStore } from "react-redux";
 import type { OxalisState } from "oxalis/store";
@@ -9,11 +10,13 @@ export function useInterval(
   const savedCallback = useRef();
   // Remember the latest callback.
   useEffect(() => {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '(...args: any[]) => any' is not assignable t... Remove this comment to see the full error message
     savedCallback.current = callback;
   });
   // Set up the interval.
   useEffect(() => {
     function tick() {
+      // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
       if (savedCallback.current != null) savedCallback.current();
     }
 

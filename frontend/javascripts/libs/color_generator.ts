@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { chunk3 } from "oxalis/model/helpers/chunk";
@@ -73,6 +74,7 @@ const rawRgbs = [
   185, 0, 0, 123, 123, 123, 88, 79, 211, 149, 211, 51, 102, 153, 128, 1, 179, 0, 255, 255, 35, 35,
   9,
 ];
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
 export const rgbs: Array<Vector3> = chunk3(rawRgbs).map(
   (
     rgb, // $FlowIssue[invalid-tuple-arity] Flow has troubles with understanding that mapping a tuple, returns another tuple
@@ -84,12 +86,14 @@ const ColorGenerator = {
   },
 
   getNRandomColors(n: number): Array<Vector3> {
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'shuffledColors' implicitly has type 'any... Remove this comment to see the full error message
     let shuffledColors = [];
     let remainingColorCount = n;
 
     while (remainingColorCount > 0) {
       // Take the first k colors
       const batchSize = Math.min(remainingColorCount, rgbs.length);
+      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'shuffledColors' implicitly has an 'any[]... Remove this comment to see the full error message
       shuffledColors = shuffledColors.concat(rgbs.slice(0, batchSize));
       remainingColorCount -= batchSize;
     }

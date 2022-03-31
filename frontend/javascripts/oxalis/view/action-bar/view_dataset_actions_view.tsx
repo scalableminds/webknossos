@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
 import type { Node } from "react";
 import React from "react";
 import { Dropdown, Menu } from "antd";
@@ -42,6 +44,7 @@ export default function ViewDatasetActionsView(props: Props) {
       {modal}
       <Dropdown overlay={overlayMenu} trigger={["click"]}>
         <ButtonComponent
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{
             padding: "0 10px",
           }}

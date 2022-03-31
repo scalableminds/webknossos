@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { Spin, Tabs, Tooltip } from "antd";
@@ -66,7 +68,9 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
     // Flow doesn't allow validTabKeys[key] where key may be null, so check that first
     const activeTabKey =
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       (initialTabKey && validTabKeys[initialTabKey] && initialTabKey) ||
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       (lastUsedTabKey && validTabKeys[lastUsedTabKey] && lastUsedTabKey) ||
       defaultTabKey;
     this.state = {
@@ -137,6 +141,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         </TabPane>,
         <TabPane tab={`${optionalMyPrefix} Annotations`} key="explorativeAnnotations">
           <ExplorativeAnnotationsView
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAdminView: boolean; userId: string | nul... Remove this comment to see the full error message
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}
           />
@@ -190,6 +195,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       );
     }
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTabKey' implicitly has an 'any' t... Remove this comment to see the full error message
     const onTabChange = (activeTabKey) => {
       const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
 
@@ -244,7 +250,9 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof DashboardView' is not ass... Remove this comment to see the full error message
 )(withRouter(DashboardView));

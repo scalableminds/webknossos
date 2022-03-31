@@ -171,6 +171,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     fallbackLayer: tracing.fallbackLayer,
     userBoundingBoxes,
   };
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ createdTimestamp: number; type: string; se... Remove this comment to see the full error message
   return volumeTracing;
 }
 

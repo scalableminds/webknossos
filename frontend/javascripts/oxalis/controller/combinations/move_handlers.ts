@@ -1,3 +1,4 @@
+// @flow
 import Store from "oxalis/store";
 import type { Point2, Vector3, OrthoView } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
@@ -85,6 +86,7 @@ function getMousePosition() {
     return null;
   }
 
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   return calculateGlobalPos(state, {
     x: mousePosition[0],
     y: mousePosition[1],
@@ -102,6 +104,7 @@ export function zoomPlanes(value: number, zoomToMouse: boolean): void {
 export function zoomTDView(value: number): void {
   const zoomToPosition = null;
   const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
   Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
 }
 
@@ -122,6 +125,7 @@ function finishZoom(oldMousePosition: Vector3): void {
       oldMousePosition[1] - mousePos[1],
       oldMousePosition[2] - mousePos[2],
     ];
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
     Store.dispatch(moveFlycamOrthoAction(moveVector, activeViewport));
   }
 }

@@ -1,7 +1,10 @@
+// @flow
 import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import React, { useState } from "react";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
 import classNames from "classnames";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIDatasetDetails } from "types/api_flow_types";
@@ -38,6 +41,7 @@ function getDetails(dataset: APIDataset): ExtendedDatasetDetails {
   };
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'details' implicitly has an 'any' ... Remove this comment to see the full error message
 function ThumbnailOverlay({ details }) {
   return (
     <div className="dataset-thumbnail-overlay">
@@ -90,6 +94,7 @@ function ThumbnailOverlay({ details }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'datasets' implicitly has an 'any'... Remove this comment to see the full error message
 function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset }) {
   return (
     <div className="datasets-scrollbar-spacer">
@@ -100,6 +105,7 @@ function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset })
             gridTemplateColumns: miniThumbnailDimension,
           }}
         >
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
           {datasets.map((dataset) => {
             const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
             return (

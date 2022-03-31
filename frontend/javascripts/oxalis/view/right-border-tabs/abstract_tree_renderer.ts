@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import type { Tree } from "oxalis/store";
@@ -33,16 +35,21 @@ const CYCLIC_TREE_ERROR = "CyclicTree";
 
 class AbstractTreeRenderer {
   canvas: HTMLCanvasElement;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'ctx' has no initializer and is not defin... Remove this comment to see the full error message
   ctx: CanvasRenderingContext2D;
   nodeList: Array<NodeListItem>;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'activeNodeId' has no initializer and is ... Remove this comment to see the full error message
   activeNodeId: number;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'tree' has no initializer and is not defi... Remove this comment to see the full error message
   tree: Tree;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'nodeDistance' has no initializer and is ... Remove this comment to see the full error message
   nodeDistance: number;
 
   static drawTree(
     canvas: HTMLCanvasElement,
     tree: Tree | null | undefined,
     activeNodeId: number | null | undefined,
+    // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
     size?: Vector2 = [450, 600],
   ) {
     const renderer = new AbstractTreeRenderer(canvas);
@@ -102,11 +109,14 @@ class AbstractTreeRenderer {
 
     // Build a tree like structure using Breadth-First-Search
     while (queue.length) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type '{ id: number... Remove this comment to see the full error message
       const { id: curNodeId, children: curChildren } = queue.shift();
 
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       if (visitedNodes[curNodeId]) {
         throw new Error(CYCLIC_TREE_ERROR);
       } else {
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         visitedNodes[curNodeId] = true;
       }
 
@@ -123,6 +133,7 @@ class AbstractTreeRenderer {
       }
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ id: number | undefined; children: never[];... Remove this comment to see the full error message
     return rootNode;
   }
 
@@ -318,6 +329,7 @@ class AbstractTreeRenderer {
     mode: AbstractTreeMode,
   ): number {
     const topChild = this.calculateTop(decision.chainCount, top, mode);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
     const extent = this.drawTreeWithWidths(decision.node, left, right, topChild, mode);
     return extent.middle;
   }

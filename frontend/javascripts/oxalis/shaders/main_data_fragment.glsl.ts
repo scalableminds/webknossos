@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import {
   MAPPING_TEXTURE_WIDTH,
@@ -218,6 +219,7 @@ void main() {
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vector3' implicitly has an 'any' type.
     formatVector3AsVec3: (vector3) => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,

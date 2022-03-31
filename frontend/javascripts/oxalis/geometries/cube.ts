@@ -1,3 +1,4 @@
+// @flow
 import * as THREE from "three";
 import _ from "lodash";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -41,10 +42,12 @@ class Cube {
     this.initialized = false;
     this.visible = true;
     this.isHighlighted = properties.isHighlighted;
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Line' is missing the following properties fr... Remove this comment to see the full error message
     this.cube = new THREE.Line(new THREE.Geometry(), this.getLineMaterial());
     this.crossSections = {};
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Line' is not assignable to type 'typeof Line... Remove this comment to see the full error message
       this.crossSections[planeId] = new THREE.Line(new THREE.Geometry(), this.getLineMaterial());
     }
 
@@ -77,8 +80,10 @@ class Cube {
     // box, we subtract Number.EPSILON.
     max = [max[0] - Number.EPSILON, max[1] - Number.EPSILON, max[2] - Number.EPSILON];
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
     const vec = (x, y, z) => new THREE.Vector3(x, y, z);
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
     this.cube.geometry.vertices = [
       vec(min[0], min[1], min[2]),
       vec(min[0], max[1], min[2]),
@@ -97,6 +102,7 @@ class Cube {
       vec(min[0], max[1], max[2]),
       vec(min[0], max[1], min[2]),
     ];
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
     this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [
       vec(min[0], min[1], 0),
       vec(min[0], max[1], 0),
@@ -104,6 +110,7 @@ class Cube {
       vec(max[0], min[1], 0),
       vec(min[0], min[1], 0),
     ];
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
     this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = [
       vec(0, min[1], min[2]),
       vec(0, min[1], max[2]),
@@ -111,6 +118,7 @@ class Cube {
       vec(0, max[1], min[2]),
       vec(0, min[1], min[2]),
     ];
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
     this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = [
       vec(min[0], 0, min[2]),
       vec(min[0], 0, max[2]),
@@ -120,7 +128,9 @@ class Cube {
     ];
 
     for (const mesh of _.values(this.crossSections).concat([this.cube])) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
       mesh.geometry.computeBoundingSphere();
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
       mesh.geometry.verticesNeedUpdate = true;
     }
 
@@ -136,6 +146,7 @@ class Cube {
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
       const { geometry } = this.crossSections[planeId];
 
       for (const vertex of geometry.vertices) {
@@ -160,6 +171,7 @@ class Cube {
 
     this.isHighlighted = highlighted;
     this.getMeshes().forEach((mesh) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
       mesh.material = this.getLineMaterial();
     });
     app.vent.trigger("rerender");
@@ -175,21 +187,26 @@ class Cube {
       const position = getPosition(Store.getState().flycam);
 
       if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] < this.max[thirdDim]) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
         this.crossSections[planeId].visible =
           this.visible && planeId === id && this.showCrossSections;
       } else {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
         this.crossSections[planeId].visible = false;
       }
     }
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.cube.visible = this.visible && id === OrthoViews.TDView;
   }
 
   setVisibility(visible: boolean) {
     this.visible = visible;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.cube.visible = visible;
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
       this.crossSections[planeId].visible = visible;
     }
   }

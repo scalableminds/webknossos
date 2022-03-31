@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'js-p... Remove this comment to see the full error message
 import PriorityQueue from "js-priority-queue";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import type { LoadingStrategy } from "oxalis/store";
@@ -9,6 +11,7 @@ import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket
 import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { expose, pretendPromise } from "./comlink_wrapper";
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'b' implicitly has an 'any' type.
 const comparator = (b, a) => b.priority - a.priority;
 
 function dequeueToArrayBuffer(
@@ -58,6 +61,7 @@ function pick(
     comparator,
   });
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucketAddress' implicitly has an 'any' ... Remove this comment to see the full error message
   const enqueueFunction = (bucketAddress, priority) => {
     bucketQueue.queue({
       bucketAddress,
@@ -90,7 +94,7 @@ function pick(
     );
   }
 
-  return pretendPromise(dequeueToArrayBuffer(bucketQueue));
+  return Promise.resolve(dequeueToArrayBuffer(bucketQueue));
 }
 
-export default expose<typeof pick>(pick);
+export default pick;

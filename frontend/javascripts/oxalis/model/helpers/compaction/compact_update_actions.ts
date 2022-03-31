@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -5,6 +6,7 @@ import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
 
 // The Cantor pairing function assigns one natural number to each pair of natural numbers
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
 function cantor(a, b) {
   return 0.5 * (a + b) * (a + b + 1) + b;
 }
@@ -51,7 +53,9 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
 
       if (
         deleteUA != null &&
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'name' does not exist on type 'number | U... Remove this comment to see the full error message
         deleteUA.name === "deleteEdge" &&
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'number | ... Remove this comment to see the full error message
         deleteUA.value.treeId !== createUA.value.treeId
       ) {
         movedNodesAndEdges.push([createUA, deleteUA]);
@@ -62,15 +66,19 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
   // Group moved nodes and edges by their old and new treeId using the cantor pairing function
   // to create a single unique id
   const groupedMovedNodesAndEdges = _.groupBy(movedNodesAndEdges, ([createUA, deleteUA]) =>
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'number | ... Remove this comment to see the full error message
     cantor(createUA.value.treeId, deleteUA.value.treeId),
   );
 
   // Create a moveTreeComponent update action for each of the groups and insert it at the right spot
   for (const movedPairings of _.values(groupedMovedNodesAndEdges)) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'number | ... Remove this comment to see the full error message
     const oldTreeId = movedPairings[0][1].value.treeId;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'number | ... Remove this comment to see the full error message
     const newTreeId = movedPairings[0][0].value.treeId;
     // This could be done with a .filter(...).map(...), but flow cannot comprehend that
     const nodeIds = movedPairings.reduce((agg, [createUA]) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'name' does not exist on type 'number | U... Remove this comment to see the full error message
       if (createUA.name === "createNode") agg.push(createUA.value.id);
       return agg;
     }, []);
@@ -94,6 +102,7 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
       compactedActions.splice(
         createTreeUAIndex + 1,
         0,
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(number | UpdateAction | ((...it... Remove this comment to see the full error message
         moveTreeComponent(oldTreeId, newTreeId, nodeIds),
       );
     } else if (deleteTreeUAIndex > -1) {
@@ -101,10 +110,12 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
       compactedActions.splice(
         deleteTreeUAIndex,
         0,
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(number | UpdateAction | ((...it... Remove this comment to see the full error message
         moveTreeComponent(oldTreeId, newTreeId, nodeIds),
       );
     } else {
       // Insert in front
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(number | UpdateAction | ((...it... Remove this comment to see the full error message
       compactedActions.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds));
     }
 
@@ -113,6 +124,7 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
     const movedPairingsChunks = _.chunk(movedPairings, 50000);
 
     for (const pairingsChunk of movedPairingsChunks) {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '(number | UpdateAction | ((...items: UpdateA... Remove this comment to see the full error message
       compactedActions = _.without(compactedActions, ..._.flatten(pairingsChunk));
     }
   }

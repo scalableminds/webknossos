@@ -1,5 +1,8 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import _ from "lodash";
 import {
@@ -19,8 +22,10 @@ import { clearCanvas, setupRenderArea, renderToTexture } from "oxalis/view/rende
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
   trigger: (...args: Array<any>) => any;
   cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
   animate: () => void;
   setClippingDistance: (value: number) => void;
@@ -29,9 +34,12 @@ class ArbitraryView {
   isRunning: boolean = false;
   animationRequestId: number | null | undefined = null;
   camDistance: number;
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'typeof Pers... Remove this comment to see the full error message
   camera: typeof THREE.PerspectiveCamera = null;
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'typeof Orth... Remove this comment to see the full error message
   tdCamera: typeof THREE.OrthographicCamera = null;
   geometries: Array<typeof THREE.Geometry> = [];
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
   group: typeof THREE.Object3D;
   cameraPosition: Array<number>;
 
@@ -47,21 +55,30 @@ class ArbitraryView {
     // viewport.
     this.camDistance = Constants.VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
     // Initialize main THREE.js components
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'PerspectiveCamera' is missing the following ... Remove this comment to see the full error message
     this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
     // This name can be used to retrieve the camera from the scene
+    // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'name' because it is a read-only ... Remove this comment to see the full error message
     this.camera.name = ArbitraryViewport;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrixAutoUpdate' does not exist on type... Remove this comment to see the full error message
     this.camera.matrixAutoUpdate = false;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message
     scene.add(this.camera);
     const tdCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
     tdCamera.position.copy(new THREE.Vector3(10, 10, -10));
     tdCamera.up = new THREE.Vector3(0, 0, -1);
     tdCamera.matrixAutoUpdate = true;
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'OrthographicCamera' is missing the following... Remove this comment to see the full error message
     this.tdCamera = tdCamera;
     const dummyCamera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
     this.cameras = {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'OrthographicCamera' is not assignable to typ... Remove this comment to see the full error message
       TDView: tdCamera,
+      // @ts-expect-error ts-migrate(2739) FIXME: Type 'PerspectiveCamera' is missing the following ... Remove this comment to see the full error message
       PLANE_XY: dummyCamera,
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'PerspectiveCamera' is not assignable to type... Remove this comment to see the full error message
       PLANE_YZ: dummyCamera,
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'PerspectiveCamera' is not assignable to type... Remove this comment to see the full error message
       PLANE_XZ: dummyCamera,
     };
     this.cameraPosition = [0, 0, this.camDistance];
@@ -84,13 +101,17 @@ class ArbitraryView {
   start(): void {
     if (!this.isRunning) {
       this.isRunning = true;
+      // @ts-expect-error ts-migrate(2739) FIXME: Type 'Object3D' is missing the following propertie... Remove this comment to see the full error message
       this.group = new THREE.Object3D();
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
       this.group.add(this.camera);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
       getSceneController().rootGroup.add(this.group);
       this.resizeImpl();
       // start the rendering loop
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
       window.addEventListener("resize", this.resizeThrottled);
     }
   }
@@ -100,11 +121,14 @@ class ArbitraryView {
       this.isRunning = false;
 
       if (this.animationRequestId != null) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'cancelAnimationFrame' does not exist on ... Remove this comment to see the full error message
         window.cancelAnimationFrame(this.animationRequestId);
         this.animationRequestId = null;
       }
 
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof O... Remove this comment to see the full error message
       getSceneController().rootGroup.remove(this.group);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
       window.removeEventListener("resize", this.resizeThrottled);
     }
   }
@@ -118,18 +142,22 @@ class ArbitraryView {
 
     TWEEN.update();
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
     if (this.needsRerender || window.needsRerender) {
       this.trigger("render");
       const { camera, geometries } = this;
       const { renderer, scene } = getSceneController();
 
       for (const geometry of geometries) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof G... Remove this comment to see the full error message
         if (geometry.update != null) {
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof G... Remove this comment to see the full error message
           geometry.update();
         }
       }
 
       const m = getZoomedMatrix(Store.getState().flycam);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrix' does not exist on type 'typeof P... Remove this comment to see the full error message
       camera.matrix.set(
         m[0],
         m[4],
@@ -148,22 +176,28 @@ class ArbitraryView {
         m[11],
         m[15],
       );
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrix' does not exist on type 'typeof P... Remove this comment to see the full error message
       camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrix' does not exist on type 'typeof P... Remove this comment to see the full error message
       camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrixWorldNeedsUpdate' does not exist o... Remove this comment to see the full error message
       camera.matrixWorldNeedsUpdate = true;
       clearCanvas(renderer);
       const storeState = Store.getState();
 
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'viewport' implicitly has an 'any' type.
       const renderViewport = (viewport, _camera) => {
         const { left, top, width, height } = getInputCatcherRect(storeState, viewport);
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, 0xffffff);
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'render' does not exist on type 'typeof W... Remove this comment to see the full error message
           renderer.render(scene, _camera);
         }
       };
 
       if (this.plane.meshes.debuggerPlane != null) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
         this.plane.meshes.debuggerPlane.visible = false;
       }
 
@@ -171,6 +205,7 @@ class ArbitraryView {
 
       if (show3DViewportInArbitrary) {
         if (this.plane.meshes.debuggerPlane != null) {
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
           this.plane.meshes.debuggerPlane.visible = true;
         }
 
@@ -178,6 +213,7 @@ class ArbitraryView {
       }
 
       this.needsRerender = false;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
       window.needsRerender = false;
     }
 
@@ -226,6 +262,7 @@ class ArbitraryView {
     while (index < buffer.length) {
       const bucketAddress = buffer
         .subarray(index, index + 4)
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'currentAnchorPoint' does not exist on ty... Remove this comment to see the full error message
         .map((el, idx) => (idx < 3 ? window.currentAnchorPoint[idx] + el : el));
       index += 4;
       const id = bucketAddress.join(",");
@@ -243,6 +280,7 @@ class ArbitraryView {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
     this.geometries.push(geometry);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addToScene' does not exist on type 'type... Remove this comment to see the full error message
     geometry.addToScene(this.group);
   }
 
@@ -253,14 +291,18 @@ class ArbitraryView {
   resizeImpl = (): void => {
     // Call this after the canvas was resized to fix the viewport
     const { width, height } = getGroundTruthLayoutRect();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setSize' does not exist on type 'typeof ... Remove this comment to see the full error message
     getSceneController().renderer.setSize(width, height);
     this.draw();
   };
+
   // throttle resize to avoid annoying flickering
   resizeThrottled = _.throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'near' does not exist on type 'typeof Per... Remove this comment to see the full error message
     this.camera.near = this.camDistance - value;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'updateProjectionMatrix' does not exist o... Remove this comment to see the full error message
     this.camera.updateProjectionMatrix();
   }
 

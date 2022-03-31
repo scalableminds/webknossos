@@ -1,8 +1,10 @@
+// @flow
 import handleStatus from "libs/handle_http_status";
 import { expose, transfer } from "./comlink_wrapper";
 
 function fetchBufferWithHeaders(
   url: RequestInfo,
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'RequestOptions'.
   options?: RequestOptions,
 ): Promise<{
   buffer: ArrayBuffer;
@@ -16,6 +18,7 @@ function fetchBufferWithHeaders(
       const headerObject = {};
 
       for (const [key, value] of headers.entries()) {
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         headerObject[key] = value;
       }
 
@@ -29,4 +32,4 @@ function fetchBufferWithHeaders(
     });
 }
 
-export default expose<typeof fetchBufferWithHeaders>(fetchBufferWithHeaders);
+export default fetchBufferWithHeaders;

@@ -1,3 +1,4 @@
+// @flow
 import { Tag, Tooltip } from "antd";
 import UserLocalStorage from "libs/user_local_storage";
 import React, { useEffect } from "react";
@@ -19,7 +20,9 @@ export default function CategorizationLabel({ tag, kind, onClick, onClose, closa
     <Tooltip title={`Click to only show ${kind} with this tag.`}>
       <Tag
         color={stringToColor(tag)}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: MouseEvent) => void' is not assignabl... Remove this comment to see the full error message
         onClick={onClick}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: MouseEvent) => void' is not assignabl... Remove this comment to see the full error message
         onClose={onClose}
         closable={closable}
         style={{

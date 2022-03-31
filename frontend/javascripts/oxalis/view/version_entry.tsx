@@ -1,3 +1,4 @@
+// @flow
 import { Avatar, Button, List } from "antd";
 import {
   ArrowsAltOutlined,
@@ -14,6 +15,7 @@ import {
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
 import classNames from "classnames";
 import type {
   ServerUpdateAction,
@@ -127,6 +129,7 @@ function getDescriptionForSpecificBatch(
     throw new Error("Flow constraint violated");
   }
 
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   return descriptionFns[type](firstAction, actions.length);
 }
 
@@ -254,6 +257,7 @@ export default function VersionEntry({
               Version {version} (<FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
             </React.Fragment>
           }
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ title: Element; onClick: () => Promise<voi... Remove this comment to see the full error message
           onClick={() => onPreviewVersion(version)}
           avatar={<Avatar size="small" icon={icon} />}
           description={

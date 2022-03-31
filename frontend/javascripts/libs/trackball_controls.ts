@@ -28,7 +28,9 @@ import window, { document } from "libs/window";
  * @author Eberhard Graether / http://egraether.com/
  * @author Mark Lundin / http://mark-lundin.com
  */
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'object' implicitly has an 'any' type.
 function TrackballControls(object, domElement, target, updateCallback) {
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   const _this = this;
 
   const STATE = {
@@ -40,27 +42,46 @@ function TrackballControls(object, domElement, target, updateCallback) {
     TOUCH_ZOOM: 4,
     TOUCH_PAN: 5,
   };
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.object = object;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.domElement = domElement !== undefined ? domElement : document;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.updateCallback = updateCallback;
   // API
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.enabled = true;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.keyboardEnabled = false;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.rotateSpeed = 1.0;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.zoomSpeed = 1.2;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.panSpeed = 0.3;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.noRotate = false;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.noZoom = false;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.noPan = false;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.noRoll = false;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.staticMoving = false;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.dynamicDampingFactor = 0.2;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.minDistance = 0;
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.maxDistance = Infinity;
   // [A, S, D]
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.keys = [65, 83, 68];
   // internals
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.target = target || new THREE.Vector3();
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.lastTarget = this.target.clone();
   const lastPosition = new THREE.Vector3();
   let _state = STATE.NONE;
@@ -84,8 +105,11 @@ function TrackballControls(object, domElement, target, updateCallback) {
   const _panEnd = new THREE.Vector2();
 
   // for reset
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.target0 = this.target.clone();
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.position0 = this.object.position.clone();
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.up0 = this.object.up.clone();
   // events
   const changeEvent = {
@@ -99,23 +123,28 @@ function TrackballControls(object, domElement, target, updateCallback) {
   };
 
   // methods
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.getScreenBounds = function getScreenBounds() {
     const clientRect = this.domElement.getBoundingClientRect();
     const d = this.domElement.ownerDocument.documentElement;
     return {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'pageYOffset' does not exist on type '(Wi... Remove this comment to see the full error message
       top: clientRect.top + window.pageYOffset - d.clientTop,
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'pageXOffset' does not exist on type '(Wi... Remove this comment to see the full error message
       left: clientRect.left + window.pageXOffset - d.clientLeft,
       width: clientRect.width,
       height: clientRect.height,
     };
   };
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.handleEvent = function handleEvent(event) {
     if (typeof this[event.type] === "function") {
       this[event.type](event);
     }
   };
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.getMouseOnScreen = function getMouseOnScreen(pageX, pageY, vector) {
     const screenBounds = _this.getScreenBounds();
 
@@ -125,9 +154,11 @@ function TrackballControls(object, domElement, target, updateCallback) {
     );
   };
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.getMouseProjectionOnBall = (() => {
     const objectUp = new THREE.Vector3();
     const mouseOnBall = new THREE.Vector3();
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pageX' implicitly has an 'any' type.
     return (pageX, pageY, projection) => {
       const screenBounds = _this.getScreenBounds();
 
@@ -159,6 +190,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     };
   })();
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.rotateCamera = (() => {
     const axis = new THREE.Vector3();
     const quaternion = new THREE.Quaternion();
@@ -189,6 +221,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     };
   })();
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.zoomCamera = () => {
     if (_state === STATE.TOUCH_ZOOM) {
       const factor = _touchZoomDistanceStart / _touchZoomDistanceEnd;
@@ -204,12 +237,14 @@ function TrackballControls(object, domElement, target, updateCallback) {
         if (_this.staticMoving) {
           _zoomStart.copy(_zoomEnd);
         } else {
+          // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
           _zoomStart.y += (_zoomEnd.y - _zoomStart.y) * this.dynamicDampingFactor;
         }
       }
     }
   };
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.panCamera = (() => {
     const mouseChange = new THREE.Vector2();
     const objectUp = new THREE.Vector3();
@@ -237,6 +272,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     };
   })();
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.checkDistances = () => {
     if (!_this.noZoom || !_this.noPan) {
       if (_eye.lengthSq() > _this.maxDistance * _this.maxDistance) {
@@ -249,6 +285,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     }
   };
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.update = (externalUpdate = false, userTriggered = false) => {
     _eye.subVectors(_this.object.position, _this.lastTarget);
 
@@ -283,6 +320,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     }
   };
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.reset = () => {
     _state = STATE.NONE;
     _prevState = STATE.NONE;
@@ -303,8 +341,10 @@ function TrackballControls(object, domElement, target, updateCallback) {
   };
 
   // listeners
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
   function keydown(event) {
     if (_this.enabled === false || _this.keyboardEnabled === false) return;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("keydown", keydown);
     _prevState = _state;
 
@@ -319,12 +359,15 @@ function TrackballControls(object, domElement, target, updateCallback) {
     }
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_' implicitly has an 'any' type.
   function keyup(_) {
     if (_this.enabled === false || _this.keyboardEnabled === false) return;
     _state = _prevState;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     window.addEventListener("keydown", keydown, false);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
   function mousedown(event) {
     if (_this.enabled === false) return;
     event.preventDefault();
@@ -347,12 +390,15 @@ function TrackballControls(object, domElement, target, updateCallback) {
       _panEnd.copy(_panStart);
     }
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("mousemove", mousemove, false);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("mouseup", mouseup, false);
 
     _this.dispatchEvent(startEvent);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
   function mousemove(event) {
     if (_this.enabled === false) return;
     event.preventDefault();
@@ -368,16 +414,20 @@ function TrackballControls(object, domElement, target, updateCallback) {
     _this.update(false, true);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
   function mouseup(event) {
     if (_this.enabled === false) return;
     event.preventDefault();
     _state = STATE.NONE;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("mousemove", mousemove);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("mouseup", mouseup);
 
     _this.dispatchEvent(endEvent);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
   function mousewheel(event) {
     if (_this.enabled === false) return;
     event.preventDefault();
@@ -398,6 +448,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     _this.dispatchEvent(endEvent);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
   function touchstart(event) {
     if (_this.enabled === false) return;
 
@@ -441,6 +492,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     _this.dispatchEvent(startEvent);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
   function touchmove(event) {
     if (_this.enabled === false) return;
     event.preventDefault();
@@ -481,6 +533,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     _this.update(false, true);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
   function touchend(event) {
     if (_this.enabled === false) return;
 
@@ -502,41 +555,63 @@ function TrackballControls(object, domElement, target, updateCallback) {
     _this.dispatchEvent(endEvent);
   }
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.destroy = () => {
+    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
     this.domElement.removeEventListener(
       "contextmenu",
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
       (event) => {
         event.preventDefault();
       },
       false,
     );
+    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
     this.domElement.removeEventListener("mousedown", mousedown, false);
+    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
     this.domElement.removeEventListener("mousewheel", mousewheel, false);
+    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
     this.domElement.removeEventListener("DOMMouseScroll", mousewheel, false); // firefox
 
+    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
     this.domElement.removeEventListener("touchstart", touchstart, false);
+    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
     this.domElement.removeEventListener("touchend", touchend, false);
+    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
     this.domElement.removeEventListener("touchmove", touchmove, false);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("keydown", keydown, false);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("keyup", keyup, false);
   };
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.domElement.addEventListener(
     "contextmenu",
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
     (event) => {
       event.preventDefault();
     },
     false,
   );
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.domElement.addEventListener("mousedown", mousedown, false);
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.domElement.addEventListener("mousewheel", mousewheel, false);
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.domElement.addEventListener("DOMMouseScroll", mousewheel, false); // firefox
 
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.domElement.addEventListener("touchstart", touchstart, false);
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.domElement.addEventListener("touchend", touchend, false);
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.domElement.addEventListener("touchmove", touchmove, false);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
   window.addEventListener("keydown", keydown, false);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
   window.addEventListener("keyup", keyup, false);
+  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.update();
 }
 

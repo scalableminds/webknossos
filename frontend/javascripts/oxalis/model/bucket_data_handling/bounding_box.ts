@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
@@ -41,7 +42,9 @@ class BoundingBox {
     }
 
     return {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       min,
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max,
     };
   });
@@ -76,7 +79,9 @@ class BoundingBox {
       Math.min(this.max[2], other.max[2]),
     ];
     return new BoundingBox({
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       min: newMin,
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max: newMax,
     });
   }
@@ -113,6 +118,7 @@ class BoundingBox {
           boxes.push(
             this.intersectedWith(
               new BoundingBox({
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
                 min: newMin,
                 max: V3.add(newMin, chunkSize),
               }),
@@ -137,7 +143,9 @@ class BoundingBox {
       Math.ceil(this.max[2] / mag[2]),
     ];
     return new BoundingBox({
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       min,
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max,
     });
   }

@@ -1,3 +1,4 @@
+// @flow
 import { Select } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
@@ -23,8 +24,10 @@ type Props = StateProps & DispatchProps;
 
 class ViewModesView extends PureComponent<Props, {}> {
   blurElement = (event: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
     event.target.blur();
   };
+
   handleChange = (mode: ViewMode) => {
     // If we switch back from any arbitrary mode we stop recording.
     // This prevents that when the user switches back to any arbitrary mode,
@@ -43,6 +46,7 @@ class ViewModesView extends PureComponent<Props, {}> {
     // to early, otherwise.
     setTimeout(() => {
       if (document.activeElement != null) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
         document.activeElement.blur();
       }
     }, 100);
@@ -66,6 +70,7 @@ class ViewModesView extends PureComponent<Props, {}> {
           constants.MODE_ARBITRARY,
           constants.MODE_ARBITRARY_PLANE,
         ].map((mode) => (
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
           <Option key={mode} disabled={this.isDisabled(mode)} value={mode}>
             {Utils.capitalize(mode)}
           </Option>
@@ -88,4 +93,5 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps, mapDispatchToProps)(ViewModesView);

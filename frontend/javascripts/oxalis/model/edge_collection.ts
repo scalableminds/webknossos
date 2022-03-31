@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import type { Edge } from "oxalis/store";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
@@ -142,6 +143,7 @@ export default class EdgeCollection {
       const ingoingEdges = rawInMap[nodeId];
       inMap.mutableSet(nodeId, ingoingEdges);
     });
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DiffableMap<number, unknown>' is... Remove this comment to see the full error message
     return EdgeCollection.loadFromMaps(outMap, inMap, edges.length);
   }
 
@@ -166,7 +168,9 @@ export function diffEdgeCollections(
   // Since inMap and outMap are symmetrical to each other, it suffices to only diff the outMaps
   const mapDiff = diffDiffableMaps(edgeCollectionA.outMap, edgeCollectionB.outMap);
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodeIds' implicitly has an 'any' type.
   const getEdgesForNodes = (nodeIds, diffableMap) =>
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodeId' implicitly has an 'any' type.
     _.flatten(nodeIds.map((nodeId) => diffableMap.get(nodeId)));
 
   const edgeDiff = {

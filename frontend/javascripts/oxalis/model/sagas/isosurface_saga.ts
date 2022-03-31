@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
@@ -33,6 +35,7 @@ import {
   finishedLoadingIsosurfaceAction,
   startedLoadingIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   _actionChannel,
@@ -96,7 +99,9 @@ function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<
 
   if (maybeMap == null) {
     const newMap = new ThreeDMap();
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'ThreeDMap<unknown>' is not assig... Remove this comment to see the full error message
     isosurfacesMap.set(segmentId, newMap);
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'ThreeDMap<unknown>' is not assignable to typ... Remove this comment to see the full error message
     return newMap;
   }
 
@@ -113,6 +118,7 @@ function removeMapForSegment(layerName: string, segmentId: number): void {
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
   const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '[...number[], number]' is not as... Remove this comment to see the full error message
     [...cubeSize, zoomStep],
     resolutionInfo,
     0,
@@ -155,6 +161,7 @@ function getNeighborPosition(
     clippedPosition[1] + neighborMultiplier[1] * zoomedCubeSize[1],
     clippedPosition[2] + neighborMultiplier[2] * zoomedCubeSize[2],
   ];
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return neighboringPosition;
 }
 
@@ -205,6 +212,7 @@ function* getIsosurfaceMappingInfo(
   maybeMappingInfo: IsosurfaceMappingInfo | null | undefined,
 ): Saga<IsosurfaceMappingInfo> {
   const activeMappingByLayer = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   if (maybeMappingInfo != null) return maybeMappingInfo;
@@ -224,6 +232,7 @@ function* getInfoForIsosurfaceLoading(layer: DataLayer): Saga<{
 }> {
   const resolutionInfo = getResolutionInfo(layer.resolutions);
   const preferredZoomStep = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
   );
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
@@ -258,6 +267,7 @@ function* loadIsosurfaceForSegmentId(
       removeExistingIsosurface,
     ),
     cancel: _take(
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
       (action) =>
         action.type === "REMOVE_ISOSURFACE" &&
         action.cellId === segmentId &&
@@ -280,6 +290,7 @@ function* loadIsosurfaceWithNeighbors(
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   let positionsToRequest = [clippedPosition];
   const hasIsosurface = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) =>
       state.localSegmentationData[layer.name].isosurfaces != null &&
       state.localSegmentationData[layer.name].isosurfaces[segmentId] != null,
@@ -312,6 +323,7 @@ function* loadIsosurfaceWithNeighbors(
 }
 
 function getAdHocMeshLoadingLimit(): number {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceMaxBatchSize' does not exist... Remove this comment to see the full error message
   return window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE;
 }
 
@@ -322,6 +334,7 @@ function hasBatchCounterExceededLimit(segmentId: number): boolean {
 function _warnAboutAdHocMeshLimit(segmentId: number) {
   const warning = "Reached ad-hoc mesh loading limit";
   console.warn(`${warning} for segment ${segmentId}`);
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
   ErrorHandling.notify(warning, {
     segmentId,
     limit: getAdHocMeshLoadingLimit(),
@@ -354,16 +367,23 @@ function* maybeLoadIsosurface(
 
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(clippedPosition, true);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceSubsamplingStrides' does not... Remove this comment to see the full error message
   const subsamplingStrides = window.__isosurfaceSubsamplingStrides || [4, 4, 4];
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const scale = yield* select((state) => state.dataset.dataSource.scale);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const datasetName = yield* select((state) => state.dataset.name);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
   const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetName}/layers/${
     layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
@@ -398,6 +418,7 @@ function* maybeLoadIsosurface(
       }
 
       getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'neighbor' implicitly has an 'any' type.
       return neighbors.map((neighbor) =>
         getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
       );
@@ -413,6 +434,7 @@ function* maybeLoadIsosurface(
 }
 
 function* markEditedCellAsDirty(): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
 
   if (volumeTracing != null && volumeTracing.fallbackLayer == null) {
@@ -459,6 +481,7 @@ function* _refreshIsosurfaceWithMap(
   layerName: string,
 ): Saga<void> {
   const isosurfaceInfo = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.localSegmentationData[layerName].isosurfaces[cellId],
   );
   yield* call(
@@ -500,6 +523,7 @@ function* _refreshIsosurfaceWithMap(
  */
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   const { cellId, seedPosition, meshFileName, layerName } = action;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -519,6 +543,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       layer,
     ),
     cancel: _take(
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'otherAction' implicitly has an 'any' ty... Remove this comment to see the full error message
       (otherAction) =>
         otherAction.type === "REMOVE_ISOSURFACE" &&
         otherAction.cellId === cellId &&
@@ -536,6 +561,7 @@ function* loadPrecomputedMeshForSegmentId(
   const layerName = segmentationLayer.name;
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   let availableChunks = null;
 
@@ -630,6 +656,7 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   yield* put(setImportingMeshStateAction(false));
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
   // we simply use the current position as a seed position.
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const seedPosition = yield* select((state) => getFlooredPosition(state.flycam));
   // TODO: This code is not used currently and it will not be possible to share these
   // isosurfaces via link.

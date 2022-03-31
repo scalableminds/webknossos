@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { Tabs, Modal, Button, Layout } from "antd";
@@ -68,6 +70,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
   ): Promise<void> => {
     setOrganization(datasetOrganization);
     setDatasetName(uploadedDatasetName);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'boolean | null | undefined' is n... Remove this comment to see the full error message
     setDatasetNeedsConversion(needsConversion);
   };
 
@@ -368,4 +371,5 @@ const mapStateToProps = (state: OxalisState) => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps)(withRouter(DatasetAddView));

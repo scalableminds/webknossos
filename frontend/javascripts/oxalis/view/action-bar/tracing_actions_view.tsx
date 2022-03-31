@@ -1,3 +1,4 @@
+// @flow
 import { Button, Dropdown, Menu, Modal, Tooltip } from "antd";
 import {
   BarsOutlined,
@@ -66,6 +67,7 @@ import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: Props) => Element' is no... Remove this comment to see the full error message
 const AsyncButtonWithAuthentication = withAuthentication(AsyncButton);
 type OwnProps = {
   layoutMenu: React.ReactNode;
@@ -226,6 +228,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
             style={{
               fontSize: 14,
             }}
+          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           >{`Layouts for ${mapLayoutKeysToLanguage[layoutKey]}`}</span>
         }
       >
@@ -241,7 +244,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     isUserScriptsModalOpen: false,
     isReopenAllowed: false,
   };
+
   modalWrapper: HTMLDivElement | null | undefined = null;
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
   reopenTimeout: TimeoutID | null | undefined;
   componentDidUpdate = () => {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
@@ -281,17 +286,20 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   handleSave = async (event?: React.SyntheticEvent) => {
     if (event != null) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
       event.target.blur();
     }
 
     Model.forceSave();
   };
+
   handleUndo = () => dispatchUndoAsync(Store.dispatch);
   handleRedo = () => dispatchRedoAsync(Store.dispatch);
   handleRestore = async () => {
     await Model.ensureSavedState();
     Store.dispatch(setVersionRestoreVisibilityAction(true));
   };
+
   handleCopyToAccount = async () => {
     const newAnnotation = await copyAnnotationToUserAccount(
       this.props.annotationId,
@@ -299,6 +307,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     );
     location.href = `/annotations/Explorational/${newAnnotation.id}`;
   };
+
   handleCopySandboxToAccount = async () => {
     const { tracing: sandboxTracing, dataset } = Store.getState();
     const tracingType = getTracingType(sandboxTracing);
@@ -313,6 +322,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     // volume tracings
     const fallbackLayer =
       sandboxTracing.volumes.length > 0 ? sandboxTracing.volumes[0].fallbackLayer : null;
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
     const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
     UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
     await api.tracing.restart(
@@ -337,6 +347,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     // TracingLayoutView would be remounted).
     location.reload();
   };
+
   handleFinish = async () => {
     await Model.ensureSavedState();
     Modal.confirm({
@@ -348,6 +359,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       },
     });
   };
+
   handleDisableSaving = () => {
     Modal.confirm({
       title: messages["annotation.disable_saving"],
@@ -357,20 +369,25 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       },
     });
   };
+
   handleShareOpen = () => {
     Store.dispatch(setShareModalVisibilityAction(true));
   };
+
   handleShareClose = () => {
     Store.dispatch(setShareModalVisibilityAction(false));
   };
+
   handleDownload = async () => {
     await Model.ensureSavedState();
     const { annotationId, annotationType, hasVolumeFallback } = this.props;
     downloadNml(annotationId, annotationType, hasVolumeFallback);
   };
+
   handleFinishAndGetNextTask = async () => {
     api.tracing.finishAndGetNextTask();
   };
+
   handleReopenTask = async () => {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
     if (!localStorageEntry) return;
@@ -390,21 +407,25 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       });
     }
   };
+
   handleMergeOpen = () => {
     this.setState({
       isMergeModalOpen: true,
     });
   };
+
   handleMergeClose = () => {
     this.setState({
       isMergeModalOpen: false,
     });
   };
+
   handleUserScriptsOpen = () => {
     this.setState({
       isUserScriptsModalOpen: true,
     });
   };
+
   handleUserScriptsClose = () => {
     this.setState({
       isUserScriptsModalOpen: false,
@@ -430,6 +451,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           hasTracing
             ? [
                 <AsyncButton
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; className: string; key:... Remove this comment to see the full error message
                   className="narrow"
                   key="undo-button"
                   title="Undo (Ctrl+Z)"
@@ -440,6 +462,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                   <i className="fas fa-undo" aria-hidden="true" />
                 </AsyncButton>,
                 <AsyncButton
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; className: string; key:... Remove this comment to see the full error message
                   className="narrow hide-on-small-screen"
                   key="redo-button"
                   title="Redo (Ctrl+Y)"
@@ -468,6 +491,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                 activeUser={activeUser}
                 authenticationMessage="Please register or login to copy the sandbox tracing to your account."
                 key="copy-sandbox-button"
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; activeUser: APIUser | n... Remove this comment to see the full error message
                 icon={<FileAddOutlined />}
                 onClick={this.handleCopySandboxToAccount}
                 title="Copy To My Account"
@@ -480,6 +504,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       : [
           <ButtonComponent
             key="read-only-button"
+            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             type="danger"
             disabled
             style={{
@@ -492,6 +517,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             activeUser={activeUser}
             authenticationMessage="Please register or login to copy the tracing to your account."
             key="copy-button"
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; activeUser: APIUser | n... Remove this comment to see the full error message
             icon={<FileAddOutlined />}
             onClick={this.handleCopyToAccount}
             title="Copy To My Account"
@@ -503,6 +529,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       restrictions.allowFinish && task ? (
         <ButtonComponent
           key="next-button"
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           icon={<VerticalLeftOutlined />}
           onClick={this.handleFinishAndGetNextTask}
         >
@@ -512,6 +539,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const reopenTaskButton = this.state.isReopenAllowed ? (
       <ButtonComponent
         key="reopen-button"
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         icon={<VerticalRightOutlined />}
         onClick={this.handleReopenTask}
         danger
@@ -615,6 +643,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {reopenTaskButton}
           {modals}
           <Dropdown overlay={menu} trigger={["click"]}>
+            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             <ButtonComponent className="narrow">
               <DownOutlined />
             </ButtonComponent>
@@ -638,4 +667,5 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(TracingActionsView);

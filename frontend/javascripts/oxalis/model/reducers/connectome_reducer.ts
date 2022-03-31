@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -34,6 +36,7 @@ function setConnectomeTreesVisibilityReducer(
     },
   };
   treeIds.forEach((treeId) => {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     updateTreesObject[treeId] = isVisibleUpdater;
   });
   return update(state, {
@@ -103,8 +106,10 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
     case "ADD_CONNECTOME_TREES": {
       const { trees, layerName } = action;
       return getSkeletonTracingForConnectome(state, layerName)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
         .map((skeletonTracing) =>
           addTreesAndGroups(skeletonTracing, trees, [])
+            // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'updatedTrees' implicitly has an '... Remove this comment to see the full error message
             .map(([updatedTrees, _treeGroups, newMaxNodeId]) =>
               update(state, {
                 localSegmentationData: {
@@ -131,8 +136,10 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
     case "DELETE_CONNECTOME_TREES": {
       const { treeIds, layerName } = action;
       return getSkeletonTracingForConnectome(state, layerName)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
         .map((skeletonTracing) =>
           deleteConnectomeTrees(skeletonTracing, treeIds)
+            // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'trees' implicitly has an 'any' ty... Remove this comment to see the full error message
             .map(([trees, newMaxNodeId]) =>
               update(state, {
                 localSegmentationData: {
@@ -159,6 +166,7 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_CONNECTOME_TREES_VISIBILITY": {
       const { treeIds, isVisible, layerName } = action;
       return getSkeletonTracingForConnectome(state, layerName)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_skeletonTracing' implicitly has an 'an... Remove this comment to see the full error message
         .map((_skeletonTracing) =>
           setConnectomeTreesVisibilityReducer(state, layerName, treeIds, isVisible),
         )

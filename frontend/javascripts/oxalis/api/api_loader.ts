@@ -1,3 +1,4 @@
+// @flow
 // only relative imports are followed by documentationjs
 import type { OxalisModel } from "oxalis/model";
 import app from "app";
@@ -7,6 +8,7 @@ const latestVersion = 3;
 
 class Api {
   readyPromise: Promise<void>;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'apiInterface' has no initializer and is ... Remove this comment to see the full error message
   apiInterface: Record<string, any>;
   model: OxalisModel;
 

@@ -1,4 +1,6 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $ReadOnly, $Keys, $Shape } from "utility-types";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
 import Enum from "Enumjs";
 import type {
   BoundingBoxObject,
@@ -448,12 +450,14 @@ export type APIBuildInfo = {
     name: string;
     commitHash: string;
     scalaVersion: string;
+    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'version'.
     version: string;
     sbtVersion: string;
     commitDate: string;
     ciTag: string;
     ciBuild: string;
     gitTag: string;
+    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'version'.
     version: string;
     datastoreApiVersion: string;
   };
@@ -470,12 +474,14 @@ export type APIBuildInfo = {
     name: string;
     commitHash: string;
     scalaVersion: string;
+    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'version'.
     version: string;
     sbtVersion: string;
     commitDate: string;
     ciTag: string;
     ciBuild: string;
     gitTag: string;
+    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'version'.
     version: string;
     datastoreApiVersion: string;
   };

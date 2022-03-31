@@ -1,4 +1,6 @@
+// @flow
 import _ from "lodash";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   _all,
@@ -33,6 +35,7 @@ import api from "oxalis/api/internal_api";
 import { MappingStatusEnum } from "oxalis/constants";
 type APIMappings = Record<string, APIMapping>;
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mapping' implicitly has an 'any' type.
 const isAgglomerate = (mapping) => {
   if (!mapping) {
     return false;
@@ -43,6 +46,7 @@ const isAgglomerate = (mapping) => {
 
 export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   // Buffer actions since they might be dispatched before WK_READY
@@ -54,12 +58,14 @@ export default function* watchActivatedMappings(): Saga<void> {
 }
 
 function* maybeReloadData(
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'oldActiveMappingByLayer' implicitly has... Remove this comment to see the full error message
   oldActiveMappingByLayer,
   action: SetMappingAction | SetMappingEnabledAction,
 ): Saga<void> {
   const { layerName } = action;
   const oldMapping = getMappingInfo(oldActiveMappingByLayer, layerName);
   const activeMappingByLayer = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   const mapping = getMappingInfo(activeMappingByLayer, layerName);
@@ -82,6 +88,7 @@ function* maybeReloadData(
   oldActiveMappingByLayer = activeMappingByLayer;
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'oldActiveMappingByLayer' implicitly has... Remove this comment to see the full error message
 function* maybeFetchMapping(oldActiveMappingByLayer, action: SetMappingAction): Saga<void> {
   const {
     layerName,
@@ -102,15 +109,19 @@ function* maybeFetchMapping(oldActiveMappingByLayer, action: SetMappingAction): 
     });
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
   const params = [
     dataset.dataStore.url,
     dataset, // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
     layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerInfo.name,
   ];
   const [jsonMappings, hdf5Mappings] = yield _all([
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     _call(getMappingsForDatasetLayer, ...params),
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     _call(getAgglomeratesForDatasetLayer, ...params),
   ]);
   const mappingsWithCorrectType = mappingType === "JSON" ? jsonMappings : hdf5Mappings;
@@ -144,6 +155,7 @@ function* maybeFetchMapping(oldActiveMappingByLayer, action: SetMappingAction): 
 
   const fetchedMappings = {};
   yield* call(fetchMappings, layerName, mappingName, fetchedMappings);
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const { hideUnmappedIds, colors: mappingColors } = fetchedMappings[mappingName];
   // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
   // class will get the first color, and so on
@@ -169,9 +181,11 @@ function* fetchMappings(
   mappingName: string,
   fetchedMappings: APIMappings,
 ): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
   // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
   const mappingLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerName;
   const mapping = yield* call(
     fetchMapping,
@@ -188,6 +202,7 @@ function* fetchMappings(
 }
 
 function* getLargestSegmentId(layerName: string): Saga<number> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   const segmentationLayer = getLayerByName(dataset, layerName);
 
@@ -219,6 +234,7 @@ function* buildMappingObject(
     if (mapping.classes) {
       for (const mappingClass of mapping.classes) {
         const minId = assignNewIds ? newMappedId : _.min(mappingClass);
+        // @ts-expect-error ts-migrate(2538) FIXME: Type 'undefined' cannot be used as an index type.
         const mappedId = mappingObject[minId] || minId;
 
         for (const id of mappingClass) {

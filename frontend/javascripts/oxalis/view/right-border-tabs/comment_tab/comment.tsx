@@ -1,5 +1,7 @@
+// @flow
 import { Popover } from "antd";
 import * as React from "react";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
 import classNames from "classnames";
 import { MarkdownWrapper } from "oxalis/view/components/markdown_modal";
 import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";
@@ -37,6 +39,7 @@ function ActiveCommentPopover({
       visible
       autoAdjustOverflow={false}
       placement="rightTop"
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '() => HTMLElement | null' is not assignable ... Remove this comment to see the full error message
       getPopupContainer={() => document.getElementById(commentListId)}
       style={{
         maxHeight: 200,
@@ -78,6 +81,7 @@ export function Comment({ comment, isActive, style }: CommentProps) {
           <MarkdownWrapper source={linkify(comment.content)} singleLine />
         </span>
         {isMultiLine ? (
+          // @ts-expect-error ts-migrate(2786) FIXME: 'ActiveCommentPopover' cannot be used as a JSX com... Remove this comment to see the full error message
           <ActiveCommentPopover comment={comment} isActive={isActive}>
             <span
               style={{

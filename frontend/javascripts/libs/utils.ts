@@ -1,6 +1,9 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
 import type { APIUser } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
@@ -20,12 +23,15 @@ type UrlParams = Record<string, string>;
 export function mod(x: number, n: number) {
   return ((x % n) + n) % n;
 }
+// @ts-expect-error ts-migrate(2344) FIXME: Type 'K' does not satisfy the constraint 'string |... Remove this comment to see the full error message
 export function values<K, V>(o: Record<K, V>): Array<V> {
   // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
   return Object.values(o);
 }
+// @ts-expect-error ts-migrate(2344) FIXME: Type 'K' does not satisfy the constraint 'string |... Remove this comment to see the full error message
 export function entries<K, V>(o: Record<K, V>): Array<[K, V]> {
   // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '[string, V][]' is not assignable to type '[K... Remove this comment to see the full error message
   return Object.entries(o);
 }
 export function map2<A, B>(fn: (arg0: A, arg1: number) => B, tuple: [A, A]): [B, B] {
@@ -54,6 +60,7 @@ export function iterateThroughBounds(
   }
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'arr' implicitly has an 'any' type.
 function swap(arr, a, b) {
   let tmp;
 
@@ -74,6 +81,7 @@ function getRecursiveValuesUnflat(obj: {} | Array<any> | string): Array<any> {
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return Object.keys(obj).map((key) => getRecursiveValuesUnflat(obj[key]));
   } else {
     return [obj];
@@ -342,6 +350,7 @@ export function numberArrayToVector3(array: Array<number>): Vector3 {
     output[i] = array[i];
   }
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return output;
 }
 export function numberArrayToVector6(array: Array<number>): Vector6 {
@@ -351,6 +360,7 @@ export function numberArrayToVector6(array: Array<number>): Vector6 {
     output[i] = array[i];
   }
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector6... Remove this comment to see the full error message
   return output;
 }
 export function point3ToVector3({ x, y, z }: Point3): Vector3 {
@@ -434,6 +444,7 @@ export function isFileExtensionEqualTo(
   fileName: string,
   extensionOrExtensions: string | Array<string>,
 ) {
+  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   const passedExtension = _.last(fileName.split(".")).toLowerCase();
 
   if (Array.isArray(extensionOrExtensions)) {
@@ -453,6 +464,7 @@ export function busyWaitDevHelper(time: number) {
   while (true) {
     now = new Date();
 
+    // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
     if (now - start >= time) {
       break;
     }
@@ -464,10 +476,12 @@ export function animationFrame(maxTimeout?: number): Promise<void> {
   });
 
   if (maxTimeout == null) {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<unknown>' is not assignable to type ... Remove this comment to see the full error message
     return rafPromise;
   }
 
   const timeoutPromise = sleep(maxTimeout);
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<unknown>' is not assignable to type ... Remove this comment to see the full error message
   return Promise.race([rafPromise, timeoutPromise]);
 }
 export function diffArrays<T>(
@@ -490,6 +504,7 @@ export function diffArrays<T>(
   };
 }
 export function zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'valueA' implicitly has an 'any' type.
   return maybeA.chain((valueA) => maybeB.map((valueB) => [valueA, valueB]));
 }
 // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
@@ -521,6 +536,7 @@ export function filterWithSearchQueryOR<
     const regexp = new RegExp(pattern, "igm");
     return collection.filter((model) =>
       _.some(properties, (fieldName) => {
+        // @ts-expect-error ts-migrate(2349) FIXME: This expression is not callable.
         const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
 
         if (value != null && (typeof value === "string" || value instanceof Object)) {
@@ -556,6 +572,7 @@ export function filterWithSearchQueryAND<
     return collection.filter((model) =>
       _.every(patterns, (pattern) =>
         _.some(properties, (fieldName) => {
+          // @ts-expect-error ts-migrate(2349) FIXME: This expression is not callable.
           const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
 
           if (value !== null && (typeof value === "string" || value instanceof Object)) {
@@ -582,6 +599,7 @@ export function millisecondsToHours(ms: number) {
 export function isNoElementFocussed(): boolean {
   // checks whether an <input> or <button> element has the focus
   // when no element is focused <body> gets the focus
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeElement' does not exist on type 'D... Remove this comment to see the full error message
   return document.activeElement === document.body;
 }
 
@@ -599,7 +617,9 @@ const areEventListenerOptionsSupported = _.once(() => {
         return true;
       },
     };
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     window.addEventListener("test", options, options);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("test", options, options);
   } catch (err) {
     passiveSupported = false;
@@ -618,8 +638,10 @@ export function addEventListenerWithDelegation(
 ) {
   const wrapperFunc = function (event: Event) {
     // $FlowIssue[prop-missing] Flow doesn't know native InputEvents
+    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
     for (let { target } = event; target && target !== this; target = target.parentNode) {
       // $FlowIssue[prop-missing] Flow doesn't know native InputEvents
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'matches' does not exist on type 'EventTa... Remove this comment to see the full error message
       if (target.matches(delegateSelector)) {
         handlerFunc.call(target, event);
         break;
@@ -694,6 +716,7 @@ export function sortArray8(arr: Array<number>): void {
 // setTimeout is used instead of requestAnimationFrame.
 const RAF_INTERVAL_THRESHOLD = 20;
 export function waitForCondition(pred: () => boolean, interval: number = 0): Promise<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolve' implicitly has an 'any' type.
   const tryToResolve = (resolve) => {
     if (pred()) {
       resolve();
@@ -707,6 +730,7 @@ export function waitForCondition(pred: () => boolean, interval: number = 0): Pro
   return new Promise(tryToResolve);
 }
 export function waitForElementWithId(elementId: string): Promise<any> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolve' implicitly has an 'any' type.
   const tryToResolve = (resolve) => {
     const el = document.getElementById(elementId);
 
@@ -720,6 +744,7 @@ export function waitForElementWithId(elementId: string): Promise<any> {
   return new Promise(tryToResolve);
 }
 export function convertDecToBase256(num: number): Vector4 {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'n' implicitly has an 'any' type.
   const divMod = (n) => [Math.floor(n / 256), n % 256];
 
   let tmp = num;
@@ -799,6 +824,7 @@ export function convertBufferToImage(
   return new Promise((resolve) => {
     width = Math.round(width);
     height = Math.round(height);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     canvas.width = width;
@@ -812,11 +838,13 @@ export function convertBufferToImage(
       ctx.drawImage(canvas, 0, 0);
     }
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'blob' implicitly has an 'any' type.
     canvas.toBlob((blob) => resolve(blob));
   });
 }
 export function getIsInIframe() {
   try {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'self' does not exist on type '(Window & ... Remove this comment to see the full error message
     return window.self !== window.top;
   } catch (e) {
     return true;
@@ -827,16 +855,23 @@ export function getWindowBounds(): [number, number] {
   let width = 0;
   let height = 0;
 
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'innerWidth' does not exist on type '(Win... Remove this comment to see the full error message
   if (typeof window.innerWidth === "number") {
     // Non-IE
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'innerWidth' does not exist on type '(Win... Remove this comment to see the full error message
     width = window.innerWidth;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'innerHeight' does not exist on type '(Wi... Remove this comment to see the full error message
     height = window.innerHeight;
   } else if (
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'documentElement' does not exist on type ... Remove this comment to see the full error message
     document.documentElement &&
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'documentElement' does not exist on type ... Remove this comment to see the full error message
     (document.documentElement.clientWidth || document.documentElement.clientHeight)
   ) {
     // IE 6+ in 'standards compliant mode'
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'documentElement' does not exist on type ... Remove this comment to see the full error message
     width = document.documentElement.clientWidth;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'documentElement' does not exist on type ... Remove this comment to see the full error message
     height = document.documentElement.clientHeight;
   } else if (document.body && (document.body.clientWidth || document.body.clientHeight)) {
     // IE 4 compatible
@@ -847,6 +882,7 @@ export function getWindowBounds(): [number, number] {
   return [width, height];
 }
 export function disableViewportMetatag() {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'querySelector' does not exist on type 'D... Remove this comment to see the full error message
   const viewport = document.querySelector("meta[name=viewport]");
 
   if (!viewport) {
@@ -868,16 +904,19 @@ export function diffObjects(
   object: Record<string, any>,
   base: Record<string, any>,
 ): Record<string, any> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_object' implicitly has an 'any' type.
   function changes(_object, _base) {
     let arrayIndexCounter = 0;
     return _.transform(_object, (result, value, key) => {
       if (!_.isEqual(value, _base[key])) {
         const resultKey = _.isArray(_base) ? arrayIndexCounter++ : key;
+        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
         result[resultKey] =
           _.isObject(value) && _.isObject(_base[key]) ? changes(value, _base[key]) : value;
       }
     });
   }
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'Record<s... Remove this comment to see the full error message
   return changes(object, base);
 }

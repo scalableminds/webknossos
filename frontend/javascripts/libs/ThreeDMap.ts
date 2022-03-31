@@ -1,3 +1,4 @@
+// @flow
 import type { Vector3 } from "oxalis/constants"; // This is a Map datastructure for which the key
 // is a Vector3.
 
@@ -35,11 +36,14 @@ export default class ThreeDMap<T> {
     // Flow doesn't understand that the access to X
     // is guaranteed to be not null due to the above code.
     // $FlowIssue[incompatible-use]
+    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
     if (this.map.get(x).get(y) == null) {
       // $FlowIssue[incompatible-use]
+      // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
       this.map.get(x).set(y, new Map());
     }
 
+    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
     this.map
       .get(x) // $FlowIssue[incompatible-use]
       .get(y) // $FlowIssue[incompatible-use]

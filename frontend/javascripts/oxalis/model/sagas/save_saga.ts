@@ -158,6 +158,7 @@ type RelevantActionsForUndoRedo = {
   updateSegment?: UpdateSegmentAction;
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
 function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
   if (action.type === "ADD_BUCKET_TO_UNDO") {
     return {
@@ -169,6 +170,7 @@ function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
     };
   } else if (action.type === "IMPORT_VOLUMETRACING") {
     return {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ importTracingAction: any; }' is not assign... Remove this comment to see the full error message
       importTracingAction: action,
     };
   } else if (action.type === "UNDO") {
@@ -198,6 +200,7 @@ function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
   throw new Error("Could not unpack redux action from channel");
 }
 
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
@@ -205,6 +208,7 @@ export function* collectUndoStates(): Saga<void> {
   let previousAction: any | null | undefined = null;
   let prevSkeletonTracingOrNull: SkeletonTracing | null | undefined = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
+  // @ts-expect-error ts-migrate(2315) FIXME: Type 'Task' is not generic.
   let pendingCompressions: Array<Task<void>> = [];
   const volumeInfoById: Record<
     string,
@@ -214,8 +218,10 @@ export function* collectUndoStates(): Saga<void> {
     }
   > = {};
   yield* take("WK_READY");
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);
   prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
 
   for (const volumeTracing of volumeTracings) {
@@ -312,6 +318,7 @@ export function* collectUndoStates(): Saga<void> {
         // All compression tasks (see `pendingCompressions`) need to be
         // awaited to add the proper entry to the undo stack.
         shouldClearRedoState = true;
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
         const activeVolumeTracing = yield* select((state) =>
           getVolumeTracingById(state.tracing, finishAnnotationStrokeAction.tracingId),
         );
@@ -398,6 +405,7 @@ export function* collectUndoStates(): Saga<void> {
       // should be created, either).
       // If no volume tracing exists (but a segmentation layer exists, otherwise, the action wouldn't
       // have been dispatched), prevSegments doesn't need to be updated, as it's not used.
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
       const volumeTracing = yield* select((state) =>
         getVolumeTracingByLayerName(state.tracing, updateSegment.layerName),
       );
@@ -409,6 +417,7 @@ export function* collectUndoStates(): Saga<void> {
     }
 
     // We need the updated tracing here
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);
     prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   }
@@ -418,7 +427,9 @@ function* getSkeletonTracingToUndoState(
   skeletonUserAction: SkeletonTracingAction,
   prevTracing: SkeletonTracing,
   previousAction: Action | null | undefined,
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<SkeletonUndoState | null | undefined> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const curTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
 
   if (curTracing !== prevTracing) {
@@ -440,12 +451,16 @@ function getBoundingBoxToUndoState(
 ): BoundingBoxUndoState | null | undefined {
   const isSameActionOnSameBoundingBox =
     previousAction != null &&
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'UserBounding... Remove this comment to see the full error message
     userBoundingBoxAction.id != null &&
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'Action'.
     previousAction.id != null &&
     userBoundingBoxAction.type === previousAction.type &&
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'UserBounding... Remove this comment to see the full error message
     userBoundingBoxAction.id === previousAction.id;
   // Used to distinguish between different resizing actions of the same bounding box.
   const isFinishedResizingAction =
+    // @ts-expect-error ts-migrate(2367) FIXME: This condition will always return 'false' since th... Remove this comment to see the full error message
     userBoundingBoxAction.type === "FINISHED_RESIZING_USER_BOUNDING_BOX";
 
   if (!isSameActionOnSameBoundingBox && !isFinishedResizingAction) {
@@ -464,6 +479,7 @@ function* compressBucketAndAddToList(
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
   pendingOperations: Array<(arg0: BucketDataArray) => void>,
   undoBucketList: VolumeUndoBuckets,
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
   // The given bucket data is compressed, wrapped into a UndoBucket instance
   // and appended to the passed VolumeAnnotationBatch.
@@ -522,6 +538,7 @@ function* applyStateOfStack(
   prevSkeletonTracingOrNull: SkeletonTracing | null | undefined,
   prevUserBoundingBoxes: Array<UserBoundingBox> | null | undefined,
   direction: "undo" | "redo",
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
   if (sourceStack.length <= 0) {
     const warningMessage =
@@ -530,6 +547,7 @@ function* applyStateOfStack(
     return;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
   if (busyBlockingInfo.isBusy) {
@@ -540,6 +558,7 @@ function* applyStateOfStack(
   yield* put(setBusyBlockingInfoAction(true, `${direction} is being performed.`));
   const stateToRestore = sourceStack.pop();
 
+  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   if (stateToRestore.type === "skeleton") {
     if (prevSkeletonTracingOrNull != null) {
       stackToPushTo.push({
@@ -548,16 +567,20 @@ function* applyStateOfStack(
       });
     }
 
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const newTracing = stateToRestore.data;
     yield* put(setTracingAction(newTracing));
     yield* put(centerActiveNodeAction());
+  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "volume") {
     const isMergerModeEnabled = yield* select(
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
       (state) => state.temporaryConfiguration.isMergerModeEnabled,
     );
 
     if (isMergerModeEnabled) {
       Toast.info(messages["tracing.edit_volume_in_merger_mode"]);
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'UndoState | undefined' is not as... Remove this comment to see the full error message
       sourceStack.push(stateToRestore);
       return;
     }
@@ -570,10 +593,12 @@ function* applyStateOfStack(
       successMessageDelay: 2000,
     });
     yield* call(progressCallback, false, `Performing ${direction}...`);
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const volumeBatchToApply = stateToRestore.data;
     const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
+  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "bounding_box") {
     if (prevUserBoundingBoxes != null) {
       stackToPushTo.push({
@@ -582,9 +607,12 @@ function* applyStateOfStack(
       });
     }
 
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const newBoundingBoxes = stateToRestore.data;
     yield* put(setUserBoundingBoxesAction(newBoundingBoxes));
+  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "warning") {
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     Toast.info(stateToRestore.reason);
   }
 }
@@ -608,6 +636,7 @@ function mergeDataWithBackendDataInPlace(
 
 function* applyAndGetRevertingVolumeBatch(
   volumeAnnotationBatch: VolumeAnnotationBatch,
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<VolumeUndoState> {
   // Applies a VolumeAnnotationBatch and returns a VolumeUndoState (which simply wraps
   // another VolumeAnnotationBatch) for reverting the undo operation.
@@ -692,6 +721,7 @@ function* applyAndGetRevertingVolumeBatch(
     cube.setBucketData(zoomedBucketAddress, decompressedBucketData, newPendingOperations);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const activeVolumeTracing = yield* select((state) =>
     getVolumeTracingById(state.tracing, volumeAnnotationBatch.tracingId),
   );
@@ -712,6 +742,7 @@ function* applyAndGetRevertingVolumeBatch(
 export function* pushTracingTypeAsync(
   tracingType: "skeleton" | "volume",
   tracingId: string,
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
   yield* take("WK_READY");
   yield* put(setLastSaveTimestampAction(tracingType, tracingId));
@@ -722,6 +753,7 @@ export function* pushTracingTypeAsync(
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
     // could have been triggered during the call to sendRequestToServer
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     saveQueue = yield* select((state) => selectQueue(state, tracingType, tracingId));
 
     if (saveQueue.length === 0) {
@@ -744,6 +776,7 @@ export function* pushTracingTypeAsync(
     if (forcePush) {
       while (true) {
         // Send batches to the server until the save queue is empty.
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
         saveQueue = yield* select((state) => selectQueue(state, tracingType, tracingId));
 
         if (saveQueue.length > 0) {
@@ -753,6 +786,7 @@ export function* pushTracingTypeAsync(
         }
       }
     } else {
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
       saveQueue = yield* select((state) => selectQueue(state, tracingType, tracingId));
 
       if (saveQueue.length > 0) {
@@ -803,11 +837,15 @@ function getRetryWaitTime(retryCount: number) {
 export function* sendRequestToServer(
   tracingType: "skeleton" | "volume",
   tracingId: string,
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const fullSaveQueue = yield* select((state) => selectQueue(state, tracingType, tracingId));
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const { version, type } = yield* select((state) => selectTracing(state, tracingType, tracingId));
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
   let retryCount = 0;
@@ -862,6 +900,7 @@ export function* sendRequestToServer(
       }
 
       console.warn("Error during saving. Will retry. Error:", error);
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
       const controlMode = yield* select((state) => state.temporaryConfiguration.controlMode);
       const isViewOrSandboxMode =
         controlMode === ControlModeEnum.VIEW || controlMode === ControlModeEnum.SANDBOX;
@@ -881,6 +920,7 @@ export function* sendRequestToServer(
 
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'onbeforeunload' does not exist on type '... Remove this comment to see the full error message
         window.onbeforeunload = null;
         yield* call(
           [ErrorHandling, ErrorHandling.notify],
@@ -960,9 +1000,11 @@ export function performDiffTracing(
   prevTdCamera: CameraData,
   tdCamera: CameraData,
 ): Array<UpdateAction> {
+  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'actions' implicitly has type 'any[]' in ... Remove this comment to see the full error message
   let actions = [];
 
   if (prevTracing.type === "skeleton" && tracing.type === "skeleton") {
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'actions' implicitly has an 'any[]' type.
     actions = actions.concat(
       Array.from(diffSkeletonTracing(prevTracing, tracing, prevFlycam, flycam)),
     );
@@ -980,12 +1022,14 @@ export function performDiffTracing(
 
   return actions;
 }
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 export function* saveTracingAsync(): Saga<void> {
   yield _takeEvery("INITIALIZE_SKELETONTRACING", saveTracingTypeAsync);
   yield _takeEvery("INITIALIZE_VOLUMETRACING", saveTracingTypeAsync);
 }
 export function* saveTracingTypeAsync(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
   /*
     Listen to changes to the annotation and derive UpdateActions from the
@@ -996,8 +1040,11 @@ export function* saveTracingTypeAsync(
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
   yield* fork(pushTracingTypeAsync, tracingType, tracingId);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   let prevTracing = yield* select((state) => selectTracing(state, tracingType, tracingId));
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   let prevFlycam = yield* select((state) => state.flycam);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
   yield* take("WK_READY");
 
@@ -1019,11 +1066,15 @@ export function* saveTracingTypeAsync(
 
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
       (state) => state.tracing.restrictions.allowUpdate && state.tracing.restrictions.allowSave,
     );
     if (!allowUpdate) return;
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const tracing = yield* select((state) => selectTracing(state, tracingType, tracingId));
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const flycam = yield* select((state) => state.flycam);
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const tdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
     const items = compactUpdateActions(
       // $FlowFixMe[incompatible-call] Should be resolved when we improve the typing of sagas in general

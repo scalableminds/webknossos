@@ -1,3 +1,4 @@
+// @flow
 import {
   Alert,
   Button,
@@ -20,10 +21,12 @@ import {
 } from "@ant-design/icons";
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import * as React from "react";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import type { Action } from "oxalis/model/actions/actions";
 import "oxalis/model/actions/actions";
@@ -133,6 +136,7 @@ type State = {
 };
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'trees' implicitly has an 'any' type.
     const wrappedAddTreesAndGroupsAction = (trees, treeGroups, groupName, userBoundingBoxes) => {
       const actions =
         userBoundingBoxes && userBoundingBoxes.length > 0
@@ -147,6 +151,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
     const tryParsingFileAsNml = async (file) => {
       try {
         const nmlString = await readFileAsText(file);
@@ -173,11 +178,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
     const tryParsingFileAsProtobuf = async (file) => {
       try {
         const nmlProtoBuffer = await readFileAsArrayBuffer(file);
         const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
         if (!parsedTracing.trees) {
           // This check is only for flow to realize that we have a skeleton tracing
           // on our hands.
@@ -185,8 +192,11 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         }
 
         return {
+          // @ts-expect-error ts-migrate(2554) FIXME: Expected 4 arguments, but got 3.
           importActions: wrappedAddTreesAndGroupsAction(
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
             createMutableTreeMapFromTreeArray(parsedTracing.trees),
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeGroups' does not exist on type 'Serv... Remove this comment to see the full error message
             parsedTracing.treeGroups,
             file.name,
           ),
@@ -198,12 +208,15 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
     const tryParsingFileAsZip = async (file) => {
       try {
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Promise<ArrayBuffer>' is not ass... Remove this comment to see the full error message
         const zipFile = await JSZip().loadAsync(readFileAsArrayBuffer(file));
         const nmlFileName = Object.keys(zipFile.files).find((key) =>
           Utils.isFileExtensionEqualTo(key, "nml"),
         );
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         const nmlFile = await zipFile.file(nmlFileName).async("blob");
         const nmlImportActions = await tryParsingFileAsNml(nmlFile);
         const dataFileName = Object.keys(zipFile.files).find((key) =>
@@ -211,6 +224,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         );
 
         if (dataFileName) {
+          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           const dataBlob = await zipFile.file(dataFileName).async("blob");
           const dataFile = new File([dataBlob], dataFileName);
           await Model.ensureSavedState();
@@ -247,6 +261,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             Store.dispatch(setMaxCellAction(newLargestSegmentId));
             await clearCache(dataset, oldVolumeTracing.tracingId);
             await api.data.reloadBuckets(oldVolumeTracing.tracingId);
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
             window.needsRerender = true;
           }
         }
@@ -260,6 +275,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
     const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async (file) => {
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
         const ext = _.last(file.name.split(".")).toLowerCase();
 
         let tryImportFunctions;
@@ -298,10 +314,12 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 }
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeIds' implicitly has an 'any' type.
 function checkAndConfirmDeletingInitialNode(treeIds) {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
   const hasNodeWithIdOne = (id) => getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
 
   const needsCheck = state.task != null && treeIds.find(hasNodeWithIdOne) != null;
@@ -309,10 +327,12 @@ function checkAndConfirmDeletingInitialNode(treeIds) {
     if (needsCheck) {
       Modal.confirm({
         title: messages["tracing.delete_tree_with_initial_node"],
+        // @ts-expect-error ts-migrate(2794) FIXME: Expected 1 arguments, but got 0. Did you forget to... Remove this comment to see the full error message
         onOk: () => resolve(),
         onCancel: () => reject(),
       });
     } else {
+      // @ts-expect-error ts-migrate(2794) FIXME: Expected 1 arguments, but got 0. Did you forget to... Remove this comment to see the full error message
       resolve();
     }
   });
@@ -325,6 +345,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     selectedTrees: [],
     groupToDelete: null,
   };
+
   getTreeAndTreeGroupList = memoizeOne(
     (trees: TreeMap, treeGroups: Array<TreeGroup>, sortBy: string): Array<TreeOrTreeGroup> => {
       const groupToTreesMap = createGroupToTreesMap(trees);
@@ -334,12 +355,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         children: treeGroups,
       };
 
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
       const makeTree = (tree) => ({
         name: tree.name,
         type: "TREE",
         id: tree.treeId,
       });
 
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
       const makeGroup = (group) => ({
         name: group.name,
         type: "GROUP",
@@ -365,6 +388,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
             // Trees are sorted by the sortBy property
             const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
 
+            // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
             yield* sortedTrees.map(makeTree);
           }
         }
@@ -373,6 +397,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       return Array.from(mapGroupsAndTreesSorted([rootGroup], groupToTreesMap, sortBy));
     },
   );
+
   handleChangeTreeName = (evt: React.SyntheticEvent) => {
     if (!this.props.skeletonTracing) {
       return;
@@ -381,11 +406,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { activeGroupId } = this.props.skeletonTracing;
 
     if (activeGroupId != null) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       api.tracing.renameGroup(activeGroupId, evt.target.value);
     } else {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       this.props.onChangeTreeName(evt.target.value);
     }
   };
+
   deleteGroup = (groupId: number, deleteRecursively: boolean = false) => {
     if (!this.props.skeletonTracing) {
       return;
@@ -396,6 +424,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const newTreeGroups = _.cloneDeep(treeGroups);
 
     const groupToTreesMap = createGroupToTreesMap(trees);
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'treeIdsToDelete' implicitly has type 'an... Remove this comment to see the full error message
     let treeIdsToDelete = [];
     callDeep(newTreeGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
@@ -418,31 +447,39 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       }
 
       // Finds all subtrees of the passed group recursively
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
       const findSubtreesRecursively = (group) => {
         const currentSubtrees =
           groupToTreesMap[group.groupId] != null ? groupToTreesMap[group.groupId] : [];
         // Delete all trees of the current group
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'treeIdsToDelete' implicitly has an 'any[... Remove this comment to see the full error message
         treeIdsToDelete = treeIdsToDelete.concat(currentSubtrees.map((tree) => tree.treeId));
         // Also delete the trees of all subgroups
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'subgroup' implicitly has an 'any' type.
         group.children.forEach((subgroup) => findSubtreesRecursively(subgroup));
       };
 
       findSubtreesRecursively(item);
     });
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'treeIdsToDelete' implicitly has an 'any[... Remove this comment to see the full error message
     checkAndConfirmDeletingInitialNode(treeIdsToDelete).then(() => {
       // Update the store at once
+      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'treeIdsToDelete' implicitly has an 'any[... Remove this comment to see the full error message
       const deleteTreeActions = treeIdsToDelete.map((treeId) => deleteTreeAction(treeId));
       this.props.onBatchActions(
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         deleteTreeActions.concat(setTreeGroupsAction(newTreeGroups)),
         "DELETE_GROUP_AND_TREES",
       );
     });
   };
+
   hideDeleteGroupsModal = () => {
     this.setState({
       groupToDelete: null,
     });
   };
+
   showDeleteGroupModal = (id: number) => {
     if (!this.props.skeletonTracing) return;
     const { trees, treeGroups } = this.props.skeletonTracing;
@@ -455,6 +492,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         groupToDelete: id,
       });
   };
+
   handleDelete = () => {
     // If there exist selected trees, ask to remove them
     const { selectedTrees } = this.state;
@@ -492,6 +530,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       }
     }
   };
+
   shuffleAllTreeColors = () => {
     this.props.onShuffleAllTreeColors();
   };
@@ -552,6 +591,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { selectedTrees } = this.state;
 
     // If the tree was already selected
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
     if (selectedTrees.includes(id)) {
       // If the tree is the second last -> set remaining tree to be the active tree
       if (selectedTrees.length === 2) {
@@ -602,11 +642,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       }
     }
   };
+
   deselectAllTrees = () => {
     this.setState({
       selectedTrees: [],
     });
   };
+
   handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
     if (selectedElement.type === "TREE") {
       this.props.onSetActiveTree(selectedElement.id);
@@ -657,6 +699,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       ? "sortByName"
       : "sortByTime";
     return (
+      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       <Menu selectedKeys={[activeMenuKey]} onClick={this.handleDropdownClick}>
         <Menu.Item key="sortByName">by name</Menu.Item>
         <Menu.Item key="sortByTime">by creation time</Menu.Item>
@@ -709,6 +752,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         }
       />
     ) : null;
+
   handleMeasureAllSkeletonsLength = () => {
     const [totalLengthNm, totalLengthVx] = api.tracing.measureAllTrees();
     notification.open({
@@ -728,9 +772,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     const { showSkeletons } = skeletonTracing;
     const activeTreeName = getActiveTree(skeletonTracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
       .map((activeTree) => activeTree.name)
       .getOrElse("");
     const activeGroupName = getActiveGroup(skeletonTracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeGroup' implicitly has an 'any' ty... Remove this comment to see the full error message
       .map((activeGroup) => activeGroup.name)
       .getOrElse("");
     const { trees, treeGroups } = skeletonTracing;
@@ -779,6 +825,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
                     title="Create new Tree (C)"
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={!this.props.allowUpdate}
                   >
                     <i className="fas fa-plus" />
@@ -786,6 +833,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.handleDelete}
                     title="Delete Selected Trees"
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={!this.props.allowUpdate}
                   >
                     <i className="far fa-trash-alt" />
@@ -819,6 +867,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <InputComponent
                     onChange={this.handleChangeTreeName}
                     value={activeTreeName || activeGroupName}
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={noTreesAndGroups}
                     style={{
                       width: "70%",
@@ -900,6 +949,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(shuffleAllTreeColorsAction());
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'shouldSortTreesByName' implicitly has a... Remove this comment to see the full error message
   onSortTree(shouldSortTreesByName) {
     dispatch(updateUserSettingAction("sortTreesByName", shouldSortTreesByName));
   },
@@ -920,18 +970,23 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(deleteTreeAsUserAction());
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'actions' implicitly has an 'any' type.
   onBatchActions(actions, actionName) {
     dispatch(batchActions(actions, actionName));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupId' implicitly has an 'any' type.
   onSetTreeGroup(groupId, treeId) {
     dispatch(setTreeGroupAction(groupId, treeId));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'name' implicitly has an 'any' type.
   onChangeTreeName(name) {
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
     dispatch(setTreeNameAction(name));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
   onSetActiveTree(treeId) {
     dispatch(setActiveTreeAction(treeId));
   },
@@ -940,6 +995,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(deselectActiveTreeAction());
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupId' implicitly has an 'any' type.
   onSetActiveGroup(groupId) {
     dispatch(setActiveGroupAction(groupId));
   },
@@ -953,4 +1009,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps, mapDispatchToProps)(SkeletonTabView);

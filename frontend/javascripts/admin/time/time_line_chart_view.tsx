@@ -1,3 +1,4 @@
+// @flow
 import { Chart } from "react-google-charts";
 import * as React from "react";
 import { getWindowBounds } from "libs/utils";
@@ -8,6 +9,7 @@ export type ColumnDefinition = {
   p?: Record<string, any>;
 };
 export type RowContent = [string, string, string, Date, Date];
+// @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
 export type DateRange = [moment$Moment, moment$Moment];
 type Props = {
   columns: Array<ColumnDefinition>;
@@ -39,18 +41,23 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     );
 
     if (chartScrollElement) {
+      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       chartScrollElement.addEventListener("mousemove", this.adjustTooltipPosition);
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Element | null' is not assignable to type 'H... Remove this comment to see the full error message
     this.chartScrollElement = chartScrollElement;
   };
+
   adjustTooltipPosition = (event: MouseEvent) => {
     const tooltip = document.getElementsByClassName("google-visualization-tooltip")[0];
 
     if (tooltip != null) {
       const { target } = event;
       const isTargetNotATimeEntry = // $FlowIssue[prop-missing]
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'tagName' does not exist on type 'EventTa... Remove this comment to see the full error message
         (target != null && target.tagName != null && target.tagName !== "rect") || // $FlowIssue[prop-missing]
+        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         target.getAttribute("stroke") !== "none";
 
       if (isTargetNotATimeEntry) {
@@ -63,27 +70,33 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
 
       const { clientX, clientY } = event;
       const [clientWidth, clientHeight] = getWindowBounds();
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'offsetHeight' does not exist on type 'El... Remove this comment to see the full error message
       const { offsetHeight, offsetWidth } = tooltip;
 
       if (clientY + offsetHeight >= clientHeight) {
         // The tooltip needs to be displayed above the mouse.
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type 'Element'.
         tooltip.style.top = `${clientY - offsetHeight}px`;
       } else {
         // The tooltip can be displayed below the mouse.
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type 'Element'.
         tooltip.style.top = `${clientY}px`;
       }
 
       if (clientX + offsetWidth >= clientWidth) {
         // The tooltip needs to be displayed on the left side of the mouse.
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type 'Element'.
         tooltip.style.left = `${clientX - offsetWidth - 5}px`;
       } else {
         // The tooltip needs to be displayed on the right side of the mouse.
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type 'Element'.
         tooltip.style.left = `${clientX + 15}px`;
       }
 
       // We need to make the tooltip visible again after adjusting the position.
       // It is initially invisible as it is mispositioned by the library and would then "beam" to the corrected
       // position. We want to avoid that "beaming" behaviour.
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type 'Element'.
       tooltip.style.visibility = "visible";
     }
   };
@@ -92,6 +105,7 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     const { columns, rows, timeAxisFormat, dateRange } = this.props;
     const { applyTooltipPositioningFix } = this;
     return (
+      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       <Chart
         chartType="Timeline"
         columns={columns}

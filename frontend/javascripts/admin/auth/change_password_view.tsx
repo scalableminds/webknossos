@@ -1,3 +1,4 @@
+// @flow
 import React from "react";
 import { withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row, Alert } from "antd";
@@ -7,6 +8,7 @@ import messages from "messages";
 import Toast from "libs/toast";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -28,6 +30,7 @@ function ChangePasswordView({ history }: Props) {
     });
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
   function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
     const otherFieldValue = form.getFieldValue(otherPasswordFieldKey);
 
@@ -45,6 +48,7 @@ function ChangePasswordView({ history }: Props) {
 
   return (
     <Row
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
       type="flex"
       justify="center"
       style={{

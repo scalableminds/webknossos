@@ -1,3 +1,4 @@
+// @flow
 import * as React from "react";
 import ReactDOM from "react-dom";
 import { document } from "libs/window";
@@ -6,17 +7,23 @@ import { document } from "libs/window";
 // to which is rendered within GoldenLayoutAdapter.
 // The actual portal targets are reused to avoid that components
 // are re-mounted when the layout changes.
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
 const getPortalId = (id) => `portal-${id}`;
 
 const portalTargetNodes = {};
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
 function getOrCreatePortalTargetNode(id) {
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   if (!portalTargetNodes[id]) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
     const newNode = document.createElement("div");
     newNode.id = getPortalId(id);
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     portalTargetNodes[id] = newNode;
   }
 
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   return portalTargetNodes[id];
 }
 

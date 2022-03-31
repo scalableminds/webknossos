@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys, $Shape } from "utility-types";
 import _ from "lodash";
 import type { Tree, TreeMap, TreeGroup } from "oxalis/store";
@@ -208,9 +210,11 @@ export function getGroupByIdWithSubgroups(
   treeGroups: Array<TreeGroup>,
   groupId: number,
 ): Array<number> {
+  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'groupWithSubgroups' implicitly has type ... Remove this comment to see the full error message
   const groupWithSubgroups = [];
   callDeepWithChildren(treeGroups, groupId, (treeGroup) => {
     groupWithSubgroups.push(treeGroup.groupId);
   });
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'groupWithSubgroups' implicitly has an 'a... Remove this comment to see the full error message
   return groupWithSubgroups;
 }

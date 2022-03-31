@@ -33,6 +33,7 @@ const dummyLocation = {
   toString: () => "",
   /* noop */
 };
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'Location | { ancestorOrigins: never[]; hash:... Remove this comment to see the full error message
 export const location: Location = typeof window === "undefined" ? dummyLocation : window.location;
 
 const _window =
@@ -41,6 +42,7 @@ const _window =
         alert: console.log.bind(console),
         app: null,
         location: dummyLocation,
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolve' implicitly has an 'any' type.
         requestAnimationFrame: (resolve) => resolve(),
         document,
         navigator: {

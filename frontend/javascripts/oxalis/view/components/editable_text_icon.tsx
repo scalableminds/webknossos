@@ -1,4 +1,6 @@
+// @flow
 import { Input } from "antd";
+// @ts-expect-error ts-migrate(2724) FIXME: '"react"' has no exported member named 'Element'. ... Remove this comment to see the full error message
 import type { Element } from "react";
 import React from "react";
 type Props = {
@@ -15,11 +17,14 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
     isEditing: false,
     value: "",
   };
+
   handleInputChange = (event: React.SyntheticEvent) => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       value: event.target.value,
     });
   };
+
   handleInputSubmit = (event: React.SyntheticEvent) => {
     const { value } = this.state;
 

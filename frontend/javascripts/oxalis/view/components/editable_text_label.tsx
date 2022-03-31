@@ -1,5 +1,6 @@
 import { Input, Tooltip } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
@@ -52,6 +53,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
 
   handleInputChange = (event: React.SyntheticEvent) => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       value: event.target.value,
     });
   };
@@ -151,8 +153,10 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
             {this.props.disableEditing ? null : (
               <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
                 <EditOutlined
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
                   className={this.props.markdown ? "flex-item" : null}
                   style={{
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ iconStyle: { cursor: string; }; marginLeft... Remove this comment to see the full error message
                     iconStyle,
                     marginLeft: 5,
                     display: "inline",

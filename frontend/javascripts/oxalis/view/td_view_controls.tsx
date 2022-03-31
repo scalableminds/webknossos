@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Values } from "utility-types";
 import { Button, Radio, Tooltip, Menu, Dropdown, Col, Row, Switch } from "antd";
 import {
@@ -115,6 +117,7 @@ function mapStateToProps(state: OxalisState) {
 function mapDispatchToProps(dispatch: Dispatch<any>) {
   return {
     onChangeTdViewDisplayPlanes(evt: React.SyntheticEvent) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       const tdViewDisplayPlanes: $Values<typeof TDViewDisplayModeEnum> = evt.target.value;
       dispatch(updateUserSettingAction("tdViewDisplayPlanes", tdViewDisplayPlanes));
     },
@@ -125,4 +128,5 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps, mapDispatchToProps)(TDViewControls);

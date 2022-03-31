@@ -1,3 +1,4 @@
+// @flow
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -172,5 +173,6 @@ export function getBaseBucketsForFallbackBucket(
     }
   }
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
   return bucketAddresses;
 }

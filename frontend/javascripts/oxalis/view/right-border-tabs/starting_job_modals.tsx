@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
 import type { Node } from "react";
 import React, { useEffect, useState } from "react";
 import type { APIDataset, APIJob } from "types/api_flow_types";
@@ -74,6 +75,7 @@ function StartingJobModal(props: StartingJobModalProps) {
       if (isBoundingBoxConfigurable) {
         apiJob = await jobApiCall(selectedColorLayerName, selectedBoundingBox);
       } else {
+        // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
         apiJob = await jobApiCall(selectedColorLayerName);
       }
 
@@ -116,9 +118,12 @@ function StartingJobModal(props: StartingJobModalProps) {
             }}
             placeholder="Select a color layer"
             optionFilterProp="children"
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null | undefined' is not assignable... Remove this comment to see the full error message
             value={selectedColorLayerName}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'Dispatch<SetStateAction<string | null | unde... Remove this comment to see the full error message
             onChange={setSelectedColorLayerName}
             filterOption={(input, option) =>
+              // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
               option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }
           >
@@ -176,9 +181,11 @@ function StartingJobModal(props: StartingJobModalProps) {
             }}
             placeholder="Select a bounding box"
             optionFilterProp="children"
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'Element | null' is not assignable to type 'n... Remove this comment to see the full error message
             value={renderUserBoundingBox(selectedBoundingBox)}
             onChange={onChangeBoundingBox}
             filterOption={(input, option) =>
+              // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
               option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }
           >
@@ -211,6 +218,7 @@ function StartingJobModal(props: StartingJobModalProps) {
         }}
       >
         <img
+          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           src={`/assets/images/${jobNameToImagePath[jobName]}`}
           alt={`${jobName} example`}
           style={{
@@ -274,6 +282,7 @@ export function NeuronInferralModal({ handleClose }: Props) {
       handleClose={handleClose}
       jobName="neuron inferral"
       isBoundingBoxConfigurable
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '(colorLayerName: string, boundingBox: UserBo... Remove this comment to see the full error message
       jobApiCall={async (colorLayerName, boundingBox) => {
         if (!boundingBox) {
           return Promise.resolve();

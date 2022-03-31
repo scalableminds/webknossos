@@ -1,5 +1,8 @@
+// @flow
 import * as THREE from "three";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'pngj... Remove this comment to see the full error message
 import { PNG } from "pngjs";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'gl'.... Remove this comment to see the full error message
 import GL from "gl";
 import type { ShaderModule } from "oxalis/shaders/shader_module_system";
 import compileShader from "oxalis/shaders/shader_module_system";
@@ -80,6 +83,7 @@ export function renderShader(fragColorExpr: string, shaderModule: ShaderModule) 
     }`;
   material.uniforms = {
     solidColor: {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ type: string; value: THREE.Vector4; }' is ... Remove this comment to see the full error message
       type: "v4",
       value: color,
     },
@@ -94,6 +98,7 @@ export function renderShader(fragColorExpr: string, shaderModule: ShaderModule) 
     format: THREE.RGBAFormat,
   });
   console.time("render and read");
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 4.
   renderer.render(scene, camera, rtTexture, true);
   // dumpToPng(gl, width, height);
   const pixels = new Uint8Array(4 * canvasWidth * canvasHeight);

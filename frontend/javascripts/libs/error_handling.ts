@@ -1,3 +1,4 @@
+// @flow
 import { Notifier } from "@airbrake/browser";
 import _ from "lodash";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
@@ -53,8 +54,10 @@ export function handleGenericError(
 }
 
 class ErrorHandling {
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'throwAssertions' has no initializer and ... Remove this comment to see the full error message
   throwAssertions: boolean;
   commitHash: string | null | undefined;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'airbrake' has no initializer and is not ... Remove this comment to see the full error message
   airbrake: typeof Notifier;
   numberOfErrors: number = 0;
   sessionStartTime: Date = new Date();
@@ -67,6 +70,7 @@ class ErrorHandling {
     }
 
     this.throwAssertions = options.throwAssertions;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'querySelector' does not exist on type 'D... Remove this comment to see the full error message
     const metaElement = document.querySelector("meta[name='commit-hash']");
     this.commitHash = metaElement ? metaElement.getAttribute("content") : null;
     this.initializeAirbrake();
@@ -75,16 +79,19 @@ class ErrorHandling {
   initializeAirbrake() {
     // read Airbrake config from DOM
     // config is inject from backend
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'querySelector' does not exist on type 'D... Remove this comment to see the full error message
     const scriptTag = document.querySelector("[data-airbrake-project-id]");
     if (!scriptTag) throw new Error("failed to initialize airbrake");
     const projectId = scriptTag.dataset.airbrakeProjectId;
     const projectKey = scriptTag.dataset.airbrakeProjectKey;
     const envName = scriptTag.dataset.airbrakeEnvironmentName;
+    // @ts-expect-error ts-migrate(2741) FIXME: Property 'prototype' is missing in type 'Notifier'... Remove this comment to see the full error message
     this.airbrake = new Notifier({
       projectId,
       projectKey,
       remoteConfig: false,
     });
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
       notice.context = notice.context || {};
       notice.context.environment = envName;
@@ -96,6 +103,7 @@ class ErrorHandling {
       return notice;
     });
     // Do not report more than MAX_NUM_ERRORS to airbrake
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
       this.numberOfErrors++;
 
@@ -105,6 +113,7 @@ class ErrorHandling {
 
       return null;
     });
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
       if (
         LOG_LOCAL_ERRORS ||
@@ -116,7 +125,9 @@ class ErrorHandling {
       return null;
     });
     // Remove airbrake's unhandledrejection handler
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     window.addEventListener("unhandledrejection", (event) => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
       const reasonAsString = event.reason instanceof Error ? event.reason.toString() : event.reason;
@@ -128,6 +139,7 @@ class ErrorHandling {
       });
     });
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'onerror' does not exist on type '(Window... Remove this comment to see the full error message
     window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
       if (BLACKLISTED_ERROR_MESSAGES.indexOf(message) > -1) {
         console.warn("Ignoring", message);
@@ -164,6 +176,7 @@ class ErrorHandling {
 
     const actionLog = getActionLog();
     const error = maybeError instanceof Error ? maybeError : new Error(JSON.stringify(maybeError));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'notify' does not exist on type 'typeof N... Remove this comment to see the full error message
     this.airbrake.notify({
       error,
       params: { ...optParams, actionLog, sessionStartTime: this.sessionStartTime },
@@ -171,7 +184,9 @@ class ErrorHandling {
   }
 
   assertExtendContext(additionalContext: Record<string, any>) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'error' implicitly has an 'any' type.
       notice.errors.forEach((error) => {
         const index = error.message.indexOf(UNHANDLED_REJECTION_PREFIX);
 
@@ -196,6 +211,7 @@ class ErrorHandling {
 
     const error: ErrorWithParams = new ErrorWithParams(`Assertion violated - ${message}`);
     error.params = assertionContext;
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
     error.stack = this.trimCallstack(error.stack);
     Toast.error(`Assertion violated - ${message}`);
 
@@ -204,6 +220,7 @@ class ErrorHandling {
       throw error;
     } else {
       console.error(error);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'notify' does not exist on type 'typeof N... Remove this comment to see the full error message
       this.airbrake.notify(error);
     }
   };
@@ -225,6 +242,7 @@ class ErrorHandling {
   }
 
   setCurrentUser(user: APIUser) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
       notice.context = notice.context || {};
       notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);

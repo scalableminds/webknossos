@@ -1,28 +1,43 @@
 // @noflow
 import window, { document } from "libs/window";
 export default {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'textureBucketManager' implicitly has an... Remove this comment to see the full error message
   addBucketManagers(textureBucketManager) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'managers' does not exist on type '(Windo... Remove this comment to see the full error message
     window.managers = window.managers || [];
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'managers' does not exist on type '(Windo... Remove this comment to see the full error message
     window.managers.push(textureBucketManager);
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'identifier' implicitly has an 'any' typ... Remove this comment to see the full error message
   addMaterial(identifier, material) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'materials' does not exist on type '(Wind... Remove this comment to see the full error message
     window.materials = window.materials || [];
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'materials' does not exist on type '(Wind... Remove this comment to see the full error message
     window.materials[identifier] = material;
   },
 };
 
+// @ts-expect-error ts-migrate(2339) FIXME: Property '_setupShaderEditor' does not exist on ty... Remove this comment to see the full error message
 window._setupShaderEditor = (identifier, _shaderType) => {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
   const outer = document.createElement("div");
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
   const input = document.createElement("textarea");
   const shaderType = _shaderType || "fragmentShader";
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'materials' does not exist on type '(Wind... Remove this comment to see the full error message
   input.value = window.materials[identifier][shaderType];
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
   const button = document.createElement("button");
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
   const buttonContainer = document.createElement("div");
 
   function overrideShader() {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'materials' does not exist on type '(Wind... Remove this comment to see the full error message
     window.materials[identifier][shaderType] = input.value;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'materials' does not exist on type '(Wind... Remove this comment to see the full error message
     window.materials[identifier].needsUpdate = true;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
     window.needsRerender = true;
   }
 
@@ -41,6 +56,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
         font-family: monospace;
         `,
   );
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
   input.addEventListener("keydown", (evt) => {
     if ((evt.keyCode === 10 || evt.keyCode === 13) && evt.ctrlKey) {
       evt.preventDefault();
@@ -56,5 +72,6 @@ window._setupShaderEditor = (identifier, _shaderType) => {
         z-index: 10000000;`,
   );
   outer.appendChild(input);
+  // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
   document.body.appendChild(outer);
 };

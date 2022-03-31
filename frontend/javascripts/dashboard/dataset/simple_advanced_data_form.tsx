@@ -1,3 +1,4 @@
+// @flow
 import { Alert, List, Input, Form, InputNumber, Col, Row, Switch, Tooltip } from "antd";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
@@ -101,6 +102,7 @@ export default function SimpleAdvancedDataForm({
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isReadOnlyDataset' implicitly has... Remove this comment to see the full error message
 function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
   return (
     <div>
@@ -117,6 +119,7 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
       >
         <List.Item>
           <FormItemWithInfo
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string[]; label: ... Remove this comment to see the full error message
             name={["dataSource", "scale"]}
             label="Voxel Size"
             info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
@@ -128,6 +131,7 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
               },
               {
                 validator: syncValidator(
+                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                   (value) => value && value.every((el) => el > 0),
                   "Each component of the scale must be larger than 0",
                 ),
@@ -135,6 +139,7 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
             ]}
           >
             <Vector3Input
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ disabled: any; style: { width: number; }; ... Remove this comment to see the full error message
               disabled={isReadOnlyDataset}
               style={{
                 width: 400,
@@ -160,12 +165,14 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
           dataSource || {
             dataLayers: [],
           }
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
         ).dataLayers.map((layer, idx) => (
           <List.Item key={`layer-${layer.name}`}>
             <SimpleLayerForm
               isReadOnlyDataset={isReadOnlyDataset}
               layer={layer}
               index={idx}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isReadOnlyDataset: any; layer: any; index:... Remove this comment to see the full error message
               form={form}
             />
           </List.Item>
@@ -175,6 +182,7 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isReadOnlyDataset' implicitly has... Remove this comment to see the full error message
 function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
   const isSegmentation = layer.category === "segmentation";
   const bitDepth = getBitDepth(layer);
@@ -198,6 +206,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
       </Col>
       <Col span={17}>
         <FormItemWithInfo
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: any[]; label: str... Remove this comment to see the full error message
           name={
             layer.dataFormat === "knossos"
               ? ["dataSource", "dataLayers", index, "sections", 0, "boundingBox"]
@@ -216,6 +225,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
             },
             {
               validator: syncValidator(
+                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 (value) => value.width !== 0 && value.height !== 0 && value.depth !== 0,
                 "Width, height and depth must not be zero",
               ),
@@ -223,6 +233,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
           ]}
         >
           <BoundingBoxInput
+            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             disabled={isReadOnlyDataset}
             style={{
               width: 300,
@@ -232,6 +243,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
 
         {isSegmentation ? (
           <FormItemWithInfo
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: any[]; label: str... Remove this comment to see the full error message
             name={["dataSource", "dataLayers", index, "largestSegmentId"]}
             label="Largest segment ID"
             info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
@@ -242,6 +254,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
                 message: "Please provide a largest segment ID for the segmentation layer",
               },
               {
+                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rule' implicitly has an 'any' type.
                 validator: (rule, value) =>
                   value > 0 && value < 2 ** bitDepth
                     ? Promise.resolve()

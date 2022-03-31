@@ -1,5 +1,8 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Spin, Button, Input, Modal } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
@@ -56,9 +59,11 @@ class ScriptListView extends React.PureComponent<Props, State> {
 
   handleSearch = (event: React.SyntheticEvent): void => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
+
   deleteScript = (script: APIScript) => {
     Modal.confirm({
       title: messages["script.delete"],
@@ -143,6 +148,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
               }}
               style={{
                 marginTop: 30,
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
                 marginBotton: 30,
               }}
               locale={{
@@ -214,4 +220,5 @@ class ScriptListView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof ScriptListView' is not as... Remove this comment to see the full error message
 export default withRouter(ScriptListView);

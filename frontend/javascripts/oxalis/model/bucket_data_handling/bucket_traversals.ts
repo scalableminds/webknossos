@@ -1,3 +1,4 @@
+// @flow
 import { V3 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
 import {
@@ -29,6 +30,7 @@ export default function traverse(
   const voxelSize = getBucketExtent(resolutions, zoomStep);
   // In addition, the variables stepX and stepY are initialized to either 1 or -1 indicating whether X and Y are
   // incremented or decremented as the ray crosses voxel boundaries (this is determined by the sign of the x and y components of → v).
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
   const [stepX, stepY, stepZ] = v.map((el) => Math.sign(el));
   const step = [stepX, stepY, stepZ];
   let [tMaxX, tMaxY, tMaxZ] = initializeTMax(u, v, [stepX, stepY, stepZ], voxelSize);
@@ -42,6 +44,7 @@ export default function traverse(
   ];
   const intersectedBuckets = [[X, Y, Z]];
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dim' implicitly has an 'any' type.
   const behindLastBucket = (dim, pos) => {
     if (step[dim] < 0) {
       return pos < lastBucket[dim];
@@ -57,7 +60,7 @@ export default function traverse(
   const visitNextX = () => {
     const _X = X + stepX;
 
-    tMaxX = tMaxX + tDeltaX;
+    tMaxX += tDeltaX;
     intersectedBuckets.push([_X, Y, Z]);
     return _X;
   };
@@ -65,7 +68,7 @@ export default function traverse(
   const visitNextY = () => {
     const _Y = Y + stepY;
 
-    tMaxY = tMaxY + tDeltaY;
+    tMaxY += tDeltaY;
     intersectedBuckets.push([X, _Y, Z]);
     return _Y;
   };
@@ -73,7 +76,7 @@ export default function traverse(
   const visitNextZ = () => {
     const _Z = Z + stepZ;
 
-    tMaxZ = tMaxZ + tDeltaZ;
+    tMaxZ += tDeltaZ;
     intersectedBuckets.push([X, Y, _Z]);
     return _Z;
   };
@@ -111,11 +114,13 @@ export default function traverse(
 
   while (loopProtection++ < maximumIterations) {
     if (X === lastBucket[0] && Y === lastBucket[1] && Z === lastBucket[2]) {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
       return intersectedBuckets;
     }
 
     if (behindLastBucket(0, X) || behindLastBucket(1, Y) || behindLastBucket(2, Z)) {
       // We didn't cross the lastBucket for some reason?
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
       return intersectedBuckets;
     }
 
@@ -170,6 +175,7 @@ function initializeTMax(
     voxelSize[2] - mod(u[2], voxelSize[2]),
   ];
   // $FlowIssue[invalid-tuple-arity] Flow does not understand that mapping a tuple returns a tuple
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type '[number... Remove this comment to see the full error message
   return [
     Math.abs((step[0] > 0 ? negativeRest[0] : positiveRest[0]) / v[0]),
     Math.abs((step[1] > 0 ? negativeRest[1] : positiveRest[1]) / v[1]),

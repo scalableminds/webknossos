@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import { resetDatabase, replaceVolatileValues, writeFlowCheckingFile } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
@@ -59,14 +60,18 @@ test.serial("updateTask()", async (t) => {
     _.isNull,
   );
 
+  // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
   const newTask = { ...task, openInstances: task.openInstances + 10 };
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | APIScript | st... Remove this comment to see the full error message
   const updatedTask = await api.updateTask(task.id, newTask);
   t.deepEqual(updatedTask.status.open, newTask.openInstances);
   t.snapshot(updatedTask, {
     id: "tasks-updatedTask",
   });
   // Reset task to original state
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | APIScript | st... Remove this comment to see the full error message
   const revertedTask = await api.updateTask(task.id, task);
+  // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
   t.is(revertedTask.status.open, task.status.open);
 });
 test.serial("transferTask()", async (t) => {
@@ -93,6 +98,7 @@ const newTask = {
   taskTypeId: "570b9f4c2a7c0e4c008da6ee",
 };
 test.serial("createTasks() and deleteTask()", async (t) => {
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boundingBox: null; dataSet: string; editPo... Remove this comment to see the full error message
   const createTaskResponse = await api.createTasks([newTask]);
   const createdTaskWrappers = createTaskResponse.tasks;
   t.is(createdTaskWrappers.length, 1);
@@ -111,6 +117,7 @@ test.serial("createTasks() and deleteTask()", async (t) => {
   t.true(true);
 });
 test.serial("requestTask()", async (t) => {
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boundingBox: null; dataSet: string; editPo... Remove this comment to see the full error message
   const createTaskResponse = await api.createTasks([newTask]);
   const createdTaskWrappers = createTaskResponse.tasks;
   t.is(createdTaskWrappers.length, 1);

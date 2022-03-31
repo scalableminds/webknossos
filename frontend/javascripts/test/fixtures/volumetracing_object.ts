@@ -1,6 +1,8 @@
+// @flow
 /* eslint-disable import/prefer-default-export */
 import update from "immutability-helper";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'mock... Remove this comment to see the full error message
 import mockRequire from "mock-require";
 import defaultState from "oxalis/default_state";
 mockRequire("app", {
@@ -40,12 +42,15 @@ export const initialState = update(defaultState, {
         allowAccess: true,
         allowDownload: true,
         resolutionRestrictions: {
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
           min: null,
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
           max: null,
         },
       },
     },
     volumes: {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ type: string; activeCellId: number; active... Remove this comment to see the full error message
       $set: [volumeTracing],
     },
   },

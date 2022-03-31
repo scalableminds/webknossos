@@ -1,3 +1,4 @@
+// @flow
 import { Modal, Table } from "antd";
 import * as React from "react";
 import _ from "lodash";
@@ -30,10 +31,12 @@ export default class RecommendedConfigurationModal extends React.Component<Props
   state = {
     visible: true,
   };
+
   handleOk = () => {
     this.props.onOk();
     this.hide();
   };
+
   hide = () => {
     this.setState({
       visible: false,
@@ -62,8 +65,10 @@ export default class RecommendedConfigurationModal extends React.Component<Props
           }}
           columns={columns}
           dataSource={_.map(this.props.config, (value, key) => ({
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             name: settings[key],
             value: value.toString(),
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             comment: settingComments[key] || "",
           }))}
           size="small"

@@ -1,3 +1,4 @@
+// @flow
 import { Form, Input, Button, Col, Row } from "antd";
 import { connect } from "react-redux";
 import React from "react";
@@ -46,6 +47,7 @@ type Props = OwnProps & StateProps;
 function DatasetAddBossView(props: Props) {
   const [form] = Form.useForm();
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleSubmit = async (formValues) => {
     const { activeUser } = props;
     if (activeUser == null) return;
@@ -205,4 +207,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(DatasetAddBossView);

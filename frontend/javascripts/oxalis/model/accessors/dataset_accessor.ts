@@ -1,5 +1,7 @@
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import type {
@@ -36,6 +38,7 @@ type UnrenderableLayersInfos = {
 };
 export class ResolutionInfo {
   resolutions: ReadonlyArray<Vector3>;
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$ReadOnlyMap'.
   resolutionMap: $ReadOnlyMap<number, Vector3>;
 
   constructor(resolutions: Array<Vector3>) {
@@ -52,6 +55,7 @@ export class ResolutionInfo {
     // This function creates a map which maps from powerOfTwo (2**index) to resolution.
     const { resolutions } = this;
 
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
     if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
       throw new Error("Max dimension in resolutions is not unique.");
     }
@@ -74,6 +78,7 @@ export class ResolutionInfo {
   getResolutionsWithIndices(): Array<[number, Vector3]> {
     return _.sortBy(
       Array.from(this.resolutionMap.entries()).map((entry) => {
+        // @ts-expect-error ts-migrate(2488) FIXME: Type 'unknown' must have a '[Symbol.iterator]()' m... Remove this comment to see the full error message
         const [powerOfTwo, resolution] = entry;
         const resolutionIndex = Math.log2(powerOfTwo);
         return [resolutionIndex, resolution];
@@ -136,10 +141,12 @@ export class ResolutionInfo {
   }
 
   getHighestResolutionPowerOf2(): number {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
     return _.max(Array.from(this.resolutionMap.keys()));
   }
 
   getLowestResolutionPowerOf2(): number {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
     return _.min(Array.from(this.resolutionMap.keys()));
   }
 
@@ -178,6 +185,7 @@ export class ResolutionInfo {
 
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, (entry) => entry[1]));
 
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     return bestIndexWithDistance[0];
   }
 
@@ -234,12 +242,16 @@ export function getResolutionUnion(
     for (const resolution of layer.resolutions) {
       const key = _.max(resolution);
 
+      // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
       if (resolutionUnionDict[key] == null) {
+        // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
         resolutionUnionDict[key] = resolution;
+      // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
       } else if (_.isEqual(resolutionUnionDict[key], resolution)) {
         // the same resolution was already picked up
       } else if (shouldThrow) {
         throw new Error(
+          // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
           `The resolutions of the different layers don't match. ${resolutionUnionDict[key].join(
             "-",
           )} != ${resolution.join("-")}.`,
@@ -259,16 +271,19 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
   // Therefore, the largest dim for each resolution has to be unique across all resolutions.
   // This function returns an array of resolutions, for which each index will
   // hold a resolution with highest_dim === 2**index and where resolutions are monotonously increasing.
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
   if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
     throw new Error("Max dimension in resolutions is not unique.");
   }
 
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
   const maxResolution = Math.log2(_.max(resolutions.map((v) => _.max(v))));
 
   const resolutionsLookUp = _.keyBy(resolutions, _.max);
 
   const maxResPower = 2 ** maxResolution;
   let lastResolution = [maxResPower, maxResPower, maxResPower];
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
   return _.range(maxResolution, -1, -1)
     .map((exp) => {
       const resPower = 2 ** exp;
@@ -276,6 +291,7 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
       // resolution and an isotropic fallback resolution. Otherwise for anisotropic resolutions,
       // the dense resolutions wouldn't be monotonously increasing.
       const fallback = map3((i) => Math.min(lastResolution[i], resPower), [0, 1, 2]);
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | Vector3 | ((...items: Vector3[]) =>... Remove this comment to see the full error message
       lastResolution = resolutionsLookUp[resPower] || fallback;
       return lastResolution;
     })
@@ -304,9 +320,11 @@ export function getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
 function _getMaxZoomStep(maybeDataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
   const maxZoomstep = Maybe.fromNullable(maybeDataset)
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
     .map((dataset) =>
       Math.max(
         minimumZoomStepCount,
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'r' implicitly has an 'any' type.
         Math.max(0, ...getResolutions(dataset).map((r) => Math.max(r[0], r[1], r[2]))),
       ),
     )
@@ -352,6 +370,7 @@ export function getLayerByNameOrFallbackName(
   const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
   ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
   const layer = dataLayers.find(
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
     (l) => l.name === layerName || (l.fallbackLayer && l.fallbackLayer === layerName),
   );
 
@@ -386,6 +405,7 @@ export function getSegmentationLayerByNameOrFallbackName(
   return layer;
 }
 export function getMappings(dataset: APIDataset, layerName: string): string[] {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'mappings' does not exist on type 'APIDat... Remove this comment to see the full error message
   return getLayerByName(dataset, layerName).mappings || [];
 }
 export function isRgb(dataset: APIDataset, layerName: string): boolean {
@@ -461,6 +481,7 @@ export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boun
   const upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
   return {
     lowerBoundary,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     upperBoundary,
   };
 }
@@ -479,7 +500,9 @@ export function getBoundaries(dataset: APIDataset): Boundary {
   }
 
   return {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     lowerBoundary,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     upperBoundary,
   };
 }
@@ -493,6 +516,7 @@ export function getDatasetCenter(dataset: APIDataset): Vector3 {
 }
 export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
   const allBoundingBoxes = datasetLayers.map((layer) => layer.boundingBox);
   const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
   const { min, max } = unifiedBoundingBoxes;
@@ -557,6 +581,7 @@ export function determineAllowedModes(
 
   return {
     preferredMode,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string[]' is not assignable to type 'APIAllo... Remove this comment to see the full error message
     allowedModes,
   };
 }
@@ -702,6 +727,7 @@ export function getSegmentationLayers(
   // $FlowIssue[incompatible-type]
   // $FlowIssue[prop-missing]
   const segmentationLayers: Array<APISegmentationLayer> = dataset.dataSource.dataLayers.filter(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataLayer' implicitly has an 'any' type... Remove this comment to see the full error message
     (dataLayer) => isSegmentationLayer(dataset, dataLayer.name),
   );
   return segmentationLayers;
@@ -727,6 +753,7 @@ export function doesSupportVolumeWithFallback(
   return isFallbackSupported;
 }
 export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataLayer' implicitly has an 'any' type... Remove this comment to see the full error message
   return dataset.dataSource.dataLayers.filter((dataLayer) => isColorLayer(dataset, dataLayer.name));
 }
 export function getEnabledLayers(
@@ -743,6 +770,7 @@ export function getEnabledLayers(
     ? getColorLayers(dataset)
     : dataset.dataSource.dataLayers;
   const layerSettings = datasetConfiguration.layers;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
   return dataLayers.filter((layer) => {
     const settings = layerSettings[layer.name];
 
@@ -888,6 +916,7 @@ export function getMappingInfo(
 
   // Return a dummy object (this mirrors webKnossos' behavior before the support of
   // multiple segmentation layers)
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ mappingName: null; mapping: null; mappingK... Remove this comment to see the full error message
   return dummyMapping;
 }
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {

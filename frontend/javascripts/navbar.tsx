@@ -10,6 +10,7 @@ import {
   BellOutlined,
 } from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
 import classnames from "classnames";
 import { connect } from "react-redux";
 import React, { useState, useEffect } from "react";
@@ -76,7 +77,9 @@ function useOlvy() {
       },
     };
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
     if (window.Olvy != null) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
       window.Olvy.init(OlvyConfig);
       setIsInitialized(true);
     }
@@ -84,6 +87,7 @@ function useOlvy() {
   return isInitialized;
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeUser' implicitly has an 'any' typ... Remove this comment to see the full error message
 function useOlvyUnreadReleasesCount(activeUser) {
   const lastViewedTimestampWithFallback =
     activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp != null
@@ -92,10 +96,12 @@ function useOlvyUnreadReleasesCount(activeUser) {
   const isInitialized = useOlvy();
   const unreadCount = useFetch(
     async () => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
       if (!isInitialized || !features().isDemoInstance || !window.Olvy) {
         return null;
       }
 
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
       return window.Olvy.getUnreadReleasesCount(
         new Date(lastViewedTimestampWithFallback).toISOString(),
       );
@@ -106,6 +112,7 @@ function useOlvyUnreadReleasesCount(activeUser) {
   return unreadCount;
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'children' implicitly has an 'any'... Remove this comment to see the full error message
 function NavbarMenuItem({ children, ...props }) {
   return (
     <Menu
@@ -123,9 +130,11 @@ function NavbarMenuItem({ children, ...props }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeUser' implicitly has an 'an... Remove this comment to see the full error message
 function UserInitials({ activeUser, isMultiMember }) {
   const { firstName, lastName } = activeUser;
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'str' implicitly has an 'any' type.
   const initialOf = (str) => str.slice(0, 1).toUpperCase();
 
   return (
@@ -165,6 +174,7 @@ function UserInitials({ activeUser, isMultiMember }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'title' implicitly has an 'any' ty... Remove this comment to see the full error message
 function CollapsibleMenuTitle({ title, collapse, icon }) {
   if (collapse) {
     return <span title={title}>{icon}</span>;
@@ -178,6 +188,7 @@ function CollapsibleMenuTitle({ title, collapse, icon }) {
   }
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'collapse' implicitly has an 'any'... Remove this comment to see the full error message
 function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }) {
   return (
     <SubMenu
@@ -220,6 +231,7 @@ function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'collapse' implicitly has an 'any'... Remove this comment to see the full error message
 function StatisticsSubMenu({ collapse, ...menuProps }) {
   return (
     <SubMenu
@@ -246,6 +258,7 @@ function StatisticsSubMenu({ collapse, ...menuProps }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'collapse' implicitly has an 'any'... Remove this comment to see the full error message
 function getTimeTrackingMenu({ collapse }) {
   return (
     <Menu.Item key="timeStatisticMenu">
@@ -265,6 +278,7 @@ function getTimeTrackingMenu({ collapse }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isAdminOrTeamManager' implicitly ... Remove this comment to see the full error message
 function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
   return (
     <SubMenu
@@ -322,6 +336,7 @@ function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'collapse' implicitly has an 'any'... Remove this comment to see the full error message
 function DashboardSubMenu({ collapse, ...other }) {
   return (
     <SubMenu
@@ -346,6 +361,7 @@ function DashboardSubMenu({ collapse, ...other }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeUser' implicitly has an 'an... Remove this comment to see the full error message
 function NotificationIcon({ activeUser }) {
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
@@ -360,7 +376,9 @@ function NotificationIcon({ activeUser }) {
     Store.dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
     if (window.Olvy) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
       window.Olvy.show();
     }
   };
@@ -386,6 +404,7 @@ function NotificationIcon({ activeUser }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeUser' implicitly has an 'an... Remove this comment to see the full error message
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
@@ -396,6 +415,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'org' implicitly has an 'any' type.
   const switchTo = async (org) => {
     Toast.info(`Switching to ${org.displayName || org.name}`);
     await switchToOrganization(org.name);
@@ -406,7 +426,9 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
 
     if (newTheme === "auto") {
       newTheme =
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'matchMedia' does not exist on type '(Win... Remove this comment to see the full error message
         window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'matchMedia' does not exist on type '(Win... Remove this comment to see the full error message
         window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "dark"
           : "light";
@@ -421,6 +443,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
       const parentEl = styleEl.parentNode;
 
       if (parentEl != null) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'href' does not exist on type 'Node'.
         newStyleEl.href = newStyleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
         newStyleEl.addEventListener(
           "load",
@@ -490,6 +513,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
             <Menu.Item
               key={key}
               onClick={() => {
+                // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
                 setSelectedTheme(key);
               }}
             >
@@ -690,4 +714,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Navbar);

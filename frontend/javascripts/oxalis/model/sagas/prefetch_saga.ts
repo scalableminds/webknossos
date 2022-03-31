@@ -1,3 +1,4 @@
+// @flow
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import type { OxalisState } from "oxalis/store";
 import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
@@ -5,6 +6,7 @@ import {
   PrefetchStrategySkeleton,
   PrefetchStrategyVolume,
 } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { _throttle, call, select, take } from "oxalis/model/sagas/effect-generators";
 import { bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
@@ -41,6 +43,7 @@ export function* watchDataRelevantChanges(): Saga<void> {
 
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
   // There is no need to prefetch data for layers that are not visible
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   return yield* select((state) =>
     isLayerVisible(
       state.dataset,
@@ -52,6 +55,7 @@ function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
 }
 
 export function* triggerDataPrefetching(previousProperties: Record<string, any>): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const viewMode = yield* select((state) => state.temporaryConfiguration.viewMode);
   const isPlaneMode = constants.MODES_PLANE.includes(viewMode);
   const dataLayers = yield* call([Model, Model.getAllLayers]);
@@ -100,13 +104,17 @@ export function* prefetchForPlaneMode(
   layer: DataLayer,
   previousProperties: Record<string, any>,
 ): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const position = yield* select((state) => getPosition(state.flycam));
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const zoomStep = yield* select((state) => getRequestLogZoomStep(state));
   const resolutionInfo = getResolutionInfo(layer.resolutions);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
   const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const resolutions = yield* select((state) => getResolutions(state.dataset));
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
@@ -118,6 +126,7 @@ export function* prefetchForPlaneMode(
     currentBucketPickerTick !== lastBucketPickerTick &&
     (position !== lastPosition || zoomStep !== lastZoomStep)
   ) {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const areas = yield* select((state) => getAreasFromState(state));
 
     for (const strategy of prefetchStrategiesPlane) {
@@ -163,11 +172,15 @@ export function* prefetchForArbitraryMode(
   layer: DataLayer,
   previousProperties: Record<string, any>,
 ): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const position = yield* select((state) => getPosition(state.flycam));
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const matrix = yield* select((state) => state.flycam.currentMatrix);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const zoomStep = yield* select((state) => getRequestLogZoomStep(state));
   const tracingTypes = yield* select(getTracingTypes);
   const resolutionInfo = getResolutionInfo(layer.resolutions);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const resolutions = yield* select((state) => getResolutions(state.dataset));
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],

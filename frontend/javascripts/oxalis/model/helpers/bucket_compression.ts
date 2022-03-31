@@ -3,7 +3,7 @@ import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 
-const _byteArrayToLz4Array = createWorker(compressLz4Block);
+const _byteArrayToLz4Array = compressLz4Block;
 
 export const decompressToTypedArray = async (
   bucket: DataBucket,

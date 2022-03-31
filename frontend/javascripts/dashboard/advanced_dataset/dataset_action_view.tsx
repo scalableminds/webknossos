@@ -26,15 +26,21 @@ const disabledStyle = {
   color: "var(--ant-disabled)",
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isReloading' implicitly has an 'any' ty... Remove this comment to see the full error message
 function getDisabledWhenReloadingStyle(isReloading) {
   return isReloading ? disabledStyle : null;
 }
 
 function NewAnnotationLink({
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'dataset' implicitly has an 'any' ... Remove this comment to see the full error message
   dataset,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isReloading' implicitly has an 'a... Remove this comment to see the full error message
   isReloading,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isCreateExplorativeModalVisible' ... Remove this comment to see the full error message
   isCreateExplorativeModalVisible,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'onShowCreateExplorativeModal' imp... Remove this comment to see the full error message
   onShowCreateExplorativeModal,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'onCloseCreateExplorativeModal' im... Remove this comment to see the full error message
   onCloseCreateExplorativeModal,
 }) {
   const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
@@ -119,6 +125,7 @@ function LinkWithDisabled({
   return (
     <Link
       {...rest}
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ pointerEvents?: string | undefined; color?... Remove this comment to see the full error message
       style={adaptedStyle}
       onClick={(e) => (disabled ? e.preventDefault() : onClick)}
     />
@@ -155,6 +162,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       <a
         onClick={() => this.clearCache(dataset)}
         title="Reload Dataset"
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ pointerEvents: string; color: string; } | ... Remove this comment to see the full error message
         style={disabledWhenReloadingStyle}
         type="link"
       >
@@ -197,6 +205,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 }
               />
             ) : (
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ pointerEvents: string; color: string; } | ... Remove this comment to see the full error message
               <p style={disabledWhenReloadingStyle}>
                 New Annotation {Unicode.NonBreakingSpace}
                 <Tooltip title="Cannot create annotations for read-only datasets">
@@ -236,4 +245,5 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof DatasetActionView' is not... Remove this comment to see the full error message
 export default withRouter(DatasetActionView);

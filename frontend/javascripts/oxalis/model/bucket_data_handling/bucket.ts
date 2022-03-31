@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import { createNanoEvents } from "nanoevents";
 import * as THREE from "three";
@@ -40,6 +42,7 @@ export const bucketDebuggingFlags = {
   enforcedZoomDiff: undefined,
 };
 // Exposing this variable allows debugging on deployed systems
+// @ts-expect-error ts-migrate(2339) FIXME: Property 'bucketDebuggingFlags' does not exist on ... Remove this comment to see the full error message
 window.bucketDebuggingFlags = bucketDebuggingFlags;
 type Emitter = {
   on: (...args: Array<any>) => any;
@@ -120,6 +123,7 @@ export class DataBucket {
   type: "data" = "data";
   elementClass: ElementClass;
   visualizedMesh: Record<string, any> | null | undefined;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
   visualizationColor: number;
   // If dirty, the bucket's data was potentially edited and needs to be
   // saved to the server.
@@ -167,6 +171,7 @@ export class DataBucket {
   }
 
   once(event: string, callback: (...args: Array<any>) => any): () => void {
+    // @ts-expect-error ts-migrate(7019) FIXME: Rest parameter 'args' implicitly has an 'any[]' ty... Remove this comment to see the full error message
     const unbind = this.emitter.on(event, (...args) => {
       unbind();
       callback(...args);
@@ -193,6 +198,7 @@ export class DataBucket {
     ];
     return {
       min,
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max,
     };
   }
@@ -297,6 +303,7 @@ export class DataBucket {
   getCopyOfData(): BucketDataArray {
     const bucketData = this.getOrCreateData();
     const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
+    // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
     const dataClone = new TypedArrayClass(bucketData);
     return dataClone;
   }
@@ -378,11 +385,14 @@ export class DataBucket {
   uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
     return arrayBuffer != null
+      // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
       ? new TypedArrayClass(
           arrayBuffer.buffer,
           arrayBuffer.byteOffset,
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'BYTES_PER_ELEMENT' does not exist on typ... Remove this comment to see the full error message
           arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
         )
+      // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
       : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
   }
 
@@ -406,6 +416,7 @@ export class DataBucket {
      */
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
+      // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
       this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
 
       if (!this.isMissing()) {
@@ -552,6 +563,7 @@ export class DataBucket {
     const data = this.uint8ToTypedBuffer(arrayBuffer);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
+    // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo = // Disable this conditional if you need verbose output here.
         process.env.BABEL_ENV === "test"
@@ -559,6 +571,7 @@ export class DataBucket {
           : {
               arrayBuffer,
               actual: data.length,
+              // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
               expected: channelCount * Constants.BUCKET_SIZE,
               channelCount,
             };
@@ -572,6 +585,7 @@ export class DataBucket {
       case BucketStateEnum.REQUESTED: {
         // Clone the data for the unmergedBucketDataLoaded event,
         // as the following merge operation is done in-place.
+        // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
         const dataClone = new TypedArrayClass(data);
         this.trigger("unmergedBucketDataLoaded", dataClone);
 
@@ -681,6 +695,7 @@ export class DataBucket {
 
     if (this.zoomedAddress[3] === zoomStep) {
       const resolutions = getResolutions(Store.getState().dataset);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'addBucketMesh' does not exist on type '(... Remove this comment to see the full error message
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
         this.zoomedAddress[3],
@@ -691,6 +706,7 @@ export class DataBucket {
 
   unvisualize() {
     if (this.visualizedMesh != null) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeBucketMesh' does not exist on type... Remove this comment to see the full error message
       window.removeBucketMesh(this.visualizedMesh);
       this.visualizedMesh = null;
     }
@@ -698,6 +714,7 @@ export class DataBucket {
 
   setVisualizationColor(colorDescriptor: string | number) {
     const color = new THREE.Color(colorDescriptor);
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Color' is not assignable to type 'number'.
     this.visualizationColor = color;
 
     if (this.visualizedMesh != null) {
@@ -712,6 +729,7 @@ export class DataBucket {
   //
   // Example usage:
   // bucket._logMaybe("Data of problematic bucket", bucket.data)
+  // @ts-expect-error ts-migrate(7019) FIXME: Rest parameter 'args' implicitly has an 'any[]' ty... Remove this comment to see the full error message
   _logMaybe = (...args) => {
     if (this.zoomedAddress.join(",") === [93, 0, 0, 0].join(",")) {
       console.log(...args);

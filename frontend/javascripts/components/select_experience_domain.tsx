@@ -1,3 +1,4 @@
+// @flow
 import { Select, Tooltip } from "antd";
 import * as React from "react";
 import type { ExperienceDomainList } from "types/api_flow_types";
@@ -23,6 +24,7 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
     alreadyUsedDomains: [],
     allowCreation: false,
   };
+
   state = {
     domains: [],
     currentlyEnteredDomain: "",
@@ -90,6 +92,7 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
           onSearch={this.onSearch}
         >
           {options.map((domain) => (
+            // @ts-expect-error ts-migrate(2741) FIXME: Property 'value' is missing in type '{ children: s... Remove this comment to see the full error message
             <Select.Option key={domain}>{domain}</Select.Option>
           ))}
         </Select>

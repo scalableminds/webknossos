@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga, Task } from "oxalis/model/sagas/effect-generators";
 import { join, call, fork } from "oxalis/model/sagas/effect-generators";
 /*
@@ -11,8 +13,10 @@ export default function* processTaskWithPool(
 ): Saga<void> {
   const startedTasks: Array<Task<void>> = [];
   let isFinalResolveScheduled = false;
+  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'error' implicitly has type 'any' in some... Remove this comment to see the full error message
   let error = null;
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'fn' implicitly has an 'any' type.
   function* forkSafely(fn): Saga<void> {
     // Errors from forked tasks cannot be caught, see https://redux-saga.js.org/docs/advanced/ForkModel/#error-propagation
     // However, the task pool should not abort if a single task fails.
@@ -31,6 +35,7 @@ export default function* processTaskWithPool(
         // All tasks were kicked off, which is why all tasks can be
         // awaited now together.
         yield* join(startedTasks);
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'error' implicitly has an 'any' type.
         if (error != null) throw error;
       }
 

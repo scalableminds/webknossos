@@ -130,6 +130,7 @@ function TaskCreateBulkView() {
     const projectName = words[17];
 
     // mapOptional takes care of treating empty strings as null
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'word' implicitly has an 'any' type.
     function mapOptional<U>(word, fn: (arg0: string) => U): U | null | undefined {
       return word != null && word !== "" ? fn(word) : undefined;
     }
@@ -153,6 +154,7 @@ function TaskCreateBulkView() {
       taskTypeId,
       scriptId,
       openInstances,
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
       boundingBox,
       projectName,
       neededExperience: {
@@ -170,6 +172,7 @@ function TaskCreateBulkView() {
       const reader = new FileReader();
 
       // $FlowIssue[incompatible-call] reader.result is wrongfully typed as ArrayBuffer
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | ArrayBuffer | null' is ... Remove this comment to see the full error message
       reader.onload = () => resolve(parseText(reader.result));
 
       reader.onerror = reject;
@@ -177,6 +180,7 @@ function TaskCreateBulkView() {
     });
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleSubmit = async (formValues) => {
     let tasks;
 
@@ -184,6 +188,7 @@ function TaskCreateBulkView() {
       // Workaround: Antd replaces file objects in the formValues with a wrapper file
       // The original file object is contained in the originFileObj property
       // This is most likely not intentional and may change in a future Antd version
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'wrapperFile' implicitly has an 'any' ty... Remove this comment to see the full error message
       formValues.csvFile = formValues.csvFile.map((wrapperFile) => wrapperFile.originFileObj);
       tasks = await readCSVFile(formValues.csvFile[0]);
     } else {
@@ -221,14 +226,18 @@ function TaskCreateBulkView() {
     setTasksProcessed(0);
 
     try {
+      // @ts-expect-error ts-migrate(7034) FIXME: Variable 'taskResponses' implicitly has type 'any[... Remove this comment to see the full error message
       let taskResponses = [];
+      // @ts-expect-error ts-migrate(7034) FIXME: Variable 'warnings' implicitly has type 'any[]' in... Remove this comment to see the full error message
       let warnings = [];
 
       for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
         const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
         // eslint-disable-next-line no-await-in-loop
         const response = await createTasks(subArray);
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'taskResponses' implicitly has an 'any[]'... Remove this comment to see the full error message
         taskResponses = taskResponses.concat(response.tasks);
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'warnings' implicitly has an 'any[]' type... Remove this comment to see the full error message
         warnings = warnings.concat(response.warnings);
         setTasksProcessed(i + NUM_TASKS_PER_BATCH);
       }
@@ -336,6 +345,7 @@ function TaskCreateBulkView() {
             <FormItem>
               {isUploading ? (
                 <Progress
+                  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
                   percent={parseInt((tasksProcessed / tasksCount) * 100)}
                   showInfo
                   status="active"

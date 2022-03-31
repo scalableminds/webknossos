@@ -1,3 +1,4 @@
+// @flow
 import React, { useEffect, useState } from "react";
 import { Link, useHistory } from "react-router-dom";
 import { Spin, Row, Col, Card } from "antd";
@@ -18,6 +19,7 @@ function RegistrationViewNotDemo() {
 
       try {
         const defaultOrg = await getDefaultOrganization();
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'APIOrganization | null | undefin... Remove this comment to see the full error message
         setOrganization(defaultOrg);
       } finally {
         setIsLoading(false);
@@ -44,11 +46,14 @@ function RegistrationViewNotDemo() {
             marginBottom: 24,
           }}
         >
+          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           You are about to join the organization &ldquo;{organization.displayName}&rdquo;!
         </Card>
         <RegistrationForm // The key is used to enforce a remount in case the organizationName changes.
           // That way, we ensure that the organization field is cleared.
+          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           key={organization.name}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'APIOrganiza... Remove this comment to see the full error message
           targetOrganization={organization}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {
@@ -79,6 +84,7 @@ function RegistrationViewNotDemo() {
   return (
     <Spin spinning={isLoading}>
       <Row
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
         type="flex"
         justify="center"
         style={{
@@ -100,6 +106,7 @@ function RegistrationViewDemo() {
   const history = useHistory();
   return (
     <Row
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
       type="flex"
       justify="center"
       style={{

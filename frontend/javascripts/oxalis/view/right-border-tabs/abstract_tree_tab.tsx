@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import { Button } from "antd";
 import type { Dispatch } from "redux";
@@ -26,6 +28,7 @@ class AbstractTreeTab extends Component<Props, State> {
   };
 
   componentDidMount() {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     window.addEventListener("resize", this.drawTree, false);
     this.drawTree();
   }
@@ -35,6 +38,7 @@ class AbstractTreeTab extends Component<Props, State> {
   }
 
   componentWillUnmount() {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("resize", this.drawTree, false);
   }
 
@@ -56,6 +60,7 @@ class AbstractTreeTab extends Component<Props, State> {
       );
     }
   }, 1000);
+
   handleClick = (event: React.MouseEvent<any>) => {
     const id = AbstractTreeRenderer.getIdFromPos(
       event.nativeEvent.offsetX,
@@ -67,6 +72,7 @@ class AbstractTreeTab extends Component<Props, State> {
       this.props.dispatch(setActiveNodeAction(id));
     }
   };
+
   onClickShow = () => {
     this.setState({
       visible: true,
@@ -110,4 +116,5 @@ function mapStateToProps(state: OxalisState): $Shape<Props> {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps)(AbstractTreeTab);

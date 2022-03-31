@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import type { APIDataset } from "types/api_flow_types";
 import {
@@ -22,10 +23,12 @@ test.before("Reset database and change token", async () => {
   setCurrToken(tokenUserA);
 });
 test.serial("getDatasets", async (t) => {
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
   let datasets = await api.getDatasets();
   let retry = 0;
 
   while (JSON.stringify(datasets).indexOf("Not imported yet") === -1 && retry < 10) {
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
     // eslint-disable-next-line no-await-in-loop
     datasets = await api.getDatasets();
     retry++;
@@ -67,6 +70,7 @@ test("updateDatasetTeams", async (t) => {
   // undo the Change
   await api.updateDatasetTeams(
     dataset,
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'team' implicitly has an 'any' type.
     dataset.allowedTeams.map((team) => team.id),
   );
 }); // test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {

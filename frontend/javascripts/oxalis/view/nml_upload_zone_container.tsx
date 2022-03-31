@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
 import { FileOutlined, InboxOutlined } from "@ant-design/icons";
@@ -29,6 +30,7 @@ type StateProps = {
 };
 type Props = StateProps & OwnProps;
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'children' implicitly has an 'any'... Remove this comment to see the full error message
 function OverlayDropZone({ children }) {
   return (
     <div className="nml-upload-zone-overlay">
@@ -37,6 +39,7 @@ function OverlayDropZone({ children }) {
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'clickAllowed' implicitly has an '... Remove this comment to see the full error message
 function NmlDropArea({ clickAllowed, isUpdateAllowed, getInputProps }) {
   const clickInput = clickAllowed ? <input {...getInputProps()} /> : null;
   return (
@@ -239,6 +242,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     // That way, files can be dropped over the entire view.
     return (
       <Dropzone
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: ({ getRootProps, getInputProps }... Remove this comment to see the full error message
         disableClick
         multiple
         disablePreview
@@ -297,6 +301,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,

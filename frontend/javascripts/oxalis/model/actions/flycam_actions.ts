@@ -109,7 +109,7 @@ export const setZoomStepAction = (zoomStep: number): SetZoomStepAction => ({
 });
 export const setPositionAction = (
   position: Vector3,
-  dimensionToSkip: number | null | undefined,
+  dimensionToSkip?: number | null | undefined,
 ): SetPositionAction => ({
   type: "SET_POSITION",
   position,

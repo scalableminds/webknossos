@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -17,7 +18,9 @@ export class AbstractPrefetchStrategy {
   roundTripTimeRangeEnd: number = 0;
   contentTypes: Array<string> = [];
   name: string = "ABSTRACT";
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'u' has no initializer and is not definit... Remove this comment to see the full error message
   u: DimensionIndices;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'v' has no initializer and is not definit... Remove this comment to see the full error message
   v: DimensionIndices;
 
   forContentType(givenContentTypes: {
@@ -29,6 +32,7 @@ export class AbstractPrefetchStrategy {
       return true;
     }
 
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return this.contentTypes.some((contentType) => givenContentTypes[contentType]);
   }
 
@@ -51,6 +55,7 @@ export class AbstractPrefetchStrategy {
         bucket[this.u] += u;
         bucket[this.v] += v;
 
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
         if (_.min(bucket) >= 0) {
           buckets.push(bucket);
         }
@@ -58,6 +63,7 @@ export class AbstractPrefetchStrategy {
     }
 
     // $FlowIssue[invalid-tuple-arity] flow does not understand that slicing a Vector3 returns another Vector3
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     return buckets;
   }
 }
@@ -68,6 +74,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
   roundTripTimeRangeEnd = Infinity;
   preloadingSlides = 0;
   preloadingPriorityOffset = 0;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'w' has no initializer and is not definit... Remove this comment to see the full error message
   w: DimensionIndices;
 
   prefetch(
@@ -101,6 +108,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       resolutions,
       false,
     );
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'queueItemsForFallbackZoomStep' implicitl... Remove this comment to see the full error message
     let queueItemsForFallbackZoomStep = [];
     const fallbackZoomStep = Math.min(maxZoomStep, currentZoomStep + 1);
 
@@ -118,6 +126,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       );
     }
 
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'queueItemsForFallbackZoomStep' implicitl... Remove this comment to see the full error message
     return queueItemsForCurrentZoomStep.concat(queueItemsForFallbackZoomStep);
   }
 
@@ -132,9 +141,11 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     resolutions: Vector3[],
     isFallback: boolean,
   ): Array<PullQueueItem> {
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'pullQueue' implicitly has type 'any[]' i... Remove this comment to see the full error message
     const pullQueue = [];
 
     if (zoomStepDiff > MAX_ZOOM_STEP_DIFF_PREFETCH) {
+      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'pullQueue' implicitly has an 'any[]' typ... Remove this comment to see the full error message
       return pullQueue;
     }
 
@@ -154,12 +165,14 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       widthHeightVector[u] = areas[plane].right - areas[plane].left;
       widthHeightVector[v] = areas[plane].bottom - areas[plane].top;
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
         widthHeightVector,
         resolutions,
         zoomStep,
       );
       const width = scaledWidthHeightVector[u];
       const height = scaledWidthHeightVector[v];
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       const bucketPositions = this.getBucketPositions(centerBucket3, width, height);
       const prefetchWeight = getPriorityWeightForPrefetch();
 
@@ -194,6 +207,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       }
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ bucket: number[]; priority: number; }[]' i... Remove this comment to see the full error message
     return pullQueue;
   }
 }

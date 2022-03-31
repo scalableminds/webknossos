@@ -1,3 +1,4 @@
+// @flow
 import * as THREE from "three";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
@@ -18,17 +19,20 @@ class Crosshair {
     this.SCALE_MAX = 1;
     this.scale = 0;
     this.isDirty = true;
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Group' is missing the following properties f... Remove this comment to see the full error message
     this.mesh = this.createMesh();
     this.setScale(scale);
   }
 
   setVisibility(v: boolean) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.mesh.visible = v;
   }
 
   update() {
     const { mesh } = this;
     const m = getZoomedMatrix(Store.getState().flycam);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrix' does not exist on type 'typeof M... Remove this comment to see the full error message
     mesh.matrix.set(
       m[0],
       m[4],
@@ -47,9 +51,13 @@ class Crosshair {
       m[11],
       m[15],
     );
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrix' does not exist on type 'typeof M... Remove this comment to see the full error message
     mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrix' does not exist on type 'typeof M... Remove this comment to see the full error message
     mesh.matrix.multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.5));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrix' does not exist on type 'typeof M... Remove this comment to see the full error message
     mesh.matrix.scale(new THREE.Vector3(this.scale, this.scale, this.scale));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrixWorldNeedsUpdate' does not exist o... Remove this comment to see the full error message
     mesh.matrixWorldNeedsUpdate = true;
     this.isDirty = false;
   }
@@ -64,10 +72,12 @@ class Crosshair {
   }
 
   addToScene(scene: typeof THREE.Scene) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message
     scene.add(this.mesh);
   }
 
   createMesh() {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'radius' implicitly has an 'any' type.
     const createCircle = (radius) => {
       const segments = 64;
       const material = new THREE.LineBasicMaterial({
@@ -86,6 +96,7 @@ class Crosshair {
     mesh.add(innerCircle);
     mesh.rotation.x = Math.PI;
     mesh.matrixAutoUpdate = false;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'doubleSided' does not exist on type 'Gro... Remove this comment to see the full error message
     mesh.doubleSided = true;
     return mesh;
   }

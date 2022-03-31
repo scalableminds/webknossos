@@ -1,4 +1,6 @@
+// @flow
 import * as THREE from "three";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
 import type { OrthoView } from "oxalis/constants";
@@ -26,14 +28,21 @@ export const setupRenderArea = (
 ) => {
   // In WebGLRenderer.setViewport() and WebGLRenderer.setScissor()
   // (x, y) is the coordinate of the lower left corner of the rectangular region.
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'domElement' does not exist on type 'type... Remove this comment to see the full error message
   const overallHeight = renderer.domElement.height;
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'setViewport' does not exist on type 'typ... Remove this comment to see the full error message
   renderer.setViewport(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'setScissor' does not exist on type 'type... Remove this comment to see the full error message
   renderer.setScissor(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'setScissorTest' does not exist on type '... Remove this comment to see the full error message
   renderer.setScissorTest(true);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'setClearColor' does not exist on type 't... Remove this comment to see the full error message
   renderer.setClearColor(color === 0xffffff ? getBackgroundColor() : color, 1);
 };
 export const clearCanvas = (renderer: typeof THREE.WebGLRenderer) => {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'domElement' does not exist on type 'type... Remove this comment to see the full error message
   setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'clear' does not exist on type 'typeof We... Remove this comment to see the full error message
   renderer.clear();
 };
 export function renderToTexture(
@@ -51,6 +60,7 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'getObjectByName' does not exist on type ... Remove this comment to see the full error message
   camera = camera || scene.getObjectByName(plane);
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
@@ -59,20 +69,27 @@ export function renderToTexture(
     const isArbitraryMode = constants.MODES_ARBITRARY.includes(
       state.temporaryConfiguration.viewMode,
     );
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     camera = camera.clone();
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     camera.far = isArbitraryMode
       ? state.userConfiguration.clippingDistanceArbitrary
       : state.userConfiguration.clippingDistance;
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     camera.updateProjectionMatrix();
   }
 
   clearColor = clearColor != null ? clearColor : 0x000000;
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'autoClear' does not exist on type 'typeo... Remove this comment to see the full error message
   renderer.autoClear = true;
   let { width, height } = getInputCatcherRect(state, plane);
   width = Math.round(width);
   height = Math.round(height);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'setViewport' does not exist on type 'typ... Remove this comment to see the full error message
   renderer.setViewport(0, 0 + height, width, height);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'setScissorTest' does not exist on type '... Remove this comment to see the full error message
   renderer.setScissorTest(false);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'setClearColor' does not exist on type 't... Remove this comment to see the full error message
   renderer.setClearColor(clearColor === 0xffffff ? getBackgroundColor() : clearColor, 1);
   const renderTarget = new THREE.WebGLRenderTarget(width, height);
   const buffer = new Uint8Array(width * height * 4);
@@ -82,9 +99,13 @@ export function renderToTexture(
     SceneController.updateSceneForCam(plane);
   }
 
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'setRenderTarget' does not exist on type ... Remove this comment to see the full error message
   renderer.setRenderTarget(renderTarget);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'render' does not exist on type 'typeof W... Remove this comment to see the full error message
   renderer.render(scene, camera);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'readRenderTargetPixels' does not exist o... Remove this comment to see the full error message
   renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'setRenderTarget' does not exist on type ... Remove this comment to see the full error message
   renderer.setRenderTarget(null);
   return buffer;
 }
@@ -102,6 +123,7 @@ export async function downloadScreenshot() {
     if (width === 0 || height === 0) continue;
     // $FlowIssue[prop-missing] planeId cannot be arbitraryViewport in OrthoViewColors access
     const clearColor = OrthoViewValues.includes(planeId) ? OrthoViewColors[planeId] : 0xffffff;
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
     const buffer = renderToTexture(planeId, null, null, false, clearColor);
     // eslint-disable-next-line no-await-in-loop
     const blob = await convertBufferToImage(buffer, width, height);

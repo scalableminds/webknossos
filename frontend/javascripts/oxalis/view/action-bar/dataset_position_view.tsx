@@ -1,3 +1,4 @@
+// @flow
 import { Input, Tooltip } from "antd";
 import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -44,17 +45,21 @@ class DatasetPositionView extends PureComponent<Props> {
     await navigator.clipboard.writeText(position);
     Toast.success("Position copied to clipboard");
   };
+
   copyRotationToClipboard = async () => {
     const rotation = V3.round(getRotation(this.props.flycam)).join(", ");
     await navigator.clipboard.writeText(rotation);
     Toast.success("Rotation copied to clipboard");
   };
+
   handleChangePosition = (position: Vector3) => {
     Store.dispatch(setPositionAction(position));
   };
+
   handleChangeRotation = (rotation: Vector3) => {
     Store.dispatch(setRotationAction(rotation));
   };
+
   isPositionOutOfBounds = (position: Vector3) => {
     const { dataset, task } = this.props;
     const { min: datasetMin, max: datasetMax } = getDatasetExtentInVoxel(dataset);
@@ -77,6 +82,7 @@ class DatasetPositionView extends PureComponent<Props> {
         bbox.topLeft[1] + bbox.height,
         bbox.topLeft[2] + bbox.depth,
       ];
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       isOutOfTaskBounds = isPositionOutOfBounds(bbox.topLeft, bboxMax);
     }
 
@@ -120,6 +126,7 @@ class DatasetPositionView extends PureComponent<Props> {
           <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
             <ButtonComponent
               onClick={this.copyPositionToClipboard}
+              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               style={copyPositionStyle}
               className="hide-on-small-screen"
             >
@@ -129,6 +136,7 @@ class DatasetPositionView extends PureComponent<Props> {
           <Vector3Input
             value={position}
             onChange={this.handleChangePosition}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ value: any; onChange: (position: Vector3) ... Remove this comment to see the full error message
             autoSize
             style={positionInputStyle}
             allowDecimals
@@ -146,6 +154,7 @@ class DatasetPositionView extends PureComponent<Props> {
             <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
               <ButtonComponent
                 onClick={this.copyRotationToClipboard}
+                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                 style={{
                   padding: "0 10px",
                 }}
@@ -157,6 +166,7 @@ class DatasetPositionView extends PureComponent<Props> {
             <Vector3Input
               value={rotation}
               onChange={this.handleChangeRotation}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ value: any; onChange: (rotation: Vector3) ... Remove this comment to see the full error message
               style={{
                 textAlign: "center",
                 width: 120,
@@ -180,4 +190,5 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps)(DatasetPositionView);

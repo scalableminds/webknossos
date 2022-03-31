@@ -1,7 +1,9 @@
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
+// @ts-expect-error ts-migrate(2306) FIXME: File '/Users/therold/Programming/scalableminds/web... Remove this comment to see the full error message
 import KeyboardJS from "libs/keyboard";
 import * as Utils from "libs/utils";
 import type { Point2 } from "oxalis/constants";
@@ -89,6 +91,7 @@ export class InputKeyboardNoLoop {
   attach(key: KeyboardKey, callback: KeyboardHandler) {
     const binding = [
       key,
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
       (event) => {
         if (!this.isStarted) {
           return;
@@ -112,6 +115,7 @@ export class InputKeyboardNoLoop {
       _.noop,
     ];
     KeyboardJS.bind(...binding);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(string | ((...args: any[]) => v... Remove this comment to see the full error message
     return this.bindings.push(binding);
   }
 
@@ -153,9 +157,11 @@ export class InputKeyboard {
   }
 
   attach(key: KeyboardKey, callback: KeyboardLoopHandler) {
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'delayTimeoutId' implicitly has type 'any... Remove this comment to see the full error message
     let delayTimeoutId = null;
     const binding = [
       key,
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
       (event) => {
         // When first pressed, insert the callback into
         // keyCallbackMap and start the buttonLoop.
@@ -168,6 +174,7 @@ export class InputKeyboard {
           return;
         }
 
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if (this.keyCallbackMap[key] != null) {
           return;
         }
@@ -184,6 +191,7 @@ export class InputKeyboard {
         // reset lastTime
         callback.lastTime = null;
         callback.delayed = true;
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         this.keyCallbackMap[key] = callback;
         this.keyPressedCount++;
 
@@ -207,18 +215,23 @@ export class InputKeyboard {
           return;
         }
 
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if (this.keyCallbackMap[key] != null) {
           this.keyPressedCount--;
+          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           delete this.keyCallbackMap[key];
         }
 
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'delayTimeoutId' implicitly has an 'any' ... Remove this comment to see the full error message
         if (delayTimeoutId != null) {
+          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'delayTimeoutId' implicitly has an 'any' ... Remove this comment to see the full error message
           clearTimeout(delayTimeoutId);
           delayTimeoutId = null;
         }
       },
     ];
     KeyboardJS.bind(...binding);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(string | ((event: any) => void)... Remove this comment to see the full error message
     this.bindings.push(binding);
   }
 
@@ -231,6 +244,7 @@ export class InputKeyboard {
 
     if (this.keyPressedCount > 0) {
       for (const key of Object.keys(this.keyCallbackMap)) {
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         const callback = this.keyCallbackMap[key];
 
         if (!callback.delayed) {
@@ -286,6 +300,7 @@ class InputMouseButton {
     const eventWhich = event.which !== 0 ? event.which : 1;
 
     if (eventWhich === this.which) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeElement' does not exist on type 'D... Remove this comment to see the full error message
       document.activeElement.blur();
       this.down = true;
       this.moveDelta = 0;
@@ -341,8 +356,11 @@ export class InputMouse {
   };
   ignoreScrollingWhileDragging: boolean;
   // Copied from backbone events (TODO: handle this better)
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'on' has no initializer and is not defini... Remove this comment to see the full error message
   on: (bindings: BindingMap<MouseHandler>) => void;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'off' has no initializer and is not defin... Remove this comment to see the full error message
   off: (...args: Array<any>) => any;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
   trigger: (...args: Array<any>) => any;
 
   constructor(
@@ -368,37 +386,46 @@ export class InputMouse {
     this.lastPosition = null;
     this.delegatedEvents = {};
     this.ignoreScrollingWhileDragging = ignoreScrollingWhileDragging;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("mousemove", this.mouseMove);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("mouseup", this.mouseUp);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("touchend", this.touchEnd);
 
     _.extend(
       this.delegatedEvents,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
       Utils.addEventListenerWithDelegation(document, "mousedown", targetSelector, this.mouseDown),
     );
 
     _.extend(
       this.delegatedEvents,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
       Utils.addEventListenerWithDelegation(document, "mouseover", targetSelector, this.mouseOver),
     );
 
     _.extend(
       this.delegatedEvents,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
       Utils.addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
     );
 
     _.extend(
       this.delegatedEvents,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
       Utils.addEventListenerWithDelegation(document, "touchstart", targetSelector, this.mouseOver),
     );
 
     _.extend(
       this.delegatedEvents,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
       Utils.addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
     );
 
     _.extend(
       this.delegatedEvents,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
       Utils.addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
         passive: false,
       }),
@@ -419,15 +446,20 @@ export class InputMouse {
     this.hammerManager.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
     this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
     this.hammerManager.on("pinchend", () => this.pinchEnd());
+    // @ts-expect-error ts-migrate(2565) FIXME: Property 'on' is used before being assigned.
     this.on(initialBindings);
   }
 
   destroy() {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("mousemove", this.mouseMove);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("mouseup", this.mouseUp);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("touchend", this.touchEnd);
 
     for (const [eventName, eventHandler] of Object.entries(this.delegatedEvents)) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
       document.removeEventListener(eventName, eventHandler);
     }
 
@@ -585,9 +617,12 @@ export class InputMouse {
 
   getElementOffset() {
     // Return the bounding rectangle relative to the top-left corner of the document
+    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     const boundingRect = document.getElementById(this.targetId).getBoundingClientRect();
     return _.extend({}, boundingRect, {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'scrollX' does not exist on type '(Window... Remove this comment to see the full error message
       left: boundingRect.left + window.scrollX,
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'scrollY' does not exist on type '(Window... Remove this comment to see the full error message
       top: boundingRect.top + window.scrollY,
     });
   }

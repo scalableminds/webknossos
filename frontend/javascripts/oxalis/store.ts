@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $ReadOnly, $Shape } from "utility-types";
 import type { Dispatch } from "redux";
 import { createStore, applyMiddleware } from "redux";
@@ -509,6 +510,7 @@ const combinedReducers = reduceReducers(
   UiReducer,
   ConnectomeReducer,
 );
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 1 type arguments, but got 3.
 const store = createStore<OxalisState, Action, Dispatch<any>>(
   enableBatching(combinedReducers),
   defaultState,

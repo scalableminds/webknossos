@@ -1,7 +1,9 @@
+// @flow
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   _all,
@@ -21,8 +23,10 @@ import Toast from "libs/toast";
 import messages from "messages";
 
 function* pushUserSettingsAsync(): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const userConfiguration = yield* select((state) => state.userConfiguration);
   yield* retry(
     SETTINGS_MAX_RETRY_COUNT,
@@ -33,9 +37,12 @@ function* pushUserSettingsAsync(): Saga<void> {
 }
 
 function* pushDatasetSettingsAsync(): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
 
   try {
@@ -48,6 +55,7 @@ function* pushDatasetSettingsAsync(): Saga<void> {
     );
   } catch (error) {
     // We catch errors in view mode as they are not that important here and may annoy the user.
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const tracing = yield* select((state) => state.tracing);
     const isViewMode = tracing.annotationType === "View";
 
@@ -70,6 +78,7 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
   const { propertyName } = action;
 
   if (propertyName === "moveValue" || propertyName === "moveValue3d") {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const moveValue = yield* select((state) => state.userConfiguration[propertyName]);
     const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
     Toast.success(moveValueMessage, {

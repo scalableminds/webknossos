@@ -122,6 +122,7 @@ function computeDistanceArray(
       min,
       max,
       !isMaxEdge,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DimensionIndices[]' is not assig... Remove this comment to see the full error message
       primaryAndSecondaryDim,
       planeRatio,
     );
@@ -197,6 +198,7 @@ export function getClosestHoveredBoundingBox(
   const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
   const primaryEdge = getEdgeInfoFromId(nearestEdgeIndex);
   let secondaryEdge = null;
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const [firstNeighbourId, secondNeighbourId] = getNeighbourEdgeIndexByEdgeIndex[nearestEdgeIndex];
   const firstNeighbourEdgeDistance = currentNearestDistanceArray[firstNeighbourId];
   const secondNeighbourEdgeDistance = currentNearestDistanceArray[secondNeighbourId];
@@ -213,6 +215,7 @@ export function getClosestHoveredBoundingBox(
     secondaryEdge = getEdgeInfoFromId(secondNeighbourId);
   }
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boxId: number; direction: string; isMaxEdg... Remove this comment to see the full error message
   return [primaryEdge, secondaryEdge];
 }
 export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
@@ -272,6 +275,7 @@ export function handleResizingBoundingBox(
     const newPositionValue = Math.round(globalMousePosition[resizableDimension]);
     const minOrMax = edge.isMaxEdge ? "max" : "min";
     const oppositeOfMinOrMax = edge.isMaxEdge ? "min" : "max";
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const otherEdgeValue = bboxToResize.boundingBox[oppositeOfMinOrMax][resizableDimension];
 
     if (otherEdgeValue === newPositionValue) {
@@ -310,6 +314,7 @@ export function handleResizingBoundingBox(
 
   Store.dispatch(
     changeUserBoundingBoxAction(primaryEdge.boxId, {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ min: number[]; max: number[]; }' is not as... Remove this comment to see the full error message
       boundingBox: updatedBounds,
     }),
   );

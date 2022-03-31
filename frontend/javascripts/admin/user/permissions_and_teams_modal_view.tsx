@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Values } from "utility-types";
 import { Modal, Button, Radio, Col, Row, Checkbox, Divider } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
@@ -148,13 +149,19 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         if (this.props.activeUser.isAdmin && this.props.selectedUserIds.length === 1) {
           // If the current user is admin and only one user is edited we also update the permissions.
           if (this.state.selectedPermission === PERMISSIONS.admin) {
+            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isAdmin' because it is a read-on... Remove this comment to see the full error message
             newUser.isAdmin = true;
+            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isDatasetManager' because it is ... Remove this comment to see the full error message
             newUser.isDatasetManager = false;
           } else if (this.state.selectedPermission === PERMISSIONS.datasetManager) {
+            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isDatasetManager' because it is ... Remove this comment to see the full error message
             newUser.isDatasetManager = true;
+            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isAdmin' because it is a read-on... Remove this comment to see the full error message
             newUser.isAdmin = false;
           } else {
+            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isDatasetManager' because it is ... Remove this comment to see the full error message
             newUser.isDatasetManager = false;
+            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isAdmin' because it is a read-on... Remove this comment to see the full error message
             newUser.isAdmin = false;
           }
         }
@@ -178,6 +185,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     );
   };
   handlePermissionChanged = (evt: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const selectedPermission: $Values<typeof PERMISSIONS> = evt.target.value;
     this.setState({
       selectedPermission,
@@ -185,10 +193,12 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
   };
 
   handleSelectTeamRole(teamName: string, isTeamManager: boolean) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'name' does not exist on type 'never'.
     const team = this.state.teams.find((t) => t.name === teamName);
 
     if (team) {
       const selectedTeam = {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
         id: team.id,
         name: teamName,
         isTeamManager,
@@ -217,7 +227,9 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         value={team.name}
         checked={_.has(this.state.selectedTeams, team.name)}
         disabled={isDisabled}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.SyntheticEvent) => void' is no... Remove this comment to see the full error message
         onChange={(event: React.SyntheticEvent) => {
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
           if (event.target.checked) {
             this.handleSelectTeamRole(team.name, false);
           } else {
@@ -231,6 +243,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
   }
 
   getRoleComponent(team: APITeam, isDisabled: boolean) {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     const selectedTeam = this.state.selectedTeams[team.name];
     let selectedValue = null;
 
@@ -285,6 +298,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
             name="permission-role"
             defaultValue={this.state.selectedPermission}
             value={this.state.selectedPermission}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(evt: React.SyntheticEvent) => void' is not ... Remove this comment to see the full error message
             onChange={this.handlePermissionChanged}
             disabled={!isUserAdmin}
           >
@@ -323,6 +337,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     );
     const isAdminSelected = this.state.selectedPermission === PERMISSIONS.admin;
     const teamsRoleComponents = this.state.teams.map((team) => (
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
       <Row key={team.id}>
         <Col span={12}>{this.getTeamComponent(team, isAdminSelected)}</Col>
         <Col span={12}>{this.getRoleComponent(team, isAdminSelected)}</Col>

@@ -1,8 +1,12 @@
+// @flow
 /* eslint no-await-in-loop: 0 */
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'url-... Remove this comment to see the full error message
 import urljoin from "url-join";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'merg... Remove this comment to see the full error message
 import mergeImg from "merge-img";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'pixe... Remove this comment to see the full error message
 import pixelmatch from "pixelmatch";
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
@@ -42,10 +46,12 @@ export async function screenshotDataset(
     "skeleton",
     null,
     null,
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ host: string; doNotInvestigate... Remove this comment to see the full error message
     options,
   );
 
   if (optionalDatasetConfigOverride != null) {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ host: string; doNotInvestigate... Remove this comment to see the full error message
     await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
   }
 
@@ -64,8 +70,10 @@ export async function screenshotDatasetWithMapping(
     "skeleton",
     null,
     null,
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ host: string; doNotInvestigate... Remove this comment to see the full error message
     options,
   );
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 4 arguments, but got 3.
   await openTracingView(page, baseUrl, createdExplorational.id);
   await page.evaluate(
     `webknossos.apiReady().then(async api => api.data.activateMapping("${mappingName}"))`,
@@ -85,6 +93,7 @@ export async function screenshotDatasetWithMappingLink(
     "skeleton",
     null,
     null,
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ host: string; doNotInvestigate... Remove this comment to see the full error message
     options,
   );
   await openTracingView(page, baseUrl, createdExplorational.id, optionalViewOverride);
@@ -119,6 +128,7 @@ async function waitForMappingEnabled(page: Page) {
 async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
 
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'length' does not exist on type 'ElementH... Remove this comment to see the full error message
   while (inputCatchers == null || inputCatchers.length < 4) {
     await page.waitForTimeout(500);
     inputCatchers = await page.$(".inputcatcher");
@@ -146,7 +156,9 @@ async function waitForRenderingFinish(page: Page) {
       changedPixels = pixelmatch(
         // The buffers need to be converted to png before comparing them
         // as they might have different lengths, otherwise (probably due to different png encodings)
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | Buffer' is not assignab... Remove this comment to see the full error message
         (await bufferToPng(lastShot, width, height)).data,
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | Buffer' is not assignab... Remove this comment to see the full error message
         (await bufferToPng(currentShot, width, height)).data,
         null,
         width,
@@ -222,6 +234,7 @@ async function screenshotTracingView(page: Page): Promise<Screenshot> {
   // Concatenate all screenshots
   const img = await mergeImg(screenshots);
   return new Promise((resolve) =>
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_' implicitly has an 'any' type.
     img.getBuffer("image/png", (_, buffer) =>
       resolve({
         screenshot: buffer,

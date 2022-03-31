@@ -1,3 +1,4 @@
+// @flow
 import { List } from "antd";
 import * as React from "react";
 import _ from "lodash";
@@ -109,6 +110,7 @@ class VersionList extends React.Component<Props, State> {
   }
 
   getNewestVersion(): number {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'never'.
     return _.max(this.state.versions.map((batch) => batch.version)) || 0;
   }
 
@@ -140,6 +142,7 @@ class VersionList extends React.Component<Props, State> {
       });
     }
   };
+
   handlePreviewVersion = (version: number) => {
     if (this.props.tracingType === "skeleton") {
       return previewVersion({
@@ -153,6 +156,7 @@ class VersionList extends React.Component<Props, State> {
       });
     }
   };
+
   // eslint-disable-next-line react/sort-comp
   getGroupedAndChunkedVersions = _.memoize(
     (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
@@ -165,10 +169,13 @@ class VersionList extends React.Component<Props, State> {
           .calendar(null, MOMENT_CALENDAR_FORMAT),
       );
 
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'batch' implicitly has an 'any' type.
       const getBatchTime = (batch) =>
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
         _.max(batch.value.map((action) => action.value.actionTimestamp));
 
       return _.mapValues(groupedVersions, (versionsOfOneDay) =>
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(batch: any) => unknown' is not ... Remove this comment to see the full error message
         chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
       );
     },
@@ -197,12 +204,15 @@ class VersionList extends React.Component<Props, State> {
             </List.Item>
           ) : (
             <VersionEntryGroup
+              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               batches={batchesOrDateString}
               allowUpdate={this.props.allowUpdate}
+              // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'never'.
               newestVersion={this.state.versions[0].version}
               activeVersion={this.props.tracing.version}
               onRestoreVersion={this.handleRestoreVersion}
               onPreviewVersion={this.handlePreviewVersion}
+              // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'APIUpda... Remove this comment to see the full error message
               key={batchesOrDateString[0].version}
             />
           )

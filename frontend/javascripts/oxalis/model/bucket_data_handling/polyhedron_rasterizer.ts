@@ -1,3 +1,4 @@
+// @flow
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import * as Utils from "libs/utils";
@@ -78,22 +79,33 @@ function nextFreeBit(x: number): number {
 //
 
 class PolyhedronRasterizer {
+  // @ts-expect-error ts-migrate(2702) FIXME: 'PolyhedronRasterizer' only refers to a type, but ... Remove this comment to see the full error message
   static Master: PolyhedronRasterizer.Master;
   // Orientation of transformed polyhedron 1 if z orientation is positive else -1
   orientation: 1 | -1 = 1;
   bufferLength: number;
   buffer: Int32Array;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'deltaX' has no initializer and is not de... Remove this comment to see the full error message
   deltaX: number;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'deltaY' has no initializer and is not de... Remove this comment to see the full error message
   deltaY: number;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'deltaZ' has no initializer and is not de... Remove this comment to see the full error message
   deltaZ: number;
   indices: Array<number>;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'maxX' has no initializer and is not defi... Remove this comment to see the full error message
   maxX: number;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'maxY' has no initializer and is not defi... Remove this comment to see the full error message
   maxY: number;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'maxZ' has no initializer and is not defi... Remove this comment to see the full error message
   maxZ: number;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'minX' has no initializer and is not defi... Remove this comment to see the full error message
   minX: number;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'minY' has no initializer and is not defi... Remove this comment to see the full error message
   minY: number;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'minZ' has no initializer and is not defi... Remove this comment to see the full error message
   minZ: number;
   pointsBuffer: Int32Array;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'shiftZ' has no initializer and is not de... Remove this comment to see the full error message
   shiftZ: number;
   vertices: Array<number>;
 

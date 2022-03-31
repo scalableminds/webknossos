@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import { Checkbox, Col, Collapse, Form, Input, Row, Table, Button } from "antd";
 import { FormInstance } from "antd/lib/form";
@@ -97,6 +99,7 @@ const columns = [
   },
 ];
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'form' implicitly has an 'any' type.
 const removeSettings = (form, settingsKey: string) => {
   const settingsString = form.getFieldValue("recommendedConfiguration");
 
@@ -105,6 +108,7 @@ const removeSettings = (form, settingsKey: string) => {
 
     const newSettings = _.omit(
       settingsObject,
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       Object.keys(getRecommendedConfigByCategory()[settingsKey]),
     );
 
@@ -121,6 +125,7 @@ export default function RecommendedConfigurationView({
   enabled,
   onChangeEnabled,
 }: {
+  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
   form: typeof FormInstance;
   enabled: boolean;
   onChangeEnabled: (arg0: boolean) => void;
@@ -128,6 +133,7 @@ export default function RecommendedConfigurationView({
   return (
     <Collapse
       onChange={(openedPanels) => onChangeEnabled(openedPanels.length === 1)}
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
       activeKey={enabled ? "config" : null}
     >
       <Panel
@@ -187,9 +193,11 @@ export default function RecommendedConfigurationView({
             <Table
               columns={columns}
               dataSource={_.map(getDefaultRecommendedConfiguration(), (value, key) => ({
+                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 name: settings[key],
                 key,
                 value: value.toString(),
+                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 comment: settingComments[key] || "",
               }))}
               size="small"

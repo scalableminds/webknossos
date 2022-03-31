@@ -1,3 +1,4 @@
+// @flow
 import { message } from "antd";
 import React from "react";
 import _ from "lodash";
@@ -8,6 +9,7 @@ import {
   getBoundaries,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   _takeEvery,
@@ -122,6 +124,7 @@ export function* watchVolumeTracingAsync(): Saga<void> {
 function* warnOfTooLowOpacity(): Saga<void> {
   yield* take("INITIALIZE_SETTINGS");
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   if (yield* select((state) => state.tracing.volumes.length === 0)) {
     return;
   }
@@ -133,6 +136,7 @@ function* warnOfTooLowOpacity(): Saga<void> {
   }
 
   const isOpacityTooLow = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.datasetConfiguration.layers[segmentationLayer.name].alpha < 10,
   );
 
@@ -145,10 +149,12 @@ function* warnOfTooLowOpacity(): Saga<void> {
 
 export function* editVolumeLayerAsync(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
     if (busyBlockingInfo.isBusy) {
@@ -162,10 +168,13 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
     const volumeTracing = yield* select(enforceActiveVolumeTracing);
     const contourTracingMode = volumeTracing.contourTracingMode;
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
     // Depending on the tool, annotation in higher zoom steps might be disallowed.
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const isZoomStepTooHighForAnnotating = yield* select((state) =>
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
     );
@@ -180,6 +189,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       continue;
     }
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const maybeLabeledResolutionWithZoomStep = yield* select((state) =>
       getRenderableResolutionForSegmentationTracing(state, volumeTracing),
     );
@@ -189,6 +199,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       continue;
     }
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
     yield* put(
       updateSegmentAction(
@@ -207,6 +218,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       startEditingAction.planeId,
       labeledResolution,
     );
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
     if (isBrushTool(activeTool)) {
@@ -234,6 +246,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         throw new Error("Unexpected action. Satisfy flow.");
       }
 
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
       const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
       if (initialViewport !== activeViewport) {
@@ -302,7 +315,9 @@ function* getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
 ): Saga<BoundingBoxType> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const halfBoundingBoxSizeUVW = V3.scale(Constants.FLOOD_FILL_EXTENTS[fillMode], 0.5);
   const currentViewportBounding = {
     min: V3.sub(position, halfBoundingBoxSizeUVW),
@@ -317,6 +332,7 @@ function* getBoundingBoxForFloodFill(
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const { lowerBoundary, upperBoundary } = yield* select((state) => getBoundaries(state.dataset));
   const { min: clippedMin, max: clippedMax } = new BoundingBox(
     currentViewportBounding,
@@ -337,17 +353,21 @@ function* createVolumeLayer(
   planeId: OrthoView,
   labeledResolution: Vector3,
 ): Saga<VolumeLayer> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledResolution);
 }
 
 function* labelWithVoxelBuffer2D(
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'voxelBuffer' implicitly has an 'any' ty... Remove this comment to see the full error message
   voxelBuffer,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'contourTracingMode' implicitly has an '... Remove this comment to see the full error message
   contourTracingMode,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
@@ -358,11 +378,13 @@ function* labelWithVoxelBuffer2D(
   );
   const { cube } = segmentationLayer;
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
   const dimensionIndices = Dimensions.getIndices(activeViewport);
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'x' implicitly has an 'any' type.
   const get3DCoordinateFromLocal2D = ([x, y]) =>
     voxelBuffer.get3DCoordinate([x + voxelBuffer.minCoord2d[0], y + voxelBuffer.minCoord2d[1]]);
 
@@ -452,8 +474,10 @@ function* copySegmentationLayer(action: Action): Saga<void> {
     throw new Error("Satisfy flow");
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
   if (activeViewport === "TDView") {
@@ -465,6 +489,7 @@ function* copySegmentationLayer(action: Action): Saga<void> {
   // to avoid large performance lags.
   // This restriction should be soften'ed when https://github.com/scalableminds/webknossos/issues/4639
   // is solved.
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const isResolutionTooLow = yield* select((state) =>
     isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
   );
@@ -482,10 +507,12 @@ function* copySegmentationLayer(action: Action): Saga<void> {
     volumeTracing.tracingId,
   );
   const { cube } = segmentationLayer;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
   const dimensionIndices = Dimensions.getIndices(activeViewport);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
     getHalfViewportExtents,
@@ -494,6 +521,7 @@ function* copySegmentationLayer(action: Action): Saga<void> {
   const activeCellId = volumeTracing.activeCellId;
   const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'voxelTemplateAddress' implicitly has an... Remove this comment to see the full error message
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
     const templateLabelValue = cube.getDataValue(voxelTemplateAddress, null, labeledZoomStep);
 
@@ -528,10 +556,12 @@ function* copySegmentationLayer(action: Action): Saga<void> {
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
   let direction = 1;
   const useDynamicSpaceDirection = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.userConfiguration.dynamicSpaceDirection,
   );
 
   if (useDynamicSpaceDirection) {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
     direction = spaceDirectionOrtho[dimensionIndices[2]];
   }
@@ -575,6 +605,7 @@ function* copySegmentationLayer(action: Action): Saga<void> {
 const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";
 export function* floodFill(): Saga<void> {
   yield* take("INITIALIZE_VOLUMETRACING");
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
@@ -594,6 +625,7 @@ export function* floodFill(): Saga<void> {
     const seedPosition = Dimensions.roundCoordinate(positionFloat);
     const activeCellId = volumeTracing.activeCellId;
     const dimensionIndices = Dimensions.getIndices(planeId);
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
     const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
@@ -604,6 +636,7 @@ export function* floodFill(): Saga<void> {
       continue;
     }
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
     if (busyBlockingInfo.isBusy) {
@@ -622,6 +655,7 @@ export function* floodFill(): Saga<void> {
     });
     yield* call(progressCallback, false, "Performing floodfill...");
     console.time("cube.floodFill");
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const fillMode = yield* select((state) => state.userConfiguration.fillMode);
     const {
       bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
@@ -667,6 +701,7 @@ export function* floodFill(): Saga<void> {
         resolutionInfo,
         cube,
         activeCellId,
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'unknown' is not assignable to pa... Remove this comment to see the full error message
         indexZ,
         true,
       );
@@ -762,13 +797,16 @@ function applyLabeledVoxelMapToAllMissingResolutions(
 
   // Given a sequence of resolutions, the inputLabeledVoxelMap is applied
   // over all these resolutions.
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'samplingSequence' implicitly has an 'an... Remove this comment to see the full error message
   function processSamplingSequence(samplingSequence, getNumberOfSlices) {
     // On each sampling step, a new LabeledVoxelMap is acquired
     // which is used as the input for the next down-/upsampling
     let currentLabeledVoxelMap: LabeledVoxelsMap = inputLabeledVoxelMap;
 
     for (const [source, target] of pairwise(samplingSequence)) {
+      // @ts-expect-error ts-migrate(2488) FIXME: Type 'unknown' must have a '[Symbol.iterator]()' m... Remove this comment to see the full error message
       const [sourceZoomStep, sourceResolution] = source;
+      // @ts-expect-error ts-migrate(2488) FIXME: Type 'unknown' must have a '[Symbol.iterator]()' m... Remove this comment to see the full error message
       const [targetZoomStep, targetResolution] = target;
       currentLabeledVoxelMap = sampleVoxelMapToResolution(
         currentLabeledVoxelMap,
@@ -796,11 +834,13 @@ function applyLabeledVoxelMapToAllMissingResolutions(
 
   // First upsample the voxel map and apply it to all better resolutions.
   // sourceZoomStep will be higher than targetZoomStep
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetResolution' implicitly has an 'an... Remove this comment to see the full error message
   processSamplingSequence(upsampleSequence, (targetResolution) =>
     Math.ceil(labeledResolution[thirdDim] / targetResolution[thirdDim]),
   );
   // Next we downsample the annotation and apply it.
   // sourceZoomStep will be lower than targetZoomStep
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_targetResolution' implicitly has an 'a... Remove this comment to see the full error message
   processSamplingSequence(downsampleSequence, (_targetResolution) => 1);
 }
 
@@ -832,6 +872,7 @@ export function* ensureToolIsAllowedInResolution(): Saga<any> {
 
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const isResolutionTooLow = yield* select((state) => {
       const { activeTool } = state.uiInformation;
       return isVolumeAnnotationDisallowedForZoom(activeTool, state);
@@ -867,11 +908,13 @@ export function* diffSegmentLists(
   } = diffDiffableMaps(prevSegments, newSegments);
 
   for (const segmentId of deletedSegmentIds) {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ name: string; value: { id: number; }; }' i... Remove this comment to see the full error message
     yield deleteSegmentVolumeAction(segmentId);
   }
 
   for (const segmentId of addedSegmentIds) {
     const segment = newSegments.get(segmentId);
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 4 arguments, but got 3.
     yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
   }
 
@@ -927,7 +970,9 @@ function* ensureSegmentExists(
 ): Saga<void> {
   const layer = yield* select(
     (
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
       store, // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'layerName' does not exist on type 'SetAc... Remove this comment to see the full error message
     ) => getRequestedOrVisibleSegmentationLayer(store, action.layerName),
   );
 
@@ -936,6 +981,7 @@ function* ensureSegmentExists(
   }
 
   const layerName = layer.name;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
   const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
   const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
 
@@ -999,11 +1045,13 @@ function* maintainSegmentsMap(): Saga<void> {
 }
 
 function* getGlobalMousePosition(): Saga<Vector3 | null | undefined> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   return yield* select((state) => {
     const mousePosition = state.temporaryConfiguration.mousePosition;
 
     if (mousePosition) {
       const [x, y] = mousePosition;
+      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       return calculateMaybeGlobalPos(state, {
         x,
         y,
@@ -1015,6 +1063,7 @@ function* getGlobalMousePosition(): Saga<Vector3 | null | undefined> {
 }
 
 function* updateHoveredSegmentId(): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
   const activeViewport = yield* select((store) => store.viewModeData.plane.activeViewport);
 
   if (activeViewport === OrthoViews.TDView) {
@@ -1025,6 +1074,7 @@ function* updateHoveredSegmentId(): Saga<void> {
   const hoveredCellInfo = yield* call([Model, Model.getHoveredCellId], globalMousePosition);
   const id = hoveredCellInfo != null ? hoveredCellInfo.id : 0;
   const oldHoveredSegmentId = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
     (store) => store.temporaryConfiguration.hoveredSegmentId,
   );
 
@@ -1044,6 +1094,7 @@ function* maintainContourGeometry(): Saga<void> {
 
   while (true) {
     yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const isTraceToolActive = yield* select((state) => isTraceTool(state.uiInformation.activeTool));
     const volumeTracing = yield* select(getActiveSegmentationTracing);
 
@@ -1058,6 +1109,7 @@ function* maintainContourGeometry(): Saga<void> {
       volumeTracing.contourTracingMode === ContourModeEnum.DELETE
         ? CONTOUR_COLOR_DELETE
         : CONTOUR_COLOR_NORMAL;
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'p' implicitly has an 'any' type.
     contourList.forEach((p) => contour.addEdgePoint(p));
   }
 }
@@ -1081,7 +1133,9 @@ function* ensureValidBrushSize(): Saga<void> {
   // - when webKnossos is loaded
   // - when a layer's visibility is toggled
   function* maybeClampBrushSize(): Saga<void> {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const currentBrushSize = yield* select((state) => state.userConfiguration.brushSize);
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const maximumBrushSize = yield* select((state) => getMaximumBrushSize(state));
 
     if (currentBrushSize > maximumBrushSize) {
@@ -1092,6 +1146,7 @@ function* ensureValidBrushSize(): Saga<void> {
   yield _takeLatest(
     [
       "WK_READY",
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
       (action) => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
     ],
     maybeClampBrushSize,

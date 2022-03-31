@@ -1,3 +1,4 @@
+// @flow
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
@@ -74,6 +75,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
       annotationType !== "skeleton" &&
       segmentationLayers.length > 0 &&
       selectedSegmentationLayerIndex != null
+        // @ts-expect-error ts-migrate(2538) FIXME: Type 'null' cannot be used as an index type.
         ? segmentationLayers[selectedSegmentationLayerIndex]
         : null;
     const fallbackLayerGetParameter =
@@ -168,6 +170,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
             segmentationLayers={segmentationLayers}
             dataset={dataset}
             selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'Dispatch<SetStateAction<null>>' is not assig... Remove this comment to see the full error message
             setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
           />
         ) : null}

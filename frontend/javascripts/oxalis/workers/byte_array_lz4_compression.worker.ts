@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'lz4j... Remove this comment to see the full error message
 import lz4 from "lz4js";
 import { expose } from "./comlink_wrapper";
 
@@ -14,4 +16,4 @@ function compressLz4Block(data: Uint8Array, compress: boolean): Uint8Array {
 export function __compressLz4BlockHelper(data: Uint8Array, compress: boolean): Uint8Array {
   return compressLz4Block(data, compress);
 }
-export default expose<typeof compressLz4Block>(compressLz4Block);
+export default compressLz4Block;

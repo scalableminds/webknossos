@@ -1,3 +1,4 @@
+// @flow
 import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",
@@ -142,6 +143,7 @@ export const annotation: APIAnnotation = {
   tracingTime: null,
   tags: ["ROI2017_wkw", "skeleton"],
   user: {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ created: number; id: string; email: string... Remove this comment to see the full error message
     created: 12345678,
     id: "5b1e45faa00000a900abc2c5",
     email: "sample@scm.io",

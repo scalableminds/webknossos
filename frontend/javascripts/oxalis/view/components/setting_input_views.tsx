@@ -42,6 +42,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     // checked more thoroughly against invalid values.
     const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
     return (
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; type: string; align: ... Remove this comment to see the full error message
       <Row type="flex" align="middle" gutter={rowGutter}>
         <Col span={9}>
           <label className="setting-label">{label}</label>
@@ -129,6 +130,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled, spans } = this.props;
     return (
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; type: string; align: ... Remove this comment to see the full error message
       <Row type="flex" align="middle" gutter={rowGutter}>
         <Col span={spans[0]}>
           <label className="setting-label">{label}</label>
@@ -137,6 +139,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string | number' is not a... Remove this comment to see the full error message
             tipFormatter={this.formatTooltip}
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
@@ -178,6 +181,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   render() {
     const { label, onChange, value, disabled, tooltipText, loading } = this.props;
     return (
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; className: string; ty... Remove this comment to see the full error message
       <Row className="margin-bottom" type="flex" align="middle" gutter={rowGutter}>
         <Col span={9}>
           <label className="setting-label">{label}</label>
@@ -234,6 +238,7 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
             min={min}
             max={max}
             onChange={onChange}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | ""' is not assignable to type 'numb... Remove this comment to see the full error message
             value={value}
             step={step}
             size="small"
@@ -272,6 +277,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
         min={min}
         max={max}
         onChange={onChange}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | null | undefined' is not assignable... Remove this comment to see the full error message
         value={value}
         step={step}
         size="small"
@@ -279,6 +285,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
     </div>
   );
   return (
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'TooltipPl... Remove this comment to see the full error message
     <Popover content={numberInput} trigger="click" placement={placement}>
       <span
         style={{
@@ -365,6 +372,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     });
   };
   handleChange = (evt: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const text = evt.target.value;
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(text);
@@ -386,6 +394,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     this.props.onColorChange(color);
   };
   handleNameChanged = (evt: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const currentEnteredName = evt.target.value;
 
     if (currentEnteredName !== this.props.name) {
@@ -453,6 +462,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               value={name}
               onChange={(evt: React.SyntheticEvent) => {
                 this.setState({
+                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
                   name: evt.target.value,
                 });
               }}
@@ -483,6 +493,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               trigger={["focus"]}
               title={tooltipTitle}
               placement="topLeft"
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ backgroundColor: string; } | null' is not ... Remove this comment to see the full error message
               overlayStyle={tooltipStyle}
             >
               <Input
@@ -499,6 +510,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
             <ColorSetting
               value={Utils.rgbToHex(upscaledColor)}
               onChange={this.handleColorChange}
+              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               className="ant-btn"
               style={iconStyle}
             />
@@ -524,6 +536,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
     disabled: false,
   };
   onColorChange = (evt: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     this.props.onChange(Utils.hexToRgb(evt.target.value));
   };
 
@@ -574,10 +587,13 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
         <Col span={15}>
           <Select
             onChange={onChange}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
             value={value.toString()}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
             defaultValue={value.toString()}
             size="small"
             dropdownMatchSelectWidth={false}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>[]' is not assignable to ... Remove this comment to see the full error message
             options={this.props.options}
           />
         </Col>

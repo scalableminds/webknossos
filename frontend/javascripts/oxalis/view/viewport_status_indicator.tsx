@@ -1,3 +1,4 @@
+// @flow
 import * as React from "react";
 import _ from "lodash";
 import { WarningOutlined } from "@ant-design/icons";
@@ -50,6 +51,7 @@ export default function ViewportStatusIndicator() {
       );
 
     if (!_.isEqual(unrenderableLayerNamesWithInfo, newUnrenderableLayersNamesWithInfos)) {
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'UnrenderableLayerNamesInfo[]' is... Remove this comment to see the full error message
       setUnrenderableLayerNamesWithInfo(newUnrenderableLayersNamesWithInfos);
     }
 

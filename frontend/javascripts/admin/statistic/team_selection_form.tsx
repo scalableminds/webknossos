@@ -1,3 +1,4 @@
+// @flow
 import { Row, Col, Form, Button } from "antd";
 import * as React from "react";
 import type { APITeam } from "types/api_flow_types";
@@ -11,6 +12,7 @@ type Props = {
 function TeamSelectionForm({ value, onChange }: Props) {
   const [form] = Form.useForm();
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleFormSubmit = (formValues) => {
     onChange(formValues.team);
   };

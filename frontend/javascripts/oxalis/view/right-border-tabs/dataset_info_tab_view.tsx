@@ -1,8 +1,11 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Values } from "utility-types";
 import type { Dispatch } from "redux";
 import { Tooltip, Button, Dropdown, Menu } from "antd";
 import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
@@ -144,9 +147,11 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state = {
     showJobsDetailsModal: null,
   };
+
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
   };
+
   setAnnotationDescription = (newDescription: string) => {
     this.props.setAnnotationDescription(newDescription);
   };
@@ -155,11 +160,15 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const statsMaybe = getStats(this.props.tracing);
     return this.props.tracing.skeleton != null ? (
       <div>
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats' implicitly has an 'any' type.
         <p>Number of Trees: {statsMaybe.map((stats) => stats.treeCount).getOrElse(null)}</p>
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats' implicitly has an 'any' type.
         <p>Number of Nodes: {statsMaybe.map((stats) => stats.nodeCount).getOrElse(null)}</p>
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats' implicitly has an 'any' type.
         <p>Number of Edges: {statsMaybe.map((stats) => stats.edgeCount).getOrElse(null)}</p>
         <p>
           Number of Branch Points:{" "}
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats' implicitly has an 'any' type.
           {statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}
         </p>
       </div>
@@ -506,6 +515,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           Annotation Type: {isVolume ? "Volume" : "Skeleton"}
           {allowUpdate && isExplorational ? (
             <ButtonComponent
+              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               style={{
                 marginLeft: 10,
               }}
@@ -572,6 +582,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
               <br />
               Available resolutions:
               <ul>
+                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'r' implicitly has an 'any' type.
                 {resolutions.map((r) => (
                   <li key={r.join()}>{r.join("-")}</li>
                 ))}
@@ -702,6 +713,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,

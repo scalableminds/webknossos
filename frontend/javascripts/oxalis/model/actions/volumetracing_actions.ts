@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import type { ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
@@ -260,6 +262,7 @@ export const dispatchFloodfillAsync = async (
   planeId: OrthoView,
 ): Promise<void> => {
   const readyDeferred = new Deferred();
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
   const action = floodFillAction(position, planeId, () => readyDeferred.resolve());
   dispatch(action);
   await readyDeferred.promise();

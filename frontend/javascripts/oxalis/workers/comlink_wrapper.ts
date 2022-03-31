@@ -51,11 +51,13 @@ export function createWorker<T>(WorkerClass: UseCreateWorkerToUseMe<T>): T {
     // In a node context (e.g., when executing tests), we don't create web workers which is why
     // we can simply return the input function here.
     // $FlowExpectedError[incompatible-return]
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'UseCreateWorkerToUseMe<T>' is not assignable... Remove this comment to see the full error message
     return WorkerClass;
   }
 
   return wrap(
     // $FlowExpectedError[not-a-function]
+    // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
     new WorkerClass(),
   );
 }
@@ -70,6 +72,7 @@ export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   // versions both return promises.
   // $FlowExpectedError[not-a-function]
   // $FlowExpectedError[prop-missing]
+  // @ts-expect-error ts-migrate(2741) FIXME: Property '_wrapped' is missing in type '(...args: ... Remove this comment to see the full error message
   return (...args) => Promise.resolve(fn(...args));
 }
 export function pretendPromise<T>(t: T): Promise<T> {
@@ -80,6 +83,7 @@ export function pretendPromise<T>(t: T): Promise<T> {
   // the call side. For this scenario, this function can be used (see
   // async_bucket_picker.worker.js as an example).
   // $FlowExpectedError[incompatible-return]
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'T' is not assignable to type 'Promise<T>'.
   return t;
 }
 export const transfer = _transfer;

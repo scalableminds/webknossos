@@ -1,3 +1,4 @@
+// @flow
 import * as React from "react";
 import { Button, Tooltip } from "antd";
 import { connect } from "react-redux";
@@ -45,6 +46,7 @@ function BorderToggleButton(props: Props) {
     */
         onClick={(event) => {
           if (event != null) {
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
             event.target.blur();
           }
 
@@ -78,4 +80,5 @@ function mapStateToProps(state: OxalisState) {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(BorderToggleButton);

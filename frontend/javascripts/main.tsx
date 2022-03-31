@@ -1,3 +1,4 @@
+// @flow
 import { Provider } from "react-redux";
 import React from "react";
 import ReactDOM from "react-dom";
@@ -36,10 +37,12 @@ async function loadHasOrganizations() {
   }
 }
 
+// @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
 document.addEventListener("DOMContentLoaded", async () => {
   ErrorHandling.initialize({
     throwAssertions: false,
   });
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
   document.addEventListener("click", googleAnalyticsLogClicks);
   await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);
   const containerElement = document.getElementById("main-container");

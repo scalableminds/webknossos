@@ -1,3 +1,4 @@
+// @flow
 /* eslint-disable no-eval */
 import { Modal, Input, Select, Spin } from "antd";
 import * as React from "react";
@@ -59,11 +60,14 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
 
   handleCodeChange = (event: React.SyntheticEvent) => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       code: event.target.value,
       isCodeChanged: true,
     });
   };
+
   handleScriptChange = async (scriptId: string) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
     const script = this.state.scripts.find((s) => s.id === scriptId);
     if (script == null) return;
 
@@ -76,6 +80,7 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
       });
     }
   };
+
   loadScript = async (script: Script) => {
     try {
       this.setState({
@@ -95,6 +100,7 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
       });
     }
   };
+
   handleClick = () => {
     try {
       eval(this.state.code);

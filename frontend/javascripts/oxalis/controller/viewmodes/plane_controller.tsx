@@ -1,4 +1,6 @@
+// @flow
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
@@ -116,9 +118,13 @@ class SkeletonKeybindings {
 
   static getLoopedKeyboardControls() {
     return {
+      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       "ctrl + left": () => SkeletonHandlers.moveNode(-1, 0),
+      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       "ctrl + right": () => SkeletonHandlers.moveNode(1, 0),
+      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       "ctrl + up": () => SkeletonHandlers.moveNode(0, -1),
+      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       "ctrl + down": () => SkeletonHandlers.moveNode(0, 1),
     };
   }
@@ -146,6 +152,7 @@ class BoundingBoxKeybindings {
   }
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'timeFactor' implicitly has an 'any' typ... Remove this comment to see the full error message
 const getMoveValue = (timeFactor) => {
   const state = Store.getState();
   return (
@@ -158,6 +165,7 @@ const getMoveValue = (timeFactor) => {
 function createDelayAwareMoveHandler(multiplier: number) {
   // The multiplier can be used for inverting the direction as well as for
   // speeding up the movement as it's done for shift+f, for example.
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'timeFactor' implicitly has an 'any' typ... Remove this comment to see the full error message
   const fn = (timeFactor, first) =>
     MoveHandlers.moveW(getMoveValue(timeFactor) * multiplier, first);
 
@@ -206,21 +214,30 @@ class PlaneController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
   // Plane Controller: Responsible for Plane Modes
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'planeView' has no initializer and is not... Remove this comment to see the full error message
   planeView: PlaneView;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'input' has no initializer and is not def... Remove this comment to see the full error message
   input: {
     mouseControllers: OrthoViewMap<InputMouse>;
     keyboard?: InputKeyboard;
+    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'keyboardNoLoop'.
     keyboardNoLoop?: InputKeyboardNoLoop;
     keyboardLoopDelayed?: InputKeyboard;
+    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'keyboardNoLoop'.
     keyboardNoLoop?: InputKeyboardNoLoop;
   };
+
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
   isStarted: boolean;
   // Copied from backbone events (TODO: handle this better)
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
   listenTo: (...args: Array<any>) => any;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'stopListening' has no initializer and is... Remove this comment to see the full error message
   stopListening: (...args: Array<any>) => any;
 
   constructor(...args: any) {
+    // @ts-expect-error ts-migrate(2556) FIXME: Expected 1-2 arguments, but got 0 or more.
     super(...args);
 
     _.extend(this, BackboneEvents);
@@ -250,8 +267,10 @@ class PlaneController extends React.PureComponent<Props> {
     // InputMouse handling so that this is not necessary anymore.
     // See: https://github.com/scalableminds/webknossos/issues/3475
     OrthoViewValuesWithoutTDView.forEach((id) => {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
       Utils.waitForElementWithId(inputcatcherId).then((el) => {
+        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         if (!document.body.contains(el)) {
           console.error("el is not attached anymore");
         }
@@ -307,8 +326,10 @@ class PlaneController extends React.PureComponent<Props> {
     const controls = {};
 
     for (const controlKey of allControlKeys) {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       controls[controlKey] = this.createToolDependentMouseHandler({
         [AnnotationToolEnum.MOVE]: moveControls[controlKey],
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         [AnnotationToolEnum.SKELETON]: skeletonControls[controlKey],
         [AnnotationToolEnum.BRUSH]: drawControls[controlKey],
         [AnnotationToolEnum.TRACE]: drawControls[controlKey],
@@ -325,6 +346,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   initKeyboard(): void {
     // avoid scrolling while pressing space
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
@@ -335,9 +357,13 @@ class PlaneController extends React.PureComponent<Props> {
     });
     this.input.keyboard = new InputKeyboard({
       // Move
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       left: (timeFactor) => MoveHandlers.moveU(-getMoveValue(timeFactor)),
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       right: (timeFactor) => MoveHandlers.moveU(getMoveValue(timeFactor)),
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       up: (timeFactor) => MoveHandlers.moveV(-getMoveValue(timeFactor)),
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       down: (timeFactor) => MoveHandlers.moveV(getMoveValue(timeFactor)),
     });
     const notLoopedKeyboardControls = this.getNotLoopedKeyboardControls();
@@ -346,19 +372,32 @@ class PlaneController extends React.PureComponent<Props> {
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
         // KeyboardJS is sensitive to ordering (complex combos first)
+        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         "shift + i": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1),
+        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         "shift + o": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1),
+        // @ts-expect-error ts-migrate(2739) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         "shift + f": createDelayAwareMoveHandler(5),
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         "shift + d": createDelayAwareMoveHandler(-5),
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         "shift + space": createDelayAwareMoveHandler(-1),
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         "ctrl + space": createDelayAwareMoveHandler(-1),
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         space: createDelayAwareMoveHandler(1),
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         f: createDelayAwareMoveHandler(1),
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         d: createDelayAwareMoveHandler(-1),
         // Zoom in/out
+        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         i: () => MoveHandlers.zoom(1, false),
+        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         o: () => MoveHandlers.zoom(-1, false),
+        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         h: () => this.changeMoveValue(25),
+        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         g: () => this.changeMoveValue(-25),
         ...loopedKeyboardControls,
       },
@@ -383,6 +422,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   getNotLoopedKeyboardControls(): Record<string, any> {
     const baseControls = {
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
       "ctrl + i": (event) => {
         const segmentationLayer = Model.getVisibleSegmentationLayer();
 
@@ -394,6 +434,7 @@ class PlaneController extends React.PureComponent<Props> {
 
         if (mousePosition) {
           const [x, y] = mousePosition;
+          // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
           const globalMousePosition = calculateGlobalPos(Store.getState(), {
             x,
             y,
@@ -599,4 +640,5 @@ export function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 export { PlaneController as PlaneControllerClass };
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(PlaneController);

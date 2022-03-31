@@ -1,3 +1,4 @@
+// @flow
 import * as React from "react";
 type Props = {
   shouldHighlight: boolean;
@@ -13,6 +14,7 @@ type State = {
 
 export default class HighlightableRow extends React.PureComponent<Props, State> {
   constructor(props: Props) {
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1-2 arguments, but got 0.
     super();
     this.state = {
       persistedShouldHighlight: props.shouldHighlight,

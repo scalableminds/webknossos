@@ -1,7 +1,9 @@
+// @flow
 import * as React from "react";
 import Toast from "libs/toast";
 import messages from "messages";
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'canvas' implicitly has an 'any' type.
 const registerWebGlCrashHandler = (canvas) => {
   if (!canvas) {
     return;
@@ -37,6 +39,7 @@ export default function TracingView() {
         ref={registerWebGlCrashHandler}
         key="render-canvas"
         id="render-canvas"
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ width: string; position: string; top: numb... Remove this comment to see the full error message
         style={canvasStyle}
       />
     </div>

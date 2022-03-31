@@ -1,3 +1,4 @@
+// @flow
 import { useEffect } from "react";
 import _ from "lodash";
 import api from "oxalis/api/internal_api";
@@ -6,6 +7,7 @@ import api from "oxalis/api/internal_api";
 // and an embedded webKnossos iframe.
 // Currently, this is only used for a couple of API functions, but the interface may be extended in the future
 // Usage: postMessage({type: "setMapping", args: [mappingObj, options]}, "*")
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
 const onMessage = async (event) => {
   // We could use this to restrict usage of this api to specific domains
   // if (event.origin !== "https://connectome-viewer.org") {
@@ -18,6 +20,7 @@ const onMessage = async (event) => {
 
   switch (type) {
     case "setMapping": {
+      // @ts-expect-error ts-migrate(2556) FIXME: Expected 2-3 arguments, but got 1 or more.
       api.data.setMapping(api.data.getVolumeTracingLayerName(), ...args);
       break;
     }
@@ -74,6 +77,7 @@ const onMessage = async (event) => {
     case "loadPrecomputedMesh": {
       const segmentId = args[0];
       const seedPosition = args[1];
+      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       api.data.loadPrecomputedMesh(segmentId, seedPosition);
       break;
     }
@@ -142,7 +146,9 @@ const CrossOriginApi = () => {
     return () => window.removeEventListener("message", onMessage);
   }, []);
   useEffect(() => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
     if (window.webknossos && window.parent) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
       window.webknossos.apiReady().then(() => {
         window.parent.postMessage(
           {
@@ -152,6 +158,7 @@ const CrossOriginApi = () => {
         );
       });
     }
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
   }, [window.webknossos]);
   return null;
 };

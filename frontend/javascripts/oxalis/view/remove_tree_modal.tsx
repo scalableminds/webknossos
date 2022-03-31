@@ -1,3 +1,4 @@
+// @flow
 import { Modal, Checkbox } from "antd";
 import * as React from "react";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -15,16 +16,20 @@ export default class TreeRemovalModal extends React.Component<Props, State> {
     shouldNotWarnAgain: false,
     visible: true,
   };
+
   handleCheckboxChange = (event: React.SyntheticEvent) => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
       shouldNotWarnAgain: event.target.checked,
     });
   };
+
   hide = () => {
     this.setState({
       visible: false,
     });
   };
+
   handleOk = () => {
     Store.dispatch(
       updateUserSettingAction("hideTreeRemovalWarning", this.state.shouldNotWarnAgain),

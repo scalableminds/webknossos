@@ -1,3 +1,4 @@
+// @flow
 import { Dropdown, Menu, Modal } from "antd";
 import {
   EyeOutlined,
@@ -76,18 +77,22 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         ),
     });
   };
+
   resetAnnotation = async (annotation: APIAnnotation) => {
     await resetAnnotation(annotation.id, annotation.typ);
     Toast.success(messages["annotation.reset_success"]);
   };
+
   finishAnnotation = async (annotation: APIAnnotation) => {
     const updatedAnnotation = await finishAnnotation(annotation.id, annotation.typ);
     this.updateAnnotationState(updatedAnnotation);
   };
+
   reOpenAnnotation = async (annotation: APIAnnotation) => {
     const updatedAnnotation = await reOpenAnnotation(annotation.id, annotation.typ);
     this.updateAnnotationState(updatedAnnotation);
   };
+
   updateAnnotationState = (updatedAnnotation: APIAnnotation) => {
     this.setState((prevState) => ({
       isTransferModalVisible: false,
@@ -136,6 +141,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         </Item>
         <Item key={`${annotation.id}-download`}>
           <AsyncLink
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
             href="#"
             onClick={() => {
               const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
@@ -213,9 +219,11 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             })}
           </tbody>
         </table>
+        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         {this.state.currentAnnotation && this.state.currentAnnotation.user ? (
           <TransferTaskModal
             visible={this.state.isTransferModalVisible}
+            // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
             annotationId={this.state.currentAnnotation.id}
             onCancel={() =>
               this.setState({
@@ -223,6 +231,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
               })
             }
             onChange={this.updateAnnotationState}
+            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             userId={this.state.currentAnnotation.user.id}
           />
         ) : null}
@@ -235,4 +244,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(TaskAnnotationView);

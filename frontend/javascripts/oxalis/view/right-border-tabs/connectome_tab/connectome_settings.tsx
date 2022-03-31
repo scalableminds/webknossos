@@ -1,3 +1,4 @@
+// @flow
 import { Popover, Select, Tooltip, Row, Col } from "antd";
 import { SettingOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -92,9 +93,11 @@ class ConnectomeFilters extends React.Component<Props> {
       Store.dispatch(updateCurrentConnectomeFileAction(segmentationLayer.name, connectomeFileName));
     }
   };
+
   updateParticleSize = (value: number) => {
     Store.dispatch(updateUserSettingAction("particleSize", value));
   };
+
   getConnectomeFileSettings = () => {
     const { currentConnectomeFile, availableConnectomeFiles, particleSize } = this.props;
     const currentConnectomeFileName =
@@ -116,7 +119,9 @@ class ConnectomeFilters extends React.Component<Props> {
             >
               <Select
                 placeholder="Select a connectome file"
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'Se... Remove this comment to see the full error message
                 value={currentConnectomeFileName}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(connectomeFileName: string | null | undefin... Remove this comment to see the full error message
                 onChange={this.handleConnectomeFileSelected}
                 size="small"
                 loading={availableConnectomeFiles == null}
@@ -134,6 +139,7 @@ class ConnectomeFilters extends React.Component<Props> {
                     </Option>
                   ))
                 ) : (
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Key'.
                   <Option value={null} disabled>
                     No files available
                   </Option>
@@ -153,6 +159,7 @@ class ConnectomeFilters extends React.Component<Props> {
               min={userSettings.particleSize.minimum}
               max={userSettings.particleSize.maximum}
               step={0.1}
+              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               roundTo={1}
               value={particleSize}
               onChange={this.updateParticleSize}
@@ -176,4 +183,5 @@ class ConnectomeFilters extends React.Component<Props> {
   }
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ConnectomeFilters);

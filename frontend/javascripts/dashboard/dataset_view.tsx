@@ -11,6 +11,7 @@ import {
   InfoCircleOutlined,
   HourglassOutlined,
 } from "@ant-design/icons";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
@@ -52,8 +53,10 @@ const persistence: Persistence<PersistenceState> = new Persistence(
   "datasetList",
 );
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
 function filterDatasetsForUsersOrganization(datasets, user) {
   return features().isDemoInstance
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'd' implicitly has an 'any' type.
     ? datasets.filter((d) => d.owningOrganization === user.organization)
     : datasets;
 }
@@ -96,6 +99,7 @@ function DatasetView(props: Props) {
     });
   }, []);
   useEffect(() => {
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'interval' implicitly has type 'any' in s... Remove this comment to see the full error message
     let interval = null;
 
     if (features().jobsEnabled) {
@@ -104,6 +108,7 @@ function DatasetView(props: Props) {
       }, CONVERSION_JOBS_REFRESH_INTERVAL);
     }
 
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'interval' implicitly has an 'any' type.
     return () => (interval != null ? clearInterval(interval) : undefined);
   }, []);
   useEffect(() => {
@@ -120,6 +125,7 @@ function DatasetView(props: Props) {
   }
 
   function handleSearch(event: React.SyntheticEvent) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     setSearchQuery(event.target.value);
   }
 
@@ -191,6 +197,7 @@ function DatasetView(props: Props) {
     );
     return context.isLoading ? null : (
       <Row
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
         type="flex"
         justify="center"
         style={{
@@ -262,6 +269,7 @@ function DatasetView(props: Props) {
         }}
       >
         {newJobs.slice(0, MAX_JOBS_TO_DISPLAY).map((job) => {
+          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
           return (
             <Row key={job.id} gutter={16}>
@@ -307,6 +315,7 @@ function DatasetView(props: Props) {
     marginRight: 5,
   };
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'key' implicitly has an 'any' type.
   const createFilteringModeRadio = (key, label) => (
     <Radio
       onChange={() => {

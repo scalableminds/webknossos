@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter, Location, Match } from "react-router-dom";
 import { Route, withRouter } from "react-router-dom";
 import type { ComponentType } from "react";
@@ -63,6 +65,7 @@ class SecuredRoute extends React.PureComponent<Props, State> {
             }
           }
 
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ layout: string; redirect: any; }' is not a... Remove this comment to see the full error message
           return <LoginView layout="horizontal" redirect={this.props.location.pathname} />;
         }}
       />
@@ -70,4 +73,5 @@ class SecuredRoute extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof SecuredRoute' is not assi... Remove this comment to see the full error message
 export default withRouter(SecuredRoute);

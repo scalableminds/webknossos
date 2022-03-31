@@ -1,7 +1,9 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import { Input, Tooltip, Popover } from "antd";
 import { DownOutlined, UpOutlined } from "@ant-design/icons";
 import * as React from "react";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Shortcut from "libs/shortcut_component";
@@ -57,7 +59,9 @@ export default class AdvancedSearchPopover<
     // It can happen that currentPosition > availableOptions.length if trees are deleted.
     // In that case taking the min ensures that the last available option is treated as
     // selected and then the offset is added.
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
     currentPosition = Math.min(currentPosition, numberOfAvailableOptions - 1);
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
     currentPosition = mod(currentPosition + offset, numberOfAvailableOptions);
     this.setState({
       currentPosition,
@@ -88,6 +92,7 @@ export default class AdvancedSearchPopover<
     const availableOptions = this.getAvailableOptions(data, searchQuery, searchKey);
     const numberOfAvailableOptions = availableOptions.length;
     // Ensure that currentPosition to not higher than numberOfAvailableOptions.
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
     currentPosition =
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
@@ -156,11 +161,13 @@ export default class AdvancedSearchPopover<
                         currentPosition: null,
                       })
                     }
+                    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
                     addonAfter={`${currentPosition + 1}/${numberOfAvailableOptions}`}
                     autoFocus
                   />
                   <Tooltip title="Previous (shift+enter)">
                     <ButtonComponent
+                      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                       style={{
                         width: 40,
                       }}
@@ -172,6 +179,7 @@ export default class AdvancedSearchPopover<
                   </Tooltip>
                   <Tooltip title="Next (enter)">
                     <ButtonComponent
+                      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                       style={{
                         width: 40,
                       }}

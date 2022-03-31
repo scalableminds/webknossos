@@ -1,3 +1,4 @@
+// @flow
 import { Input } from "antd";
 import * as React from "react";
 import _ from "lodash";
@@ -30,16 +31,19 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
     onChange: _.noop,
     onFocus: _.noop,
     onBlur: _.noop,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type '((...args: ... Remove this comment to see the full error message
     onPressEnter: null,
     placeholder: "",
     value: "",
     style: {},
     isTextArea: false,
   };
+
   state = {
     isFocused: false,
     currentValue: this.props.value,
   };
+
   componentDidUpdate = (prevProps: InputComponentProp) => {
     if (!this.state.isFocused && prevProps.value !== this.props.value) {
       // eslint-disable-next-line react/no-did-update-set-state
@@ -48,8 +52,10 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
       });
     }
   };
+
   handleChange = (e: React.SyntheticEvent) => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       currentValue: e.target.value,
     });
 
@@ -57,6 +63,7 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
       this.props.onChange(e);
     }
   };
+
   handleFocus = (e: React.SyntheticEvent) => {
     this.setState({
       isFocused: true,
@@ -66,6 +73,7 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
       this.props.onFocus(e);
     }
   };
+
   handleBlur = (e: React.SyntheticEvent) => {
     this.setState(
       {
@@ -78,6 +86,8 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
       },
     );
   };
+
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
   blurYourself = () => (document.activeElement ? document.activeElement.blur() : null);
   blurOnEscape = (event: KeyboardEvent) => {
     if (event.key === "Escape") {
@@ -97,7 +107,9 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.currentValue}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '((...args: any[]) => any) | null' is not ass... Remove this comment to see the full error message
         onPressEnter={onPressEnter != null ? onPressEnter : defaultOnPressEnter}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: KeyboardEvent) => void' is not assig... Remove this comment to see the full error message
         onKeyDown={this.blurOnEscape}
       />
     );

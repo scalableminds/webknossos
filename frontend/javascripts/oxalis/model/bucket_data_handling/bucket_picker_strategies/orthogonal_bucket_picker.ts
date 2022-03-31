@@ -31,6 +31,7 @@ export default function determineBucketsForOrthogonal(
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
   abortLimit?: number | null | undefined,
+  // @ts-expect-error ts-migrate(1016) FIXME: A required parameter cannot follow an optional par... Remove this comment to see the full error message
   gpuFactor: number,
 ) {
   let zoomStepDiff = 0;
@@ -73,6 +74,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   let currentCount = 0;
 
   const enqueueAll = () => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'bucketAddress' does not exist on type 'u... Remove this comment to see the full error message
     for (const { bucketAddress, priority } of uniqueBucketMap.values()) {
       enqueueFunction(bucketAddress, priority);
     }
@@ -89,11 +91,13 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     bottomRightVector[v] = areas[planeId].bottom;
     bottomRightVector[u] = areas[planeId].right;
     const scaledTopLeftVector = zoomedAddressToAnotherZoomStep(
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       topLeftVector,
       resolutions,
       logZoomStep,
     );
     const scaledBottomRightVector = zoomedAddressToAnotherZoomStep(
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       bottomRightVector,
       resolutions,
       logZoomStep,
@@ -156,6 +160,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
               return;
             }
           } else {
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'priority' does not exist on type 'unknow... Remove this comment to see the full error message
             const { priority: existingPriority } = existingEntry;
 
             if (priority < existingPriority) {

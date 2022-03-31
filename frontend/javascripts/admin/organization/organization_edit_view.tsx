@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import { withRouter } from "react-router-dom";
 import { Form, Button, Card, Input, Row } from "antd";
@@ -7,6 +8,7 @@ import { FormInstance } from "antd/lib/form";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { getOrganization, deleteOrganization, updateOrganization } from "admin/admin_rest_api";
 import Toast from "libs/toast";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
 import Enum from "Enumjs";
 const FormItem = Form.Item;
 export const PricingPlanEnum = Enum.make({
@@ -35,6 +37,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     isFetchingData: false,
     isDeleting: false,
   };
+  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
   formRef = React.createRef<typeof FormInstance>();
 
   componentDidMount() {
@@ -82,6 +85,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     });
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   onFinish = async (formValues) => {
     await updateOrganization(
       this.props.organizationName,
@@ -164,6 +168,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               rules={[
                 {
                   required: true,
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'RegExp | ... Remove this comment to see the full error message
                   pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
                   message:
                     "The organization name must not contain any special characters and can not be empty.",
@@ -234,6 +239,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 </Button>
               </FormItem>
               <Button
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '"danger"' is not assignable to type '"link" ... Remove this comment to see the full error message
                 type="danger"
                 loading={this.state.isDeleting}
                 onClick={this.handleDeleteButtonClicked}
@@ -249,4 +255,5 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof OrganizationEditView' is ... Remove this comment to see the full error message
 export default withRouter(OrganizationEditView);

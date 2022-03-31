@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import { Collapse, Tooltip } from "antd";
 import type { Dispatch } from "redux";
@@ -40,7 +42,9 @@ type ControlsAndRenderingSettingsTabProps = {
 };
 
 class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRenderingSettingsTabProps> {
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeUser' has no initializer and is ... Remove this comment to see the full error message
   onChangeUser: Record<$Keys<UserConfiguration>, (...args: Array<any>) => any>;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeDataset' has no initializer and ... Remove this comment to see the full error message
   onChangeDataset: Record<$Keys<DatasetConfiguration>, (...args: Array<any>) => any>;
 
   // This cannot be changed to componentDidMount, because this.onChangeUser is accessed in render
@@ -160,10 +164,12 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       );
     }
   };
+
   onChangeGpuFactor = (gpuFactor: number) => {
     Toast.warning("Please reload the page to allow the changes to take effect.");
     this.onChangeUser.gpuMemoryFactor(gpuFactor);
   };
+
   onChangeRenderMissingDataBlack = async (value: boolean): Promise<void> => {
     Toast.info(
       value
@@ -180,6 +186,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       await api.data.reloadBuckets(layerName);
     });
     await Promise.all(reloadAllLayersPromises);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
     window.needsRerender = true;
     Toast.success("Successfully reloaded data of all layers.");
   };
@@ -313,19 +320,25 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
 } // Reuse last range if it's equal to the current one to avoid unnecessary
 // render() executions
 
+// @ts-expect-error ts-migrate(7034) FIXME: Variable 'lastValidZoomRange' implicitly has type ... Remove this comment to see the full error message
 let lastValidZoomRange = null;
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
 function _getValidZoomRangeForUser(state) {
   const newRange = getValidZoomRangeForUser(state);
 
   if (
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'lastValidZoomRange' implicitly has an 'a... Remove this comment to see the full error message
     !lastValidZoomRange ||
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'lastValidZoomRange' implicitly has an 'a... Remove this comment to see the full error message
     newRange[0] !== lastValidZoomRange[0] ||
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'lastValidZoomRange' implicitly has an 'a... Remove this comment to see the full error message
     newRange[1] !== lastValidZoomRange[1]
   ) {
     lastValidZoomRange = newRange;
   }
 
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'lastValidZoomRange' implicitly has an 'a... Remove this comment to see the full error message
   return lastValidZoomRange;
 }
 
@@ -339,10 +352,12 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
   onChangeUser(propertyName, value) {
     dispatch(updateUserSettingAction(propertyName, value));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
   onChangeDataset(propertyName, value) {
     dispatch(updateDatasetSettingAction(propertyName, value));
   },
@@ -352,6 +367,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<ControlsAndRenderingSettingsTabProps, {}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,

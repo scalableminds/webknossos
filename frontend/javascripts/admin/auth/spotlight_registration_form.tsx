@@ -1,3 +1,4 @@
+// @flow
 import { Form, Input, Button, Row, Col, Checkbox } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import React, { useRef, memo } from "react";
@@ -44,6 +45,7 @@ function SpotlightRegistrationForm(props: Props) {
       email: formValues.email,
       password: formValues.password.password1,
     });
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
     Store.dispatch(setActiveUserAction(user));
     props.onRegistered(true);
   }
@@ -188,6 +190,5 @@ function SpotlightRegistrationForm(props: Props) {
       </FormItem>
     </Form>
   );
-} // @ts-ignore[missing-annot]
-
+}
 export default memo(SpotlightRegistrationForm);

@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import {
   getDefaultLayerViewConfiguration,
@@ -51,6 +52,7 @@ export const enforceValidatedDatasetViewConfiguration = (
 
   if (maybeUnimportedDataset.isActive) {
     const dataset: APIDataset = maybeUnimportedDataset;
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
     dataset.dataSource.dataLayers.forEach((layer) => {
       const layerConfigDefault = getDefaultLayerViewConfiguration(
         getSpecificDefaultsForLayers(dataset, layer),
@@ -63,8 +65,10 @@ export const enforceValidatedDatasetViewConfiguration = (
           existingLayerConfig,
         );
         eliminateErrors(existingLayerConfig, layerErrors, layerConfigDefault);
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         newLayerConfig[layer.name] = existingLayerConfig;
       } else {
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         newLayerConfig[layer.name] = isOptional
           ? {}
           : _.pickBy(layerConfigDefault, (value: any) => value !== null);

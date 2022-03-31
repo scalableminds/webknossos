@@ -1,4 +1,6 @@
+// @flow
 import { Row, Col, Card } from "antd";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import React from "react";
 import type { APIOrganization } from "types/api_flow_types";
@@ -32,12 +34,14 @@ class LegalBase extends React.PureComponent<Props, State> {
     // Dummy render
     return (
       this.state.operatorData +
+      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       (this.state.defaultOrganization != null ? this.state.defaultOrganization.name : "")
     );
   }
 }
 
 export class Imprint extends LegalBase {
+  // @ts-expect-error ts-migrate(2416) FIXME: Property 'render' in type 'Imprint' is not assigna... Remove this comment to see the full error message
   render() {
     return (
       <div className="container" id="impressum">
@@ -56,9 +60,11 @@ export class Imprint extends LegalBase {
             </Card>
             <p />
             {this.state.defaultOrganization != null &&
+            // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
             this.state.defaultOrganization.additionalInformation ? (
               <Card>
                 <Markdown
+                  // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
                   source={this.state.defaultOrganization.additionalInformation}
                   options={{
                     html: false,
@@ -75,6 +81,7 @@ export class Imprint extends LegalBase {
   }
 }
 export class Privacy extends LegalBase {
+  // @ts-expect-error ts-migrate(2416) FIXME: Property 'render' in type 'Privacy' is not assigna... Remove this comment to see the full error message
   render() {
     return (
       <div className="container text">
@@ -148,8 +155,10 @@ export class Privacy extends LegalBase {
 
             <h3>Data controller</h3>
             {this.state.defaultOrganization != null ? (
+              // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
               <div key={this.state.defaultOrganization.name}>
                 <Markdown
+                  // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
                   source={this.state.defaultOrganization.additionalInformation}
                   options={{
                     html: false,

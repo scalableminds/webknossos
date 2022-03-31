@@ -1,3 +1,4 @@
+// @flow
 import { Spin, Table, Card } from "antd";
 import * as React from "react";
 import type { APIOpenTasksReport } from "types/api_flow_types";
@@ -60,6 +61,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
             rowKey="id"
             style={{
               marginTop: 30,
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
               marginBotton: 30,
             }}
             size="small"
@@ -85,7 +87,9 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
               title=""
               key="content"
               render={(text, item) =>
+                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 Object.keys(item.assignmentsByProjects)
+                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                   .map((key) => `${key} (${item.assignmentsByProjects[key]})`)
                   .join(", ")
               }

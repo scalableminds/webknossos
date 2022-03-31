@@ -1,4 +1,6 @@
+// @flow
 /* eslint-disable no-await-in-loop */
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Deferred from "libs/deferred";
@@ -17,12 +19,15 @@ class AsyncTaskQueue {
   tasks: Array<AsyncTask> = [];
   deferreds: Map<AsyncTask, Deferred<void, any>> = new Map();
   doneDeferred: Deferred<void, any> = new Deferred();
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'nextArguments' has no initializer and is... Remove this comment to see the full error message
   nextArguments: Array<any>;
   retryCount: number = 0;
   running: boolean = false;
   failed: boolean = false;
   // Copied from backbone events (TODO: handle this better)
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'on' has no initializer and is not defini... Remove this comment to see the full error message
   on: (...args: Array<any>) => any;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
   trigger: (...args: Array<any>) => any;
 
   constructor(maxRetry: number = 3, retryTimeMs: number = 1000, failureEventThreshold: number = 3) {
@@ -40,6 +45,7 @@ class AsyncTaskQueue {
   scheduleTask(task: AsyncTask): Promise<void> {
     this.tasks.push(task);
     const deferred = new Deferred();
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Deferred<unknown, unknown>' is n... Remove this comment to see the full error message
     this.deferreds.set(task, deferred);
 
     if (this.failed) {
@@ -50,6 +56,7 @@ class AsyncTaskQueue {
       this.executeNext();
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<unknown>' is not assignable to type ... Remove this comment to see the full error message
     return deferred.promise();
   }
 
@@ -102,11 +109,14 @@ class AsyncTaskQueue {
       const currentTask = this.tasks.shift();
 
       try {
+        // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
         const response = await currentTask();
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'AsyncTask | undefined' is not as... Remove this comment to see the full error message
         this.signalResolve(currentTask, response);
         this.trigger("success");
       } catch (error) {
         this.retryCount++;
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'AsyncTask | undefined' is not as... Remove this comment to see the full error message
         this.tasks.unshift(currentTask);
 
         if (this.retryCount > this.failureEventThreshold) {
@@ -116,6 +126,7 @@ class AsyncTaskQueue {
 
         if (this.retryCount >= this.maxRetry) {
           this.failed = true;
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'AsyncTask | undefined' is not as... Remove this comment to see the full error message
           this.signalReject(currentTask, error);
           this.running = false;
           this.doneDeferred.reject(error);

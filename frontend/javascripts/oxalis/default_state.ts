@@ -1,3 +1,4 @@
+// @flow
 import type { OxalisState } from "oxalis/store";
 import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
 import { document } from "libs/window";
@@ -39,9 +40,11 @@ const initialAnnotationInfo = {
   annotationType: "View",
   meshes: [],
 };
+// @ts-expect-error ts-migrate(2322) FIXME: Type 'HTMLElement | null' is not assignable to typ... Remove this comment to see the full error message
 const primaryStylesheetElement: HTMLLinkElement | null | undefined =
   document.getElementById("primary-stylesheet");
 const defaultState: OxalisState = {
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ fourBit: boolean; interpolation: boolean; ... Remove this comment to see the full error message
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,
@@ -74,6 +77,7 @@ const defaultState: OxalisState = {
     useLegacyBindings: false,
   },
   temporaryConfiguration: {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'ViewMode'... Remove this comment to see the full error message
     viewMode: Constants.MODE_PLANE_TRACING,
     histogramData: {},
     flightmodeRecording: false,
@@ -129,6 +133,7 @@ const defaultState: OxalisState = {
     sortingKey: 123,
     publication: null,
   },
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ readOnly: { userBoundingBoxes: never[]; bo... Remove this comment to see the full error message
   tracing: {
     ...initialAnnotationInfo,
     readOnly: {

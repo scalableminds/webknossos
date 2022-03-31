@@ -1,3 +1,4 @@
+// @flow
 import { Badge, Spin, Table, Card } from "antd";
 import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -31,6 +32,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
     updatedAt: null,
   };
 
+  // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
   async fetchData(suppressLoadingState?: boolean = false) {
     const { team } = this.state;
 
@@ -42,6 +44,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       const errorToastKey = "progress-report-failed-to-refresh";
 
       try {
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
         const progessData = await getProjectProgressReport(team.id);
         this.setState({
           data: progessData,
@@ -58,6 +61,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       this.setState({
         isLoading: true,
       });
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const progessData = await getProjectProgressReport(team.id);
       this.setState({
         data: progessData,
@@ -78,14 +82,17 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       },
     );
   };
+
   handleOpenSettings = () => {
     this.setState({
       areSettingsVisible: true,
     });
   };
+
   handleReload = () => {
     this.fetchData();
   };
+
   handleAutoReload = () => {
     this.fetchData(true);
   };
@@ -95,6 +102,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       <div className="container">
         <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
         <div className="pull-right">
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'string | nu... Remove this comment to see the full error message
           {this.state.updatedAt != null ? <FormattedDate timestamp={this.state.updatedAt} /> : null}{" "}
           <SettingOutlined onClick={this.handleOpenSettings} />
           <ReloadOutlined onClick={this.handleReload} />
@@ -115,6 +123,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
             rowKey="projectName"
             style={{
               marginTop: 30,
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
               marginBotton: 30,
             }}
             size="small"
@@ -124,9 +133,11 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               title="Project"
               dataIndex="projectName"
               defaultSortOrder="ascend"
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'Comparator<APIProjectProgressReport>' is not... Remove this comment to see the full error message
               sorter={Utils.localeCompareBy(typeHint, (project) => project.projectName)}
               render={(text, item) => (
                 <span>
+                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                   {item.paused ? <PauseCircleOutlined /> : null} {text}
                 </span>
               )}
@@ -166,11 +177,13 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 key="progress"
                 dataIndex="finishedInstances"
                 width={100}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'Comparator<APIProjectProgressReport>' is not... Remove this comment to see the full error message
                 sorter={Utils.compareBy(
                   typeHint,
                   ({ finishedInstances, totalInstances }) => finishedInstances / totalInstances,
                 )}
                 render={(finishedInstances, item) =>
+                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                   finishedInstances === item.totalInstances ? (
                     <Badge
                       count="100%"
@@ -179,6 +192,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                       }}
                     />
                   ) : (
+                    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                     <span>{Math.floor((100 * finishedInstances) / item.totalInstances)} %</span>
                   )
                 }
@@ -193,6 +207,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                   />
                 }
                 dataIndex="finishedInstances"
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'Comparator<APIProjectProgressReport>' is not... Remove this comment to see the full error message
                 sorter={Utils.compareBy(typeHint, (project) => project.finishedInstances)}
                 render={(text, item) => ({
                   props: {
@@ -200,8 +215,11 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                   },
                   children: (
                     <StackedBarChart
+                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                       a={item.finishedInstances}
+                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                       b={item.activeInstances}
+                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                       c={item.openInstances}
                     />
                   ),

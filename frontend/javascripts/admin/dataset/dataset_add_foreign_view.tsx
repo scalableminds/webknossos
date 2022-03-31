@@ -51,6 +51,7 @@ function DatasetAddForeignView({ onAdded }: Props) {
     };
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleSubmit = async (formValues) => {
     const specification = parseLine(formValues.foreignDatasetText);
 

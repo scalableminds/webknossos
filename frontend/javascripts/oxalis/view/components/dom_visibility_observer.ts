@@ -1,3 +1,4 @@
+// @flow
 import * as React from "react";
 // This component uses an IntersectionObserver to find out if the element with the id targetId
 // is visible in the current viewport or not. It then calls its children render function with that value.
@@ -14,6 +15,7 @@ type State = {
 export default class DomVisibilityObserver extends React.Component<Props, State> {
   observer: IntersectionObserver | null | undefined;
   target: HTMLElement | null | undefined;
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
   timeoutId: TimeoutID | null | undefined;
   state = {
     isVisibleInDom: true,
@@ -40,6 +42,7 @@ export default class DomVisibilityObserver extends React.Component<Props, State>
     const target = document.getElementById(this.props.targetId);
 
     if (target != null) {
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'interactionEntries' implicitly has an '... Remove this comment to see the full error message
       const callback = (interactionEntries) => {
         const isVisibleInDom = interactionEntries[0].isIntersecting;
         this.setState((oldState) => ({

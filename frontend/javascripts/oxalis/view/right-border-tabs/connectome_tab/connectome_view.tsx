@@ -1,5 +1,7 @@
+// @flow
 import { Alert, Empty, Input, Tooltip } from "antd";
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import React from "react";
 import _ from "lodash";
@@ -122,6 +124,7 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
   const partnerAgglomerateIds = filteredSynapseIds.map((synapseId): number => {
     const synapse = synapses[synapseId];
     // $FlowIssue[incompatible-return] Flow doesn't understand that if src == null -> dst != null
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | void' is not assignable to type 'nu... Remove this comment to see the full error message
     return synapse.src != null ? synapse.src : synapse.dst;
   });
   return unique(topLevelAgglomerateIds.concat(partnerAgglomerateIds));
@@ -173,6 +176,7 @@ function* mapAndFilterTreeData<R>(
   }
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'synapseTypesAndNames' implicitly has an... Remove this comment to see the full error message
 function ensureTypeToString(synapseTypesAndNames) {
   const { synapseTypes, typeToString } = synapseTypesAndNames;
 
@@ -228,6 +232,7 @@ class ConnectomeView extends React.Component<Props, State> {
       const connectomeFileChanged =
         prevState.filteredConnectomeData != null &&
         filteredConnectomeData != null &&
+        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         prevState.filteredConnectomeData.connectomeFile !== filteredConnectomeData.connectomeFile;
       this.updateSynapseTrees(prevState.filteredConnectomeData, connectomeFileChanged);
     }
@@ -241,6 +246,7 @@ class ConnectomeView extends React.Component<Props, State> {
         prevState.connectomeData != null &&
         connectomeData != null &&
         prevState.connectomeData.connectomeFile.mappingName !==
+          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           connectomeData.connectomeFile.mappingName;
       this.updateAgglomerateTrees(
         prevState.connectomeData,
@@ -369,7 +375,9 @@ class ConnectomeView extends React.Component<Props, State> {
       await Promise.all([
         getSynapseSources(...fetchProperties, allInSynapseIds),
         getSynapseDestinations(...fetchProperties, allOutSynapseIds),
+        // @ts-expect-error ts-migrate(2556) FIXME: Expected 5 arguments, but got 1 or more.
         getSynapsePositions(...fetchProperties, allSynapseIds),
+        // @ts-expect-error ts-migrate(2556) FIXME: Expected 5 arguments, but got 1 or more.
         getSynapseTypes(...fetchProperties, allSynapseIds),
       ]);
     // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file.
@@ -396,6 +404,7 @@ class ConnectomeView extends React.Component<Props, State> {
       src: synapseIdToSource[synapseId],
       dst: synapseIdToDestination[synapseId],
       position: synapseIdToPosition[synapseId],
+      // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
       type: typeToString[synapseIdToType[synapseId]],
     }));
 
@@ -417,11 +426,13 @@ class ConnectomeView extends React.Component<Props, State> {
       ),
     );
     // Auto-load the skeletons of the active agglomerates and check all occurences of the same agglomerate
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'topLevelTreeNode' implicitly has an 'an... Remove this comment to see the full error message
     const topLevelCheckedKeys = treeData.map((topLevelTreeNode) => topLevelTreeNode.key);
     const checkedKeys = Array.from(
       mapAndFilterTreeData(
         treeData,
         (node) => node.key,
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'topLevelKey' implicitly has an 'any' ty... Remove this comment to see the full error message
         (node) => topLevelCheckedKeys.some((topLevelKey) => node.key.startsWith(topLevelKey)),
       ),
     );
@@ -474,6 +485,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const { trees } = skeleton;
 
     if (deletedSynapseIds.length > 0) {
+      // @ts-expect-error ts-migrate(7034) FIXME: Variable 'treeIdsToDelete' implicitly has type 'an... Remove this comment to see the full error message
       const treeIdsToDelete = [];
 
       const treeNameToTree = _.keyBy(trees, "name");
@@ -487,6 +499,7 @@ class ConnectomeView extends React.Component<Props, State> {
       });
 
       if (treeIdsToDelete.length) {
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'treeIdsToDelete' implicitly has an 'any[... Remove this comment to see the full error message
         Store.dispatch(deleteConnectomeTreesAction(treeIdsToDelete, layerName));
       }
     }
@@ -540,6 +553,7 @@ class ConnectomeView extends React.Component<Props, State> {
       filteredAgglomerateIds.includes(agglomerateId),
     );
     let deletedAgglomerateIds;
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'hiddenAgglomerateIds' implicitly has typ... Remove this comment to see the full error message
     let hiddenAgglomerateIds;
     let addedAgglomerateIds;
 
@@ -600,6 +614,7 @@ class ConnectomeView extends React.Component<Props, State> {
     if (hiddenAgglomerateIds.length) {
       const mappingName = getMappingNameFromConnectomeDataEnforced(prevConnectomeData);
 
+      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hiddenAgglomerateIds' implicitly has an ... Remove this comment to see the full error message
       for (const agglomerateId of hiddenAgglomerateIds) {
         // Hide agglomerates that are no longer visible
         const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
@@ -636,19 +651,26 @@ class ConnectomeView extends React.Component<Props, State> {
       filteredConnectomeData,
     });
   };
+
   handleChangeActiveSegment = (evt: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const agglomerateIds = evt.target.value
       .split(",")
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'part' implicitly has an 'any' type.
       .map((part) => parseInt(part, 10))
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
       .filter((id) => !Number.isNaN(id));
     this.setActiveConnectomeAgglomerateIds(agglomerateIds);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
     evt.target.blur();
   };
+
   setActiveConnectomeAgglomerateIds = (agglomerateIds: Array<number>) => {
     const { segmentationLayer } = this.props;
     if (segmentationLayer == null) return;
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));
   };
+
   handleCheck = (
     {
       checked,
@@ -687,6 +709,7 @@ class ConnectomeView extends React.Component<Props, State> {
       });
     }
   };
+
   handleExpand = (expandedKeys: Array<string>) => {
     this.setState({
       expandedKeys,
@@ -762,6 +785,7 @@ class ConnectomeView extends React.Component<Props, State> {
               style={{
                 width: 220,
               }}
+              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               disabled={disabled}
             />
           </Tooltip>
@@ -828,4 +852,5 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps)(ConnectomeView);

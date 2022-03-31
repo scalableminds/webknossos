@@ -1,4 +1,6 @@
+// @flow
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'url-... Remove this comment to see the full error message
 import urljoin from "url-join";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { pingMentionedDataStores } from "admin/datastore_health_check";
@@ -7,9 +9,9 @@ import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_heade
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
 import Toast from "libs/toast";
 import handleStatus from "libs/handle_http_status";
-const fetchBufferViaWorker = createWorker(FetchBufferWorker);
-const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
-const compress = createWorker(CompressWorker);
+const fetchBufferViaWorker = FetchBufferWorker;
+const fetchBufferWithHeaders = FetchBufferWithHeadersWorker;
+const compress = CompressWorker;
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 export type RequestOptionsBase<T> = {
   compress?: boolean;
@@ -41,6 +43,7 @@ class Request {
       }),
       this.handleEmptyJsonResponse,
     );
+
   prepareJSON = async (
     url: string,
     options: RequestOptionsWithData<any>,
@@ -61,6 +64,7 @@ class Request {
         : JSON.stringify(options.data);
 
     if (options.compress) {
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | ArrayBuffer' is not ass... Remove this comment to see the full error message
       body = await compress(body);
 
       if (options.headers == null) {
@@ -80,10 +84,12 @@ class Request {
       },
     });
   };
+
   // IN:  json
   // OUT: json
   sendJSONReceiveJSON = async (url: string, options: RequestOptionsWithData<any>): Promise<any> =>
     this.receiveJSON(url, await this.prepareJSON(url, options));
+
   // IN:  multipart formdata
   // OUT: json
   sendMultipartFormReceiveJSON = (
@@ -141,6 +147,7 @@ class Request {
       }),
     );
   };
+
   // IN:  url-encoded formdata
   // OUT: json
   sendUrlEncodedFormReceiveJSON = (
@@ -157,6 +164,7 @@ class Request {
         },
       }),
     );
+
   receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<any> =>
     this.triggerRequest(
       url,
@@ -170,12 +178,14 @@ class Request {
       // the arrayBuffer must still be read from the response
       options.useWebworkerForArrayBuffer === false ? (response) => response.arrayBuffer() : null,
     );
+
   // IN:  JSON
   // OUT: arraybuffer
   sendJSONReceiveArraybuffer = async (
     url: string,
     options: RequestOptionsWithData<any>,
   ): Promise<ArrayBuffer> => this.receiveArraybuffer(url, await this.prepareJSON(url, options));
+
   sendJSONReceiveArraybufferWithHeaders = async (
     url: string,
     options: RequestOptionsWithData<any>,
@@ -226,10 +236,13 @@ class Request {
 
     const headers = new Headers();
 
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     for (const name of Object.keys(options.headers)) {
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       headers.set(name, options.headers[name]);
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Headers' is not assignable to type 'Record<s... Remove this comment to see the full error message
     options.headers = headers;
     let fetchPromise;
 
@@ -266,6 +279,7 @@ class Request {
     new Promise((resolve) => {
       setTimeout(() => resolve("timeout"), timeout);
     });
+
   handleError = (
     requestedUrl: string,
     showErrorToast: boolean,
@@ -287,6 +301,7 @@ class Request {
                 json.status = error.status;
               }
 
+              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'message' implicitly has an 'any' type.
               const messages = json.messages.map((message) => ({
                 ...message,
                 key: json.status.toString(),
@@ -325,6 +340,7 @@ class Request {
 
     return Promise.reject(error);
   };
+
   handleEmptyJsonResponse = (response: Response): Promise<{}> =>
     response.text().then((responseText) => {
       if (responseText.length === 0) {

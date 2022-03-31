@@ -1,3 +1,4 @@
+// @flow
 import type { Vector3 } from "oxalis/constants";
 type RangeItem = [number, number, number, boolean | null, boolean, boolean];
 // This is a class with static methods and constants dealing with drawing
@@ -212,12 +213,19 @@ class Drawing {
 
     while (ranges.length) {
       const r = ranges.pop();
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       let minX = r[0];
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       let maxX = r[1];
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       y = r[2];
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const down = r[3] === true;
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const up = r[3] === false;
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const extendLeft = r[4];
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const extendRight = r[5];
 
       if (extendLeft) {
@@ -243,15 +251,19 @@ class Drawing {
           maxX++;
         }
       } else {
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
         r[0]--;
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
         r[1]++;
       }
 
       if (y < height) {
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'RangeItem | undefined' is not as... Remove this comment to see the full error message
         this.addNextLine(y + 1, !up, true, minX, maxX, r, ranges, test, paint);
       }
 
       if (y > 0) {
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'RangeItem | undefined' is not as... Remove this comment to see the full error message
         this.addNextLine(y - 1, !down, false, minX, maxX, r, ranges, test, paint);
       }
     }
@@ -292,7 +304,9 @@ class Drawing {
           p[k] = p0[k] * (1 - a) + p1[k] * a;
         }
 
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
         callback(p);
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
         points[j] = p;
       }
     }

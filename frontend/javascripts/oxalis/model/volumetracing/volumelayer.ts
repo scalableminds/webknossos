@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import { V2, V3 } from "libs/mjs";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
@@ -84,11 +85,17 @@ export class VoxelNeighborQueue3D {
     const currentVoxel = this.queue.shift();
     // 6-neighborhood in 3D
     return [
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0], currentVoxel[1], currentVoxel[2] + 1],
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0], currentVoxel[1], currentVoxel[2] - 1],
     ];
   }
@@ -102,9 +109,13 @@ export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
     const currentVoxel = this.queue.shift();
     // 4-neighborhood in 2D
     return [
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
     ];
   }
@@ -120,6 +131,7 @@ class VolumeLayer {
   volumeTracingId: string;
   plane: OrthoView;
   thirdDimensionValue: number;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'contourList' has no initializer and is n... Remove this comment to see the full error message
   contourList: Array<Vector3>;
   maxCoord: Vector3 | null | undefined;
   minCoord: Vector3 | null | undefined;
@@ -281,6 +293,7 @@ class VolumeLayer {
     } else {
       const gradient = (pos2[1] - pos1[1]) / dx;
       perpendicularVector = [gradient, -1];
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       const norm = this.vector2Norm(perpendicularVector);
       perpendicularVector = V2.scale(perpendicularVector, 1 / norm);
     }
@@ -375,6 +388,7 @@ class VolumeLayer {
     const [width, height] = V3.sub(maxCoord2d, minCoord2d);
     const map = this.createMap(width, height);
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
     const setMap = (x, y) => {
       map[x * height + y] = 1;
     };
@@ -394,6 +408,7 @@ class VolumeLayer {
       map,
       width,
       height,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       minCoord2d,
       this.get3DCoordinate.bind(this),
       this.getFast3DCoordinateFunction(),
@@ -421,6 +436,7 @@ class VolumeLayer {
       getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
     const setMap = (x, y) => {
       map[x * height + y] = 1;
     };
@@ -438,6 +454,7 @@ class VolumeLayer {
       map,
       width,
       height,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       minCoord2d,
       this.get3DCoordinate.bind(this),
       this.getFast3DCoordinateFunction(),
@@ -458,10 +475,12 @@ class VolumeLayer {
   }
 
   fillOutsideArea(map: Uint8Array, width: number, height: number): void {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
     const setMap = (x, y) => {
       map[x * height + y] = 0;
     };
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
     const isEmpty = (x, y) => map[x * height + y] === 1;
 
     // Fill everything BUT the cell

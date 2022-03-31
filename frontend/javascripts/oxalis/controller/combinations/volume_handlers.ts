@@ -1,3 +1,4 @@
+// @flow
 import type { OrthoView, Point2, Vector3 } from "oxalis/constants";
 import { ContourModeEnum } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
@@ -16,14 +17,17 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import api from "oxalis/api/internal_api";
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   Store.dispatch(startEditingAction(calculateGlobalPos(Store.getState(), pos), plane));
 }
 export function handleEraseStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   Store.dispatch(startEditingAction(calculateGlobalPos(Store.getState(), pos), plane));
 }
 export function handleMoveForDrawOrErase(pos: Point2) {
   const state = Store.getState();
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   Store.dispatch(addToLayerAction(calculateGlobalPos(state, pos)));
 }
 export function handleEndForDrawOrErase() {
@@ -32,6 +36,7 @@ export function handleEndForDrawOrErase() {
 }
 export function handlePickCell(pos: Point2) {
   const storeState = Store.getState();
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   const globalPos = calculateGlobalPos(storeState, pos);
   return handlePickCellFromGlobalPosition(globalPos);
 }
@@ -81,6 +86,7 @@ export function handlePickCellFromGlobalPosition(globalPos: Vector3) {
   }
 }
 export function handleFloodFill(pos: Point2, plane: OrthoView) {
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   const globalPos = calculateGlobalPos(Store.getState(), pos);
   handleFloodFillFromGlobalPosition(globalPos, plane);
 }

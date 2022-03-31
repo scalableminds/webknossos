@@ -1,3 +1,4 @@
+// @flow
 export default function runAsync(
   functions: Array<(...args: Array<any>) => any>,
   waitTimeMs: number = 100,
@@ -13,6 +14,7 @@ export default function runAsync(
 
     setTimeout(() => {
       const func = functions.shift();
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const result = func();
       const promise = result instanceof Promise ? result : Promise.resolve();
       promise.then(() => runAsync(functions, waitTimeMs).then(resolve));

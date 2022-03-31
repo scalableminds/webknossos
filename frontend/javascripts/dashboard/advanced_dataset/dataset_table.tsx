@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import {
   CheckCircleOutlined,
@@ -9,6 +11,7 @@ import { Link } from "react-router-dom";
 import { Table, Tag, Tooltip } from "antd";
 import * as React from "react";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'dice... Remove this comment to see the full error message
 import dice from "dice-coefficient";
 import update from "immutability-helper";
 import type {
@@ -83,29 +86,36 @@ class DatasetTable extends React.PureComponent<Props, State> {
       sortedInfo: sorter,
     });
   };
+
   reloadSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
     this.props.reloadDataset(datasetId, this.props.datasets);
 
   getFilteredDatasets() {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
     const filterByMode = (datasets) => {
       const { datasetFilteringMode } = this.props;
 
       if (datasetFilteringMode === "onlyShowReported") {
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
         return datasets.filter((el) => !el.isUnreported);
       } else if (datasetFilteringMode === "onlyShowUnreported") {
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
         return datasets.filter((el) => el.isUnreported);
       } else {
         return datasets;
       }
     };
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
     const filteredByTags = (datasets) =>
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
       datasets.filter((dataset) => {
         const notIncludedTags = _.difference(this.props.searchTags, dataset.tags);
 
         return notIncludedTags.length === 0;
       });
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
     const filterByQuery = (datasets) =>
       Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description" | "tags">(
         datasets,
@@ -113,10 +123,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
         this.props.searchQuery,
       );
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
     const filterByHasLayers = (datasets) =>
       this.props.isUserAdmin || this.props.isUserDatasetManager
         ? datasets
         : datasets.filter(
+            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
             (dataset) => dataset.isActive && dataset.dataSource.dataLayers.length > 0,
           );
 
@@ -215,6 +227,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         pagination={{
           defaultPageSize: 50,
         }}
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         expandedRowRender={
           isUserAdmin || isUserTeamManager
             ? (dataset) => <DatasetAccessListView dataset={dataset} />
@@ -231,6 +244,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="name"
           width={280}
           sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(name: string, dataset: APIMaybeUnimportedDataset) => (
             <div>
@@ -251,6 +265,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="tags"
           key="tags"
           width={280}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
             dataset.isActive ? (
@@ -261,6 +276,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                     key={tag}
                     kind="datasets"
                     onClick={_.partial(this.props.addTagToSearch, tag)}
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Function1<SyntheticEvent<Element, Event>, vo... Remove this comment to see the full error message
                     onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
                     closable
                   />
@@ -298,6 +314,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="created"
           key="created"
           sorter={Utils.compareBy(typeHint, (dataset) => dataset.created)}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
           render={(created) => <FormattedDate timestamp={created} />}
         />
@@ -323,7 +340,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="isActive"
           key="isActive"
           width={130}
+          // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
           sorter={(a, b) => a.isActive - b.isActive}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
           render={(isActive: boolean) =>
             isActive ? (
@@ -346,7 +365,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="isPublic"
           key="isPublic"
           width={130}
+          // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
           sorter={(a, b) => a.isPublic - b.isPublic}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "isPublic" && sortedInfo.order}
           render={(isPublic: boolean) =>
             isPublic ? (
@@ -374,6 +395,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 maxWidth: 300,
               }}
             >
+              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
               {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
@@ -389,6 +411,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ dataset: any; reloadDataset: (datasetId: a... Remove this comment to see the full error message
             <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
           )}
         />

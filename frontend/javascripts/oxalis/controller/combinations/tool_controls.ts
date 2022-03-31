@@ -1,3 +1,4 @@
+// @flow
 import type { ModifierKeys } from "libs/input";
 import "libs/input";
 import type { OrthoView, Point2, ShowContextMenuFunction, AnnotationTool } from "oxalis/constants";
@@ -108,6 +109,7 @@ export class MoveTool {
 
         handleClickSegment(pos);
       },
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'delta' implicitly has an 'any' type.
       pinch: (delta) => MoveHandlers.zoom(delta, true),
       mouseMove: MoveHandlers.moveWhenAltIsPressed,
       out: () => {
@@ -189,6 +191,7 @@ export class SkeletonTool {
       }
     };
 
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'draggingNodeId' implicitly has type 'any... Remove this comment to see the full error message
     let draggingNodeId = null;
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -220,8 +223,10 @@ export class SkeletonTool {
 
         if (
           tracing.skeleton != null &&
+          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'draggingNodeId' implicitly has an 'any' ... Remove this comment to see the full error message
           (draggingNodeId != null || (useLegacyBindings && event.ctrlKey))
         ) {
+          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'draggingNodeId' implicitly has an 'any' ... Remove this comment to see the full error message
           SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId);
         } else {
           MoveHandlers.handleMovePlane(delta);
@@ -575,6 +580,7 @@ export class BoundingBoxTool {
         secondarySelectedEdge = null;
         getSceneController().highlightUserBoundingBox(null);
       },
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_id' implicitly has an 'any' type.
       mouseMove: (delta: Point2, position: Point2, _id, event: MouseEvent) => {
         if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
           MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);

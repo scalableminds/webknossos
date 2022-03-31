@@ -1,3 +1,4 @@
+// @flow
 import { Button, Modal, Tag, Card, Row, Col, List } from "antd";
 import {
   CheckCircleOutlined,
@@ -9,12 +10,16 @@ import {
   TeamOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
 import classNames from "classnames";
 import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "types/api_flow_types";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
@@ -85,6 +90,7 @@ const convertAnnotationToTaskWithAnnotationType = (
   }
 
   if (!task.type) {
+    // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'type' because it is a read-only ... Remove this comment to see the full error message
     task.type = {
       summary: `[deleted] ${annotation.typ}`,
       description: "",
@@ -130,8 +136,11 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
   getCurrentModeState = () =>
     this.state.showFinishedTasks ? this.state.finishedModeState : this.state.unfinishedModeState;
+
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'modeShape' implicitly has an 'any' type... Remove this comment to see the full error message
   setCurrentModeState = (modeShape) => {
     const { showFinishedTasks } = this.state;
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(prevState: Readonly<State>) => ... Remove this comment to see the full error message
     this.setState((prevState) => {
       const newSubState = {
         // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
@@ -171,6 +180,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     });
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pageNumber' implicitly has an 'any' typ... Remove this comment to see the full error message
   fetchNextPage = async (pageNumber) => {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
     const isFinished = this.state.showFinishedTasks;
@@ -201,6 +211,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       });
     }
   };
+
   toggleShowFinished = () => {
     this.setState(
       (prevState) => ({
@@ -260,6 +271,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         {isAdmin ? (
           <div>
             <AsyncLink
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
               href="#"
               onClick={() => {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
@@ -313,6 +325,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       onOk: async () => {
         await deleteAnnotation(annotationId, annotation.typ);
         this.setCurrentModeState({
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'annotation' does not exist on type 'neve... Remove this comment to see the full error message
           tasks: this.getCurrentModeState().tasks.filter((t) => t.annotation.id !== annotationId),
         });
       },
@@ -332,6 +345,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         })}`;
       }
 
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ destroy: () => void; update: (configUpdate... Remove this comment to see the full error message
       return Modal.confirm({
         content: modalContent,
         onOk: () => this.getNewTask(),
@@ -368,7 +382,9 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       isTransferModalVisible: false,
     });
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tasks' implicitly has an 'any' type.
     const removeTransferredTask = (tasks, currentAnnotationId) =>
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 't' implicitly has an 'any' type.
       tasks.filter((t) => t.annotation.id !== currentAnnotationId);
 
     this.setCurrentModeState({
@@ -422,6 +438,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       short: this.state.showFinishedTasks || this.props.isAdminView,
     });
 
+    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'task' implicitly has an 'any' typ... Remove this comment to see the full error message
     const TaskCardTitle = ({ task }) => (
       <React.Fragment>
         <span
@@ -435,6 +452,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         {getVolumeDescriptors(task.annotation).length === 0 ? null : (
           <Tag color="orange">volume</Tag>
         )}
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mode' implicitly has an 'any' type.
         {task.type.settings.allowedModes.map((mode) => (
           <Tag key={mode}>{mode}</Tag>
         ))}
@@ -519,6 +537,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       <div>
         <div className="pull-right">
           <AsyncButton
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; type: string; icon: Elem... Remove this comment to see the full error message
             type="primary"
             icon={<UserAddOutlined />}
             onClick={() => this.confirmGetNewTask()}
@@ -568,6 +587,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
             })
           }
           onChange={() => this.handleTransferredTask()}
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           userId={this.props.userId}
         />
       </div>
@@ -579,6 +599,8 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof DashboardTaskListView' is... Remove this comment to see the full error message
   withRouter(DashboardTaskListView),
 );

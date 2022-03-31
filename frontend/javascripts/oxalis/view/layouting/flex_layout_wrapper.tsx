@@ -1,3 +1,4 @@
+// @flow
 import type { Dispatch } from "redux";
 import { Layout, Tooltip } from "antd";
 import { connect } from "react-redux";
@@ -73,6 +74,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     left: false,
     right: false,
   };
+
   maximizedItemId: string | null | undefined = null;
 
   constructor(props: Props) {
@@ -80,10 +82,13 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const model = this.loadCurrentModel();
     this.unbindListeners = [];
     this.addListeners();
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Model' is not assignable to para... Remove this comment to see the full error message
     this.borderOpenStatusWhenNotMaximized = getBorderOpenStatus(model);
     props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatusWhenNotMaximized));
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Model' is not assignable to para... Remove this comment to see the full error message
     this.updateToModelStateAndAdjustIt(model);
     this.state = {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Model' is not assignable to type 'typeof Mod... Remove this comment to see the full error message
       model,
     };
   }
@@ -145,6 +150,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
      * tabs, too.
      */
     const rightBorderId = "right-border-tab-container";
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'getNodeById' does not exist on type 'typ... Remove this comment to see the full error message
     const rightBorderModel = model.getNodeById(rightBorderId).getExtraData().model;
 
     if (rightBorderModel == null) {
@@ -185,6 +191,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   updateToModelStateAndAdjustIt(model: Model) {
     this.maximizedItemId = getMaximizedItemId(model);
     adjustModelToBorderOpenStatus(model, this.borderOpenStatusWhenNotMaximized);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setOnAllowDrop' does not exist on type '... Remove this comment to see the full error message
     model.setOnAllowDrop(this.allowDrop);
     setTimeout(() => {
       this.adaptModelToConditionalTabs(model);
@@ -194,8 +201,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   rebuildLayout() {
     const model = this.loadCurrentModel();
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Model' is not assignable to para... Remove this comment to see the full error message
     this.updateToModelStateAndAdjustIt(model);
     this.setState({
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Model' is not assignable to type 'typeof Mod... Remove this comment to see the full error message
       model,
     });
     setTimeout(this.onLayoutChange, 1);
@@ -210,6 +219,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   attachKeyboardShortcuts() {
     const toggleMaximize = () => {
       const { model } = this.state;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'getActiveTabset' does not exist on type ... Remove this comment to see the full error message
       const activeNode = model.getActiveTabset();
 
       if (activeNode == null) {
@@ -217,7 +227,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
 
       const toggleMaximiseAction = FlexLayout.Actions.maximizeToggle(activeNode.getId());
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'doAction' does not exist on type 'typeof... Remove this comment to see the full error message
       model.doAction(toggleMaximiseAction);
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Action' is not assignable to par... Remove this comment to see the full error message
       this.onAction(toggleMaximiseAction);
     };
 
@@ -371,6 +383,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         onModelChange={() => {
           // Update / inform parent layout about the changes.
           // This will trigger the parents onModelChange and this will then save the model changes.
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'doAction' does not exist on type 'typeof... Remove this comment to see the full error message
           this.state.model.doAction(
             FlexLayout.Actions.updateNodeAttributes(node.getId(), {
               config: {
@@ -407,24 +420,29 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onLayoutChange = () => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'toJson' does not exist on type 'typeof M... Remove this comment to see the full error message
     const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
 
     // Workaround so that onLayoutChange is called after the update of flexlayout.
     // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
     setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 1);
   };
+
   onMaximizeToggle = () => {
     const currentBorderOpenStatus = Store.getState().uiInformation.borderOpenStatus;
     const isMaximizing = this.maximizedItemId != null;
     // If a tab is maximized, this.borderOpenStatusWhenNotMaximized will not change and therefore save the BorderOpenStatus before maximizing.
     Object.entries(this.borderOpenStatusWhenNotMaximized).forEach(([side, isOpen]) => {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       if ((isOpen && isMaximizing) || (!isMaximizing && currentBorderOpenStatus[side] !== isOpen)) {
         // Close all border if a tab is maximized and restore border status before maximizing.
         this.toggleBorder(side, false);
       }
     });
   };
+
   onAction = (action: Action) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'type' does not exist on type 'typeof Act... Remove this comment to see the full error message
     const { type, data } = action;
 
     if (type === "FlexLayout_MaximizeToggle") {
@@ -437,12 +455,16 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       this.onMaximizeToggle();
 
       if (document.activeElement) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
         document.activeElement.blur();
       }
 
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'getNodeById' does not exist on type 'typ... Remove this comment to see the full error message
       const toggledViewportId = this.state.model.getNodeById(data.node).getChildren()[0].getId();
 
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       if (OrthoViews[toggledViewportId] != null) {
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         this.props.setActiveViewport(OrthoViews[toggledViewportId]);
       }
     }
@@ -461,14 +483,17 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
     const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
 
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
     this.props.setBorderOpenStatus(borderOpenStatusCopy);
 
     if (toggleInternalState && this.maximizedItemId == null) {
       // Only adjust the internal state if the toggle is not automated and no tab is maximized.
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       this.borderOpenStatusWhenNotMaximized[side] = !this.borderOpenStatusWhenNotMaximized[side];
     }
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'doAction' does not exist on type 'typeof... Remove this comment to see the full error message
     this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
     this.onLayoutChange();
   }
@@ -492,7 +517,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       );
     }
   };
+
   onRenderTab = (tabNode: typeof TabNode, renderValues: Record<string, any>) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'getParent' does not exist on type 'typeo... Remove this comment to see the full error message
     const parent = tabNode.getParent();
 
     if (parent.getType() !== "tabset") {
@@ -502,6 +529,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
     const parentTabSetNode = parent;
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'getId' does not exist on type 'typeof Ta... Remove this comment to see the full error message
     if (parentTabSetNode.getChildren()[0].getId() === tabNode.getId()) {
       const { isTopMost, isLeftMost } = getPositionStatusOf(parentTabSetNode);
 
@@ -512,6 +540,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
     }
   };
+
   classNameMapper = (className: string) => {
     const isLeftSidebarOpen = getBorderOpenStatus(this.state.model).left;
 
@@ -529,11 +558,15 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       <React.Fragment>
         <div className="flex-layout-container">
           <FlexLayout.Layout
+            // @ts-expect-error ts-migrate(2740) FIXME: Type 'typeof Model' is missing the following prope... Remove this comment to see the full error message
             model={model}
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(action: Action) => typeof Action' is not as... Remove this comment to see the full error message
             onAction={this.onAction}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabSetNode: typeof TabSetNode, renderValues... Remove this comment to see the full error message
             onRenderTabSet={this.onRenderTabSet}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabNode: typeof TabNode, renderValues: Reco... Remove this comment to see the full error message
             onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}
           />
@@ -568,6 +601,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,

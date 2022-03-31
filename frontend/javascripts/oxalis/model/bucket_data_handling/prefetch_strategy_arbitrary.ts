@@ -1,3 +1,4 @@
+// @flow
 import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -12,6 +13,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   roundTripTimeRangeStart = 0;
   roundTripTimeRangeEnd = Infinity;
   name = "ARBITRARY";
+  // @ts-expect-error ts-migrate(2702) FIXME: 'PolyhedronRasterizer' only refers to a type, but ... Remove this comment to see the full error message
   prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(
     7,
     7,
@@ -57,12 +59,14 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     resolutions: Array<Vector3>,
     resolutionInfo: ResolutionInfo,
   ): Array<PullQueueItem> {
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'pullQueue' implicitly has type 'any[]' i... Remove this comment to see the full error message
     const pullQueue = [];
     const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(activeZoomStep);
 
     if (zoomStep == null) {
       // The layer cannot be rendered at this zoom step, as necessary magnifications
       // are missing. Don't prefetch anything.
+      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'pullQueue' implicitly has an 'any[]' typ... Remove this comment to see the full error message
       return pullQueue;
     }
 
@@ -84,6 +88,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
       });
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ bucket: any[]; priority: any; }[]' is not ... Remove this comment to see the full error message
     return pullQueue;
   }
 }

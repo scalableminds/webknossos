@@ -1,5 +1,8 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Spin, Input, Table, Button, Modal, Tooltip } from "antd";
 import {
@@ -94,6 +97,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     this.setState(persistence.load(this.props.history), () => this.fetchNextPage(0));
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_prevProps' implicitly has an 'any' typ... Remove this comment to see the full error message
   componentDidUpdate(_prevProps, prevState) {
     persistence.persist(this.props.history, this.state);
 
@@ -106,12 +110,19 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     this.state.shouldShowArchivedTracings
       ? this.state.archivedModeState
       : this.state.unarchivedModeState;
+
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'modeShape' implicitly has an 'any' type... Remove this comment to see the full error message
   setModeState = (modeShape, addToArchivedTracings) =>
     this.addToShownTracings(modeShape, addToArchivedTracings);
+
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'modeShape' implicitly has an 'any' type... Remove this comment to see the full error message
   setOppositeModeState = (modeShape, addToArchivedTracings) =>
     this.addToShownTracings(modeShape, !addToArchivedTracings);
+
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'modeShape' implicitly has an 'any' type... Remove this comment to see the full error message
   addToShownTracings = (modeShape, addToArchivedTracings) => {
     const mode = addToArchivedTracings ? "archivedModeState" : "unarchivedModeState";
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(prevState: Readonly<State>) => ... Remove this comment to see the full error message
     this.setState((prevState) => {
       const newSubState = {
         // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
@@ -124,6 +135,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       };
     });
   };
+
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pageNumber' implicitly has an 'any' typ... Remove this comment to see the full error message
   fetchNextPage = async (pageNumber) => {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
@@ -143,6 +156,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           : await getCompactAnnotations(showArchivedTracings, pageNumber);
       this.setModeState(
         {
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           tracings: previousTracings.concat(tracings),
           lastLoadedPage: pageNumber,
           loadedAllTracings: tracings.length !== pageLength || tracings.length === 0,
@@ -157,6 +171,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       });
     }
   };
+
   toggleShowArchived = () => {
     this.setState(
       (prevState) => ({
@@ -167,6 +182,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       },
     );
   };
+
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationCompact) => {
     const newTracing =
       type === "finish"
@@ -210,6 +226,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       );
     }
   };
+
   renderActions = (tracing: APIAnnotationCompact) => {
     if (tracing.typ !== "Explorational") {
       return null;
@@ -227,6 +244,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           </Link>
           <br />
           <AsyncLink
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
             href="#"
             onClick={() => downloadNml(id, typ, hasVolumeTracing)}
             icon={<DownloadOutlined key="download" />}
@@ -235,6 +253,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           </AsyncLink>
           <br />
           <AsyncLink
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
             href="#"
             onClick={() => this.finishOrReopenTracing("finish", tracing)}
             icon={<InboxOutlined key="inbox" />}
@@ -248,6 +267,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <AsyncLink
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
             href="#"
             onClick={() => this.finishOrReopenTracing("reopen", tracing)}
             icon={<FolderOpenOutlined key="folder" />}
@@ -266,6 +286,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   handleSearch = (event: React.SyntheticEvent): void => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -317,13 +338,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       },
     });
   };
+
   addTagToSearch = (tag: string): void => {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
     if (!this.state.tags.includes(tag)) {
       this.setState((prevState) => ({
         tags: [...prevState.tags, tag],
       }));
     }
   };
+
   editTagFromAnnotation = (
     annotation: APIAnnotationCompact,
     shouldAddTag: boolean,
@@ -371,10 +395,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       };
     });
   };
+
   handleSearchPressEnter = (event: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const { value } = event.target;
 
     if (value !== "") {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       this.addTagToSearch(event.target.value);
       this.setState({
         searchQuery: "",
@@ -474,8 +501,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             __,
             annotation: APIAnnotationCompact, // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
           ) =>
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeCount' does not exist on type '{} | ... Remove this comment to see the full error message
             annotation.stats.treeCount != null &&
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'nodeCount' does not exist on type '{} | ... Remove this comment to see the full error message
             annotation.stats.nodeCount != null &&
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'edgeCount' does not exist on type '{} | ... Remove this comment to see the full error message
             annotation.stats.edgeCount != null ? (
               <div
                 style={{
@@ -491,6 +521,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 >
                   <i className="fas fa-sitemap" />
                 </span>
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeCount' does not exist on type '{} | ... Remove this comment to see the full error message
                 <span>{annotation.stats.treeCount}</span>
                 <span
                   title="Nodes"
@@ -500,6 +531,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 >
                   <i className="fas fa-circle fa-sm" />
                 </span>
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'nodeCount' does not exist on type '{} | ... Remove this comment to see the full error message
                 <span>{annotation.stats.nodeCount}</span>
                 <span
                   title="Edges"
@@ -509,6 +541,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 >
                   <i className="fas fa-arrows-alt-h" />
                 </span>
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'edgeCount' does not exist on type '{} | ... Remove this comment to see the full error message
                 <span>{annotation.stats.edgeCount}</span>
               </div>
             ) : null
@@ -524,6 +557,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   key={tag}
                   kind="annotations"
                   onClick={_.partial(this.addTagToSearch, tag)}
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Function1<SyntheticEvent<Element, Event>, vo... Remove this comment to see the full error message
                   onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
                   tag={tag}
                   closable={
@@ -642,4 +676,5 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof ExplorativeAnnotationsVie... Remove this comment to see the full error message
 export default withRouter(ExplorativeAnnotationsView);

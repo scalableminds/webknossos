@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import type { ViewMode, ControlMode } from "oxalis/constants";
 import type {
@@ -149,7 +151,9 @@ export const initializeSettingsAction = (
   initialDatasetSettings: Record<string, any>,
 ): InitializeSettingsAction => ({
   type: "INITIALIZE_SETTINGS",
+  // @ts-expect-error ts-migrate(2740) FIXME: Type 'Record<string, any>' is missing the followin... Remove this comment to see the full error message
   initialUserSettings,
+  // @ts-expect-error ts-migrate(2740) FIXME: Type 'Record<string, any>' is missing the followin... Remove this comment to see the full error message
   initialDatasetSettings,
 });
 export const setViewModeAction = (viewMode: ViewMode): SetViewModeAction => ({
@@ -179,6 +183,7 @@ export const dispatchClipHistogramAsync = async (
 ): Promise<void> => {
   const readyDeferred = new Deferred();
   const action = clipHistogramAction(layerName, shouldAdjustClipRange, () =>
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
     readyDeferred.resolve(),
   );
   dispatch(action);

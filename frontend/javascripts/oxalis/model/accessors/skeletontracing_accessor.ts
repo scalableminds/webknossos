@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
 import type {
@@ -168,6 +170,7 @@ export function getNodeAndTreeOrNull(
   node: Node | null;
 } {
   return getNodeAndTree(skeletonTracing, nodeId, treeId)
+    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'maybeTree' implicitly has an 'any... Remove this comment to see the full error message
     .map(([maybeTree, maybeNode]) => ({
       tree: maybeTree,
       node: maybeNode,
@@ -189,6 +192,7 @@ export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
 export function getMaxNodeId(skeletonTracing: SkeletonTracing): Maybe<number> {
   const maxNodeId = _.reduce(
     skeletonTracing.trees,
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Tree' is not assignable to param... Remove this comment to see the full error message
     (r, tree) => Math.max(r, getMaxNodeId(tree).getOrElse(-Infinity)),
     -Infinity,
   );
@@ -196,13 +200,16 @@ export function getMaxNodeId(skeletonTracing: SkeletonTracing): Maybe<number> {
   return maxNodeId === -Infinity ? Maybe.Nothing() : Maybe.Just(maxNodeId);
 }
 export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
   return getSkeletonTracing(tracing).map((skeletonTracing) =>
     _.flatMap(skeletonTracing.trees, (tree) => tree.branchPoints),
   );
 }
 export function getStats(tracing: Tracing): Maybe<SkeletonTracingStats> {
   return getSkeletonTracing(tracing)
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
     .chain((skeletonTracing) => Maybe.fromNullable(skeletonTracing.trees))
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'trees' implicitly has an 'any' type.
     .map((trees) => ({
       treeCount: _.size(trees),
       nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),

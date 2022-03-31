@@ -1,3 +1,4 @@
+// @flow
 import { Form, Input, Button, Row, Col, Checkbox } from "antd";
 import { LockOutlined, UserOutlined, MailOutlined } from "@ant-design/icons";
 import React from "react";
@@ -43,12 +44,14 @@ function RegistrationForm(props: Props) {
         email: formValues.email,
         password: formValues.password.password1,
       });
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
       Store.dispatch(setActiveUserAction(user));
     }
 
     props.onRegistered(tryAutoLogin);
   };
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
   function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
     const otherFieldValue = form.getFieldValue(otherPasswordFieldKey);
 

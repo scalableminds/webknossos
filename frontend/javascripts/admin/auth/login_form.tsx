@@ -1,3 +1,4 @@
+// @flow
 import { Alert, Button, Form, Input } from "antd";
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
@@ -25,8 +26,10 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
         }
       : null;
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const onFinish = async (formValues) => {
     const user = await loginUser(formValues);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
     Store.dispatch(setActiveUserAction(user));
 
     if (onLoggedIn) {
@@ -41,6 +44,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
         <span>
           Authentication within an iFrame probably does not work due to third-party cookies being
           forbidden in most browsers. Please{" "}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'Location' is not assignable to type 'string'... Remove this comment to see the full error message
           <a href={window.location} target="_blank" rel="noopener noreferrer">
             open webKnossos
           </a>{" "}

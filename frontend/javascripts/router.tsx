@@ -1,7 +1,10 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
 import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
@@ -63,8 +66,10 @@ type StateProps = {
 type Props = StateProps;
 const browserHistory = createBrowserHistory();
 browserHistory.listen((location) => {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'ga' does not exist on type '(Window & ty... Remove this comment to see the full error message
   if (typeof window.ga !== "undefined" && window.ga !== null && window.ga.getByName != null) {
     // t0 is the default tracker name
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'ga' does not exist on type '(Window & ty... Remove this comment to see the full error message
     const tracker = window.ga.getByName("t0");
     if (tracker == null) return;
     const lastPage = tracker.get("page");
@@ -73,7 +78,9 @@ browserHistory.listen((location) => {
     // The listener is called repeatedly for a single page change, don't send repeated pageviews
     if (lastPage !== newPage) {
       // Update the tracker state first, so that subsequent pageviews AND events use the correct page
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'gtag' does not exist on type '(Window & ... Remove this comment to see the full error message
       window.gtag("set", "page_path", newPage);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'gtag' does not exist on type '(Window & ... Remove this comment to see the full error message
       window.gtag("event", "page_view");
     }
   }
@@ -114,6 +121,7 @@ class ReactRouter extends React.Component<Props> {
 
     return <h3>Invalid annotation URL.</h3>;
   };
+
   tracingSandbox = ({ match }: ContextRouter) => {
     const tracingType = Enum.coalesce(TracingTypeEnum, match.params.type);
 
@@ -133,6 +141,7 @@ class ReactRouter extends React.Component<Props> {
 
     return <h3>Invalid annotation URL.</h3>;
   };
+
   tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
       initialAnnotationType={APIAnnotationTypeEnum.View}
@@ -170,10 +179,12 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
                   const { tab } = match.params;
+                  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                   const initialTabKey = tab ? urlTokenToTabKeyMap[tab] : null;
                   return (
                     <DashboardView
@@ -186,6 +197,7 @@ class ReactRouter extends React.Component<Props> {
               />
 
               <Route
+                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                 isAuthenticated={isAuthenticated}
                 path="/dashboard"
                 render={() => {
@@ -199,6 +211,7 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/users/:userId/details"
                 render={({ match }: ContextRouter) => (
@@ -210,55 +223,66 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/users"
                 component={UserListView}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/teams"
                 component={TeamListView}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/statistics"
                 component={StatisticView}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/reports/projectProgress"
                 component={ProjectProgressReportView}
                 exact
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/reports/openTasks"
                 component={OpenTasksReportView}
                 exact
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/tasks"
                 component={TaskListView}
                 exact
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/tasks/create"
                 component={TaskCreateView}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
                 render={({ match }: ContextRouter) => (
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ taskId: any; }' is not assignable to type ... Remove this comment to see the full error message
                   <TaskCreateFormView taskId={match.params.taskId} />
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId"
                 render={({ match }: ContextRouter) => (
                   <TaskListView
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialFieldValues: { taskId: any; }; }' i... Remove this comment to see the full error message
                     initialFieldValues={{
                       taskId: match.params.taskId || "",
                     }}
@@ -266,6 +290,7 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/projects"
                 render={(
@@ -274,15 +299,18 @@ class ReactRouter extends React.Component<Props> {
                 exact
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
                 render={() => <ProjectCreateView />}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/tasks"
                 render={({ match }: ContextRouter) => (
                   <TaskListView
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialFieldValues: { projectId: any; }; }... Remove this comment to see the full error message
                     initialFieldValues={{
                       projectId: match.params.projectId || "",
                     }}
@@ -290,6 +318,7 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/edit"
                 render={({ match }: ContextRouter) => (
@@ -297,6 +326,7 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/annotations/:type/:id"
                 render={this.tracingView}
@@ -316,11 +346,13 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
                 render={() => <DatasetAddView />}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/import"
                 render={({ match }: ContextRouter) => (
@@ -333,11 +365,13 @@ class ReactRouter extends React.Component<Props> {
                     onComplete={() =>
                       window.location.replace(`${window.location.origin}/dashboard/datasets`)
                     }
+                    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
                     onCancel={() => window.history.back()}
                   />
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
@@ -347,36 +381,45 @@ class ReactRouter extends React.Component<Props> {
                       name: match.params.datasetName || "",
                       owningOrganization: match.params.organizationName || "",
                     }}
+                    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
                     onComplete={() => window.history.back()}
+                    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
                     onCancel={() => window.history.back()}
                   />
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialSearchValue: any; }' is not assigna... Remove this comment to see the full error message
                 ) => <TaskTypeListView initialSearchValue={location.hash.slice(1)} />}
                 exact
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/create"
                 component={TaskTypeCreateView}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/edit"
                 render={({ match }: ContextRouter) => (
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ taskTypeId: any; }' is not assignable to t... Remove this comment to see the full error message
                   <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/tasks"
                 render={({ match }: ContextRouter) => (
                   <TaskListView
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialFieldValues: { taskTypeId: any; }; ... Remove this comment to see the full error message
                     initialFieldValues={{
                       taskTypeId: match.params.taskTypeId || "",
                     }}
@@ -384,6 +427,7 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/projects"
                 render={({ match }: ContextRouter) => (
@@ -391,11 +435,13 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
                 render={() => <ScriptCreateView />}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/scripts/:scriptId/edit"
                 render={({ match }: ContextRouter) => (
@@ -403,20 +449,25 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/scripts"
                 component={ScriptListView}
                 exact
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/jobs"
                 render={() => <JobListView />}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/organizations/:organizationName/edit"
+                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'match' implicitly has an 'any' ty... Remove this comment to see the full error message
                 render={({ match }) => (
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ organizationName: any; }' is not assignabl... Remove this comment to see the full error message
                   <OrganizationEditView organizationName={match.params.organizationName || ""} />
                 )}
               />
@@ -427,16 +478,19 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"
                 render={() => <TimeLineView />}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
                 component={AuthTokenView}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/auth/changePassword"
                 component={ChangePasswordView}
@@ -459,6 +513,7 @@ class ReactRouter extends React.Component<Props> {
               <Route
                 path="/auth/login"
                 render={() =>
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ layout: string; }' is not assignable to ty... Remove this comment to see the full error message
                   isAuthenticated ? <Redirect to="/" /> : <LoginView layout="horizontal" />
                 }
               />
@@ -472,6 +527,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/auth/finishResetPassword"
                 render={({ location }: ContextRouter) => {
                   const params = Utils.getUrlParamsObjectFromString(location.search);
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ resetToken: string; }' is not assignable t... Remove this comment to see the full error message
                   return <FinishResetPasswordView resetToken={params.token} />;
                 }}
               />
@@ -483,6 +539,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:id/view"
                 render={({ match, location }: ContextRouter) => (
                   <AsyncRedirect
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ redirectTo: () => Promise<string>; }' is n... Remove this comment to see the full error message
                     redirectTo={async () => {
                       const datasetName = match.params.id || "";
                       const organizationName = await getOrganizationForDataset(datasetName);
@@ -496,10 +553,12 @@ class ReactRouter extends React.Component<Props> {
                 render={this.tracingSandbox}
               />
               <SecuredRoute
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ pushToHistory: boolean; redirectTo: () => ... Remove this comment to see the full error message
                     pushToHistory={false}
                     redirectTo={async () => {
                       if (
@@ -523,16 +582,20 @@ class ReactRouter extends React.Component<Props> {
                       const resolutionRestrictions = {};
 
                       if (getParams.minRes !== undefined) {
+                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'min' does not exist on type '{}'.
                         resolutionRestrictions.min = parseInt(getParams.minRes);
 
+                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'min' does not exist on type '{}'.
                         if (!_.isNumber(resolutionRestrictions.min)) {
                           throw new Error("Invalid minRes parameter");
                         }
                       }
 
                       if (getParams.maxRes !== undefined) {
+                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'max' does not exist on type '{}'.
                         resolutionRestrictions.max = parseInt(getParams.maxRes);
 
+                        // @ts-expect-error ts-migrate(2339) FIXME: Property 'max' does not exist on type '{}'.
                         if (!_.isNumber(resolutionRestrictions.max)) {
                           throw new Error("Invalid maxRes parameter");
                         }
@@ -581,4 +644,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps)(ReactRouter);

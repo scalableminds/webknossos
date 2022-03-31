@@ -14,6 +14,7 @@ import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/
 import { waitForCondition } from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
   return segmentationLayer.fallbackLayer || segmentationLayer.name;
 }
 export async function maybeFetchMeshFiles(
@@ -78,6 +79,7 @@ export function withMappingActivationConfirmation<P, C extends ComponentType<P>>
     // If the mapping name is undefined, no mapping is specified. In that case never show the activation modal.
     // In contrast, if the mapping name is null, this indicates that all mappings should be specifically disabled.
     if (mappingName === undefined || layerName == null) {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<MappingActivationConfirmationProps<P>, ... Remove this comment to see the full error message
       return <WrappedComponent {...rest} onClick={originalOnClick} />;
     }
 

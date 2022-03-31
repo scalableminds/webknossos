@@ -1,3 +1,4 @@
+// @flow
 import * as THREE from "three";
 import type {
   OrthoView,
@@ -61,6 +62,7 @@ export function handleMergeTrees(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     getActiveNode(skeletonTracing).map((activeNode) =>
       Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
     );
@@ -77,6 +79,7 @@ export function handleDeleteEdge(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     getActiveNode(skeletonTracing).map((activeNode) =>
       Store.dispatch(deleteEdgeAction(activeNode.id, nodeId)),
     );
@@ -119,6 +122,7 @@ export function handleCreateNode(planeView: PlaneView, position: Point2, ctrlPre
     return;
   }
 
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   const globalPosition = calculateGlobalPos(state, position);
   setWaypoint(globalPosition, activeViewport, ctrlPressed);
 }
@@ -138,6 +142,7 @@ export function handleOpenContextMenu(
 
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
   const state = Store.getState();
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   const globalPosition = calculateGlobalPos(state, position);
   const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, plane);
   const clickedBoundingBoxId = hoveredEdgesInfo != null ? hoveredEdgesInfo[0].boxId : null;
@@ -152,7 +157,9 @@ export function handleOpenContextMenu(
 }
 export function moveNode(dx: number, dy: number, nodeId: number | null | undefined) {
   // dx and dy are measured in pixel.
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, activeNode]) => {
       const state = Store.getState();
       const { activeViewport } = state.viewModeData.plane;
@@ -184,6 +191,7 @@ export function setWaypoint(
   const activeNodeMaybe = getActiveNode(skeletonTracing);
   const rotation = getRotationOrtho(activeViewport);
   // set the new trace direction
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
   activeNodeMaybe.map((activeNode) =>
     Store.dispatch(
       setDirectionAction([
@@ -236,6 +244,7 @@ function addNode(
     const newState = Store.getState();
     enforce(getActiveNode)(newState.tracing.skeleton).map(
       (
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newActiveNode' implicitly has an 'any' ... Remove this comment to see the full error message
         newActiveNode, // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
       ) =>
         // This is important because otherwise the user cannot continue to trace until the animation is over
@@ -279,11 +288,13 @@ export function maybeGetNodeIdFromPosition(
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
   const pickingNode = skeleton.startPicking(isTouch);
   const pickingScene = new THREE.Scene();
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof Object3D' is not assignab... Remove this comment to see the full error message
   pickingScene.add(pickingNode);
   const camera = planeView.getCameras()[plane];
   let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Scene' is not assignable to para... Remove this comment to see the full error message
   const buffer = renderToTexture(plane, pickingScene, camera, true);
   // Beware of the fact that new browsers yield float numbers for the mouse position
   // Subtract the CSS border as the renderer viewport is smaller than the inputcatcher

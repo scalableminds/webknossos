@@ -7,11 +7,13 @@ let mockedWindow = false;
 
 if (!global.window) {
   global.window = {
+    // @ts-expect-error ts-migrate(2740) FIXME: Type '{ protocol: string; }' is missing the follow... Remove this comment to see the full error message
     location: {
       protocol: "",
     },
   };
   global.document = {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ style: {}; }' is not assignable to type 'H... Remove this comment to see the full error message
     createElement: () => ({
       style: {},
     }),
@@ -23,7 +25,9 @@ const Hammer = require("hammerjs");
 
 if (mockedWindow) {
   // Reset to old values, otherwise other libs may not detect a test environment
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Document | undefined' is not assignable to t... Remove this comment to see the full error message
   global.document = oldDocument;
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '(Window & typeof globalThis) | undefined' is... Remove this comment to see the full error message
   global.window = oldWindow;
 }
 

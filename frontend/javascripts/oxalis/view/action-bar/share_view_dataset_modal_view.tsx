@@ -1,3 +1,4 @@
+// @flow
 import { Modal, Input, Button, Row, Col } from "antd";
 import { useSelector } from "react-redux";
 import React from "react";
@@ -10,7 +11,9 @@ type Props = {
 };
 export default function ShareViewDatasetModalView(props: Props) {
   const { onOk } = props;
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'Default... Remove this comment to see the full error message
   const dataset = useSelector((state) => state.dataset);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'uiInformation' does not exist on type 'D... Remove this comment to see the full error message
   const isShareModalOpen = useSelector((state) => state.uiInformation.showShareModal);
   const sharingToken = useDatasetSharingToken(dataset);
   const url = getUrl(sharingToken, !dataset.isPublic);

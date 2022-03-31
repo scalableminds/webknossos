@@ -1,6 +1,7 @@
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { TestInterface } from "ava";
 import anyTest from "ava";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import path from "path";
 import type { Browser } from "puppeteer";
@@ -51,6 +52,7 @@ async function getNewPage(browser: Browser) {
     height: 1080,
   });
   page.setExtraHTTPHeaders({
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | undefined' is not assignable to typ... Remove this comment to see the full error message
     "X-Auth-Token": WK_AUTH_TOKEN,
   });
   return page;
@@ -73,6 +75,7 @@ test.beforeEach(async (t) => {
   global.fetch = fetch;
   global.Request = Request;
   global.Response = Response;
+  // @ts-expect-error ts-migrate(2551) FIXME: Property 'FetchError' does not exist on type 'Glob... Remove this comment to see the full error message
   global.FetchError = FetchError;
 });
 // These are the datasets that are available on our dev instance
@@ -293,6 +296,7 @@ test.serial(
           name: datasetName,
           owningOrganization: "sample_organization",
         };
+        // @ts-expect-error ts-migrate(2554) FIXME: Expected 5 arguments, but got 4.
         const { screenshot, width, height } = await screenshotDataset(
           await getNewPage(t.context.browser),
           URL,

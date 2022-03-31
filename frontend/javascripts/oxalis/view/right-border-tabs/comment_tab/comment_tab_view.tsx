@@ -1,4 +1,6 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
 import { Input, Menu, Dropdown, Tooltip } from "antd";
@@ -11,10 +13,13 @@ import {
   ShrinkOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
 import Enum from "Enumjs";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import * as React from "react";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import update from "immutability-helper";
 import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
@@ -101,6 +106,7 @@ const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "revertToVersion",
 ];
 const memoizedDeriveData = memoizeOne(
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'trees' implicitly has an 'any' type.
   (trees, state: CommentTabState): Array<Tree | CommentType> => {
     const sortedTrees = _.values(trees)
       .filter((tree) => tree.comments.length > 0)
@@ -132,7 +138,9 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
   storePropertyUnsubscribers: Array<() => void> = [];
   keyboard = new InputKeyboard(
     {
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
       n: () => this.nextComment(),
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
       p: () => this.previousComment(),
     },
     {
@@ -159,6 +167,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     );
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nextProps' implicitly has an 'any' type... Remove this comment to see the full error message
   shouldComponentUpdate(nextProps, nextState) {
     if (nextState !== this.state) {
       return true;
@@ -183,6 +192,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return relevantUpdateActions.length > 0;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'prevProps' implicitly has an 'any' type... Remove this comment to see the full error message
   componentDidUpdate(prevProps) {
     if (
       this.listRef != null &&
@@ -200,6 +210,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
   }
 
   nextComment = (forward: boolean = true) => {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     getActiveNode(this.props.skeletonTracing).map((activeNode) => {
       const { isSortedAscending, sortBy } = this.state;
       const sortAscending = forward ? isSortedAscending : !isSortedAscending;
@@ -241,6 +252,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     this.nextComment(false);
   };
   handleChangeInput = (evt: React.SyntheticEvent, insertLineBreaks: boolean = false) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const commentText = evt.target.value;
 
     if (commentText) {
@@ -249,6 +261,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       this.props.deleteComment();
     }
   };
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'key' implicitly has an 'any' type... Remove this comment to see the full error message
   handleChangeSorting = ({ key }) => {
     this.setState({
       sortBy: key,
@@ -287,7 +300,9 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return zipMaybe(
       getActiveTree(this.props.skeletonTracing),
       getActiveNode(this.props.skeletonTracing),
+    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
     ).chain(([tree, activeNode]) =>
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comment' implicitly has an 'any' type.
       Maybe.fromNullable(tree.comments.find((comment) => comment.nodeId === activeNode.id)).orElse(
         () =>
           // If there is no active comment and createIfNotExisting is set, create an empty comment
@@ -315,6 +330,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     const onOk = () => this.setMarkdownModalVisibility(false);
 
     return activeCommentMaybe
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comment' implicitly has an 'any' type.
       .map((comment) => (
         <MarkdownModal
           key={comment.nodeId}
@@ -355,6 +371,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return memoizedDeriveData(this.props.skeletonTracing.trees, this.state);
   }
 
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'index' implicitly has an 'any' ty... Remove this comment to see the full error message
   renderRow = ({ index, key, style }) => {
     if (this.getData()[index].treeId != null) {
       const tree = this.getData()[index];
@@ -363,6 +380,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
           key={key}
           style={style}
           tree={tree}
+          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           collapsed={this.state.collapsedTreeIds[tree.treeId]}
           onExpand={this.toggleExpand}
           isActive={tree.treeId === this.props.skeletonTracing.activeTreeId}
@@ -379,16 +397,19 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     const activeCommentMaybe = this.getActiveComment();
     // Replace line breaks as they will otherwise be stripped when shown in an input field
     const activeCommentContent = activeCommentMaybe
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comment' implicitly has an 'any' type.
       .map((comment) => comment.content)
       .getOrElse("")
       .replace(/\r?\n/g, "\\n");
     const isMultilineComment = activeCommentContent.indexOf("\\n") !== -1;
     const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'commentOrTree' implicitly has an 'any' ... Remove this comment to see the full error message
     const findCommentIndexFn = (commentOrTree) =>
       commentOrTree.nodeId != null &&
       commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'commentOrTree' implicitly has an 'any' ... Remove this comment to see the full error message
     const findTreeIndexFn = (commentOrTree) =>
       commentOrTree.treeId != null &&
       commentOrTree.treeId === this.props.skeletonTracing.activeTreeId;
@@ -424,15 +445,18 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     searchKey="content"
                     targetId={commentListId}
                   >
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     <ButtonComponent icon={<SearchOutlined />} title="Search through comments" />
                   </AdvancedSearchPopover>
                   <ButtonComponent
                     title="Jump to previous comment"
                     onClick={this.previousComment}
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     icon={<ArrowLeftOutlined />}
                   />
                   <InputComponent
                     value={activeCommentContent}
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={activeNodeMaybe.isNothing}
                     onChange={(evt) => this.handleChangeInput(evt, true)}
                     onPressEnter={(evt) => evt.target.blur()}
@@ -443,6 +467,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   />
                   <ButtonComponent
                     onClick={() => this.setMarkdownModalVisibility(true)}
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={activeNodeMaybe.isNothing}
                     type={isMultilineComment ? "primary" : "button"}
                     icon={<EditOutlined />}
@@ -451,6 +476,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   <ButtonComponent
                     title="Jump to next comment"
                     onClick={this.nextComment}
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     icon={<ArrowRightOutlined />}
                   />
                   <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
@@ -460,6 +486,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   </Dropdown>
                   <ButtonComponent
                     onClick={this.toggleExpandForAllTrees}
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     icon={<ShrinkOutlined />}
                     title="Collapse or expand groups"
                   />
@@ -472,6 +499,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   }}
                 >
                   <AutoSizer>
+                    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'height' implicitly has an 'any' t... Remove this comment to see the full error message
                     {({ height, width }) => (
                       <div
                         style={{
@@ -489,6 +517,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                           rowRenderer={this.renderRow}
                           scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
                           tabIndex={null}
+                          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'listEl' implicitly has an 'any' type.
                           ref={(listEl) => {
                             this.listRef = listEl;
                           }}
@@ -511,6 +540,7 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodeId' implicitly has an 'any' type.
   setActiveNode(nodeId) {
     dispatch(setActiveNodeAction(nodeId));
   },
@@ -519,11 +549,13 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(deleteCommentAction());
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'text' implicitly has an 'any' type.
   createComment(text) {
     dispatch(createCommentAction(text));
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,

@@ -1,3 +1,4 @@
+// @flow
 import { Modal, Input, Form } from "antd";
 import { TagOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -39,6 +40,7 @@ function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isVisible }: Props)
           rules={[
             {
               required: true,
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'RegExp | ... Remove this comment to see the full error message
               pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
               message: "The team name must not contain any special characters.",
             },

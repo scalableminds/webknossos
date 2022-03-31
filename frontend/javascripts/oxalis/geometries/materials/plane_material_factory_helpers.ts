@@ -1,3 +1,4 @@
+// @flow
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 export const channelCountToFormat = {
@@ -13,12 +14,14 @@ export function createUpdatableTexture(
   type: typeof THREE.FloatType | typeof THREE.UnsignedByteType | typeof THREE.Uint32BufferAttribute,
   renderer: typeof THREE.WebGLRenderer,
 ): typeof UpdatableTexture {
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const format = channelCountToFormat[channelCount];
 
   if (!format) {
     throw new Error(`Unhandled byte count: ${channelCount}`);
   }
 
+  // @ts-expect-error ts-migrate(2554) FIXME: Expected 11 arguments, but got 9.
   const newTexture = new UpdatableTexture(
     width,
     width,

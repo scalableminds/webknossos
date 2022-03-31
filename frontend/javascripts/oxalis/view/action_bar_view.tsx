@@ -1,3 +1,4 @@
+// @flow
 import { Alert } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -61,6 +62,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
   state = {
     isNewLayoutModalVisible: false,
   };
+
   handleResetLayout = () => {
     layoutEmitter.emit(
       "resetLayout",
@@ -68,9 +70,11 @@ class ActionBarView extends React.PureComponent<Props, State> {
       this.props.layoutProps.activeLayout,
     );
   };
+
   handleLayoutDeleted = (layoutName: string) => {
     deleteLayout(this.props.layoutProps.layoutKey, layoutName);
   };
+
   addNewLayout = (layoutName: string) => {
     this.setState({
       isNewLayoutModalVisible: false,
@@ -84,6 +88,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       this.props.layoutProps.setCurrentLayout(layoutName);
     }
   };
+
   createTracing = async (dataset: APIDataset) => {
     // If the dataset supports creating an annotation with a fallback segmentation,
     // use it (as the fallback can always be removed later)
@@ -92,17 +97,20 @@ class ActionBarView extends React.PureComponent<Props, State> {
       maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
         ? maybeSegmentationLayer.name
         : null;
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
     const annotation = await createExplorational(dataset, "hybrid", fallbackLayerName);
     trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };
 
   renderStartTracingButton(): React.ReactNode {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: Props) => Element' is no... Remove this comment to see the full error message
     const ButtonWithAuthentication = withAuthentication(AsyncButton);
     return (
       <ButtonWithAuthentication
         activeUser={this.props.activeUser}
         authenticationMessage="You have to register or login to create an annotation."
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; activeUser: APIUser | nu... Remove this comment to see the full error message
         style={{
           marginLeft: 12,
         }}
@@ -181,4 +189,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   viewMode: state.temporaryConfiguration.viewMode,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ActionBarView);

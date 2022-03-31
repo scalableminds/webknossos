@@ -1,5 +1,8 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal, Card } from "antd";
 import {
@@ -95,9 +98,11 @@ class TaskListView extends React.PureComponent<Props, State> {
 
   handleSearch = (event: React.SyntheticEvent): void => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
+
   deleteTask = (task: APITask) => {
     Modal.confirm({
       title: messages["task.delete"],
@@ -120,6 +125,7 @@ class TaskListView extends React.PureComponent<Props, State> {
       },
     });
   };
+
   getFilteredTasks = () => {
     const { searchQuery, tasks } = this.state;
     return Utils.filterWithSearchQueryAND(
@@ -131,11 +137,13 @@ class TaskListView extends React.PureComponent<Props, State> {
         "dataSet",
         "created",
         "type",
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'neededExperience' does not exist on type... Remove this comment to see the full error message
         (task) => task.neededExperience.domain,
       ],
       searchQuery,
     );
   };
+
   downloadSettingsFromAllTasks = async (queryObject: QueryObject) => {
     await this.fetchData(queryObject);
     const filteredTasks = this.getFilteredTasks();
@@ -155,7 +163,9 @@ class TaskListView extends React.PureComponent<Props, State> {
     }
 
     const tasksString = this.state.tasks
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
       .filter((t) => t.id === anonymousTaskId)
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'directLinks' does not exist on type 'nev... Remove this comment to see the full error message
       .map((t) => t.directLinks)
       .join("\n");
     return (
@@ -244,6 +254,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                   background:
                     "linear-gradient(181deg, #1414147a, rgb(59 59 59 / 45%), rgba(20, 19, 31, 0.84))",
                 }}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'true' is not assignable to type 'string | un... Remove this comment to see the full error message
                 className
               >
                 <h4
@@ -269,6 +280,7 @@ class TaskListView extends React.PureComponent<Props, State> {
 
         <Card title="Search for Tasks">
           <TaskSearchForm
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ onChange: (queryObject: any) => Promise<vo... Remove this comment to see the full error message
             onChange={(queryObject) => this.fetchData(queryObject)}
             initialFieldValues={this.props.initialFieldValues}
             isLoading={isLoading}
@@ -278,6 +290,7 @@ class TaskListView extends React.PureComponent<Props, State> {
 
         <Spin spinning={isLoading} size="large">
           <FixedExpandableTable
+            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             dataSource={this.getFilteredTasks()}
             rowKey="id"
             pagination={{
@@ -410,6 +423,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                   <br />
                   {task.status.finished > 0 ? (
                     <AsyncLink
+                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
                       href="#"
                       onClick={() => {
                         const includesVolumeData = task.type.tracingType !== "skeleton";
@@ -437,4 +451,5 @@ class TaskListView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TaskListView' is not assi... Remove this comment to see the full error message
 export default withRouter(TaskListView);

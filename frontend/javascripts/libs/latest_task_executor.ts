@@ -1,3 +1,4 @@
+// @flow
 import Deferred from "libs/deferred";
 type Task<T> = () => Promise<T>;
 export const SKIPPED_TASK_REASON = "Skipped task";
@@ -24,6 +25,7 @@ export default class LatestTaskExecutor<T> {
       const deferred = new Deferred();
       this.taskQueue.push({
         task,
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Deferred<unknown, unknown>' is not assignabl... Remove this comment to see the full error message
         deferred,
       });
 
@@ -34,6 +36,7 @@ export default class LatestTaskExecutor<T> {
         // from the queue is fulfilled.
       }
 
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Promise<unknown>' is not assigna... Remove this comment to see the full error message
       return resolve(deferred.promise());
     });
   }
@@ -44,6 +47,7 @@ export default class LatestTaskExecutor<T> {
     }
 
     const latestTask = this.taskQueue.pop();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'task' does not exist on type '{ task: Ta... Remove this comment to see the full error message
     const { task, deferred } = latestTask;
     // Discard the remaining queue
     this.taskQueue.forEach((queueObject) => {
@@ -51,9 +55,11 @@ export default class LatestTaskExecutor<T> {
       // they've already become obsolete.
       queueObject.deferred.reject(new Error(SKIPPED_TASK_REASON));
     });
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ task: Task<T>; deferred: Deferred<T, Error... Remove this comment to see the full error message
     this.taskQueue = [latestTask];
     // Start the latest task
     const promise = task();
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'result' implicitly has an 'any' type.
     promise.then((result) => {
       this.taskQueue.shift();
       deferred.resolve(result);

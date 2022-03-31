@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import moment from "moment";
 import {
@@ -8,7 +9,9 @@ import {
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
+// @ts-expect-error ts-migrate(7034) FIXME: Variable 'activeUser' implicitly has type 'any' in... Remove this comment to see the full error message
 let activeUser;
+// @ts-expect-error ts-migrate(7034) FIXME: Variable 'firstTeam' implicitly has type 'any' in ... Remove this comment to see the full error message
 let firstTeam;
 test.before("Reset database and initialize values", async () => {
   resetDatabase();
@@ -21,6 +24,7 @@ test.before("Reset database and initialize values", async () => {
 });
 test("getTimeTrackingForUserByMonth", async (t) => {
   const timeTrackingForUserByMonth = await api.getTimeTrackingForUserByMonth(
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'activeUser' implicitly has an 'any' type... Remove this comment to see the full error message
     activeUser.email,
     moment("20160401", "YYYYMMDD"),
   );
@@ -34,6 +38,7 @@ test("getTimeTrackingForUserByMonth", async (t) => {
 });
 test("getTimeTrackingForUser", async (t) => {
   const timeTrackingForUser = await api.getTimeTrackingForUser(
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'activeUser' implicitly has an 'any' type... Remove this comment to see the full error message
     activeUser.id,
     moment("20180101", "YYYYMMDD"),
     moment("20181001", "YYYYMMDD"),
@@ -56,6 +61,7 @@ test("getTimeTrackingForUser for a user other than the active user", async (t) =
   });
 });
 test("getProjectProgressReport", async (t) => {
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'firstTeam' implicitly has an 'any' type.
   const projectProgressReport = await api.getProjectProgressReport(firstTeam.id);
   writeFlowCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReport", {
     isArray: true,
@@ -65,6 +71,7 @@ test("getProjectProgressReport", async (t) => {
   });
 });
 test("getOpenTasksReport", async (t) => {
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'firstTeam' implicitly has an 'any' type.
   const openTasksReport = await api.getOpenTasksReport(firstTeam.id);
   writeFlowCheckingFile(openTasksReport, "open-tasks", "APIOpenTasksReport", {
     isArray: true,

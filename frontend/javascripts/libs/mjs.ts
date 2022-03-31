@@ -187,12 +187,16 @@ V3.round = function round(
   return r;
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
 V3.floor = (vec) => [Math.floor(vec[0]), Math.floor(vec[1]), Math.floor(vec[2])];
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
 V3.ceil = (vec) => [Math.ceil(vec[0]), Math.ceil(vec[1]), Math.ceil(vec[2])];
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'v' implicitly has an 'any' type.
 V3.toString = (v) => v.join(", ");
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
 V3.scale3 = function scale3(a, k, r) {
   if (r == null) r = new Float32Array(3);
   r[0] = a[0] * k[0];
@@ -201,6 +205,7 @@ V3.scale3 = function scale3(a, k, r) {
   return r;
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
 V3.divide3 = function divide3(a, k, r) {
   if (r == null) r = new Float32Array(3);
   r[0] = a[0] / k[0];
@@ -209,12 +214,15 @@ V3.divide3 = function divide3(a, k, r) {
   return r;
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
 V3.fromMag1ToMag = (vec, targetMag) => V3.floor(V3.divide3(vec, targetMag));
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
 V3.fromMagToMag1 = (vec, sourceMag) => V3.floor(V3.scale3(vec, sourceMag));
 
 const _tmpVec = [0, 0, 0];
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
 V3.scaledSquaredDist = function squaredDist(a, b, scale) {
   // Computes the distance between two vectors while respecting a 3 dimensional scale
   // Use _tmpVec as result variable (third parameter) to avoid allocations
@@ -223,15 +231,18 @@ V3.scaledSquaredDist = function squaredDist(a, b, scale) {
   return V3.lengthSquared(_tmpVec);
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
 V3.scaledDist = function scaledDist(a, b, scale) {
   const squaredDist = V3.scaledSquaredDist(a, b, scale);
   return Math.sqrt(squaredDist);
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
 V3.toArray = function (vec) {
   return [vec[0], vec[1], vec[2]];
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
 V2.scale2 = function scale2(a, k, r) {
   if (r == null) r = new Float32Array(2);
   r[0] = a[0] * k[0];
@@ -240,6 +251,7 @@ V2.scale2 = function scale2(a, k, r) {
 };
 
 // Component-wise minimum of two vectors.
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec1' implicitly has an 'any' type.
 V3.min = (vec1, vec2) => [
   Math.min(vec1[0], vec2[0]),
   Math.min(vec1[1], vec2[1]),
@@ -247,12 +259,14 @@ V3.min = (vec1, vec2) => [
 ];
 
 // Component-wise maximum of two vectors.
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec1' implicitly has an 'any' type.
 V3.max = (vec1, vec2) => [
   Math.max(vec1[0], vec2[0]),
   Math.max(vec1[1], vec2[1]),
   Math.max(vec1[2], vec2[2]),
 ];
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec1' implicitly has an 'any' type.
 V3.equals = (vec1, vec2) => vec1[0] === vec2[0] && vec1[1] === vec2[1] && vec1[2] === vec2[2];
 
 export { M4x4, V2, V3 };

@@ -23,7 +23,9 @@ type MergerModeState = {
   nodeSegmentMap: Record<string, any>;
   prevTracing: SkeletonTracing;
 };
+// @ts-expect-error ts-migrate(7034) FIXME: Variable 'unregisterKeyHandlers' implicitly has ty... Remove this comment to see the full error message
 const unregisterKeyHandlers = [];
+// @ts-expect-error ts-migrate(7034) FIXME: Variable 'unsubscribeFunctions' implicitly has typ... Remove this comment to see the full error message
 const unsubscribeFunctions = [];
 let isCodeActive = false;
 
@@ -77,6 +79,7 @@ function decreaseNodesOfSegment(segementId: number, mergerModeState: MergerModeS
 
 function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
   const trees: TreeMap = api.tracing.getAllTrees();
+  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'nodes' implicitly has type 'any[]' in so... Remove this comment to see the full error message
   const nodes = [];
   // Create an array of all nodes, but with the additional treeId Property
   Object.keys(trees).forEach((treeId) => {
@@ -90,10 +93,12 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
       nodes.push(nodeWithTreeId);
     }
   });
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'nodes' implicitly has an 'any[]' type.
   return nodes;
 }
 
 // Do not create nodes if they are set outside of segments.
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
 async function createNodeOverwrite(store, call, action, mergerModeState: MergerModeState) {
   const { segmentationLayerName } = mergerModeState;
 
@@ -315,6 +320,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
 
   const [segMinVec, segMaxVec] = api.data.getBoundingBox(segmentationLayerName);
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
   const setSegmentationOfNode = async (node) => {
     const pos = node.position;
     const { treeId } = node;
@@ -359,6 +365,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
   api.data.setMapping(segmentationLayerName, colorMapping);
 }
 
+// @ts-expect-error ts-migrate(2740) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
 function resetState(mergerModeState: MergerModeState = {}) {
   const state = Store.getState();
   const visibleLayer = getVisibleSegmentationLayer(Store.getState());
@@ -390,6 +397,7 @@ export async function enableMergerMode(
   unsubscribeFunctions.push(
     Store.subscribe(() => {
       const state = Store.getState();
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
       getSkeletonTracing(state.tracing).map((skeletonTracing) => {
         const { segmentationLayerName } = mergerModeState;
 
@@ -434,7 +442,9 @@ export function disableMergerMode(segmentationLayerName: string | null | undefin
   }
 
   isCodeActive = false;
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'unsubscribeFunctions' implicitly has an ... Remove this comment to see the full error message
   unsubscribeFunctions.forEach((unsubscribeFunction) => unsubscribeFunction());
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'unregisterKeyHandlers' implicitly has an... Remove this comment to see the full error message
   unregisterKeyHandlers.forEach((unregisterObject) => unregisterObject.unregister());
 
   // Disable the custom merger mode mapping

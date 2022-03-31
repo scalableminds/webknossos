@@ -1,3 +1,4 @@
+// @flow
 import { Select, Card, Form, Row, Col, DatePicker, Spin } from "antd";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";
@@ -40,7 +41,9 @@ type State = {
   isFetchingUsers: boolean;
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
 function compressTimeLogs(logs) {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
   logs.sort((a, b) => a.timestamp - b.timestamp);
   const compressedLogs = [];
   let previousLog = null;
@@ -57,6 +60,7 @@ function compressTimeLogs(logs) {
       timeLog.task_id === previousLog.task_id
     ) {
       const newDuration = previousDuration.add(moment.duration(timeLog.time));
+      // @ts-expect-error ts-migrate(7022) FIXME: 'copiedLog' implicitly has type 'any' because it d... Remove this comment to see the full error message
       const copiedLog = { ...compressedLogs[compressedLogs.length - 1] };
       copiedLog.time = newDuration.toISOString();
       compressedLogs[compressedLogs.length - 1] = copiedLog;
@@ -71,6 +75,7 @@ function compressTimeLogs(logs) {
 }
 
 class TimeLineView extends React.PureComponent<Props, State> {
+  // @ts-expect-error ts-migrate(2416) FIXME: Property 'state' in type 'TimeLineView' is not ass... Remove this comment to see the full error message
   state = {
     user: null,
     users: [],
@@ -115,6 +120,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       /* eslint-disable react/no-access-state-in-setstate */
       const timeTrackingData = compressTimeLogs(
         await getTimeTrackingForUser(
+          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           this.state.user.id,
           this.state.dateRange[0],
           this.state.dateRange[1],
@@ -162,12 +168,15 @@ class TimeLineView extends React.PureComponent<Props, State> {
     });
     this.fetchTimeTrackingData();
   };
+
   handleUserChange = async (userId: number) => {
     await this.setState((prevState) => ({
+      // @ts-expect-error ts-migrate(2367) FIXME: This condition will always return 'false' since th... Remove this comment to see the full error message
       user: prevState.users.find((u) => u.id === userId),
     }));
     this.fetchTimeTrackingData();
   };
+
   handleDateChange = async (dates: DateRange) => {
     // to ease the load on the server restrict date range selection to a month
     if (Math.abs(dates[0].diff(dates[1], "days")) > 31) {
@@ -180,6 +189,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
     await this.setState({
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'DateRange'... Remove this comment to see the full error message
       dateRange,
     });
     this.fetchTimeTrackingData();
@@ -187,6 +197,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
 
   getTooltipForEntry(taskId: string, start: Date, end: Date) {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
+    // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
     const duration = end - start;
     const durationAsString = formatDurationToMinutesAndSeconds(duration);
     const dayFormatForMomentJs = "DD MMM, YYYY";
@@ -307,6 +318,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                     onChange={this.handleUserChange}
                     notFoundContent={this.state.isFetchingUsers ? <Spin size="small" /> : "No Data"}
                     options={this.state.users
+                      // @ts-expect-error ts-migrate(2339) FIXME: Property 'isActive' does not exist on type 'never'... Remove this comment to see the full error message
                       .filter((u) => u.isActive)
                       .map((user: APIUser) => ({
                         value: user.id,
@@ -352,7 +364,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   style={{
                     width: "100%",
                   }}
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Moment[]' is not assignable to type '[EventV... Remove this comment to see the full error message
                   value={dateRange}
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(dates: DateRange) => Promise<void>' is not ... Remove this comment to see the full error message
                   onChange={this.handleDateChange}
                 />
               </FormItem>
@@ -396,6 +410,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 columns={columns}
                 rows={rows}
                 timeAxisFormat={timeAxisFormat}
+                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                 dateRange={dateRange}
                 timeTrackingData={timeTrackingData}
               />
@@ -419,4 +434,5 @@ const mapStateToProps = (state: OxalisState) => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps)(TimeLineView);

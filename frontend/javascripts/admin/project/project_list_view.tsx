@@ -1,5 +1,8 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Spin, Button, Input, Modal, Tooltip } from "antd";
 import {
@@ -89,6 +92,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     this.fetchData();
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'prevProps' implicitly has an 'any' type... Remove this comment to see the full error message
   componentDidUpdate(prevProps) {
     persistence.persist(this.props.history, this.state);
 
@@ -121,9 +125,11 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
 
   handleSearch = (event: React.SyntheticEvent): void => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
+
   deleteProject = (project: APIProjectWithAssignments) => {
     Modal.confirm({
       title: messages["project.delete"],
@@ -147,10 +153,12 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
       },
     });
   };
+
   mergeProjectWithUpdated = (
     oldProject: APIProjectWithAssignments,
     updatedProject: APIProject,
   ): APIProjectWithAssignments => ({ ...oldProject, ...updatedProject }); // $FlowIgnore[prop-missing] flow does not understand that merging with type that is superset should produce that type.
+
   pauseResumeProject = async (
     project: APIProjectWithAssignments,
     APICall: (arg0: string) => Promise<APIProject>,
@@ -162,6 +170,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
       ),
     }));
   };
+
   increaseProjectTaskInstances = async (project: APIProjectWithAssignments) => {
     Modal.confirm({
       title: messages["project.increase_instances"],
@@ -184,12 +193,14 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
       },
     });
   };
+
   showActiveUsersModal = async (project: APIProjectWithAssignments) => {
     this.setState({
       selectedProject: project,
       isTransferTasksVisible: true,
     });
   };
+
   maybeShowNoFallbackDataInfo = async (projectId: string) => {
     const tasks = await getTasks({
       project: projectId,
@@ -201,6 +212,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
       });
     }
   };
+
   onTaskTransferComplete = () => {
     this.setState({
       isTransferTasksVisible: false,
@@ -267,6 +279,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
               }}
               style={{
                 marginTop: 30,
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
                 marginBotton: 30,
               }}
               locale={{
@@ -395,6 +408,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                     </a>
                     <br />
                     <AsyncLink
+                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
                       href="#"
                       onClick={async () => {
                         this.maybeShowNoFallbackDataInfo(project.id);
@@ -439,4 +453,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(ProjectListView));

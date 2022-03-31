@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
@@ -41,11 +43,14 @@ export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rec
     return state.viewModeData.arbitrary.inputCatcherRect;
   } else {
     // $FlowIssue[prop-missing] Flow does not understand that viewport cannot be ArbitraryViewport at this point
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return state.viewModeData.plane.inputCatcherRects[viewport];
   }
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rects' implicitly has an 'any' type.
 const _getViewportExtents = memoizeOne((rects) => {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rect' implicitly has an 'any' type.
   const getExtent = (rect) => [rect.width, rect.height];
 
   return {
@@ -141,6 +146,7 @@ function _calculateMaybeGlobalPos(
       return null;
   }
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'Vector3'.
   return position;
 }
 
@@ -168,6 +174,7 @@ export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
   const [xyExtent, yzExtent, xzExtent] = extents;
   const minExtent = 1;
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'val1' implicitly has an 'any' type.
   const getMinExtent = (val1, val2) =>
     _.min([val1, val2].filter((v) => v >= minExtent)) || minExtent;
 

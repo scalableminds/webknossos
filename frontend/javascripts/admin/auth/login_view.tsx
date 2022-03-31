@@ -1,4 +1,6 @@
+// @flow
 import { Col, Row } from "antd";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import React from "react";
@@ -28,6 +30,7 @@ function LoginView({ history, redirect }: Props) {
 
   return (
     <Row
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
       type="flex"
       justify="center"
       style={{

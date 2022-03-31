@@ -11,13 +11,17 @@ type GpuSpecs = {
 };
 const lookupTextureCountPerLayer = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
   const canvas = document.createElement("canvas");
   const contextProvider = canvas.getContext
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
     ? (x) => canvas.getContext(x)
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'ctxName' implicitly has an 'any' type.
     : (ctxName) => ({
         MAX_TEXTURE_SIZE: 0,
         MAX_TEXTURE_IMAGE_UNITS: 1,
 
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'param' implicitly has an 'any' type.
         getParameter(param) {
           if (ctxName === "webgl") {
             const dummyValues = {
@@ -25,12 +29,14 @@ export function getSupportedTextureSpecs(): GpuSpecs {
               "1": 16,
               "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
             };
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             return dummyValues[param];
           }
 
           throw new Error(`Unknown call to getParameter: ${param}`);
         },
 
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'param' implicitly has an 'any' type.
         getExtension(param) {
           if (param === "WEBGL_debug_renderer_info") {
             return {
@@ -60,6 +66,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   };
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'maxSamplers' implicitly has an 'any' ty... Remove this comment to see the full error message
 function guardAgainstMesaLimit(maxSamplers, gl) {
   // Adapted from here: https://github.com/pixijs/pixi.js/pull/6354/files
   const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
@@ -120,6 +127,7 @@ export function getBucketCapacity(
   return Math.min(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, theoreticalBucketCapacity);
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'requiredBucketCapacity' implicitly has ... Remove this comment to see the full error message
 function getNecessaryVoxelCount(requiredBucketCapacity) {
   return requiredBucketCapacity * constants.BUCKET_SIZE;
 }
@@ -228,8 +236,10 @@ function deriveSupportedFeatures<Layer>(
   };
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'textureInformationPerLayer' implicitly ... Remove this comment to see the full error message
 function getSmallestCommonBucketCapacity(textureInformationPerLayer): number {
   const capacities = Array.from(textureInformationPerLayer.values()).map(
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(sizeAndCount: DataTextureSizeAn... Remove this comment to see the full error message
     (sizeAndCount: DataTextureSizeAndCount) =>
       getBucketCapacity(
         sizeAndCount.textureCount,
@@ -237,9 +247,11 @@ function getSmallestCommonBucketCapacity(textureInformationPerLayer): number {
         sizeAndCount.packingDegree,
       ),
   );
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
   return _.min(capacities);
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'textureInformationPerLayer' implicitly ... Remove this comment to see the full error message
 function getRenderSupportedLayerCount(specs: GpuSpecs, textureInformationPerLayer) {
   // Find out which layer needs the most textures. We assume that value is equal for all layers
   // so that we can tell the user that X layers can be rendered simultaneously. We could be more precise
@@ -247,11 +259,13 @@ function getRenderSupportedLayerCount(specs: GpuSpecs, textureInformationPerLaye
   // the user and also more complex to maintain code-wise.
   const maximumTextureCountForLayer = _.max(
     Array.from(textureInformationPerLayer.values()).map(
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(sizeAndCount: DataTextureSizeAn... Remove this comment to see the full error message
       (sizeAndCount: DataTextureSizeAndCount) => sizeAndCount.textureCount,
     ),
   );
 
   const maximumLayerCountToRender = Math.floor(
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     specs.maxTextureCount / (lookupTextureCountPerLayer + maximumTextureCountForLayer),
   );
   return {
@@ -337,5 +351,6 @@ const addressSpaceDimensionsTable = {
 };
 export function getAddressSpaceDimensions(gpuMultiplier: number): Vector3 {
   const lookupBufferSize = getLookupBufferSize(gpuMultiplier);
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   return addressSpaceDimensionsTable[lookupBufferSize] || addressSpaceDimensionsTable["256"];
 }

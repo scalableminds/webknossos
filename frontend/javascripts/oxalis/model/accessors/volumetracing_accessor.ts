@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
@@ -112,6 +114,7 @@ export function getServerVolumeTracings(
   // See https://github.com/facebook/flow/issues/1414
   // $FlowIgnore[prop-missing]
   // $FlowIgnore[incompatible-type]
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'ServerTracing[]' is not assignable to type '... Remove this comment to see the full error message
   const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
     (tracing) => tracing.typ === "Volume",
   );

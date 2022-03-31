@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, Modal, Input } from "antd";
 import { FormInstance } from "antd/lib/form";
@@ -6,6 +7,7 @@ import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type {
@@ -122,16 +124,19 @@ function ensureValidScaleOnInferredDataSource(
       (layer) => layer.category === "segmentation",
     );
     const savedSegmentationLayerSettings = savedDataSourceOnServer.dataLayers.find(
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
       (layer) => layer.category === "segmentation",
     );
 
     if (
       segmentationLayerSettings != null &&
       savedSegmentationLayerSettings != null &&
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'largestSegmentId' does not exist on type... Remove this comment to see the full error message
       segmentationLayerSettings.largestSegmentId === 0 && // Flow needs this additional check to understand that segmentationLayerSettings is for the segmentation layer.
       savedSegmentationLayerSettings.category === "segmentation" &&
       segmentationLayerSettings.category === "segmentation"
     ) {
+      // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'largestSegmentId' because it is ... Remove this comment to see the full error message
       segmentationLayerSettings.largestSegmentId = savedSegmentationLayerSettings.largestSegmentId;
     }
   }
@@ -140,9 +145,12 @@ function ensureValidScaleOnInferredDataSource(
 }
 
 class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, State> {
+  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
   formRef = React.createRef<typeof FormInstance>();
   unblock: ((...args: Array<any>) => any) | null | undefined;
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
   blockTimeoutId: TimeoutID | null | undefined;
+  // @ts-expect-error ts-migrate(2416) FIXME: Property 'state' in type 'DatasetImportView' is no... Remove this comment to see the full error message
   state = {
     hasUnsavedChanges: false,
     dataset: null,
@@ -164,9 +172,11 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
   async componentDidMount() {
     await this.fetchData();
     sendAnalyticsEvent("open_dataset_settings", {
+      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
     });
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newLocation' implicitly has an 'any' ty... Remove this comment to see the full error message
     const beforeUnload = (newLocation, action) => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
@@ -179,6 +189,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
           this.blockTimeoutId = window.setTimeout(() => {
             // restore the event handler in case a user chose to stay on the page
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
             window.onbeforeunload = beforeUnload;
           }, 500);
           return messages["dataset.leave_with_unsaved_changes"];
@@ -189,6 +200,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     };
 
     this.unblock = this.props.history.block(beforeUnload);
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
     window.onbeforeunload = beforeUnload;
   }
 
@@ -352,6 +364,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       return null;
     }
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'title' implicitly has an 'any' type.
     function showJSONModal(title, object) {
       Modal.info({
         title,
@@ -371,6 +384,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       }
 
       form.setFieldsValue({
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
         dataSourceJson: jsonStringify(inferredDataSource),
         dataSource: inferredDataSource,
       });
@@ -519,14 +533,17 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     const hasErr = hasFormError;
 
     if (hasErr(err, "dataSource") || hasErr(err, "dataSourceJson")) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'data' does not exist on type '{}'.
       formErrors.data = true;
     }
 
     if (hasErr(err, "dataset")) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'general' does not exist on type '{}'.
       formErrors.general = true;
     }
 
     if (hasErr(err, "defaultConfiguration") || hasErr(err, "defaultConfigurationLayersJson")) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'defaultConfig' does not exist on type '{... Remove this comment to see the full error message
       formErrors.defaultConfig = true;
     }
 
@@ -549,12 +566,14 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
     if (problematicTab) {
       this.setState({
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | number | (() => string) | (() => st... Remove this comment to see the full error message
         activeTabKey: problematicTab,
       });
     }
   }
 
   didDatasourceChange(dataSource: Record<string, any>) {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
     return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer)) > 0;
   }
 
@@ -605,7 +624,9 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       // Trigger validation manually, because fields may have been updated
       form
         .validateFields()
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
         .then((formValues) => this.submit(formValues))
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'errorInfo' implicitly has an 'any' type... Remove this comment to see the full error message
         .catch((errorInfo) => this.handleValidationFailed(errorInfo));
 
     // Need to force update of the SimpleAdvancedDataForm as removing a layer in the advanced tab does not update
@@ -621,7 +642,9 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
     }
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 't' implicitly has an 'any' type.
     const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
+    // @ts-expect-error ts-migrate(2698) FIXME: Spread types may only be created from object types... Remove this comment to see the full error message
     await updateDataset(this.props.datasetId, { ...dataset, ...datasetChangeValues });
 
     if (datasetDefaultConfiguration != null) {
@@ -638,10 +661,13 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
     if (
       dataset != null &&
+      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       !dataset.isForeign &&
+      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       !dataset.dataStore.isConnector &&
       this.didDatasourceChange(dataSource)
     ) {
+      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
@@ -664,6 +690,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       return null;
     }
 
+    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     const { status } = this.state.dataset.dataSource;
     const messageElements = [];
 
@@ -715,7 +742,9 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       ) => (
         <Alert
           key={i}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'ReactNod... Remove this comment to see the full error message
           message={Object.values(message)[0]}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type '"info" | ... Remove this comment to see the full error message
           type={Object.keys(message)[0]}
           showIcon
         />
@@ -789,6 +818,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const confirmString =
       this.props.isEditingMode ||
+      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       (this.state.dataset != null && this.state.dataset.dataSource.status == null)
         ? "Save"
         : "Import";
@@ -839,6 +869,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
                 activeKey={this.state.activeTabKey}
                 onChange={(activeTabKey) =>
                   this.setState({
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'TabKey'.
                     activeTabKey,
                   })
                 }
@@ -857,9 +888,11 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
                       key="SimpleAdvancedDataForm"
                       isReadOnlyDataset={
                         this.state.dataset != null &&
+                        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
                         (this.state.dataset.isForeign || this.state.dataset.dataStore.isConnector)
                       }
                       form={form}
+                      // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type '"simple" ... Remove this comment to see the full error message
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                       onChange={(activeEditMode) => {
                         const currentForm = this.formRef.current;
@@ -900,6 +933,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
                 <TabPane tab={<span>Metadata</span>} key="general" forceRender>
                   <Hideable hidden={this.state.activeTabKey !== "general"}>
+                    {/* // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: any; }' is not assignable to type 'I... Remove this comment to see the full error message */}
                     <ImportGeneralComponent form={form} />
                   </Hideable>
                 </TabPane>
@@ -947,4 +981,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   isUserAdmin: state.activeUser != null && state.activeUser.isAdmin,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(DatasetImportView));

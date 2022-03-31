@@ -42,6 +42,7 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
       this.setState({
         isLoading: true,
       });
+      // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
       const datasets = await getDatasets();
       this.setState({
         datasets,
@@ -59,6 +60,7 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
     const { isLoading, datasets } = this.state;
     const datasetsOfPublication = datasets.filter(
       (ds) =>
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'isActive' does not exist on type 'never'... Remove this comment to see the full error message
         ds.isActive && ds.publication != null && ds.publication.id === this.props.publicationId,
     ) as any as Array<APIDataset>;
     return (
@@ -88,6 +90,7 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
                   </Tooltip>
                 </Link>
                 <PublicationCard
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ className: string; datasets: any[]; showDe... Remove this comment to see the full error message
                   className="dataset-panel"
                   datasets={datasetsOfPublication}
                   showDetailedLink={false}

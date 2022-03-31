@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import {
   DataBucket,
@@ -28,6 +29,7 @@ class ArbitraryCubeAdapter {
   }
 
   reset(): void {
+    // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
     return this.getBucket.cache.clear();
   }
 
@@ -37,12 +39,14 @@ class ArbitraryCubeAdapter {
     bucketIndex % this.sizeZ,
     0,
   ];
+
   getBucket = _.memoize((bucketIndex: number): DataBucket | typeof NULL_BUCKET => {
     let bucketAddress = this.getBucketAddress(bucketIndex);
 
     for (let zoomStep = 0; zoomStep <= ARBITRARY_MAX_ZOOMSTEP; zoomStep++) {
       const bucket = this.cube.getBucket(bucketAddress);
 
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'isOutOfBoundingBox' does not exist on ty... Remove this comment to see the full error message
       if (bucket.isOutOfBoundingBox) {
         return NULL_BUCKET_OUT_OF_BB;
       }

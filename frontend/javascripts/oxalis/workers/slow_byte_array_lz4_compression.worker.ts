@@ -17,4 +17,4 @@ async function slowCompressLz4Block(data: Uint8Array, compress: boolean): Promis
   return __compressLz4BlockHelper(data, compress);
 }
 
-export default expose<typeof slowCompressLz4Block>(slowCompressLz4Block);
+export default slowCompressLz4Block;

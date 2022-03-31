@@ -12,6 +12,7 @@ import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'x' implicitly has an 'any' type.
 const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
 
 const makeBucketsUnique = (buckets: Vector3[]) => _.uniqBy(buckets, hashPosition);
@@ -22,8 +23,10 @@ export const getFallbackBuckets = (
   fallbackZoomStep: number,
   isFallbackAvailable: boolean,
 ): Vector4[] =>
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '[any, any, any][]' is not assignable to type... Remove this comment to see the full error message
   isFallbackAvailable
     ? _.uniqBy(
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector4[]' is not assignable to ... Remove this comment to see the full error message
         buckets.map((bucketAddress: Vector4) =>
           zoomedAddressToAnotherZoomStep(bucketAddress, resolutions, fallbackZoomStep),
         ),
@@ -77,19 +80,23 @@ export default function determineBucketsForOblique(
   );
 
   let traversedBuckets = _.flatten(
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '([a, b]: [Vector3, Vector3]) => ... Remove this comment to see the full error message
     chunk2(scanLinesPoints).map(([a, b]: [Vector3, Vector3]) =>
       traverse(a, b, resolutions, logZoomStep),
     ),
   );
 
   traversedBuckets = makeBucketsUnique(traversedBuckets);
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '[number, number, number, number][]' is not a... Remove this comment to see the full error message
   traversedBuckets = traversedBuckets.map((addr) => [...addr, logZoomStep]);
   const fallbackBuckets = getFallbackBuckets(
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3[]' is not assignable to ... Remove this comment to see the full error message
     traversedBuckets,
     resolutions,
     fallbackZoomStep,
     isFallbackAvailable,
   );
+  // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
   traversedBuckets = traversedBuckets.concat(fallbackBuckets);
   const centerAddress = globalPositionToBucketPosition(position, resolutions, logZoomStep);
 
@@ -104,7 +111,9 @@ export default function determineBucketsForOblique(
         return;
       }
 
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
       const priority = V3.sub(bucketAddress, centerAddress).reduce((a, b) => a + Math.abs(b), 0);
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3' is not assignable to pa... Remove this comment to see the full error message
       enqueueFunction(bucketAddress, priority);
     }
   }

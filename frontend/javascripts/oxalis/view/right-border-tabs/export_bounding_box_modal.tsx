@@ -1,3 +1,4 @@
+// @flow
 import { Button, Modal, Alert } from "antd";
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
@@ -36,9 +37,11 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
   const annotationId = tracing != null ? tracing.annotationId : null;
   const annotationType = tracing != null ? tracing.annotationType : null;
   const activeMappingInfos = useSelector(
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   const isMergerModeEnabled = useSelector(
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
     (state) => state.temporaryConfiguration.isMergerModeEnabled,
   );
 
@@ -46,6 +49,7 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
     (layerInfos.layerName || "") + (layerInfos.tracingId || "");
 
   const handleStartExport = async (layerInfos: LayerInfos) => {
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     setStartedExports(startedExports.concat(exportKey(layerInfos)));
 
     if (layerInfos.tracingId) {
@@ -68,6 +72,7 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
 
   const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
   const allLayerInfos = dataset.dataSource.dataLayers.map((layer) => {
     const { mappingStatus, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
       activeMappingInfos,
@@ -132,8 +137,10 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
       isColorLayer: false,
     };
   });
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerInfos' implicitly has an 'any' typ... Remove this comment to see the full error message
   const exportButtonsList = allLayerInfos.map((layerInfos) => {
     const parenthesesInfos = [
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
       startedExports.includes(exportKey(layerInfos)) ? "started" : null,
       layerInfos.mappingName != null ? `using mapping "${layerInfos.mappingName}"` : null,
       !layerInfos.hasMag1 ? "resolution 1 missing" : null,
@@ -146,6 +153,7 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
           onClick={() => handleStartExport(layerInfos)}
           disabled={
             // The export is already running or...
+            // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
             startedExports.includes(exportKey(layerInfos)) || // The layer has no mag 1 or...
             !layerInfos.hasMag1 || // Merger mode is enabled and this layer is the volume tracing layer.
             (isMergerModeEnabled && layerInfos.tracingId != null)

@@ -1,4 +1,6 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape, $Diff } from "utility-types";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
 import _ from "lodash";
@@ -87,6 +89,7 @@ type NewTeam = {
   readonly name: string;
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'collection' implicitly has an 'any' typ... Remove this comment to see the full error message
 function assertResponseLimit(collection) {
   if (collection.length === MAX_SERVER_ITEMS_PER_RESPONSE) {
     Toast.warning(messages["request.max_item_count_alert"], {
@@ -96,10 +99,13 @@ function assertResponseLimit(collection) {
 }
 
 // ### Do with userToken
+// @ts-expect-error ts-migrate(7034) FIXME: Variable 'tokenRequestPromise' implicitly has type... Remove this comment to see the full error message
 let tokenRequestPromise;
 
 function requestUserToken(): Promise<string> {
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'tokenRequestPromise' implicitly has an '... Remove this comment to see the full error message
   if (tokenRequestPromise) {
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'tokenRequestPromise' implicitly has an '... Remove this comment to see the full error message
     return tokenRequestPromise;
   }
 
@@ -123,6 +129,7 @@ export function getSharingToken(): string | null | undefined {
 
   return null;
 }
+// @ts-expect-error ts-migrate(7034) FIXME: Variable 'tokenPromise' implicitly has type 'any' ... Remove this comment to see the full error message
 let tokenPromise;
 export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<any> {
   const sharingToken = getSharingToken();
@@ -131,7 +138,9 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
     return fn(sharingToken);
   }
 
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'tokenPromise' implicitly has an 'any' ty... Remove this comment to see the full error message
   if (!tokenPromise) tokenPromise = requestUserToken();
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'tokenPromise' implicitly has an 'any' ty... Remove this comment to see the full error message
   return tokenPromise.then(fn).catch((error) => {
     if (error.status === 403) {
       console.warn("Token expired. Requesting new token...");
@@ -450,6 +459,7 @@ export async function getTasks(queryObject: QueryObject): Promise<Array<APITask>
   const responses = await Request.sendJSONReceiveJSON("/api/tasks/list", {
     data: queryObject,
   });
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'response' implicitly has an 'any' type.
   const tasks = responses.map((response) => transformTask(response));
   assertResponseLimit(tasks);
   return tasks;
@@ -685,6 +695,7 @@ export function createExplorational(
     layers = [
       {
         typ: "Skeleton",
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ typ: "Skeleton"; name: string; }' is not a... Remove this comment to see the full error message
         name: "Skeleton",
       },
     ];
@@ -692,6 +703,7 @@ export function createExplorational(
     layers = [
       {
         typ: "Volume",
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ typ: "Volume"; name: string; fallbackLayer... Remove this comment to see the full error message
         name: "Volume",
         fallbackLayerName,
         resolutionRestrictions,
@@ -701,10 +713,12 @@ export function createExplorational(
     layers = [
       {
         typ: "Skeleton",
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ typ: "Skeleton"; name: string; }' is not a... Remove this comment to see the full error message
         name: "Skeleton",
       },
       {
         typ: "Volume",
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ typ: "Volume"; name: string; fallbackLayer... Remove this comment to see the full error message
         name: "Volume",
         fallbackLayerName,
         resolutionRestrictions,
@@ -811,6 +825,7 @@ export function convertToHybridTracing(
 ): Promise<void> {
   return Request.receiveJSON(`/api/annotations/Explorational/${annotationId}/makeHybrid`, {
     method: "PATCH",
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ method: "PATCH"; fallbackLayer... Remove this comment to see the full error message
     fallbackLayerName,
   });
 }
@@ -888,6 +903,7 @@ export async function getDatasets(
 export async function getJobs(): Promise<Array<APIJob>> {
   const jobs = await Request.receiveJSON("/api/jobs");
   assertResponseLimit(jobs);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'job' implicitly has an 'any' type.
   return jobs.map((job) => ({
     id: job.id,
     type: job.command,
@@ -1133,6 +1149,7 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 export function createResumableUpload(datastoreUrl: string, uploadId: string): Promise<any> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const generateUniqueIdentifier = (file) => {
     if (file.path == null) {
       // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
@@ -1146,6 +1163,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
 
   return doWithToken(
     (token) =>
+      // @ts-expect-error ts-migrate(2739) FIXME: Type 'Resumable' is missing the following properti... Remove this comment to see the full error message
       new ResumableJS({
         testChunks: false,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
@@ -1155,6 +1173,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
         simultaneousUploads: 3,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
         generateUniqueIdentifier,
       }),
   );
@@ -1241,6 +1260,7 @@ export async function isDatasetNameValid(
     );
     return null;
   } catch (ex) {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'msg' implicitly has an 'any' type.
     return ex.messages.map((msg) => Object.values(msg)[0]).join(". ");
   }
 }
@@ -1476,6 +1496,7 @@ export function updateUserConfiguration(
 // ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
   day: moment$Moment,
 ): Promise<Array<APITimeTracking>> {
   const month = day.format("M");
@@ -1489,7 +1510,9 @@ export async function getTimeTrackingForUserByMonth(
 }
 export async function getTimeTrackingForUser(
   userId: string,
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
   startDate: moment$Moment,
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
   endDate: moment$Moment,
 ): Promise<Array<APITimeTracking>> {
   const timeTrackingData = await Request.receiveJSON(
@@ -1624,6 +1647,7 @@ export function setMaintenance(bool: boolean): Promise<void> {
     method: bool ? "POST" : "DELETE",
   });
 }
+// @ts-expect-error ts-migrate(2339) FIXME: Property 'setMaintenance' does not exist on type '... Remove this comment to see the full error message
 window.setMaintenance = setMaintenance;
 // ### Meshes
 type MeshMetaDataForCreation = $Diff<
@@ -1860,9 +1884,11 @@ function getSynapseSourcesOrDestinations(
 }
 
 export function getSynapseSources(...args: any): Promise<Array<number>> {
+  // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "src");
 }
 export function getSynapseDestinations(...args: any): Promise<Array<number>> {
+  // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "dst");
 }
 export function getSynapsePositions(

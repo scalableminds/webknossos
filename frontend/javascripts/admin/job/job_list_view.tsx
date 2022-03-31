@@ -1,6 +1,9 @@
+// @flow
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { confirmAsync } from "dashboard/dataset/helper_components";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Spin, Input, Tooltip } from "antd";
@@ -78,6 +81,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class JobListView extends React.PureComponent<Props, State> {
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
   intervalID: TimeoutID | null | undefined;
   state = {
     isLoading: true,
@@ -122,9 +126,11 @@ class JobListView extends React.PureComponent<Props, State> {
 
   handleSearch = (event: React.SyntheticEvent): void => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
+
   renderDescription = (__: any, job: APIJob) => {
     if (job.type === "convert_to_wkw" && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
@@ -174,10 +180,12 @@ class JobListView extends React.PureComponent<Props, State> {
       return <span>{job.type}</span>;
     }
   };
+
   renderActions = (__: any, job: APIJob) => {
     if (job.state === "PENDING" || job.state === "STARTED") {
       return (
         <AsyncLink
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
           href="#"
           onClick={async () => {
             const isDeleteConfirmed = await confirmAsync({
@@ -230,7 +238,9 @@ class JobListView extends React.PureComponent<Props, State> {
       );
     } else return null;
   };
+
   renderState = (__: any, job: APIJob) => {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
     const jobStateNormalized = _.capitalize(job.state.toLowerCase());
@@ -248,6 +258,7 @@ class JobListView extends React.PureComponent<Props, State> {
       <div className="container">
         <div
           style={{
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTag: number; }' is not assignable to... Remove this comment to see the full error message
             marginTag: 20,
           }}
         >
@@ -282,6 +293,7 @@ class JobListView extends React.PureComponent<Props, State> {
               }}
               style={{
                 marginTop: 30,
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
                 marginBotton: 30,
               }}
             >
@@ -319,4 +331,5 @@ class JobListView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof JobListView' is not assig... Remove this comment to see the full error message
 export default withRouter(JobListView);

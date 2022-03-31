@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -100,6 +101,7 @@ export function* mapGroups<R>(
 export function getMaximumGroupId(groups: Array<TreeGroup>): number {
   const maxGroupId = _.max(Array.from(mapGroups(groups, (group) => group.groupId)));
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
   return maxGroupId >= 0 ? maxGroupId : 0;
 }
 
@@ -132,6 +134,7 @@ export function createNode(
 
   // Use the same radius as current active node or revert to default value
   const radius = activeNodeMaybe
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     .map((activeNode) => activeNode.radius)
     .getOrElse(Constants.DEFAULT_NODE_RADIUS);
   // Find new node id by increasing the max node id.
@@ -150,6 +153,7 @@ export function createNode(
   };
   // Create a new edge
   const edges = activeNodeMaybe
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     .map((activeNode) => {
       const newEdge = {
         source: activeNode.id,
@@ -166,6 +170,7 @@ export function deleteNode(
   node: Node,
   timestamp: number,
 ): Maybe<[TreeMap, number, number | null | undefined, number]> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Delete node and possible branchpoints/comments
     const activeTree = update(tree, {
@@ -218,6 +223,7 @@ export function deleteEdge(
   targetNode: Node,
   timestamp: number,
 ): Maybe<[TreeMap, number]> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     if (sourceTree.treeId !== targetTree.treeId) {
       // The two selected nodes are in different trees
@@ -278,11 +284,13 @@ function splitTreeByNodes(
   // remember which edges were already visited.
   const visitedEdges = {};
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edge' implicitly has an 'any' type.
   const getEdgeHash = (edge) => `${edge.source}-${edge.target}`;
 
   const visitedNodes = {};
   // Mark deletedEdges as visited, so they are not traversed.
   deletedEdges.forEach((deletedEdge) => {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     visitedEdges[getEdgeHash(deletedEdge)] = true;
   });
 
@@ -291,17 +299,22 @@ function splitTreeByNodes(
 
     while (nodeQueue.length !== 0) {
       const nodeId = nodeQueue.shift();
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
       const edges = activeTree.edges.getEdgesForNode(nodeId);
+      // @ts-expect-error ts-migrate(2538) FIXME: Type 'undefined' cannot be used as an index type.
       visitedNodes[nodeId] = true;
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
       newTree.nodes.mutableSet(nodeId, activeTree.nodes.get(nodeId));
 
       for (const edge of edges) {
         const edgeHash = getEdgeHash(edge);
 
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if (visitedEdges[edgeHash]) {
           continue;
         }
 
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         visitedEdges[edgeHash] = true;
         newTree.edges.addEdge(edge, true);
 
@@ -328,6 +341,7 @@ function splitTreeByNodes(
         // The rootNodeId could have already been traversed from another rootNodeId
         // as there are cyclic trees
         // In this case we do not need to create a new tree for this rootNodeId
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if (visitedNodes[rootNodeId] === true) {
           return null;
         }
@@ -437,6 +451,7 @@ export function deleteBranchPoint(
   // Find most recent branchpoint across all trees
   const treesWithBranchPoints = _.values(trees).filter((tree) => !_.isEmpty(tree.branchPoints));
 
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeId' does not exist on type 'Tree | u... Remove this comment to see the full error message
   const { treeId } = _.maxBy(treesWithBranchPoints, (tree) => _.last(tree.branchPoints).timestamp);
 
   const branchPoint = _.last(trees[treeId].branchPoints);
@@ -455,6 +470,7 @@ export function createTree(
   timestamp: number,
   addToActiveGroup: boolean = true,
 ): Maybe<Tree> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
     const newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
@@ -462,8 +478,10 @@ export function createTree(
     let groupId = null;
 
     if (addToActiveGroup) {
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
       const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map((tree) => tree.groupId);
       const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
         (group) => group.groupId,
       );
       groupId = Utils.toNullable(groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe));
@@ -480,6 +498,7 @@ export function createTree(
       edges: new EdgeCollection(),
       comments: [],
       isVisible: true,
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'number |... Remove this comment to see the full error message
       groupId,
     };
     return Maybe.Just(tree);
@@ -533,7 +552,9 @@ export function addTreesAndGroups(
   let nextGroupId = getMaximumGroupId(skeletonTracing.treeGroups) + 1;
   forEachGroups(treeGroups, (group: TreeGroup) => {
     // Assign new group ids for all groups
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     groupIdMap[group.groupId] = nextGroupId;
+    // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'groupId' because it is a read-on... Remove this comment to see the full error message
     group.groupId = nextGroupId;
     nextGroupId++;
   });
@@ -546,6 +567,7 @@ export function addTreesAndGroups(
 
   for (const tree of _.values(trees)) {
     for (const node of tree.nodes.values()) {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       idMap[node.id] = newNodeId++;
     }
   }
@@ -557,34 +579,43 @@ export function addTreesAndGroups(
     const newNodes = new DiffableMap();
 
     for (const node of tree.nodes.values()) {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       node.id = idMap[node.id];
       newNodes.mutableSet(node.id, node);
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'DiffableMap<number, unknown>' is not assigna... Remove this comment to see the full error message
     tree.nodes = newNodes;
     tree.edges = EdgeCollection.loadFromArray(
       tree.edges.map((edge) => ({
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         source: idMap[edge.source],
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         target: idMap[edge.target],
       })),
     );
 
     for (const comment of tree.comments) {
       // Comments can reference other nodes, rewrite those references if the referenced id changed
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       comment.nodeId = idMap[comment.nodeId];
       comment.content = comment.content.replace(
         NODE_ID_REF_REGEX,
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         (__, p1) => `#${idMap[Number(p1)] != null ? idMap[Number(p1)] : p1}`,
       );
     }
 
     for (const bp of tree.branchPoints) {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       bp.nodeId = idMap[bp.nodeId];
     }
 
     // Assign the new group id to the tree if the tree belongs to a group
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     tree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
     tree.treeId = newTreeId;
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     newTrees[tree.treeId] = tree;
     newTreeId++;
   }
@@ -604,6 +635,7 @@ export function deleteTree(
   if (_.size(newTrees) > 0) {
     // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
     newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
+    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
   }
 
@@ -713,6 +745,7 @@ export function toggleAllTreesReducer(
     },
   };
   Object.keys(skeletonTracing.trees).forEach((treeId) => {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     updateTreeObject[treeId] = isVisibleUpdater;
   });
   return update(state, {
@@ -741,6 +774,7 @@ export function toggleTreeGroupReducer(
     targetVisibility != null
       ? targetVisibility
       : _.values(skeletonTracing.trees).some(
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | null | undefined' is no... Remove this comment to see the full error message
           (tree) => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
         );
   const updateTreeObject = {};
@@ -751,7 +785,9 @@ export function toggleTreeGroupReducer(
   };
 
   _.values(skeletonTracing.trees).forEach((tree) => {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | null | undefined' is no... Remove this comment to see the full error message
     if (affectedGroupIds.has(tree.groupId)) {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       updateTreeObject[tree.treeId] = isVisibleUpdater;
     }
   });
@@ -826,6 +862,7 @@ export function removeMissingGroupsFromTrees(
     const tree = skeletonTracing.trees[Number(treeId)];
 
     if (tree.groupId != null && !groupIds.includes(tree.groupId)) {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       changedTrees[treeId] = { ...tree, groupId: null };
     }
   });

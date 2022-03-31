@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
 import type { Node } from "react";
 import React, { createContext, useState } from "react";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
@@ -39,6 +41,7 @@ export const datasetCache = {
   get(): APIMaybeUnimportedDataset[] {
     return Utils.parseAsMaybe(UserLocalStorage.getItem(wkDatasetsCacheKey))
       .getOrElse([]) // Ensuring that each dataset has tags.
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
       .map((dataset) => ({ ...dataset, tags: dataset.tags || [] }));
   },
 

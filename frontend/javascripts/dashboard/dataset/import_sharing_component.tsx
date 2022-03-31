@@ -1,3 +1,4 @@
+// @flow
 import { Button, Input, Checkbox, Tooltip } from "antd";
 import React, { useState, useEffect } from "react";
 import type { APIDataset, APIDatasetId } from "types/api_flow_types";
@@ -23,6 +24,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   const [dataSet, setDataSet] = useState<APIDataset | null | undefined>(null);
   const allowedTeamsComponent = (
     <FormItemWithInfo
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string[]; label: ... Remove this comment to see the full error message
       name={["dataset", "allowedTeams"]}
       label="Teams allowed to access this dataset"
       info="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset."
@@ -49,6 +51,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   }, []);
 
   function handleSelectCode(event: React.SyntheticEvent): void {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'select' does not exist on type 'EventTar... Remove this comment to see the full error message
     event.target.select();
   }
 
@@ -94,6 +97,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   return form ? (
     <div>
       <FormItemWithInfo
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string[]; label: ... Remove this comment to see the full error message
         name={["dataset", "isPublic"]}
         label="Visibility"
         info="Make your dataset public, for anonymous/unregistered users to access your dataset."
@@ -114,6 +118,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
       >
         <Input.Group compact>
           <Input
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
             value={getSharingLink()}
             onClick={handleSelectCode}
             style={{
@@ -141,6 +146,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
             >
               <AsyncButton
                 onClick={handleRevokeSharingLink}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; onClick: () => Promise<v... Remove this comment to see the full error message
                 style={{
                   width: "10%",
                 }}

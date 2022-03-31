@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
@@ -80,6 +81,7 @@ export type UrlManagerState = {
 export type PartialUrlManagerState = $Shape<UrlManagerState>;
 
 class UrlManager {
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'baseUrl' has no initializer and is not d... Remove this comment to see the full error message
   baseUrl: string;
   initialState: PartialUrlManagerState;
 
@@ -88,9 +90,11 @@ class UrlManager {
     this.initialState = this.parseUrlHash();
   }
 
+  // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
   reset(keepUrlState?: boolean = false): void {
     // don't use location.hash = ""; since it refreshes the page
     if (!keepUrlState) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
       window.history.replaceState({}, null, location.pathname + location.search);
     }
 
@@ -106,6 +110,7 @@ class UrlManager {
 
   updateUnthrottled() {
     const url = this.buildUrl();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
     window.history.replaceState({}, null, url);
   }
 
@@ -194,6 +199,7 @@ class UrlManager {
   startUrlUpdater(): void {
     Store.subscribe(() => this.update());
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'onhashchange' does not exist on type '(W... Remove this comment to see the full error message
     window.onhashchange = () => this.onHashChange();
   }
 
@@ -203,11 +209,14 @@ class UrlManager {
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
     const rotationOptional = constants.MODES_ARBITRARY.includes(mode)
       ? {
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'unknown' is not assignable to pa... Remove this comment to see the full error message
           rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotation(state.flycam)),
         }
       : {};
     const activeNodeOptional = getSkeletonTracing(state.tracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
       .chain((skeletonTracing) => getActiveNode(skeletonTracing))
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
       .map((node) => ({
         activeNode: node.id,
       }))
@@ -270,6 +279,7 @@ class UrlManager {
 
   buildUrlHashCsv(state: OxalisState): string {
     const { position = [], mode, zoomStep, rotation = [], activeNode } = this.getUrlState(state);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
     const viewModeIndex = ViewModeValues.indexOf(mode);
     const activeNodeArray = activeNode != null ? [activeNode] : [];
     return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeArray].join(",");
@@ -315,12 +325,14 @@ export function updateTypeAndId(
 const urlHashCharacterWhiteList = ["$", "&", "+", ",", ";", "=", ":", "@", "/", "?"];
 // Build lookup table from encoded to decoded value
 const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce((obj, decodedValue) => {
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   obj[encodeURIComponent(decodedValue)] = decodedValue;
   return obj;
 }, {});
 // Build RegExp that matches each of the encoded characters (%xy) and a function to decode it
 const re = new RegExp(Object.keys(encodedCharacterToDecodedCharacter).join("|"), "gi");
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'matched' implicitly has an 'any' type.
 const decodeWhitelistedCharacters = (matched) => encodedCharacterToDecodedCharacter[matched];
 
 export function encodeUrlHash(unencodedHash: string): string {

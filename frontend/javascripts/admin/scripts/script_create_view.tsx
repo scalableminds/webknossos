@@ -1,4 +1,6 @@
+// @flow
 import { Form, Input, Select, Button, Card, Spin } from "antd";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
@@ -50,6 +52,7 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
     form.setFieldsValue(defaultFormValues);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const onFinish = async (formValues) => {
     if (scriptId) {
       await updateScript(scriptId, formValues);
@@ -137,4 +140,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(ScriptCreateView));

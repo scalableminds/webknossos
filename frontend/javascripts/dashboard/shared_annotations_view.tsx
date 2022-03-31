@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
 import { Spin, Table, Tag } from "antd";
@@ -27,6 +29,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
     annotations: [],
     isLoading: false,
   };
+
   componentDidMount = () => {
     this.setState(persistence.load(this.props.history));
     this.fetchData();
@@ -82,6 +85,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
       </p>
     </>
   );
+
   renderTable = () => {
     const sortedAnnotations = this.state.annotations.sort(
       Utils.compareBy(typeHint, (annotation) => annotation.modified, false),
@@ -168,6 +172,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
       </Table>
     );
   };
+
   render = () => (
     <div className="TestExplorativeAnnotationsView">
       <div
@@ -183,4 +188,5 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
   );
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof SharedAnnotationsView' is... Remove this comment to see the full error message
 export default withRouter(SharedAnnotationsView);

@@ -1,3 +1,4 @@
+// @flow
 import * as React from "react";
 import _ from "lodash";
 export const colors = {
@@ -33,6 +34,7 @@ export default function StackedBarChart({ a, b, c }: { a: number; b: number; c: 
           <div
             key={type}
             style={{
+              // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
               background: colors[type],
               minWidth: `${renderedPercentages[index]}%`,
               display: percentages[index] === 0 ? "none" : "inline-block",

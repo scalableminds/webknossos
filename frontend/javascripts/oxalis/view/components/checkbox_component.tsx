@@ -1,3 +1,4 @@
+// @flow
 import { Checkbox } from "antd";
 import * as React from "react";
 import _ from "lodash";
@@ -13,6 +14,7 @@ class CheckboxComponent extends React.PureComponent<CheckboxComponentProp> {
   static defaultProps: CheckboxComponentProp = {
     onClick: _.noop,
   };
+
   handleClick = (e: React.SyntheticEvent<HTMLInputElement>) => {
     // For antd checkboxs e.target seems to be the span with the checkbox description, whereas
     // e.currentTarget is the actual checkbox
@@ -24,6 +26,7 @@ class CheckboxComponent extends React.PureComponent<CheckboxComponentProp> {
   };
 
   render() {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '(e: React.SyntheticEvent<HTMLInputElement>) ... Remove this comment to see the full error message
     return <Checkbox {...this.props} onClick={this.handleClick} />;
   }
 }

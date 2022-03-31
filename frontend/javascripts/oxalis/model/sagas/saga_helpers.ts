@@ -1,6 +1,9 @@
+// @flow
 import type { Action } from "oxalis/model/actions/actions";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put, select, _takeEvery } from "oxalis/model/sagas/effect-generators";
+// @ts-expect-error ts-migrate(2614) FIXME: Module '"redux-saga"' has no exported member 'Patt... Remove this comment to see the full error message
 import type { Pattern } from "redux-saga";
 import "redux-saga";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
@@ -20,6 +23,7 @@ export function* takeEveryUnlessBusy(
    * webKnossos.
    */
   function* sagaBusyWrapper(action: Action) {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
     if (busyBlockingInfo.isBusy) {

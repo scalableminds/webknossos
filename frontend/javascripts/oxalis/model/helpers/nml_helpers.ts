@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'saxo... Remove this comment to see the full error message
 import Saxophone from "saxophone";
 import _ from "lodash";
 import type { APIBuildInfo } from "types/api_flow_types";
@@ -85,6 +87,7 @@ function serializeTag(
   closed: boolean = true,
 ): string {
   return `<${name} ${Object.keys(properties)
+    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
     .map((key) => `${key}="${properties[key] != null ? escape(properties[key].toString()) : ""}"`)
     .join(" ")}${closed ? " /" : ""}>`;
 }
@@ -346,6 +349,7 @@ function serializeComments(trees: Array<Tree>): Array<string> {
 }
 
 function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): Array<string> {
+  // @ts-expect-error ts-migrate(7024) FIXME: Function implicitly has return type 'any' because ... Remove this comment to see the full error message
   const deepFindTree = (group) =>
     trees.find((tree) => tree.groupId === group.groupId) || _.some(group.children, deepFindTree);
 
@@ -428,6 +432,7 @@ function _parseColor(obj: Record<string, any>, defaultColor: Vector3): Vector3 {
     _parseFloat(obj, "color.g", defaultColor[1]),
     _parseFloat(obj, "color.b", defaultColor[2]),
   ];
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return color;
 }
 
@@ -454,6 +459,7 @@ function connectedComponentsOfTree(tree: MutableTree): Array<Array<number>> {
     while (queue.length > 0) {
       const nodeId = queue.shift();
       component.push(nodeId);
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
       const curEdges = edges.getEdgesForNode(nodeId);
 
       for (const edge of curEdges) {
@@ -479,6 +485,7 @@ function connectedComponentsOfTree(tree: MutableTree): Array<Array<number>> {
     }
   }
 
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '(number | undefined)[][]' is not assignable ... Remove this comment to see the full error message
   return components;
 }
 
@@ -579,6 +586,7 @@ function getUnusedUserBoundingBoxId(
   return maxId + 1;
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'attr' implicitly has an 'any' type.
 function parseBoundingBoxObject(attr): BoundingBoxObject {
   const boundingBoxObject = {
     topLeft: [
@@ -590,6 +598,7 @@ function parseBoundingBoxObject(attr): BoundingBoxObject {
     height: _parseInt(attr, "height"),
     depth: _parseInt(attr, "depth"),
   };
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
   return boundingBoxObject;
 }
 
@@ -610,9 +619,12 @@ export function parseNml(nmlString: string): Promise<{
     let currentGroup: TreeGroup | null | undefined = null;
     const groupIdToParent: Record<number, TreeGroup | null | undefined> = {};
     const nodeIdToTreeId = {};
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'userBoundingBoxes' implicitly has type '... Remove this comment to see the full error message
     const userBoundingBoxes = [];
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'datasetName' implicitly has type 'any' i... Remove this comment to see the full error message
     let datasetName = null;
     parser
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
       .on("tagopen", (node) => {
         const attr = Saxophone.parseAttrs(node.attrs);
 
@@ -627,6 +639,7 @@ export function parseNml(nmlString: string): Promise<{
 
             currentTree = {
               treeId: _parseInt(attr, "id"),
+              // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
               color: _parseColor(attr, DEFAULT_COLOR),
               // In Knossos NMLs, there is usually a tree comment instead of a name
               name: _parseEntities(attr, "name", "") || _parseEntities(attr, "comment", ""),
@@ -666,7 +679,9 @@ export function parseNml(nmlString: string): Promise<{
               throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
             if (existingNodeIds.has(currentNode.id))
               throw new NmlParseError(`${messages["nml.duplicate_node_id"]} ${currentNode.id}`);
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             nodeIdToTreeId[nodeId] = currentTree.treeId;
+            // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ id: number; position: number[]... Remove this comment to see the full error message
             currentTree.nodes.mutableSet(currentNode.id, currentNode);
             existingNodeIds.add(currentNode.id);
             break;
@@ -709,6 +724,7 @@ export function parseNml(nmlString: string): Promise<{
               nodeId: _parseInt(attr, "node"),
               content: _parseEntities(attr, "content"),
             };
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             const tree = trees[nodeIdToTreeId[currentComment.nodeId]];
             if (tree == null)
               throw new NmlParseError(
@@ -723,6 +739,7 @@ export function parseNml(nmlString: string): Promise<{
               nodeId: _parseInt(attr, "id"),
               timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
             };
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             const tree = trees[nodeIdToTreeId[currentBranchpoint.nodeId]];
             if (tree == null)
               throw new NmlParseError(
@@ -762,12 +779,14 @@ export function parseNml(nmlString: string): Promise<{
             const parsedUserBoundingBoxId = _parseInt(attr, "id", 0);
 
             const userBoundingBoxId = getUnusedUserBoundingBoxId(
+              // @ts-expect-error ts-migrate(7005) FIXME: Variable 'userBoundingBoxes' implicitly has an 'an... Remove this comment to see the full error message
               userBoundingBoxes,
               parsedUserBoundingBoxId,
             );
             const boundingBoxObject = parseBoundingBoxObject(attr);
             const userBoundingBox = {
               boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+              // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
               color: _parseColor(attr, DEFAULT_COLOR),
               id: userBoundingBoxId,
               isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
@@ -778,6 +797,7 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "taskBoundingBox": {
+            // @ts-expect-error ts-migrate(7005) FIXME: Variable 'userBoundingBoxes' implicitly has an 'an... Remove this comment to see the full error message
             const userBoundingBoxId = getUnusedUserBoundingBoxId(userBoundingBoxes);
             const boundingBoxObject = parseBoundingBoxObject(attr);
             const userBoundingBox = {
@@ -795,6 +815,7 @@ export function parseNml(nmlString: string): Promise<{
             break;
         }
       })
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
       .on("tagclose", (node) => {
         switch (node.name) {
           case "thing": {
@@ -802,6 +823,7 @@ export function parseNml(nmlString: string): Promise<{
               if (currentTree.nodes.size() > 0) {
                 const timestamp = _.min(currentTree.nodes.map((n) => n.timestamp));
 
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
                 trees[currentTree.treeId].timestamp = timestamp;
               }
             }
@@ -858,7 +880,9 @@ export function parseNml(nmlString: string): Promise<{
         resolve({
           trees,
           treeGroups,
+          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'datasetName' implicitly has an 'any' typ... Remove this comment to see the full error message
           datasetName,
+          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'userBoundingBoxes' implicitly has an 'an... Remove this comment to see the full error message
           userBoundingBoxes,
         });
       })

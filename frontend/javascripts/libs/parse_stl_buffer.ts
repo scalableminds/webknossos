@@ -34,7 +34,9 @@ import * as THREE from "three";
  *  var mesh = new THREE.Mesh( geometry, material );
  */
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'data' implicitly has an 'any' type.
 export default function parse(data) {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'data' implicitly has an 'any' type.
   function isBinary(data) {
     var expect, face_size, n_faces, reader;
     reader = new DataView(data);
@@ -64,6 +66,7 @@ export default function parse(data) {
     return true;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'query' implicitly has an 'any' type.
   function matchDataViewAt(query, reader, offset) {
     // Check if each byte in query matches the corresponding byte from the current offset
     for (var i = 0, il = query.length; i < il; i++) {
@@ -73,6 +76,7 @@ export default function parse(data) {
     return true;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'data' implicitly has an 'any' type.
   function parseBinary(data) {
     var reader = new DataView(data);
     var faces = reader.getUint32(80, true);
@@ -138,6 +142,7 @@ export default function parse(data) {
         normals.push(normalX, normalY, normalZ);
 
         if (hasColors) {
+          // @ts-expect-error ts-migrate(2454) FIXME: Variable 'colors' is used before being assigned.
           colors.push(r, g, b);
         }
       }
@@ -147,14 +152,18 @@ export default function parse(data) {
     geometry.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(normals), 3));
 
     if (hasColors) {
+      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 3));
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'hasColors' does not exist on type 'Buffe... Remove this comment to see the full error message
       geometry.hasColors = true;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'alpha' does not exist on type 'BufferGeo... Remove this comment to see the full error message
       geometry.alpha = alpha;
     }
 
     return geometry;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'data' implicitly has an 'any' type.
   function parseASCII(data) {
     var geometry = new THREE.BufferGeometry();
     var patternFace = /facet([\s\S]*?)endfacet/g;
@@ -207,6 +216,7 @@ export default function parse(data) {
     return geometry;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'buffer' implicitly has an 'any' type.
   function ensureString(buffer) {
     if (typeof buffer !== "string") {
       return THREE.LoaderUtils.decodeText(new Uint8Array(buffer));
@@ -215,6 +225,7 @@ export default function parse(data) {
     return buffer;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'buffer' implicitly has an 'any' type.
   function ensureBinary(buffer) {
     if (typeof buffer === "string") {
       var array_buffer = new Uint8Array(buffer.length);

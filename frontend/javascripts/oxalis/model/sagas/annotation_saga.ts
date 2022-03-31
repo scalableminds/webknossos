@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import _ from "lodash";
 import type { EditAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
@@ -7,6 +9,7 @@ import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { _takeLatest, select, take, retry, _delay } from "oxalis/model/sagas/effect-generators";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -21,6 +24,7 @@ import messages from "messages";
   compare https://github.com/scalableminds/webknossos/issues/5223 */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 export function* pushAnnotationUpdateAsync(): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const tracing = yield* select((state) => state.tracing);
 
   if (!tracing.restrictions.allowUpdate) {
@@ -29,6 +33,7 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
 
   // Persist the visibility of each layer within the annotation-specific
   // viewConfiguration.
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const { layers } = yield* select((state) => state.datasetConfiguration);
   const viewConfiguration = {
     layers: _.mapValues(layers, (layer) => ({
@@ -54,7 +59,9 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
 
 function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
   const { tracingId, layerProperties } = action;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'storeState' implicitly has an 'any' typ... Remove this comment to see the full error message
   const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'storeState' implicitly has an 'any' typ... Remove this comment to see the full error message
   const annotationType = yield* select((storeState) => storeState.tracing.annotationType);
   yield* retry(
     SETTINGS_MAX_RETRY_COUNT,
@@ -90,6 +97,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       return;
     }
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'storeState' implicitly has an 'any' typ... Remove this comment to see the full error message
     const isAgglomerateMappingEnabled = yield* select((storeState) => {
       if (!segmentationLayer) {
         return false;
@@ -105,6 +113,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       );
     });
     const isZoomThresholdExceeded = yield* select(
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'storeState' implicitly has an 'any' typ... Remove this comment to see the full error message
       (storeState) =>
         getRequestLogZoomStep(storeState) > Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING),
     );
@@ -135,6 +144,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       "SET_STORED_LAYOUTS",
       "SET_MAPPING",
       "SET_MAPPING_ENABLED",
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
       (action) =>
         action.type === "UPDATE_LAYER_SETTING" &&
         action.layerName === segmentationLayerName &&
@@ -153,6 +163,7 @@ export function* watchAnnotationAsync(): Saga<void> {
   yield _takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
   yield _takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
   yield _takeLatest(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
     (action) => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
     pushAnnotationUpdateAsync,
   );

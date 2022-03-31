@@ -9,6 +9,7 @@ import {
   updateLocalMeshMetaDataAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { MeshMetaData } from "types/api_flow_types";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { _all, _call, _takeEvery, call, put, select } from "oxalis/model/sagas/effect-generators";
 import {
@@ -72,6 +73,7 @@ function* handleVisibilityChange(meshMetaData: MeshMetaData, isVisible: boolean)
 
 function* handleRemoteUpdateMesh(action: UpdateRemoteMeshMetaDataAction): Saga<void> {
   const { id } = action;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const meshMetaData = yield* select((state) => state.tracing.meshes.find((m) => m.id === id));
 
   if (!meshMetaData) {
@@ -98,6 +100,7 @@ function* handleRemoteUpdateMesh(action: UpdateRemoteMeshMetaDataAction): Saga<v
 
 function* handleLocalUpdateMesh(action: UpdateLocalMeshMetaDataAction): Saga<void> {
   const { id } = action;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const meshMetaData = yield* select((state) => state.tracing.meshes.find((m) => m.id === id));
 
   if (!meshMetaData) {
@@ -112,7 +115,9 @@ function* handleLocalUpdateMesh(action: UpdateLocalMeshMetaDataAction): Saga<voi
 }
 
 function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
   const annotationId = yield* select((store) => store.tracing.annotationId);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
   const allowUpdate = yield* select((store) => store.tracing.restrictions.allowUpdate);
 
   if (!allowUpdate) {

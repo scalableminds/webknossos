@@ -1,3 +1,4 @@
+// @flow
 import {
   Button,
   Card,
@@ -12,6 +13,7 @@ import {
 } from "antd";
 import { FormInstance } from "antd/lib/form";
 import { InfoCircleOutlined } from "@ant-design/icons";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import React from "react";
@@ -42,6 +44,7 @@ type State = {
   isFetchingData: boolean;
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rule' implicitly has an 'any' type.
 function isValidMagnification(rule, value) {
   if (value === "" || value == null || (Math.log(value) / Math.log(2)) % 1 === 0) {
     return Promise.resolve();
@@ -52,6 +55,7 @@ function isValidMagnification(rule, value) {
   }
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rawSettings' implicitly has an 'any' ty... Remove this comment to see the full error message
 function getMagnificationAdaptedSettings(rawSettings) {
   const { resolutionRestrictionsForm, ...settingsWithoutMagnifications } = rawSettings;
   const resolutionRestrictions = {
@@ -72,6 +76,7 @@ function getMagnificationAdaptedSettings(rawSettings) {
 }
 
 class TaskTypeCreateView extends React.PureComponent<Props, State> {
+  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
   formRef = React.createRef<typeof FormInstance>();
   state = {
     teams: [],
@@ -107,19 +112,27 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     if (!hasRecommendedConfiguration) {
       // A recommended configuration of null overrides the default configuration when using _.merge
       // If the task type has no recommended configuration, suggest the default one
+      // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'recommendedConfiguration' becaus... Remove this comment to see the full error message
       formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
     }
 
+    // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'recommendedConfiguration' becaus... Remove this comment to see the full error message
     formValues.recommendedConfiguration = jsonStringify(formValues.recommendedConfiguration);
     // The format of settings.resolutionRestrictions does not match the form precisely.
     // It is replaced here by resolutionRestrictionsForm, wich has a shouldRestrict boolean
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'resolutionRestrictionsForm' does not exi... Remove this comment to see the full error message
     formValues.settings.resolutionRestrictionsForm = {
       shouldRestrict:
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'resolutionRestrictions' does not exist o... Remove this comment to see the full error message
         formValues.settings.resolutionRestrictions.min != null ||
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'resolutionRestrictions' does not exist o... Remove this comment to see the full error message
         formValues.settings.resolutionRestrictions.max != null,
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'resolutionRestrictions' does not exist o... Remove this comment to see the full error message
       min: formValues.settings.resolutionRestrictions.min || 1,
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'resolutionRestrictions' does not exist o... Remove this comment to see the full error message
       max: formValues.settings.resolutionRestrictions.max || 512,
     };
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'resolutionRestrictions' does not exist o... Remove this comment to see the full error message
     delete formValues.settings.resolutionRestrictions;
     const form = this.formRef.current;
 
@@ -149,6 +162,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     });
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   onFinish = async (formValues) => {
     if (!this.state.useRecommendedConfiguration) {
       formValues.recommendedConfiguration = null;
@@ -176,6 +190,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
     this.props.history.push("/taskTypes");
   };
+
   onChangeUseRecommendedConfiguration = (useRecommendedConfiguration: boolean) => {
     this.setState({
       useRecommendedConfiguration,
@@ -327,6 +342,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   width: "100%",
                 }}
                 options={[
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ value: null; label: string; }' is not assi... Remove this comment to see the full error message
                   {
                     value: null,
                     label: "Any",
@@ -467,4 +483,5 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TaskTypeCreateView' is no... Remove this comment to see the full error message
 export default withRouter(TaskTypeCreateView);

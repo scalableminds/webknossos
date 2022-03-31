@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import {
   DeleteOutlined,
@@ -10,6 +12,7 @@ import { List, Tooltip, Dropdown, Menu } from "antd";
 import { useDispatch } from "react-redux";
 import Checkbox from "antd/lib/checkbox/Checkbox";
 import React from "react";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
 import classnames from "classnames";
 import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
@@ -26,11 +29,13 @@ import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs
 import type { ActiveMappingInfo, IsosurfaceInformation, Segment } from "oxalis/store";
 import Store from "oxalis/store";
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mappingColors' implicitly has an 'any' ... Remove this comment to see the full error message
 const convertCellIdToCSS = (id: number, mappingColors) => {
   const [h, s, l, a] = jsConvertCellIdToHSLA(id, mappingColors);
   return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 };
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mappingColors' implicitly has an 'any' ... Remove this comment to see the full error message
 function getColoredDotIconForSegment(segmentId: number, mappingColors) {
   return (
     <span
@@ -43,14 +48,20 @@ function getColoredDotIconForSegment(segmentId: number, mappingColors) {
   );
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof MenuItem' is not assignab... Remove this comment to see the full error message
 const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
 
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'currentMeshFile' implicitly has an 'any... Remove this comment to see the full error message
   currentMeshFile,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'loadPrecomputedMesh' implicitly has an ... Remove this comment to see the full error message
   loadPrecomputedMesh,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'andCloseContextMenu' implicitly has an ... Remove this comment to see the full error message
   andCloseContextMenu,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerName' implicitly has an 'any' type... Remove this comment to see the full error message
   layerName,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mappingInfo' implicitly has an 'any' ty... Remove this comment to see the full error message
   mappingInfo,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
@@ -62,6 +73,7 @@ const getLoadPrecomputedMeshMenuItem = (
           loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
         )
       }
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; onClick: () => any; dis... Remove this comment to see the full error message
       disabled={!currentMeshFile}
       mappingName={mappingName}
       descriptor="mesh file"
@@ -83,9 +95,13 @@ const getLoadPrecomputedMeshMenuItem = (
 };
 
 const getComputeMeshAdHocMenuItem = (
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'segment' implicitly has an 'any' type.
   segment,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'loadAdHocMesh' implicitly has an 'any' ... Remove this comment to see the full error message
   loadAdHocMesh,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isSegmentationLayerVisible' implicitly ... Remove this comment to see the full error message
   isSegmentationLayerVisible,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'andCloseContextMenu' implicitly has an ... Remove this comment to see the full error message
   andCloseContextMenu,
 ) => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
@@ -100,9 +116,13 @@ const getComputeMeshAdHocMenuItem = (
 };
 
 const getMakeSegmentActiveMenuItem = (
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'segment' implicitly has an 'any' type.
   segment,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'setActiveCell' implicitly has an 'any' ... Remove this comment to see the full error message
   setActiveCell,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeCellId' implicitly has an 'any' t... Remove this comment to see the full error message
   activeCellId,
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'andCloseContextMenu' implicitly has an ... Remove this comment to see the full error message
   andCloseContextMenu,
 ) => {
   const disabled = segment.id === activeCellId;
@@ -244,6 +264,7 @@ function _SegmentListItem({
         // Therefore, autoDestroy is passed.
         // destroyPopupOnHide should also be an option according to the docs, but
         // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
         autoDestroy
         placement="bottomCenter"
         visible={activeDropdownSegmentId === segment.id}
@@ -392,6 +413,7 @@ function _MeshInfoItem(props: {
     <Tooltip title="Change visibility">
       <Checkbox
         checked={isVisible}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.SyntheticEvent) => void' is no... Remove this comment to see the full error message
         onChange={(event: React.SyntheticEvent) => {
           if (!props.visibleSegmentationLayer) {
             return;
@@ -400,6 +422,7 @@ function _MeshInfoItem(props: {
           onChangeMeshVisibility(
             props.visibleSegmentationLayer.name,
             segment.id,
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
             event.target.checked,
           );
         }}

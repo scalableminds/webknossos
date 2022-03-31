@@ -1,3 +1,4 @@
+// @flow
 import { Select, Spin } from "antd";
 import * as React from "react";
 import _ from "lodash";
@@ -72,6 +73,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
       selectedTeams,
     });
   };
+
   getAllTeams = (): Array<APITeam> =>
     _.unionBy(this.state.possibleTeams, this.state.selectedTeams, (t) => t.id);
 
@@ -79,6 +81,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     return (
       <Select
         showSearch
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '"default" | "multiple"' is not assignable to... Remove this comment to see the full error message
         mode={this.props.mode ? this.props.mode : "default"}
         style={{
           width: "100%",
@@ -94,7 +97,9 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
       >
         {this.getAllTeams().map((team) => (
+          // @ts-expect-error ts-migrate(2741) FIXME: Property 'value' is missing in type '{ children: s... Remove this comment to see the full error message
           <Option
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
             disabled={this.state.possibleTeams.find((t) => t.id === team.id) == null}
             key={team.id}
           >

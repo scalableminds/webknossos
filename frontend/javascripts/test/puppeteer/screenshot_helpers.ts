@@ -1,5 +1,8 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'pngj... Remove this comment to see the full error message
 import { PNG } from "pngjs";
 import fs from "fs";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'pixe... Remove this comment to see the full error message
 import pixelmatch from "pixelmatch";
 export function isPixelEquivalent(changedPixels: number, width: number, height: number) {
   // There may be a difference of 0.1 %
@@ -12,6 +15,7 @@ function openScreenshot(path: string, name: string): Promise<typeof PNG> {
   return new Promise((resolve) => {
     fs.createReadStream(`${path}/${name}.png`)
       .on("error", (error) => {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'code' does not exist on type 'Error'.
         if (error.code === "ENOENT") {
           resolve(null);
         } else {
@@ -20,6 +24,7 @@ function openScreenshot(path: string, name: string): Promise<typeof PNG> {
       })
       .pipe(new PNG())
       .on("parsed", function () {
+        // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
         resolve(this);
       });
   });

@@ -6,8 +6,11 @@ function getOrganization() {
   return activeUser != null ? activeUser.organization : null;
 }
 
+// @ts-expect-error ts-migrate(7019) FIXME: Rest parameter 'params' implicitly has an 'any[]' ... Remove this comment to see the full error message
 function gtagGuard(...params) {
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'gtag' does not exist on type '(Window & ... Remove this comment to see the full error message
   if (typeof window.gtag !== "undefined" && window.gtag !== null) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'gtag' does not exist on type '(Window & ... Remove this comment to see the full error message
     window.gtag(...params);
   }
 }

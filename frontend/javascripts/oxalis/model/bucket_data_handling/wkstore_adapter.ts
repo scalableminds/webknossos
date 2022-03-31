@@ -1,3 +1,4 @@
+// @flow
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
@@ -23,10 +24,10 @@ import WorkerPool from "libs/worker_pool";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
-const decodeFourBit = createWorker(DecodeFourBitWorker);
+const decodeFourBit = DecodeFourBitWorker;
 const COMPRESSION_WORKER_COUNT = 2;
 const compressionPool = new WorkerPool(
-  () => createWorker(ByteArrayToLz4Base64Worker),
+  () => ByteArrayToLz4Base64Worker,
   COMPRESSION_WORKER_COUNT,
 );
 export const REQUEST_TIMEOUT = 60000;
@@ -95,6 +96,7 @@ export async function requestWithFallback(
   const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   const maybeVolumeTracing =
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
     layerInfo.tracingId != null ? getVolumeTracingById(state.tracing, layerInfo.tracingId) : null;
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
   const shouldUseDataStore = maybeVolumeTracing == null;

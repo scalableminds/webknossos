@@ -2,6 +2,7 @@ import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox, IsosurfaceInformation } from "oxalis/store";
 import { V3 } from "libs/mjs";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/helpers/deep_update"' has no... Remove this comment to see the full error message
 import type { StateShape1, WriteableShape } from "oxalis/model/helpers/deep_update";
 import { updateKey, updateKey2, updateKey4 } from "oxalis/model/helpers/deep_update";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -110,6 +111,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map((bbox) =>
         bbox.id === action.id
           ? {
+              // @ts-expect-error ts-migrate(2783) FIXME: 'id' is specified more than once, so this usage wi... Remove this comment to see the full error message
               id: bbox.id,
               ...bbox,
               ...action.newProps,

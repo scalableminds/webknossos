@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import Request from "libs/request";
 import * as RestAPI from "admin/admin_rest_api";
@@ -6,12 +7,15 @@ import messages from "messages";
 
 // Create a throttled function which depends on its arguments.
 // That way, each datastore is checked for health in a throttled and isolated manner
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'func' implicitly has an 'any' type.
 const memoizedThrottle = (func, wait = 0, options = {}): ((...args: Array<any>) => any) => {
   // Memoize the creation of a throttling function
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'resolver' does not exist on type '{}'.
   const mem = _.memoize(() => _.throttle(func, wait, options), options.resolver);
 
   return (...args: Array<any>) => {
     // look up (or create) the throttling function and invoke it
+    // @ts-expect-error ts-migrate(2556) FIXME: Expected 0 arguments, but got 1 or more.
     mem(...args)(...args);
   };
 };
@@ -31,6 +35,7 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
     return;
   }
 
+  // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
   const stores = datastores
     .map((datastore) => ({ ...datastore, path: "data" }))
     .concat({ ...tracingstore, path: "tracings" });
@@ -45,6 +50,7 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
       const healthEndpoint = `${url}/${path}/health`;
       Request.triggerRequest(healthEndpoint, {
         doNotInvestigate: true,
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ doNotInvestigate: true; mode: ... Remove this comment to see the full error message
         mode: "cors",
         timeout: 5000,
       }).then(

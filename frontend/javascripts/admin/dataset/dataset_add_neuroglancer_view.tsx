@@ -1,3 +1,4 @@
+// @flow
 import { Form, Input, Button, Col, Row, Upload } from "antd";
 import { UnlockOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -44,6 +45,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
     const jsonConfig = url.slice(delimiterIndex + 2);
     // This will throw an error if the URL did not contain valid JSON. The error will be handled by the caller.
     const config = JSON.parse(decodeURIComponent(jsonConfig));
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
     config.layers.forEach((layer) => {
       if (!layer.source.startsWith("precomputed://")) {
         throw new Error(
@@ -54,6 +56,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
     return config;
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'info' implicitly has an 'any' type.
   const handleChange = (info) => {
     // Restrict the upload list to the latest file
     const newFileList = info.fileList.slice(-1);
@@ -65,6 +68,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
     return JSON.parse(jsonString);
   };
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   async function handleSubmit(formValues) {
     if (activeUser == null) return;
     const neuroglancerConfig = validateAndParseUrl(formValues.url);
@@ -170,6 +174,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
           >
             <Upload.Dragger
               name="files"
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'FileList' is not assignable to type 'UploadF... Remove this comment to see the full error message
               fileList={fileList}
               onChange={handleChange}
               beforeUpload={() => false}
@@ -217,4 +222,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(DatasetAddNeuroglancerView);

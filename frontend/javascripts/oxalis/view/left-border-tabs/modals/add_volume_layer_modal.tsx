@@ -23,6 +23,7 @@ export default function AddVolumeLayerModal({
   const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState(null);
   const [newLayerName, setNewLayerName] = useState("Volume");
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
   const handleSetNewLayerName = (evt) => setNewLayerName(evt.target.value);
 
   const segmentationLayers = getSegmentationLayers(dataset);
@@ -36,6 +37,7 @@ export default function AddVolumeLayerModal({
     if (selectedSegmentationLayerIndex == null) {
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ typ: "Volume"; name: string; f... Remove this comment to see the full error message
         name: newLayerName,
         fallbackLayerName: undefined,
         resolutionRestrictions: undefined,
@@ -44,6 +46,7 @@ export default function AddVolumeLayerModal({
       const fallbackLayerName = availableSegmentationLayers[selectedSegmentationLayerIndex].name;
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ typ: "Volume"; name: string; f... Remove this comment to see the full error message
         name: newLayerName,
         fallbackLayerName,
         resolutionRestrictions: undefined,
@@ -64,6 +67,7 @@ export default function AddVolumeLayerModal({
     >
       Layer Name:{" "}
       <InputComponent
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         size="small"
         onChange={handleSetNewLayerName}
         value={newLayerName}

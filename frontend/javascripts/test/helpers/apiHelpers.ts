@@ -1,11 +1,15 @@
 // @noflow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Tracing, VolumeTracing } from "oxalis/store";
 import { sleep } from "libs/utils";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'mock... Remove this comment to see the full error message
 import mockRequire from "mock-require";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'sino... Remove this comment to see the full error message
 import sinon from "sinon";
 import window from "libs/window";
 import {
@@ -29,7 +33,9 @@ const Request = {
   sendJSONReceiveArraybufferWithHeaders: sinon.stub(),
   always: () => Promise.resolve(),
 };
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'TypedArrayClass' implicitly has an 'any... Remove this comment to see the full error message
 export function createBucketResponseFunction(TypedArrayClass, fillValue, delay = 0) {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'url' implicitly has an 'any' type.
   return async function getBucketData(url, payload) {
     const bucketCount = payload.data.length;
     await sleep(delay);
@@ -134,6 +140,7 @@ let counter = 0;
 // This function should always be imported at the very top since it setups
 // important mocks. The leading underscores are there to make the import
 // appear at the top when sorting the imports with importjs.
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 't' implicitly has an 'any' type.
 export function __setupOxalis(t, mode, apiVersion) {
   UrlManager.initialState = {
     position: [1, 2, 3],
@@ -145,11 +152,13 @@ export function __setupOxalis(t, mode, apiVersion) {
   t.context.setSlowCompression = setSlowCompression;
   const webknossos = new OxalisApi(Model);
   const organizationName = "Connectomics Department";
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
     .withArgs(
       sinon.match(
         (
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'arg' implicitly has an 'any' type.
           arg, // Match against the URL while ignoring further GET parameters (such as timestamps)
         ) =>
           typeof arg === "string" &&
@@ -172,6 +181,7 @@ export function __setupOxalis(t, mode, apiVersion) {
     // each __setupOxalis call would overwrite the current stub to receiveJSON.
     .onCall(counter++)
     .returns(Promise.resolve(datasetClone));
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));
   Request.receiveJSON
     .withArgs("/api/userToken/generate", {
@@ -195,10 +205,12 @@ export function __setupOxalis(t, mode, apiVersion) {
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'apiObject' implicitly has an 'any' type... Remove this comment to see the full error message
       webknossos.apiReady(apiVersion).then((apiObject) => {
         t.context.api = apiObject;
       });
     })
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'error' implicitly has an 'any' type.
     .catch((error) => {
       console.error("model.fetch() failed", error);
       t.fail(error.message);

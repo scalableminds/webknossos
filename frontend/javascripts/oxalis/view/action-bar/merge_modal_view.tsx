@@ -1,3 +1,4 @@
+// @flow
 import { Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -74,6 +75,7 @@ class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWi
         </Form.Item>
         <Form.Item>
           {React.cloneElement(this.props.button, {
+            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
             onClick: (evt) => this.props.onButtonClick(evt, this.state.isChecked),
           })}
         </Form.Item>
@@ -103,6 +105,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       showErrorToast: false,
     });
     this.setState({
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'project' implicitly has an 'any' type.
       projects: projects.map((project) => ({
         id: project.id,
         label: project.name,
@@ -127,16 +130,20 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       selectedProject: project,
     });
   };
+
   handleChangeMergeExplorativeAnnotation = (event: React.SyntheticEvent) => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       selectedExplorativeAnnotation: event.target.value,
     });
   };
+
   handleBeforeUploadNML = () => {
     this.setState({
       isUploading: true,
     });
   };
+
   handleMergeProject = async (event: React.SyntheticEvent, isLocalMerge: boolean) => {
     event.preventDefault();
     const { selectedProject } = this.state;
@@ -153,6 +160,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       }
     }
   };
+
   handleMergeExplorativeAnnotation = async (event: React.SyntheticEvent, isLocalMerge: boolean) => {
     event.preventDefault();
     const { selectedExplorativeAnnotation } = this.state;
@@ -188,11 +196,13 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
     const tracing = await getTracingForAnnotationType(annotation, skeletonDescriptorMaybe);
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
     if (!tracing || !tracing.trees) {
       Toast.error(messages["merge.volume_unsupported"]);
       return;
     }
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
     const { trees, treeGroups } = tracing;
     this.setState({
       isUploading: true,
@@ -247,6 +257,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
           >
             <Form.Item label="Project">
               <Select
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'never[]' is not assignable to type 'string'.
                 value={this.state.selectedProject || []}
                 style={{
                   width: 200,
@@ -254,7 +265,9 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 onChange={this.handleChangeMergeProject}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 options={this.state.projects.map((project) => ({
+                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
                   value: project.id,
+                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'label' does not exist on type 'never'.
                   label: project.label,
                 }))}
               />
@@ -263,6 +276,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
             <ButtonWithCheckbox
               checkboxContent={mergeIntoActiveTracingCheckbox}
               button={
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '"default"' is not assignable to type 'SizeTy... Remove this comment to see the full error message
                 <Button type="primary" size="default" disabled={this.state.selectedProject == null}>
                   Merge
                 </Button>
@@ -286,6 +300,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
               button={
                 <Button
                   type="primary"
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '"default"' is not assignable to type 'SizeTy... Remove this comment to see the full error message
                   size="default"
                   disabled={this.state.selectedExplorativeAnnotation.length !== 24}
                 >
@@ -314,6 +329,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,

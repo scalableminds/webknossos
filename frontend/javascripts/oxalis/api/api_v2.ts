@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
@@ -48,6 +50,7 @@ import {
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import UrlManager from "oxalis/controller/url_manager";
@@ -64,7 +67,9 @@ import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ nodes: { $apply: (nodes: any) ... Remove this comment to see the full error message
     nodes: {
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodes' implicitly has an 'any' type.
       $apply: (nodes) => nodes.toObject(),
     },
   });
@@ -93,6 +98,7 @@ class TracingApi {
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
     return getActiveNode(tracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
       .map((node) => node.id)
       .getOrElse(null);
   }
@@ -103,6 +109,7 @@ class TracingApi {
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
     return getActiveTree(tracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
       .map((tree) => tree.treeId)
       .getOrElse(null);
   }
@@ -192,6 +199,7 @@ class TracingApi {
     }
 
     // $FlowIssue[incompatible-use] remove once https://github.com/facebook/flow/issues/34 is closed
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const comment = tree.comments.find((__) => __.nodeId === nodeId);
     return comment != null ? comment.content : null;
   }
@@ -217,6 +225,7 @@ class TracingApi {
   getTreeName(treeId?: number) {
     const tracing = assertSkeleton(Store.getState().tracing);
     return getTree(tracing, treeId)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
       .map((activeTree) => activeTree.name)
       .get();
   }
@@ -331,6 +340,7 @@ class TracingApi {
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'node' implicitly has an 'any' typ... Remove this comment to see the full error message
     getNodeAndTree(skeletonTracing, nodeId, treeId).map(([, node]) =>
       Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId)),
     );
@@ -344,6 +354,7 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
       Store.dispatch(setPositionAction(node.position)),
     );
@@ -358,6 +369,7 @@ class TracingApi {
   centerTDView = (): void => {
     Store.dispatch(centerTDViewAction());
   };
+
   rotate3DViewToXY = (): void => rotate3DViewTo(OrthoViews.PLANE_XY);
   rotate3DViewToYZ = (): void => rotate3DViewTo(OrthoViews.PLANE_YZ);
   rotate3DViewToXZ = (): void => rotate3DViewTo(OrthoViews.PLANE_XZ);
@@ -381,6 +393,7 @@ class TracingApi {
       }
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     return result;
   }
 
@@ -407,6 +420,7 @@ class TracingApi {
     const curPosition = getPosition(Store.getState().flycam);
     const curRotation = getRotation(Store.getState().flycam);
     if (!Array.isArray(rotation)) rotation = curRotation;
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3 | undefined' is not assi... Remove this comment to see the full error message
     rotation = this.getShortestRotation(curRotation, rotation);
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
@@ -431,8 +445,10 @@ class TracingApi {
       .onUpdate(function () {
         // needs to be a normal (non-bound) function
         Store.dispatch(
+          // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
           setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
         );
+        // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
         Store.dispatch(setRotationAction([this.rotationX, this.rotationY, this.rotationZ]));
       })
       .start();
@@ -485,6 +501,7 @@ class TracingApi {
   setAnnotationTool(tool: AnnotationTool) {
     assertExists(tool, "Volume tool is missing.");
 
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     if (AnnotationToolEnum[tool] == null) {
       throw new Error(
         `Volume tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
@@ -639,6 +656,7 @@ class DataApi {
         `width=${bottomRight[0] - topLeft[0]}&` +
         `height=${bottomRight[1] - topLeft[1]}&` +
         `depth=${bottomRight[2] - topLeft[2]}`;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'open' does not exist on type '(Window & ... Remove this comment to see the full error message
       window.open(downloadUrl);
       // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
       return Promise.resolve();
@@ -681,6 +699,7 @@ class DataApi {
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
   getConfiguration(key: $Keys<DatasetConfiguration>) {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return Store.getState().datasetConfiguration[key];
   }
 
@@ -735,6 +754,7 @@ class UserApi {
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
   getConfiguration(key: $Keys<UserConfiguration>) {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     const value = Store.getState().userConfiguration[key];
 
     // Backwards compatibility

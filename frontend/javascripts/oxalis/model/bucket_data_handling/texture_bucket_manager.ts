@@ -1,3 +1,4 @@
+// @flow
 import * as THREE from "three";
 import _ from "lodash";
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
@@ -49,6 +50,7 @@ function getSomeValue<T>(set: Set<T>): T {
 export default class TextureBucketManager {
   dataTextures: Array<typeof UpdatableTexture>;
   lookUpBuffer: Float32Array;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lookUpTexture' has no initializer and is... Remove this comment to see the full error message
   lookUpTexture: typeof THREE.DataTexture;
   // Holds the index for each active bucket, to which it should (or already
   // has been was) written in the data texture.
@@ -63,6 +65,7 @@ export default class TextureBucketManager {
     bucket: DataBucket;
     _index: number;
   }> = [];
+
   textureWidth: number;
   dataTextureCount: number;
   maximumCapacity: number;
@@ -96,6 +99,7 @@ export default class TextureBucketManager {
 
   async startRAFLoops() {
     await waitForCondition(
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'isInitialized' does not exist on type 't... Remove this comment to see the full error message
       () => this.lookUpTexture.isInitialized() && this.dataTextures[0].isInitialized(),
     );
     this.keepLookUpBufferUpToDate();
@@ -137,6 +141,7 @@ export default class TextureBucketManager {
     isAnchorPointNew: boolean,
   ): void {
     this.currentAnchorPoint = anchorPoint;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'currentAnchorPoint' does not exist on ty... Remove this comment to see the full error message
     window.currentAnchorPoint = anchorPoint;
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
@@ -200,6 +205,7 @@ export default class TextureBucketManager {
     const bucketsPerTexture = (this.textureWidth * this.textureWidth) / packedBucketSize;
 
     while (performance.now() - startingTime < maxTimePerFrame && this.writerQueue.length > 0) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'bucket' does not exist on type '{ bucket... Remove this comment to see the full error message
       const { bucket, _index } = this.writerQueue.pop();
 
       if (!this.activeBucketToIndexMap.has(bucket)) {
@@ -222,6 +228,7 @@ export default class TextureBucketManager {
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
       const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof U... Remove this comment to see the full error message
       this.dataTextures[dataTextureIndex].update(
         new TypedArrayClass(
           data.buffer,
@@ -236,6 +243,7 @@ export default class TextureBucketManager {
       this.committedBucketSet.add(bucket);
       // bucket.setVisualizationColor("#00ff00");
       // bucket.visualize();
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
       window.needsRerender = true;
       this.isRefreshBufferOutOfDate = true;
     }
@@ -246,6 +254,7 @@ export default class TextureBucketManager {
   }
 
   getTextures(): Array<typeof THREE.DataTexture | typeof UpdatableTexture> {
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     return [this.lookUpTexture].concat(this.dataTextures);
   }
 
@@ -268,6 +277,7 @@ export default class TextureBucketManager {
       THREE.FloatType,
       getRenderer(),
     );
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'typeof UpdatableTexture' is not assignable t... Remove this comment to see the full error message
     this.lookUpTexture = lookUpTexture;
     this.startRAFLoops();
   }
@@ -283,6 +293,7 @@ export default class TextureBucketManager {
     this.freeIndexSet.delete(index);
     this.activeBucketToIndexMap.set(bucket, index);
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_index' implicitly has an 'any' type.
     const enqueueBucket = (_index) => {
       if (!bucket.hasData()) {
         return;
@@ -365,6 +376,7 @@ export default class TextureBucketManager {
                 fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
                 this.committedBucketSet.has(fallbackBucket)
               ) {
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
                 address = this.activeBucketToIndexMap.get(fallbackBucket);
                 address = address != null ? address : -1;
                 bucketZoomStep = fallbackBucket.zoomedAddress[3];
@@ -413,6 +425,7 @@ export default class TextureBucketManager {
       }
     }
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof D... Remove this comment to see the full error message
     this.lookUpTexture.update(
       this.lookUpBuffer,
       0,
@@ -421,6 +434,7 @@ export default class TextureBucketManager {
       this.lookUpBufferWidth,
     );
     this.isRefreshBufferOutOfDate = false;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
     window.needsRerender = true;
   }
 

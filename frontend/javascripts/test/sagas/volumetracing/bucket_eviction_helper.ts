@@ -1,4 +1,6 @@
+// @flow
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'mock... Remove this comment to see the full error message
 import mockRequire from "mock-require";
 import "test/sagas/saga_integration.mock";
 import { createBucketResponseFunction } from "test/helpers/apiHelpers";

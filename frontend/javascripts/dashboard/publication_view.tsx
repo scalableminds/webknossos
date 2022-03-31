@@ -14,6 +14,7 @@ export function PublicationViewWithHeader() {
   }, []);
 
   function handleSearch(event: React.SyntheticEvent) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     setSearchQuery(event.target.value);
   }
 
@@ -88,13 +89,16 @@ function PublicationView(props: Props) {
   return (
     <>
       <List
+        // @ts-expect-error ts-migrate(2740) FIXME: Type 'CollectionChain<any[]>' is missing the follo... Remove this comment to see the full error message
         dataSource={datasetsByPublication}
         locale={{
           emptyText: "No featured publications.",
         }}
         className="antd-no-border-list"
         renderItem={(datasets) => (
+          // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
           <List.Item key={datasets[0].publication.id}>
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'any[]'.
             <PublicationCard className="dataset-panel" datasets={datasets} showDetailedLink />
           </List.Item>
         )}

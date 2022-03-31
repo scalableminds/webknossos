@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import { Button, ConfigProvider, List, Tooltip, Select, Popover, Empty } from "antd";
 import type { Dispatch } from "redux";
@@ -5,9 +7,9 @@ import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
-import type { ExtractReturn } from "libs/type_helpers";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import {
@@ -139,6 +141,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 };
 
 const mapDispatchToProps = (dispatch: Dispatch<any>): any => ({
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
   onChangeDatasetSettings(propertyName, value) {
     dispatch(updateDatasetSettingAction(propertyName, value));
   },
@@ -151,6 +154,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>): any => ({
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'info' implicitly has an 'any' type.
   async onStlUpload(layerName: string, info) {
     dispatch(setImportingMeshStateAction(true));
     const buffer = await readFileAsArrayBuffer(info.file);
@@ -189,6 +193,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>): any => ({
   },
 });
 
+// @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'ExtractReturn'.
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
@@ -217,6 +222,7 @@ const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null
 
 function _getMapIdFn(visibleSegmentationLayer: DataLayer | null | undefined) {
   const mapId =
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
     visibleSegmentationLayer != null ? (id) => visibleSegmentationLayer.cube.mapId(id) : (id) => id;
   return mapId;
 }
@@ -233,6 +239,7 @@ function renderEmptyMeshFileSelect() {
 }
 
 class SegmentsView extends React.Component<Props, State> {
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
   intervalID: TimeoutID | null | undefined;
   state = {
     selectedSegmentId: null,
@@ -359,12 +366,14 @@ class SegmentsView extends React.Component<Props, State> {
       title,
     };
   };
+
   onSelectSegment = (segment: Segment) => {
     this.setState({
       selectedSegmentId: segment.id,
     });
     this.props.setPosition(segment.somePosition);
   };
+
   handleSegmentDropdownMenuVisibility = (segmentId: number, isVisible: boolean) => {
     if (isVisible) {
       this.setState({
@@ -377,6 +386,7 @@ class SegmentsView extends React.Component<Props, State> {
       activeDropdownSegmentId: null,
     });
   };
+
   startComputingMeshfile = async () => {
     const {
       preferredQualityForMeshPrecomputation,
@@ -420,19 +430,23 @@ class SegmentsView extends React.Component<Props, State> {
       );
     }
   };
+
   handleMeshFileSelected = async (meshFileName: string | null | undefined) => {
     if (this.props.visibleSegmentationLayer != null && meshFileName != null) {
       this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, meshFileName);
     }
   };
+
   handleQualityChangeForPrecomputation = (resolutionIndex: number) =>
     Store.dispatch(
       updateTemporarySettingAction("preferredQualityForMeshPrecomputation", resolutionIndex),
     );
+
   handleQualityChangeForAdHocGeneration = (resolutionIndex: number) =>
     Store.dispatch(
       updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", resolutionIndex),
     );
+
   getAdHocMeshSettings = () => {
     const {
       preferredQualityForMeshAdHocComputation,
@@ -462,6 +476,7 @@ class SegmentsView extends React.Component<Props, State> {
       </div>
     );
   };
+
   getPreComputeMeshesPopover = () => {
     const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
     const {
@@ -529,6 +544,7 @@ class SegmentsView extends React.Component<Props, State> {
       </div>
     );
   };
+
   getMeshesHeader = () => (
     <div>
       <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
@@ -542,17 +558,20 @@ class SegmentsView extends React.Component<Props, State> {
             value={
               this.props.currentMeshFile != null ? this.props.currentMeshFile.meshFileName : null
             }
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(meshFileName: string | null | undefined) =>... Remove this comment to see the full error message
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
           >
             {this.props.availableMeshFiles ? (
+              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'meshFile' implicitly has an 'any' type.
               this.props.availableMeshFiles.map((meshFile) => (
                 <Option key={meshFile.meshFileName} value={meshFile.meshFileName}>
                   {formatMeshFile(meshFile)}
                 </Option>
               ))
             ) : (
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Key'.
               <Option value={null} disabled>
                 No files available.
               </Option>
@@ -635,6 +654,7 @@ class SegmentsView extends React.Component<Props, State> {
                     }}
                   >
                     {allSegments.map((segment) => (
+                      // @ts-expect-error ts-migrate(2740) FIXME: Type '{ children?: ReactNode; key: any; mapId: any... Remove this comment to see the full error message
                       <SegmentListItem
                         key={segment.id}
                         mapId={mapId}
@@ -661,4 +681,5 @@ class SegmentsView extends React.Component<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps, mapDispatchToProps)(SegmentsView);

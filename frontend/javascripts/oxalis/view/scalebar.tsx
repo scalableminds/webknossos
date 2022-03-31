@@ -1,3 +1,4 @@
+// @flow
 import { connect } from "react-redux";
 import * as React from "react";
 import { Tooltip } from "antd";
@@ -118,4 +119,5 @@ const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => 
   };
 };
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Scalebar);

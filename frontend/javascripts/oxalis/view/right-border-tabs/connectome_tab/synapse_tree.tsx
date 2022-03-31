@@ -1,7 +1,10 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { AutoSizer } from "react-virtualized";
 import { Dropdown, Menu, Tag, Tree } from "antd";
 import React from "react";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import { stringToAntdColorPreset } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
@@ -96,10 +99,13 @@ const _convertConnectomeToTreeData = (
   if (connectomeData == null) return null;
   const { agglomerates, synapses } = connectomeData;
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'synapseIds' implicitly has an 'any' typ... Remove this comment to see the full error message
   const convertSynapsesForPartner = (synapseIds, partnerId1, direction): Array<TreeNode> => {
     if (synapseIds == null) return [];
     const partnerSynapses = synapseIds
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'synapseId' implicitly has an 'any' type... Remove this comment to see the full error message
       .map((synapseId) => synapses[synapseId]) // Some synapses might be filtered out
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'synapse' implicitly has an 'any' type.
       .filter((synapse) => synapse != null);
 
     const synapsesByPartner = _.groupBy(partnerSynapses, direction === "in" ? "src" : "dst");
@@ -123,15 +129,18 @@ const _convertConnectomeToTreeData = (
   // Second level is the distinction between Incoming and Outgoing synapses.
   // Third level are the respective partner agglomerates.
   // Fourth level are the respective synapses.
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ key: string; title: string; data: SegmentD... Remove this comment to see the full error message
   return Object.keys(agglomerates).map((partnerId1) => ({
     key: `segment;${partnerId1};`,
     title: `Segment ${partnerId1}`,
     data: segmentData(+partnerId1, 0),
     children: Object.keys(agglomerates[+partnerId1]).map((direction) => ({
       key: `${direction};segment;${partnerId1};`,
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       title: `${directionCaptions[direction]} Synapses`,
       data: noneData,
       children: convertSynapsesForPartner(
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         agglomerates[+partnerId1][direction],
         partnerId1,
         direction,
@@ -167,6 +176,7 @@ class SynapseTree extends React.Component<Props, State> {
   state = {
     activeSegmentDropdownKey: null,
   };
+
   handleSelect = (
     selectedKeys: Array<string>,
     evt: {
@@ -182,6 +192,7 @@ class SynapseTree extends React.Component<Props, State> {
       api.tracing.setCameraPosition(data.position);
     }
   };
+
   handleSegmentDropdownMenuVisibility = (key: string, isVisible: boolean) => {
     if (isVisible) {
       this.setState({
@@ -210,6 +221,7 @@ class SynapseTree extends React.Component<Props, State> {
       </Menu.Item>
     </Menu>
   );
+
   renderNode = (node: TreeNode) => {
     const { data, key } = node;
     if (data.type === "none") return node.title;
@@ -230,6 +242,7 @@ class SynapseTree extends React.Component<Props, State> {
             onVisibleChange={(isVisible) =>
               this.handleSegmentDropdownMenuVisibility(key, isVisible)
             }
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string[]' is not assignable to type '("conte... Remove this comment to see the full error message
             trigger={contextMenuTrigger}
           >
             <span>{node.title}</span>
@@ -279,6 +292,7 @@ class SynapseTree extends React.Component<Props, State> {
         {/* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
          This has a major performance impact. */}
         <AutoSizer defaultHeight={500}>
+          // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'height' implicitly has an 'any' t... Remove this comment to see the full error message
           {({ height, width }) => (
             <div
               style={{
@@ -291,13 +305,18 @@ class SynapseTree extends React.Component<Props, State> {
                 checkStrictly
                 height={height}
                 showLine={showLine}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(selectedKeys: Array<string>, evt: {    sele... Remove this comment to see the full error message
                 onSelect={this.handleSelect} // Although clicking on some nodes triggers an action, the node should not remain selected
                 // as repeated clicks wouldn't retrigger the action, then
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Key[] | und... Remove this comment to see the full error message
                 selectedKeys={null}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: { checked: string[]; }, arg1: { node:... Remove this comment to see the full error message
                 onCheck={onCheck}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: string[]) => void' is not assignable ... Remove this comment to see the full error message
                 onExpand={onExpand}
                 checkedKeys={checkedKeys}
                 expandedKeys={expandedKeys}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(node: TreeNode) => string | JSX.Element' is... Remove this comment to see the full error message
                 titleRender={this.renderNode}
                 treeData={convertConnectomeToTreeData(connectomeData)}
               />

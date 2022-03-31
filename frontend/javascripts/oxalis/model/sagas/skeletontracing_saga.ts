@@ -1,6 +1,8 @@
+// @flow
 import { Modal } from "antd";
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   _actionChannel,
@@ -93,7 +95,9 @@ function* centerActiveNode(action: Action): Saga<void> {
   }
 
   getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     (activeNode) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'suppressAnimation' does not exist on typ... Remove this comment to see the full error message
       if (action.suppressAnimation === true) {
         Store.dispatch(setPositionAction(activeNode.position));
         Store.dispatch(setRotationAction(activeNode.rotation));
@@ -146,6 +150,7 @@ function* watchFailedNodeCreations(): Saga<void> {
   while (true) {
     yield* take("CREATE_NODE");
     const activeTreeId = yield* select(
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
       (state) => enforceSkeletonTracing(state.tracing).activeTreeId,
     );
 
@@ -156,9 +161,11 @@ function* watchFailedNodeCreations(): Saga<void> {
 }
 
 function* watchTracingConsistency(): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_state' implicitly has an 'any' type.
   const state = yield* select((_state) => _state);
   const invalidTreeDetails = [];
 
+  // @ts-expect-error ts-migrate(2483) FIXME: The left-hand side of a 'for...of' statement canno... Remove this comment to see the full error message
   for (const tree: Tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
     const edgeCount = tree.edges.size();
     const nodeCount = tree.nodes.size();
@@ -187,9 +194,11 @@ function* watchTracingConsistency(): Saga<void> {
 }
 
 export function* watchTreeNames(): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_state' implicitly has an 'any' type.
   const state = yield* select((_state) => _state);
 
   // rename trees with an empty/default tree name
+  // @ts-expect-error ts-migrate(2483) FIXME: The left-hand side of a 'for...of' statement canno... Remove this comment to see the full error message
   for (const tree: Tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
@@ -229,9 +238,11 @@ function* getAgglomerateSkeletonTracing(
   mappingName: string,
   agglomerateId: number,
 ): Saga<ServerSkeletonTracing> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
   // If there is a fallbackLayer, request the agglomerate for that instead of the tracing segmentation layer
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
   const effectiveLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerName;
 
   try {
@@ -245,6 +256,7 @@ function* getAgglomerateSkeletonTracing(
     );
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
     if (!parsedTracing.trees) {
       // This check is only for flow to realize that we have a skeleton tracing
       // on our hands.
@@ -255,6 +267,7 @@ function* getAgglomerateSkeletonTracing(
   } catch (e) {
     if (e.messages != null) {
       // Enhance the error message for agglomerates that are too large
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'message' implicitly has an 'any' type.
       const agglomerateTooLargeMessages = e.messages.filter((message) =>
         message.chain != null ? message.chain.includes("too many") : false,
       );
@@ -295,6 +308,7 @@ function handleAgglomerateLoadingError(
 }
 
 function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
   const { layerName, mappingName, agglomerateId } = action;
@@ -363,11 +377,14 @@ function* loadConnectomeAgglomerateSkeletonWithId(
 }
 
 function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
   const { mappingName, agglomerateId } = action;
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
   yield _all(findTreeByName(trees, treeName).map((tree) => put(deleteTreeAction(tree.treeId))));
 }
 
@@ -377,11 +394,13 @@ function* removeConnectomeAgglomerateSkeletonWithId(
   const { layerName, mappingName, agglomerateId } = action;
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
   const skeleton = yield* select(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.localSegmentationData[layerName].connectomeData.skeleton,
   );
   if (skeleton == null) return;
   const { trees } = skeleton;
   yield _all(
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
     findTreeByName(trees, treeName).map((tree) =>
       put(deleteConnectomeTreesAction([tree.treeId], layerName)),
     ),
@@ -532,12 +551,17 @@ export function* diffTrees(
 const diffTreeCache = {};
 export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<UpdateAction> {
   // Try to use the cached version of the diff if available to increase performance
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'prevTrees' does not exist on type '{}'.
   if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'prevTrees' does not exist on type '{}'.
     diffTreeCache.prevTrees = prevTrees;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type '{}'.
     diffTreeCache.trees = trees;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'diff' does not exist on type '{}'.
     diffTreeCache.diff = Array.from(diffTrees(prevTrees, trees));
   }
 
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'diff' does not exist on type '{}'.
   return diffTreeCache.diff;
 }
 export function* diffSkeletonTracing(
@@ -547,6 +571,7 @@ export function* diffSkeletonTracing(
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
+    // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
     yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
 
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {

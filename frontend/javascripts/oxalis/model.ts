@@ -1,3 +1,4 @@
+// @flow
 import "oxalis/model/actions/settings_actions";
 import _ from "lodash";
 import { COMPRESSING_BATCH_SIZE } from "oxalis/model/bucket_data_handling/pushqueue";
@@ -26,9 +27,12 @@ import * as Utils from "libs/utils";
 import { initialize } from "./model_initialization";
 // TODO: Non-reactive
 export class OxalisModel {
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'connectionInfo' has no initializer and i... Remove this comment to see the full error message
   connectionInfo: ConnectionInfo;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
   isMappingSupported: boolean = true;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'maximumTextureCountForLayer' has no init... Remove this comment to see the full error message
   maximumTextureCountForLayer: number;
 
   async fetch(
@@ -221,6 +225,7 @@ export class OxalisModel {
       globalMousePosition,
     );
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pos' implicitly has an 'any' type.
     const getIdForPos = (pos, usableZoomStep) => {
       const id = cube.getDataValue(pos, null, usableZoomStep);
       return {
@@ -313,6 +318,7 @@ export class OxalisModel {
     // This will force a new save try, even if the save saga is currently waiting to retry the save request
     Store.dispatch(saveNowAction());
   };
+
   ensureSavedState = async () => {
     // This function will only return once all state is saved
     // even if new updates are pushed to the save queue during saving

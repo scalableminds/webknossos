@@ -1,6 +1,8 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { Class } from "utility-types";
 const GROW_MULTIPLIER = 1.3;
 
+// @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
 class ResizableBuffer<T extends $TypedArray> {
   elementLength: number;
   capacity: number;
@@ -52,17 +54,21 @@ class ResizableBuffer<T extends $TypedArray> {
     return this.buffer[i];
   }
 
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
   set(element: Array<number> | $TypedArray, i: number): void {
     this.buffer.set(element, i * this.elementLength);
   }
 
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
   push(element: Array<number> | $TypedArray): void {
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
     this.ensureCapacity();
     const { buffer, elementLength, length } = this;
     buffer.set(element, length);
     this.length += elementLength;
   }
 
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
   pushMany(elements: Array<Array<number>> | Array<$TypedArray>): void {
     this.ensureCapacity(this.length + elements.length * this.elementLength);
     // eslint-disable-next-line prefer-const

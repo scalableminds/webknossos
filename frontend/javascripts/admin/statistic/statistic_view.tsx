@@ -1,3 +1,4 @@
+// @flow
 import { Chart } from "react-google-charts";
 import { Row, Col, Spin, Table, Card } from "antd";
 import * as React from "react";
@@ -22,7 +23,9 @@ type State = {
   timeEntries: Array<TimeEntry>;
   isAchievementsLoading: boolean;
   isTimeEntriesLoading: boolean;
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
   startDate: moment$Moment;
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
   endDate: moment$Moment;
 };
 type GoogleCharts = {
@@ -59,6 +62,7 @@ class StatisticView extends React.PureComponent<{}, State> {
     this.fetchTimeEntryData();
   }
 
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
   toTimestamp(date: moment$Moment) {
     return date.unix() * 1000;
   }
@@ -67,7 +71,9 @@ class StatisticView extends React.PureComponent<{}, State> {
     const achievementsURL = "/api/statistics/webknossos?interval=week";
     const achievements = await Request.receiveJSON(achievementsURL);
     achievements.tracingTimes.sort(
+      // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'dateString1' implicitly has an 'a... Remove this comment to see the full error message
       ({ start: dateString1 }, { start: dateString2 }) =>
+        // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
         new Date(dateString2) - new Date(dateString1),
     );
     this.setState({
@@ -90,6 +96,7 @@ class StatisticView extends React.PureComponent<{}, State> {
   selectDataPoint = ({ chartWrapper }: GoogleCharts) => {
     const chart = chartWrapper.getChart();
     const indicies = chart.getSelection()[0];
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'start' does not exist on type 'never'.
     const startDate = this.state.achievements.tracingTimes[indicies.row].start;
     this.setState(
       {
@@ -118,10 +125,13 @@ class StatisticView extends React.PureComponent<{}, State> {
       },
     ];
     const rows = this.state.achievements.tracingTimes.map((item) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingTime' does not exist on type 'nev... Remove this comment to see the full error message
       const duration = Utils.roundTo(moment.duration(item.tracingTime).asHours(), 2);
       return [
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'start' does not exist on type 'never'.
         new Date(item.start),
         duration,
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'start' does not exist on type 'never'.
         `${moment(item.start).format("DD.MM.YYYY")} - ${moment(item.end).format("DD.MM.YYYY")}
         ${duration}h`,
       ];
@@ -137,6 +147,7 @@ class StatisticView extends React.PureComponent<{}, State> {
             <Card title="Overall Weekly Annotation Time">
               <Spin spinning={this.state.isAchievementsLoading} size="large">
                 {rows.length > 0 ? (
+                  // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                   <Chart
                     chartType="LineChart"
                     columns={columns}
@@ -210,15 +221,18 @@ class StatisticView extends React.PureComponent<{}, State> {
               )} - ${this.state.endDate.format("DD.MM.YYYY")}`}
               style={{
                 marginTop: 30,
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
                 marginBotton: 30,
               }}
             >
               <Spin spinning={this.state.isTimeEntriesLoading} size="large">
                 <Table
                   dataSource={this.state.timeEntries}
+                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'user' does not exist on type 'never'.
                   rowKey={(entry) => entry.user.id}
                   style={{
                     marginTop: 30,
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
                     marginBotton: 30,
                   }}
                   pagination={false}
@@ -234,6 +248,7 @@ class StatisticView extends React.PureComponent<{}, State> {
                     dataIndex="tracingTimes"
                     key="tracingTimes"
                     render={(tracingTimes) => {
+                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                       const duration = _.sumBy(tracingTimes, (timeEntry) => timeEntry.tracingTime);
 
                       const minutes = duration / 1000 / 60;

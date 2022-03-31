@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 
 /*
@@ -7,7 +9,6 @@ import { $Keys } from "utility-types";
  *  - a `determineLayout` function which decides which layout type has to be chosen
  */
 import _ from "lodash";
-import type { ExtractReturn } from "libs/type_helpers";
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
 import type { BorderTabType, ControlMode, ViewMode } from "oxalis/constants";
@@ -58,7 +59,9 @@ export const getGroundTruthLayoutRect = () => {
       width = dummyExtent;
     }
   } else {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'offsetHeight' does not exist on type 'El... Remove this comment to see the full error message
     height = mainContainer.offsetHeight;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'offsetWidth' does not exist on type 'Ele... Remove this comment to see the full error message
     width = mainContainer.offsetWidth;
   }
 
@@ -81,6 +84,7 @@ function Tab(
     name,
     component,
     id,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ type: "tab"; name: string; component: stri... Remove this comment to see the full error message
     enableRenderOnDemand,
   };
 }
@@ -115,11 +119,13 @@ Utils.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType])
 });
 const OrthoViewports: Record<$Keys<typeof OrthoViews>, Record<string, any>> = {};
 Object.keys(OrthoViews).forEach((viewportId) => {
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const name = OrthoViewsToName[viewportId];
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 const ArbitraryViewports: Record<$Keys<typeof ArbitraryViews>, Record<string, any>> = {};
 Object.keys(ArbitraryViews).forEach((viewportId) => {
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const name = ArbitraryViewsToName[viewportId];
   ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
@@ -144,6 +150,7 @@ function buildTabsets(setsOfTabs: Array<Array<TabNode>>): Array<TabsetNode> {
   return tabsets;
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'side' implicitly has an 'any' type.
 function buildBorder(side, tabset: Array<TabNode>, width: number, isBorderOpen: boolean): Border {
   const buildTabset = Tabset(tabset, 100);
   const border: Border = {
@@ -158,6 +165,7 @@ function buildBorder(side, tabset: Array<TabNode>, width: number, isBorderOpen: 
         name: "container",
         id: `${side}-border-tab-container`,
         component: "sub",
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ type: "tab"; name: string; id: string; com... Remove this comment to see the full error message
         config: {
           model: {
             global: subLayoutGlobalSettings,
@@ -186,6 +194,7 @@ function buildMainLayout(rowsOfSetOfTabs: Array<Array<Array<TabNode>>>): RowNode
   return mainLayout;
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'settings' implicitly has an 'any' type.
 function buildLayout(settings, borders, mainLayout): ModelConfig {
   return {
     global: settings,
@@ -236,15 +245,21 @@ const _getDefaultLayouts = () => {
     borderIsOpenByDefault,
   );
   const OrthoMainLayout = buildMainLayout([
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Record<string, any>' is missing the followin... Remove this comment to see the full error message
     [[OrthoViewports.PLANE_XY], [OrthoViewports.PLANE_XZ]],
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>' is not assignable to ty... Remove this comment to see the full error message
     [[OrthoViewports.PLANE_YZ], [OrthoViewports.TDView]],
   ]);
   const OrthoMainLayout2d = buildMainLayout([
     [
       [
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>' is not assignable to ty... Remove this comment to see the full error message
         OrthoViewports.PLANE_XY,
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>' is not assignable to ty... Remove this comment to see the full error message
         OrthoViewports.PLANE_YZ,
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>' is not assignable to ty... Remove this comment to see the full error message
         OrthoViewports.PLANE_XZ,
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>' is not assignable to ty... Remove this comment to see the full error message
         OrthoViewports.TDView,
       ],
     ],
@@ -267,7 +282,9 @@ const _getDefaultLayouts = () => {
     ? [[[OrthoViewports.TDView]]]
     : [];
   const ArbitraryMainLayout = buildMainLayout([
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>' is not assignable to ty... Remove this comment to see the full error message
     [[ArbitraryViewports.arbitraryViewport]],
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>[][]' is not assignable t... Remove this comment to see the full error message
     ...eventual3DViewportForArbitrary,
   ]);
 
@@ -295,8 +312,10 @@ const _getDefaultLayouts = () => {
 const getDefaultLayouts = _.memoize(_getDefaultLayouts);
 
 export const resetDefaultLayouts = () => {
+  // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
   getDefaultLayouts.cache.clear();
 };
+// @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'ExtractReturn'.
 type Layout = $Keys<ExtractReturn<typeof _getDefaultLayouts>>;
 export const getCurrentDefaultLayoutConfig = () => {
   resetDefaultLayouts();

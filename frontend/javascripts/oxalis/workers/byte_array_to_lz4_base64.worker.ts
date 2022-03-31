@@ -1,4 +1,6 @@
+// @flow
 import Base64 from "base64-js";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'lz4j... Remove this comment to see the full error message
 import lz4 from "lz4js";
 import { expose } from "./comlink_wrapper";
 
@@ -16,4 +18,4 @@ export function byteArrayToLz4Base64(byteArray: Uint8Array): string {
   const compressed = compressLz4Block(byteArray);
   return Base64.fromByteArray(compressed);
 }
-export default expose<typeof byteArrayToLz4Base64>(byteArrayToLz4Base64);
+export default byteArrayToLz4Base64;

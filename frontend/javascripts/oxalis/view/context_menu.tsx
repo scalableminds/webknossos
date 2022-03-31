@@ -2,6 +2,7 @@ import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Menu, notification, Tooltip, Popover, Input } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
 import type { Node } from "react";
 import React, { useEffect } from "react";
 import type {
@@ -94,12 +95,16 @@ type DispatchProps = {
   hideTree: (arg0: number) => void;
   createTree: () => void;
   hideBoundingBox: (arg0: number) => void;
+  // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'setActiveCell'.
   setActiveCell: (arg0: number) => void;
+  // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'addNewBoundingBox'.
   addNewBoundingBox: (arg0: Vector3) => void;
   setBoundingBoxColor: (arg0: number, arg1: Vector3) => void;
   setBoundingBoxName: (arg0: number, arg1: string) => void;
+  // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'addNewBoundingBox'.
   addNewBoundingBox: (arg0: Vector3) => void;
   deleteBoundingBox: (arg0: number) => void;
+  // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'setActiveCell'.
   setActiveCell: (arg0: number, somePosition?: Vector3) => void;
   createBranchPoint: (arg0: number, arg1: number) => void;
   deleteBranchpointById: (arg0: number, arg1: number) => void;
@@ -119,6 +124,7 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps & DispatchProps;
 type PropsWithRef = Props & {
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'React$ElementRef'.
   inputRef: React$ElementRef<any>;
 };
 type NodeContextMenuOptionsProps = Props & {
@@ -134,6 +140,7 @@ type NoNodeContextMenuProps = Props & {
   activeTool: AnnotationTool;
   infoRows: Array<React.ReactNode>;
 };
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof MenuItem' is not assignab... Remove this comment to see the full error message
 const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
 
 function copyIconWithTooltip(value: string | number, title: string) {
@@ -287,6 +294,7 @@ function shortcutBuilder(shortcuts: Array<string>): Node {
   );
 }
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'clickedTree' implicitly has an 'any' ty... Remove this comment to see the full error message
 function getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispatch) {
   const seeds = Array.from(clickedTree.nodes.values());
 
@@ -315,7 +323,9 @@ function getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispa
         </Menu.Item>
 
         {userBoundingBoxes
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bbox' implicitly has an 'any' type.
           .filter((bbox) => isBoundingBoxUsableForMinCut(bbox.boundingBox, seeds))
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bbox' implicitly has an 'any' type.
           .map((bbox) => (
             <Menu.Item
               key={bbox.id}
@@ -354,6 +364,7 @@ function NodeContextMenuOptions({
   const { activeTreeId, trees, activeNodeId } = skeletonTracing;
   const clickedTree = findTreeByNodeId(trees, clickedNodeId).get();
   const areInSameTree = activeTreeId === clickedTree.treeId;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bp' implicitly has an 'any' type.
   const isBranchpoint = clickedTree.branchPoints.find((bp) => bp.nodeId === clickedNodeId) != null;
   const isTheSameNode = activeNodeId === clickedNodeId;
   let areNodesConnected = false;
@@ -361,6 +372,7 @@ function NodeContextMenuOptions({
   if (areInSameTree && !isTheSameNode && activeNodeId != null) {
     const activeTreeEdges = clickedTree.edges.getEdgesForNode(activeNodeId);
     areNodesConnected = activeTreeEdges.some(
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edge' implicitly has an 'any' type.
       (edge) => edge.source === clickedNodeId || edge.target === clickedNodeId,
     );
   }
@@ -484,9 +496,11 @@ function getBoundingBoxMenuOptions({
   }
 
   const setBBoxName = (evt: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     setBoundingBoxName(clickedBoundingBoxId, evt.target.value);
   };
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
   const preventContextMenuFromClosing = (evt) => {
     evt.stopPropagation();
   };
@@ -547,6 +561,7 @@ function getBoundingBoxMenuOptions({
             opacity: 0,
           }}
           onChange={(evt: React.SyntheticEvent) => {
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
             let color = hexToRgb(evt.target.value);
             color = color.map((colorPart) => colorPart / 255) as any as Vector3;
             setBoundingBoxColor(clickedBoundingBoxId, color);
@@ -669,6 +684,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     currentConnectomeFile != null ? currentConnectomeFile.mappingName : undefined;
   const loadSynapsesItem = (
     <MenuItemWithMappingActivationConfirmation
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string | Element; className: str... Remove this comment to see the full error message
       className="node-context-menu-item"
       key="load-synapses"
       disabled={!isConnectomeMappingEnabled.value}
@@ -696,6 +712,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     <MenuItemWithMappingActivationConfirmation
       key="load-precomputed-mesh"
       onClick={loadPrecomputedMesh}
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; key: string; onClick: ()... Remove this comment to see the full error message
       disabled={!currentMeshFile}
       mappingName={meshFileMappingName}
       descriptor="mesh file"
@@ -719,6 +736,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
             <Menu.Item
               key="select-cell"
               onClick={() => {
+                // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 2.
                 setActiveCell(segmentIdAtPosition, globalPosition);
               }}
             >
@@ -747,8 +765,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   let allActions = [];
 
   if (isSkeletonToolActive) {
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
   } else if (isBoundingBoxToolActive) {
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
   } else {
     allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
@@ -789,6 +809,7 @@ function ContextMenuContainer(props: Props) {
   const inputRef = React.useRef(null);
   React.useEffect(() => {
     if (inputRef.current != null) {
+      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       inputRef.current.focus();
     }
   }, [inputRef.current]);
@@ -861,6 +882,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     let nodeContextMenuNode = null;
 
     if (skeletonTracing != null && maybeClickedNodeId != null) {
+      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       getNodeAndTree(skeletonTracing, maybeClickedNodeId).map(([tree, node]) => {
         nodeContextMenuNode = node;
         nodeContextMenuTree = tree;
@@ -868,6 +890,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     }
 
     const positionToMeasureDistanceTo =
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
       nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
     const activeNode =
       activeNodeId != null && skeletonTracing != null
@@ -883,6 +906,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
           ]
         : null;
     const nodePositionAsString =
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
       nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
     const segmentIdAtPosition = getSegmentIdForPosition(globalPosition);
     const infoRows = [];
@@ -952,6 +976,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     // for the following two expressions, since this breaks
     // antd's internal population of the correct class names
     // for the menu.
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Element | null' is not assignable to type 'E... Remove this comment to see the full error message
     overlay =
       maybeClickedNodeId != null
         ? NodeContextMenuOptions({
@@ -961,6 +986,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
             ...props,
           })
         : NoNodeContextMenuOptions({
+            // @ts-expect-error ts-migrate(2783) FIXME: 'activeTool' is specified more than once, so this ... Remove this comment to see the full error message
             activeTool,
             segmentIdAtPosition,
             infoRows,
@@ -979,6 +1005,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
             overlayClassName="dropdown-overlay-container-for-context-menu"
             visible={contextMenuPosition != null}
             getPopupContainer={() => inputRef.current}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: Element; overl... Remove this comment to see the full error message
             destroyPopupOnHide
           >
             <div />
@@ -1088,6 +1115,7 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,

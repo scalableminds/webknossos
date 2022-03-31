@@ -1,8 +1,10 @@
+// @flow
 import { Alert, Layout, Tooltip } from "antd";
 import { SettingOutlined, WarningFilled } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
 import _ from "lodash";
@@ -126,13 +128,16 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     // Replace entire document with loading message
+    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     document.body.removeChild(document.getElementById("main-container"));
     window.removeEventListener("resize", this.debouncedOnLayoutChange);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
     const refreshMessage = document.createElement("p");
     refreshMessage.innerHTML = "Reloading webKnossos...";
     refreshMessage.style.position = "absolute";
     refreshMessage.style.top = "10px";
     refreshMessage.style.left = "10px";
+    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     document.body.appendChild(refreshMessage);
     // Do a complete page refresh to make sure all tracing data is garbage
     // collected and all events are canceled, etc.
@@ -154,6 +159,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     });
     initializeInputCatcherSizes();
   };
+
   showContextMenuAt = (
     xPos: number,
     yPos: number,
@@ -178,6 +184,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       0,
     );
   };
+
   hideContextMenu = () => {
     this.setState({
       contextMenuPosition: null,
@@ -187,8 +194,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       contextMenuViewport: null,
     });
   };
+
   onLayoutChange = (model?: Record<string, any>, layoutName?: string) => {
     recalculateInputCatcherSizes();
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
     window.needsRerender = true;
 
     if (model != null) {
@@ -201,6 +210,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.saveCurrentLayout(layoutName);
     }
   };
+
   // eslint-disable-next-line react/sort-comp
   debouncedOnLayoutChange = _.debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
   saveCurrentLayout = (layoutName?: string) => {
@@ -211,6 +221,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     );
     storeLayoutConfig(this.state.model, layoutKey, layoutName || this.state.activeLayoutName);
   };
+
   getTabTitle = () => {
     const getDescriptors = () => {
       switch (this.state.status) {
@@ -228,8 +239,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     const titleArray: Array<string> = [...getDescriptors(), "webKnossos"];
     return titleArray.filter((elem) => elem).join(" | ");
   };
+
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layoutKey' implicitly has an 'any' type... Remove this comment to see the full error message
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
+
   toggleLeftBorder = () => {
     layoutEmitter.emit("toggleBorder", "left");
   };
@@ -310,6 +324,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   }}
                 >
                   <ButtonComponent
+                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     className={isLeftBorderOpen ? "highlight-togglable-button" : ""}
                     onClick={this.toggleLeftBorder}
                     shape="circle"
@@ -328,6 +343,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                       storedLayoutNamesForView: currentLayoutNames,
                       activeLayout: activeLayoutName,
                       layoutKey: layoutType,
+                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layoutName' implicitly has an 'any' typ... Remove this comment to see the full error message
                       setCurrentLayout: (layoutName) => {
                         this.setState({
                           activeLayoutName: layoutName,
@@ -427,7 +443,9 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TracingLayoutView' is not... Remove this comment to see the full error message
 )(withRouter(TracingLayoutView));

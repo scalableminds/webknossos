@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $PropertyType, $Call } from "utility-types";
 import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { Vector3 } from "oxalis/constants";

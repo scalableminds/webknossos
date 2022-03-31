@@ -1,4 +1,7 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { Table, Spin, Button, Input, Modal, Alert } from "antd";
@@ -59,9 +62,11 @@ class TeamListView extends React.PureComponent<Props, State> {
 
   handleSearch = (event: React.SyntheticEvent): void => {
     this.setState({
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
+
   deleteTeam = (team: APITeam) => {
     Modal.confirm({
       title: messages["team.delete"],
@@ -84,6 +89,7 @@ class TeamListView extends React.PureComponent<Props, State> {
       },
     });
   };
+
   createTeam = (newTeam: APITeam) => {
     this.setState((prevState) => ({
       isTeamCreationModalVisible: false,
@@ -120,6 +126,7 @@ class TeamListView extends React.PureComponent<Props, State> {
       <div className="container">
         <div
           style={{
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTag: number; }' is not assignable to... Remove this comment to see the full error message
             marginTag: 20,
           }}
         >
@@ -167,6 +174,7 @@ class TeamListView extends React.PureComponent<Props, State> {
               }}
               style={{
                 marginTop: 30,
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
                 marginBotton: 30,
               }}
             >
@@ -189,6 +197,7 @@ class TeamListView extends React.PureComponent<Props, State> {
             </Table>
           </Spin>
           <CreateTeamModal
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ teams: never[]; isVisible: boolean; onOk: ... Remove this comment to see the full error message
             teams={this.state.teams}
             isVisible={this.state.isTeamCreationModalVisible}
             onOk={this.createTeam}
@@ -204,4 +213,5 @@ class TeamListView extends React.PureComponent<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TeamListView' is not assi... Remove this comment to see the full error message
 export default withRouter(TeamListView);

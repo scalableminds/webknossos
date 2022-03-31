@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import type { Tree, Node, Edge, OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
@@ -35,11 +36,17 @@ type BufferCollection = {
 type BufferOperation = (position: BufferPosition) => Array<typeof THREE.BufferAttribute>;
 const NodeBufferHelperType = {
   setAttributes(geometry: typeof THREE.BufferGeometry, capacity: number): void {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'ty... Remove this comment to see the full error message
     geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'ty... Remove this comment to see the full error message
     geometry.setAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'ty... Remove this comment to see the full error message
     geometry.setAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'ty... Remove this comment to see the full error message
     geometry.setAttribute("isCommented", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'ty... Remove this comment to see the full error message
     geometry.setAttribute("nodeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'ty... Remove this comment to see the full error message
     geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
   },
 
@@ -47,6 +54,7 @@ const NodeBufferHelperType = {
     geometry: typeof THREE.BufferGeometry,
     material: typeof THREE.RawShaderMaterial,
   ): typeof THREE.Mesh {
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Points' is missing the following properties ... Remove this comment to see the full error message
     return new THREE.Points(geometry, material);
   },
 
@@ -54,7 +62,9 @@ const NodeBufferHelperType = {
 };
 const EdgeBufferHelperType = {
   setAttributes(geometry: typeof THREE.BufferGeometry, capacity: number): void {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'ty... Remove this comment to see the full error message
     geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 6), 3));
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'ty... Remove this comment to see the full error message
     geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
   },
 
@@ -62,6 +72,7 @@ const EdgeBufferHelperType = {
     geometry: typeof THREE.BufferGeometry,
     material: typeof THREE.LineBasicMaterial,
   ): typeof THREE.Mesh {
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'LineSegments' is missing the following prope... Remove this comment to see the full error message
     return new THREE.LineSegments(geometry, material);
   },
 
@@ -80,9 +91,13 @@ const EdgeBufferHelperType = {
 class Skeleton {
   rootGroup: typeof THREE.Group;
   pickingNode: typeof THREE.Object3D;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'prevTracing' has no initializer and is n... Remove this comment to see the full error message
   prevTracing: SkeletonTracing;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'nodes' has no initializer and is not def... Remove this comment to see the full error message
   nodes: BufferCollection;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'edges' has no initializer and is not def... Remove this comment to see the full error message
   edges: BufferCollection;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'treeColorTexture' has no initializer and... Remove this comment to see the full error message
   treeColorTexture: typeof THREE.DataTexture;
   supportsPicking: boolean;
   stopStoreListening: () => void;
@@ -92,12 +107,16 @@ class Skeleton {
     supportsPicking: boolean,
   ) {
     this.supportsPicking = supportsPicking;
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Group' is missing the following properties f... Remove this comment to see the full error message
     this.rootGroup = new THREE.Group();
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Object3D' is missing the following propertie... Remove this comment to see the full error message
     this.pickingNode = new THREE.Object3D();
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
     skeletonTracingSelectorFn(Store.getState()).map((skeletonTracing) => {
       this.reset(skeletonTracing);
     });
     this.stopStoreListening = Store.subscribe(() => {
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
       skeletonTracingSelectorFn(Store.getState()).map((skeletonTracing) => {
         if (skeletonTracing.tracingId !== this.prevTracing.tracingId) {
           this.reset(skeletonTracing);
@@ -114,7 +133,9 @@ class Skeleton {
 
   reset(skeletonTracing: SkeletonTracing) {
     // Remove all existing geometries
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof G... Remove this comment to see the full error message
     this.rootGroup.remove(...this.rootGroup.children);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof O... Remove this comment to see the full error message
     this.pickingNode.remove(...this.pickingNode.children);
     const { trees } = skeletonTracing;
 
@@ -122,6 +143,7 @@ class Skeleton {
 
     const edgeCount = _.sum(_.map(trees, (tree) => tree.edges.size()));
 
+    // @ts-expect-error ts-migrate(2739) FIXME: Type 'DataTexture' is missing the following proper... Remove this comment to see the full error message
     this.treeColorTexture = new THREE.DataTexture(
       new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
       COLOR_TEXTURE_WIDTH,
@@ -135,12 +157,14 @@ class Skeleton {
     // delete actual GPU buffers in case there were any
     if (this.nodes != null) {
       for (const nodes of this.nodes.buffers) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'dispose' does not exist on type 'typeof ... Remove this comment to see the full error message
         nodes.geometry.dispose();
       }
     }
 
     if (this.edges != null) {
       for (const edges of this.edges.buffers) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'dispose' does not exist on type 'typeof ... Remove this comment to see the full error message
         edges.geometry.dispose();
       }
     }
@@ -156,10 +180,12 @@ class Skeleton {
 
     // compute bounding sphere to make ThreeJS happy
     for (const nodes of this.nodes.buffers) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'computeBoundingSphere' does not exist on... Remove this comment to see the full error message
       nodes.geometry.computeBoundingSphere();
     }
 
     for (const edges of this.edges.buffers) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'computeBoundingSphere' does not exist on... Remove this comment to see the full error message
       edges.geometry.computeBoundingSphere();
     }
 
@@ -191,18 +217,24 @@ class Skeleton {
     helper: BufferHelper,
   ): Buffer {
     const geometry = new THREE.BufferGeometry();
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'BufferGeometry' is not assignabl... Remove this comment to see the full error message
     helper.setAttributes(geometry, capacity);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'BufferGeometry' is not assignabl... Remove this comment to see the full error message
     const mesh = helper.buildMesh(geometry, material);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Grou... Remove this comment to see the full error message
     this.rootGroup.add(mesh);
 
     if (helper.supportsPicking) {
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'BufferGeometry' is not assignabl... Remove this comment to see the full error message
       const pickingMesh = helper.buildMesh(geometry, material);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Obje... Remove this comment to see the full error message
       this.pickingNode.add(pickingMesh);
     }
 
     return {
       capacity,
       nextIndex: 0,
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'BufferGeometry' is not assignable to type 't... Remove this comment to see the full error message
       geometry,
       mesh,
     };
@@ -231,6 +263,7 @@ class Skeleton {
     const changedAttributes = createFunc(bufferPosition);
 
     for (const attribute of changedAttributes) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsUpdate' does not exist on type 'typ... Remove this comment to see the full error message
       attribute.needsUpdate = true;
     }
   }
@@ -248,6 +281,7 @@ class Skeleton {
       const changedAttributes = deleteFunc(bufferPosition);
 
       for (const attribute of changedAttributes) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsUpdate' does not exist on type 'typ... Remove this comment to see the full error message
         attribute.needsUpdate = true;
       }
 
@@ -271,6 +305,7 @@ class Skeleton {
       const changedAttributes = updateFunc(bufferPosition);
 
       for (const attribute of changedAttributes) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsUpdate' does not exist on type 'typ... Remove this comment to see the full error message
         attribute.needsUpdate = true;
       }
     } else {
@@ -395,10 +430,12 @@ class Skeleton {
     if (diff.length > 0) {
       // compute bounding sphere to make ThreeJS happy
       for (const nodes of this.nodes.buffers) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'computeBoundingSphere' does not exist on... Remove this comment to see the full error message
         nodes.geometry.computeBoundingSphere();
       }
 
       for (const edges of this.edges.buffers) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'computeBoundingSphere' does not exist on... Remove this comment to see the full error message
         edges.geometry.computeBoundingSphere();
       }
     }
@@ -409,14 +446,17 @@ class Skeleton {
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
     let { activeTreeId } = skeletonTracing;
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'typeof... Remove this comment to see the full error message
     const nodeUniforms = this.nodes.material.uniforms;
     nodeUniforms.planeZoomFactor.value = getZoomValue(state.flycam);
     nodeUniforms.overrideParticleSize.value = particleSize;
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
     nodeUniforms.activeTreeId.value = activeTreeId;
     nodeUniforms.activeNodeId.value = activeNodeId;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'typeof... Remove this comment to see the full error message
     const edgeUniforms = this.edges.material.uniforms;
     edgeUniforms.activeTreeId.value = activeTreeId;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'linewidth' does not exist on type 'typeo... Remove this comment to see the full error message
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
     this.prevTracing = skeletonTracing;
   }
@@ -430,15 +470,21 @@ class Skeleton {
   }
 
   startPicking(isTouch: boolean): typeof THREE.Object3D {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrixAutoUpdate' does not exist on type... Remove this comment to see the full error message
     this.pickingNode.matrixAutoUpdate = false;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrix' does not exist on type 'typeof O... Remove this comment to see the full error message
     this.pickingNode.matrix.copy(this.rootGroup.matrixWorld);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'typeof... Remove this comment to see the full error message
     this.nodes.material.uniforms.isTouch.value = isTouch ? 1 : 0;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'typeof... Remove this comment to see the full error message
     this.nodes.material.uniforms.isPicking.value = 1;
     return this.pickingNode;
   }
 
   stopPicking(): void {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'typeof... Remove this comment to see the full error message
     this.nodes.material.uniforms.isTouch.value = 0;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'uniforms' does not exist on type 'typeof... Remove this comment to see the full error message
     this.nodes.material.uniforms.isPicking.value = 0;
   }
 
@@ -484,6 +530,7 @@ class Skeleton {
   createNode(treeId: number, node: Node) {
     const id = this.combineIds(node.id, treeId);
     this.create(id, this.nodes, ({ buffer, index }) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
       const { attributes } = buffer.geometry;
       attributes.position.set(node.position, index * 3);
       attributes.radius.array[index] = node.radius;
@@ -501,6 +548,7 @@ class Skeleton {
   deleteNode(treeId: number, nodeId: number) {
     const id = this.combineIds(nodeId, treeId);
     this.delete(id, this.nodes, ({ buffer, index }) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
       const attribute = buffer.geometry.attributes.type;
       attribute.array[index] = NodeTypes.INVALID;
       return [attribute];
@@ -513,6 +561,7 @@ class Skeleton {
   updateNodeRadius(treeId: number, nodeId: number, radius: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
       const attribute = buffer.geometry.attributes.radius;
       attribute.array[index] = radius;
       return [attribute];
@@ -526,6 +575,7 @@ class Skeleton {
     const { treeId } = tree;
     const bufferNodeId = this.combineIds(nodeId, treeId);
     this.update(bufferNodeId, this.nodes, ({ buffer, index }) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
       const attribute = buffer.geometry.attributes.position;
       attribute.set(position, index * 3);
       return [attribute];
@@ -537,6 +587,7 @@ class Skeleton {
       const indexOffset = isIngoingEdge ? 3 : 0;
       const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
       this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
         const positionAttribute = buffer.geometry.attributes.position;
         positionAttribute.set(position, index * 6 + indexOffset);
         return [positionAttribute];
@@ -559,6 +610,7 @@ class Skeleton {
   updateNodeType(treeId: number, nodeId: number, type: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
       const attribute = buffer.geometry.attributes.type;
       attribute.array[index] = type;
       return [attribute];
@@ -568,6 +620,7 @@ class Skeleton {
   updateIsCommented(treeId: number, nodeId: number, isCommented: boolean) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
       const attribute = buffer.geometry.attributes.isCommented;
       attribute.array[index] = isCommented;
       return [attribute];
@@ -580,7 +633,9 @@ class Skeleton {
   createEdge(treeId: number, source: Node, target: Node) {
     const id = this.combineIds(treeId, source.id, target.id);
     this.create(id, this.edges, ({ buffer, index }) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
       const positionAttribute = buffer.geometry.attributes.position;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
       const treeIdAttribute = buffer.geometry.attributes.treeId;
       positionAttribute.set(source.position, index * 6);
       positionAttribute.set(target.position, index * 6 + 3);
@@ -596,6 +651,7 @@ class Skeleton {
   deleteEdge(treeId: number, sourceId: number, targetId: number) {
     const id = this.combineIds(treeId, sourceId, targetId);
     this.delete(id, this.edges, ({ buffer, index }) => {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'type... Remove this comment to see the full error message
       const attribute = buffer.geometry.attributes.position;
       attribute.set([0, 0, 0, 0, 0, 0], index * 6);
       return [attribute];
@@ -608,7 +664,9 @@ class Skeleton {
    */
   updateTreeColor(treeId: number, color: Vector3, isVisible: boolean = true) {
     const rgba = this.getTreeRGBA(color, isVisible);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'image' does not exist on type 'typeof Da... Remove this comment to see the full error message
     this.treeColorTexture.image.data.set(rgba, treeId * 4);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsUpdate' does not exist on type 'typ... Remove this comment to see the full error message
     this.treeColorTexture.needsUpdate = true;
   }
 

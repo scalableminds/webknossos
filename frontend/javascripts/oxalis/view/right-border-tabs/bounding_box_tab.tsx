@@ -1,3 +1,4 @@
+// @flow
 import { Button, Form, Modal, Tooltip } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
@@ -36,11 +37,16 @@ export function getBBoxNameForPartialFloodfill(
 }
 
 function StartGlobalizeFloodfillsModal({
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'onStartGlobalization' implicitly ... Remove this comment to see the full error message
   onStartGlobalization,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'handleClose' implicitly has an 'a... Remove this comment to see the full error message
   handleClose,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeUser' implicitly has an 'an... Remove this comment to see the full error message
   activeUser,
+  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'initialName' implicitly has an 'a... Remove this comment to see the full error message
   initialName,
 }) {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleSubmit = async (formValues) => {
     try {
       await onStartGlobalization(formValues.name);
@@ -102,8 +108,11 @@ function StartGlobalizeFloodfillsModal({
 export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
   const [isGlobalizeFloodfillsModalVisible, setIsGlobalizeFloodfillsModalVisible] = useState(false);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
   const tracing = useSelector((state) => state.tracing);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'Default... Remove this comment to see the full error message
   const dataset = useSelector((state) => state.dataset);
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeUser' does not exist on type 'Defa... Remove this comment to see the full error message
   const activeUser = useSelector((state) => state.activeUser);
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const { userBoundingBoxes } = getSomeTracing(tracing);
@@ -160,6 +169,7 @@ export default function BoundingBoxTab() {
       min[1] + (max[1] - min[1]) / 2,
       min[2] + (max[2] - min[2]) / 2,
     ];
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
     setPosition(center);
   }
 
@@ -169,6 +179,7 @@ export default function BoundingBoxTab() {
     activeSegmentationTracingLayer != null &&
     userBoundingBoxes.some((bbox) => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null);
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newName' implicitly has an 'any' type.
   const onGlobalizeFloodfills = (newName) => {
     if (activeSegmentationTracingLayer == null) {
       return;
@@ -225,7 +236,9 @@ export default function BoundingBoxTab() {
             isVisible={bb.isVisible}
             onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
             onDelete={_.partial(deleteBoundingBox, bb.id)}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'Function1<SetStateAction<null>, void>' is no... Remove this comment to see the full error message
             onExport={
+              // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'UserBoundingBox' is not assignab... Remove this comment to see the full error message
               dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
             }
             onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
@@ -258,6 +271,7 @@ export default function BoundingBoxTab() {
         <ExportBoundingBoxModal
           dataset={dataset}
           tracing={tracing}
+          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           boundingBox={selectedBoundingBoxForExport.boundingBox}
           handleClose={() => setSelectedBoundingBoxForExport(null)}
         />

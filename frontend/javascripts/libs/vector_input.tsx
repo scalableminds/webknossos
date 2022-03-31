@@ -17,6 +17,7 @@ type State = {
 }; // Accepts both a string or a VectorX as input and always outputs a valid VectorX
 
 class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BaseProps<T>, State> {
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'defaultValue' has no initializer and is ... Remove this comment to see the full error message
   defaultValue: T;
   static defaultProps = {
     value: "",
@@ -96,6 +97,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
     });
   };
   handleChange = (evt: React.SyntheticEvent) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const text = evt.target.value;
     // only numbers, commas and whitespace is allowed
     const isValidInput = this.props.allowDecimals
@@ -116,6 +118,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
   };
 
   render() {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type 'Omit<Read... Remove this comment to see the full error message
     const { style, autoSize, ...props } = _.omit(this.props, [
       "onChange",
       "value",

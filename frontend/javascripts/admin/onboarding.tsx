@@ -12,9 +12,11 @@ import {
   CustomerServiceOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
 import type { Node } from "react";
 import React from "react";
 import type { APIUser, APIDataStore } from "types/api_flow_types";
@@ -92,6 +94,7 @@ function StepHeader({
   );
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'icon' implicitly has an 'any' typ... Remove this comment to see the full error message
 function FeatureCard({ icon, header, children }) {
   const columnSpan = {
     xs: 24,
@@ -285,9 +288,11 @@ export class InviteUsersModal extends React.Component<
   }
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'onComplete' implicitly has an 'an... Remove this comment to see the full error message
 const OrganizationForm = ({ onComplete }) => {
   const [form] = Form.useForm();
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'values' implicitly has an 'any' type.
   const onFinish = (values) => {
     onComplete(values.organizationName);
   };
@@ -301,6 +306,7 @@ const OrganizationForm = ({ onComplete }) => {
       }}
     >
       <Row
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; type: string; justify... Remove this comment to see the full error message
         type="flex"
         justify="center"
         style={{
@@ -404,6 +410,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       icon={<i className="far fa-building icon-big" />}
     >
       <OrganizationForm
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'organizationName' implicitly has an 'an... Remove this comment to see the full error message
         onComplete={(organizationName) => {
           this.setState({
             organizationName,
@@ -661,6 +668,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <>
         <div className="onboarding">
           <Row
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
             type="flex"
             justify="center"
             style={{
@@ -689,6 +697,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             }}
           >
             <Row
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
               type="flex"
               justify="center"
               style={{
@@ -714,4 +723,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<StateProps, {}, _, _, _, _>(mapStateToProps)(withRouter(OnboardingView));

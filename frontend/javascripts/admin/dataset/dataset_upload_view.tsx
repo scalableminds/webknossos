@@ -1,3 +1,4 @@
+// @flow
 import {
   Popover,
   Avatar,
@@ -16,10 +17,12 @@ import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from 
 import { connect } from "react-redux";
 import React from "react";
 import moment from "moment";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
 import classnames from "classnames";
 import _ from "lodash";
 import { useDropzone } from "react-dropzone";
 import ErrorHandling from "libs/error_handling";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
@@ -37,6 +40,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
+// @ts-expect-error ts-migrate(2306) FIXME: File '/Users/therold/Programming/scalableminds/web... Remove this comment to see the full error message
 import { createReader, BlobReader } from "zip-js-webpack";
 import {
   CardContainer,
@@ -151,8 +155,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     resumableUpload: {},
     datastoreUrl: "",
   };
+
   unblock: ((...args: Array<any>) => any) | null | undefined;
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
   blockTimeoutId: TimeoutID | null | undefined;
+  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
   formRef = React.createRef<typeof FormInstance>();
 
   componentDidMount() {
@@ -208,6 +215,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     return uploadableDatastores.find((ds) => ds.url === url);
   }
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   handleSubmit = async (formValues) => {
     const { activeUser } = this.props;
 
@@ -217,6 +225,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         isUploading: true,
       });
 
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newLocation' implicitly has an 'any' ty... Remove this comment to see the full error message
       const beforeUnload = (newLocation, action) => {
         // Only show the prompt if this is a proper beforeUnload event from the browser
         // or the pathname changed
@@ -229,6 +238,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
             this.blockTimeoutId = window.setTimeout(() => {
               // restore the event handler in case a user chose to stay on the page
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
               window.onbeforeunload = beforeUnload;
             }, 500);
             return messages["dataset.leave_during_upload"];
@@ -239,6 +249,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       };
 
       this.unblock = this.props.history.block(beforeUnload);
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
       window.onbeforeunload = beforeUnload;
       const datasetId: APIDatasetId = {
         name: formValues.name,
@@ -259,6 +270,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         name: datasetId.name,
         totalFileCount: formValues.zipFile.length,
         layersToLink: [],
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'team' implicitly has an 'any' type.
         initialTeams: formValues.initialTeams.map((team) => team.id),
       };
       const datastoreUrl = formValues.datastoreUrl;
@@ -362,6 +374,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload.on("filesAdded", () => {
         resumableUpload.upload();
       });
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
       resumableUpload.on("fileError", (file, message) => {
         Toast.error(message);
         this.setState({
@@ -383,8 +396,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload.addFiles(formValues.zipFile);
     }
   };
+
   cancelUpload = async () => {
     const { uploadId, resumableUpload, datastoreUrl } = this.state;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'pause' does not exist on type '{}'.
     resumableUpload.pause();
     const shouldCancel = await confirmAsync({
       title:
@@ -394,10 +409,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     });
 
     if (!shouldCancel) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'upload' does not exist on type '{}'.
       resumableUpload.upload();
       return;
     }
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'cancel' does not exist on type '{}'.
     resumableUpload.cancel();
     await cancelDatasetUpload(datastoreUrl, {
       uploadId,
@@ -410,6 +427,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     });
     Toast.success(messages["dataset.upload_cancel"]);
   };
+
   getUploadModal = () => {
     const form = this.formRef.current;
 
@@ -464,6 +482,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       </Modal>
     );
   };
+
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'files' implicitly has an 'any' type.
   validateFiles = (files) => {
     if (files.length === 0) {
       return;
@@ -483,8 +503,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       if (fileExtension === "zip") {
         createReader(
           new BlobReader(file),
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'reader' implicitly has an 'any' type.
           (reader) => {
+            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'entries' implicitly has an 'any' type.
             reader.getEntries((entries) => {
+              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'entry' implicitly has an 'any' type.
               const wkwFile = entries.find((entry) =>
                 Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
               );
@@ -524,6 +547,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     );
     this.handleNeedsConversionInfo(needsConversion);
   };
+
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'needsConversion' implicitly has an 'any... Remove this comment to see the full error message
   handleNeedsConversionInfo = (needsConversion) => {
     const form = this.formRef.current;
 
@@ -561,6 +586,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
     }
   };
+
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'files' implicitly has an 'any' type.
   maybeSetUploadName = (files) => {
     const form = this.formRef.current;
 
@@ -632,6 +659,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   rules={[
                     {
                       required: !isDatasetManagerOrAdmin,
+                      // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
                       message: !isDatasetManagerOrAdmin
                         ? messages["dataset.import.required.initialTeam"]
                         : null,
@@ -684,6 +712,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               </Col>
             </Row>
             <DatastoreFormItem
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: any; datastores: APIDataStore[]; hid... Remove this comment to see the full error message
               form={form}
               datastores={uploadableDatastores}
               hidden={hasOnlyOneDatastoreOrNone}
@@ -691,6 +720,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             {features().jobsEnabled && needsConversion ? (
               <React.Fragment>
                 <FormItemWithInfo
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string; label: st... Remove this comment to see the full error message
                   name="scale"
                   label="Voxel Size"
                   info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
@@ -703,6 +733,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     },
                     {
                       validator: syncValidator(
+                        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                         (value) => value && value.every((el) => el > 0),
                         "Each component of the scale must be larger than 0.",
                       ),
@@ -710,6 +741,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   ]}
                 >
                   <Vector3Input
+                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ style: { width: number; }; allowDecimals: ... Remove this comment to see the full error message
                     style={{
                       width: 400,
                     }}
@@ -737,6 +769,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 {
                   validator: syncValidator(
                     (files) =>
+                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
                       files.filter((file) => Utils.isFileExtensionEqualTo(file.path, "zip"))
                         .length <= 1,
                     "You cannot upload more than one archive.",
@@ -745,6 +778,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 {
                   validator: syncValidator(
                     (files) =>
+                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
                       files.filter((file) =>
                         Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]),
                       ).length === 0,
@@ -753,6 +787,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
                 {
                   validator: syncValidator((files) => {
+                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
                     const archives = files.filter((file) =>
                       Utils.isFileExtensionEqualTo(file.path, "zip"),
                     );
@@ -762,9 +797,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
                 {
                   validator: syncValidator((files) => {
+                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
                     const wkwFiles = files.filter((file) =>
                       Utils.isFileExtensionEqualTo(file.path, "wkw"),
                     );
+                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
                     const imageFiles = files.filter((file) =>
                       Utils.isFileExtensionEqualTo(file.path, [
                         "tif",
@@ -786,6 +823,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               valuePropName="fileList"
             >
               <FileUploadArea
+                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'files' implicitly has an 'any' type.
                 onChange={(files) => {
                   this.maybeSetUploadName(files);
                   this.validateFiles(files);
@@ -818,12 +856,16 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'fileList' implicitly has an 'any'... Remove this comment to see the full error message
 function FileUploadArea({ fileList, onChange }) {
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'acceptedFiles' implicitly has an 'any' ... Remove this comment to see the full error message
   const onDropAccepted = (acceptedFiles) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
+    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     onChange(_.uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
   };
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const removeFile = (file) => {
     onChange(_.without(fileList, file));
   };
@@ -832,6 +874,7 @@ function FileUploadArea({ fileList, onChange }) {
     onDropAccepted,
   });
   const acceptedFiles = fileList;
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const files = acceptedFiles.map((file) => <li key={file.path}>{file.path}</li>);
   const showSmallFileList = files.length > 10;
   const list = (
@@ -862,7 +905,9 @@ function FileUploadArea({ fileList, onChange }) {
                   style={{
                     color: "darkgrey",
                   }}
+                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 >{`${item.path.split("/").slice(0, -1).join("/")}/`}</span>
+                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 {item.name}
               </span>
             }
@@ -983,4 +1028,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(DatasetUploadView));

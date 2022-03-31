@@ -1,9 +1,12 @@
+// @flow
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { AutoSizer } from "react-virtualized";
 import { Checkbox, Dropdown, Menu, Modal, notification } from "antd";
 import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import * as React from "react";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { SortableTreeWithoutDndContext as SortableTree } from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
@@ -151,6 +154,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   onChange = (treeData: Array<TreeNode>) => {
     const expandedGroupIds = {};
     forEachTreeNode(treeData, (node) => {
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       if (node.type === TYPE_GROUP && node.expanded) expandedGroupIds[node.id] = true;
     });
     this.setState({
@@ -158,8 +162,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       expandedGroupIds,
     });
   };
+
   onCheck = (evt: React.MouseEvent<any>) => {
     // $FlowIssue[prop-missing] .node is unknown to flow
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'node' does not exist on type 'EventTarge... Remove this comment to see the full error message
     const { id, type } = evt.target.node;
 
     if (type === TYPE_TREE) {
@@ -170,8 +176,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       this.props.onToggleTreeGroup(id);
     }
   };
+
   onSelectTree = (evt: React.MouseEvent<any>) => {
     // $FlowIssue[prop-missing] .dataset is unknown to flow
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'EventTa... Remove this comment to see the full error message
     const treeId = parseInt(evt.target.dataset.id, 10);
 
     if (evt.ctrlKey || evt.metaKey) {
@@ -181,12 +189,15 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       this.props.onSetActiveTree(treeId);
     }
   };
+
   selectGroupById = (groupId: number) => {
     this.props.deselectAllTrees();
     this.props.onSetActiveGroup(groupId);
   };
+
   onSelectGroup = (evt: React.MouseEvent<any>) => {
     // $FlowIssue[prop-missing] .dataset is unknown to flow
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'EventTa... Remove this comment to see the full error message
     const groupId = parseInt(evt.target.dataset.id, 10);
     const numberOfSelectedTrees = this.props.selectedTrees.length;
 
@@ -205,9 +216,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       this.selectGroupById(groupId);
     }
   };
+
   setExpansionOfAllSubgroupsTo = (groupId: number, expanded: boolean) => {
     const newExpandedGroupIds = Object.assign({}, this.state.expandedGroupIds);
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupTree' implicitly has an 'any' type... Remove this comment to see the full error message
     const collapseAllGroups = (groupTree) => {
       const copyOfGroupTree = _.cloneDeep(groupTree);
 
@@ -220,6 +233,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         forEachTreeNode(item.children, (node) => {
           if (node.type === TYPE_GROUP) {
             node.expanded = expanded;
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             newExpandedGroupIds[node.id] = expanded;
           }
         });
@@ -232,6 +246,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       expandedGroupIds: newExpandedGroupIds,
     }));
   };
+
   onMoveNode = (params: {
     nextParentNode: TreeNode;
     node: TreeNode;
@@ -245,6 +260,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const moveActions = allTreesToMove.map((treeId) =>
         setTreeGroupAction(
           nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
           parseInt(treeId, 10),
         ),
       );
@@ -291,6 +307,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       activeTreeDropdownId: null,
     });
   };
+
   getNodeStyleClassForBackground = (id: number) => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
 
@@ -300,6 +317,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
     return null;
   };
+
   handleMeasureSkeletonLength = (treeId: number, treeName: string) => {
     const [lengthInNm, lengthInVx] = api.tracing.measureTreeLength(treeId);
     notification.open({
@@ -311,6 +329,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       icon: <i className="fas fa-ruler" />,
     });
   };
+
   renderGroupActionsDropdown = (node: TreeNode) => {
     // The root group must not be removed or renamed
     const { id, name } = node;
@@ -387,6 +406,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           // Therefore, autoDestroy is passed.
           // destroyPopupOnHide should also be an option according to the docs, but
           // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
           autoDestroy
           trigger={["contextMenu"]}
         >
@@ -395,6 +415,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               <Checkbox
                 checked={node.isChecked}
                 indeterminate={node.isIndeterminate}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(evt: React.MouseEvent<any>) => void' is not... Remove this comment to see the full error message
                 onChange={this.onCheck}
                 node={node}
                 style={CHECKBOX_STYLE}
@@ -416,15 +437,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       </div>
     );
   };
+
   generateNodeProps = (params: { node: TreeNode }) => {
     // This method can be used to add props to each node of the SortableTree component
     const { node } = params;
     const nodeProps = {};
 
     if (node.type === TYPE_GROUP) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'title' does not exist on type '{}'.
       nodeProps.title = this.renderGroupActionsDropdown(node);
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'className' does not exist on type '{}'.
       nodeProps.className = "group-type";
     } else {
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map((c) => Math.round(c * 255)).join(",");
       // Defining background color of current node
@@ -501,7 +526,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         </Menu>
       );
 
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'title' does not exist on type '{}'.
       nodeProps.title = (
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
         <div className={styleClass}>
           <Dropdown
             overlay={createMenu} // The overlay is generated lazily. By default, this would make the overlay
@@ -510,6 +537,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             // Therefore, autoDestroy is passed.
             // destroyPopupOnHide should also be an option according to the docs, but
             // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
             autoDestroy
             placement="bottomCenter"
             visible={this.state.activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
@@ -521,6 +549,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             <span>
               <Checkbox
                 checked={tree.isVisible}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(evt: React.MouseEvent<any>) => void' is not... Remove this comment to see the full error message
                 onChange={this.onCheck}
                 node={node}
                 style={CHECKBOX_STYLE}
@@ -537,7 +566,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           </Dropdown>
         </div>
       );
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'className' does not exist on type '{}'.
       nodeProps.className = "tree-type";
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type '{}'.
       nodeProps.style = {
         color: `rgb(${rgbColorString})`,
       };
@@ -570,6 +601,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const { nextParent } = params;
     return this.props.allowUpdate && nextParent != null && nextParent.type === TYPE_GROUP;
   };
+
   canDrag = (params: { node: TreeNode }) => {
     const { node } = params;
     return this.props.allowUpdate && node.id !== MISSING_GROUP_ID;
@@ -583,6 +615,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const { activeTreeId, activeGroupId } = this.props;
     return (
       <AutoSizer>
+        // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'height' implicitly has an 'any' t... Remove this comment to see the full error message
         {({ height, width }) => (
           <div
             style={{
@@ -625,30 +658,37 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
   onSetActiveTree(treeId) {
     dispatch(setActiveTreeAction(treeId));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupId' implicitly has an 'any' type.
   onSetActiveGroup(groupId) {
     dispatch(setActiveGroupAction(groupId));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
   onSetTreeColor(treeId, color) {
     dispatch(setTreeColorAction(treeId, color));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
   onShuffleTreeColor(treeId) {
     dispatch(shuffleTreeColorAction(treeId));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
   onDeleteTree(treeId) {
     dispatch(deleteTreeAction(treeId));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
   onToggleTree(treeId) {
     dispatch(toggleTreeAction(treeId));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupId' implicitly has an 'any' type.
   onToggleTreeGroup(groupId) {
     dispatch(toggleTreeGroupAction(groupId));
   },
@@ -657,10 +697,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(toggleAllTreesAction());
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeGroups' implicitly has an 'any' typ... Remove this comment to see the full error message
   onUpdateTreeGroups(treeGroups) {
     dispatch(setTreeGroupsAction(treeGroups));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'actions' implicitly has an 'any' type.
   onBatchActions(actions, actionName) {
     dispatch(batchActions(actions, actionName));
   },
@@ -670,4 +712,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, OwnProps, _, _, _, _>(null, mapDispatchToProps)(TreeHierarchyView);

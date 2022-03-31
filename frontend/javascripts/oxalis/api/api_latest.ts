@@ -1,5 +1,8 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'js-p... Remove this comment to see the full error message
 import PriorityQueue from "js-priority-queue";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import _ from "lodash";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
@@ -210,6 +213,7 @@ class TracingApi {
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
     return getActiveNode(tracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
       .map((node) => node.id)
       .getOrElse(null);
   }
@@ -220,6 +224,7 @@ class TracingApi {
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
     return getActiveTree(tracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
       .map((tree) => tree.treeId)
       .getOrElse(null);
   }
@@ -230,6 +235,7 @@ class TracingApi {
   getActiveGroupId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
     return getActiveGroup(tracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
       .map((group) => group.groupId)
       .getOrElse(null);
   }
@@ -341,6 +347,7 @@ class TracingApi {
     }
 
     // $FlowIssue[incompatible-use] remove once https://github.com/facebook/flow/issues/34 is closed
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const comment = tree.comments.find((__) => __.nodeId === nodeId);
     return comment != null ? comment.content : null;
   }
@@ -475,6 +482,7 @@ class TracingApi {
     const newTreeGroups = _.cloneDeep(skeletonTracing.treeGroups);
 
     callDeep(newTreeGroups, groupId, (item) => {
+      // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'name' because it is a read-only ... Remove this comment to see the full error message
       item.name = newName;
     });
     Store.dispatch(setTreeGroupsAction(newTreeGroups));
@@ -489,6 +497,7 @@ class TracingApi {
   getTreeName(treeId?: number) {
     const tracing = assertSkeleton(Store.getState().tracing);
     return getTree(tracing, treeId)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
       .map((activeTree) => activeTree.name)
       .get();
   }
@@ -597,6 +606,7 @@ class TracingApi {
     newAnnotationId: string,
     newControlMode: ControlMode,
     versions?: Versions,
+    // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
     keepUrlState?: boolean = false,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
@@ -639,6 +649,7 @@ class TracingApi {
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'node' implicitly has an 'any' typ... Remove this comment to see the full error message
     getNodeAndTree(skeletonTracing, nodeId, treeId).map(([, node]) =>
       Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId)),
     );
@@ -652,6 +663,7 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
       Store.dispatch(setPositionAction(node.position)),
     );
@@ -689,6 +701,7 @@ class TracingApi {
       }
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
     return result;
   }
 
@@ -740,10 +753,12 @@ class TracingApi {
    */
   measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
       skeletonTracing,
       sourceNodeId,
     );
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     const { node: targetNode, tree: targetTree } = getNodeAndTreeOrNull(
       skeletonTracing,
       targetNodeId,
@@ -765,13 +780,18 @@ class TracingApi {
     // the physical space (nm-based).
     const distanceMapVx = {};
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodeId' implicitly has an 'any' type.
     const getDistance = (nodeId) =>
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       distanceMap[nodeId] != null ? distanceMap[nodeId] : Number.POSITIVE_INFINITY;
 
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     distanceMap[sourceNode.id] = 0;
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     distanceMapVx[sourceNode.id] = 0;
     // The priority queue saves node id and distance tuples.
     const priorityQueue = new PriorityQueue<[number, number]>({
+      // @ts-expect-error ts-migrate(7031) FIXME: Binding element '_first' implicitly has an 'any' t... Remove this comment to see the full error message
       comparator: ([_first, firstDistance], [_second, secondDistance]) =>
         firstDistance <= secondDistance ? -1 : 1,
     });
@@ -789,14 +809,17 @@ class TracingApi {
           distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
 
         if (neighbourDistance < getDistance(neighbourNodeId)) {
+          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           distanceMap[neighbourNodeId] = neighbourDistance;
           const neighbourDistanceVx = V3.length(V3.sub(nextNodePosition, neighbourPosition));
+          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           distanceMapVx[neighbourNodeId] = neighbourDistanceVx;
           priorityQueue.queue([neighbourNodeId, neighbourDistance]);
         }
       }
     }
 
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return [distanceMap[targetNodeId], distanceMapVx[targetNodeId]];
   }
 
@@ -823,6 +846,7 @@ class TracingApi {
     const curPosition = getPosition(Store.getState().flycam);
     const curRotation = getRotation(Store.getState().flycam);
     if (!Array.isArray(rotation)) rotation = curRotation;
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3 | undefined' is not assi... Remove this comment to see the full error message
     rotation = this.getShortestRotation(curRotation, rotation);
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
@@ -847,8 +871,10 @@ class TracingApi {
       .onUpdate(function () {
         // needs to be a normal (non-bound) function
         Store.dispatch(
+          // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
           setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
         );
+        // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
         Store.dispatch(setRotationAction([this.rotationX, this.rotationY, this.rotationZ]));
       })
       .start();
@@ -910,6 +936,7 @@ class TracingApi {
    * _Volume tracing only!_
    */
   setAnnotationTool(tool: AnnotationTool) {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     if (AnnotationToolEnum[tool] == null) {
       throw new Error(
         `Annotation tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
@@ -1085,6 +1112,7 @@ class DataApi {
   setMapping(
     layerName: string,
     mapping: Mapping,
+    // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
     options?: {
       colors?: Array<number>;
       hideUnmappedIds?: boolean;
@@ -1351,8 +1379,10 @@ class DataApi {
     const bottomRight = bbox.max;
     const minBucket = globalPositionToBucketPosition(bbox.min, resolutions, zoomStep);
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucketAddress' implicitly has an 'any' ... Remove this comment to see the full error message
     const topLeft = (bucketAddress) => bucketPositionToGlobalAddress(bucketAddress, resolutions);
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucket' implicitly has an 'any' type.
     const nextBucketInDim = (bucket, dim) => {
       const copy = bucket.slice();
       copy[dim]++;
@@ -1387,6 +1417,7 @@ class DataApi {
     elementClass: ElementClass,
     resolutions: Array<Vector3>,
     zoomStep: number,
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
   ): $TypedArray {
     const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
@@ -1396,6 +1427,7 @@ class DataApi {
     const bottomRight = scaleGlobalPositionWithResolution(bbox.max, resolution, true);
     const extent: Vector3 = V3.sub(bottomRight, topLeft);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
+    // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
     const bucketWidth = Constants.BUCKET_WIDTH;
     buckets.reverse();
@@ -1429,6 +1461,7 @@ class DataApi {
           // could also be MISSING.
           const data = bucket.hasData()
             ? bucket.getData()
+            // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
             : new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
@@ -1461,6 +1494,7 @@ class DataApi {
         `width=${bottomRight[0] - topLeft[0]}&` +
         `height=${bottomRight[1] - topLeft[1]}&` +
         `depth=${bottomRight[2] - topLeft[2]}`;
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'open' does not exist on type '(Window & ... Remove this comment to see the full error message
       window.open(downloadUrl);
       // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
       return Promise.resolve();
@@ -1545,6 +1579,7 @@ class DataApi {
       }
 
       default: {
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         return Store.getState().datasetConfiguration[key];
       }
     }
@@ -1668,6 +1703,7 @@ class DataApi {
 
     if (
       state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
+      // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
       !state.localSegmentationData[effectiveLayerName].availableMeshFiles.find(
         (el) => el.meshFileName === meshFileName,
       )
@@ -1860,6 +1896,7 @@ class UserApi {
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
   getConfiguration(key: $Keys<UserConfiguration>) {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     const value = Store.getState().userConfiguration[key];
 
     // Backwards compatibility

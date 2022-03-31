@@ -85,6 +85,7 @@ export function withAuthentication<P, C extends ComponentType<P>>(
     const { activeUser, authenticationMessage, onClick: originalOnClick, ...rest } = props;
 
     if (activeUser != null) {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<AuthenticationProps<P>, "activeUser" | ... Remove this comment to see the full error message
       return <WrappedComponent {...rest} onClick={originalOnClick} />;
     } else {
       return (

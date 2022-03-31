@@ -1,3 +1,4 @@
+// @flow
 import { Switch } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -12,6 +13,7 @@ type Props = {
 function RecordingSwitch({ flightmodeRecording, onChangeFlightmodeRecording }: Props) {
   return (
     <Switch
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ id: string; checkedChildren: string; unChe... Remove this comment to see the full error message
       id="flightmode-switch"
       checkedChildren="Recording"
       unCheckedChildren="Watching"
@@ -22,6 +24,7 @@ function RecordingSwitch({ flightmodeRecording, onChangeFlightmodeRecording }: P
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
   onChangeFlightmodeRecording(value) {
     dispatch(setFlightmodeRecordingAction(value));
   },
@@ -31,4 +34,5 @@ const mapStateToProps = (state: OxalisState) => ({
   flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<Props, {}, _, _, _, _>(mapStateToProps, mapDispatchToProps)(RecordingSwitch);

@@ -37,11 +37,13 @@ class DiffableMap<K extends number, V> {
 
   getId() {
     // $FlowFixMe[prop-missing]
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return this[idSymbol];
   }
 
   setId(id: number) {
     // $FlowFixMe[prop-missing]
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     this[idSymbol] = id;
   }
 
@@ -149,6 +151,7 @@ class DiffableMap<K extends number, V> {
     newDiffableMap.setId(this.getId());
     newDiffableMap.entryCount = this.entryCount;
     newDiffableMap.itemsPerBatch = this.itemsPerBatch;
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'DiffableMap<number, unknown>' is not assigna... Remove this comment to see the full error message
     return newDiffableMap;
   }
 
@@ -185,18 +188,21 @@ class DiffableMap<K extends number, V> {
 
   *entries(): Generator<[K, V], void, void> {
     for (const map of this.chunks) {
+      // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
       yield* map;
     }
   }
 
   *values(): Generator<V, void, void> {
     for (const map of this.chunks) {
+      // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
       yield* map.values();
     }
   }
 
   *keys(): Generator<K, void, void> {
     for (const map of this.chunks) {
+      // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
       yield* map.keys();
     }
   }
@@ -215,9 +221,11 @@ class DiffableMap<K extends number, V> {
     const result = {};
 
     for (const [k, v] of this.entries()) {
+      // @ts-expect-error ts-migrate(2536) FIXME: Type 'K' cannot be used to index type '{}'.
       result[k] = v;
     }
 
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{}' is not assignable to type 'Record<K, V>'... Remove this comment to see the full error message
     return result;
   }
 } // This function should only be used internally by this module.
@@ -231,6 +239,7 @@ function shallowCopy<K extends number, V>(template: DiffableMap<K, V>): Diffable
   newMap.chunks = template.chunks.slice();
   newMap.entryCount = template.entryCount;
   newMap.itemsPerBatch = template.itemsPerBatch;
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'DiffableMap<number, unknown>' is not assigna... Remove this comment to see the full error message
   return newMap;
 }
 

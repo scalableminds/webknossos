@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { alert, document } from "libs/window";
@@ -14,6 +15,7 @@ const PUSH_DEBOUNCE_TIME = 1000;
 const PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
 
 class PushQueue {
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataSetName' has no initializer and is n... Remove this comment to see the full error message
   dataSetName: string;
   cube: DataCube;
   compressionTaskQueue: AsyncTaskQueue;
@@ -85,6 +87,7 @@ class PushQueue {
 
     while (this.pendingQueue.size) {
       let batchSize = Math.min(COMPRESSING_BATCH_SIZE, this.pendingQueue.size);
+      // @ts-expect-error ts-migrate(7034) FIXME: Variable 'batch' implicitly has type 'any[]' in so... Remove this comment to see the full error message
       const batch = [];
 
       for (const bucket of this.pendingQueue) {
@@ -95,6 +98,7 @@ class PushQueue {
       }
 
       // fire and forget
+      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'batch' implicitly has an 'any[]' type.
       this.compressionTaskQueue.scheduleTask(() => this.pushBatch(batch));
     }
 
@@ -105,6 +109,7 @@ class PushQueue {
       alert("We've encountered a permanent issue while saving. Please try to reload the page.");
     }
   };
+
   push = _.debounce(this.pushImpl, PUSH_DEBOUNCE_TIME, {
     maxWait: PUSH_DEBOUNCE_MAX_WAIT_TIME,
   });

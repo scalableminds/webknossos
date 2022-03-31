@@ -1,3 +1,4 @@
+// @flow
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
@@ -43,6 +44,7 @@ class MergerModeController extends PureComponent<MergerModeControllerProps, Stat
         mergerModeProgress: 0,
       });
 
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mergerModeProgress' implicitly has an '... Remove this comment to see the full error message
       const onUpdateProgress = (mergerModeProgress) =>
         this.setState({
           mergerModeProgress,
@@ -90,6 +92,7 @@ const mapStateToProps = (state: OxalisState) => ({
   isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<MergerModeControllerProps, {}, _, _, _, _>(mapStateToProps)(
   MergerModeController,
 );

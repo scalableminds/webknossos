@@ -1,3 +1,5 @@
+// @flow
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import { message } from "antd";
 import { sleep } from "libs/utils";
@@ -25,6 +27,7 @@ type Options = {
 // with rendering the actual feedback.
 
 export default function createProgressCallback(options: Options): ProgressCallback {
+  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'hideFn' implicitly has type 'any' in som... Remove this comment to see the full error message
   let hideFn = null;
   return async (
     isDone: boolean,
@@ -34,8 +37,10 @@ export default function createProgressCallback(options: Options): ProgressCallba
   ): Promise<{
     hideFn: HideFn;
   }> => {
+    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hideFn' implicitly has an 'any' type.
     if (hideFn != null) {
       // Clear old progress message
+      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hideFn' implicitly has an 'any' type.
       hideFn();
       hideFn = null;
     }
@@ -61,10 +66,12 @@ export default function createProgressCallback(options: Options): ProgressCallba
         key: overridingOptions.key || options.key,
       });
       setTimeout(() => {
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hideFn' implicitly has an 'any' type.
         if (hideFn == null) {
           return;
         }
 
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hideFn' implicitly has an 'any' type.
         hideFn();
         hideFn = null;
       }, successDelay);

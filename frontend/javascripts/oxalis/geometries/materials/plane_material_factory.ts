@@ -1,3 +1,4 @@
+// @flow
 import * as THREE from "three";
 import _ from "lodash";
 import type { OrthoView, Vector3 } from "oxalis/constants";
@@ -49,6 +50,7 @@ export type Uniforms = Record<
     value: any;
   }
 >;
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
 function sanitizeName(name: string | null | undefined): string {
@@ -81,8 +83,11 @@ function getPackingDegreeLookup(): Record<string, number> {
 class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'material' has no initializer and is not ... Remove this comment to see the full error message
   material: typeof THREE.ShaderMaterial;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'uniforms' has no initializer and is not ... Remove this comment to see the full error message
   uniforms: Uniforms;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'attributes' has no initializer and is no... Remove this comment to see the full error message
   attributes: Record<string, any>;
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
@@ -294,6 +299,7 @@ class PlaneMaterialFactory {
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {
+    // @ts-expect-error ts-migrate(2741) FIXME: Property 'prototype' is missing in type 'ShaderMat... Remove this comment to see the full error message
     this.material = new THREE.ShaderMaterial(
       _.extend(options, {
         uniforms: this.uniforms,
@@ -301,24 +307,29 @@ class PlaneMaterialFactory {
         fragmentShader: this.getFragmentShader(),
       }),
     );
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'extensions' does not exist on type 'type... Remove this comment to see the full error message
     this.material.extensions = {
       // Necessary for anti-aliasing via fwidth in shader
       derivatives: true,
     };
     shaderEditor.addMaterial(this.shaderId, this.material);
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
     this.material.setGlobalPosition = (x, y, z) => {
       this.uniforms.globalPosition.value.set(x, y, z);
     };
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
     this.material.setAnchorPoint = ([x, y, z]) => {
       this.uniforms.anchorPoint.value.set(x, y, z);
     };
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
     this.material.setUseBilinearFiltering = (isEnabled) => {
       this.uniforms.useBilinearFiltering.value = isEnabled;
     };
 
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'side' does not exist on type 'typeof Sha... Remove this comment to see the full error message
     this.material.side = THREE.DoubleSide;
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -426,7 +437,9 @@ class PlaneMaterialFactory {
 
               if (
                 !isSegmentationLayer &&
+                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 oldVisibilityPerLayer[dataLayer.name] != null &&
+                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 oldVisibilityPerLayer[dataLayer.name] !== isLayerEnabled
               ) {
                 if (settings.isDisabled) {
@@ -436,6 +449,7 @@ class PlaneMaterialFactory {
                 }
               }
 
+              // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
               oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
               const name = sanitizeName(dataLayer.name);
               this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
@@ -465,6 +479,7 @@ class PlaneMaterialFactory {
               return;
             }
 
+            // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
             const [x, y, z] = calculateGlobalPos(state, {
               x: globalMousePosition[0],
               y: globalMousePosition[1],
@@ -608,8 +623,11 @@ class PlaneMaterialFactory {
     }
 
     this.oldShaderCode = newShaderCode;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'fragmentShader' does not exist on type '... Remove this comment to see the full error message
     this.material.fragmentShader = newShaderCode;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsUpdate' does not exist on type 'typ... Remove this comment to see the full error message
     this.material.needsUpdate = true;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
     window.needsRerender = true;
   }, RECOMPILATION_THROTTLE_TIME);
 
@@ -663,6 +681,7 @@ class PlaneMaterialFactory {
     this.leastRecentlyVisibleColorLayers = [layerName, ...this.leastRecentlyVisibleColorLayers];
     this.recomputeFragmentShader();
   };
+
   onEnableColorLayer = (layerName: string) => {
     this.leastRecentlyVisibleColorLayers = _.without(
       this.leastRecentlyVisibleColorLayers,

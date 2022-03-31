@@ -1,5 +1,6 @@
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
 import type { Node as ReactNode } from "react";
 import React from "react";
 const { Panel } = Collapse;
@@ -78,6 +79,7 @@ const Toast = {
     config: ToastConfig,
     details?: string,
   ): void {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
     const message = this.buildContentWithDetails(rawMessage, details);
     const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : null);
@@ -108,14 +110,17 @@ const Toast = {
       });
     }
 
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ icon: undefined; key: string |... Remove this comment to see the full error message
     notification[type](toastConfig);
   },
 
   info(message: ReactNode, config: ToastConfig = {}, details?: string | null | undefined): void {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | null | undefined' is no... Remove this comment to see the full error message
     return this.message("info", message, config, details);
   },
 
   warning(message: ReactNode, config: ToastConfig = {}, details?: string | null | undefined): void {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | null | undefined' is no... Remove this comment to see the full error message
     return this.message("warning", message, config, details);
   },
 
@@ -124,6 +129,7 @@ const Toast = {
     config: ToastConfig = {},
     details?: string | null | undefined,
   ): void {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | null | undefined' is no... Remove this comment to see the full error message
     return this.message("success", message, config, details);
   },
 
@@ -132,6 +138,7 @@ const Toast = {
     config: ToastConfig = {},
     details?: string | null | undefined,
   ): void {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | null | undefined' is no... Remove this comment to see the full error message
     return this.message("error", message, config, details);
   },
 

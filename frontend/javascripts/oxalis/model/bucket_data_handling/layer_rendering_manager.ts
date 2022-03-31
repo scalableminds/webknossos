@@ -1,5 +1,7 @@
+// @flow
 import * as THREE from "three";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import { getAreasFromState, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
@@ -28,7 +30,8 @@ import type { ViewMode, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants"
 import constants from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import window from "libs/window";
-const asyncBucketPick = memoizeOne(createWorker(AsyncBucketPickerWorker), (oldArgs, newArgs) =>
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'oldArgs' implicitly has an 'any' type.
+const asyncBucketPick = memoizeOne(AsyncBucketPickerWorker, (oldArgs, newArgs) =>
   _.isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);
@@ -37,8 +40,10 @@ export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   // E.g., modAndDivide(63, 32) === 31 / 32 === ~0.97
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
   const modAndDivide = (a, b) => (a % b) / b;
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pos' implicitly has an 'any' type.
   const roundToNearestBucketBoundary = (pos, dimension) => {
     const bucketExtentInVoxel = constants.BUCKET_WIDTH * resolution[dimension];
     // Math.round returns 0 or 1 which will be mapped to -1 or 1
@@ -46,6 +51,7 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   };
 
   // $FlowIssue[invalid-tuple-arity]
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
 }
 
@@ -77,6 +83,7 @@ function consumeBucketsFromArrayBuffer(
       uint32Array[currentBufferIndex + 3],
     ];
     const priority = uint32Array[currentBufferIndex + 4];
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
     const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
@@ -95,14 +102,19 @@ function consumeBucketsFromArrayBuffer(
 }
 
 export default class LayerRenderingManager {
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastSphericalCapRadius' has no initializ... Remove this comment to see the full error message
   lastSphericalCapRadius: number;
   // Indicates whether the current position is closer to the previous or next bucket for each dimension
   // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastAreas' has no initializer and is not... Remove this comment to see the full error message
   lastAreas: OrthoViewMap<Area>;
   lastZoomedMatrix: typeof M4x4;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastViewMode' has no initializer and is ... Remove this comment to see the full error message
   lastViewMode: ViewMode;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastIsVisible' has no initializer and is... Remove this comment to see the full error message
   lastIsVisible: boolean;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'textureBucketManager' has no initializer... Remove this comment to see the full error message
   textureBucketManager: TextureBucketManager;
   textureWidth: number;
   cube: DataCube;
@@ -130,6 +142,7 @@ export default class LayerRenderingManager {
 
   refresh() {
     this.needsRefresh = true;
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
     window.needsRerender = true;
   }
 
@@ -207,6 +220,7 @@ export default class LayerRenderingManager {
 
       if (isVisible) {
         const { initializedGpuFactor } = state.temporaryConfiguration.gpuSetup;
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<(...args: any[]) => any>' is not ass... Remove this comment to see the full error message
         pickingPromise = this.latestTaskExecutor.schedule(() =>
           asyncBucketPick(
             viewMode,
@@ -282,6 +296,7 @@ export default class LayerRenderingManager {
       position[1] - maximumRenderedBucketsHalfInVoxel[1] * resolution[1],
       position[2] - maximumRenderedBucketsHalfInVoxel[2] * resolution[2],
     ];
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
     const anchorPoint = this.cube.positionToZoomedAddress(anchorPointInVoxel, logZoomStep);
 
     if (_.isEqual(anchorPoint, this.cachedAnchorPoint)) {

@@ -1,3 +1,4 @@
+// @flow
 import * as THREE from "three";
 import _ from "lodash";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
@@ -29,6 +30,7 @@ class ArbitraryPlane {
   meshes: ArbitraryMeshes;
   isDirty: boolean;
   stopStoreListening: () => void;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'materialFactory' has no initializer and ... Remove this comment to see the full error message
   materialFactory: PlaneMaterialFactory;
 
   constructor() {
@@ -46,17 +48,20 @@ class ArbitraryPlane {
 
   updateAnchorPoints(anchorPoint: Vector4 | null | undefined): void {
     if (anchorPoint) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
       this.meshes.mainPlane.material.setAnchorPoint(anchorPoint);
     }
   }
 
   setPosition = (x: number, y: number, z: number) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
     this.meshes.mainPlane.material.setGlobalPosition(x, y, z);
   };
 
   addToScene(scene: typeof THREE.Scene) {
     _.values(this.meshes).forEach((mesh) => {
       if (mesh) {
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message
         scene.add(mesh);
       }
     });
@@ -66,6 +71,7 @@ class ArbitraryPlane {
     if (this.isDirty) {
       const matrix = getZoomedMatrix(Store.getState().flycam);
 
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mesh' implicitly has an 'any' type.
       const updateMesh = (mesh) => {
         if (!mesh) {
           return;
@@ -104,6 +110,7 @@ class ArbitraryPlane {
   }
 
   createMeshes(): ArbitraryMeshes {
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_plane' implicitly has an 'any' type.
     const adaptPlane = (_plane) => {
       _plane.rotation.x = Math.PI;
       _plane.matrixAutoUpdate = false;
@@ -116,6 +123,7 @@ class ArbitraryPlane {
     const mainPlane = adaptPlane(
       new THREE.Mesh(
         new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof ShaderMaterial' is not as... Remove this comment to see the full error message
         textureMaterial,
       ),
     );

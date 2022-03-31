@@ -1,7 +1,10 @@
+// @flow
 import { Form, Row, Dropdown, Menu, Col, Button, Input, Select, Spin } from "antd";
 import { FormInstance } from "antd/lib/form";
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
+// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import React from "react";
@@ -53,6 +56,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class TaskSearchForm extends React.Component<Props, State> {
+  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
   formRef = React.createRef<typeof FormInstance>();
   state = {
     users: [],
@@ -143,6 +147,7 @@ class TaskSearchForm extends React.Component<Props, State> {
     });
     onFinishCallback(queryObject);
   };
+
   handleSearchFormFinish = (isRandom: boolean, formValues?: Record<string, any>) => {
     if (formValues) {
       this.handleFormFinish(isRandom, this.props.onChange, formValues);
@@ -155,10 +160,12 @@ class TaskSearchForm extends React.Component<Props, State> {
       return;
     }
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'validFormValues' implicitly has an 'any... Remove this comment to see the full error message
     form.validateFields().then((validFormValues) => {
       this.handleFormFinish(isRandom, this.props.onChange, validFormValues);
     });
   };
+
   handleDownloadAllTasks = () => {
     const form = this.formRef.current;
 
@@ -169,10 +176,12 @@ class TaskSearchForm extends React.Component<Props, State> {
 
     form
       .validateFields()
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
       .then((formValues) =>
         this.handleFormFinish(false, this.props.onDownloadAllTasks, formValues),
       );
   };
+
   handleReset = () => {
     const form = this.formRef.current;
 
@@ -258,6 +267,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 }}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 options={this.state.users
+                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'isActive' does not exist on type 'never'... Remove this comment to see the full error message
                   .filter((u) => u.isActive)
                   .map((user: APIUser) => ({
                     value: user.id,
@@ -322,4 +332,5 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 }
 
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TaskSearchForm' is not as... Remove this comment to see the full error message
 export default withRouter(TaskSearchForm);

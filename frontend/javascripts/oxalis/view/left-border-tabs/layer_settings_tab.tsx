@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import { Button, Col, Divider, Modal, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
@@ -14,6 +15,7 @@ import {
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
 import classnames from "classnames";
 import type { APIDataset, EditableLayerProperties } from "types/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
@@ -118,6 +120,7 @@ type State = {
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeUser' has no initializer and is ... Remove this comment to see the full error message
   onChangeUser: Record<$Keys<UserConfiguration>, (...args: Array<any>) => any>;
   state = {
     volumeTracingToDownsample: null,
@@ -157,6 +160,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               ? () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing)
               : () => Promise.resolve()
           }
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ icon: Element; onClick: () => Promise<void... Remove this comment to see the full error message
           style={{
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
@@ -172,6 +176,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         <AsyncIconButton
           icon={<ReloadOutlined />}
           onClick={() => this.reloadLayerData(layerName)}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ icon: Element; onClick: () => Promise<void... Remove this comment to see the full error message
           style={{
             cursor: "pointer",
           }}
@@ -218,6 +223,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
           style={{
             cursor: "pointer",
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '"var(--ant-primary)" | null' is not assignab... Remove this comment to see the full error message
             color: isInEditMode ? "var(--ant-primary)" : null,
           }}
         />
@@ -233,6 +239,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <Tooltip title={tooltipText}>
         <AsyncIconButton
           icon={<VerticalAlignMiddleOutlined />}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ icon: Element; style: { cursor: string; tr... Remove this comment to see the full error message
           style={{
             cursor: "pointer",
             transform: "rotate(90deg)",
@@ -329,6 +336,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
     const onChange = (value, event) => {
       if (!event.ctrlKey && !event.altKey && !event.shiftKey) {
         setSingleLayerVisibility(value);
@@ -348,9 +356,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const hasHistogram = this.props.histogramData[layerName] != null;
     const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
     const volumeDescriptor =
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
       layer.tracingId != null ? getVolumeDescriptorById(tracing, layer.tracingId) : null;
     const readableName =
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
       layer.tracingId != null
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
         ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
         : layerName;
     return (
@@ -549,6 +560,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         <ColorSetting
           value={Utils.rgbToHex(layerConfiguration.color)}
           onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           className="ant-btn"
           style={{
             marginLeft: 6,
@@ -689,6 +701,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     if (!foundPosition || !foundResolution) {
       const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
       const centerPosition = V3.add(lowerBoundary, upperBoundary).map((el) => el / 2);
       Toast.warning(
         `Couldn't find data within layer "${layerName}." Jumping to the center of the layer's bounding box.`,
@@ -706,6 +719,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
     await api.data.reloadBuckets(layerName);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
@@ -725,6 +739,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? fallbackLayerInfo.resolutions
         : getResolutions(this.props.dataset);
 
+    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolution' implicitly has an 'any' typ... Remove this comment to see the full error message
     const getMaxDim = (resolution) => Math.max(...resolution);
 
     const volumeTracingResolutions = segmentationLayer.resolutions;
@@ -732,6 +747,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const sourceMag = _.minBy(volumeTracingResolutions, getMaxDim);
 
     const possibleMags = volumeTargetResolutions.filter(
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolution' implicitly has an 'any' typ... Remove this comment to see the full error message
       (resolution) => getMaxDim(resolution) >= getMaxDim(sourceMag),
     );
 
@@ -782,6 +798,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const skeletonTracing = enforceSkeletonTracing(tracing);
     const { showSkeletons } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
       .map((activeNode) => activeNode.radius)
       .getOrElse(0);
     return (
@@ -836,6 +853,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               min={userSettings.particleSize.minimum}
               max={userSettings.particleSize.maximum}
               step={0.1}
+              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               roundTo={1}
               value={userConfiguration.particleSize}
               onChange={this.onChangeUser.particleSize}
@@ -967,18 +985,22 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
   onChange(propertyName, value) {
     dispatch(updateDatasetSettingAction(propertyName, value));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
   onChangeUser(propertyName, value) {
     dispatch(updateUserSettingAction(propertyName, value));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerName' implicitly has an 'any' type... Remove this comment to see the full error message
   onChangeLayer(layerName, propertyName, value) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerName' implicitly has an 'any' type... Remove this comment to see the full error message
   onClipHistogram(layerName, shouldAdjustClipRange) {
     return dispatchClipHistogramAsync(layerName, shouldAdjustClipRange, dispatch);
   },
@@ -987,6 +1009,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setNodeRadiusAction(radius));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'position' implicitly has an 'any' type.
   onSetPosition(position) {
     dispatch(setPositionAction(position));
   },
@@ -995,6 +1018,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setShowSkeletonsAction(showSkeletons));
   },
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolution' implicitly has an 'any' typ... Remove this comment to see the full error message
   onZoomToResolution(resolution) {
     const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);
     dispatch(setZoomStepAction(targetZoomValue));
@@ -1012,6 +1036,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
+// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
 export default connect<DatasetSettingsProps, {}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,

@@ -14,7 +14,13 @@ import {
   resetDefaultLayouts,
 } from "oxalis/view/layouting/default_layout_configs";
 import { InputKeyboardNoLoop } from "libs/input";
-import { OrthoViews, ArbitraryViews, BorderTabs, type OrthoView } from "oxalis/constants";
+import {
+  OrthoViews,
+  ArbitraryViews,
+  BorderTabs,
+  type OrthoView,
+  type AnnotationTool,
+} from "oxalis/constants";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
@@ -56,6 +62,7 @@ type StateProps = {|
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
   busyBlockingInfo: BusyBlockingInfo,
+  activeTool: AnnotationTool,
 |};
 
 type OwnProps = {|
@@ -298,6 +305,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             busyBlockingInfo={busyBlockingInfo}
             viewportID={id}
             displayScalebars={displayScalebars}
+            activeTool={this.props.activeTool}
           />
         );
       }
@@ -307,6 +315,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             busyBlockingInfo={busyBlockingInfo}
             viewportID={id}
             displayScalebars={displayScalebars}
+            activeTool={this.props.activeTool}
           >
             <TDViewControls />
           </InputCatcher>
@@ -317,6 +326,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
           <InputCatcher
             busyBlockingInfo={busyBlockingInfo}
             viewportID={ArbitraryViews.arbitraryViewport}
+            activeTool={this.props.activeTool}
           >
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
@@ -509,6 +519,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
+    activeTool: state.uiInformation.activeTool,
   };
 }
 function mapDispatchToProps(dispatch: Dispatch<*>) {

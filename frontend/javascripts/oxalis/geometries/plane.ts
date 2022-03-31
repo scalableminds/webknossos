@@ -1,4 +1,3 @@
-// @flow
 import * as THREE from "three";
 import _ from "lodash";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";

@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Form, Input, Checkbox, Alert, InputNumber, Col, Row, Tooltip, Table } from "antd";
@@ -106,7 +105,8 @@ export default function DefaultConfigComponent() {
               },
             ]}
           >
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type
+            'number | ... Remove this comment to see the full error message
             <Input.TextArea rows="10" style={jsonEditStyle} />
           </FormItemWithInfo>
         </Col>

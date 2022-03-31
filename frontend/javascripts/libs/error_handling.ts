@@ -1,4 +1,3 @@
-// @flow
 import { Notifier } from "@airbrake/browser";
 import _ from "lodash";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";

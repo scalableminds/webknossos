@@ -1,4 +1,3 @@
-// @flow
 import { Spin, Button, Modal, List } from "antd";
 import React, { useState, useEffect } from "react";
 import {

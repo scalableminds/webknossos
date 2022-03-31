@@ -1,4 +1,3 @@
-// @flow
 import { Popover, Select, Tooltip, Row, Col } from "antd";
 import { SettingOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";

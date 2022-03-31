@@ -427,7 +427,7 @@ function* getSkeletonTracingToUndoState(
   skeletonUserAction: SkeletonTracingAction,
   prevTracing: SkeletonTracing,
   previousAction: Action | null | undefined,
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<SkeletonUndoState | null | undefined> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const curTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
@@ -479,7 +479,7 @@ function* compressBucketAndAddToList(
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
   pendingOperations: Array<(arg0: BucketDataArray) => void>,
   undoBucketList: VolumeUndoBuckets,
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
   // The given bucket data is compressed, wrapped into a UndoBucket instance
   // and appended to the passed VolumeAnnotationBatch.
@@ -538,7 +538,7 @@ function* applyStateOfStack(
   prevSkeletonTracingOrNull: SkeletonTracing | null | undefined,
   prevUserBoundingBoxes: Array<UserBoundingBox> | null | undefined,
   direction: "undo" | "redo",
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
   if (sourceStack.length <= 0) {
     const warningMessage =
@@ -571,7 +571,7 @@ function* applyStateOfStack(
     const newTracing = stateToRestore.data;
     yield* put(setTracingAction(newTracing));
     yield* put(centerActiveNodeAction());
-  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "volume") {
     const isMergerModeEnabled = yield* select(
       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
@@ -598,7 +598,7 @@ function* applyStateOfStack(
     const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
-  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "bounding_box") {
     if (prevUserBoundingBoxes != null) {
       stackToPushTo.push({
@@ -610,7 +610,7 @@ function* applyStateOfStack(
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const newBoundingBoxes = stateToRestore.data;
     yield* put(setUserBoundingBoxesAction(newBoundingBoxes));
-  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "warning") {
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     Toast.info(stateToRestore.reason);
@@ -636,7 +636,7 @@ function mergeDataWithBackendDataInPlace(
 
 function* applyAndGetRevertingVolumeBatch(
   volumeAnnotationBatch: VolumeAnnotationBatch,
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<VolumeUndoState> {
   // Applies a VolumeAnnotationBatch and returns a VolumeUndoState (which simply wraps
   // another VolumeAnnotationBatch) for reverting the undo operation.
@@ -742,7 +742,7 @@ function* applyAndGetRevertingVolumeBatch(
 export function* pushTracingTypeAsync(
   tracingType: "skeleton" | "volume",
   tracingId: string,
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
   yield* take("WK_READY");
   yield* put(setLastSaveTimestampAction(tracingType, tracingId));
@@ -837,7 +837,7 @@ function getRetryWaitTime(retryCount: number) {
 export function* sendRequestToServer(
   tracingType: "skeleton" | "volume",
   tracingId: string,
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const fullSaveQueue = yield* select((state) => selectQueue(state, tracingType, tracingId));
@@ -1029,7 +1029,7 @@ export function* saveTracingAsync(): Saga<void> {
 }
 export function* saveTracingTypeAsync(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Generator<any, any, any>' is not assignable ... Remove this comment to see the full error message
 ): Saga<void> {
   /*
     Listen to changes to the annotation and derive UpdateActions from the

@@ -1,4 +1,3 @@
-// @flow
 import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
@@ -105,7 +104,8 @@ function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset })
             gridTemplateColumns: miniThumbnailDimension,
           }}
         >
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any'
+          type.
           {datasets.map((dataset) => {
             const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
             return (

@@ -1,4 +1,3 @@
-// @flow
 /* eslint no-await-in-loop: 0 */
 import type { Action } from "oxalis/model/actions/actions";
 import type { Dispatch, Store as StoreType } from "redux";

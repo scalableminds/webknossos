@@ -1,4 +1,3 @@
-// @flow
 import { Input, Tooltip } from "antd";
 import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";

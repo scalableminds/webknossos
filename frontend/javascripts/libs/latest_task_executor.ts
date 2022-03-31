@@ -1,4 +1,3 @@
-// @flow
 import Deferred from "libs/deferred";
 type Task<T> = () => Promise<T>;
 export const SKIPPED_TASK_REASON = "Skipped task";

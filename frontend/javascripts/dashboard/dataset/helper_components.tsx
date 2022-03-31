@@ -1,4 +1,3 @@
-// @flow
 import { Alert, Form, Tooltip, Modal } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";

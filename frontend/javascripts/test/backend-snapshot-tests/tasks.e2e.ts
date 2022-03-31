@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import { resetDatabase, replaceVolatileValues, writeFlowCheckingFile } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";

@@ -1,4 +1,3 @@
-// @flow
 import * as React from "react";
 import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message

@@ -276,7 +276,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     const explanationStyle = {
       paddingBottom: 12,
       color: "var(--ant-text-secondary)",
-    } as React.CSSProperties;;
+    } as React.CSSProperties;
     return (
       <React.Fragment>
         <h4>

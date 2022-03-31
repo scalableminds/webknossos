@@ -333,13 +333,13 @@ function CreateTreeButton() {
   const activeTree = useSelector((state) => toNullable(getActiveTree(state.tracing.skeleton)));
   const rgbColorString =
     activeTree != null
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-      ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
+      ? // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+        `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
       : "transparent";
   const activeTreeHint =
     activeTree != null
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-      ? `The active tree id is ${activeTree.treeId}.`
+      ? // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+        `The active tree id is ${activeTree.treeId}.`
       : "No tree is currently selected";
 
   const handleCreateTree = () => dispatch(createTreeAction());

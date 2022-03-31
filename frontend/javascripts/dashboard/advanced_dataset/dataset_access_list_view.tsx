@@ -1,4 +1,3 @@
-// @flow
 import { Spin, Tag } from "antd";
 import * as React from "react";
 import type { APIDataset, APIUser } from "types/api_flow_types";
@@ -78,7 +77,8 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
                   display: "inline-block",
                 }}
               >
-                // @ts-expect-error ts-migrate(2339) FIXME: Property 'firstName' does not exist on type 'never... Remove this comment to see the full error message
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'firstName' does not exist on
+                type 'never... Remove this comment to see the full error message
                 {user.firstName} {user.lastName}
               </div>
               {this.renderUserTags(user)}

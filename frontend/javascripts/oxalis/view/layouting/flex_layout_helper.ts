@@ -1,4 +1,3 @@
-// @flow
 import { Model, Actions, TabSetNode } from "flexlayout-react";
 import type { BorderOpenStatus } from "oxalis/store";
 import "oxalis/store";

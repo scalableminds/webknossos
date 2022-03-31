@@ -1,4 +1,3 @@
-// @flow
 import type { Rect } from "oxalis/constants";
 import { OUTER_CSS_BORDER } from "oxalis/constants";
 import { document } from "libs/window";

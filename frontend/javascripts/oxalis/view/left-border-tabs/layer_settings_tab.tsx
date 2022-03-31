@@ -361,8 +361,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const readableName =
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
       layer.tracingId != null
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
-        ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+        ? // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
+          getReadableNameByVolumeTracingId(tracing, layer.tracingId)
         : layerName;
     return (
       <div className="flex-container">

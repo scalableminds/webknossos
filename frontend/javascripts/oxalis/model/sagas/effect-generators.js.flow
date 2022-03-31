@@ -1,4 +1,4 @@
-// @flow
+ 
 
 import { type Channel, type Effect, type Pattern, type Task as _Task, type Saga as _Saga, channel, effects } from "redux-saga";
 import {

@@ -1,4 +1,3 @@
-// @flow
 import { Chart } from "react-google-charts";
 import { Row, Col, Spin, Table, Card } from "antd";
 import * as React from "react";

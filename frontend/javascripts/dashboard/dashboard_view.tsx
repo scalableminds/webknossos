@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
@@ -254,5 +253,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof DashboardView' is not ass... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof DashboardView' is not ass... Remove this comment to see the full error message
 )(withRouter(DashboardView));

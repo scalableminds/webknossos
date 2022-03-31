@@ -1,4 +1,3 @@
-// @flow
 import { Modal, Input, Form } from "antd";
 import { TagOutlined } from "@ant-design/icons";
 import * as React from "react";

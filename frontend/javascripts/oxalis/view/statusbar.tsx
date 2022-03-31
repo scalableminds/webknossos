@@ -1,4 +1,3 @@
-// @flow
 import { Tooltip } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import React from "react";

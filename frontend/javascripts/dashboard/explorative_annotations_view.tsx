@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
@@ -521,7 +520,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 >
                   <i className="fas fa-sitemap" />
                 </span>
-                // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeCount' does not exist on type '{} | ... Remove this comment to see the full error message
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeCount' does not exist on
+                type '{} | ... Remove this comment to see the full error message
                 <span>{annotation.stats.treeCount}</span>
                 <span
                   title="Nodes"
@@ -531,7 +531,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 >
                   <i className="fas fa-circle fa-sm" />
                 </span>
-                // @ts-expect-error ts-migrate(2339) FIXME: Property 'nodeCount' does not exist on type '{} | ... Remove this comment to see the full error message
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'nodeCount' does not exist on
+                type '{} | ... Remove this comment to see the full error message
                 <span>{annotation.stats.nodeCount}</span>
                 <span
                   title="Edges"
@@ -541,7 +542,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 >
                   <i className="fas fa-arrows-alt-h" />
                 </span>
-                // @ts-expect-error ts-migrate(2339) FIXME: Property 'edgeCount' does not exist on type '{} | ... Remove this comment to see the full error message
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'edgeCount' does not exist on
+                type '{} | ... Remove this comment to see the full error message
                 <span>{annotation.stats.edgeCount}</span>
               </div>
             ) : null

@@ -1,4 +1,3 @@
-// @flow
 import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";

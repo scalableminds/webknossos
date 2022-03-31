@@ -1,4 +1,3 @@
-// @flow
 import type { Dispatch } from "redux";
 import { Layout, Tooltip } from "antd";
 import { connect } from "react-redux";

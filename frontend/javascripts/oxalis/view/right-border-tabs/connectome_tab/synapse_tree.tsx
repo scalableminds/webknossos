@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { AutoSizer } from "react-virtualized";
 import { Dropdown, Menu, Tag, Tree } from "antd";
@@ -292,7 +291,8 @@ class SynapseTree extends React.Component<Props, State> {
         {/* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
          This has a major performance impact. */}
         <AutoSizer defaultHeight={500}>
-          // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'height' implicitly has an 'any' t... Remove this comment to see the full error message
+          // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'height' implicitly has an
+          'any' t... Remove this comment to see the full error message
           {({ height, width }) => (
             <div
               style={{

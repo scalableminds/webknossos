@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'deep... Remove this comment to see the full error message
 import deepForEach from "deep-for-each";
@@ -121,7 +120,7 @@ export async function writeFlowCheckingFile(
   const fullFlowType = options.isArray ? `Array<${flowTypeString}>` : flowTypeString;
   fs.writeFileSync(
     `frontend/javascripts/test/snapshots/flow-check/test-flow-checking-${name}.js`,
-    `// @flow
+    ` 
 import type { ${flowTypeString} } from "types/api_flow_types";
 const a: ${fullFlowType} = ${JSON.stringify(object)}`,
   );

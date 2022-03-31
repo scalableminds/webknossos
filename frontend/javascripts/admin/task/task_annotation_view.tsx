@@ -1,4 +1,3 @@
-// @flow
 import { Dropdown, Menu, Modal } from "antd";
 import {
   EyeOutlined,

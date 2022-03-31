@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";

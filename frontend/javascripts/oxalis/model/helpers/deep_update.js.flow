@@ -1,4 +1,4 @@
-// @flow
+ 
 import type { OxalisState } from "oxalis/store";
 
 type OxalisKey<K> = $ElementType<OxalisState, K>;

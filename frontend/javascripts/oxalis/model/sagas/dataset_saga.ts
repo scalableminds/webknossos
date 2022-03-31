@@ -1,4 +1,3 @@
-// @flow
 /* eslint-disable import/prefer-default-export */
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";

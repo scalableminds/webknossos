@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
 import type { Node } from "react";
 import React from "react";

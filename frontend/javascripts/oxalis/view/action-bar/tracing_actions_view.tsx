@@ -1,4 +1,3 @@
-// @flow
 import { Button, Dropdown, Menu, Modal, Tooltip } from "antd";
 import {
   BarsOutlined,
@@ -228,7 +227,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
             style={{
               fontSize: 14,
             }}
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           >{`Layouts for ${mapLayoutKeysToLanguage[layoutKey]}`}</span>
         }
       >
@@ -643,7 +642,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {reopenTaskButton}
           {modals}
           <Dropdown overlay={menu} trigger={["click"]}>
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             <ButtonComponent className="narrow">
               <DownOutlined />
             </ButtonComponent>

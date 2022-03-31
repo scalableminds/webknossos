@@ -1,4 +1,3 @@
-// @flow
 import type { OxalisState } from "oxalis/store";
 import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
 import { document } from "libs/window";

@@ -1,4 +1,3 @@
-// @flow
 import { Select, Card, Form, Row, Col, DatePicker, Spin } from "antd";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";

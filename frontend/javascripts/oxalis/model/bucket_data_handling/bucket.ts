@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import { createNanoEvents } from "nanoevents";
@@ -385,15 +384,15 @@ export class DataBucket {
   uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
     return arrayBuffer != null
-      // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
-      ? new TypedArrayClass(
+      ? // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
+        new TypedArrayClass(
           arrayBuffer.buffer,
           arrayBuffer.byteOffset,
           // @ts-expect-error ts-migrate(2339) FIXME: Property 'BYTES_PER_ELEMENT' does not exist on typ... Remove this comment to see the full error message
           arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
         )
-      // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
-      : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
+      : // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
+        new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
   }
 
   markAsNeeded(): void {

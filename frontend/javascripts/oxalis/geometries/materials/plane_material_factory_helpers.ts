@@ -1,4 +1,3 @@
-// @flow
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 export const channelCountToFormat = {

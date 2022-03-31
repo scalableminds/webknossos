@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import { updateKey } from "oxalis/model/helpers/deep_update";
@@ -38,10 +37,12 @@ export function convertServerBoundingBoxToBoundingBox(
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ServerBoundingBox | null | undefined,
 ): BoundingBoxType | null | undefined {
-  return Maybe.fromNullable(boundingBox)
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bb' implicitly has an 'any' type.
-    .map((bb) => convertServerBoundingBoxToBoundingBox(bb))
-    .getOrElse(null);
+  return (
+    Maybe.fromNullable(boundingBox)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bb' implicitly has an 'any' type.
+      .map((bb) => convertServerBoundingBoxToBoundingBox(bb))
+      .getOrElse(null)
+  );
 }
 export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxFromServer>,

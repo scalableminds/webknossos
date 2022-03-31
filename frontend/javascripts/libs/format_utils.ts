@@ -1,4 +1,3 @@
-// @flow
 import moment from "moment";
 import { presetPalettes } from "@ant-design/colors";
 import type { Vector3, Vector6 } from "oxalis/constants";

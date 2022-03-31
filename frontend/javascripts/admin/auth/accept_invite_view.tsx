@@ -1,4 +1,3 @@
-// @flow
 import { Button, Result, Layout, Spin } from "antd";
 import { GiftTwoTone } from "@ant-design/icons";
 import { useHistory } from "react-router-dom";

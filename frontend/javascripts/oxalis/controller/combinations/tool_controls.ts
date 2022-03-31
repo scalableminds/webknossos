@@ -1,4 +1,3 @@
-// @flow
 import type { ModifierKeys } from "libs/input";
 import "libs/input";
 import type { OrthoView, Point2, ShowContextMenuFunction, AnnotationTool } from "oxalis/constants";

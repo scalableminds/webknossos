@@ -56,8 +56,8 @@ const persistence: Persistence<PersistenceState> = new Persistence(
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
 function filterDatasetsForUsersOrganization(datasets, user) {
   return features().isDemoInstance
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'd' implicitly has an 'any' type.
-    ? datasets.filter((d) => d.owningOrganization === user.organization)
+    ? // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'd' implicitly has an 'any' type.
+      datasets.filter((d) => d.owningOrganization === user.organization)
     : datasets;
 }
 

@@ -1,4 +1,3 @@
-// @flow
 import * as THREE from "three";
 import { message } from "antd";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";

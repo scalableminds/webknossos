@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";

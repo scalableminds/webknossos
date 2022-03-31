@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
@@ -296,7 +295,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         if (segmentationLayer != null) {
           // If there is a visible segmentation layer, disable and remember it.
           leastRecentlyUsedSegmentationLayer = segmentationLayer;
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'leastRecentlyUsedSegmentationLayer' impl... Remove this comment to see the full error message
+          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'leastRecentlyUsedSegmentationLayer' impl... Remove this comment to see the full error message
         } else if (leastRecentlyUsedSegmentationLayer != null) {
           // If no segmentation layer is visible, use the least recently toggled
           // layer (note that toggling the layer via the switch-button won't update
@@ -351,8 +350,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     } else if (status === "failedLoading" && user != null) {
       const message =
         organizationToSwitchTo != null
-          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-          ? `This dataset belongs to the organization ${organizationToSwitchTo.displayName} which is currently not your active organization. Do you want to switch to that organization?`
+          ? // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
+            `This dataset belongs to the organization ${organizationToSwitchTo.displayName} which is currently not your active organization. Do you want to switch to that organization?`
           : "Either the dataset does not exist or you do not have the necessary access rights.";
       return (
         <BrainSpinner

@@ -1,4 +1,3 @@
-// @flow
 import { Form, Input, Button, Col, Row } from "antd";
 import { connect } from "react-redux";
 import React from "react";

@@ -1,4 +1,3 @@
-// @flow
 import { Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";

@@ -1,4 +1,3 @@
-// @flow
 import * as React from "react";
 import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 // This component provides a lightweight wrapper around the input library.

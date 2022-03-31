@@ -1,4 +1,3 @@
-// @flow
 import * as React from "react";
 import _ from "lodash";
 import { WarningOutlined } from "@ant-design/icons";

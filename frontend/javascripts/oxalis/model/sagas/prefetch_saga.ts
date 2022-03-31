@@ -1,4 +1,3 @@
-// @flow
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import type { OxalisState } from "oxalis/store";
 import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";

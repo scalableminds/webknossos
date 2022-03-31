@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import { V2, V3 } from "libs/mjs";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";

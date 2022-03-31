@@ -1,4 +1,3 @@
-// @flow
 import { Badge, Spin, Table, Card } from "antd";
 import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -102,8 +101,11 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       <div className="container">
         <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
         <div className="pull-right">
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'string | nu... Remove this comment to see the full error message
-          {this.state.updatedAt != null ? <FormattedDate timestamp={this.state.updatedAt} /> : null}{" "}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'string
+          | nu... Remove this comment to see the full error message
+          {this.state.updatedAt != null ? (
+            <FormattedDate timestamp={this.state.updatedAt} />
+          ) : null}{" "}
           <SettingOutlined onClick={this.handleOpenSettings} />
           <ReloadOutlined onClick={this.handleReload} />
         </div>

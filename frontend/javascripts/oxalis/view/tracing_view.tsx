@@ -1,4 +1,3 @@
-// @flow
 import * as React from "react";
 import Toast from "libs/toast";
 import messages from "messages";

@@ -1,4 +1,3 @@
-// @flow
 import { Button, Form, Modal, Tooltip } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";

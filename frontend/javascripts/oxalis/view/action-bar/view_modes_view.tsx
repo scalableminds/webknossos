@@ -1,4 +1,3 @@
-// @flow
 import { Select } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";

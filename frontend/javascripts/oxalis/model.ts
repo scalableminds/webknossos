@@ -1,4 +1,3 @@
-// @flow
 import "oxalis/model/actions/settings_actions";
 import _ from "lodash";
 import { COMPRESSING_BATCH_SIZE } from "oxalis/model/bucket_data_handling/pushqueue";

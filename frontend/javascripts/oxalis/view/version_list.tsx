@@ -1,4 +1,3 @@
-// @flow
 import { List } from "antd";
 import * as React from "react";
 import _ from "lodash";

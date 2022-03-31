@@ -1,4 +1,3 @@
-// @flow
 import React from "react";
 import _ from "lodash";
 import { Button } from "antd";

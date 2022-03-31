@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
@@ -105,72 +104,78 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "ADD_CONNECTOME_TREES": {
       const { trees, layerName } = action;
-      return getSkeletonTracingForConnectome(state, layerName)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
-        .map((skeletonTracing) =>
-          addTreesAndGroups(skeletonTracing, trees, [])
-            // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'updatedTrees' implicitly has an '... Remove this comment to see the full error message
-            .map(([updatedTrees, _treeGroups, newMaxNodeId]) =>
-              update(state, {
-                localSegmentationData: {
-                  [layerName]: {
-                    connectomeData: {
-                      skeleton: {
-                        trees: {
-                          $merge: updatedTrees,
-                        },
-                        cachedMaxNodeId: {
-                          $set: newMaxNodeId,
+      return (
+        getSkeletonTracingForConnectome(state, layerName)
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
+          .map((skeletonTracing) =>
+            addTreesAndGroups(skeletonTracing, trees, [])
+              // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'updatedTrees' implicitly has an '... Remove this comment to see the full error message
+              .map(([updatedTrees, _treeGroups, newMaxNodeId]) =>
+                update(state, {
+                  localSegmentationData: {
+                    [layerName]: {
+                      connectomeData: {
+                        skeleton: {
+                          trees: {
+                            $merge: updatedTrees,
+                          },
+                          cachedMaxNodeId: {
+                            $set: newMaxNodeId,
+                          },
                         },
                       },
                     },
                   },
-                },
-              }),
-            )
-            .getOrElse(state),
-        )
-        .getOrElse(state);
+                }),
+              )
+              .getOrElse(state),
+          )
+          .getOrElse(state)
+      );
     }
 
     case "DELETE_CONNECTOME_TREES": {
       const { treeIds, layerName } = action;
-      return getSkeletonTracingForConnectome(state, layerName)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
-        .map((skeletonTracing) =>
-          deleteConnectomeTrees(skeletonTracing, treeIds)
-            // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'trees' implicitly has an 'any' ty... Remove this comment to see the full error message
-            .map(([trees, newMaxNodeId]) =>
-              update(state, {
-                localSegmentationData: {
-                  [layerName]: {
-                    connectomeData: {
-                      skeleton: {
-                        trees: {
-                          $set: trees,
-                        },
-                        cachedMaxNodeId: {
-                          $set: newMaxNodeId,
+      return (
+        getSkeletonTracingForConnectome(state, layerName)
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
+          .map((skeletonTracing) =>
+            deleteConnectomeTrees(skeletonTracing, treeIds)
+              // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'trees' implicitly has an 'any' ty... Remove this comment to see the full error message
+              .map(([trees, newMaxNodeId]) =>
+                update(state, {
+                  localSegmentationData: {
+                    [layerName]: {
+                      connectomeData: {
+                        skeleton: {
+                          trees: {
+                            $set: trees,
+                          },
+                          cachedMaxNodeId: {
+                            $set: newMaxNodeId,
+                          },
                         },
                       },
                     },
                   },
-                },
-              }),
-            )
-            .getOrElse(state),
-        )
-        .getOrElse(state);
+                }),
+              )
+              .getOrElse(state),
+          )
+          .getOrElse(state)
+      );
     }
 
     case "SET_CONNECTOME_TREES_VISIBILITY": {
       const { treeIds, isVisible, layerName } = action;
-      return getSkeletonTracingForConnectome(state, layerName)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_skeletonTracing' implicitly has an 'an... Remove this comment to see the full error message
-        .map((_skeletonTracing) =>
-          setConnectomeTreesVisibilityReducer(state, layerName, treeIds, isVisible),
-        )
-        .getOrElse(state);
+      return (
+        getSkeletonTracingForConnectome(state, layerName)
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_skeletonTracing' implicitly has an 'an... Remove this comment to see the full error message
+          .map((_skeletonTracing) =>
+            setConnectomeTreesVisibilityReducer(state, layerName, treeIds, isVisible),
+          )
+          .getOrElse(state)
+      );
     }
 
     case "UPDATE_CONNECTOME_FILE_LIST": {

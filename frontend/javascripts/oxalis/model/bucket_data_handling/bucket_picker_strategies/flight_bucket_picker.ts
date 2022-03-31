@@ -1,4 +1,3 @@
-// @flow
 import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";

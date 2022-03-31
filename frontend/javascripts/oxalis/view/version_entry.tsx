@@ -1,4 +1,3 @@
-// @flow
 import { Avatar, Button, List } from "antd";
 import {
   ArrowsAltOutlined,

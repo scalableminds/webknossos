@@ -1,4 +1,3 @@
-// @flow
 import { getFeatureToggles } from "admin/admin_rest_api";
 // @ts-expect-error ts-migrate(7034) FIXME: Variable 'features' implicitly has type 'any' in s... Remove this comment to see the full error message
 let features = null;

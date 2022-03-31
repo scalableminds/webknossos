@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";

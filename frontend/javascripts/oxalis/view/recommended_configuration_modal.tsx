@@ -1,4 +1,3 @@
-// @flow
 import { Modal, Table } from "antd";
 import * as React from "react";
 import _ from "lodash";

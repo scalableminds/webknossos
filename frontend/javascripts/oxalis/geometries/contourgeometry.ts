@@ -1,4 +1,3 @@
-// @flow
 import * as THREE from "three";
 import type { Vector3 } from "oxalis/constants";
 import "oxalis/constants";

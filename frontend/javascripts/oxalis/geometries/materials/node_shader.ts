@@ -1,4 +1,3 @@
-// @flow
 import * as THREE from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";

@@ -1,4 +1,3 @@
-// @flow
 import { Form, Input, Button, Row, Col, Checkbox } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import React, { useRef, memo } from "react";

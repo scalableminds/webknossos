@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
@@ -394,8 +393,10 @@ class ReactRouter extends React.Component<Props> {
                 path="/taskTypes"
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialSearchValue: any; }' is not assigna... Remove this comment to see the full error message
-                ) => <TaskTypeListView initialSearchValue={location.hash.slice(1)} />}
+                ) => (
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialSearchValue: any; }' is not assigna... Remove this comment to see the full error message
+                  <TaskTypeListView initialSearchValue={location.hash.slice(1)} />
+                )}
                 exact
               />
               <SecuredRoute

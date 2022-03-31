@@ -1,4 +1,3 @@
-// @flow
 import { Spin, Table, Card } from "antd";
 import * as React from "react";
 import type { APIOpenTasksReport } from "types/api_flow_types";

@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import Request from "libs/request";
 import * as RestAPI from "admin/admin_rest_api";

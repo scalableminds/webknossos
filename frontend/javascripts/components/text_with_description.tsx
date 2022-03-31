@@ -1,4 +1,3 @@
-// @flow
 import { Popover, Tooltip } from "antd";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
@@ -65,7 +64,8 @@ class TextWithDescription extends React.PureComponent<Props> {
               </Tooltip>
             ) : null}
           </span>
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type
+          'st... Remove this comment to see the full error message
           <span className={hasDescription ? "flex-item" : null}>
             {isEditable ? ( // $FlowIssue[incompatible-type]
               // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
@@ -77,7 +77,8 @@ class TextWithDescription extends React.PureComponent<Props> {
                   display: "inline-block",
                 }}
               >
-                // @ts-expect-error ts-migrate(2339) FIXME: Property 'markdown' does not exist on type 'Readon... Remove this comment to see the full error message
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'markdown' does not exist on
+                type 'Readon... Remove this comment to see the full error message
                 {this.props.markdown ? (
                   <Markdown
                     source={this.props.value}

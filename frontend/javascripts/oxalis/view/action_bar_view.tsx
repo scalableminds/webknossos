@@ -1,4 +1,3 @@
-// @flow
 import { Alert } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";

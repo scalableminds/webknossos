@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Values } from "utility-types";
 import type { Dispatch } from "redux";
@@ -167,8 +166,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats' implicitly has an 'any' type.
         <p>Number of Edges: {statsMaybe.map((stats) => stats.edgeCount).getOrElse(null)}</p>
         <p>
-          Number of Branch Points:{" "}
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats' implicitly has an 'any' type.
+          Number of Branch Points: // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats'
+          implicitly has an 'any' type.
           {statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}
         </p>
       </div>
@@ -582,7 +581,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
               <br />
               Available resolutions:
               <ul>
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'r' implicitly has an 'any' type.
+                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'r' implicitly has an 'any'
+                type.
                 {resolutions.map((r) => (
                   <li key={r.join()}>{r.join("-")}</li>
                 ))}

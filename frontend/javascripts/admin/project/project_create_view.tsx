@@ -1,4 +1,3 @@
-// @flow
 import { Form, Input, Select, Button, Card, InputNumber, Checkbox, Spin } from "antd";
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";

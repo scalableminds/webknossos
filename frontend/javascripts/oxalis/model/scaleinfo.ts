@@ -1,4 +1,3 @@
-// @flow
 import type { Vector3 } from "oxalis/constants";
 export function getBaseVoxel(dataSetScale: Vector3): number {
   // base voxel should be a cube with highest resolution

@@ -1,4 +1,3 @@
-// @flow
 import { Input, Col, Row, DatePicker } from "antd";
 import React from "react";
 import { FormItemWithInfo } from "./helper_components";
@@ -23,7 +22,8 @@ export default function ImportGeneralComponent() {
             label="Description"
             info="Add a description with additional information about your dataset. Format with Markdown."
           >
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type
+            'number | ... Remove this comment to see the full error message
             <Input.TextArea rows="3" placeholder="Description" />
           </FormItemWithInfo>
         </Col>

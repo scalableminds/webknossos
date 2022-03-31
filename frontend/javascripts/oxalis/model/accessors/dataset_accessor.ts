@@ -246,7 +246,7 @@ export function getResolutionUnion(
       if (resolutionUnionDict[key] == null) {
         // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
         resolutionUnionDict[key] = resolution;
-      // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
+        // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
       } else if (_.isEqual(resolutionUnionDict[key], resolution)) {
         // the same resolution was already picked up
       } else if (shouldThrow) {

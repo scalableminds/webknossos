@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import type { Vector3, LabeledVoxelsMap } from "oxalis/constants";
 import constants from "oxalis/constants";

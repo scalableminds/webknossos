@@ -1,4 +1,3 @@
-// @flow
 class ChainReducerClass<S, A> {
   state: S;
 

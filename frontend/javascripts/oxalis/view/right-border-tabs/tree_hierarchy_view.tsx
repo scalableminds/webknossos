@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { AutoSizer } from "react-virtualized";
 import { Checkbox, Dropdown, Menu, Modal, notification } from "antd";
@@ -615,7 +614,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const { activeTreeId, activeGroupId } = this.props;
     return (
       <AutoSizer>
-        // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'height' implicitly has an 'any' t... Remove this comment to see the full error message
         {({ height, width }) => (
           <div
             style={{
@@ -712,5 +710,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, OwnProps, _, _, _, _>(null, mapDispatchToProps)(TreeHierarchyView);
+const connector = connect(null, mapDispatchToProps)
+export default connector(TreeHierarchyView);

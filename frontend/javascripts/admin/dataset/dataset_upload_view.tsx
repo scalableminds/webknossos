@@ -1,4 +1,3 @@
-// @flow
 import {
   Popover,
   Avatar,
@@ -905,7 +904,7 @@ function FileUploadArea({ fileList, onChange }) {
                   style={{
                     color: "darkgrey",
                   }}
-                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 >{`${item.path.split("/").slice(0, -1).join("/")}/`}</span>
                 // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 {item.name}

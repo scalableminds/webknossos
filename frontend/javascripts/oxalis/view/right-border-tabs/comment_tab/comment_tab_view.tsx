@@ -300,7 +300,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return zipMaybe(
       getActiveTree(this.props.skeletonTracing),
       getActiveNode(this.props.skeletonTracing),
-    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
     ).chain(([tree, activeNode]) =>
       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comment' implicitly has an 'any' type.
       Maybe.fromNullable(tree.comments.find((comment) => comment.nodeId === activeNode.id)).orElse(
@@ -329,19 +329,21 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
     const onOk = () => this.setMarkdownModalVisibility(false);
 
-    return activeCommentMaybe
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comment' implicitly has an 'any' type.
-      .map((comment) => (
-        <MarkdownModal
-          key={comment.nodeId}
-          source={comment.content}
-          visible={this.state.isMarkdownModalVisible}
-          onChange={this.handleChangeInput}
-          onOk={onOk}
-          label="Comment"
-        />
-      ))
-      .getOrElse(null);
+    return (
+      activeCommentMaybe
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comment' implicitly has an 'any' type.
+        .map((comment) => (
+          <MarkdownModal
+            key={comment.nodeId}
+            source={comment.content}
+            visible={this.state.isMarkdownModalVisible}
+            onChange={this.handleChangeInput}
+            onOk={onOk}
+            label="Comment"
+          />
+        ))
+        .getOrElse(null)
+    );
   }
 
   renderSortIcon() {
@@ -445,7 +447,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     searchKey="content"
                     targetId={commentListId}
                   >
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     <ButtonComponent icon={<SearchOutlined />} title="Search through comments" />
                   </AdvancedSearchPopover>
                   <ButtonComponent
@@ -499,7 +500,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   }}
                 >
                   <AutoSizer>
-                    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'height' implicitly has an 'any' t... Remove this comment to see the full error message
                     {({ height, width }) => (
                       <div
                         style={{
@@ -555,8 +555,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, {}, _, _, _, _>(
+const connector = connect(
   mapStateToProps,
   mapDispatchToProps,
-)(makeSkeletonTracingGuard(CommentTabView));
+)
+export default connector(makeSkeletonTracingGuard(CommentTabView));

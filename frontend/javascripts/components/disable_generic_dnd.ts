@@ -1,4 +1,3 @@
-// @flow
 import React from "react";
 import window from "libs/window";
 export default class DisableGenericDnd extends React.Component<{}> {

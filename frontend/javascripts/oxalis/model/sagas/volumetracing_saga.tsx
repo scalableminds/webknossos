@@ -1,4 +1,3 @@
-// @flow
 import { message } from "antd";
 import React from "react";
 import _ from "lodash";
@@ -972,7 +971,7 @@ function* ensureSegmentExists(
     (
       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
       store, // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'layerName' does not exist on type 'SetAc... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'layerName' does not exist on type 'SetAc... Remove this comment to see the full error message
     ) => getRequestedOrVisibleSegmentationLayer(store, action.layerName),
   );
 

@@ -1,4 +1,3 @@
-// @flow
 import ReactDOM from "react-dom";
 import { document } from "libs/window";
 type DestroyFunction = () => void; // The returned promise gets resolved once the element is destroyed.

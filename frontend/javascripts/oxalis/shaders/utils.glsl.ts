@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import type { ShaderModule } from "./shader_module_system";
 export const hsvToRgb: ShaderModule = {

@@ -1,4 +1,3 @@
-// @flow
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";

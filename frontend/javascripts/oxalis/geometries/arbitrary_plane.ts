@@ -1,4 +1,3 @@
-// @flow
 import * as THREE from "three";
 import _ from "lodash";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";

@@ -1,4 +1,3 @@
-// @flow
 import { Modal, Checkbox } from "antd";
 import * as React from "react";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";

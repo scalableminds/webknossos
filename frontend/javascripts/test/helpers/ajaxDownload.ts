@@ -26,14 +26,16 @@ export default class Request {
         url = `http://localhost:9000${url}`;
       }
 
-      return fetch(url, options)
-        .then(responseHandler)
-        .then(converter)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'e' implicitly has an 'any' type.
-        .catch((e) => {
-          console.error(e);
-          return Promise.reject(e);
-        });
+      return (
+        fetch(url, options)
+          .then(responseHandler)
+          .then(converter)
+          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'e' implicitly has an 'any' type.
+          .catch((e) => {
+            console.error(e);
+            return Promise.reject(e);
+          })
+      );
     }
 
     // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'url' implicitly has an 'any' type.

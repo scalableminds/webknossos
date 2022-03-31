@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
@@ -169,16 +168,18 @@ export function getNodeAndTreeOrNull(
   tree: Tree | null;
   node: Node | null;
 } {
-  return getNodeAndTree(skeletonTracing, nodeId, treeId)
-    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'maybeTree' implicitly has an 'any... Remove this comment to see the full error message
-    .map(([maybeTree, maybeNode]) => ({
-      tree: maybeTree,
-      node: maybeNode,
-    }))
-    .getOrElse({
-      tree: null,
-      node: null,
-    });
+  return (
+    getNodeAndTree(skeletonTracing, nodeId, treeId)
+      // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'maybeTree' implicitly has an 'any... Remove this comment to see the full error message
+      .map(([maybeTree, maybeNode]) => ({
+        tree: maybeTree,
+        node: maybeNode,
+      }))
+      .getOrElse({
+        tree: null,
+        node: null,
+      })
+  );
 }
 export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
   const maxNodeId = _.reduce(
@@ -206,16 +207,18 @@ export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
   );
 }
 export function getStats(tracing: Tracing): Maybe<SkeletonTracingStats> {
-  return getSkeletonTracing(tracing)
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
-    .chain((skeletonTracing) => Maybe.fromNullable(skeletonTracing.trees))
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'trees' implicitly has an 'any' type.
-    .map((trees) => ({
-      treeCount: _.size(trees),
-      nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
-      edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
-      branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
-    }));
+  return (
+    getSkeletonTracing(tracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
+      .chain((skeletonTracing) => Maybe.fromNullable(skeletonTracing.trees))
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'trees' implicitly has an 'any' type.
+      .map((trees) => ({
+        treeCount: _.size(trees),
+        nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
+        edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
+        branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
+      }))
+  );
 }
 export function getFlatTreeGroups(skeletonTracing: SkeletonTracing): Array<TreeGroupTypeFlat> {
   return Array.from(

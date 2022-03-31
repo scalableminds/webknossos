@@ -1,4 +1,3 @@
-// @flow
 import { useState, useEffect, useRef } from "react";
 import { useStore } from "react-redux";
 import type { OxalisState } from "oxalis/store";

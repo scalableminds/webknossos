@@ -1,4 +1,3 @@
-// @flow
 import * as THREE from "three";
 import _ from "lodash";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";

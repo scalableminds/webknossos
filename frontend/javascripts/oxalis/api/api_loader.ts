@@ -1,4 +1,3 @@
-// @flow
 // only relative imports are followed by documentationjs
 import type { OxalisModel } from "oxalis/model";
 import app from "app";

@@ -1,4 +1,3 @@
-// @flow
 import * as THREE from "three";
 import _ from "lodash";
 import type { OrthoView, Vector3 } from "oxalis/constants";

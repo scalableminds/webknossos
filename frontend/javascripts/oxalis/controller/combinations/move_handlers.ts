@@ -1,4 +1,3 @@
-// @flow
 import Store from "oxalis/store";
 import type { Point2, Vector3, OrthoView } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";

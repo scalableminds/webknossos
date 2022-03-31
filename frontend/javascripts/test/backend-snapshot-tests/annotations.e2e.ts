@@ -1,4 +1,3 @@
-// @flow
 import type { APIAnnotation } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";

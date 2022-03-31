@@ -1,4 +1,3 @@
-// @flow
 import { Form, Input, Button, Col, Row, Upload } from "antd";
 import { UnlockOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";

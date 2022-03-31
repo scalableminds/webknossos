@@ -1,4 +1,3 @@
-// @flow
 import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",

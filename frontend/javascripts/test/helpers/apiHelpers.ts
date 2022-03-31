@@ -194,25 +194,27 @@ export function __setupOxalis(t, mode, apiVersion) {
     );
   Request.receiveJSON.returns(Promise.resolve({}));
   Request.sendJSONReceiveJSON.returns(Promise.resolve({}));
-  return Model.fetch(
-    ANNOTATION_TYPE,
-    {
-      annotationId: ANNOTATION_ID,
-      type: ControlModeEnum.TRACE,
-    },
-    true,
-  )
-    .then(() => {
-      // Trigger the event ourselves, as the OxalisController is not instantiated
-      app.vent.trigger("webknossos:ready");
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'apiObject' implicitly has an 'any' type... Remove this comment to see the full error message
-      webknossos.apiReady(apiVersion).then((apiObject) => {
-        t.context.api = apiObject;
-      });
-    })
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'error' implicitly has an 'any' type.
-    .catch((error) => {
-      console.error("model.fetch() failed", error);
-      t.fail(error.message);
-    });
+  return (
+    Model.fetch(
+      ANNOTATION_TYPE,
+      {
+        annotationId: ANNOTATION_ID,
+        type: ControlModeEnum.TRACE,
+      },
+      true,
+    )
+      .then(() => {
+        // Trigger the event ourselves, as the OxalisController is not instantiated
+        app.vent.trigger("webknossos:ready");
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'apiObject' implicitly has an 'any' type... Remove this comment to see the full error message
+        webknossos.apiReady(apiVersion).then((apiObject) => {
+          t.context.api = apiObject;
+        });
+      })
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'error' implicitly has an 'any' type.
+      .catch((error) => {
+        console.error("model.fetch() failed", error);
+        t.fail(error.message);
+      })
+  );
 }

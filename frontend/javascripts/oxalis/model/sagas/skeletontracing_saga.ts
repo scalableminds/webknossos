@@ -1,4 +1,3 @@
-// @flow
 import { Modal } from "antd";
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";

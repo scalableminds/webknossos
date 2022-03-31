@@ -1,4 +1,3 @@
-// @flow
 import { Button } from "antd";
 import React, { useState, useEffect, useContext } from "react";
 import type { APIDataset, APIDatasetId } from "types/api_flow_types";

@@ -1,4 +1,3 @@
-// @flow
 import { Button, Tooltip } from "antd";
 import * as React from "react";
 import _ from "lodash";

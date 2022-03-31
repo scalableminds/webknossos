@@ -14,10 +14,10 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
   const canvas = document.createElement("canvas");
   const contextProvider = canvas.getContext
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
-    ? (x) => canvas.getContext(x)
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'ctxName' implicitly has an 'any' type.
-    : (ctxName) => ({
+    ? // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
+      (x) => canvas.getContext(x)
+    : // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'ctxName' implicitly has an 'any' type.
+      (ctxName) => ({
         MAX_TEXTURE_SIZE: 0,
         MAX_TEXTURE_IMAGE_UNITS: 1,
 

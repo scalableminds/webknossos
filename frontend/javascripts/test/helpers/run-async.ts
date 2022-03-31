@@ -1,4 +1,3 @@
-// @flow
 export default function runAsync(
   functions: Array<(...args: Array<any>) => any>,
   waitTimeMs: number = 100,

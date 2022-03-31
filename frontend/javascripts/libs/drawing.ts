@@ -1,4 +1,3 @@
-// @flow
 import type { Vector3 } from "oxalis/constants";
 type RangeItem = [number, number, number, boolean | null, boolean, boolean];
 // This is a class with static methods and constants dealing with drawing

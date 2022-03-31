@@ -1,4 +1,3 @@
-// @flow
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { getUid } from "libs/uid_generator";
 import Date from "libs/date";

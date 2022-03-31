@@ -212,10 +212,12 @@ class TracingApi {
    */
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveNode(tracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
-      .map((node) => node.id)
-      .getOrElse(null);
+    return (
+      getActiveNode(tracing)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
+        .map((node) => node.id)
+        .getOrElse(null)
+    );
   }
 
   /**
@@ -223,10 +225,12 @@ class TracingApi {
    */
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveTree(tracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
-      .map((tree) => tree.treeId)
-      .getOrElse(null);
+    return (
+      getActiveTree(tracing)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
+        .map((tree) => tree.treeId)
+        .getOrElse(null)
+    );
   }
 
   /**
@@ -234,10 +238,12 @@ class TracingApi {
    */
   getActiveGroupId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveGroup(tracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
-      .map((group) => group.groupId)
-      .getOrElse(null);
+    return (
+      getActiveGroup(tracing)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
+        .map((group) => group.groupId)
+        .getOrElse(null)
+    );
   }
 
   /**
@@ -496,10 +502,12 @@ class TracingApi {
    */
   getTreeName(treeId?: number) {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getTree(tracing, treeId)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
-      .map((activeTree) => activeTree.name)
-      .get();
+    return (
+      getTree(tracing, treeId)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
+        .map((activeTree) => activeTree.name)
+        .get()
+    );
   }
 
   /**
@@ -1417,7 +1425,7 @@ class DataApi {
     elementClass: ElementClass,
     resolutions: Array<Vector3>,
     zoomStep: number,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
+    // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
   ): $TypedArray {
     const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
@@ -1461,8 +1469,8 @@ class DataApi {
           // could also be MISSING.
           const data = bucket.hasData()
             ? bucket.getData()
-            // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
-            : new TypedArrayClass(Constants.BUCKET_SIZE);
+            : // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
+              new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;

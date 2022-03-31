@@ -1,4 +1,3 @@
-// @flow
 import { Form, Row, Dropdown, Menu, Col, Button, Input, Select, Spin } from "antd";
 import { FormInstance } from "antd/lib/form";
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";

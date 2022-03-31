@@ -1,4 +1,3 @@
-// @flow
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
@@ -26,10 +25,7 @@ import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 const decodeFourBit = DecodeFourBitWorker;
 const COMPRESSION_WORKER_COUNT = 2;
-const compressionPool = new WorkerPool(
-  () => ByteArrayToLz4Base64Worker,
-  COMPRESSION_WORKER_COUNT,
-);
+const compressionPool = new WorkerPool(() => ByteArrayToLz4Base64Worker, COMPRESSION_WORKER_COUNT);
 export const REQUEST_TIMEOUT = 60000;
 export type SendBucketInfo = {
   position: Vector3;

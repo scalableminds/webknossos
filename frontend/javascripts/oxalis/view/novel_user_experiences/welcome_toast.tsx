@@ -1,4 +1,3 @@
-// @flow
 import React, { useEffect } from "react";
 import { Button, notification } from "antd";
 import { useSelector } from "react-redux";

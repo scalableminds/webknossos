@@ -1,4 +1,3 @@
-// @flow
 import jsonschema from "jsonschema";
 import DatasourceSchema from "types/schemas/datasource.schema";
 import UserSettingsSchema from "types/schemas/user_settings.schema";

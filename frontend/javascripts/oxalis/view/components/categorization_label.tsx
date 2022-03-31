@@ -1,4 +1,3 @@
-// @flow
 import { Tag, Tooltip } from "antd";
 import UserLocalStorage from "libs/user_local_storage";
 import React, { useEffect } from "react";

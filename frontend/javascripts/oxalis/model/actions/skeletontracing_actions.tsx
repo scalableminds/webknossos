@@ -1,4 +1,3 @@
-// @flow
 import { Modal } from "antd";
 import React from "react";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
@@ -557,27 +556,29 @@ export const deleteActiveNodeAsUserAction = (
   state: OxalisState,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
-  return getActiveNode(skeletonTracing)
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
-    .map((activeNode) => {
-      const nodeId = activeNode.id;
+  return (
+    getActiveNode(skeletonTracing)
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
+      .map((activeNode) => {
+        const nodeId = activeNode.id;
 
-      if (state.task != null && nodeId === 1) {
-        // Let the user confirm the deletion of the initial node (node with id 1) of a task
-        Modal.confirm({
-          title: messages["tracing.delete_initial_node"],
-          onOk: () => {
-            Store.dispatch(deleteNodeAction(nodeId));
-          },
-        });
-        // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
-        // if the user confirms
-        return noAction();
-      }
+        if (state.task != null && nodeId === 1) {
+          // Let the user confirm the deletion of the initial node (node with id 1) of a task
+          Modal.confirm({
+            title: messages["tracing.delete_initial_node"],
+            onOk: () => {
+              Store.dispatch(deleteNodeAction(nodeId));
+            },
+          });
+          // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+          // if the user confirms
+          return noAction();
+        }
 
-      return deleteNodeAction(nodeId);
-    }) // If the tree is empty, it will be deleted
-    .getOrElse(deleteTreeAction());
+        return deleteNodeAction(nodeId);
+      }) // If the tree is empty, it will be deleted
+      .getOrElse(deleteTreeAction())
+  );
 };
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task

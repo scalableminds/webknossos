@@ -1,4 +1,3 @@
-// @flow
 import { Checkbox, Divider, Popover, Tooltip } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import React from "react";

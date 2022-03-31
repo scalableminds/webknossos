@@ -1,4 +1,3 @@
-// @flow
 import { Alert, List, Input, Form, InputNumber, Col, Row, Switch, Tooltip } from "antd";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
@@ -165,18 +164,19 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
           dataSource || {
             dataLayers: [],
           }
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
-        ).dataLayers.map((layer, idx) => (
-          <List.Item key={`layer-${layer.name}`}>
-            <SimpleLayerForm
-              isReadOnlyDataset={isReadOnlyDataset}
-              layer={layer}
-              index={idx}
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isReadOnlyDataset: any; layer: any; index:... Remove this comment to see the full error message
-              form={form}
-            />
-          </List.Item>
-        ))}
+        )// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
+        .dataLayers
+          .map((layer, idx) => (
+            <List.Item key={`layer-${layer.name}`}>
+              <SimpleLayerForm
+                isReadOnlyDataset={isReadOnlyDataset}
+                layer={layer}
+                index={idx}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isReadOnlyDataset: any; layer: any; index:... Remove this comment to see the full error message
+                form={form}
+              />
+            </List.Item>
+          ))}
       </List>
     </div>
   );

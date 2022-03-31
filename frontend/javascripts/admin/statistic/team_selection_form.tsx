@@ -1,4 +1,3 @@
-// @flow
 import { Row, Col, Form, Button } from "antd";
 import * as React from "react";
 import type { APITeam } from "types/api_flow_types";

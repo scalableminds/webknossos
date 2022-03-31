@@ -1,4 +1,3 @@
-// @flow
 import { Root } from "protobufjs/light";
 import type { ServerTracing } from "types/api_flow_types";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'SkeletonTracing.proto' or its ... Remove this comment to see the full error message

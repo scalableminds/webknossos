@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import type { Edge } from "oxalis/store";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";

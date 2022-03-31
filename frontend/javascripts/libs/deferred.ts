@@ -1,4 +1,3 @@
-// @flow
 class Deferred<T, U> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property '_internalResolve' has no initializer and... Remove this comment to see the full error message
   _internalResolve: (arg0: T) => void;

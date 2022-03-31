@@ -1,4 +1,3 @@
-// @flow
 import Base64 from "base64-js";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'lz4j... Remove this comment to see the full error message
 import lz4 from "lz4js";

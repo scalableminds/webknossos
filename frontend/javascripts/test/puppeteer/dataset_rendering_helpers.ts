@@ -1,4 +1,3 @@
-// @flow
 /* eslint no-await-in-loop: 0 */
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'url-... Remove this comment to see the full error message
 import urljoin from "url-join";

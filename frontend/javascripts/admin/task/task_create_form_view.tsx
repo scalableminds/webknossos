@@ -192,7 +192,8 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
       <pre>
         taskId,filename,position
         <br />
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'successfulTasks' implicitly has an 'any[... Remove this comment to see the full error message
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'successfulTasks' implicitly has an
+        'any[... Remove this comment to see the full error message
         {successfulTasks.map((task) => taskToShortText(task)).join("\n")}
       </pre>
     ) : (

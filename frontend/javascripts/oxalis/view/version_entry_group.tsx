@@ -1,4 +1,3 @@
-// @flow
 import { Avatar, List } from "antd";
 import * as React from "react";
 import _ from "lodash";
@@ -51,8 +50,8 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
         <List.Item.Meta
           title={
             <React.Fragment>
-              // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-              Versions {_.last(batches).version} to {batches[0].version} (
+              // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'. Versions{" "}
+              {_.last(batches).version} to {batches[0].version} (
               <FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
             </React.Fragment>
           }

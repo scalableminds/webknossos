@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import {
@@ -395,7 +394,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 maxWidth: 300,
               }}
             >
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
+              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any'
+              type.
               {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}

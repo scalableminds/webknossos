@@ -1,4 +1,3 @@
-// @flow
 import React from "react";
 import { withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row, Alert } from "antd";

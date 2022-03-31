@@ -1,4 +1,3 @@
-// @flow
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 // Allows to listen on a certain property of the store.

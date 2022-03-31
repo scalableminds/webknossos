@@ -1,4 +1,3 @@
-// @flow
 import { useEffect } from "react";
 import _ from "lodash";
 import api from "oxalis/api/internal_api";
@@ -158,7 +157,7 @@ const CrossOriginApi = () => {
         );
       });
     }
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
   }, [window.webknossos]);
   return null;
 };

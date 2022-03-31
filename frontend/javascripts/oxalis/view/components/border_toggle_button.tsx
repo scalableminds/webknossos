@@ -1,4 +1,3 @@
-// @flow
 import * as React from "react";
 import { Button, Tooltip } from "antd";
 import { connect } from "react-redux";

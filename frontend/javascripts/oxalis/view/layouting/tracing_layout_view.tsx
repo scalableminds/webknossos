@@ -1,4 +1,3 @@
-// @flow
 import { Alert, Layout, Tooltip } from "antd";
 import { SettingOutlined, WarningFilled } from "@ant-design/icons";
 import type { Dispatch } from "redux";
@@ -447,5 +446,5 @@ function mapStateToProps(state: OxalisState): StateProps {
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TracingLayoutView' is not... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TracingLayoutView' is not... Remove this comment to see the full error message
 )(withRouter(TracingLayoutView));

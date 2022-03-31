@@ -1,4 +1,3 @@
-// @flow
 import { Button, Modal, Tag, Card, Row, Col, List } from "antd";
 import {
   CheckCircleOutlined,

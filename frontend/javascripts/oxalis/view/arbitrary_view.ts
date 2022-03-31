@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
@@ -230,7 +229,7 @@ class ArbitraryView {
     // Code similar to the following will render buckets wireframes in red, if there were
     // passed to the GPU but were not used.
     // It can be used within the orthogonal bucket picker for example.
-    // // @flow
+    //
     // import * as Utils from "libs/utils";
     // import type { Vector4 } from "oxalis/constants";
     // const makeBucketId = ([x, y, z], logZoomStep) => [x, y, z, logZoomStep].join(",");

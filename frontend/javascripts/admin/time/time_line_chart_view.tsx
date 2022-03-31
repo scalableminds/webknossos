@@ -1,4 +1,3 @@
-// @flow
 import { Chart } from "react-google-charts";
 import * as React from "react";
 import { getWindowBounds } from "libs/utils";

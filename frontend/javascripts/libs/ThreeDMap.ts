@@ -1,4 +1,3 @@
-// @flow
 import type { Vector3 } from "oxalis/constants"; // This is a Map datastructure for which the key
 // is a Vector3.
 

@@ -1,4 +1,3 @@
-// @flow
 import { Button, Input, Checkbox, Tooltip } from "antd";
 import React, { useState, useEffect } from "react";
 import type { APIDataset, APIDatasetId } from "types/api_flow_types";

@@ -1,4 +1,3 @@
-// @flow
 import { Table } from "antd";
 import * as React from "react";
 type Props = {

@@ -1,4 +1,3 @@
-// @flow
 import * as THREE from "three";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";

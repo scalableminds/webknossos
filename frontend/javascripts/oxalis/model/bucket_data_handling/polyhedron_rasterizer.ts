@@ -1,4 +1,3 @@
-// @flow
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import * as Utils from "libs/utils";

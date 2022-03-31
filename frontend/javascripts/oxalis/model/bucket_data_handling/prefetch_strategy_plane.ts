@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";

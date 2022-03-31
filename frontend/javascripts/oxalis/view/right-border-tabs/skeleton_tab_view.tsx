@@ -1,4 +1,3 @@
-// @flow
 import {
   Alert,
   Button,

@@ -1,4 +1,3 @@
-// @flow
 import * as React from "react";
 // This component uses an IntersectionObserver to find out if the element with the id targetId
 // is visible in the current viewport or not. It then calls its children render function with that value.

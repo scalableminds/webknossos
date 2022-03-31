@@ -1,4 +1,3 @@
-// @flow
 import { Modal, Input, Button, Row, Col } from "antd";
 import { useSelector } from "react-redux";
 import React from "react";

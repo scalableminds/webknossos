@@ -1,4 +1,3 @@
-// @flow
 import { Button, Modal, Alert } from "antd";
 import { useSelector } from "react-redux";
 import React, { useState } from "react";

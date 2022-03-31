@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 export function chunk2<T>(arr: Array<T>): Array<[T, T]> {
   // $FlowFixMe[invalid-tuple-arity]

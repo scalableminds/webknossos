@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
@@ -250,7 +249,7 @@ function* performMinCut(action: Action): Saga<void> {
         // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
         name: `Bounding box used for splitting cell (seedA=(${nodes[0].position.join(
           ",",
-        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+          // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
         )}), seedB=(${nodes[1].position.join(",")}), timestamp=${new Date().getTime()})`,
         color: Utils.getRandomColor(),
         isVisible: true,

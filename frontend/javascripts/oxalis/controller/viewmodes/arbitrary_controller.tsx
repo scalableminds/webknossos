@@ -1,4 +1,3 @@
-// @flow
 import * as React from "react";
 import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";

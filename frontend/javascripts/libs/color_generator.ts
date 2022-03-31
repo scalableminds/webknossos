@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { chunk3 } from "oxalis/model/helpers/chunk";

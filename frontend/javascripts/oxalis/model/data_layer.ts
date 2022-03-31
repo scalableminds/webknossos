@@ -1,4 +1,3 @@
-// @flow
 import type { Vector3 } from "oxalis/constants";
 import { getLayerBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import ConnectionInfo from "oxalis/model/data_connection_info";

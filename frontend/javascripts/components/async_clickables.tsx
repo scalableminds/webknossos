@@ -1,4 +1,3 @@
-// @flow
 import { Button } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import * as React from "react";

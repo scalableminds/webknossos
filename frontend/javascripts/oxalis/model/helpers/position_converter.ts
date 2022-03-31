@@ -1,4 +1,3 @@
-// @flow
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";

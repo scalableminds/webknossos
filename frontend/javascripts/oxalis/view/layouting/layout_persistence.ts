@@ -1,4 +1,3 @@
-// @flow
 import { createNanoEvents } from "nanoevents";
 import _ from "lodash";
 import { getIsInIframe } from "libs/utils";

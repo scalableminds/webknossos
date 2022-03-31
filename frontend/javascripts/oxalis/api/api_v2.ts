@@ -1,4 +1,3 @@
-// @flow
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 import _ from "lodash";
@@ -97,10 +96,12 @@ class TracingApi {
    */
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveNode(tracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
-      .map((node) => node.id)
-      .getOrElse(null);
+    return (
+      getActiveNode(tracing)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
+        .map((node) => node.id)
+        .getOrElse(null)
+    );
   }
 
   /**
@@ -108,10 +109,12 @@ class TracingApi {
    */
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveTree(tracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
-      .map((tree) => tree.treeId)
-      .getOrElse(null);
+    return (
+      getActiveTree(tracing)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
+        .map((tree) => tree.treeId)
+        .getOrElse(null)
+    );
   }
 
   /**
@@ -224,10 +227,12 @@ class TracingApi {
    */
   getTreeName(treeId?: number) {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getTree(tracing, treeId)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
-      .map((activeTree) => activeTree.name)
-      .get();
+    return (
+      getTree(tracing, treeId)
+        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
+        .map((activeTree) => activeTree.name)
+        .get()
+    );
   }
 
   /**

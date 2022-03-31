@@ -1,4 +1,3 @@
-// @flow
 import { Input } from "antd";
 // @ts-expect-error ts-migrate(2724) FIXME: '"react"' has no exported member named 'Element'. ... Remove this comment to see the full error message
 import type { Element } from "react";

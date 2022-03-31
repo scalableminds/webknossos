@@ -1067,22 +1067,49 @@ export function startNeuronInferralJob(
     `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?layerName=${layerName}&bbox=${bbox.join(
       ",",
     )}&newDatasetName=${newDatasetName}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+function startSegmentationAnnotationDependentJob(
+  jobURLPath: string,
+  organizationName: string,
+  datasetName: string,
+  fallbackLayerName: string,
+  volumeLayerName: ?string,
+  newDatasetName: string,
+  annotationId: string,
+  annotationType: APIAnnotationType,
+): Promise<APIJob> {
+  const volumeLayerArg = volumeLayerName != null ? `&volumeLayerName=${volumeLayerName}` : "";
+  return Request.receiveJSON(
+    `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}?fallbackLayerName=${fallbackLayerName}${volumeLayerArg}&annotationId=${annotationId}&annotationType=${annotationType}&newDatasetName=${newDatasetName}`,
+    {
+      method: "POST",
+    },
   );
 }
 
 export function startGlobalizeFloodfillsJob(
   organizationName: string,
   datasetName: string,
-  newDataSetName: string,
-  layerName: string,
+  fallbackLayerName: string,
+  volumeLayerName: ?string,
+  newDatasetName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/globalizeFloodfills/${organizationName}/${datasetName}?newDataSetName=${newDataSetName}&layerName=${layerName}&annotationId=${annotationId}&annotationType=${annotationType}`,
-    {
-      method: "POST",
-    },
+  return startSegmentationAnnotationDependentJob(
+    "globalizeFloodfills",
+    organizationName,
+    datasetName,
+    fallbackLayerName,
+    volumeLayerName,
+    newDatasetName,
+    annotationId,
+    annotationType,
   );
 }
 
@@ -1095,12 +1122,15 @@ export function startApplyMergerModeJob(
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIJob> {
-  const volumeLayerArg = volumeLayerName != null ? `&volumeLayerName=${volumeLayerName}` : "";
-  return Request.receiveJSON(
-    `/api/jobs/run/applyMergerMode/${organizationName}/${datasetName}?fallbackLayerName=${fallbackLayerName}${volumeLayerArg}&annotationId=${annotationId}&annotationType=${annotationType}&newDatasetName=${newDatasetName}`,
-    {
-      method: "POST",
-    },
+  return startSegmentationAnnotationDependentJob(
+    "applyMergerMode",
+    organizationName,
+    datasetName,
+    fallbackLayerName,
+    volumeLayerName,
+    newDatasetName,
+    annotationId,
+    annotationType,
   );
 }
 

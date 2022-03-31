@@ -6,6 +6,7 @@ import {
   startNucleiInferralJob,
   startNeuronInferralJob,
   startApplyMergerModeJob,
+  startGlobalizeFloodfillsJob,
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
@@ -25,6 +26,7 @@ const jobNameToImagePath = {
   "neuron inferral": "neuron_inferral_example.jpg",
   "nuclei inferral": "nuclei_inferral_example.jpg",
   "apply merger mode": "apply_merger_mode_example.jpg",
+  "globalization of the floodfill operation(s)": null,
 };
 
 type Props = {
@@ -193,14 +195,18 @@ function StartingJobModal(props: StartingJobModalProps) {
     >
       {description}
       <br />
-      <div style={{ textAlign: "center" }}>
-        <img
-          src={`/assets/images/${jobNameToImagePath[jobName]}`}
-          alt={`${jobName} example`}
-          style={{ width: 400, height: "auto", borderRadius: 3 }}
-        />
-      </div>
-      <br />
+      {jobNameToImagePath[jobName] != null ? (
+        <>
+          <div style={{ textAlign: "center" }}>
+            <img
+              src={`/assets/images/${jobNameToImagePath[jobName]}`}
+              alt={`${jobName} example`}
+              style={{ width: 400, height: "auto", borderRadius: 3 }}
+            />
+          </div>
+          <br />
+        </>
+      ) : null}
       <Form
         onFinish={startJob}
         layout="vertical"
@@ -235,7 +241,6 @@ export function NucleiInferralModal({ handleClose }: Props) {
       jobName="nuclei inferral"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async (newDatasetName, colorLayer) =>
-        // TODO
         startNucleiInferralJob(
           dataset.owningOrganization,
           dataset.name,
@@ -276,7 +281,6 @@ export function NeuronInferralModal({ handleClose }: Props) {
         if (!boundingBox) {
           return Promise.resolve();
         }
-        // TODO
         const bbox = computeArrayFromBoundingBox(boundingBox.boundingBox);
         return startNeuronInferralJob(
           dataset.owningOrganization,
@@ -333,14 +337,50 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
         );
       }}
       description={
-        <>
-          <p>
-            Start a job that take the current state of this merger mode tracing and apply it to the
-            segmentation layer. This will create a new dataset which contains the merged
-            segmentation layer. If this dataset has more than one segmentation layer, please select
-            the segmentation layer to the merging should be applied to.
-          </p>
-        </>
+        <p>
+          Start a job that take the current state of this merger mode tracing and apply it to the
+          segmentation layer. This will create a new dataset which contains the merged segmentation
+          layer. If this dataset has more than one segmentation layer, please select the
+          segmentation layer to the merging should be applied to.
+        </p>
+      }
+    />
+  );
+}
+
+export function StartGlobalizeFloodfillsModal({ handleClose }: Props) {
+  const dataset = useSelector(state => state.dataset);
+  const tracing = useSelector(store => store.tracing);
+  return (
+    <StartingJobModal
+      handleClose={handleClose}
+      jobName="globalization of the floodfill operation(s)"
+      suggestedDatasetSuffix="with_floodfills"
+      chooseSegmentationLayer
+      jobApiCall={async (newDatasetName, segmentationLayer) => {
+        const volumeLayerName =
+          segmentationLayer.tracingId != null
+            ? getReadableNameByVolumeTracingId(tracing, segmentationLayer.tracingId)
+            : null;
+        const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
+        return startGlobalizeFloodfillsJob(
+          dataset.owningOrganization,
+          dataset.name,
+          baseSegmentationName,
+          volumeLayerName,
+          newDatasetName,
+          tracing.annotationId,
+          tracing.annotationType,
+        );
+      }}
+      description={
+        <p>
+          For this annotation some floodfill operations have not run to completion, because they
+          covered a too large volume. webKnossos can finish these operations via a long-running job.
+          This job will copy the current dataset, apply the changes of the current volume annotation
+          into the volume layer and use the existing bounding boxes as seeds to continue the
+          remaining floodfill operations (i.e., &quot;globalize&quot; them).
+        </p>
       }
     />
   );

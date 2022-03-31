@@ -1,11 +1,6 @@
 // @flow
 
-import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  PlusOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Table, Tag, Tooltip } from "antd";
 import * as React from "react";
@@ -213,9 +208,15 @@ class DatasetTable extends React.PureComponent<Props, State> {
     // antd table filter entries for data layer names
     const dataLayersFilter = _.uniqBy(
       _.compact(
-        sortedDataSource.flatMap(dataset =>
-          dataset.dataSource.dataLayers?.map(layer => ({ text: layer.name, value: layer.name })),
-        ),
+        sortedDataSource.flatMap(dataset => {
+          if (dataset.dataSource.dataLayers) {
+            return dataset.dataSource.dataLayers.map(layer => ({
+              text: layer.name,
+              value: layer.name,
+            }));
+          }
+          return null;
+        }),
       ),
       "text",
     );
@@ -314,13 +315,13 @@ class DatasetTable extends React.PureComponent<Props, State> {
           filters={accessPermissionFilters}
           onFilter={(value, dataset) => dataset.allowedTeams.some(team => team.name === value)}
           render={(teams: Array<APITeam>, dataset: APIMaybeUnimportedDataset) => {
-            let permittedTeams = [...teams];
+            const permittedTeams = [...teams];
             if (dataset.isPublic) {
               permittedTeams.push({ name: "public" });
             }
 
             return permittedTeams.map(team => (
-              <div>
+              <div key={`allowed_teams_${dataset.name}_${team.name}`}>
                 <Tag
                   style={{
                     maxWidth: 200,
@@ -329,7 +330,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
                     textOverflow: "ellipsis",
                   }}
                   color={stringToColor(team.name)}
-                  key={`allowed_teams_${dataset.name}_${team.name}`}
                 >
                   {team.name}
                 </Tag>
@@ -341,7 +341,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Data Layers"
           key="dataLayers"
           dataIndex="dataSource.dataLayers"
-          filters={dataLayersFilter }
+          filters={dataLayersFilter}
           onFilter={(value, dataset) =>
             dataset.dataSource.dataLayers?.some(layer => layer.name === value)
           }

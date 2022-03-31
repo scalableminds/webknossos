@@ -32,13 +32,13 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 
 ## Screenshots
 
-![Skeleton Annotations](./images/tracing_ui_skeleton.png)
-![Volume Annotations](./images/tracing_ui_volume.png)
-![Flight Mode](./images/tracing_ui_flight.png)
+![Skeleton Annotations](./images/tracing_ui_skeleton.jpeg)
+![Volume Annotations](./images/tracing_ui_volume.jpeg)
+![Flight Mode](./images/tracing_ui_flight.jpeg)
 
-![Managing Datasets](./images/dashboard_datasets.png)
-![Working on Tasks](./images/dashboard_tasks.png)
-![Showcasing Datasets](./images/dashboard_featured_publications.png)
+![Managing Datasets](./images/dashboard_datasets.jpeg)
+![Working on Tasks](./images/dashboard_tasks.jpeg)
+![Showcasing Datasets](./images/dashboard_featured_publications.jpeg)
 
 # Built for Science
 webKnossos is built for scientists with support by scientists. Our goal is to make image analysis and data exploration accessible and easy to use. 

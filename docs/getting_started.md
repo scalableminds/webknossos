@@ -23,12 +23,12 @@ To get started, navigate to the `Featured Publications` tab on your [dashboard](
 There, you find a list of all available public datasets.
 Click on the dataset name to open the dataset.
 
-![The list of available datasets](./images/getting_started-datasets.png)
+![The list of available datasets](./images/getting_started-datasets.jpeg)
 
 Any webKnossos dataset can be opened for read-only viewing ("View" mode) or in editor-mode to create a new skeleton and/or volume annotation. 
 The main webKnossos user interface consists of three orthogonal viewports slicing the data along the major axis and a 3D viewport. Read more about the UI in the section [about the UI](./tracing_ui.md).
 
-![The webKnossos user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.png)
+![The webKnossos user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.jpeg)
 
 You can use the following shortcuts to navigate the data.
 See the full list of [gestures and keyboard shortcuts](./keyboard_shortcuts.md) for advanced use.
@@ -46,7 +46,7 @@ See the full list of [gestures and keyboard shortcuts](./keyboard_shortcuts.md) 
 
 You can also change the size of the viewports to see more details in your data and customize your layout.
 
-![Explore datasets with customized viewport layouts](./images/getting_started-viewports.png)
+![Explore datasets with customized viewport layouts](./images/getting_started-viewports.jpeg)
 
 
 ## Your First Annotation
@@ -66,7 +66,7 @@ Basic movement along the 3rd axis is done with the mouse wheel or by pressing th
 
 Learn more about the skeleton, volume, and hybrid annotations as well as the interface in the [Annotation UI guide](./tracing_ui.md).
 
-![Editing skeleton and volume annotations in the Annotation UI](./images/tracing_ui.png)
+![Editing skeleton and volume annotations in the Annotation UI](./images/tracing_ui.jpeg)
 
 
 ## Learn More

@@ -23,7 +23,7 @@ First, a *Task Type* needs to be created:
     - Note that the `Description` field supports Markdown formatting.
     - If you don't have a sophisticated team structure, select the [default Team](./users.md#organizations).
 
-![Create a Task Type](./images/tasks_tasktype.png)
+![Create a Task Type](./images/tasks_tasktype.jpeg)
 
 Next, you need to set up a *Project*:
 
@@ -32,7 +32,7 @@ Next, you need to set up a *Project*:
     - Note that you can assign a `Priority` to the Project. A higher value means that Tasks from this Project will be more likely to be assigned to users.
     - With the `Time Limit` property, you can specify the expected completion time of a Task Instance. There will be an email notification if users exceed this limit.
 
-![Create a Project](./images/tasks_project.png)
+![Create a Project](./images/tasks_project.jpeg)
 
 Now, you are ready to create *Tasks*:
 
@@ -43,25 +43,25 @@ Now, you are ready to create *Tasks*:
 
 Tasks can also be created in bulk using the advanced CSV text input. Not recommended for beginners.
 
-![Create a Task](./images/tasks_task.png)
+![Create a Task](./images/tasks_task.jpeg)
 
 
 **Note that you need to specify required *Experiences* for a *Task*. Your *Task* can only be assigned if there are users that have the required *Experience* assigned to them. You can assign an Experience to a user on the `Users` screen.**
 
-![Assigning Experiences to users](./images/users_experience.png)
+![Assigning Experiences to users](./images/users_experience.jpeg)
 
 After your *Task* is created, other users in your organization can request *Tasks* from their dashboard (*My Tasks* Tab). 
 If there are no other projects with high priorities, they will eventually get your *Task* assigned.
 Once a user is done working on a task, they can mark the task as `Finished`.
 
-![Requesting Tasks in the Dashboard](./images/dashboard_tasks.png)
+![Requesting Tasks in the Dashboard](./images/dashboard_tasks.jpeg)
 
 Finally, you can collect and review the completed data of all annotations within a project:
 
 1. Navigate to the `Project` page
 2. Select to *View* or *Download* all the combined annotations.
 
-![Download all Tasks of a Project](./images/tasks_download.png)
+![Download all Tasks of a Project](./images/tasks_download.jpeg)
 
 ![Video: Focused Annotation and High-Speed Tasks](https://www.youtube.com/watch?v=2A3en7Kxl3M)
 

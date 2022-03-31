@@ -141,7 +141,7 @@ The `Advanced` view lets you edit the underlying [JSON configuration](./data_for
 
 webKnossos automatically periodically checks and detects changes to a dataset's metadata (`datasource-properties.json`) on disk (only relevant for self-hosted instances). Before applying these suggestions, users can preview all the new settings (as JSON) and inspect just the detected difference (as JSON).
 
-![Dataset Editing: Data Tab](images/dataset_data.png)
+![Dataset Editing: Data Tab](images/dataset_data.jpeg)
 
 
 ### Sharing & Permissions Tab
@@ -150,13 +150,13 @@ webKnossos automatically periodically checks and detects changes to a dataset's 
 - `Sharing Link`: A web URL pointing to this dataset for easy sharing that allows any user to view your dataset. The URL contains an access token to allow people to view the dataset without a webKnossos account. The access token is random, and therefore the URL cannot be guessed by visitors. You may also revoke the access token to create a new one. Anyone with a URL containing a revoked token will no longer have access to this dataset. 
 Read more in [the Sharing guide](./sharing.md).
 
-![Dataset Editing: Sharing Tab](images/sharing_tab.png)
+![Dataset Editing: Sharing Tab](images/sharing_tab.jpeg)
 
 ### Metadata Tab
 - `Display Name`: A meaningful name for a dataset other than its (automatically assigned) technical name which is usually limited by naming rules of file systems. It is displayed in various parts of webKnossos. The display name may contain special characters and can also be changed without invalidating already created sharing URLs. It can also be useful when sharing datasets with outsiders while "hiding" any internal naming schemes or make it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
 - `Description`: A free-text field for providing more information about your datasets, e.g., authors, paper reference, descriptions, etc. Supports Markdown formatting. The description will be featured in the webKnossos UI when opening a dataset in view mode.
 
-![Dataset Editing: Metadata Tab](images/metadata_tab.png)
+![Dataset Editing: Metadata Tab](images/metadata_tab.jpeg)
 
 ### View Configuration Tab
 The *View configuration* tab lets you set defaults for viewing this dataset. Anytime a user opens a dataset or creates a new annotation based on this dataset, these default values will be applied. 
@@ -168,7 +168,7 @@ Defaults include:
 - `Interpolation`: Whether interpolation should be enabled by default.
 - `Layer Configuration`: Advanced feature to control the default settings on a per-layer basis. It needs to be configured in JSON format. E.g., layer visibility & opacity, color, contrast/brightness/intensity range ("histogram sliders"), and many more.
 
-![Dataset Editing: View Configuration Tab](images/dataset_view_config.png)
+![Dataset Editing: View Configuration Tab](images/dataset_view_config.jpeg)
 
 Of course, the defaults can all be overwritten and adjusted once a user opens the dataset in the main webKnossos interface and makes changes to any of these settings in his viewports. 
 
@@ -185,7 +185,7 @@ You don't have to set complete *View Configurations* in either option, as webKno
 
 Offers an option to delete a dataset and completely removes it from webKnossos. Careful, this can not be undone!
 
-![Dataset Editing: Delete Tab](images/delete_tab.png)
+![Dataset Editing: Delete Tab](images/delete_tab.jpeg)
 
 
 ## Dataset Sharing

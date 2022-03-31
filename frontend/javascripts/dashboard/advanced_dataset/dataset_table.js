@@ -199,6 +199,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             .value()
         : dataSourceSortedByRank;
 
+    // antd table filter entries for access permissions / teams
     const accessPermissionFilters = _.uniqBy(
       [
         { text: "public", value: "public" },
@@ -206,6 +207,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataset.allowedTeams.map(team => ({ text: team.name, value: team.name })),
         ),
       ],
+      "text",
+    );
+
+    // antd table filter entries for data layer names
+    const dataLayersFilter = _.uniqBy(
+      _.compact(
+        sortedDataSource.flatMap(dataset =>
+          dataset.dataSource.dataLayers?.map(layer => ({ text: layer.name, value: layer.name })),
+        ),
+      ),
       "text",
     );
 
@@ -252,7 +263,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
             dataset.isActive ? (
-              <div style={{maxWidth: 280}}>
+              <div style={{ maxWidth: 280 }}>
                 {tags.map(tag => (
                   <CategorizationLabel
                     tag={tag}
@@ -330,6 +341,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Data Layers"
           key="dataLayers"
           dataIndex="dataSource.dataLayers"
+          filters={dataLayersFilter }
+          onFilter={(value, dataset) =>
+            dataset.dataSource.dataLayers?.some(layer => layer.name === value)
+          }
           render={(__, dataset: APIMaybeUnimportedDataset) => (
             <div style={{ maxWidth: 250 }}>
               {(dataset.isActive ? dataset.dataSource.dataLayers : []).map(layer => (

@@ -23,7 +23,7 @@ const createTree = (id, groupId, isVisible) => ({
   groupId,
 });
 
-const makeTreesObject = (trees) => (_.keyBy(trees, "treeId") as any) as TreeMap;
+const makeTreesObject = (trees) => _.keyBy(trees, "treeId") as any as TreeMap;
 
 const treeGroups = [
   {
@@ -49,7 +49,7 @@ const treeGroups = [
     children: [],
   },
 ];
-const flycamMock = ({} as any) as Flycam;
+const flycamMock = {} as any as Flycam;
 
 const createState = (trees, _treeGroups): OxalisState => ({
   ...defaultState,
@@ -111,10 +111,10 @@ function testDiffing(prevState, nextState) {
 }
 
 function _updateTreeVisibility(treeId: number, isVisible: boolean) {
-  const tree = ({
+  const tree = {
     treeId,
     isVisible,
-  } as any) as Tree;
+  } as any as Tree;
   return updateTreeVisibility(tree);
 }
 

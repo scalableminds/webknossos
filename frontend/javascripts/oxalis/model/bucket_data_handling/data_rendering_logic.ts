@@ -168,7 +168,7 @@ export function calculateTextureSizeAndCountForLayer(
 function buildTextureInformationMap<
   Layer extends {
     elementClass: ElementClass;
-  }
+  },
 >(
   layers: Array<Layer>,
   getByteCountForLayer: (arg0: Layer) => number,
@@ -229,14 +229,13 @@ function deriveSupportedFeatures<Layer>(
 }
 
 function getSmallestCommonBucketCapacity(textureInformationPerLayer): number {
-  const capacities = Array.from(
-    textureInformationPerLayer.values(),
-  ).map((sizeAndCount: DataTextureSizeAndCount) =>
-    getBucketCapacity(
-      sizeAndCount.textureCount,
-      sizeAndCount.textureSize,
-      sizeAndCount.packingDegree,
-    ),
+  const capacities = Array.from(textureInformationPerLayer.values()).map(
+    (sizeAndCount: DataTextureSizeAndCount) =>
+      getBucketCapacity(
+        sizeAndCount.textureCount,
+        sizeAndCount.textureSize,
+        sizeAndCount.packingDegree,
+      ),
   );
   return _.min(capacities);
 }
@@ -264,7 +263,7 @@ function getRenderSupportedLayerCount(specs: GpuSpecs, textureInformationPerLaye
 export function computeDataTexturesSetup<
   Layer extends {
     elementClass: ElementClass;
-  }
+  },
 >(
   specs: GpuSpecs,
   layers: Array<Layer>,

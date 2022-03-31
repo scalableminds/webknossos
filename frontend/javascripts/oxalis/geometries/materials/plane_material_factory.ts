@@ -672,10 +672,8 @@ class PlaneMaterialFactory {
   };
 
   getFragmentShader(): string {
-    const {
-      initializedGpuFactor,
-      maximumLayerCountToRender,
-    } = Store.getState().temporaryConfiguration.gpuSetup;
+    const { initializedGpuFactor, maximumLayerCountToRender } =
+      Store.getState().temporaryConfiguration.gpuSetup;
     // Don't compile code for segmentation in arbitrary mode
     const shouldRenderSegmentation = this.isOrthogonal && Model.hasSegmentationLayer();
     const colorLayerNames = this.getLayersToRender(

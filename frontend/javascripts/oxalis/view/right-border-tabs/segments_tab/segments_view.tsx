@@ -389,9 +389,8 @@ class SegmentsView extends React.Component<Props, State> {
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
         : datasetResolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
-    const meshfileResolution = datasetResolutionInfo.getResolutionByIndexWithFallback(
-      meshfileResolutionIndex,
-    );
+    const meshfileResolution =
+      datasetResolutionInfo.getResolutionByIndexWithFallback(meshfileResolutionIndex);
 
     if (this.props.visibleSegmentationLayer != null) {
       const job = await startComputeMeshFileJob(

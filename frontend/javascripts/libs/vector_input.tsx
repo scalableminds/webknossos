@@ -57,7 +57,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
 
     if (this.state.isValid) {
       if (this.props.changeOnlyOnBlur) {
-        const vector = (Utils.stringToNumberArray(this.state.text) as any) as T;
+        const vector = Utils.stringToNumberArray(this.state.text) as any as T;
         this.props.onChange(vector);
       } else {
         this.setState({
@@ -84,7 +84,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
       .map((el) => parseFloat(el) || 0)
       .slice(0, this.defaultValue.length);
     const paddedVector = validSubVector.concat(this.defaultValue.slice(validSubVector.length));
-    const vector = (paddedVector as any) as T;
+    const vector = paddedVector as any as T;
     return vector;
   }
 
@@ -105,7 +105,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
     const isValidFormat = value.length === this.defaultValue.length;
 
     if (isValidFormat && isValidInput && !this.props.changeOnlyOnBlur) {
-      const vector = (value as any) as T;
+      const vector = value as any as T;
       this.props.onChange(vector);
     }
 

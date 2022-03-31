@@ -289,9 +289,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         }
 
         const segmentationLayerName = segmentationLayer.name;
-        const isSegmentationDisabled = Store.getState().datasetConfiguration.layers[
-          segmentationLayerName
-        ].isDisabled;
+        const isSegmentationDisabled =
+          Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled;
         Store.dispatch(
           updateLayerSettingAction(segmentationLayerName, "isDisabled", !isSegmentationDisabled),
         );

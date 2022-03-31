@@ -371,9 +371,7 @@ export const getRenderableResolutionForSegmentationTracing = reuseInstanceOnEqua
   _getRenderableResolutionForSegmentationTracing,
 );
 
-function _getRenderableResolutionForActiveSegmentationTracing(
-  state: OxalisState,
-):
+function _getRenderableResolutionForActiveSegmentationTracing(state: OxalisState):
   | {
       resolution: Vector3;
       zoomStep: number;

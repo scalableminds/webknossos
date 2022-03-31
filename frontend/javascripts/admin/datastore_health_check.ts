@@ -97,7 +97,8 @@ async function checkVersionMismatch(url: string) {
 }
 
 const extractUrls = (str: string): Array<string> => {
-  const urlMatcher = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}(\.[a-z]{2,6})?\b([-a-zA-Z0-9@:%_+.~#?&\\=]*)/g;
+  const urlMatcher =
+    /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}(\.[a-z]{2,6})?\b([-a-zA-Z0-9@:%_+.~#?&\\=]*)/g;
   return _.uniq(str.match(urlMatcher) || []);
 };
 

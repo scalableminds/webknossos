@@ -23,7 +23,8 @@ import features from "features";
 // NOTE: The regexp and getBBoxNameForPartialFloodfill need to stay in sync.
 // That way, bboxes created by the floodfill can be detected as such and
 // a job for globalizing floodfills can be started.
-const GLOBALIZE_FLOODFILL_REGEX = /Limits of flood-fill \(source_id=(\d+), target_id=(\d+), seed=([\d,]+), timestamp=(\d+)\)/;
+const GLOBALIZE_FLOODFILL_REGEX =
+  /Limits of flood-fill \(source_id=(\d+), target_id=(\d+), seed=([\d,]+), timestamp=(\d+)\)/;
 export function getBBoxNameForPartialFloodfill(
   oldSegmentIdAtSeed: number,
   activeCellId: number,

@@ -7,12 +7,8 @@ import { OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 const { setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");
 const { setPositionAction } = mockRequire.reRequire("oxalis/model/actions/flycam_actions");
-const {
-  setActiveCellAction,
-  addToLayerAction,
-  startEditingAction,
-  finishEditingAction,
-} = mockRequire.reRequire("oxalis/model/actions/volumetracing_actions");
+const { setActiveCellAction, addToLayerAction, startEditingAction, finishEditingAction } =
+  mockRequire.reRequire("oxalis/model/actions/volumetracing_actions");
 export async function testLabelingManyBuckets(t: any, saveInbetween: boolean) {
   // We set MAXIMUM_BUCKET_COUNT to 150 and then label 199 = 75 (mag1) + 124 (downsampled) buckets in total.
   // In between, we will save the data which allows the buckets of the first batch to be GC'ed.

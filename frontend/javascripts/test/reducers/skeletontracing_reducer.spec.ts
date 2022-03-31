@@ -20,8 +20,9 @@ mock("libs/window", {
     getElementById: () => null,
   },
 });
-const SkeletonTracingReducer = mock.reRequire("oxalis/model/reducers/skeletontracing_reducer")
-  .default;
+const SkeletonTracingReducer = mock.reRequire(
+  "oxalis/model/reducers/skeletontracing_reducer",
+).default;
 const SkeletonTracingActions = mock.reRequire("oxalis/model/actions/skeletontracing_actions");
 
 function deepEqualObjectContaining(

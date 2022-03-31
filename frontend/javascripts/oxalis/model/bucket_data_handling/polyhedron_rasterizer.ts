@@ -568,30 +568,7 @@ PolyhedronRasterizer.Master = class Master {
       farFaceZ, // 21
     ];
     const indices = [
-      0,
-      3,
-      0,
-      6,
-      0,
-      12,
-      3,
-      9,
-      3,
-      15,
-      6,
-      9,
-      6,
-      18,
-      9,
-      21,
-      12,
-      15,
-      12,
-      18,
-      15,
-      21,
-      18,
-      21,
+      0, 3, 0, 6, 0, 12, 3, 9, 3, 15, 6, 9, 6, 18, 9, 21, 12, 15, 12, 18, 15, 21, 18, 21,
     ];
     return new PolyhedronRasterizer.Master(vertices, indices);
   }

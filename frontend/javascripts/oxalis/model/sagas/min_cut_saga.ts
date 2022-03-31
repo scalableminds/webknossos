@@ -306,9 +306,8 @@ function* performMinCut(action: Action): Saga<void> {
           continue;
         }
 
-        const refiningResolution = resolutionInfo.getResolutionByIndexOrThrow(
-          refiningResolutionIndex,
-        );
+        const refiningResolution =
+          resolutionInfo.getResolutionByIndexOrThrow(refiningResolutionIndex);
         console.group("Refining min-cut at", refiningResolution.join("-"));
         yield* call(
           progressCallback,

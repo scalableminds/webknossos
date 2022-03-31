@@ -168,14 +168,12 @@ export async function requestFromStore(
 
   try {
     return await doWithToken(async (token) => {
-      const {
-        buffer: responseBuffer,
-        headers,
-      } = await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
-        data: bucketInfo,
-        timeout: REQUEST_TIMEOUT,
-        showErrorToast: false,
-      });
+      const { buffer: responseBuffer, headers } =
+        await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
+          data: bucketInfo,
+          timeout: REQUEST_TIMEOUT,
+          showErrorToast: false,
+        });
       const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
       let resultBuffer = responseBuffer;
 
@@ -219,18 +217,16 @@ function sliceBufferIntoPieces(
 
 export async function sendToStore(batch: Array<DataBucket>, tracingId: string): Promise<void> {
   const items: Array<UpdateAction> = await Promise.all(
-    batch.map(
-      async (bucket): Promise<UpdateAction> => {
-        const data = bucket.getCopyOfData();
-        const bucketInfo = createSendBucketInfo(
-          bucket.zoomedAddress,
-          getResolutions(Store.getState().dataset),
-        );
-        const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-        const compressedBase64 = await compressionPool.submit(byteArray);
-        return updateBucket(bucketInfo, compressedBase64);
-      },
-    ),
+    batch.map(async (bucket): Promise<UpdateAction> => {
+      const data = bucket.getCopyOfData();
+      const bucketInfo = createSendBucketInfo(
+        bucket.zoomedAddress,
+        getResolutions(Store.getState().dataset),
+      );
+      const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+      const compressedBase64 = await compressionPool.submit(byteArray);
+      return updateBucket(bucketInfo, compressedBase64);
+    }),
   );
   Store.dispatch(pushSaveQueueTransaction(items, "volume", tracingId));
 }

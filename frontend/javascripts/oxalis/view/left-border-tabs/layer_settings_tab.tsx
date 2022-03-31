@@ -771,13 +771,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
   getSkeletonLayer = () => {
-    const {
-      controlMode,
-      tracing,
-      onChangeRadius,
-      userConfiguration,
-      onChangeShowSkeletons,
-    } = this.props;
+    const { controlMode, tracing, onChangeRadius, userConfiguration, onChangeShowSkeletons } =
+      this.props;
     const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
 
     if (isPublicViewMode || tracing.skeleton == null) {

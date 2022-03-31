@@ -10,10 +10,8 @@ import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { mod } from "libs/utils";
 
-const aggregatePerDimension = (
-  aggregateFn,
-  buckets,
-): Vector3 => [0, 1, 2].map((dim) => aggregateFn(...buckets.map((pos) => pos[dim]))); // $FlowIssue[invalid-tuple-arity]
+const aggregatePerDimension = (aggregateFn, buckets): Vector3 =>
+  [0, 1, 2].map((dim) => aggregateFn(...buckets.map((pos) => pos[dim]))); // $FlowIssue[invalid-tuple-arity]
 
 const getBBox = (buckets) => ({
   cornerMin: aggregatePerDimension(Math.min, buckets),

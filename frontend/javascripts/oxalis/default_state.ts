@@ -39,9 +39,8 @@ const initialAnnotationInfo = {
   annotationType: "View",
   meshes: [],
 };
-const primaryStylesheetElement: HTMLLinkElement | null | undefined = document.getElementById(
-  "primary-stylesheet",
-);
+const primaryStylesheetElement: HTMLLinkElement | null | undefined =
+  document.getElementById("primary-stylesheet");
 const defaultState: OxalisState = {
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {

@@ -382,7 +382,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     });
   };
   handleColorChange = (color: Vector3) => {
-    color = (color.map((colorPart) => colorPart / 255) as any) as Vector3;
+    color = color.map((colorPart) => colorPart / 255) as any as Vector3;
     this.props.onColorChange(color);
   };
   handleNameChanged = (evt: React.SyntheticEvent) => {
@@ -409,7 +409,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isExportEnabled,
       onGoToBoundingBox,
     } = this.props;
-    const upscaledColor = (color.map((colorPart) => colorPart * 255) as any) as Vector3;
+    const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
     const iconStyle = {
       marginRight: 0,
       marginLeft: 6,

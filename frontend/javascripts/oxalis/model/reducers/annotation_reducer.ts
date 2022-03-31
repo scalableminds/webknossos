@@ -239,9 +239,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "REMOVE_ISOSURFACE": {
       const { layerName, cellId } = action;
-      const { [cellId]: _, ...remainingIsosurfaces } = state.localSegmentationData[
-        layerName
-      ].isosurfaces;
+      const { [cellId]: _, ...remainingIsosurfaces } =
+        state.localSegmentationData[layerName].isosurfaces;
       return updateKey2(state, "localSegmentationData", layerName, {
         isosurfaces: remainingIsosurfaces,
       });

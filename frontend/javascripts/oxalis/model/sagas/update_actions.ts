@@ -200,9 +200,7 @@ type CreateTracingUpdateAction = {
   name: "createTracing";
   value: {};
 };
-type AddServerValuesFn = <T>(
-  arg0: T,
-) => T & {
+type AddServerValuesFn = <T>(arg0: T) => T & {
   value: $PropertyType<T, "value"> & {
     actionTimestamp: number;
   };

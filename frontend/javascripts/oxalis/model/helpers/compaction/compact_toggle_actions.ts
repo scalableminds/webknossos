@@ -156,7 +156,7 @@ export default function compactToggleActions(
     (ua) => ua.name === "updateTreeVisibility",
   );
 
-  const toggleActions = (_toggleActions as any) as Array<UpdateTreeVisibilityUpdateAction>;
+  const toggleActions = _toggleActions as any as Array<UpdateTreeVisibilityUpdateAction>;
 
   if (toggleActions.length <= 1) {
     // Don't try to compact actons if there are no or only one toggleAction(s)

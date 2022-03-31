@@ -141,7 +141,7 @@ export default function ShareModalView(props: Props) {
   }, [annotationType, annotationId]);
 
   const handleCheckboxChange = (event: React.SyntheticEvent) => {
-    setVisibility((event.target.value as any) as APIAnnotationVisibility);
+    setVisibility(event.target.value as any as APIAnnotationVisibility);
   };
 
   const handleOk = async () => {

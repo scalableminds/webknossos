@@ -631,9 +631,7 @@ export function deleteAnnotation(
     method: "DELETE",
   });
 }
-export function finishAllAnnotations(
-  selectedAnnotationIds: Array<string>,
-): Promise<{
+export function finishAllAnnotations(selectedAnnotationIds: Array<string>): Promise<{
   messages: Array<Message>;
 }> {
   return Request.sendJSONReceiveJSON(

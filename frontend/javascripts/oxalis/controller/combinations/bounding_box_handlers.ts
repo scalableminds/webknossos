@@ -126,7 +126,7 @@ function computeDistanceArray(
       planeRatio,
     );
   });
-  return (distanceArray as any) as DistanceArray;
+  return distanceArray as any as DistanceArray;
 }
 
 // Return the edge or edges of the bounding box closest to the mouse position if their distance is below a certain threshold.

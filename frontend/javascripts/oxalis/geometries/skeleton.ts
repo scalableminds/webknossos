@@ -351,7 +351,7 @@ class Skeleton {
           const forEachCreatedOrDeletedId = <
             T extends {
               readonly nodeId: number;
-            }
+            },
           >(
             oldElements: Array<T>,
             newElements: Array<T>,

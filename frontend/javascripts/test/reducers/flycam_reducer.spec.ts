@@ -38,24 +38,10 @@ const initialState = {
   },
 };
 test("Flycam should calculate zoomed matrix", (t) => {
-  t.deepEqual(Array.from(getZoomedMatrix(initialState.flycam)), [
-    2,
-    0,
-    0,
-    0,
-    0,
-    2,
-    0,
-    0,
-    0,
-    0,
-    2,
-    0,
-    0,
-    0,
-    0,
-    1,
-  ]);
+  t.deepEqual(
+    Array.from(getZoomedMatrix(initialState.flycam)),
+    [2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1],
+  );
 });
 test("Flycam should move the flycam", (t) => {
   const moveAction = FlycamActions.moveFlycamAction([1, 2, 3]);

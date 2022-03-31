@@ -36,8 +36,8 @@ export default function ViewportStatusIndicator() {
   const [renderMissingDataBlack, setRenderMissingDataBlack] = useState(true);
   usePolledState((state) => {
     const newUnrenderableLayersWithInfos = getUnrenderableLayerInfosForCurrentZoom(state);
-    const newUnrenderableLayersNamesWithInfos: Array<UnrenderableLayerNamesInfo> = newUnrenderableLayersWithInfos.map(
-      ({ layer, smallerOrHigherInfo }) =>
+    const newUnrenderableLayersNamesWithInfos: Array<UnrenderableLayerNamesInfo> =
+      newUnrenderableLayersWithInfos.map(({ layer, smallerOrHigherInfo }) =>
         layer.category === "segmentation"
           ? {
               layerName: "Segmentation",
@@ -47,7 +47,7 @@ export default function ViewportStatusIndicator() {
               layerName: layer.name,
               smallerOrHigherInfo,
             },
-    );
+      );
 
     if (!_.isEqual(unrenderableLayerNamesWithInfo, newUnrenderableLayersNamesWithInfos)) {
       setUnrenderableLayerNamesWithInfo(newUnrenderableLayersNamesWithInfos);

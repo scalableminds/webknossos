@@ -417,10 +417,11 @@ function* diffNodes(
   treeId: number,
 ): Generator<UpdateAction, void, void> {
   if (prevNodes === nodes) return;
-  const { onlyA: deletedNodeIds, onlyB: addedNodeIds, changed: changedNodeIds } = diffDiffableMaps(
-    prevNodes,
-    nodes,
-  );
+  const {
+    onlyA: deletedNodeIds,
+    onlyB: addedNodeIds,
+    changed: changedNodeIds,
+  } = diffDiffableMaps(prevNodes, nodes);
 
   for (const nodeId of deletedNodeIds) {
     yield deleteNode(treeId, nodeId);
@@ -487,7 +488,11 @@ export function* diffTrees(
   trees: TreeMap,
 ): Generator<UpdateAction, void, void> {
   if (prevTrees === trees) return;
-  const { onlyA: deletedTreeIds, onlyB: addedTreeIds, both: bothTreeIds } = Utils.diffArrays(
+  const {
+    onlyA: deletedTreeIds,
+    onlyB: addedTreeIds,
+    both: bothTreeIds,
+  } = Utils.diffArrays(
     _.map(prevTrees, (tree) => tree.treeId),
     _.map(trees, (tree) => tree.treeId),
   );

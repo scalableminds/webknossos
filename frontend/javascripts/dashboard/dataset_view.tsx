@@ -64,9 +64,8 @@ function DatasetView(props: Props) {
   const context = useContext(DatasetCacheContext);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchTags, setSearchTags] = useState<Array<string>>([]);
-  const [datasetFilteringMode, setDatasetFilteringMode] = useState<DatasetFilteringMode>(
-    "onlyShowReported",
-  );
+  const [datasetFilteringMode, setDatasetFilteringMode] =
+    useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<Array<APIJob>>([]);
   useEffect(() => {
     const state = persistence.load(history);

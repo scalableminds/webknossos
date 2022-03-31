@@ -100,7 +100,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     );
     const addressSpaceDimensions = getAddressSpaceDimensions(gpuFactor);
     const renderedBucketsPerDimension = addressSpaceDimensions[w];
-    let topLeftBucket = (nonFallbackAnchorPoint.slice() as any) as Vector4;
+    let topLeftBucket = nonFallbackAnchorPoint.slice() as any as Vector4;
     topLeftBucket[w] += getAnchorPositionToCenterDistance(renderedBucketsPerDimension);
     topLeftBucket = zoomedAddressToAnotherZoomStep(topLeftBucket, resolutions, logZoomStep);
     const centerBucketUV = [
@@ -126,7 +126,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
 
       for (let y = extraYBucketStart; y <= extraYBucketEnd; y++) {
         for (let x = extraXBucketStart; x <= extraXBucketEnd; x++) {
-          const bucketAddress = (topLeftBucket.slice() as any) as Vector4;
+          const bucketAddress = topLeftBucket.slice() as any as Vector4;
           bucketAddress[u] = x;
           bucketAddress[v] = y;
           bucketAddress[w] += wSliceOffset;
@@ -141,7 +141,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
             Math.abs(100 * wSliceOffset) +
             additionalPriorityWeight +
             (isExtraBucket ? 100 : 0);
-          const bucketVector3 = (bucketAddress.slice(0, 3) as any) as Vector3;
+          const bucketVector3 = bucketAddress.slice(0, 3) as any as Vector3;
           const existingEntry = uniqueBucketMap.get(bucketVector3);
 
           if (existingEntry == null) {

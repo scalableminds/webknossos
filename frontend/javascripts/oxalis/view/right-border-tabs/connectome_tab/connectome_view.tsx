@@ -129,9 +129,8 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
 
 const getTreeNameForSynapse = (synapseId: number): string => `synapse-${synapseId}`;
 
-const getAgglomerateIdsFromKeys = (
-  keys: Array<string>,
-): Array<number> => unique(keys.map((key) => +key.split(";")[1])); // The id identifying the respective agglomerate is at the second position (pattern is segment;xxx;[...])
+const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<number> =>
+  unique(keys.map((key) => +key.split(";")[1])); // The id identifying the respective agglomerate is at the second position (pattern is segment;xxx;[...])
 
 const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree => ({
   name: getTreeNameForSynapse(synapseId),
@@ -366,17 +365,13 @@ class ConnectomeView extends React.Component<Props, State> {
       synapsesOfAgglomerates.flatMap((connections) => connections.out),
     );
     const allSynapseIds = unique([...allInSynapseIds, ...allOutSynapseIds]);
-    const [
-      synapseSources,
-      synapseDestinations,
-      synapsePositions,
-      synapseTypesAndNames,
-    ] = await Promise.all([
-      getSynapseSources(...fetchProperties, allInSynapseIds),
-      getSynapseDestinations(...fetchProperties, allOutSynapseIds),
-      getSynapsePositions(...fetchProperties, allSynapseIds),
-      getSynapseTypes(...fetchProperties, allSynapseIds),
-    ]);
+    const [synapseSources, synapseDestinations, synapsePositions, synapseTypesAndNames] =
+      await Promise.all([
+        getSynapseSources(...fetchProperties, allInSynapseIds),
+        getSynapseDestinations(...fetchProperties, allOutSynapseIds),
+        getSynapsePositions(...fetchProperties, allSynapseIds),
+        getSynapseTypes(...fetchProperties, allSynapseIds),
+      ]);
     // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file.
     // Currently, the used jhdf5 library seems to have a bug which makes it impossible to read
     // hdf5 array attributes which is why this information is read from a json file, instead.

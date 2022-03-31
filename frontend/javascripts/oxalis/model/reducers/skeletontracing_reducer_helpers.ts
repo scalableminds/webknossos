@@ -352,7 +352,7 @@ function splitTreeByNodes(
           const immutableNewTree = createTree(intermediateState, timestamp).get();
           // Cast to mutable tree type since we want to mutably do the split
           // in this reducer for performance reasons.
-          newTree = (immutableNewTree as any) as Tree;
+          newTree = immutableNewTree as any as Tree;
           intermediateState = update(intermediateState, {
             tracing: {
               skeleton: {
@@ -792,7 +792,7 @@ export function createMutableTreeMapFromTreeArray(
   return _.keyBy(
     trees.map(
       (tree): MutableTree => ({
-        comments: (tree.comments as any) as Array<MutableCommentType>,
+        comments: tree.comments as any as Array<MutableCommentType>,
         edges: EdgeCollection.loadFromArray(tree.edges),
         name: tree.name,
         treeId: tree.treeId,
@@ -813,7 +813,7 @@ export function createMutableTreeMapFromTreeArray(
   );
 }
 export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTree>): TreeMap {
-  return (createMutableTreeMapFromTreeArray(trees) as any) as TreeMap;
+  return createMutableTreeMapFromTreeArray(trees) as any as TreeMap;
 }
 export function removeMissingGroupsFromTrees(
   skeletonTracing: SkeletonTracing,

@@ -205,13 +205,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   );
 
   render() {
-    const {
-      intensityRangeMin,
-      intensityRangeMax,
-      isInEditMode,
-      defaultMinMax,
-      layerName,
-    } = this.props;
+    const { intensityRangeMin, intensityRangeMax, isInEditMode, defaultMinMax, layerName } =
+      this.props;
     const { currentMin, currentMax } = this.state;
     const { min: minRange, max: maxRange } = getMinAndMax(this.props);
 

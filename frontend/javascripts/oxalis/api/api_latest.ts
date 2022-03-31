@@ -1356,7 +1356,7 @@ class DataApi {
     const nextBucketInDim = (bucket, dim) => {
       const copy = bucket.slice();
       copy[dim]++;
-      return (copy as any) as Vector4;
+      return copy as any as Vector4;
     };
 
     let bucket = minBucket;

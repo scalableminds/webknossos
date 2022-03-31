@@ -192,7 +192,7 @@ export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
 export function getRandomColor(): Vector3 {
   // Generate three values between 0 and 1 that multiplied with 255 will be integers.
   const randomColor = [0, 1, 2].map(() => Math.floor(Math.random() * 256) / 255);
-  return (randomColor as any) as Vector3;
+  return randomColor as any as Vector3;
 }
 export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
   const [x, y, z, width, height, depth] = bb;
@@ -245,8 +245,8 @@ export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): B
         }),
       ),
   );
-  const min = ([0, 1, 2].map((index) => Math.min(...allCoordinates[index])) as any) as Vector3;
-  const max = ([0, 1, 2].map((index) => Math.max(...allCoordinates[index])) as any) as Vector3;
+  const min = [0, 1, 2].map((index) => Math.min(...allCoordinates[index])) as any as Vector3;
+  const max = [0, 1, 2].map((index) => Math.max(...allCoordinates[index])) as any as Vector3;
   return {
     min,
     max,
@@ -502,7 +502,7 @@ export function toNullable<T>(_maybe: Maybe<T>): T | null | undefined {
 // Supports nested properties
 export function filterWithSearchQueryOR<
   T extends Readonly<Record<string, unknown>>,
-  P extends $Keys<T>
+  P extends $Keys<T>,
 >(
   collection: Array<T>,
   properties: Array<P | ((arg0: T) => {} | Array<any> | string)>,
@@ -537,7 +537,7 @@ export function filterWithSearchQueryOR<
 // Supports nested properties
 export function filterWithSearchQueryAND<
   T extends Readonly<Record<string, unknown>>,
-  P extends $Keys<T>
+  P extends $Keys<T>,
 >(
   collection: Array<T>,
   properties: Array<P | ((arg0: T) => {} | Array<any> | string)>,
@@ -736,9 +736,7 @@ export function convertDecToBase256(num: number): Vector4 {
   // Big endian
   return [a, b, g, r];
 }
-export async function promiseAllWithErrors<T>(
-  promises: Array<Promise<T>>,
-): Promise<{
+export async function promiseAllWithErrors<T>(promises: Array<Promise<T>>): Promise<{
   successes: Array<T>;
   errors: Array<Error>;
 }> {

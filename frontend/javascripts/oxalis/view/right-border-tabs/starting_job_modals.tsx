@@ -138,7 +138,7 @@ function StartingJobModal(props: StartingJobModalProps) {
       return null;
     }
 
-    const upscaledColor = (bbox.color.map((colorPart) => colorPart * 255) as any) as Vector3;
+    const upscaledColor = bbox.color.map((colorPart) => colorPart * 255) as any as Vector3;
     const colorAsHexString = rgbToHex(upscaledColor);
     return (
       <>

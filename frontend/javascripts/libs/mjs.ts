@@ -71,7 +71,7 @@ M4x4.transformVectorsAffine = function transformVectorsAffine(
   m: Matrix4x4,
   _points: Vector3[],
 ): Vector3[] {
-  const points: Array<Array<number>> = (_points as any) as Array<Array<number>>;
+  const points: Array<Array<number>> = _points as any as Array<Array<number>>;
   return chunk3(M4x4.transformPointsAffine(m, _.flatten(points)));
 };
 

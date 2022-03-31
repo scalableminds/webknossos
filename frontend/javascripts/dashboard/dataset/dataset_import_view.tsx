@@ -107,7 +107,7 @@ function ensureValidScaleOnInferredDataSource(
     return savedDataSourceOnServer || inferredDataSource;
   }
 
-  const inferredDataSourceClone = (_.cloneDeep(inferredDataSource) as any) as MutableAPIDataSource;
+  const inferredDataSourceClone = _.cloneDeep(inferredDataSource) as any as MutableAPIDataSource;
 
   if (
     _.isEqual(inferredDataSource.scale, [0, 0, 0]) &&
@@ -277,7 +277,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       if (dataset.dataSource.status != null && dataset.dataSource.status.includes("Error")) {
         // If the datasource-properties.json could not be parsed due to schema errors,
         // we replace it with the version that is at least parsable.
-        const datasetClone = (_.cloneDeep(dataset) as any) as MutableAPIDataset;
+        const datasetClone = _.cloneDeep(dataset) as any as MutableAPIDataset;
         // We are keeping the error message to display it to the user.
         datasetClone.dataSource.status = dataset.dataSource.status;
         dataset = datasetClone as APIDataset;
@@ -337,11 +337,8 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
   getDatasourceDiffAlert() {
     // Only show if the option did not apply
-    const {
-      differenceBetweenDataSources,
-      dataSourceSettingsStatus,
-      inferredDataSource,
-    } = this.state;
+    const { differenceBetweenDataSources, dataSourceSettingsStatus, inferredDataSource } =
+      this.state;
     const { appliedSuggestions, isJSONFormatValid } = dataSourceSettingsStatus;
 
     // No info shown, when:
@@ -711,12 +708,19 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       );
     }
 
-    const restMessages = this.state.messages.map((
-      message,
-      i, // eslint-disable-next-line react/no-array-index-key
-    ) => (
-      <Alert key={i} message={Object.values(message)[0]} type={Object.keys(message)[0]} showIcon />
-    ));
+    const restMessages = this.state.messages.map(
+      (
+        message,
+        i, // eslint-disable-next-line react/no-array-index-key
+      ) => (
+        <Alert
+          key={i}
+          message={Object.values(message)[0]}
+          type={Object.keys(message)[0]}
+          showIcon
+        />
+      ),
+    );
     messageElements.push(...restMessages);
     return (
       <div

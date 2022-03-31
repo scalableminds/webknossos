@@ -140,8 +140,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
         moment.duration(timeSpan.time).asMilliseconds(),
       );
 
-      const numberTasks = _.uniq(prevState.timeTrackingData.map((timeSpan) => timeSpan.annotation))
-        .length;
+      const numberTasks = _.uniq(
+        prevState.timeTrackingData.map((timeSpan) => timeSpan.annotation),
+      ).length;
 
       // prevent division by zero
       const averageTimePerTask = numberTasks === 0 ? 0 : totalTime / numberTasks;

@@ -74,9 +74,8 @@ function useSampleDatasets(
 }
 
 const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
-  const [datasets, failedDatasets, handleSampleDatasetDownload] = useSampleDatasets(
-    organizationName,
-  );
+  const [datasets, failedDatasets, handleSampleDatasetDownload] =
+    useSampleDatasets(organizationName);
 
   const handleCancel = () => {
     destroy();

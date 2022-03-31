@@ -94,7 +94,7 @@ export default function determineBucketsForOblique(
   const centerAddress = globalPositionToBucketPosition(position, resolutions, logZoomStep);
 
   for (const bucketAddress of traversedBuckets) {
-    const bucketVector3 = (bucketAddress.slice(0, 3) as any) as Vector3;
+    const bucketVector3 = bucketAddress.slice(0, 3) as any as Vector3;
 
     if (uniqueBucketMap.get(bucketVector3) == null) {
       uniqueBucketMap.set(bucketVector3, bucketAddress);

@@ -509,7 +509,7 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
 export function getDatasetExtentInLength(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
   const { scale } = dataset.dataSource;
-  const topLeft = (extentInVoxel.topLeft.map((val, index) => val * scale[index]) as any) as Vector3;
+  const topLeft = extentInVoxel.topLeft.map((val, index) => val * scale[index]) as any as Vector3;
   const extent = {
     topLeft,
     width: extentInVoxel.width * scale[0],

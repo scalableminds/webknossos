@@ -133,9 +133,7 @@ function _getDisabledInfoFromArgs(
 }
 
 const getDisabledInfoFromArgs = memoizeOne(_getDisabledInfoFromArgs);
-export function getDisabledInfoForTools(
-  state: OxalisState,
-): Record<
+export function getDisabledInfoForTools(state: OxalisState): Record<
   AnnotationTool,
   {
     isDisabled: boolean;

@@ -77,9 +77,8 @@ function shouldDisplaySegmentationData(): boolean {
   }
 
   const segmentationLayerName = segmentationLayer.name;
-  const isSegmentationLayerDisabled = Store.getState().datasetConfiguration.layers[
-    segmentationLayerName
-  ].isDisabled;
+  const isSegmentationLayerDisabled =
+    Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled;
   return !isSegmentationLayerDisabled;
 }
 

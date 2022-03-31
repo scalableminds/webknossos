@@ -354,7 +354,7 @@ function initializeDataset(
   ErrorHandling.assertExtendContext({
     dataSet: dataset.dataSource.id.name,
   });
-  const mutableDataset = (dataset as any) as MutableAPIDataset;
+  const mutableDataset = dataset as any as MutableAPIDataset;
   // Add the originalElementClass property to the segmentation layer if it exists.
   // Also set the elementClass to uint32 because uint64 segmentation data is truncated to uint32 by the backend.
   const updatedDataLayers = mutableDataset.dataSource.dataLayers.map((dataLayer) => {
@@ -402,9 +402,7 @@ function initializeSettings(
   Store.dispatch(initializeSettingsAction(initialUserSettings, initialDatasetSettings));
 }
 
-function initializeDataLayerInstances(
-  gpuFactor: number | null | undefined,
-): {
+function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   dataLayers: DataLayerCollection;
   connectionInfo: ConnectionInfo;
   isMappingSupported: boolean;

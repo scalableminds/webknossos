@@ -24,31 +24,32 @@ export function removeOverwrite(actionName: string) {
 export default function overwriteMiddleware<S, A extends Action>(
   store: MiddlewareAPI<S, A>,
 ): (next: Dispatch<A>) => Dispatch<A> {
-  return (next: Dispatch<A>) => (action: A): A => {
-    if (overwrites[action.type]) {
-      let isSyncExecutionDone = false;
+  return (next: Dispatch<A>) =>
+    (action: A): A => {
+      if (overwrites[action.type]) {
+        let isSyncExecutionDone = false;
 
-      const wrappedNext = function (...args) {
-        if (isSyncExecutionDone) {
-          console.warn(
-            "Apparently, you used registerOverwrite for",
-            action.type,
-            ` and
+        const wrappedNext = function (...args) {
+          if (isSyncExecutionDone) {
+            console.warn(
+              "Apparently, you used registerOverwrite for",
+              action.type,
+              ` and
               dispatched the action asynchronously (e.g., within a setTimeout call
               or after 'async'). This can lead to weird behaviour, since actions
               are expected to be dispatched synchronously. Please dispatch the
               action in a synchronous way.`,
-          );
-        }
+            );
+          }
 
-        return next(...args);
-      };
+          return next(...args);
+        };
 
-      const returnValue = overwrites[action.type](store, wrappedNext, action);
-      isSyncExecutionDone = true;
-      return returnValue;
-    } else {
-      return next(action);
-    }
-  };
+        const returnValue = overwrites[action.type](store, wrappedNext, action);
+        isSyncExecutionDone = true;
+        return returnValue;
+      } else {
+        return next(action);
+      }
+    };
 }

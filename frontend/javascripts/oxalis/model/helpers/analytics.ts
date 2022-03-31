@@ -25,7 +25,7 @@ export function trackVersion(version: string): void {
 export function googleAnalyticsLogClicks(evt: MouseEvent) {
   // This function logs all clicks on elements that contain text to google analytics
   // Flow doesn't allow to check for the textContent property otherwise
-  const target = (evt.target as any) as Node;
+  const target = evt.target as any as Node;
 
   if (target.textContent != null) {
     // Restrict the textContent to a maximum length

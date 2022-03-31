@@ -111,12 +111,13 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       await Promise.all(
         datastores
           .filter((ds) => !ds.isForeign)
-          .map((
-            datastore, // Catch potentially failing triggers, since these should not
-          ) =>
-            // block the subsequent fetch of datasets. Otherwise, one offline
-            // datastore will stop the refresh for all datastores.
-            triggerDatasetCheck(datastore.url).catch(() => {}),
+          .map(
+            (
+              datastore, // Catch potentially failing triggers, since these should not
+            ) =>
+              // block the subsequent fetch of datasets. Otherwise, one offline
+              // datastore will stop the refresh for all datastores.
+              triggerDatasetCheck(datastore.url).catch(() => {}),
           ),
       );
       await fetchDatasets({

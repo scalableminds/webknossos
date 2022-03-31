@@ -57,10 +57,10 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
 
   render() {
     const { isLoading, datasets } = this.state;
-    const datasetsOfPublication = (datasets.filter(
+    const datasetsOfPublication = datasets.filter(
       (ds) =>
         ds.isActive && ds.publication != null && ds.publication.id === this.props.publicationId,
-    ) as any) as Array<APIDataset>;
+    ) as any as Array<APIDataset>;
     return (
       <Layout>
         <SimpleHeader />

@@ -218,9 +218,7 @@ function* getIsosurfaceMappingInfo(
   };
 }
 
-function* getInfoForIsosurfaceLoading(
-  layer: DataLayer,
-): Saga<{
+function* getInfoForIsosurfaceLoading(layer: DataLayer): Saga<{
   zoomStep: number;
   resolutionInfo: ResolutionInfo;
 }> {

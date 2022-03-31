@@ -199,10 +199,8 @@ export function* editVolumeLayerAsync(): Saga<any> {
         volumeTracing.tracingId,
       ),
     );
-    const {
-      zoomStep: labeledZoomStep,
-      resolution: labeledResolution,
-    } = maybeLabeledResolutionWithZoomStep;
+    const { zoomStep: labeledZoomStep, resolution: labeledResolution } =
+      maybeLabeledResolutionWithZoomStep;
     const currentLayer = yield* call(
       createVolumeLayer,
       volumeTracing,
@@ -927,9 +925,11 @@ function* ensureSegmentExists(
     | UpdateTemporarySettingAction
     | ClickSegmentAction,
 ): Saga<void> {
-  const layer = yield* select((
-    store, // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
-  ) => getRequestedOrVisibleSegmentationLayer(store, action.layerName));
+  const layer = yield* select(
+    (
+      store, // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
+    ) => getRequestedOrVisibleSegmentationLayer(store, action.layerName),
+  );
 
   if (!layer) {
     return;

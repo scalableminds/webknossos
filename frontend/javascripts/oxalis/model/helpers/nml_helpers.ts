@@ -593,9 +593,7 @@ function parseBoundingBoxObject(attr): BoundingBoxObject {
   return boundingBoxObject;
 }
 
-export function parseNml(
-  nmlString: string,
-): Promise<{
+export function parseNml(nmlString: string): Promise<{
   trees: MutableTreeMap;
   treeGroups: Array<TreeGroup>;
   userBoundingBoxes: Array<UserBoundingBox>;

@@ -24,15 +24,16 @@ export function getActionLog(): Array<string> {
 export default function actionLoggerMiddleware<A extends Action>(): (
   next: Dispatch<A>,
 ) => Dispatch<A> {
-  return (next: Dispatch<A>) => (action: A): A => {
-    const isBlackListed = actionBlacklist.includes(action.type);
+  return (next: Dispatch<A>) =>
+    (action: A): A => {
+      const isBlackListed = actionBlacklist.includes(action.type);
 
-    if (!isBlackListed) {
-      actionLog.push(action.type);
-      const overflowCount = Math.max(actionLog.length - MAX_ACTION_LOG_LENGTH, 0);
-      actionLog = _.drop(actionLog, overflowCount);
-    }
+      if (!isBlackListed) {
+        actionLog.push(action.type);
+        const overflowCount = Math.max(actionLog.length - MAX_ACTION_LOG_LENGTH, 0);
+        actionLog = _.drop(actionLog, overflowCount);
+      }
 
-    return next(action);
-  };
+      return next(action);
+    };
 }

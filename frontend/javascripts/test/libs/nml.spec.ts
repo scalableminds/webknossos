@@ -16,8 +16,9 @@ const buildInfo = {
   },
 };
 const { serializeToNml, getNmlName, parseNml } = mock.reRequire("oxalis/model/helpers/nml_helpers");
-const SkeletonTracingReducer = mock.reRequire("oxalis/model/reducers/skeletontracing_reducer")
-  .default;
+const SkeletonTracingReducer = mock.reRequire(
+  "oxalis/model/reducers/skeletontracing_reducer",
+).default;
 const SkeletonTracingActions = mock.reRequire("oxalis/model/actions/skeletontracing_actions");
 
 const createDummyNode = (id: number): Node => ({

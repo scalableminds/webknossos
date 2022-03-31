@@ -13,15 +13,8 @@ Object.values(AnnotationToolEnum).forEach((annotationTool) => {
 mockRequire("oxalis/model/accessors/tool_accessor", {
   getDisabledInfoForTools: () => disabledInfoMock,
 });
-const {
-  MoveTool,
-  SkeletonTool,
-  BoundingBoxTool,
-  DrawTool,
-  EraseTool,
-  FillCellTool,
-  PickCellTool,
-} = mockRequire.reRequire("oxalis/controller/combinations/tool_controls");
+const { MoveTool, SkeletonTool, BoundingBoxTool, DrawTool, EraseTool, FillCellTool, PickCellTool } =
+  mockRequire.reRequire("oxalis/controller/combinations/tool_controls");
 const UiReducer = mockRequire.reRequire("oxalis/model/reducers/ui_reducer").default;
 const { wkReadyAction } = mockRequire.reRequire("oxalis/model/actions/actions");
 const { cycleToolAction, setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");

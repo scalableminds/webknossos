@@ -22,7 +22,7 @@ type State = {
   currentPosition: number | null | undefined;
 };
 export default class AdvancedSearchPopover<
-  S extends Record<string, any>
+  S extends Record<string, any>,
 > extends React.PureComponent<Props<S>, State> {
   state = {
     isVisible: false,

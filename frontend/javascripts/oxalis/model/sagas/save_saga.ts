@@ -185,13 +185,13 @@ function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
     };
   } else if (UndoRedoRelevantBoundingBoxActions.includes(action.type)) {
     return {
-      userBoundingBoxAction: (action as any) as UserBoundingBoxAction,
+      userBoundingBoxAction: action as any as UserBoundingBoxAction,
     };
   }
 
   if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
     return {
-      skeletonUserAction: (action as any) as SkeletonTracingAction,
+      skeletonUserAction: action as any as SkeletonTracingAction,
     };
   }
 

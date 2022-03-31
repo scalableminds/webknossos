@@ -61,9 +61,8 @@ export function hasConnectomeFile(state: OxalisState) {
     };
   }
 
-  const { currentConnectomeFile } = state.localSegmentationData[
-    segmentationLayer.name
-  ].connectomeData;
+  const { currentConnectomeFile } =
+    state.localSegmentationData[segmentationLayer.name].connectomeData;
 
   if (currentConnectomeFile == null) {
     return {

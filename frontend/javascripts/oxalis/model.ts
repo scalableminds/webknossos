@@ -47,12 +47,8 @@ export class OxalisModel {
 
       if (initializationInformation) {
         // Only executed on initial fetch
-        const {
-          dataLayers,
-          connectionInfo,
-          isMappingSupported,
-          maximumTextureCountForLayer,
-        } = initializationInformation;
+        const { dataLayers, connectionInfo, isMappingSupported, maximumTextureCountForLayer } =
+          initializationInformation;
 
         if (this.dataLayers != null) {
           _.values(this.dataLayers).forEach((layer) => layer.destroy());
@@ -200,9 +196,7 @@ export class OxalisModel {
     return renderedZoomStep;
   }
 
-  getHoveredCellId(
-    globalMousePosition: Vector3 | null | undefined,
-  ):
+  getHoveredCellId(globalMousePosition: Vector3 | null | undefined):
     | {
         id: number;
         isMapped: boolean;

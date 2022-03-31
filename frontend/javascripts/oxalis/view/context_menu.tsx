@@ -491,9 +491,7 @@ function getBoundingBoxMenuOptions({
     evt.stopPropagation();
   };
 
-  const upscaledBBoxColor = (hoveredBBox.color.map(
-    (colorPart) => colorPart * 255,
-  ) as any) as Vector3;
+  const upscaledBBoxColor = hoveredBBox.color.map((colorPart) => colorPart * 255) as any as Vector3;
   return [
     newBoundingBoxMenuItem,
     <Menu.Item key="change-bounding-box-name">
@@ -550,7 +548,7 @@ function getBoundingBoxMenuOptions({
           }}
           onChange={(evt: React.SyntheticEvent) => {
             let color = hexToRgb(evt.target.value);
-            color = (color.map((colorPart) => colorPart / 255) as any) as Vector3;
+            color = color.map((colorPart) => colorPart / 255) as any as Vector3;
             setBoundingBoxColor(clickedBoundingBoxId, color);
           }}
           value={rgbToHex(upscaledBBoxColor)}

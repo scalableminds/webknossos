@@ -15,7 +15,7 @@ export const requestOptionsTransferHandler = {
       clone.headers = headers;
     }
 
-    const cloneWithCorrectType = (clone as any) as SerializedRequestOptions;
+    const cloneWithCorrectType = clone as any as SerializedRequestOptions;
     return [cloneWithCorrectType, []];
   },
 
@@ -30,7 +30,7 @@ export const requestOptionsTransferHandler = {
     }
 
     clone.headers = headers;
-    const cloneWithCorrectType = (clone as any) as RequestOptionsWithParsedHeaders;
+    const cloneWithCorrectType = clone as any as RequestOptionsWithParsedHeaders;
     return cloneWithCorrectType;
   },
 };

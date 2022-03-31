@@ -9,11 +9,8 @@ mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
 const { call } = mockRequire.reRequire("redux-saga/effects");
-const {
-  triggerDataPrefetching,
-  prefetchForArbitraryMode,
-  prefetchForPlaneMode,
-} = mockRequire.reRequire("oxalis/model/sagas/prefetch_saga");
+const { triggerDataPrefetching, prefetchForArbitraryMode, prefetchForPlaneMode } =
+  mockRequire.reRequire("oxalis/model/sagas/prefetch_saga");
 test("Prefetch saga should trigger prefetching for the correct view mode", (t) => {
   // These are not the correct layers (those should be data_layer instances)
   // but they are sufficient to test this saga

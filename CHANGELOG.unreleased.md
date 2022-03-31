@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 ### Changed
+- Add filters for dataset access permissions and data layers to dashboard's dataset list. Removed `isActive` and `isPublic` columns to safe screen space. Switch data layer entries to display layer names instead of categories, e.g. "color" --> "axons". [#6131](https://github.com/scalableminds/webknossos/pull/6131)
 
 ### Fixed
 - Fixed a bug that led to an error when drag-'n-dropping an empty volume annotation in the dataset view. [#6116](https://github.com/scalableminds/webknossos/pull/6116)

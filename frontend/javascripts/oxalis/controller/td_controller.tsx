@@ -224,7 +224,6 @@ class TDController extends React.PureComponent<Props> {
         const unscaledPosition = V3.divide3(hitPosition.toArray(), this.props.scale);
 
         if (event.shiftKey) {
-          // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
           Store.dispatch(setPositionAction(unscaledPosition));
         } else if (event.ctrlKey) {
           const storeState = Store.getState();

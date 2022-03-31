@@ -1,6 +1,6 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Values } from "utility-types";
-import { Modal, Button, Radio, Col, Row, Checkbox, Divider } from "antd";
+import { Modal, Button, Radio, Col, Row, Checkbox, Divider, RadioChangeEvent } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -184,8 +184,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
       },
     );
   };
-  handlePermissionChanged = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  handlePermissionChanged = (evt: RadioChangeEvent) => {
     const selectedPermission: $Values<typeof PERMISSIONS> = evt.target.value;
     this.setState({
       selectedPermission,
@@ -273,11 +272,11 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
   getPermissionSelection(onlyEditingSingleUser: boolean, isUserAdmin: boolean) {
     const roleStyle = {
       fontWeight: "bold",
-    };
+    } as React.CSSProperties;
     const explanationStyle = {
       paddingBottom: 12,
       color: "var(--ant-text-secondary)",
-    };
+    } as React.CSSProperties;;
     return (
       <React.Fragment>
         <h4>
@@ -298,7 +297,6 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
             name="permission-role"
             defaultValue={this.state.selectedPermission}
             value={this.state.selectedPermission}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(evt: React.SyntheticEvent) => void' is not ... Remove this comment to see the full error message
             onChange={this.handlePermissionChanged}
             disabled={!isUserAdmin}
           >

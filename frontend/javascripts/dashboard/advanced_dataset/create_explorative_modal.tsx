@@ -75,7 +75,6 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
       annotationType !== "skeleton" &&
       segmentationLayers.length > 0 &&
       selectedSegmentationLayerIndex != null
-        // @ts-expect-error ts-migrate(2538) FIXME: Type 'null' cannot be used as an index type.
         ? segmentationLayers[selectedSegmentationLayerIndex]
         : null;
     const fallbackLayerGetParameter =

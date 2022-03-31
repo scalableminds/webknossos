@@ -46,14 +46,11 @@ function RegistrationViewNotDemo() {
             marginBottom: 24,
           }}
         >
-          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           You are about to join the organization &ldquo;{organization.displayName}&rdquo;!
         </Card>
         <RegistrationForm // The key is used to enforce a remount in case the organizationName changes.
           // That way, we ensure that the organization field is cleared.
-          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           key={organization.name}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'APIOrganiza... Remove this comment to see the full error message
           targetOrganization={organization}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {

@@ -112,11 +112,9 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     if (!hasRecommendedConfiguration) {
       // A recommended configuration of null overrides the default configuration when using _.merge
       // If the task type has no recommended configuration, suggest the default one
-      // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'recommendedConfiguration' becaus... Remove this comment to see the full error message
       formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
     }
 
-    // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'recommendedConfiguration' becaus... Remove this comment to see the full error message
     formValues.recommendedConfiguration = jsonStringify(formValues.recommendedConfiguration);
     // The format of settings.resolutionRestrictions does not match the form precisely.
     // It is replaced here by resolutionRestrictionsForm, wich has a shouldRestrict boolean

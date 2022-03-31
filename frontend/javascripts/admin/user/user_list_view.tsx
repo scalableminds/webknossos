@@ -68,8 +68,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class UserListView extends React.PureComponent<PropsWithRouter, State> {
-  // @ts-expect-error ts-migrate(2416) FIXME: Property 'state' in type 'UserListView' is not ass... Remove this comment to see the full error message
-  state = {
+  state: State = {
     isLoading: true,
     users: [],
     selectedUserIds: [],
@@ -110,7 +109,6 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
 
   activateUser = async (selectedUser: APIUser, isActive: boolean = true) => {
     const newUserPromises = this.state.users.map((user) => {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
       if (selectedUser.id === user.id) {
         const newUser = Object.assign({}, user, {
           isActive,
@@ -138,7 +136,6 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
 
   changeEmail = async (selectedUser: APIUser, newEmail: string) => {
     const newUserPromises = this.state.users.map((user) => {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
       if (selectedUser.id === user.id) {
         const newUser = Object.assign({}, user, {
           email: newEmail,
@@ -196,7 +193,6 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
   renderNewUsersAlert() {
     const now = moment();
     const newInactiveUsers = this.state.users.filter(
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'isActive' does not exist on type 'never'... Remove this comment to see the full error message
       (user) => !user.isActive && moment.duration(now.diff(user.created)).asDays() <= 14,
     );
     const newInactiveUsersHeader = (
@@ -213,9 +209,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     const newInactiveUsersList = (
       <React.Fragment>
         {newInactiveUsers.map((user) => (
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
           <Row key={user.id} gutter={16}>
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'lastName' does not exist on type 'never'... Remove this comment to see the full error message
             <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
               <LinkButton onClick={() => this.activateUser(user)}>
@@ -272,7 +266,6 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
 
   getAllSelectedUsers(): Array<APIUser> {
     if (this.state.selectedUserIds.length > 0) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'any' is not assignable to parame... Remove this comment to see the full error message
       return this.state.users.filter((user) => this.state.selectedUserIds.includes(user.id));
     } else return [];
   }
@@ -403,7 +396,6 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
           <Table
             dataSource={Utils.filterWithSearchQueryAND(
               this.state.users,
-              // @ts-expect-error ts-migrate(2339) FIXME: Property 'experiences' does not exist on type 'nev... Remove this comment to see the full error message
               ["firstName", "lastName", "email", "teams", (user) => Object.keys(user.experiences)],
               this.state.searchQuery,
             )}
@@ -619,7 +611,6 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
         {this.state.isExperienceModalVisible ? (
           <ExperienceModalView
             visible={this.state.isExperienceModalVisible}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'APIUser[] | null[]' is not assignable to typ... Remove this comment to see the full error message
             selectedUsers={
               this.state.singleSelectedUser
                 ? [this.state.singleSelectedUser]
@@ -657,5 +648,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, {}, _, _, _, _>(mapStateToProps)(withRouter(UserListView));
+const connector = connect(mapStateToProps)
+export default connector(withRouter(UserListView));

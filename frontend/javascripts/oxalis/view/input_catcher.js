@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { ArbitraryViewport, type Rect, type Viewport, type AnnotationTool } from "oxalis/constants";
+import { ArbitraryViewport, type Rect, type Viewport, type AnnotationTool, } from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
@@ -102,11 +102,11 @@ class InputCatcher extends React.PureComponent<Props, {}> {
       SKELETON: "crosshair",
       BRUSH: "url(/assets/images/paint-brush-solid-border.svg) 0 10,auto",
       ERASE_BRUSH: "url(/assets/images/eraser-solid-border.svg) 0 8,auto",
-      TRACE: "url(/assets/images/crosshairs-solid-border.svg),auto",
+      TRACE: "url(/assets/images/crosshairs-solid-border.svg) 6.5 7,auto",
       ERASE_TRACE: "url(/assets/images/eraser-solid-border.svg) 0 8,auto",
-      FILL_CELL: "url(/assets/images/fill-drip-solid-border.svg) 0 8,auto",
-      PICK_CELL: "url(/assets/images/eye-dropper-solid-border.svg) 0 8,auto",
-      BOUNDING_BOX: "url(/assets/images/new-bounding-box.svg),auto",
+      FILL_CELL: "url(/assets/images/fill-drip-solid-border.svg) 0 0,auto",
+      PICK_CELL: "url(/assets/images/eye-dropper-solid-border.svg) 0 10,auto",
+      BOUNDING_BOX: "move",
     };
 
     return (
@@ -121,9 +121,7 @@ class InputCatcher extends React.PureComponent<Props, {}> {
           className={`inputcatcher ${viewportID}`}
           style={{
             position: "relative",
-            cursor: this.props.busyBlockingInfo.isBusy
-              ? "wait"
-              : cursorForTool[this.props.activeTool],
+            cursor: this.props.busyBlockingInfo.isBusy ? "wait" : cursorForTool[this.props.activeTool],
           }}
         >
           <ViewportStatusIndicator />

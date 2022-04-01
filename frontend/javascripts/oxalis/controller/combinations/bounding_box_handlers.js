@@ -230,7 +230,7 @@ export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
     } else {
       getSceneController().highlightUserBoundingBox(null);
       if (inputCatcher != null) {
-        inputCatcher.style.cursor = "url(/assets/images/new-bounding-box-solid-border.svg),auto";
+        inputCatcher.style.cursor = "move";
       }
     }
   },

@@ -23,7 +23,14 @@ const UserLocalStorage = {
   },
 
   setItem(key: string, value: string, isOrganizationSpecific: boolean = true): void {
-    return localStorage.setItem(prefixKey(key, isOrganizationSpecific), value);
+    const trySetItem = () => localStorage.setItem(prefixKey(key, isOrganizationSpecific), value);
+    try {
+      trySetItem();
+    } catch (exception) {
+      console.warn("localStorage.setItem failed. Clearing localStorage and retrying...", exception);
+      localStorage.clear();
+      trySetItem();
+    }
   },
 
   removeItem(key: string, isOrganizationSpecific: boolean = true): void {

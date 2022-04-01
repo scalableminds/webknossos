@@ -722,5 +722,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<StateProps, {}, _, _, _, _>(mapStateToProps)(withRouter(OnboardingView));
+const connector = connect(mapStateToProps);
+export default connector(withRouter(OnboardingView));

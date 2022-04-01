@@ -115,5 +115,5 @@ function mapStateToProps(state: OxalisState): $Shape<Props> {
   };
 }
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, {}, _, _, _, _>(mapStateToProps)(AbstractTreeTab);
+const connector = connect(mapStateToProps);
+export default connector(AbstractTreeTab);

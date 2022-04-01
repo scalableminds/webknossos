@@ -6,6 +6,7 @@ import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumet
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import type { OxalisState, Tracing } from "oxalis/store";
+import type { TracingType } from "types/api_flow_types";
 import Store from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
 const { TabPane } = Tabs;
@@ -21,12 +22,11 @@ type OwnProps = {
 };
 type Props = StateProps & OwnProps;
 type State = {
-  activeTracingType: "skeleton" | "volume";
+  activeTracingType: TracingType;
   initialAllowUpdate: boolean;
 };
 
 class VersionView extends React.Component<Props, State> {
-  // @ts-expect-error ts-migrate(2416) FIXME: Property 'state' in type 'VersionView' is not assi... Remove this comment to see the full error message
   state = {
     activeTracingType: this.props.tracing.skeleton != null ? "skeleton" : "volume",
     // Remember whether the tracing could originally be updated
@@ -44,7 +44,7 @@ class VersionView extends React.Component<Props, State> {
     Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
   };
 
-  onChangeTab = (activeKey: "skeleton" | "volume") => {
+  onChangeTab = (activeKey: TracingType) => {
     this.setState({
       activeTracingType: activeKey,
     });
@@ -142,5 +142,5 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(VersionView);
+const connector = connect(mapStateToProps);
+export default  connector(VersionView);

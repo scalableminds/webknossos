@@ -366,8 +366,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<ControlsAndRenderingSettingsTabProps, {}, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-)(ControlsAndRenderingSettingsTab);
+const connector = connect(mapStateToProps, mapDispatchToProps);
+export default connector(ControlsAndRenderingSettingsTab);

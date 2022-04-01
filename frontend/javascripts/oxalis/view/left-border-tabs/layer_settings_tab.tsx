@@ -1036,8 +1036,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<DatasetSettingsProps, {}, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-)(DatasetSettings);
+const connector = connect(mapStateToProps, mapDispatchToProps);
+export default connector(DatasetSettings);

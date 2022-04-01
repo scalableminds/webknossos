@@ -91,7 +91,5 @@ const mapStateToProps = (state: OxalisState) => ({
   isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<MergerModeControllerProps, {}, _, _, _, _>(mapStateToProps)(
-  MergerModeController,
-);
+const connector = connect(mapStateToProps);
+export default connector(  MergerModeController);

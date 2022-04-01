@@ -93,8 +93,16 @@ function ThumbnailOverlay({ details }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'datasets' implicitly has an 'any'... Remove this comment to see the full error message
-function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset }) {
+type PublishedDatasetsOverlayProps = {
+  datasets: APIDataset[];
+  activeDataset: APIDataset;
+  setActiveDataset: React.Dispatch<any>;
+};
+function PublishedDatasetsOverlay({
+  datasets,
+  activeDataset,
+  setActiveDataset,
+}: PublishedDatasetsOverlayProps) {
   return (
     <div className="datasets-scrollbar-spacer">
       <div className="dataset-published-grid nice-scrollbar">
@@ -104,8 +112,6 @@ function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset })
             gridTemplateColumns: miniThumbnailDimension,
           }}
         >
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any'
-          type.
           {datasets.map((dataset) => {
             const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
             return (

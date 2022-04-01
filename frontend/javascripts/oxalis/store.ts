@@ -1,5 +1,5 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $ReadOnly, $Shape } from "utility-types";
+import { $Shape } from "utility-types";
 import type { Dispatch } from "redux";
 import { createStore, applyMiddleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
@@ -69,12 +69,12 @@ export type MutableCommentType = {
   content: string;
   nodeId: number;
 };
-export type CommentType = $ReadOnly<MutableCommentType>;
+export type CommentType = Readonly<MutableCommentType>;
 export type MutableEdge = {
   source: number;
   target: number;
 };
-export type Edge = $ReadOnly<MutableEdge>;
+export type Edge = Readonly<MutableEdge>;
 export type MutableNode = {
   id: number;
   position: Vector3;
@@ -86,12 +86,12 @@ export type MutableNode = {
   timestamp: number;
   interpolation: boolean;
 };
-export type Node = $ReadOnly<MutableNode>;
+export type Node = Readonly<MutableNode>;
 export type MutableBranchPoint = {
   timestamp: number;
   nodeId: number;
 };
-export type BranchPoint = $ReadOnly<MutableBranchPoint>;
+export type BranchPoint = Readonly<MutableBranchPoint>;
 export type MutableNodeMap = DiffableMap<number, MutableNode>;
 export type NodeMap = DiffableMap<number, Node>;
 export type BoundingBoxObject = {

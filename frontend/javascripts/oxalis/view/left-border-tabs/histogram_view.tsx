@@ -338,5 +338,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<HistogramProps, OwnProps, _, _, _, _>(null, mapDispatchToProps)(Histogram);
+
+const connector = connect(null, mapDispatchToProps);
+export default connector(Histogram);

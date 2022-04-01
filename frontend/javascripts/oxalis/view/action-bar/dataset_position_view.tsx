@@ -189,5 +189,5 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, {}, _, _, _, _>(mapStateToProps)(DatasetPositionView);
+const connector = connect(mapStateToProps);
+export default connector(DatasetPositionView);

@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys, $ReadOnly } from "utility-types";
 export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
 
 export const ViewModeValuesIndices = {
@@ -57,10 +55,10 @@ export const OrthoViewsToName = {
   PLANE_XZ: "XZ",
   TDView: "3D",
 };
-export type OrthoView = $Keys<typeof OrthoViews>;
+export type OrthoView = keyof typeof OrthoViews;
 export type OrthoViewMap<T> = Record<OrthoView, T>;
-export type OrthoViewExtents = $ReadOnly<OrthoViewMap<Vector2>>;
-export type OrthoViewRects = $ReadOnly<OrthoViewMap<Rect>>;
+export type OrthoViewExtents = Readonly<OrthoViewMap<Vector2>>;
+export type OrthoViewRects = Readonly<OrthoViewMap<Rect>>;
 export const ArbitraryViewport = "arbitraryViewport";
 export const ArbitraryViews = {
   arbitraryViewport: "arbitraryViewport",
@@ -70,13 +68,13 @@ export const ArbitraryViewsToName = {
   arbitraryViewport: "Arbitrary View",
   TDView: "3D",
 };
-export type ArbitraryView = $Keys<typeof ArbitraryViews>;
+export type ArbitraryView = keyof typeof ArbitraryViews;
 export type ArbitraryViewMap<T> = Record<ArbitraryView, T>;
 export type Viewport = OrthoView | typeof ArbitraryViewport;
 export const allViewports: Array<Viewport> = Object.keys(OrthoViews).concat([ArbitraryViewport]);
 export type ViewportMap<T> = Record<Viewport, T>;
-export type ViewportExtents = $ReadOnly<ViewportMap<Vector2>>;
-export type ViewportRects = $ReadOnly<ViewportMap<Rect>>;
+export type ViewportExtents = Readonly<ViewportMap<Vector2>>;
+export type ViewportRects = Readonly<ViewportMap<Rect>>;
 export const OrthoViewValues: Array<OrthoView> = Object.keys(OrthoViews);
 export const OrthoViewIndices = {
   PLANE_XY: OrthoViewValues.indexOf("PLANE_XY"),
@@ -168,7 +166,7 @@ export const ControlModeEnum = {
   SANDBOX: "SANDBOX",
   VIEW: "VIEW",
 };
-export type ControlMode = $Keys<typeof ControlModeEnum>;
+export type ControlMode = keyof typeof ControlModeEnum;
 export const AnnotationToolEnum = {
   MOVE: "MOVE",
   SKELETON: "SKELETON",
@@ -194,7 +192,7 @@ export const ToolsWithOverwriteCapabilities = [
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.ERASE_BRUSH,
 ];
-export type AnnotationTool = $Keys<typeof AnnotationToolEnum>;
+export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export function annotationToolEnumToIndex(
   annotationTool: AnnotationTool | null | undefined,
 ): number {
@@ -204,31 +202,31 @@ export const ContourModeEnum = {
   DRAW: "DRAW",
   DELETE: "DELETE",
 };
-export type ContourMode = $Keys<typeof ContourModeEnum>;
+export type ContourMode = keyof typeof ContourModeEnum;
 export const OverwriteModeEnum = {
   OVERWRITE_ALL: "OVERWRITE_ALL",
   OVERWRITE_EMPTY: "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
 };
-export type OverwriteMode = $Keys<typeof OverwriteModeEnum>;
+export type OverwriteMode = keyof typeof OverwriteModeEnum;
 export const FillModeEnum = {
   // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.
   _2D: "_2D",
   _3D: "_3D",
 };
-export type FillMode = $Keys<typeof FillModeEnum>;
+export type FillMode = keyof typeof FillModeEnum;
 export const TDViewDisplayModeEnum = {
   NONE: "NONE",
   WIREFRAME: "WIREFRAME",
   DATA: "DATA",
 };
-export type TDViewDisplayMode = $Keys<typeof TDViewDisplayModeEnum>;
+export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
 export const MappingStatusEnum = {
   DISABLED: "DISABLED",
   ACTIVATING: "ACTIVATING",
   ENABLED: "ENABLED",
 };
-export type MappingStatus = $Keys<typeof MappingStatusEnum>;
+export type MappingStatus = keyof typeof MappingStatusEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 // The plane in orthogonal mode is a little smaller than the viewport

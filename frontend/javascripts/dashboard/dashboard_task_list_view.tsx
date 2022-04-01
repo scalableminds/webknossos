@@ -598,8 +598,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof DashboardTaskListView' is... Remove this comment to see the full error message
-  withRouter(DashboardTaskListView),
-);
+const connector = connect(mapStateToProps)
+export default connector(withRouter(DashboardTaskListView));

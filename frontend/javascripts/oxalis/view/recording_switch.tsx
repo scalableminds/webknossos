@@ -33,5 +33,5 @@ const mapStateToProps = (state: OxalisState) => ({
   flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, {}, _, _, _, _>(mapStateToProps, mapDispatchToProps)(RecordingSwitch);
+const connector = connect(mapStateToProps, mapDispatchToProps);
+export default connector(RecordingSwitch);

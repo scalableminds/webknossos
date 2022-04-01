@@ -249,9 +249,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, OwnProps, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof DashboardView' is not ass... Remove this comment to see the full error message
-)(withRouter(DashboardView));
+const connector = connect(mapStateToProps, mapDispatchToProps)
+export default connector(withRouter(DashboardView));

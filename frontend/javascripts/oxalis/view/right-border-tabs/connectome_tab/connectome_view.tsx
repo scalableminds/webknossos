@@ -851,5 +851,5 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 }
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, {}, _, _, _, _>(mapStateToProps)(ConnectomeView);
+const connector = connect(mapStateToProps);
+export default connector(ConnectomeView);

@@ -127,5 +127,5 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
   };
 }
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, {}, _, _, _, _>(mapStateToProps, mapDispatchToProps)(TDViewControls);
+const connector = connect(mapStateToProps, mapDispatchToProps);
+export default connector(TDViewControls);

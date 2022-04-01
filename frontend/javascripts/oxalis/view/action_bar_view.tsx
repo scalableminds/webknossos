@@ -188,5 +188,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   viewMode: state.temporaryConfiguration.viewMode,
 });
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ActionBarView);
+const connector = connect(mapStateToProps);
+export default  connector(ActionBarView);

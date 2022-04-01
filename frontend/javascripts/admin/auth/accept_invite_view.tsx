@@ -75,7 +75,6 @@ export default function AcceptInviteView({
     activeUser != null ? null : <p>Please log in or register to join this organization.</p>;
   const primaryButton =
     activeUser != null ? (
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; type: string; onClick: (... Remove this comment to see the full error message
       <AsyncButton type="primary" onClick={onClickJoin} size="large">
         Join this Organization
       </AsyncButton>

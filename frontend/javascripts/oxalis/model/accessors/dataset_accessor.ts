@@ -38,8 +38,7 @@ type UnrenderableLayersInfos = {
 };
 export class ResolutionInfo {
   resolutions: ReadonlyArray<Vector3>;
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$ReadOnlyMap'.
-  resolutionMap: $ReadOnlyMap<number, Vector3>;
+  resolutionMap: Map<number, Vector3>;
 
   constructor(resolutions: Array<Vector3>) {
     this.resolutions = resolutions;
@@ -78,7 +77,6 @@ export class ResolutionInfo {
   getResolutionsWithIndices(): Array<[number, Vector3]> {
     return _.sortBy(
       Array.from(this.resolutionMap.entries()).map((entry) => {
-        // @ts-expect-error ts-migrate(2488) FIXME: Type 'unknown' must have a '[Symbol.iterator]()' m... Remove this comment to see the full error message
         const [powerOfTwo, resolution] = entry;
         const resolutionIndex = Math.log2(powerOfTwo);
         return [resolutionIndex, resolution];
@@ -516,7 +514,6 @@ export function getDatasetCenter(dataset: APIDataset): Vector3 {
 }
 export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
   const allBoundingBoxes = datasetLayers.map((layer) => layer.boundingBox);
   const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
   const { min, max } = unifiedBoundingBoxes;
@@ -726,10 +723,9 @@ export function getSegmentationLayers(
 
   // $FlowIssue[incompatible-type]
   // $FlowIssue[prop-missing]
-  const segmentationLayers: Array<APISegmentationLayer> = dataset.dataSource.dataLayers.filter(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataLayer' implicitly has an 'any' type... Remove this comment to see the full error message
-    (dataLayer) => isSegmentationLayer(dataset, dataLayer.name),
-  );
+  const segmentationLayers = dataset.dataSource.dataLayers.filter((dataLayer) =>
+    isSegmentationLayer(dataset, dataLayer.name),
+  ) as APISegmentationLayer[];
   return segmentationLayers;
 }
 export function hasSegmentation(dataset: APIDataset): boolean {
@@ -753,7 +749,6 @@ export function doesSupportVolumeWithFallback(
   return isFallbackSupported;
 }
 export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataLayer' implicitly has an 'any' type... Remove this comment to see the full error message
   return dataset.dataSource.dataLayers.filter((dataLayer) => isColorLayer(dataset, dataLayer.name));
 }
 export function getEnabledLayers(
@@ -770,7 +765,6 @@ export function getEnabledLayers(
     ? getColorLayers(dataset)
     : dataset.dataSource.dataLayers;
   const layerSettings = datasetConfiguration.layers;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
   return dataLayers.filter((layer) => {
     const settings = layerSettings[layer.name];
 

@@ -1,5 +1,5 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $ReadOnly, $Keys, $Shape } from "utility-types";
+import {  $Shape } from "utility-types";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
 import Enum from "Enumjs";
 import type {
@@ -66,13 +66,13 @@ type MutableAPIDataSourceBase = {
   };
   status?: string;
 };
-type APIDataSourceBase = $ReadOnly<MutableAPIDataSourceBase>;
+type APIDataSourceBase = Readonly<MutableAPIDataSourceBase>;
 type APIUnimportedDatasource = APIDataSourceBase;
 export type MutableAPIDataSource = MutableAPIDataSourceBase & {
   dataLayers: Array<APIDataLayer>;
   scale: Vector3;
 };
-export type APIDataSource = $ReadOnly<MutableAPIDataSource>;
+export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {
   readonly name: string;
   readonly url: string;
@@ -102,7 +102,7 @@ export type MutableAPIDatasetId = {
   owningOrganization: string;
   name: string;
 };
-export type APIDatasetId = $ReadOnly<MutableAPIDatasetId>;
+export type APIDatasetId = Readonly<MutableAPIDatasetId>;
 export type APIDatasetDetails = {
   readonly species?: string;
   readonly brainRegion?: string;
@@ -127,7 +127,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   publication: APIPublication | null | undefined;
   tags: Array<string>;
 };
-type APIDatasetBase = $ReadOnly<MutableAPIDatasetBase>;
+type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
   dataSource: MutableAPIDataSource;
   isActive: true;
@@ -230,14 +230,14 @@ export const APIAnnotationTypeEnum = Enum.make({
   CompoundProject: "CompoundProject",
   CompoundTaskType: "CompoundTaskType",
 });
-export type APIAnnotationType = $Keys<typeof APIAnnotationTypeEnum>;
+export type APIAnnotationType = keyof typeof APIAnnotationTypeEnum;
 export type APIAnnotationVisibility = "Private" | "Internal" | "Public";
 export const TracingTypeEnum = Enum.make({
   skeleton: "skeleton",
   volume: "volume",
   hybrid: "hybrid",
 });
-export type TracingType = $Keys<typeof TracingTypeEnum>;
+export type TracingType = keyof typeof TracingTypeEnum;
 export type APITaskType = {
   readonly id: string;
   readonly summary: string;

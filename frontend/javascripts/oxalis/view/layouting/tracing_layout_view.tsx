@@ -442,9 +442,5 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-// @ts-expect-error ts-migrate(2558) FIXME: Expected 5 type arguments, but got 6.
-export default connect<Props, OwnProps, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TracingLayoutView' is not... Remove this comment to see the full error message
-)(withRouter(TracingLayoutView));
+const connector = connect(mapStateToProps, mapDispatchToProps);
+export default connector(withRouter(TracingLayoutView));

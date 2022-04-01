@@ -1,6 +1,5 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { _all, _call, _cancel, fork, take } from "oxalis/model/sagas/effect-generators";
+import { all, call, cancel, fork, take } from "typed-redux-saga";
 import { alert } from "libs/window";
 import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import SaveSagas, { toggleErrorHighlighting } from "oxalis/model/sagas/save_saga";
@@ -23,7 +22,7 @@ export default function* rootSaga(): Saga<void> {
     rootSagaCrashed = false;
     const task = yield* fork(restartableSaga);
     yield* take("RESTART_SAGA");
-    yield _cancel(task);
+    yield* cancel(task);
   }
 }
 export function hasRootSagaCrashed() {
@@ -32,22 +31,22 @@ export function hasRootSagaCrashed() {
 
 function* restartableSaga(): Saga<void> {
   try {
-    yield _all([
-      _call(warnAboutMagRestriction),
-      _call(SettingsSaga),
-      ...SkeletontracingSagas.map((saga) => _call(saga)),
-      _call(listenToClipHistogramSaga),
-      _call(loadHistogramDataSaga),
-      _call(watchDataRelevantChanges),
-      _call(isosurfaceSaga),
-      _call(watchTasksAsync),
-      _call(handleMeshChanges),
-      _call(watchMaximumRenderableLayers),
-      _call(MappingSaga),
-      _call(watchToolDeselection),
-      ...AnnotationSagas.map((saga) => _call(saga)),
-      ...SaveSagas.map((saga) => _call(saga)),
-      ...VolumetracingSagas.map((saga) => _call(saga)),
+    yield* all([
+      call(warnAboutMagRestriction),
+      call(SettingsSaga),
+      ...SkeletontracingSagas.map((saga) => call(saga)),
+      call(listenToClipHistogramSaga),
+      call(loadHistogramDataSaga),
+      call(watchDataRelevantChanges),
+      call(isosurfaceSaga),
+      call(watchTasksAsync),
+      call(handleMeshChanges),
+      call(watchMaximumRenderableLayers),
+      call(MappingSaga),
+      call(watchToolDeselection),
+      ...AnnotationSagas.map((saga) => call(saga)),
+      ...SaveSagas.map((saga) => call(saga)),
+      ...VolumetracingSagas.map((saga) => call(saga)),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

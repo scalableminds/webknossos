@@ -2,9 +2,9 @@ import React from "react";
 import _ from "lodash";
 import { Button } from "antd";
 import type { APITaskType } from "types/api_flow_types";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put, select, _delay, take } from "oxalis/model/sagas/effect-generators";
+import {  select } from "oxalis/model/sagas/effect-generators";
+import { call, put, delay, take } from "typed-redux-saga";
 import { clamp } from "libs/utils";
 import {
   getValidTaskZoomRange,
@@ -40,7 +40,6 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
     text = messages["task.no_description"];
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'destroy' implicitly has an 'any' type.
   yield* call(renderIndependently, (destroy) => (
     // @ts-expect-error ts-migrate(7005) FIXME: Variable 'text' implicitly has an 'any' type.
     <NewTaskDescriptionModal title={title} description={text} destroy={destroy} />
@@ -50,13 +49,9 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
 function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const { recommendedConfiguration } = taskType;
   if (recommendedConfiguration == null || _.size(recommendedConfiguration) === 0) return;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const userConfiguration = yield* select((state) => state.userConfiguration);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const zoomStep = yield* select((state) => state.flycam.zoomStep);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
 
   // $FlowFixMe[incompatible-call] Cannot call `_.find` because number [1] is incompatible with boolean [2] in property `brushSize` of type argument `T`.
@@ -65,7 +60,6 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
       return true;
     } else if (key === "segmentationOpacity") {
       const opacities = _.uniq(
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
         segmentationLayers.map((layer) => datasetConfiguration.layers[layer.name].alpha),
       );
 
@@ -89,7 +83,6 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   let confirmed = false;
   // The renderIndependently call returns a promise that is only resolved
   // once destroy is called. yield* will wait until the returned promise is resolved.
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'destroy' implicitly has an 'any' type.
   yield* call(renderIndependently, (destroy) => (
     <RecommendedConfigurationModal
       config={recommendedConfiguration}
@@ -138,11 +131,8 @@ function* maybeActivateMergerMode(taskType: APITaskType): Saga<void> {
 
 export default function* watchTasksAsync(): Saga<void> {
   yield* take("WK_READY");
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const task = yield* select((state) => state.task);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const activeUser = yield* select((state) => state.activeUser);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (task == null || activeUser == null || !allowUpdate) return;
   yield* call(maybeActivateMergerMode, task.type);
@@ -158,7 +148,6 @@ export default function* watchTasksAsync(): Saga<void> {
 }
 export function* warnAboutMagRestriction(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const { allowUpdate } = yield* select((state) => state.tracing.restrictions);
 
     if (!allowUpdate) {
@@ -175,7 +164,6 @@ export function* warnAboutMagRestriction(): Saga<void> {
     };
 
     if (isViolated) {
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'storeState' implicitly has an 'any' typ... Remove this comment to see the full error message
       const [min, max] = yield* select((storeState) => getValidTaskZoomRange(storeState, true));
 
       const clampZoom = () => {
@@ -208,7 +196,7 @@ export function* warnAboutMagRestriction(): Saga<void> {
 
   yield* take("WK_READY");
   // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
-  yield _delay(5000);
+  yield* delay(5000);
   yield* warnMaybe();
 
   while (true) {

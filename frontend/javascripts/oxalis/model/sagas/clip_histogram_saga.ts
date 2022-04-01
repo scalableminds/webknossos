@@ -1,7 +1,6 @@
 import Store from "oxalis/store";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { _takeEvery } from "oxalis/model/sagas/effect-generators";
+import { takeEvery } from "typed-redux-saga";
 import type { ClipHistogramAction } from "oxalis/model/actions/settings_actions";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import Toast from "libs/toast";
@@ -104,5 +103,5 @@ async function clipHistogram(action: ClipHistogramAction) {
 }
 
 export default function* listenToClipHistogramSaga(): Saga<void> {
-  yield _takeEvery("CLIP_HISTOGRAM", clipHistogram);
+  yield* takeEvery("CLIP_HISTOGRAM", clipHistogram);
 }

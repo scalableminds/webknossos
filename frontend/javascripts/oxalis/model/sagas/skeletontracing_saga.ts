@@ -1,21 +1,19 @@
 import { Modal } from "antd";
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
-  _actionChannel,
-  _take,
-  _takeEvery,
-  _throttle,
-  _all,
+  actionChannel,
+  take,
+  takeEvery,
+  throttle,
+  all,
   call,
   fork,
   put,
   race,
-  select,
-  take,
-} from "oxalis/model/sagas/effect-generators";
+} from "typed-redux-saga";
+import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import {
   createEdge,
@@ -112,8 +110,8 @@ function* watchBranchPointDeletion(): Saga<void> {
 
   while (true) {
     const { deleteBranchpointAction } = yield* race({
-      deleteBranchpointAction: _take("REQUEST_DELETE_BRANCHPOINT"),
-      createNodeAction: _take("CREATE_NODE"),
+      deleteBranchpointAction: take("REQUEST_DELETE_BRANCHPOINT"),
+      createNodeAction: take("CREATE_NODE"),
     });
 
     if (deleteBranchpointAction) {
@@ -149,7 +147,6 @@ function* watchFailedNodeCreations(): Saga<void> {
   while (true) {
     yield* take("CREATE_NODE");
     const activeTreeId = yield* select(
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
       (state) => enforceSkeletonTracing(state.tracing).activeTreeId,
     );
 
@@ -160,7 +157,6 @@ function* watchFailedNodeCreations(): Saga<void> {
 }
 
 function* watchTracingConsistency(): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_state' implicitly has an 'any' type.
   const state = yield* select((_state) => _state);
   const invalidTreeDetails = [];
 
@@ -193,7 +189,6 @@ function* watchTracingConsistency(): Saga<void> {
 }
 
 export function* watchTreeNames(): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_state' implicitly has an 'any' type.
   const state = yield* select((_state) => _state);
 
   // rename trees with an empty/default tree name
@@ -214,19 +209,19 @@ export function* watchVersionRestoreParam(): Saga<void> {
 }
 export function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
-  const actionChannel = yield _actionChannel("LOAD_AGGLOMERATE_SKELETON");
+  const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
-  yield _takeEvery(actionChannel, loadAgglomerateSkeletonWithId);
-  yield _takeEvery("REMOVE_AGGLOMERATE_SKELETON", removeAgglomerateSkeletonWithId);
+  yield * takeEvery(channel, loadAgglomerateSkeletonWithId);
+  yield* takeEvery("REMOVE_AGGLOMERATE_SKELETON", removeAgglomerateSkeletonWithId);
 }
 export function* watchConnectomeAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
-  const actionChannel = yield _actionChannel("LOAD_CONNECTOME_AGGLOMERATE_SKELETON");
+  const channel = yield* actionChannel("LOAD_CONNECTOME_AGGLOMERATE_SKELETON");
   // The order of these two actions is not guaranteed, but they both need to be dispatched
-  yield _all([_take("INITIALIZE_CONNECTOME_TRACING"), _take("WK_READY")]);
-  yield _takeEvery(actionChannel, loadConnectomeAgglomerateSkeletonWithId);
-  yield _takeEvery(
+  yield* all([take("INITIALIZE_CONNECTOME_TRACING"), take("WK_READY")]);
+  yield * takeEvery(channel, loadConnectomeAgglomerateSkeletonWithId);
+  yield* takeEvery(
     "REMOVE_CONNECTOME_AGGLOMERATE_SKELETON",
     removeConnectomeAgglomerateSkeletonWithId,
   );
@@ -237,7 +232,6 @@ function* getAgglomerateSkeletonTracing(
   mappingName: string,
   agglomerateId: number,
 ): Saga<ServerSkeletonTracing> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
   // If there is a fallbackLayer, request the agglomerate for that instead of the tracing segmentation layer
@@ -255,8 +249,7 @@ function* getAgglomerateSkeletonTracing(
     );
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
-    if (!parsedTracing.trees) {
+    if (!("trees" in parsedTracing)) {
       // This check is only for flow to realize that we have a skeleton tracing
       // on our hands.
       throw new Error("Skeleton tracing doesn't contain trees");
@@ -307,7 +300,6 @@ function handleAgglomerateLoadingError(
 }
 
 function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
   const { layerName, mappingName, agglomerateId } = action;
@@ -376,12 +368,10 @@ function* loadConnectomeAgglomerateSkeletonWithId(
 }
 
 function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
   const { mappingName, agglomerateId } = action;
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
   yield _all(findTreeByName(trees, treeName).map((tree) => put(deleteTreeAction(tree.treeId))));
@@ -393,12 +383,11 @@ function* removeConnectomeAgglomerateSkeletonWithId(
   const { layerName, mappingName, agglomerateId } = action;
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
   const skeleton = yield* select(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.localSegmentationData[layerName].connectomeData.skeleton,
   );
   if (skeleton == null) return;
   const { trees } = skeleton;
-  yield _all(
+  yield* all(
     // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
     findTreeByName(trees, treeName).map((tree) =>
       put(deleteConnectomeTreesAction([tree.treeId], layerName)),
@@ -408,8 +397,8 @@ function* removeConnectomeAgglomerateSkeletonWithId(
 
 export function* watchSkeletonTracingAsync(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
-  yield _takeEvery("WK_READY", watchTreeNames);
-  yield _takeEvery(
+  yield* takeEvery("WK_READY", watchTreeNames);
+  yield* takeEvery(
     [
       "SET_ACTIVE_TREE",
       "SET_ACTIVE_TREE_BY_NAME",
@@ -423,7 +412,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
     ],
     centerActiveNode,
   );
-  yield _throttle(5000, "PUSH_SAVE_QUEUE_TRANSACTION", watchTracingConsistency);
+  yield* throttle(5000, "PUSH_SAVE_QUEUE_TRANSACTION", watchTracingConsistency);
   yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
   yield* fork(watchVersionRestoreParam);

@@ -2,17 +2,16 @@ import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
-  _all,
-  _takeEvery,
-  _throttle,
+  all,
+  takeEvery,
+  throttle,
   call,
   retry,
-  select,
   take,
-} from "oxalis/model/sagas/effect-generators";
+} from "typed-redux-saga";
+import {select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import "oxalis/model/actions/settings_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -22,10 +21,8 @@ import Toast from "libs/toast";
 import messages from "messages";
 
 function* pushUserSettingsAsync(): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const userConfiguration = yield* select((state) => state.userConfiguration);
   yield* retry(
     SETTINGS_MAX_RETRY_COUNT,
@@ -36,12 +33,9 @@ function* pushUserSettingsAsync(): Saga<void> {
 }
 
 function* pushDatasetSettingsAsync(): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
 
   try {
@@ -54,7 +48,6 @@ function* pushDatasetSettingsAsync(): Saga<void> {
     );
   } catch (error) {
     // We catch errors in view mode as they are not that important here and may annoy the user.
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const tracing = yield* select((state) => state.tracing);
     const isViewMode = tracing.annotationType === "View";
 
@@ -62,7 +55,7 @@ function* pushDatasetSettingsAsync(): Saga<void> {
       throw error;
     } else {
       // Still log the error to airbrake in view mode.
-      yield* call([ErrorHandling, ErrorHandling.notify], error);
+      yield* call({context: ErrorHandling, fn: ErrorHandling.notify}, error);
     }
   }
 }
@@ -88,11 +81,11 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
 
 export default function* watchPushSettingsAsync(): Saga<void> {
   yield* take("INITIALIZE_SETTINGS");
-  yield _all([
-    _throttle(500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
-    _throttle(500, "UPDATE_DATASET_SETTING", pushDatasetSettingsAsync),
-    _throttle(500, "UPDATE_LAYER_SETTING", pushDatasetSettingsAsync),
-    _takeEvery("UPDATE_USER_SETTING", trackUserSettingsAsync),
-    _takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
+  yield* all([
+    throttle(500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
+    throttle(500, "UPDATE_DATASET_SETTING", pushDatasetSettingsAsync),
+    throttle(500, "UPDATE_LAYER_SETTING", pushDatasetSettingsAsync),
+    takeEvery("UPDATE_USER_SETTING", trackUserSettingsAsync),
+    takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
   ]);
 }

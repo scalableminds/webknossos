@@ -2,9 +2,9 @@ import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import type { Node } from "oxalis/store";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put, select } from "oxalis/model/sagas/effect-generators";
+import { call, put } from "typed-redux-saga";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -196,7 +196,6 @@ function* performMinCut(action: Action): Saga<void> {
     throw new Error("Satisfy flow.");
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
   const skeleton = yield* select((store) => store.tracing.skeleton);
 
   if (!skeleton) {
@@ -221,7 +220,6 @@ function* performMinCut(action: Action): Saga<void> {
   let boundingBoxObj;
 
   if (boundingBoxId != null) {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bbox' implicitly has an 'any' type.
     const boundingBoxes = skeleton.userBoundingBoxes.filter((bbox) => bbox.id === boundingBoxId);
 
     if (boundingBoxes.length !== 1) {
@@ -233,11 +231,9 @@ function* performMinCut(action: Action): Saga<void> {
     boundingBoxObj = boundingBoxes[0].boundingBox;
   } else {
     const newBBox = {
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       min: V3.floor(V3.sub(V3.min(nodes[0].position, nodes[1].position), DEFAULT_PADDING)),
       max: V3.floor(
         V3.add(
-          // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
           V3.add(V3.max(nodes[0].position, nodes[1].position), DEFAULT_PADDING), // Add [1, 1, 1], since BoundingBox.max is exclusive
           [1, 1, 1],
         ),
@@ -246,10 +242,8 @@ function* performMinCut(action: Action): Saga<void> {
     yield* put(
       addUserBoundingBoxAction({
         boundingBox: newBBox,
-        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
         name: `Bounding box used for splitting cell (seedA=(${nodes[0].position.join(
           ",",
-          // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
         )}), seedB=(${nodes[1].position.join(",")}), timestamp=${new Date().getTime()})`,
         color: Utils.getRandomColor(),
         isVisible: true,
@@ -267,7 +261,6 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
   const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
 
@@ -350,7 +343,7 @@ function* performMinCut(action: Action): Saga<void> {
             );
             yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
             yield* call(
-              progressCallback,
+              {context: null, fn: progressCallback},
               true,
               "Min-cut calculation finished. However, the refinement timed out. There still might be small voxel connections between the seeds.",
               {},

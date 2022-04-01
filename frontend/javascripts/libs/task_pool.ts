@@ -1,6 +1,5 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga, Task } from "oxalis/model/sagas/effect-generators";
-import { join, call, fork } from "oxalis/model/sagas/effect-generators";
+import { join, call, fork } from "typed-redux-saga";
 /*
   Given an array of async tasks, processTaskWithPool
   allows to execute at most ${poolSize} tasks concurrently.

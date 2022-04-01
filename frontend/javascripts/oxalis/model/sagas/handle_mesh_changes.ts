@@ -9,9 +9,10 @@ import {
   updateLocalMeshMetaDataAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { MeshMetaData } from "types/api_flow_types";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { _all, _call, _takeEvery, call, put, select } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+// import { _all, _call, _takeEvery, call, put, select } from "oxalis/model/sagas/effect-generators";
+import { all, call, takeEvery, put } from "typed-redux-saga";
 import {
   createMesh,
   deleteMesh as deleteMeshFromServer,
@@ -21,6 +22,7 @@ import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import getMeshBufferFromStore, { addMeshBufferToStore } from "oxalis/model/mesh_store";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
+import { BufferGeometry } from "three";
 
 function* handleDeleteMesh(action: DeleteMeshAction): Saga<void> {
   const { id } = action;
@@ -55,7 +57,7 @@ function* handleVisibilityChange(meshMetaData: MeshMetaData, isVisible: boolean)
 
     if (meshBuffer != null) {
       const geometry = yield* call(parseStlBuffer, meshBuffer);
-      yield* call([SceneController, SceneController.addSTL], meshMetaData, geometry);
+      yield* call({context: SceneController, fn: SceneController.addSTL}, meshMetaData, geometry);
       yield* put(
         updateLocalMeshMetaDataAction(id, {
           isLoaded: true,
@@ -73,7 +75,6 @@ function* handleVisibilityChange(meshMetaData: MeshMetaData, isVisible: boolean)
 
 function* handleRemoteUpdateMesh(action: UpdateRemoteMeshMetaDataAction): Saga<void> {
   const { id } = action;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const meshMetaData = yield* select((state) => state.tracing.meshes.find((m) => m.id === id));
 
   if (!meshMetaData) {
@@ -100,7 +101,6 @@ function* handleRemoteUpdateMesh(action: UpdateRemoteMeshMetaDataAction): Saga<v
 
 function* handleLocalUpdateMesh(action: UpdateLocalMeshMetaDataAction): Saga<void> {
   const { id } = action;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const meshMetaData = yield* select((state) => state.tracing.meshes.find((m) => m.id === id));
 
   if (!meshMetaData) {
@@ -115,9 +115,7 @@ function* handleLocalUpdateMesh(action: UpdateLocalMeshMetaDataAction): Saga<voi
 }
 
 function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
   const annotationId = yield* select((store) => store.tracing.annotationId);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
   const allowUpdate = yield* select((store) => store.tracing.restrictions.allowUpdate);
 
   if (!allowUpdate) {
@@ -125,9 +123,9 @@ function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
   }
 
   // Parse and persist STL in parallel
-  const [geometry, meshMetaData] = yield _all([
-    _call(parseStlBuffer, action.buffer),
-    _call(
+  const STLOperationResults = yield* all([
+    call(parseStlBuffer, action.buffer),
+    call(
       createMesh,
       {
         annotationId,
@@ -137,9 +135,13 @@ function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
       action.buffer,
     ),
   ]);
+
+  const geometry = STLOperationResults[0] as BufferGeometry
+  const meshMetaData = STLOperationResults[1] as MeshMetaData;
+
   const SceneController = yield* call(getSceneController);
-  yield* call([SceneController, SceneController.addSTL], meshMetaData as MeshMetaData, geometry);
-  yield* put(addMeshMetaDataAction(meshMetaData));
+  yield* call({context: SceneController, fn: SceneController.addSTL}, meshMetaData, geometry);
+  yield * put(addMeshMetaDataAction(meshMetaData as MeshMetaData));
   yield* put(
     updateLocalMeshMetaDataAction(meshMetaData.id, {
       isLoaded: true,
@@ -155,8 +157,8 @@ function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
 }
 
 export default function* handleMeshChanges(): Saga<void> {
-  yield _takeEvery("DELETE_MESH", handleDeleteMesh);
-  yield _takeEvery("UPDATE_LOCAL_MESH_METADATA", handleLocalUpdateMesh);
-  yield _takeEvery("UPDATE_REMOTE_MESH_METADATA", handleRemoteUpdateMesh);
-  yield _takeEvery("CREATE_MESH_FROM_BUFFER", createMeshFromBuffer);
+  yield* takeEvery("DELETE_MESH", handleDeleteMesh);
+  yield* takeEvery("UPDATE_LOCAL_MESH_METADATA", handleLocalUpdateMesh);
+  yield* takeEvery("UPDATE_REMOTE_MESH_METADATA", handleRemoteUpdateMesh);
+  yield* takeEvery("CREATE_MESH_FROM_BUFFER", createMeshFromBuffer);
 }

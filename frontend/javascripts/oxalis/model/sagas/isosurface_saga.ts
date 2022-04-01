@@ -34,19 +34,16 @@ import {
   finishedLoadingIsosurfaceAction,
   startedLoadingIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
+import  { select } from "oxalis/model/sagas/effect-generators";
 import {
-  _actionChannel,
-  _takeEvery,
+  actionChannel,
+  takeEvery,
   call,
-  _call,
-  _take,
+  take,
   race,
   put,
-  select,
-  take,
-} from "oxalis/model/sagas/effect-generators";
+} from "typed-redux-saga";
 import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
 import {
   computeIsosurface,
@@ -81,7 +78,7 @@ const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 6;
  *
  */
 const isosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
-const cubeSize = [256, 256, 256];
+const cubeSize: Vector3 = [256, 256, 256];
 const modifiedCells: Set<number> = new Set();
 export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
   const dataView = new DataView(buffer);
@@ -211,7 +208,6 @@ function* getIsosurfaceMappingInfo(
   maybeMappingInfo: IsosurfaceMappingInfo | null | undefined,
 ): Saga<IsosurfaceMappingInfo> {
   const activeMappingByLayer = yield* select(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   if (maybeMappingInfo != null) return maybeMappingInfo;
@@ -231,7 +227,6 @@ function* getInfoForIsosurfaceLoading(layer: DataLayer): Saga<{
 }> {
   const resolutionInfo = getResolutionInfo(layer.resolutions);
   const preferredZoomStep = yield* select(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
   );
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
@@ -255,7 +250,7 @@ function* loadIsosurfaceForSegmentId(
   // should be canceled automatically to avoid populating mesh data even though
   // the mesh was removed. This is accomplished by redux-saga's race effect.
   yield* race({
-    loadIsosurfaceWithNeighbors: _call(
+    loadIsosurfaceWithNeighbors: call(
       loadIsosurfaceWithNeighbors,
       layer,
       segmentId,
@@ -265,7 +260,7 @@ function* loadIsosurfaceForSegmentId(
       resolutionInfo,
       removeExistingIsosurface,
     ),
-    cancel: _take(
+    cancel: take(
       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
       (action) =>
         action.type === "REMOVE_ISOSURFACE" &&
@@ -289,7 +284,6 @@ function* loadIsosurfaceWithNeighbors(
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   let positionsToRequest = [clippedPosition];
   const hasIsosurface = yield* select(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) =>
       state.localSegmentationData[layer.name].isosurfaces != null &&
       state.localSegmentationData[layer.name].isosurfaces[segmentId] != null,
@@ -303,8 +297,7 @@ function* loadIsosurfaceWithNeighbors(
 
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
-    const neighbors = yield* call(
-      maybeLoadIsosurface,
+    const neighbors = yield* call({context: null, fn: maybeLoadIsosurface},
       layer,
       segmentId,
       currentPosition,
@@ -352,7 +345,7 @@ function* maybeLoadIsosurface(
   resolutionInfo: ResolutionInfo,
   isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
-): Saga<Array<Vector3>> {
+): Saga<Vector3[]> {
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
 
   if (threeDMap.get(clippedPosition)) {
@@ -368,21 +361,15 @@ function* maybeLoadIsosurface(
   threeDMap.set(clippedPosition, true);
   // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceSubsamplingStrides' does not... Remove this comment to see the full error message
   const subsamplingStrides = window.__isosurfaceSubsamplingStrides || [4, 4, 4];
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const scale = yield* select((state) => state.dataset.dataSource.scale);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const datasetName = yield* select((state) => state.dataset.name);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
   const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetName}/layers/${
     layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
@@ -397,8 +384,9 @@ function* maybeLoadIsosurface(
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
-      const { buffer: responseBuffer, neighbors } = yield* call(
-        computeIsosurface,
+      const { buffer: responseBuffer, neighbors } = yield* call({
+        context: null, 
+        fn:computeIsosurface},
         useDataStore ? dataStoreUrl : tracingStoreUrl,
         {
           position: clippedPosition,
@@ -417,7 +405,6 @@ function* maybeLoadIsosurface(
       }
 
       getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'neighbor' implicitly has an 'any' type.
       return neighbors.map((neighbor) =>
         getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
       );
@@ -433,7 +420,6 @@ function* maybeLoadIsosurface(
 }
 
 function* markEditedCellAsDirty(): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
 
   if (volumeTracing != null && volumeTracing.fallbackLayer == null) {
@@ -480,7 +466,6 @@ function* _refreshIsosurfaceWithMap(
   layerName: string,
 ): Saga<void> {
   const isosurfaceInfo = yield* select(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.localSegmentationData[layerName].isosurfaces[cellId],
   );
   yield* call(
@@ -522,7 +507,6 @@ function* _refreshIsosurfaceWithMap(
  */
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   const { cellId, seedPosition, meshFileName, layerName } = action;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -534,14 +518,14 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   // should be canceled automatically to avoid populating mesh data even though
   // the mesh was removed. This is accomplished by redux-saga's race effect.
   yield* race({
-    loadPrecomputedMeshForSegmentId: _call(
+    loadPrecomputedMeshForSegmentId: call(
       loadPrecomputedMeshForSegmentId,
       cellId,
       seedPosition,
       meshFileName,
       layer,
     ),
-    cancel: _take(
+    cancel: take(
       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'otherAction' implicitly has an 'any' ty... Remove this comment to see the full error message
       (otherAction) =>
         otherAction.type === "REMOVE_ISOSURFACE" &&
@@ -560,7 +544,6 @@ function* loadPrecomputedMeshForSegmentId(
   const layerName = segmentationLayer.name;
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   let availableChunks = null;
 
@@ -600,7 +583,7 @@ function* loadPrecomputedMeshForSegmentId(
         );
         const geometry = yield* call(parseStlBuffer, stlData);
         const sceneController = yield* call(getSceneController);
-        yield* call([sceneController, sceneController.addIsosurfaceFromGeometry], geometry, id);
+        yield* call({context: sceneController, fn: sceneController.addIsosurfaceFromGeometry}, geometry, id);
       },
   );
 
@@ -655,7 +638,6 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   yield* put(setImportingMeshStateAction(false));
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
   // we simply use the current position as a seed position.
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const seedPosition = yield* select((state) => getFlooredPosition(state.flycam));
   // TODO: This code is not used currently and it will not be possible to share these
   // isosurfaces via link.
@@ -681,16 +663,16 @@ function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAct
 
 export default function* isosurfaceSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
-  const loadAdHocMeshActionChannel = yield _actionChannel("LOAD_AD_HOC_MESH_ACTION");
-  const loadPrecomputedMeshActionChannel = yield _actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
+  const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
+  const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   yield* take("WK_READY");
-  yield _takeEvery(loadAdHocMeshActionChannel, loadAdHocIsosurfaceFromAction);
-  yield _takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
-  yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
-  yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
-  yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
-  yield _takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
-  yield _takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
-  yield _takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
-  yield _takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
+  yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocIsosurfaceFromAction);
+  yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
+  yield* takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
+  yield* takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
+  yield* takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
+  yield* takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
+  yield* takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
+  yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
+  yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
 }

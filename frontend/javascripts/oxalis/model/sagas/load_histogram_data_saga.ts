@@ -1,7 +1,7 @@
 import type { HistogramDataForAllLayers } from "oxalis/store";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, select, take, put } from "oxalis/model/sagas/effect-generators";
+import { select} from "oxalis/model/sagas/effect-generators";
+import { call, take, put } from "typed-redux-saga";
 import {
   setHistogramDataAction,
   updateLayerSettingAction,
@@ -38,18 +38,14 @@ export default function* loadHistogramDataSaga(): Saga<void> {
   yield* take("WK_READY");
   // Flow does not understand that Array<DataLayer> is returned for some reason.
   const dataLayers: Array<DataLayer> = yield* call([Model, Model.getColorLayers]) as any;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const layerConfigurations = yield* select((state) => state.datasetConfiguration.layers);
   const histograms = yield* call(fetchAllHistogramsForLayers, dataLayers, dataset);
 
   for (const layerName of Object.keys(histograms)) {
     // Adjust the intensityRange of the layer to be within the range of the actual (sampled) data.
     const histogram = histograms[layerName];
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'currentHistogramData' implicitly has an... Remove this comment to see the full error message
     const allMinValues = histogram.map((currentHistogramData) => currentHistogramData.min);
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'currentHistogramData' implicitly has an... Remove this comment to see the full error message
     const allMaxValues = histogram.map((currentHistogramData) => currentHistogramData.max);
     const minimumInHistogramData = Math.min(...allMinValues);
     const maximumInHistogramData = Math.max(...allMaxValues);

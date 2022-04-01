@@ -201,12 +201,12 @@ class SceneController {
     window.removeBucketMesh = (mesh: typeof THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getIsosurfaceGeometry(cellId: number): typeof THREE.Geometry {
+  getIsosurfaceGeometry(cellId: number): THREE.Geometry {
     // @ts-expect-error ts-migrate(2419) FIXME: Types of construct signatures are incompatible.
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
-  constructSceneMesh(cellId: number, geometry: typeof THREE.Geometry) {
+  constructSceneMesh(cellId: number, geometry: THREE.Geometry) {
     const [hue] = jsConvertCellIdToHSLA(cellId);
     const color = new THREE.Color().setHSL(hue, 0.75, 0.05);
     const meshMaterial = new THREE.MeshLambertMaterial({
@@ -237,7 +237,7 @@ class SceneController {
     return mesh;
   }
 
-  addSTL(meshMetaData: MeshMetaData, geometry: typeof THREE.Geometry): void {
+  addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
     const { id, position } = meshMetaData;
 
     if (this.stlMeshes[id] != null) {
@@ -245,9 +245,7 @@ class SceneController {
       return;
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'computeVertexNormals' does not exist on ... Remove this comment to see the full error message
     geometry.computeVertexNormals();
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'computeFaceNormals' does not exist on ty... Remove this comment to see the full error message
     geometry.computeFaceNormals();
 
     const meshNumber = _.size(this.stlMeshes);
@@ -283,7 +281,7 @@ class SceneController {
     this.addIsosurfaceFromGeometry(geometry, segmentationId);
   }
 
-  addIsosurfaceFromGeometry(geometry: typeof THREE.Geometry, segmentationId: number): void {
+  addIsosurfaceFromGeometry(geometry: THREE.Geometry, segmentationId: number): void {
     const mesh = this.constructSceneMesh(segmentationId, geometry);
 
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {

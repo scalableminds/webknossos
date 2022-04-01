@@ -1,18 +1,16 @@
 import _ from "lodash";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
-  _all,
-  _call,
-  _takeEvery,
-  _takeLatest,
+  all,
   call,
-  select,
+  takeEvery,
+  takeLatest,
   take,
   put,
   fork,
-  _actionChannel,
-} from "oxalis/model/sagas/effect-generators";
+  actionChannel,
+} from "typed-redux-saga";
+import {select} from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
   SetMappingAction,
@@ -45,15 +43,14 @@ const isAgglomerate = (mapping) => {
 
 export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = yield* select(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   // Buffer actions since they might be dispatched before WK_READY
-  const setMappingActionChannel = yield _actionChannel("SET_MAPPING");
-  const mappingChangeActionChannel = yield _actionChannel(["SET_MAPPING_ENABLED"]);
+  const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
+  const mappingChangeActionChannel = yield* actionChannel(["SET_MAPPING_ENABLED"]);
   yield* take("WK_READY");
-  yield _takeLatest(setMappingActionChannel, maybeFetchMapping, oldActiveMappingByLayer);
-  yield _takeEvery(mappingChangeActionChannel, maybeReloadData, oldActiveMappingByLayer);
+  yield* takeLatest(setMappingActionChannel, maybeFetchMapping, oldActiveMappingByLayer);
+  yield* takeEvery(mappingChangeActionChannel, maybeReloadData, oldActiveMappingByLayer);
 }
 
 function* maybeReloadData(
@@ -64,7 +61,6 @@ function* maybeReloadData(
   const { layerName } = action;
   const oldMapping = getMappingInfo(oldActiveMappingByLayer, layerName);
   const activeMappingByLayer = yield* select(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   const mapping = getMappingInfo(activeMappingByLayer, layerName);
@@ -108,7 +104,6 @@ function* maybeFetchMapping(oldActiveMappingByLayer, action: SetMappingAction): 
     });
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
   const params = [
@@ -117,11 +112,9 @@ function* maybeFetchMapping(oldActiveMappingByLayer, action: SetMappingAction): 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
     layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerInfo.name,
   ];
-  const [jsonMappings, hdf5Mappings] = yield _all([
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-    _call(getMappingsForDatasetLayer, ...params),
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-    _call(getAgglomeratesForDatasetLayer, ...params),
+  const [jsonMappings, hdf5Mappings] = yield* all([
+    call(getMappingsForDatasetLayer, ...params),
+    call(getAgglomeratesForDatasetLayer, ...params),
   ]);
   const mappingsWithCorrectType = mappingType === "JSON" ? jsonMappings : hdf5Mappings;
 
@@ -180,7 +173,6 @@ function* fetchMappings(
   mappingName: string,
   fetchedMappings: APIMappings,
 ): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
   // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
@@ -201,7 +193,6 @@ function* fetchMappings(
 }
 
 function* getLargestSegmentId(layerName: string): Saga<number> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const dataset = yield* select((state) => state.dataset);
   const segmentationLayer = getLayerByName(dataset, layerName);
 
@@ -222,7 +213,8 @@ function* buildMappingObject(
   // Performance optimization: Object.keys(...) is slow for large objects
   // keeping track of the keys in a separate array is ~5x faster
   const mappingKeys = [];
-  const maxId = (yield* call(getLargestSegmentId, layerName)) + 1;
+  const largestSegmentID = yield* call(getLargestSegmentId, layerName);
+  const maxId = largestSegmentID + 1;
   // Initialize to the next multiple of 256 that is larger than maxId
   let newMappedId = Math.ceil(maxId / 256) * 256;
 

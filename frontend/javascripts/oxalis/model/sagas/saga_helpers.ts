@@ -1,7 +1,7 @@
 import type { Action } from "oxalis/model/actions/actions";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put, select, _takeEvery } from "oxalis/model/sagas/effect-generators";
+import { call, put, takeEvery } from "typed-redux-saga";
+import {  select} from "oxalis/model/sagas/effect-generators";
 // @ts-expect-error ts-migrate(2614) FIXME: Module '"redux-saga"' has no exported member 'Patt... Remove this comment to see the full error message
 import type { Pattern } from "redux-saga";
 import "redux-saga";
@@ -12,7 +12,7 @@ export function* takeEveryUnlessBusy(
   reason: string,
 ): Saga<void> {
   /*
-   * Similar to _takeEvery, this function can be used to react to
+   * Similar to takeEvery, this function can be used to react to
    * actions to start sagas. However, the difference is that once the given
    * saga is executed, webKnossos will be marked as busy. When being busy,
    * following actions which match the actionDescriptor are ignored.
@@ -22,7 +22,6 @@ export function* takeEveryUnlessBusy(
    * webKnossos.
    */
   function* sagaBusyWrapper(action: Action) {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
     if (busyBlockingInfo.isBusy) {
@@ -37,6 +36,6 @@ export function* takeEveryUnlessBusy(
     yield* put(setBusyBlockingInfoAction(false));
   }
 
-  yield _takeEvery(actionDescriptor, sagaBusyWrapper);
+  yield* takeEvery(actionDescriptor, sagaBusyWrapper);
 }
 export default {};

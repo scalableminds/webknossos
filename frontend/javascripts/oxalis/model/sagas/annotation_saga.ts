@@ -8,9 +8,8 @@ import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"oxalis/model/sagas/effect-generators"' ha... Remove this comment to see the full error message
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { _takeLatest, select, take, retry, _delay } from "oxalis/model/sagas/effect-generators";
+import { takeLatest, select, take, retry, delay } from "typed-redux-saga";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
@@ -22,8 +21,7 @@ import messages from "messages";
 /* Note that this must stay in sync with the back-end constant
   compare https://github.com/scalableminds/webknossos/issues/5223 */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
-export function* pushAnnotationUpdateAsync(): Saga<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
+export function* pushAnnotationUpdateAsync() {
   const tracing = yield* select((state) => state.tracing);
 
   if (!tracing.restrictions.allowUpdate) {
@@ -32,7 +30,6 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
 
   // Persist the visibility of each layer within the annotation-specific
   // viewConfiguration.
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
   const { layers } = yield* select((state) => state.datasetConfiguration);
   const viewConfiguration = {
     layers: _.mapValues(layers, (layer) => ({
@@ -58,9 +55,7 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
 
 function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
   const { tracingId, layerProperties } = action;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'storeState' implicitly has an 'any' typ... Remove this comment to see the full error message
   const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'storeState' implicitly has an 'any' typ... Remove this comment to see the full error message
   const annotationType = yield* select((storeState) => storeState.tracing.annotationType);
   yield* retry(
     SETTINGS_MAX_RETRY_COUNT,
@@ -96,7 +91,6 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       return;
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'storeState' implicitly has an 'any' typ... Remove this comment to see the full error message
     const isAgglomerateMappingEnabled = yield* select((storeState) => {
       if (!segmentationLayer) {
         return false;
@@ -112,7 +106,6 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       );
     });
     const isZoomThresholdExceeded = yield* select(
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'storeState' implicitly has an 'any' typ... Remove this comment to see the full error message
       (storeState) =>
         getRequestLogZoomStep(storeState) > Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING),
     );
@@ -129,7 +122,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
 
   yield* take("WK_READY");
   // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
-  yield _delay(5000);
+  yield* delay(5000);
   yield* warnMaybe();
 
   while (true) {
@@ -158,14 +151,14 @@ export function* watchAnnotationAsync(): Saga<void> {
   // name, only the latest action is relevant. If `_takeEvery` was used,
   // all updates to the annotation name would be retried regularily, which
   // would also cause race conditions.
-  yield _takeLatest("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
-  yield _takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
-  yield _takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
-  yield _takeLatest(
+  yield* takeLatest("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
+  yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
+  yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
+  yield* takeLatest(
     // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
     (action) => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
     pushAnnotationUpdateAsync,
   );
-  yield _takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
+  yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
 export default [warnAboutSegmentationZoom, watchAnnotationAsync];

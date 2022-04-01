@@ -216,7 +216,6 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
   const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ elementClass: ElementClass; }'... Remove this comment to see the full error message
     (layer) => getBitDepth(layer) >> 3,
     hasSegmentation(dataset),
     requiredBucketCapacity,
@@ -481,7 +480,6 @@ function setupLayerForVolumeTracing(
   // layers, we cannot render both at the same time. Hiding the existing segmentation
   // layer would be good, but this information is stored per dataset and not per annotation
   // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
   const newLayers = originalLayers.filter((layer) => layer.category !== "segmentation");
 
   for (const tracing of tracings) {
@@ -493,7 +491,6 @@ function setupLayerForVolumeTracing(
     //    with the new volume layer.
     const fallbackLayerIndex = _.findIndex(
       originalLayers,
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       (layer) => layer.name === tracing.fallbackLayer,
     );
 

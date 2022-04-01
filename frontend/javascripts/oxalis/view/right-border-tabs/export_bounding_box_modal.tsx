@@ -71,7 +71,6 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
 
   const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
   const allLayerInfos = dataset.dataSource.dataLayers.map((layer) => {
     const { mappingStatus, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
       activeMappingInfos,
@@ -136,7 +135,6 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
       isColorLayer: false,
     };
   });
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerInfos' implicitly has an 'any' typ... Remove this comment to see the full error message
   const exportButtonsList = allLayerInfos.map((layerInfos) => {
     const parenthesesInfos = [
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message

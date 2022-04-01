@@ -51,7 +51,6 @@ export const enforceValidatedDatasetViewConfiguration = (
 
   if (maybeUnimportedDataset.isActive) {
     const dataset: APIDataset = maybeUnimportedDataset;
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
     dataset.dataSource.dataLayers.forEach((layer) => {
       const layerConfigDefault = getDefaultLayerViewConfiguration(
         getSpecificDefaultsForLayers(dataset, layer),

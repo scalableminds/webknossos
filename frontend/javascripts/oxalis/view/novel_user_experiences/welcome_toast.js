@@ -50,7 +50,10 @@ export default function WelcomeToast() {
     if (!features().isDemoInstance) {
       return;
     }
-    const hasSeenToast = UserLocalStorage.getItem("novelUserExperienceInfos.hasSeenWelcomeToast");
+    const hasSeenToast = UserLocalStorage.getItem(
+      "novelUserExperienceInfos.hasSeenWelcomeToast",
+      false,
+    );
 
     if (activeUser == null && hasSeenToast == null) {
       // Only if the user is not logged in and has never seen the toast before, we show it here.
@@ -60,7 +63,7 @@ export default function WelcomeToast() {
     // Even if the toast wasn't opened above, we set the hasSeen bit, since the decision to not
     // show the toast will still be valid (and important) in the future. For example, the toast
     // should also *not* appear after a registered user logs out.
-    UserLocalStorage.setItem("novelUserExperienceInfos.hasSeenWelcomeToast", "true");
+    UserLocalStorage.setItem("novelUserExperienceInfos.hasSeenWelcomeToast", "true", false);
   }, []);
 
   return null;

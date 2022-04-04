@@ -1,7 +1,7 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps, RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { Table, Spin, Button, Input, Modal, Alert } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
@@ -212,5 +212,4 @@ class TeamListView extends React.PureComponent<Props, State> {
   }
 }
 
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TeamListView' is not assi... Remove this comment to see the full error message
-export default withRouter(TeamListView);
+export default withRouter<RouteComponentProps & Props, any>(TeamListView);

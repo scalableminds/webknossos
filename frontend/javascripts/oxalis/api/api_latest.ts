@@ -614,8 +614,7 @@ class TracingApi {
     newAnnotationId: string,
     newControlMode: ControlMode,
     versions?: Versions,
-    // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
-    keepUrlState?: boolean = false,
+    keepUrlState: boolean = false,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
       throw new Error("Restarting with view option is not supported");

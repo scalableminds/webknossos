@@ -22,7 +22,7 @@ import _ from "lodash";
 import { useDropzone } from "react-dropzone";
 import ErrorHandling from "libs/error_handling";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps, RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -1028,4 +1028,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps)
-export default connector(withRouter(DatasetUploadView));
+export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetUploadView));

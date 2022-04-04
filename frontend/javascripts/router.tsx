@@ -3,8 +3,6 @@ import type { ContextRouter } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
-import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
 import _ from "lodash";
@@ -57,6 +55,7 @@ import * as Utils from "libs/utils";
 import features from "features";
 import window from "libs/window";
 import { trackAction } from "oxalis/model/helpers/analytics";
+import { coalesce } from "libs/utils";
 const { Content } = Layout;
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -104,7 +103,7 @@ function PageNotFoundView() {
 
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ContextRouter) => {
-    const annotationType = Enum.coalesce(APIAnnotationTypeEnum, match.params.type);
+    const annotationType = coalesce(APIAnnotationTypeEnum, match.params.type);
 
     if (annotationType != null) {
       return (
@@ -122,7 +121,7 @@ class ReactRouter extends React.Component<Props> {
   };
 
   tracingSandbox = ({ match }: ContextRouter) => {
-    const tracingType = Enum.coalesce(TracingTypeEnum, match.params.type);
+    const tracingType = coalesce(TracingTypeEnum, match.params.type);
 
     if (tracingType != null) {
       return (
@@ -271,7 +270,6 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
                 render={({ match }: ContextRouter) => (
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ taskId: any; }' is not assignable to type ... Remove this comment to see the full error message
                   <TaskCreateFormView taskId={match.params.taskId} />
                 )}
               />
@@ -333,7 +331,7 @@ class ReactRouter extends React.Component<Props> {
                   try {
                     const annotationInformation = await getAnnotationInformation(
                       match.params.id || "",
-                      Enum.coalesce(APIAnnotationTypeEnum, match.params.type) ||
+                      coalesce(APIAnnotationTypeEnum, match.params.type) ||
                         APIAnnotationTypeEnum.Explorational,
                     );
                     return annotationInformation.visibility === "Public";
@@ -468,7 +466,6 @@ class ReactRouter extends React.Component<Props> {
                 path="/organizations/:organizationName/edit"
                 // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'match' implicitly has an 'any' ty... Remove this comment to see the full error message
                 render={({ match }) => (
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ organizationName: any; }' is not assignabl... Remove this comment to see the full error message
                   <OrganizationEditView organizationName={match.params.organizationName || ""} />
                 )}
               />
@@ -528,7 +525,6 @@ class ReactRouter extends React.Component<Props> {
                 path="/auth/finishResetPassword"
                 render={({ location }: ContextRouter) => {
                   const params = Utils.getUrlParamsObjectFromString(location.search);
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ resetToken: string; }' is not assignable t... Remove this comment to see the full error message
                   return <FinishResetPasswordView resetToken={params.token} />;
                 }}
               />
@@ -540,7 +536,6 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:id/view"
                 render={({ match, location }: ContextRouter) => (
                   <AsyncRedirect
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ redirectTo: () => Promise<string>; }' is n... Remove this comment to see the full error message
                     redirectTo={async () => {
                       const datasetName = match.params.id || "";
                       const organizationName = await getOrganizationForDataset(datasetName);
@@ -559,7 +554,6 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ pushToHistory: boolean; redirectTo: () => ... Remove this comment to see the full error message
                     pushToHistory={false}
                     redirectTo={async () => {
                       if (
@@ -576,7 +570,7 @@ class ReactRouter extends React.Component<Props> {
                         name: match.params.dataSetName,
                       };
                       const type =
-                        Enum.coalesce(TracingTypeEnum, match.params.type) ||
+                        coalesce(TracingTypeEnum, match.params.type) ||
                         TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
                       const { fallbackLayerName } = getParams;

@@ -140,11 +140,8 @@ class CameraController extends React.PureComponent<Props> {
     if (inputCatcherRects != null) {
       // Update td camera's aspect ratio
       const tdCamera = this.props.cameras[OrthoViews.TDView];
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'right' does not exist on type 'typeof Or... Remove this comment to see the full error message
       const oldMid = (tdCamera.right + tdCamera.left) / 2;
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'right' does not exist on type 'typeof Or... Remove this comment to see the full error message
       const oldWidth = tdCamera.right - tdCamera.left;
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'top' does not exist on type 'typeof Orth... Remove this comment to see the full error message
       const oldHeight = tdCamera.top - tdCamera.bottom;
       const tdRect = inputCatcherRects[OrthoViews.TDView];
       // Do not update the tdCamera if the tdView is not visible
@@ -206,21 +203,13 @@ class CameraController extends React.PureComponent<Props> {
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     tdCamera.position.set(...cameraData.position);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'left' does not exist on type 'typeof Ort... Remove this comment to see the full error message
     tdCamera.left = cameraData.left;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'right' does not exist on type 'typeof Or... Remove this comment to see the full error message
     tdCamera.right = cameraData.right;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'top' does not exist on type 'typeof Orth... Remove this comment to see the full error message
     tdCamera.top = cameraData.top;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'bottom' does not exist on type 'typeof O... Remove this comment to see the full error message
     tdCamera.bottom = cameraData.bottom;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'up' does not exist on type 'typeof Ortho... Remove this comment to see the full error message
     tdCamera.up = new THREE.Vector3(...cameraData.up);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'lookAt' does not exist on type 'typeof O... Remove this comment to see the full error message
     tdCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'updateProjectionMatrix' does not exist o... Remove this comment to see the full error message
     tdCamera.updateProjectionMatrix();
     this.props.onCameraPositionChanged();
   }
@@ -290,11 +279,13 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
       [OrthoViews.PLANE_YZ]: [clippingOffsetFactor, 0, 0],
       [OrthoViews.PLANE_XZ]: [0, clippingOffsetFactor, 0],
+      [OrthoViews.TDView]: [0, 0, 0],
     };
     const upVector: OrthoViewMap<Vector3> = {
       [OrthoViews.PLANE_XY]: [0, -1, 0],
       [OrthoViews.PLANE_YZ]: [0, -1, 0],
       [OrthoViews.PLANE_XZ]: [0, 0, -1],
+      [OrthoViews.TDView]: [0, 0, 0],
     };
     up = upVector[id];
     position = [

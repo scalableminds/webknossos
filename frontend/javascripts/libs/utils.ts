@@ -920,3 +920,10 @@ export function diffObjects(
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'Record<s... Remove this comment to see the full error message
   return changes(object, base);
 }
+
+export function coalesce<T>(obj: { [key: string]: T }, field: T): T | null {
+  if (obj && typeof obj === "object" && (field in obj || field in Object.values(obj))) {
+    return field;
+  }
+  return null;
+}

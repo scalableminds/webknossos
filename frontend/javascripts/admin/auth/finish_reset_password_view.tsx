@@ -1,5 +1,5 @@
 import React from "react";
-import { withRouter } from "react-router-dom";
+import { RouteComponentProps, withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import Request from "libs/request";
@@ -138,5 +138,5 @@ function FinishResetPasswordView(props: Props) {
   );
 }
 
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: Props) => Element' is no... Remove this comment to see the full error message
-export default withRouter(FinishResetPasswordView);
+
+export default withRouter<RouteComponentProps & Props, any>(FinishResetPasswordView);

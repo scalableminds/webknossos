@@ -43,17 +43,17 @@ export const Vector3Indicies = [0, 1, 2];
 export const Vector4Indicies = [0, 1, 2, 3];
 export const Vector5Indicies = [0, 1, 2, 3, 4];
 export const Vector6Indicies = [0, 1, 2, 3, 4, 5];
-export const OrthoViews = {
-  PLANE_XY: "PLANE_XY",
-  PLANE_YZ: "PLANE_YZ",
-  PLANE_XZ: "PLANE_XZ",
-  TDView: "TDView",
+export enum OrthoViews {
+  PLANE_XY = "PLANE_XY",
+  PLANE_YZ = "PLANE_YZ",
+  PLANE_XZ = "PLANE_XZ",
+  TDView = "TDView",
 };
-export const OrthoViewsToName = {
-  PLANE_XY: "XY",
-  PLANE_YZ: "YZ",
-  PLANE_XZ: "XZ",
-  TDView: "3D",
+export const enum OrthoViewsToName {
+  PLANE_XY = "XY",
+  PLANE_YZ = "YZ",
+  PLANE_XZ = "XZ",
+  TDView = "3D",
 };
 export type OrthoView = keyof typeof OrthoViews;
 export type OrthoViewMap<T> = Record<OrthoView, T>;
@@ -71,11 +71,11 @@ export const ArbitraryViewsToName = {
 export type ArbitraryView = keyof typeof ArbitraryViews;
 export type ArbitraryViewMap<T> = Record<ArbitraryView, T>;
 export type Viewport = OrthoView | typeof ArbitraryViewport;
-export const allViewports: Array<Viewport> = Object.keys(OrthoViews).concat([ArbitraryViewport]);
+export const allViewports = Object.keys(OrthoViews).concat([ArbitraryViewport]) as Viewport[];
 export type ViewportMap<T> = Record<Viewport, T>;
 export type ViewportExtents = Readonly<ViewportMap<Vector2>>;
 export type ViewportRects = Readonly<ViewportMap<Rect>>;
-export const OrthoViewValues: Array<OrthoView> = Object.keys(OrthoViews);
+export const OrthoViewValues = Object.keys(OrthoViews) as OrthoView[];
 export const OrthoViewIndices = {
   PLANE_XY: OrthoViewValues.indexOf("PLANE_XY"),
   PLANE_YZ: OrthoViewValues.indexOf("PLANE_YZ"),
@@ -161,22 +161,22 @@ export const BorderTabs: Record<string, BorderTabType> = {
   },
 };
 export const OrthoViewGrayCrosshairColor = 0x222222;
-export const ControlModeEnum = {
-  TRACE: "TRACE",
-  SANDBOX: "SANDBOX",
-  VIEW: "VIEW",
+export enum ControlModeEnum {
+  TRACE= "TRACE",
+  SANDBOX= "SANDBOX",
+  VIEW= "VIEW",
 };
 export type ControlMode = keyof typeof ControlModeEnum;
-export const AnnotationToolEnum = {
-  MOVE: "MOVE",
-  SKELETON: "SKELETON",
-  BRUSH: "BRUSH",
-  ERASE_BRUSH: "ERASE_BRUSH",
-  TRACE: "TRACE",
-  ERASE_TRACE: "ERASE_TRACE",
-  FILL_CELL: "FILL_CELL",
-  PICK_CELL: "PICK_CELL",
-  BOUNDING_BOX: "BOUNDING_BOX",
+export const enum AnnotationToolEnum {
+  MOVE= "MOVE",
+  SKELETON= "SKELETON",
+  BRUSH= "BRUSH",
+  ERASE_BRUSH= "ERASE_BRUSH",
+  TRACE= "TRACE",
+  ERASE_TRACE= "ERASE_TRACE",
+  FILL_CELL= "FILL_CELL",
+  PICK_CELL= "PICK_CELL",
+  BOUNDING_BOX= "BOUNDING_BOX",
 };
 export const VolumeTools = [
   AnnotationToolEnum.BRUSH,
@@ -193,38 +193,33 @@ export const ToolsWithOverwriteCapabilities = [
   AnnotationToolEnum.ERASE_BRUSH,
 ];
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
-export function annotationToolEnumToIndex(
-  annotationTool: AnnotationTool | null | undefined,
-): number {
-  return Object.keys(AnnotationToolEnum).indexOf(annotationTool);
-}
-export const ContourModeEnum = {
-  DRAW: "DRAW",
-  DELETE: "DELETE",
+export const enum ContourModeEnum {
+  DRAW = "DRAW",
+  DELETE=  "DELETE",
 };
 export type ContourMode = keyof typeof ContourModeEnum;
-export const OverwriteModeEnum = {
-  OVERWRITE_ALL: "OVERWRITE_ALL",
-  OVERWRITE_EMPTY: "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
+export enum OverwriteModeEnum {
+  OVERWRITE_ALL= "OVERWRITE_ALL",
+  OVERWRITE_EMPTY= "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
 };
 export type OverwriteMode = keyof typeof OverwriteModeEnum;
-export const FillModeEnum = {
+export enum FillModeEnum {
   // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.
-  _2D: "_2D",
-  _3D: "_3D",
+  _2D = "_2D",
+  _3D = "_3D",
 };
 export type FillMode = keyof typeof FillModeEnum;
-export const TDViewDisplayModeEnum = {
-  NONE: "NONE",
-  WIREFRAME: "WIREFRAME",
-  DATA: "DATA",
+export enum TDViewDisplayModeEnum  {
+  NONE= "NONE",
+  WIREFRAME= "WIREFRAME",
+  DATA= "DATA",
 };
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
-export const MappingStatusEnum = {
-  DISABLED: "DISABLED",
-  ACTIVATING: "ACTIVATING",
-  ENABLED: "ENABLED",
+export const enum MappingStatusEnum  {
+  DISABLED = "DISABLED",
+  ACTIVATING = "ACTIVATING",
+  ENABLED = "ENABLED",
 };
 export type MappingStatus = keyof typeof MappingStatusEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;

@@ -1,5 +1,5 @@
 import React from "react";
-import { withRouter } from "react-router-dom";
+import { RouteComponentProps, withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row, Alert } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import Request from "libs/request";
@@ -152,4 +152,4 @@ function ChangePasswordView({ history }: Props) {
   );
 }
 
-export default withRouter(ChangePasswordView);
+export default withRouter<RouteComponentProps & Props, any>(ChangePasswordView);

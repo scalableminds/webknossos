@@ -134,7 +134,6 @@ const RadioButtonWithTooltip = ({
   disabled?: boolean;
 }) => (
   <Tooltip title={disabled ? disabledTitle : title}>
-    {/* $FlowIgnore[cannot-spread-inexact] */}
     <Radio.Button disabled={disabled} {...props} />
   </Tooltip>
 );
@@ -143,7 +142,6 @@ const RadioButtonWithTooltip = ({
 function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
   const overwriteMode = useSelector((state) => state.userConfiguration.overwriteMode);
   const previousIsControlPressed = usePrevious(isControlPressed);
   const previousIsShiftPressed = usePrevious(isShiftPressed);

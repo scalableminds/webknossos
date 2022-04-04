@@ -11,6 +11,7 @@ import constants, {
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
 } from "oxalis/constants";
+import ThreeDMap from "libs/ThreeDMap";
 
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
@@ -162,7 +163,7 @@ class Plane {
     this.crosshair[1].scale.copy(scaleVec);
   }
 
-  setRotation = (rotVec: Vector3): void => {
+  setRotation = (rotVec: THREE.Euler): void => {
     [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map((mesh) =>
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'setRotationFromEuler' does not exist on ... Remove this comment to see the full error message
       mesh.setRotationFromEuler(rotVec),

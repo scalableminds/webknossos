@@ -1,7 +1,7 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps, RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import {
   Row,
@@ -43,11 +43,9 @@ import {
   getTaskTypes,
   updateTask,
 } from "admin/admin_rest_api";
-import { tryToAwaitPromise } from "libs/utils";
+import { coalesce, tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
-import Enum from "Enumjs";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
@@ -63,12 +61,12 @@ type Props = {
   taskId: string | null | undefined;
   history: RouterHistory;
 };
-export const SpecificationEnum = Enum.make({
-  Manual: "Manual",
-  Nml: "Nml",
-  BaseAnnotation: "BaseAnnotation",
-});
-type Specification = $Keys<typeof SpecificationEnum>;
+export const enum SpecificationEnum {
+  Manual= "Manual",
+  Nml= "Nml",
+  BaseAnnotation= "BaseAnnotation",
+};
+type Specification = keyof typeof SpecificationEnum;
 type State = {
   datasets: Array<APIDataset>;
   taskTypes: Array<APITaskType>;
@@ -696,9 +694,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   // @ts-expect-error ts-migrate(2322) FIXME: Type '(evt: React.SyntheticEvent<any>) => void' is... Remove this comment to see the full error message
                   onChange={(evt: React.SyntheticEvent<any>) =>
                     this.setState({
-                      // $FlowIssue[incompatible-call] Inference for enum.coalesce does not work properly anymore? Flow update might help
-                      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-                      specificationType: Enum.coalesce(SpecificationEnum, evt.target.value),
+                      specificationType: coalesce(SpecificationEnum, evt.target.value),
                     })
                   }
                 >
@@ -729,5 +725,4 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 }
 
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof TaskCreateFormView' is no... Remove this comment to see the full error message
-export default withRouter(TaskCreateFormView);
+export default withRouter<RouteComponentProps & Props, any>(TaskCreateFormView);

@@ -8,7 +8,7 @@ import _ from "lodash";
 import moment from "moment";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps, RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type {
   APIDataSource,
@@ -124,7 +124,6 @@ function ensureValidScaleOnInferredDataSource(
       (layer) => layer.category === "segmentation",
     );
     const savedSegmentationLayerSettings = savedDataSourceOnServer.dataLayers.find(
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
       (layer) => layer.category === "segmentation",
     );
 
@@ -982,4 +981,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps)
-export default connector(withRouter(DatasetImportView));
+export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetImportView));

@@ -5,7 +5,7 @@ import { getDataset, deleteDatasetOnDisk } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps, RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import { confirmAsync } from "./helper_components";
@@ -67,5 +67,5 @@ const ImportDeleteComponent = ({ datasetId, history }: Props) => {
   );
 };
 
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type '({ datasetId, history }: Props) ... Remove this comment to see the full error message
-export default withRouter(ImportDeleteComponent);
+
+export default withRouter<RouteComponentProps & Props, any>(ImportDeleteComponent);

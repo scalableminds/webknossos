@@ -2,7 +2,7 @@ import { Alert, Layout, Tooltip } from "antd";
 import { SettingOutlined, WarningFilled } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
-import { withRouter } from "react-router-dom";
+import { RouteComponentProps, withRouter } from "react-router-dom";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
@@ -66,7 +66,6 @@ type StateProps = {
 type DispatchProps = {
   setAutoSaveLayouts: (arg0: boolean) => void;
 };
-type Props = OwnProps & StateProps & DispatchProps;
 type PropsWithRouter = OwnProps &
   StateProps &
   DispatchProps & {
@@ -342,7 +341,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                       storedLayoutNamesForView: currentLayoutNames,
                       activeLayout: activeLayoutName,
                       layoutKey: layoutType,
-                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layoutName' implicitly has an 'any' typ... Remove this comment to see the full error message
                       setCurrentLayout: (layoutName) => {
                         this.setState({
                           activeLayoutName: layoutName,
@@ -443,4 +441,4 @@ function mapStateToProps(state: OxalisState): StateProps {
 }
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(withRouter(TracingLayoutView));
+export default connector(withRouter<RouteComponentProps & OwnProps, any>(TracingLayoutView));

@@ -343,7 +343,7 @@ function* performMinCut(action: Action): Saga<void> {
             );
             yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
             yield* call(
-              {context: null, fn: progressCallback},
+             {context: null, fn: progressCallback},
               true,
               "Min-cut calculation finished. However, the refinement timed out. There still might be small voxel connections between the seeds.",
               {},

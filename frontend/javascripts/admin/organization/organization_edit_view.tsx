@@ -1,22 +1,21 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Keys } from "utility-types";
-import { withRouter } from "react-router-dom";
+import { RouteComponentProps, withRouter } from "react-router-dom";
 import { Form, Button, Card, Input, Row } from "antd";
 import { MailOutlined, TagOutlined, CopyOutlined, KeyOutlined } from "@ant-design/icons";
 import React from "react";
-import { FormInstance } from "antd/lib/form";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { getOrganization, deleteOrganization, updateOrganization } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
-import Enum from "Enumjs";
+import { coalesce } from "libs/utils";
+
 const FormItem = Form.Item;
-export const PricingPlanEnum = Enum.make({
-  Basic: "Basic",
-  Premium: "Premium",
-  Pilot: "Pilot",
-  Custom: "Custom",
-});
+export const enum PricingPlanEnum {
+  Basic= "Basic",
+  Premium= "Premium",
+  Pilot= "Pilot",
+  Custom= "Custom",
+};
 type PricingPlan = $Keys<typeof PricingPlanEnum>;
 type Props = {
   organizationName: string;
@@ -79,7 +78,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     );
     this.setState({
       displayName,
-      pricingPlan: Enum.coalesce(PricingPlanEnum, pricingPlan),
+      pricingPlan: coalesce(PricingPlanEnum, pricingPlan),
       newUserMailingList,
       isFetchingData: false,
     });
@@ -255,5 +254,4 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   }
 }
 
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof OrganizationEditView' is ... Remove this comment to see the full error message
-export default withRouter(OrganizationEditView);
+export default withRouter<RouteComponentProps & Props, any>(OrganizationEditView);

@@ -1,6 +1,6 @@
 import { Form, Input, Select, Button, Card, Spin } from "antd";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps, RouterHistory } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React, { useState, useEffect } from "react";
@@ -13,6 +13,7 @@ import {
   createScript,
   getScript,
 } from "admin/admin_rest_api";
+import { PropertySafetyFilled } from "@ant-design/icons";
 const FormItem = Form.Item;
 type OwnProps = {
   scriptId?: string | null | undefined;
@@ -141,4 +142,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 
 
 const connector = connect(mapStateToProps)
-export default connector(withRouter(ScriptCreateView));
+export default connector(withRouter<RouteComponentProps & Props, any>(ScriptCreateView));

@@ -114,7 +114,6 @@ function removeMapForSegment(layerName: string, segmentId: number): void {
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
   const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '[...number[], number]' is not as... Remove this comment to see the full error message
     [...cubeSize, zoomStep],
     resolutionInfo,
     0,

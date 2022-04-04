@@ -108,7 +108,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
       <List
         itemLayout="horizontal"
         dataSource={this.state.files}
-        renderItem={(file) => (
+        renderItem={(file: File) => (
           <List.Item>
             <List.Item.Meta
               avatar={
@@ -132,7 +132,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
               }
               description={
                 <span>
-                  Last modified: <FormattedDate timestamp={file.lastModifiedDate} />
+                  Last modified: <FormattedDate timestamp={file.lastModified} />
                 </span>
               }
             />

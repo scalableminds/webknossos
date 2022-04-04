@@ -13,8 +13,6 @@ import {
   ShrinkOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
-import Enum from "Enumjs";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import * as React from "react";

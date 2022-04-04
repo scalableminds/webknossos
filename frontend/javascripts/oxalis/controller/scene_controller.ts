@@ -87,6 +87,7 @@ class SceneController {
       [OrthoViews.PLANE_XY]: true,
       [OrthoViews.PLANE_YZ]: true,
       [OrthoViews.PLANE_XZ]: true,
+      [OrthoViews.TDView]: true,
     };
     this.planeShift = [0, 0, 0];
   }
@@ -214,7 +215,6 @@ class SceneController {
     });
     meshMaterial.side = THREE.DoubleSide;
     meshMaterial.transparent = true;
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof Geometry' is not assignab... Remove this comment to see the full error message
     const mesh = new THREE.Mesh(geometry, meshMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -388,11 +388,8 @@ class SceneController {
       [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
       [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
     };
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Euler' is not assignable to para... Remove this comment to see the full error message
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Euler' is not assignable to para... Remove this comment to see the full error message
     this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Euler' is not assignable to para... Remove this comment to see the full error message
     this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {

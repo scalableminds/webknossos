@@ -1,7 +1,5 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import {  $Shape } from "utility-types";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'Enum... Remove this comment to see the full error message
-import Enum from "Enumjs";
 import type {
   BoundingBoxObject,
   Edge,
@@ -222,21 +220,21 @@ export type APISettings = {
   readonly mergerMode?: boolean;
   readonly resolutionRestrictions: APIResolutionRestrictions;
 };
-export const APIAnnotationTypeEnum = Enum.make({
-  Explorational: "Explorational",
-  Task: "Task",
-  View: "View",
-  CompoundTask: "CompoundTask",
-  CompoundProject: "CompoundProject",
-  CompoundTaskType: "CompoundTaskType",
-});
+export enum APIAnnotationTypeEnum {
+  Explorational = "Explorational",
+  Task = "Task",
+  View = "View",
+  CompoundTask = "CompoundTask",
+  CompoundProject = "CompoundProject",
+  CompoundTaskType = "CompoundTaskType"
+};
 export type APIAnnotationType = keyof typeof APIAnnotationTypeEnum;
 export type APIAnnotationVisibility = "Private" | "Internal" | "Public";
-export const TracingTypeEnum = Enum.make({
-  skeleton: "skeleton",
-  volume: "volume",
-  hybrid: "hybrid",
-});
+export enum TracingTypeEnum {
+  skeleton = "skeleton",
+  volume = "volume",
+  hybrid = "hybrid",
+};
 export type TracingType = keyof typeof TracingTypeEnum;
 export type APITaskType = {
   readonly id: string;

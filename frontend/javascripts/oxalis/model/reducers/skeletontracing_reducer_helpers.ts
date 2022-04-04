@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -134,7 +133,6 @@ export function createNode(
 
   // Use the same radius as current active node or revert to default value
   const radius = activeNodeMaybe
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     .map((activeNode) => activeNode.radius)
     .getOrElse(Constants.DEFAULT_NODE_RADIUS);
   // Find new node id by increasing the max node id.
@@ -153,7 +151,6 @@ export function createNode(
   };
   // Create a new edge
   const edges = activeNodeMaybe
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     .map((activeNode) => {
       const newEdge = {
         source: activeNode.id,
@@ -170,7 +167,6 @@ export function deleteNode(
   node: Node,
   timestamp: number,
 ): Maybe<[TreeMap, number, number | null | undefined, number]> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Delete node and possible branchpoints/comments
     const activeTree = update(tree, {
@@ -223,7 +219,6 @@ export function deleteEdge(
   targetNode: Node,
   timestamp: number,
 ): Maybe<[TreeMap, number]> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     if (sourceTree.treeId !== targetTree.treeId) {
       // The two selected nodes are in different trees
@@ -470,7 +465,6 @@ export function createTree(
   timestamp: number,
   addToActiveGroup: boolean = true,
 ): Maybe<Tree> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
     const newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
@@ -478,10 +472,8 @@ export function createTree(
     let groupId = null;
 
     if (addToActiveGroup) {
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
       const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map((tree) => tree.groupId);
       const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
         (group) => group.groupId,
       );
       groupId = Utils.toNullable(groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe));
@@ -498,7 +490,6 @@ export function createTree(
       edges: new EdgeCollection(),
       comments: [],
       isVisible: true,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'number |... Remove this comment to see the full error message
       groupId,
     };
     return Maybe.Just(tree);

@@ -90,7 +90,6 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
         const oldQueue = selectQueue(state, action.tracingType, action.tracingId);
         const newQueue = oldQueue.concat(
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           updateActionChunks.map((actions, transactionGroupIndex) => ({
             // Placeholder, the version number will be updated before sending to the server
             version: -1,

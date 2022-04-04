@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -52,10 +51,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
       let activeNodeId = Utils.toNullable(activeNodeIdMaybe);
       const activeTreeIdMaybe = activeNodeIdMaybe
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodeId' implicitly has an 'any' type.
         .chain((nodeId) => {
           // use activeNodeId to find active tree
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
           const treeIdMaybe = findTreeByNodeId(trees, nodeId).map((tree) => tree.treeId);
 
           if (treeIdMaybe.isNothing) {
@@ -76,7 +73,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         .orElse(() => {
           // use last tree for active tree
           const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), (tree) => tree.treeId));
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 't' implicitly has an 'any' type.
           return lastTree.map((t) => {
             // use last node for active node
             // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
@@ -94,10 +90,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       const skeletonTracing: SkeletonTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'number |... Remove this comment to see the full error message
         activeNodeId,
         cachedMaxNodeId,
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'number |... Remove this comment to see the full error message
         activeTreeId,
         activeGroupId: null,
         trees,
@@ -126,7 +120,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
   return (
     getSkeletonTracing(state.tracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
       .map((skeletonTracing) => {
         /**
          * ATTENTION: The actions that should be executed regardless of whether allowUpdate is true or false
@@ -137,7 +130,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { nodeId } = action;
             return (
               findTreeByNodeId(skeletonTracing.trees, nodeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .map((tree) =>
                   update(state, {
                     tracing: {
@@ -168,7 +160,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             );
             return (
               getNodeAndTree(skeletonTracing, nodeId, treeId)
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
                 .map(([tree, node]) => {
                   const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
                   const newDiffableMap = diffableMap.set(
@@ -214,16 +205,13 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { trees } = skeletonTracing;
             return (
               getTree(skeletonTracing, action.treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .map((tree) => {
-                  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
                   const newActiveNodeId =
                     _.max(trees[tree.treeId].nodes.map((el) => el.id)) || null;
                   return update(state, {
                     tracing: {
                       skeleton: {
                         activeNodeId: {
-                          // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'number |... Remove this comment to see the full error message
                           $set: newActiveNodeId,
                         },
                         activeTreeId: {
@@ -250,13 +238,11 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               return state;
             }
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
             const newActiveNodeId = _.max(treeWithMatchingName.nodes.map((el) => el.id)) || null;
             return update(state, {
               tracing: {
                 skeleton: {
                   activeNodeId: {
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'number |... Remove this comment to see the full error message
                     $set: newActiveNodeId,
                   },
                   activeTreeId: {
@@ -329,7 +315,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const newActiveTreeIdIndex =
               (activeTreeIdIndex + increaseDecrease + treeIds.length) % treeIds.length;
             const newActiveTreeId = treeIds[newActiveTreeIdIndex];
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
             const newActiveNodeId = _.max(trees[newActiveTreeId].nodes.map((el) => el.id)) || null;
             return update(state, {
               tracing: {
@@ -338,7 +323,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                     $set: newActiveTreeId,
                   },
                   activeNodeId: {
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'number |... Remove this comment to see the full error message
                     $set: newActiveNodeId,
                   },
                   activeGroupId: {
@@ -353,9 +337,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { colorIndex } = action;
             return (
               getTree(skeletonTracing, action.treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .chain((tree) => setTreeColorIndex(skeletonTracing, tree, colorIndex))
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
                 .map(([tree, treeId]) =>
                   update(state, {
                     tracing: {
@@ -377,7 +359,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { color, treeId } = action;
             return (
               getTree(skeletonTracing, treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .map((tree) =>
                   update(state, {
                     tracing: {
@@ -400,9 +381,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           case "SHUFFLE_TREE_COLOR": {
             return (
               getTree(skeletonTracing, action.treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .chain((tree) => shuffleTreeColor(skeletonTracing, tree))
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
                 .map(([tree, treeId]) =>
                   update(state, {
                     tracing: {
@@ -459,7 +438,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { treeId } = action;
             return (
               getTree(skeletonTracing, treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .map((tree) =>
                   update(state, {
                     tracing: {
@@ -483,7 +461,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { treeId, isVisible } = action;
             return (
               getTree(skeletonTracing, treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .map((tree) =>
                   update(state, {
                     tracing: {
@@ -527,10 +504,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               );
             }
 
-            // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
             return (
               getTree(skeletonTracing)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
                 .map((activeTree) =>
                   update(toggleAllTreesReducer(state, skeletonTracing), {
                     tracing: {
@@ -598,7 +573,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { position, rotation, viewport, resolution, treeId, timestamp } = action;
             return (
               getOrCreateTree(state, skeletonTracing, treeId, timestamp)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .chain((tree) =>
                   createNode(
                     state,
@@ -609,7 +583,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                     viewport,
                     resolution,
                     timestamp,
-                    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'node' implicitly has an 'any' typ... Remove this comment to see the full error message
                   ).map(([node, edges]) => {
                     const diffableNodeMap = tree.nodes;
                     const newDiffableMap = diffableNodeMap.set(node.id, node);
@@ -660,9 +633,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { timestamp, nodeId, treeId } = action;
             return (
               getNodeAndTree(skeletonTracing, nodeId, treeId)
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
                 .chain(([tree, node]) => deleteNode(state, tree, node, timestamp))
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'trees' implicitly has an 'any' ty... Remove this comment to see the full error message
                 .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
                   update(state, {
                     tracing: {
@@ -703,14 +674,11 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId);
             return (
               sourceTreeMaybe
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'sourceTree' implicitly has an 'an... Remove this comment to see the full error message
                 .chain(([sourceTree, sourceNode]) =>
-                  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'targetTree' implicitly has an 'an... Remove this comment to see the full error message
                   targetTreeMaybe.chain(([targetTree, targetNode]) =>
                     deleteEdge(state, sourceTree, sourceNode, targetTree, targetNode, timestamp),
                   ),
                 )
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'trees' implicitly has an 'any' ty... Remove this comment to see the full error message
                 .map(([trees, newActiveTreeId]) =>
                   update(state, {
                     tracing: {
@@ -733,7 +701,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { position, nodeId, treeId } = action;
             return (
               getNodeAndTree(skeletonTracing, nodeId, treeId)
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
                 .map(([tree, node]) => {
                   const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
                   const newDiffableMap = diffableMap.set(
@@ -766,10 +733,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { timestamp, nodeId, treeId } = action;
             return (
               getNodeAndTree(skeletonTracing, nodeId, treeId)
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
                 .chain(([tree, node]) =>
                   createBranchPoint(skeletonTracing, tree, node, timestamp, restrictions).map(
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'branchPoint' implicitly has an 'any' ty... Remove this comment to see the full error message
                     (branchPoint) =>
                       update(state, {
                         tracing: {
@@ -793,7 +758,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           case "DELETE_BRANCHPOINT": {
             return (
               deleteBranchPoint(skeletonTracing, restrictions)
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'branchPoints' implicitly has an '... Remove this comment to see the full error message
                 .map(([branchPoints, treeId, newActiveNodeId]) =>
                   update(state, {
                     tracing: {
@@ -826,7 +790,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { nodeId, treeId } = action;
             return (
               getTree(skeletonTracing, treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .map((tree) =>
                   update(state, {
                     tracing: {
@@ -834,7 +797,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                         trees: {
                           [treeId]: {
                             branchPoints: {
-                              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bp' implicitly has an 'any' type.
                               $set: tree.branchPoints.filter((bp) => bp.nodeId !== nodeId),
                             },
                           },
@@ -851,7 +813,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { timestamp } = action;
             return (
               createTree(state, timestamp)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .map((tree) =>
                   update(state, {
                     tracing: {
@@ -883,7 +844,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const treesWithNames = ensureTreeNames(state, trees);
             return (
               addTreesAndGroups(skeletonTracing, treesWithNames, treeGroups)
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'updatedTrees' implicitly has an '... Remove this comment to see the full error message
                 .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) =>
                   update(state, {
                     tracing: {
@@ -909,9 +869,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { treeId } = action;
             return (
               getTree(skeletonTracing, treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .chain((tree) => deleteTree(skeletonTracing, tree))
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'trees' implicitly has an 'any' ty... Remove this comment to see the full error message
                 .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
                   update(state, {
                     tracing: {
@@ -975,7 +933,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { sourceNodeId, targetNodeId } = action;
             return (
               mergeTrees(skeletonTracing, sourceNodeId, targetNodeId)
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'trees' implicitly has an 'any' ty... Remove this comment to see the full error message
                 .map(([trees, newActiveTreeId, newActiveNodeId]) =>
                   update(state, {
                     tracing: {
@@ -1003,7 +960,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           case "SET_TREE_NAME": {
             return (
               getTree(skeletonTracing, action.treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .map((tree) => {
                   const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
                   const newName = action.name || defaultName;
@@ -1029,9 +985,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { commentText, nodeId, treeId } = action;
             return (
               getNodeAndTree(skeletonTracing, nodeId, treeId)
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
                 .chain(([tree, node]) =>
-                  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comments' implicitly has an 'any' type.
                   createComment(skeletonTracing, tree, node, commentText).map((comments) =>
                     update(state, {
                       tracing: {
@@ -1055,9 +1009,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           case "DELETE_COMMENT": {
             return (
               getNodeAndTree(skeletonTracing, action.nodeId, action.treeId)
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
                 .chain(([tree, node]) =>
-                  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comments' implicitly has an 'any' type.
                   deleteComment(skeletonTracing, tree, node).map((comments) =>
                     update(state, {
                       tracing: {
@@ -1099,7 +1051,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const { treeId, groupId } = action;
             return (
               getTree(skeletonTracing, treeId)
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
                 .map((tree) =>
                   update(state, {
                     tracing: {

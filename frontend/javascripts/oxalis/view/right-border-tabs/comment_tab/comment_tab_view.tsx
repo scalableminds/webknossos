@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
@@ -13,7 +11,6 @@ import {
   ShrinkOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import * as React from "react";
 import _ from "lodash";
@@ -46,12 +43,12 @@ const InputGroup = Input.Group;
 const treeTypeHint = [] as Array<Tree>;
 const commentTypeHint = [] as Array<CommentType>;
 const commentTabId = "commentTabId";
-const SortByEnum = Enum.make({
-  NAME: "NAME",
-  ID: "ID",
-  NATURAL: "NATURAL",
-});
-type SortByEnumType = $Keys<typeof SortByEnum>;
+const enum SortByEnum {
+  NAME= "NAME",
+  ID= "ID",
+  NATURAL= "NATURAL",
+};
+type SortByEnumType = keyof typeof SortByEnum;
 type SortOptions = {
   sortBy: SortByEnumType;
   isSortedAscending: boolean;
@@ -208,7 +205,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
   }
 
   nextComment = (forward: boolean = true) => {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     getActiveNode(this.props.skeletonTracing).map((activeNode) => {
       const { isSortedAscending, sortBy } = this.state;
       const sortAscending = forward ? isSortedAscending : !isSortedAscending;
@@ -298,9 +294,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return zipMaybe(
       getActiveTree(this.props.skeletonTracing),
       getActiveNode(this.props.skeletonTracing),
-      // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'tree' implicitly has an 'any' typ... Remove this comment to see the full error message
     ).chain(([tree, activeNode]) =>
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comment' implicitly has an 'any' type.
       Maybe.fromNullable(tree.comments.find((comment) => comment.nodeId === activeNode.id)).orElse(
         () =>
           // If there is no active comment and createIfNotExisting is set, create an empty comment
@@ -329,7 +323,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
     return (
       activeCommentMaybe
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comment' implicitly has an 'any' type.
         .map((comment) => (
           <MarkdownModal
             key={comment.nodeId}
@@ -397,7 +390,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     const activeCommentMaybe = this.getActiveComment();
     // Replace line breaks as they will otherwise be stripped when shown in an input field
     const activeCommentContent = activeCommentMaybe
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'comment' implicitly has an 'any' type.
       .map((comment) => comment.content)
       .getOrElse("")
       .replace(/\r?\n/g, "\\n");

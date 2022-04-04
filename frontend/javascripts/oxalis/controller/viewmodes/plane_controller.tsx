@@ -266,7 +266,6 @@ class PlaneController extends React.PureComponent<Props> {
     // InputMouse handling so that this is not necessary anymore.
     // See: https://github.com/scalableminds/webknossos/issues/3475
     OrthoViewValuesWithoutTDView.forEach((id) => {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
       Utils.waitForElementWithId(inputcatcherId).then((el) => {
         // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.

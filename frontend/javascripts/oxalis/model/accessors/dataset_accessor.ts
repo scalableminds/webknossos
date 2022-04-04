@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
@@ -318,7 +317,6 @@ export function getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
 function _getMaxZoomStep(maybeDataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
   const maxZoomstep = Maybe.fromNullable(maybeDataset)
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
     .map((dataset) =>
       Math.max(
         minimumZoomStepCount,

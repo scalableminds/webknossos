@@ -92,7 +92,6 @@ function* centerActiveNode(action: Action): Saga<void> {
   }
 
   getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     (activeNode) => {
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'suppressAnimation' does not exist on typ... Remove this comment to see the full error message
       if (action.suppressAnimation === true) {
@@ -388,7 +387,6 @@ function* removeConnectomeAgglomerateSkeletonWithId(
   if (skeleton == null) return;
   const { trees } = skeleton;
   yield* all(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
     findTreeByName(trees, treeName).map((tree) =>
       put(deleteConnectomeTreesAction([tree.treeId], layerName)),
     ),

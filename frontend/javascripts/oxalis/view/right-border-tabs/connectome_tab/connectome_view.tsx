@@ -1,6 +1,5 @@
 import { Alert, Empty, Input, Tooltip } from "antd";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import React from "react";
 import _ from "lodash";

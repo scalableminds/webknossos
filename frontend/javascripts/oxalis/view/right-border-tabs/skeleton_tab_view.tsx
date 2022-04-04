@@ -771,11 +771,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     const { showSkeletons } = skeletonTracing;
     const activeTreeName = getActiveTree(skeletonTracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
       .map((activeTree) => activeTree.name)
       .getOrElse("");
     const activeGroupName = getActiveGroup(skeletonTracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeGroup' implicitly has an 'any' ty... Remove this comment to see the full error message
       .map((activeGroup) => activeGroup.name)
       .getOrElse("");
     const { trees, treeGroups } = skeletonTracing;

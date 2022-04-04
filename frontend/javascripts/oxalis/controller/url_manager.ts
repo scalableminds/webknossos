@@ -214,9 +214,7 @@ class UrlManager {
         }
       : {};
     const activeNodeOptional = getSkeletonTracing(state.tracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
       .chain((skeletonTracing) => getActiveNode(skeletonTracing))
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
       .map((node) => ({
         activeNode: node.id,
       }))

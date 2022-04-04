@@ -656,7 +656,6 @@ class TracingApi {
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'node' implicitly has an 'any' typ... Remove this comment to see the full error message
     getNodeAndTree(skeletonTracing, nodeId, treeId).map(([, node]) =>
       Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId)),
     );

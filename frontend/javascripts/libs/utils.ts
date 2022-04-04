@@ -1,6 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
@@ -504,7 +501,6 @@ export function diffArrays<T>(
   };
 }
 export function zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'valueA' implicitly has an 'any' type.
   return maybeA.chain((valueA) => maybeB.map((valueB) => [valueA, valueB]));
 }
 // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
@@ -517,7 +513,7 @@ export function toNullable<T>(_maybe: Maybe<T>): T | null | undefined {
 // Supports nested properties
 export function filterWithSearchQueryOR<
   T extends Readonly<Record<string, unknown>>,
-  P extends $Keys<T>,
+  P extends keyof T,
 >(
   collection: Array<T>,
   properties: Array<P | ((arg0: T) => {} | Array<any> | string)>,
@@ -536,7 +532,6 @@ export function filterWithSearchQueryOR<
     const regexp = new RegExp(pattern, "igm");
     return collection.filter((model) =>
       _.some(properties, (fieldName) => {
-        // @ts-expect-error ts-migrate(2349) FIXME: This expression is not callable.
         const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
 
         if (value != null && (typeof value === "string" || value instanceof Object)) {
@@ -553,7 +548,7 @@ export function filterWithSearchQueryOR<
 // Supports nested properties
 export function filterWithSearchQueryAND<
   T extends Readonly<Record<string, unknown>>,
-  P extends $Keys<T>,
+  P extends keyof T,
 >(
   collection: Array<T>,
   properties: Array<P | ((arg0: T) => {} | Array<any> | string)>,
@@ -572,7 +567,6 @@ export function filterWithSearchQueryAND<
     return collection.filter((model) =>
       _.every(patterns, (pattern) =>
         _.some(properties, (fieldName) => {
-          // @ts-expect-error ts-migrate(2349) FIXME: This expression is not callable.
           const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
 
           if (value !== null && (typeof value === "string" || value instanceof Object)) {

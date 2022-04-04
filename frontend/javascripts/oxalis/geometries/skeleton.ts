@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'data... Remove this comment to see the full error message
 import Maybe from "data.maybe";
 import type { Tree, Node, Edge, OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
@@ -111,12 +110,10 @@ class Skeleton {
     this.rootGroup = new THREE.Group();
     // @ts-expect-error ts-migrate(2739) FIXME: Type 'Object3D' is missing the following propertie... Remove this comment to see the full error message
     this.pickingNode = new THREE.Object3D();
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
     skeletonTracingSelectorFn(Store.getState()).map((skeletonTracing) => {
       this.reset(skeletonTracing);
     });
     this.stopStoreListening = Store.subscribe(() => {
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
       skeletonTracingSelectorFn(Store.getState()).map((skeletonTracing) => {
         if (skeletonTracing.tracingId !== this.prevTracing.tracingId) {
           this.reset(skeletonTracing);

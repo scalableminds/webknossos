@@ -558,7 +558,6 @@ export const deleteActiveNodeAsUserAction = (
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   return (
     getActiveNode(skeletonTracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
       .map((activeNode) => {
         const nodeId = activeNode.id;
 
@@ -595,7 +594,6 @@ function confirmDeletingInitialNode(id) {
 export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
   getTree(skeletonTracing, treeId).map((tree) => {
     if (state.task != null && tree.nodes.has(1)) {
       confirmDeletingInitialNode(treeId);

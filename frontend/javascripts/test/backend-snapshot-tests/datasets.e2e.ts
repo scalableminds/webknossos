@@ -69,7 +69,6 @@ test("updateDatasetTeams", async (t) => {
   // undo the Change
   await api.updateDatasetTeams(
     dataset,
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'team' implicitly has an 'any' type.
     dataset.allowedTeams.map((team) => team.id),
   );
 }); // test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {

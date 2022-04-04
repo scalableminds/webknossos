@@ -641,7 +641,6 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 't' implicitly has an 'any' type.
     const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
     // @ts-expect-error ts-migrate(2698) FIXME: Spread types may only be created from object types... Remove this comment to see the full error message
     await updateDataset(this.props.datasetId, { ...dataset, ...datasetChangeValues });

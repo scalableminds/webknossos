@@ -364,7 +364,6 @@ function NodeContextMenuOptions({
   const { activeTreeId, trees, activeNodeId } = skeletonTracing;
   const clickedTree = findTreeByNodeId(trees, clickedNodeId).get();
   const areInSameTree = activeTreeId === clickedTree.treeId;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bp' implicitly has an 'any' type.
   const isBranchpoint = clickedTree.branchPoints.find((bp) => bp.nodeId === clickedNodeId) != null;
   const isTheSameNode = activeNodeId === clickedNodeId;
   let areNodesConnected = false;
@@ -372,7 +371,6 @@ function NodeContextMenuOptions({
   if (areInSameTree && !isTheSameNode && activeNodeId != null) {
     const activeTreeEdges = clickedTree.edges.getEdgesForNode(activeNodeId);
     areNodesConnected = activeTreeEdges.some(
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edge' implicitly has an 'any' type.
       (edge) => edge.source === clickedNodeId || edge.target === clickedNodeId,
     );
   }

@@ -164,7 +164,6 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
           dataSource || {
             dataLayers: [],
           }
-        )// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any' type.
         .dataLayers
           .map((layer, idx) => (
             <List.Item key={`layer-${layer.name}`}>

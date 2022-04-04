@@ -61,7 +61,6 @@ export function handleMergeTrees(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     getActiveNode(skeletonTracing).map((activeNode) =>
       Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
     );
@@ -78,7 +77,6 @@ export function handleDeleteEdge(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
     getActiveNode(skeletonTracing).map((activeNode) =>
       Store.dispatch(deleteEdgeAction(activeNode.id, nodeId)),
     );
@@ -156,7 +154,6 @@ export function handleOpenContextMenu(
 }
 export function moveNode(dx: number, dy: number, nodeId: number | null | undefined) {
   // dx and dy are measured in pixel.
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
     // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, activeNode]) => {
@@ -190,7 +187,6 @@ export function setWaypoint(
   const activeNodeMaybe = getActiveNode(skeletonTracing);
   const rotation = getRotationOrtho(activeViewport);
   // set the new trace direction
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
   activeNodeMaybe.map((activeNode) =>
     Store.dispatch(
       setDirectionAction([
@@ -243,7 +239,6 @@ function addNode(
     const newState = Store.getState();
     enforce(getActiveNode)(newState.tracing.skeleton).map(
       (
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newActiveNode' implicitly has an 'any' ... Remove this comment to see the full error message
         newActiveNode, // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
       ) =>
         // This is important because otherwise the user cannot continue to trace until the animation is over

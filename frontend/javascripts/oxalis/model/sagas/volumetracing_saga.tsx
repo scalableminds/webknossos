@@ -671,7 +671,6 @@ export function* floodFill(): Saga<void> {
         resolutionInfo,
         cube,
         activeCellId,
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'unknown' is not assignable to pa... Remove this comment to see the full error message
         indexZ,
         true,
       );

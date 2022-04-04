@@ -798,7 +798,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const skeletonTracing = enforceSkeletonTracing(tracing);
     const { showSkeletons } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
       .map((activeNode) => activeNode.radius)
       .getOrElse(0);
     return (

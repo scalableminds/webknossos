@@ -98,7 +98,6 @@ class TracingApi {
     const tracing = assertSkeleton(Store.getState().tracing);
     return (
       getActiveNode(tracing)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
         .map((node) => node.id)
         .getOrElse(null)
     );
@@ -111,7 +110,6 @@ class TracingApi {
     const tracing = assertSkeleton(Store.getState().tracing);
     return (
       getActiveTree(tracing)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
         .map((tree) => tree.treeId)
         .getOrElse(null)
     );
@@ -229,7 +227,6 @@ class TracingApi {
     const tracing = assertSkeleton(Store.getState().tracing);
     return (
       getTree(tracing, treeId)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
         .map((activeTree) => activeTree.name)
         .get()
     );
@@ -345,7 +342,6 @@ class TracingApi {
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'node' implicitly has an 'any' typ... Remove this comment to see the full error message
     getNodeAndTree(skeletonTracing, nodeId, treeId).map(([, node]) =>
       Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId)),
     );

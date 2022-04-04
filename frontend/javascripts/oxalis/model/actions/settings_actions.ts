@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 import type { ViewMode, ControlMode } from "oxalis/constants";
 import type {
   UserConfiguration,
@@ -13,27 +11,27 @@ import type {
 import Deferred from "libs/deferred";
 export type UpdateUserSettingAction = {
   type: "UPDATE_USER_SETTING";
-  propertyName: $Keys<UserConfiguration>;
+  propertyName: keyof UserConfiguration;
   value: any;
 };
 type UpdateDatasetSettingAction = {
   type: "UPDATE_DATASET_SETTING";
-  propertyName: $Keys<DatasetConfiguration>;
+  propertyName: keyof DatasetConfiguration;
   value: any;
 };
 export type UpdateTemporarySettingAction = {
   type: "UPDATE_TEMPORARY_SETTING";
-  propertyName: $Keys<TemporaryConfiguration>;
+  propertyName: keyof TemporaryConfiguration;
   value: any;
 };
 export type ToggleTemporarySettingAction = {
   type: "TOGGLE_TEMPORARY_SETTING";
-  propertyName: $Keys<TemporaryConfiguration>;
+  propertyName: keyof TemporaryConfiguration;
 };
 type UpdateLayerSettingAction = {
   type: "UPDATE_LAYER_SETTING";
   layerName: string;
-  propertyName: $Keys<DatasetLayerConfiguration>;
+  propertyName: keyof DatasetLayerConfiguration;
   value: any;
 };
 export type InitializeSettingsAction = {
@@ -106,7 +104,7 @@ export type SettingAction =
   | SetHistogramDataAction
   | InitializeGpuSetupAction;
 export const updateUserSettingAction = (
-  propertyName: $Keys<UserConfiguration>,
+  propertyName: keyof UserConfiguration,
   value: any,
 ): UpdateUserSettingAction => ({
   type: "UPDATE_USER_SETTING",
@@ -114,7 +112,7 @@ export const updateUserSettingAction = (
   value,
 });
 export const updateDatasetSettingAction = (
-  propertyName: $Keys<DatasetConfiguration>,
+  propertyName: keyof DatasetConfiguration,
   value: any,
 ): UpdateDatasetSettingAction => ({
   type: "UPDATE_DATASET_SETTING",
@@ -122,7 +120,7 @@ export const updateDatasetSettingAction = (
   value,
 });
 export const updateTemporarySettingAction = (
-  propertyName: $Keys<TemporaryConfiguration>,
+  propertyName: keyof TemporaryConfiguration,
   value: any,
 ): UpdateTemporarySettingAction => ({
   type: "UPDATE_TEMPORARY_SETTING",
@@ -130,14 +128,14 @@ export const updateTemporarySettingAction = (
   value,
 });
 export const toggleTemporarySettingAction = (
-  propertyName: $Keys<TemporaryConfiguration>,
+  propertyName: keyof TemporaryConfiguration,
 ): ToggleTemporarySettingAction => ({
   type: "TOGGLE_TEMPORARY_SETTING",
   propertyName,
 });
 export const updateLayerSettingAction = (
   layerName: string,
-  propertyName: $Keys<DatasetLayerConfiguration>,
+  propertyName: keyof DatasetLayerConfiguration,
   value: any,
 ): UpdateLayerSettingAction => ({
   type: "UPDATE_LAYER_SETTING",

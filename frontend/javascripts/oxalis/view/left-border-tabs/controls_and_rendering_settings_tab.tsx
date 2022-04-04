@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 import { Collapse, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
@@ -33,8 +31,8 @@ type ControlsAndRenderingSettingsTabProps = {
   zoomStep: number;
   validZoomRange: [number, number];
   datasetConfiguration: DatasetConfiguration;
-  onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void;
-  onChangeDataset: (key: $Keys<DatasetConfiguration>, value: any) => void;
+  onChangeUser: (key: keyof UserConfiguration, value: any) => void;
+  onChangeDataset: (key: keyof DatasetConfiguration, value: any) => void;
   onChangeZoomStep: (value: number) => void;
   viewMode: ViewMode;
   dataset: APIDataset;
@@ -42,9 +40,9 @@ type ControlsAndRenderingSettingsTabProps = {
 
 class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRenderingSettingsTabProps> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeUser' has no initializer and is ... Remove this comment to see the full error message
-  onChangeUser: Record<$Keys<UserConfiguration>, (...args: Array<any>) => any>;
+  onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeDataset' has no initializer and ... Remove this comment to see the full error message
-  onChangeDataset: Record<$Keys<DatasetConfiguration>, (...args: Array<any>) => any>;
+  onChangeDataset: Record<keyof DatasetConfiguration, (...args: Array<any>) => any>;
 
   // This cannot be changed to componentDidMount, because this.onChangeUser is accessed in render
   // eslint-disable-next-line camelcase

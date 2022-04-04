@@ -1,5 +1,4 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 import { RouteComponentProps, withRouter } from "react-router-dom";
 import { Form, Button, Card, Input, Row } from "antd";
 import { MailOutlined, TagOutlined, CopyOutlined, KeyOutlined } from "@ant-design/icons";
@@ -16,7 +15,7 @@ export const enum PricingPlanEnum {
   Pilot= "Pilot",
   Custom= "Custom",
 };
-type PricingPlan = $Keys<typeof PricingPlanEnum>;
+type PricingPlan = keyof typeof PricingPlanEnum;
 type Props = {
   organizationName: string;
 };

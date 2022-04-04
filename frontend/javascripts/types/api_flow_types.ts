@@ -51,12 +51,13 @@ export type APISegmentationLayer = APIDataLayerBase & {
   readonly tracingId?: string;
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
-export type APIHistogramData = Array<{
+export type APIHistogramData = HistogramDatum[]
+export type HistogramDatum = {
   numberOfElements: number;
   elementCounts: Array<number>;
   min: number;
   max: number;
-}>;
+};
 type MutableAPIDataSourceBase = {
   id: {
     name: string;

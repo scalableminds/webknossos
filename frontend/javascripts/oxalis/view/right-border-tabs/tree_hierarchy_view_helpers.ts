@@ -1,5 +1,5 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys, $Shape } from "utility-types";
+import { $Shape } from "utility-types";
 import _ from "lodash";
 import type { Tree, TreeMap, TreeGroup } from "oxalis/store";
 export const MISSING_GROUP_ID = -1;
@@ -9,7 +9,7 @@ const GroupTypeEnum = {
   [TYPE_GROUP]: TYPE_GROUP,
   [TYPE_TREE]: TYPE_TREE,
 };
-type TreeOrGroup = $Keys<typeof GroupTypeEnum>;
+type TreeOrGroup = keyof typeof GroupTypeEnum;
 export type TreeNode = {
   name: string;
   id: number;

@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 import { Button, Col, Divider, Modal, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
@@ -88,14 +86,15 @@ import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
+
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
   datasetConfiguration: DatasetConfiguration;
   dataset: APIDataset;
-  onChange: (propertyName: $Keys<DatasetConfiguration>, value: any) => void;
+  onChange: (propertyName: keyof DatasetConfiguration, value: any) => void;
   onChangeLayer: (
     layerName: string,
-    propertyName: $Keys<DatasetLayerConfiguration>,
+    propertyName: keyof DatasetLayerConfiguration,
     value: any,
   ) => void;
   onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => Promise<void>;
@@ -104,7 +103,7 @@ type DatasetSettingsProps = {
   onChangeShowSkeletons: (arg0: boolean) => void;
   onSetPosition: (arg0: Vector3) => void;
   onZoomToResolution: (arg0: Vector3) => number;
-  onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void;
+  onChangeUser: (key: keyof UserConfiguration, value: any) => void;
   onUnlinkFallbackLayer: (arg0: Tracing, arg1: VolumeTracing) => Promise<void>;
   tracing: Tracing;
   task: Task | null | undefined;
@@ -112,6 +111,7 @@ type DatasetSettingsProps = {
   controlMode: ControlMode;
   isArbitraryMode: boolean;
 };
+
 type State = {
   // If this is set to not-null, the downsampling modal
   // is shown for that VolumeTracing
@@ -121,7 +121,7 @@ type State = {
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeUser' has no initializer and is ... Remove this comment to see the full error message
-  onChangeUser: Record<$Keys<UserConfiguration>, (...args: Array<any>) => any>;
+  onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
   state = {
     volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,

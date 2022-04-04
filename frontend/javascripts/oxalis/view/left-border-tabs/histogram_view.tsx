@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys, $ElementType } from "utility-types";
 import type { Dispatch } from "redux";
 import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
 import { connect } from "react-redux";
@@ -7,7 +5,7 @@ import * as React from "react";
 import * as _ from "lodash";
 import type { Vector2, Vector3 } from "oxalis/constants";
 import "oxalis/constants";
-import type { APIHistogramData, ElementClass } from "types/api_flow_types";
+import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_flow_types";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
@@ -25,7 +23,7 @@ type OwnProps = {
 type HistogramProps = OwnProps & {
   onChangeLayer: (
     layerName: string,
-    propertyName: $Keys<DatasetLayerConfiguration>,
+    propertyName: keyof DatasetLayerConfiguration,
     value: [number, number] | number,
   ) => void;
 };
@@ -150,7 +148,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
 
   drawHistogram = (
     ctx: CanvasRenderingContext2D,
-    histogram: $ElementType<APIHistogramData, number>,
+    histogram: HistogramDatum,
     maxValue: number,
     color: Vector3,
     minRange: number,
@@ -165,7 +163,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.strokeStyle = `rgba(${color.join(",")})`;
     ctx.beginPath();
     // Scale data to the height of the histogram canvas.
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
     const downscaledData = elementCounts.map((value) => (value / maxValue) * canvasHeight);
     const activeRegion = new Path2D();
     ctx.moveTo(0, 0);

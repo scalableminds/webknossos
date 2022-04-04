@@ -1,7 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, Modal, Input } from "antd";
-import { FormInstance } from "antd/lib/form";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -75,8 +72,8 @@ const IsJSONFormatValidEnum = {
   BrokenJson: "BrokenJson",
 };
 type DataSourceSettingsStatus = {
-  appliedSuggestions: $Keys<typeof AppliedSuggestionsEnum>;
-  isJSONFormatValid: $Keys<typeof IsJSONFormatValidEnum>;
+  appliedSuggestions: keyof typeof AppliedSuggestionsEnum;
+  isJSONFormatValid: keyof typeof IsJSONFormatValidEnum;
 };
 type State = {
   hasUnsavedChanges: boolean;

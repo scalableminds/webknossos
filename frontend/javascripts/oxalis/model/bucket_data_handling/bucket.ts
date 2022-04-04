@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 import { createNanoEvents } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
@@ -22,14 +20,14 @@ import ErrorHandling from "libs/error_handling";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import window from "libs/window";
-export const BucketStateEnum = {
-  UNREQUESTED: "UNREQUESTED",
-  REQUESTED: "REQUESTED",
-  MISSING: "MISSING",
+export const enum BucketStateEnum {
+  UNREQUESTED= "UNREQUESTED",
+  REQUESTED= "REQUESTED",
+  MISSING= "MISSING",
   // Missing means that the bucket couldn't be found on the data store
-  LOADED: "LOADED",
+  LOADED= "LOADED",
 };
-export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
+export type BucketStateEnumType = keyof typeof BucketStateEnum;
 export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU

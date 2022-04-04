@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
@@ -699,8 +697,7 @@ class DataApi {
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
-  getConfiguration(key: $Keys<DatasetConfiguration>) {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+  getConfiguration(key: keyof DatasetConfiguration) {
     return Store.getState().datasetConfiguration[key];
   }
 
@@ -711,7 +708,7 @@ class DataApi {
    * @example
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
-  setConfiguration(key: $Keys<DatasetConfiguration>, value: any) {
+  setConfiguration(key: keyof DatasetConfiguration, value: any) {
     Store.dispatch(updateDatasetSettingAction(key, value));
   }
 }
@@ -754,8 +751,7 @@ class UserApi {
   * @example
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
-  getConfiguration(key: $Keys<UserConfiguration>) {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+  getConfiguration(key: keyof UserConfiguration) {
     const value = Store.getState().userConfiguration[key];
 
     // Backwards compatibility
@@ -773,7 +769,7 @@ class UserApi {
    * @example
    * api.user.setConfiguration("keyboardDelay", 20);
    */
-  setConfiguration(key: $Keys<UserConfiguration>, value: any) {
+  setConfiguration(key: keyof UserConfiguration, value: any) {
     // Backwards compatibility
     if (key === "tdViewDisplayPlanes") {
       value = value ? TDViewDisplayModeEnum.DATA : TDViewDisplayModeEnum.WIREFRAME;

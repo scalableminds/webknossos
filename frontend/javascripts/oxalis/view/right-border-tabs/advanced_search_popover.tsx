@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 import { Input, Tooltip, Popover } from "antd";
 import { DownOutlined, UpOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -12,7 +10,7 @@ import { mod } from "libs/utils";
 const InputGroup = Input.Group;
 type Props<S> = {
   data: Array<S>;
-  searchKey: $Keys<S>;
+  searchKey: keyof S;
   onSelect: (arg0: S) => void;
   children: React.ReactNode;
   provideShortcut?: boolean;
@@ -32,7 +30,7 @@ export default class AdvancedSearchPopover<
     currentPosition: null,
   };
   getAvailableOptions = memoizeOne(
-    (data: Array<S>, searchQuery: string, searchKey: $Keys<S>): Array<S> =>
+    (data: Array<S>, searchQuery: string, searchKey: keyof S): Array<S> =>
       searchQuery !== ""
         ? data.filter(
             (datum) => datum[searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,

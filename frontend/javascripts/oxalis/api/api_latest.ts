@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'js-p... Remove this comment to see the full error message
 import PriorityQueue from "js-priority-queue";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
@@ -214,7 +212,6 @@ class TracingApi {
     const tracing = assertSkeleton(Store.getState().tracing);
     return (
       getActiveNode(tracing)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
         .map((node) => node.id)
         .getOrElse(null)
     );
@@ -227,7 +224,6 @@ class TracingApi {
     const tracing = assertSkeleton(Store.getState().tracing);
     return (
       getActiveTree(tracing)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
         .map((tree) => tree.treeId)
         .getOrElse(null)
     );
@@ -240,7 +236,6 @@ class TracingApi {
     const tracing = assertSkeleton(Store.getState().tracing);
     return (
       getActiveGroup(tracing)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
         .map((group) => group.groupId)
         .getOrElse(null)
     );
@@ -504,7 +499,6 @@ class TracingApi {
     const tracing = assertSkeleton(Store.getState().tracing);
     return (
       getTree(tracing, treeId)
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTree' implicitly has an 'any' typ... Remove this comment to see the full error message
         .map((activeTree) => activeTree.name)
         .get()
     );
@@ -1558,7 +1552,7 @@ class DataApi {
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
-  getConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys) {
+  getConfiguration(key: keyof DatasetConfiguration | OutdatedDatasetConfigurationKeys) {
     const printDeprecationWarning = () =>
       console.warn(`The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration.
       Instead, they are part of the segmentation layer configuration and can be accessed as follows:
@@ -1584,7 +1578,7 @@ class DataApi {
       }
 
       default: {
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+        
         return Store.getState().datasetConfiguration[key];
       }
     }
@@ -1598,7 +1592,7 @@ class DataApi {
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
   setConfiguration(
-    key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys,
+    key: keyof DatasetConfiguration | OutdatedDatasetConfigurationKeys,
     value: any,
   ) {
     const printDeprecationWarning = () =>
@@ -1900,8 +1894,7 @@ class UserApi {
   * @example
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
-  getConfiguration(key: $Keys<UserConfiguration>) {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+  getConfiguration(key: keyof UserConfiguration) {
     const value = Store.getState().userConfiguration[key];
 
     // Backwards compatibility
@@ -1919,7 +1912,7 @@ class UserApi {
    * @example
    * api.user.setConfiguration("keyboardDelay", 20);
    */
-  setConfiguration(key: $Keys<UserConfiguration>, value: any) {
+  setConfiguration(key: keyof UserConfiguration, value: any) {
     // Backwards compatibility
     if (key === "tdViewDisplayPlanes") {
       value = value ? TDViewDisplayModeEnum.DATA : TDViewDisplayModeEnum.WIREFRAME;

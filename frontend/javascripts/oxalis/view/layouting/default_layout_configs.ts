@@ -1,6 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Keys } from "utility-types";
-
 /*
  * This file defines:
  *  - the main tabs which can be arranged in WK Core
@@ -111,18 +108,18 @@ export function getTabDescriptorForBorderTab(borderTab: BorderTabType): TabNode 
   const { name, id, enableRenderOnDemand = true } = borderTab;
   return Tab(name, id, "border-tab", enableRenderOnDemand);
 }
-const borderTabs: Record<$Keys<typeof BorderTabs>, TabNode> = {};
+const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
 // Flow does not understand that the values must have a name and an id.
 Utils.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
   borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });
-const OrthoViewports: Record<$Keys<typeof OrthoViews>, Record<string, any>> = {};
+const OrthoViewports: Record<keyof typeof OrthoViews, Record<string, any>> = {};
 Object.keys(OrthoViews).forEach((viewportId) => {
   // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const name = OrthoViewsToName[viewportId];
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
-const ArbitraryViewports: Record<$Keys<typeof ArbitraryViews>, Record<string, any>> = {};
+const ArbitraryViewports: Record<keyof typeof ArbitraryViews, Record<string, any>> = {};
 Object.keys(ArbitraryViews).forEach((viewportId) => {
   // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const name = ArbitraryViewsToName[viewportId];
@@ -314,8 +311,7 @@ export const resetDefaultLayouts = () => {
   // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
   getDefaultLayouts.cache.clear();
 };
-// @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'ExtractReturn'.
-type Layout = $Keys<ExtractReturn<typeof _getDefaultLayouts>>;
+type Layout = keyof ReturnType<typeof _getDefaultLayouts>;
 export const getCurrentDefaultLayoutConfig = () => {
   resetDefaultLayouts();
   const defaultLayouts = getDefaultLayouts();

@@ -1,15 +1,12 @@
 // @noflow
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'isom... Remove this comment to see the full error message
-import fetch from "isomorphic-fetch"; //  Request Helper Module
 //  Collection of static methods for up/downloading and content convertion.
 
 export default class Request {
   // Build fetch-from method and inject given converter
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'converter' implicitly has an 'any' type... Remove this comment to see the full error message
   static fetchFactory(converter) {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'response' implicitly has an 'any' type.
-    function responseHandler(response) {
+    function responseHandler(response: Response) {
       if (response.status >= 200 && response.status < 300) {
         return response;
       }
@@ -20,8 +17,7 @@ export default class Request {
       return Promise.reject(error);
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'url' implicitly has an 'any' type.
-    function from(url, options) {
+    function from(url: string, options) {
       if (!url.startsWith("http")) {
         url = `http://localhost:9000${url}`;
       }
@@ -30,7 +26,6 @@ export default class Request {
         fetch(url, options)
           .then(responseHandler)
           .then(converter)
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'e' implicitly has an 'any' type.
           .catch((e) => {
             console.error(e);
             return Promise.reject(e);
@@ -38,8 +33,7 @@ export default class Request {
       );
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'url' implicitly has an 'any' type.
-    function upload(url, options) {
+    function upload(url: string, options) {
       let body;
 
       if (typeof options.data === "string") {
@@ -68,12 +62,10 @@ export default class Request {
 
   // CONVERTERS
   static text() {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'response' implicitly has an 'any' type.
-    return this.fetchFactory((response) => response.text());
+    return this.fetchFactory((response: Response) => response.text());
   }
 
   static json() {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'response' implicitly has an 'any' type.
-    return this.fetchFactory((response) => response.json());
+    return this.fetchFactory((response: Response) => response.json());
   }
 }

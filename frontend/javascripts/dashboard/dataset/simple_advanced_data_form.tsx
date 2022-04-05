@@ -101,8 +101,7 @@ export default function SimpleAdvancedDataForm({
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isReadOnlyDataset' implicitly has... Remove this comment to see the full error message
-function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
+function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }: { isReadOnlyDataset : boolean, form:Record<string, any>, dataSource:Record<string, any>}) {
   return (
     <div>
       <List
@@ -118,7 +117,6 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
       >
         <List.Item>
           <FormItemWithInfo
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string[]; label: ... Remove this comment to see the full error message
             name={["dataSource", "scale"]}
             label="Voxel Size"
             info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
@@ -138,7 +136,6 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
             ]}
           >
             <Vector3Input
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ disabled: any; style: { width: number; }; ... Remove this comment to see the full error message
               disabled={isReadOnlyDataset}
               style={{
                 width: 400,
@@ -160,18 +157,15 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
           </div>
         }
       >
-        {(
-          dataSource || {
+        {dataSource ||
+          {
             dataLayers: [],
-          }
-        .dataLayers
-          .map((layer, idx) => (
+          }.dataLayers.map((layer, idx) => (
             <List.Item key={`layer-${layer.name}`}>
               <SimpleLayerForm
                 isReadOnlyDataset={isReadOnlyDataset}
                 layer={layer}
                 index={idx}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isReadOnlyDataset: any; layer: any; index:... Remove this comment to see the full error message
                 form={form}
               />
             </List.Item>

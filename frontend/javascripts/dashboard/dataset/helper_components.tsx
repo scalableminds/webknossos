@@ -22,7 +22,7 @@ export const FormItemWithInfo = ({
   info,
   children,
   ...props
-}: {
+}: typeof FormItem & {
   label: React.ReactNode;
   info: React.ReactNode;
   children: React.ReactNode;

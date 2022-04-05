@@ -1,4 +1,4 @@
-import { Radio, Tooltip, Badge, Space, Popover } from "antd";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent } from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect } from "react";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
@@ -99,12 +99,9 @@ const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
 };
 
-const handleSetTool = (event: {
-  target: {
-    value: AnnotationTool;
-  };
-}) => {
-  Store.dispatch(setToolAction(event.target.value));
+const handleSetTool = (event: RadioChangeEvent ) => {
+  const value = event.target.value as AnnotationTool
+  Store.dispatch(setToolAction(value));
 };
 
 const handleCreateCell = () => {
@@ -132,6 +129,9 @@ const RadioButtonWithTooltip = ({
   title: string;
   disabledTitle?: string;
   disabled?: boolean;
+  children: React.ReactNode;
+  style: React.CSSProperties;
+  value: string;
 }) => (
   <Tooltip title={disabled ? disabledTitle : title}>
     <Radio.Button disabled={disabled} {...props} />
@@ -226,7 +226,6 @@ function AdditionalSkeletonModesButtons() {
     <React.Fragment>
       <Tooltip title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree.">
         <ButtonComponent
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={newNodeNewTreeModeButtonStyle}
           value="active"
           onClick={toggleNewNodeNewTreeMode}
@@ -291,7 +290,6 @@ function CreateCellButton() {
       >
         <ButtonComponent
           onClick={handleCreateCell}
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{
             width: 36,
             paddingLeft: 10,
@@ -309,7 +307,6 @@ function CreateNewBoundingBoxButton() {
     <Tooltip title="Create a new bounding box centered around the current position.">
       <ButtonComponent
         onClick={handleAddNewUserBoundingBox}
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         style={{
           paddingLeft: 9,
           paddingRight: 9,
@@ -331,11 +328,11 @@ function CreateTreeButton() {
   const activeTree = useSelector((state) => toNullable(getActiveTree(state.tracing.skeleton)));
   const rgbColorString =
     activeTree != null
-        `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
+      ?  `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
       : "transparent";
   const activeTreeHint =
     activeTree != null
-        `The active tree id is ${activeTree.treeId}.`
+      ?  `The active tree id is ${activeTree.treeId}.`
       : "No tree is currently selected";
 
   const handleCreateTree = () => dispatch(createTreeAction());
@@ -352,7 +349,6 @@ function CreateTreeButton() {
       <Tooltip title={`Create a new Tree (C) – ${activeTreeHint}`}>
         <ButtonComponent
           onClick={handleCreateTree}
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{ ...narrowButtonStyle, paddingRight: 5 }}
         >
           <i
@@ -419,7 +415,6 @@ function ChangeBrushSizeButton() {
         }}
       >
         <ButtonComponent
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{
             width: 36,
             padding: 0,
@@ -525,7 +520,6 @@ export default function ToolbarView() {
         </RadioButtonWithTooltip>
 
         {hasSkeleton ? (
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; title: string; disabled... Remove this comment to see the full error message
           <RadioButtonWithTooltip
             title={skeletonToolDescription}
             disabledTitle=""

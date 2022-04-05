@@ -7,6 +7,8 @@ type ButtonComponentProp = {
   loading?: boolean;
   children?: React.ReactNode;
   title?: React.ReactNode;
+  style?: React.CSSProperties;
+  value?: string;
 };
 /*
  * A lightweight wrapper around <Button> to automatically blur the button

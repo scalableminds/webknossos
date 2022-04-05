@@ -1,5 +1,5 @@
 import { RouteComponentProps, withRouter } from "react-router-dom";
-import { Form, Button, Card, Input, Row } from "antd";
+import { Form, Button, Card, Input, Row, FormInstance } from "antd";
 import { MailOutlined, TagOutlined, CopyOutlined, KeyOutlined } from "@ant-design/icons";
 import React from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -34,8 +34,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     isFetchingData: false,
     isDeleting: false,
   };
-  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
-  formRef = React.createRef<typeof FormInstance>();
+  formRef = React.createRef<FormInstance>();
 
   componentDidMount() {
     this.fetchData();

@@ -158,8 +158,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   unblock: ((...args: Array<any>) => any) | null | undefined;
   // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
   blockTimeoutId: TimeoutID | null | undefined;
-  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
-  formRef = React.createRef<typeof FormInstance>();
+  formRef = React.createRef<FormInstance>();
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");

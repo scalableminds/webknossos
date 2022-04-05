@@ -124,8 +124,7 @@ export default function RecommendedConfigurationView({
   enabled,
   onChangeEnabled,
 }: {
-  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
-  form: typeof FormInstance;
+  form: FormInstance;
   enabled: boolean;
   onChangeEnabled: (arg0: boolean) => void;
 }) {

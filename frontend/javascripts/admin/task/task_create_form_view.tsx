@@ -126,22 +126,19 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
 }
 export function handleTaskCreationResponse(response: TaskCreationResponseContainer) {
   const { tasks, warnings } = response;
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'successfulTasks' implicitly has type 'an... Remove this comment to see the full error message
-  const successfulTasks = [];
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'failedTasks' implicitly has type 'any[]'... Remove this comment to see the full error message
-  const failedTasks = [];
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'teamName' implicitly has type 'any' in s... Remove this comment to see the full error message
-  let teamName = null;
-  const subHeadingStyle = {
+  const successfulTasks: APITask[] = [];
+  const failedTasks: string[] = [];
+  let teamName: string | null = null;
+  const subHeadingStyle: React.CSSProperties = {
     fontWeight: "bold",
   };
-  const displayResultsStyle = {
+  const displayResultsStyle: React.CSSProperties = {
     maxHeight: 300,
     overflow: "auto",
   };
+
   tasks.forEach((taskResponse: TaskCreationResponse, i: number) => {
     if (taskResponse.status === 200 && taskResponse.success) {
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'teamName' implicitly has an 'any' type.
       if (!teamName) {
         teamName = taskResponse.success.team;
       }
@@ -152,7 +149,6 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
     }
   });
 
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'successfulTasks' implicitly has an 'any[... Remove this comment to see the full error message
   const allProjectNames = _.uniq(successfulTasks.map((task) => task.projectName));
 
   if (allProjectNames.length > 1) {
@@ -181,7 +177,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
         </div>
       </div>
     ) : null;
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'failedTasks' implicitly has an 'any[]' t... Remove this comment to see the full error message
+
   const failedTasksAsString = failedTasks.join("");
   const successfulTasksContent =
     successfulTasks.length <= maxDisplayedTasksCount ? (
@@ -261,8 +257,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
 }
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {
-  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
-  formRef = React.createRef<typeof FormInstance>();
+  formRef = React.createRef<FormInstance>();
   state = {
     datasets: [],
     taskTypes: [],

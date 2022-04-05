@@ -55,8 +55,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class TaskSearchForm extends React.Component<Props, State> {
-  // @ts-expect-error ts-migrate(2693) FIXME: 'FormInstance' only refers to a type, but is being... Remove this comment to see the full error message
-  formRef = React.createRef<typeof FormInstance>();
+  formRef = React.createRef<FormInstance>();
   state = {
     users: [],
     projects: [],

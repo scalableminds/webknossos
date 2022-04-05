@@ -143,10 +143,9 @@ function ensureValidScaleOnInferredDataSource(
 class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, State> {
   formRef = React.createRef<FormInstance>();
   unblock: ((...args: Array<any>) => any) | null | undefined;
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
-  blockTimeoutId: TimeoutID | null | undefined;
-  // @ts-expect-error ts-migrate(2416) FIXME: Property 'state' in type 'DatasetImportView' is no... Remove this comment to see the full error message
-  state = {
+  blockTimeoutId: ReturnType<typeof setTimeout> | null | undefined;
+
+  state: State = {
     hasUnsavedChanges: false,
     dataset: null,
     datasetDefaultConfiguration: null,
@@ -167,7 +166,6 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
   async componentDidMount() {
     await this.fetchData();
     sendAnalyticsEvent("open_dataset_settings", {
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
     });
 

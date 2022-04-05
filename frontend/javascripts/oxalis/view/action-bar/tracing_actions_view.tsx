@@ -244,8 +244,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   modalWrapper: HTMLDivElement | null | undefined = null;
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
-  reopenTimeout: TimeoutID | null | undefined;
+  reopenTimeout: ReturnType<typeof setTimeout> | null | undefined;
   componentDidUpdate = () => {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
 

@@ -238,8 +238,7 @@ function renderEmptyMeshFileSelect() {
 }
 
 class SegmentsView extends React.Component<Props, State> {
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
-  intervalID: TimeoutID | null | undefined;
+  intervalID: ReturnType<typeof setTimeout> | null | undefined;
   state = {
     selectedSegmentId: null,
     activeMeshJobId: null,

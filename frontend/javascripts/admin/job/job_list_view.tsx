@@ -80,8 +80,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class JobListView extends React.PureComponent<Props, State> {
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
-  intervalID: TimeoutID | null | undefined;
+  intervalID: number | null | undefined;
   state = {
     isLoading: true,
     jobs: [],

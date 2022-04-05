@@ -12,8 +12,7 @@ type State = {
   visible: boolean;
 };
 export default class NewTaskDescriptionModal extends React.Component<Props, State> {
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
-  timeoutId: TimeoutID;
+  timeoutId: ReturnType<typeof setTimeout>;
   state = {
     mayClose: false,
     visible: true,

@@ -14,8 +14,7 @@ type State = {
 export default class DomVisibilityObserver extends React.Component<Props, State> {
   observer: IntersectionObserver | null | undefined;
   target: HTMLElement | null | undefined;
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
-  timeoutId: TimeoutID | null | undefined;
+  timeoutId: ReturnType<typeof setTimeout> | null | undefined;
   state = {
     isVisibleInDom: true,
     wasEverVisibleInDom: false,

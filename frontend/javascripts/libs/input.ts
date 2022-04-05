@@ -157,8 +157,7 @@ export class InputKeyboard {
   }
 
   attach(key: KeyboardKey, callback: KeyboardLoopHandler) {
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'delayTimeoutId' implicitly has type 'any... Remove this comment to see the full error message
-    let delayTimeoutId = null;
+    let delayTimeoutId: ReturnType<typeof setTimeout> | null = null;
     const binding = [
       key,
       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.

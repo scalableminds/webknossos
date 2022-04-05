@@ -156,8 +156,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'TimeoutID'.
-  blockTimeoutId: TimeoutID | null | undefined;
+  blockTimeoutId: ReturnType<typeof setTimeout> | null | undefined;
   formRef = React.createRef<FormInstance>();
 
   componentDidMount() {

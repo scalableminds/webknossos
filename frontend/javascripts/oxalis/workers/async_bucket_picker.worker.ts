@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'js-p... Remove this comment to see the full error message
 import PriorityQueue from "js-priority-queue";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import type { LoadingStrategy } from "oxalis/store";

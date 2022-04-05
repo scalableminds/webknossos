@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'js-p... Remove this comment to see the full error message
 import PriorityQueue from "js-priority-queue";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
@@ -791,7 +790,6 @@ class TracingApi {
     distanceMapVx[sourceNode.id] = 0;
     // The priority queue saves node id and distance tuples.
     const priorityQueue = new PriorityQueue<[number, number]>({
-      // @ts-expect-error ts-migrate(7031) FIXME: Binding element '_first' implicitly has an 'any' t... Remove this comment to see the full error message
       comparator: ([_first, firstDistance], [_second, secondDistance]) =>
         firstDistance <= secondDistance ? -1 : 1,
     });

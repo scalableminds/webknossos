@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'js-p... Remove this comment to see the full error message
 import PriorityQueue from "js-priority-queue";
 import _ from "lodash";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
@@ -44,7 +43,6 @@ class PullQueue {
     this.datastoreInfo = datastoreInfo;
     this.priorityQueue = new PriorityQueue({
       // small priorities take precedence
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'b' implicitly has an 'any' type.
       comparator: (b, a) => b.priority - a.priority,
     });
     this.batchCount = 0;

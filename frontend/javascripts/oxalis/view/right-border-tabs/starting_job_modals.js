@@ -100,7 +100,7 @@ function StartingJobModal(props: StartingJobModalProps) {
         rules={[
           {
             required: true,
-            message: `Please the ${layerType} that should be used for this job.`,
+            message: `Please select the ${layerType} that should be used for this job.`,
           },
         ]}
         hidden={layers.length === 1}
@@ -338,10 +338,10 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
       }}
       description={
         <p>
-          Start a job that take the current state of this merger mode tracing and apply it to the
+          Start a job that takes the current state of this merger mode tracing and applies it to the
           segmentation layer. This will create a new dataset which contains the merged segmentation
           layer. If this dataset has more than one segmentation layer, please select the
-          segmentation layer to the merging should be applied to.
+          segmentation layer to which the merging should be applied to.
         </p>
       }
     />

@@ -61,15 +61,15 @@ type PropsWithFormAndRouter = Props & {
   history: RouterHistory;
 };
 type TabKey = "data" | "general" | "defaultConfig";
-const AppliedSuggestionsEnum = {
-  Yes: "Yes",
-  No: "No",
-  NoAvailableSuggestions: "NoAvailableSuggestions",
+enum AppliedSuggestionsEnum {
+  Yes= "Yes",
+  No= "No",
+  NoAvailableSuggestions= "NoAvailableSuggestions",
 };
-const IsJSONFormatValidEnum = {
-  Yes: "Yes",
-  No: "No",
-  BrokenJson: "BrokenJson",
+enum IsJSONFormatValidEnum {
+  Yes= "Yes",
+  No= "No",
+  BrokenJson= "BrokenJson",
 };
 type DataSourceSettingsStatus = {
   appliedSuggestions: keyof typeof AppliedSuggestionsEnum;
@@ -526,7 +526,6 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     const hasErr = hasFormError;
 
     if (hasErr(err, "dataSource") || hasErr(err, "dataSourceJson")) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'data' does not exist on type '{}'.
       formErrors.data = true;
     }
 
@@ -617,9 +616,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       // Trigger validation manually, because fields may have been updated
       form
         .validateFields()
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
         .then((formValues) => this.submit(formValues))
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'errorInfo' implicitly has an 'any' type... Remove this comment to see the full error message
         .catch((errorInfo) => this.handleValidationFailed(errorInfo));
 
     // Need to force update of the SimpleAdvancedDataForm as removing a layer in the advanced tab does not update
@@ -636,7 +633,6 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     }
 
     const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
-    // @ts-expect-error ts-migrate(2698) FIXME: Spread types may only be created from object types... Remove this comment to see the full error message
     await updateDataset(this.props.datasetId, { ...dataset, ...datasetChangeValues });
 
     if (datasetDefaultConfiguration != null) {
@@ -653,13 +649,10 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
     if (
       dataset != null &&
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       !dataset.isForeign &&
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       !dataset.dataStore.isConnector &&
       this.didDatasourceChange(dataSource)
     ) {
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
@@ -682,7 +675,6 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       return null;
     }
 
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     const { status } = this.state.dataset.dataSource;
     const messageElements = [];
 
@@ -734,7 +726,6 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       ) => (
         <Alert
           key={i}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'ReactNod... Remove this comment to see the full error message
           message={Object.values(message)[0]}
           // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type '"info" | ... Remove this comment to see the full error message
           type={Object.keys(message)[0]}
@@ -810,7 +801,6 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const confirmString =
       this.props.isEditingMode ||
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       (this.state.dataset != null && this.state.dataset.dataSource.status == null)
         ? "Save"
         : "Import";
@@ -880,11 +870,9 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
                       key="SimpleAdvancedDataForm"
                       isReadOnlyDataset={
                         this.state.dataset != null &&
-                        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
                         (this.state.dataset.isForeign || this.state.dataset.dataStore.isConnector)
                       }
                       form={form}
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type '"simple" ... Remove this comment to see the full error message
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                       onChange={(activeEditMode) => {
                         const currentForm = this.formRef.current;

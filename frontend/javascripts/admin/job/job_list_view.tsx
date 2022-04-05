@@ -183,7 +183,6 @@ class JobListView extends React.PureComponent<Props, State> {
     if (job.state === "PENDING" || job.state === "STARTED") {
       return (
         <AsyncLink
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
           href="#"
           onClick={async () => {
             const isDeleteConfirmed = await confirmAsync({

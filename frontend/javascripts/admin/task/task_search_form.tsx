@@ -158,7 +158,6 @@ class TaskSearchForm extends React.Component<Props, State> {
       return;
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'validFormValues' implicitly has an 'any... Remove this comment to see the full error message
     form.validateFields().then((validFormValues) => {
       this.handleFormFinish(isRandom, this.props.onChange, validFormValues);
     });
@@ -174,7 +173,6 @@ class TaskSearchForm extends React.Component<Props, State> {
 
     form
       .validateFields()
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
       .then((formValues) =>
         this.handleFormFinish(false, this.props.onDownloadAllTasks, formValues),
       );

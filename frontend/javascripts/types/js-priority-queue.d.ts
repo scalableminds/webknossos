@@ -1,6 +1,5 @@
 declare module "js-priority-queue" {
-  
-    declare class PriorityQueue<T> {
+  declare class PriorityQueue<T> {
     length: number;
     constructor(
       options?: Partial<{
@@ -12,7 +11,7 @@ declare module "js-priority-queue" {
     peek(): T;
     dequeue(): T;
     clear(): void;
-  } 
-  
+  }
+
   export default PriorityQueue;
 }

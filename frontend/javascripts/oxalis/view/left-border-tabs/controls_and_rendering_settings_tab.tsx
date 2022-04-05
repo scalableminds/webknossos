@@ -48,10 +48,10 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   // eslint-disable-next-line camelcase
   UNSAFE_componentWillMount() {
     // cache onChange handler
-    this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName) =>
+    this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName: keyof UserConfiguration) =>
       _.partial(this.props.onChangeUser, propertyName),
     );
-    this.onChangeDataset = _.mapValues(this.props.datasetConfiguration, (__, propertyName) =>
+    this.onChangeDataset = _.mapValues(this.props.datasetConfiguration, (__, propertyName ) =>
       _.partial(this.props.onChangeDataset, propertyName),
     );
   }

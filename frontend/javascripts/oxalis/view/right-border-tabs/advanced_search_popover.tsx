@@ -165,7 +165,6 @@ export default class AdvancedSearchPopover<
                   />
                   <Tooltip title="Previous (shift+enter)">
                     <ButtonComponent
-                      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                       style={{
                         width: 40,
                       }}
@@ -177,7 +176,6 @@ export default class AdvancedSearchPopover<
                   </Tooltip>
                   <Tooltip title="Next (enter)">
                     <ButtonComponent
-                      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                       style={{
                         width: 40,
                       }}

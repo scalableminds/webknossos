@@ -25,6 +25,8 @@
     "@types/react-dom": "^17.0.14",
     "@types/react-redux": "^7.1.23",
     "@types/react-router-dom": "^5.3.3",
+    "@typescript-eslint/eslint-plugin": "^5.18.0",
+    "@typescript-eslint/parser": "^5.18.0",
     "abort-controller": "^3.0.0",
     "ava": "^3.13.0",
     "babel-eslint": "^9.0.0",
@@ -44,8 +46,6 @@
     "eslint-config-prettier": "^3.1.0",
     "eslint-import-resolver-webpack": "^0.13.2",
     "eslint-plugin-eslint-comments": "^3.1.1",
-    "eslint-plugin-flow-header": "^0.2.0",
-    "eslint-plugin-flowtype": "^3.0.0",
     "eslint-plugin-import": "^2.14.0",
     "eslint-plugin-jsx-a11y": "^6.1.2",
     "eslint-plugin-react": "^7.12.4",
@@ -110,13 +110,13 @@
     "remove-snapshots": "rm -rf frontend/javascripts/test/snapshots/public/test-bundle/test/backend-snapshot-tests/ && rm -rf frontend/javascripts/test/snapshots/public/test-bundle/test/enzyme/",
     "remove-snapshots-all": "rm -rf frontend/javascripts/test/snapshots/",
     "refresh-snapshots": "yarn remove-snapshots && docker-compose down && docker-compose up e2e-tests",
-    "lint": "node_modules/.bin/eslint --cache --quiet frontend/javascripts/ tools/",
-    "lintd": "node_modules/.bin/eslint_d --cache --quiet frontend/javascripts/ tools/ # lintd uses a daemon for better speed (especially useful for hooking up to editors)",
-    "lint-no-cache": "node_modules/.bin/eslint --quiet frontend/javascripts/ tools/",
+    "lint": "node_modules/.bin/eslint --cache --quiet --ext .ts,.tsx frontend/javascripts/",
+    "lintd": "node_modules/.bin/eslint_d --cache --quiet --ext .ts,.tsx frontend/javascripts/ # lintd uses a daemon for better speed (especially useful for hooking up to editors)",
+    "lint-no-cache": "node_modules/.bin/eslint --quiet --ext .ts,.tsx frontend/javascripts/",
     "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.ts\" \"frontend/javascripts/**/*.tsx\" \"tools/**/*.js\"",
     "pretty-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
     "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",
-    "lint-fix": "node_modules/.bin/eslint --cache --fix --quiet frontend/javascripts/ tools/",
+    "lint-fix": "node_modules/.bin/eslint --cache --fix --quiet --ext .ts,.tsx frontend/javascripts/ tools/",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.js frontend/javascripts/oxalis/api/api_latest.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/refresh_schema.sh && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
     "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; ./tools/postgres/set_jobs.sh true",
@@ -128,7 +128,10 @@
     "postinstall": "cd tools/proxy && yarn install"
   },
   "lint-staged": {
-    "*.js": [
+    "*.ts": [
+      "eslint --fix"
+    ],
+    "*.tsx": [
       "eslint --fix"
     ]
   },

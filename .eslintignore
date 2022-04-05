@@ -1,2 +1,2 @@
-frontend/javascripts/test/snapshots/flow-check/*
+*.d.ts
 tools/proxy/node_modules/*

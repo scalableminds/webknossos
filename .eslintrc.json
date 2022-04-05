@@ -1,21 +1,21 @@
 {
   "extends": [
-    "airbnb",
+    // "airbnb",
+    "plugin:@typescript-eslint/eslint-recommended",
     "plugin:eslint-comments/recommended",
-    "plugin:flowtype/recommended",
     "plugin:react/recommended",
     "prettier",
     "prettier/flowtype",
     "prettier/react"
   ],
-  "plugins": ["react", "react-hooks", "import", "flowtype", "flow-header"],
+  "plugins": ["@typescript-eslint","react", "react-hooks", "import", "flowtype", "flow-header"],
   "parserOptions": {
     "ecmaVersion": 8
   },
   "env": {
     "browser": true
   },
-  "parser": "babel-eslint",
+  "parser": "@typescript-eslint/parser",
   "settings": {
     "import/resolver": "webpack",
     "import/ignore": ["$three.*"],
@@ -84,7 +84,6 @@
     "react/require-default-props": "off",
     "react-hooks/rules-of-hooks": "error",
     "import/newline-after-import": "off",
-    "flow-header/flow-header": "error",
     "spaced-comment": "off",
     "react/sort-comp": [
       "error",

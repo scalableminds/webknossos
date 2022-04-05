@@ -93,7 +93,6 @@ function persistLayoutConfigs() {
 }
 
 layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) => {
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   storeLayoutConfig(getDefaultLayouts()[layoutKey], layoutKey, activeLayout);
 });
 
@@ -103,14 +102,12 @@ export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string)
   const { storedLayouts } = Store.getState().uiInformation;
 
   if (!storedLayouts[layoutKey]) {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return getDefaultLayouts()[layoutKey];
   }
 
   const layout = storedLayouts[layoutKey][activeLayoutName];
 
   if (!layout) {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return getDefaultLayouts()[layoutKey];
   }
 

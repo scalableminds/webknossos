@@ -371,7 +371,6 @@ class ReactRouter extends React.Component<Props> {
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                 ) => (
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialSearchValue: any; }' is not assigna... Remove this comment to see the full error message
                   <TaskTypeListView initialSearchValue={location.hash.slice(1)} />
                 )}
                 exact
@@ -385,7 +384,6 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/edit"
                 render={({ match }: ContextRouter) => (
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ taskTypeId: any; }' is not assignable to t... Remove this comment to see the full error message
                   <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                 )}
               />
@@ -394,7 +392,6 @@ class ReactRouter extends React.Component<Props> {
                 path="/taskTypes/:taskTypeId/tasks"
                 render={({ match }: ContextRouter) => (
                   <TaskListView
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialFieldValues: { taskTypeId: any; }; ... Remove this comment to see the full error message
                     initialFieldValues={{
                       taskTypeId: match.params.taskTypeId || "",
                     }}
@@ -434,7 +431,6 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/organizations/:organizationName/edit"
-                // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'match' implicitly has an 'any' ty... Remove this comment to see the full error message
                 render={({ match }) => (
                   <OrganizationEditView organizationName={match.params.organizationName || ""} />
                 )}

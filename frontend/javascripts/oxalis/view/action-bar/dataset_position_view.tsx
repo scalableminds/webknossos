@@ -125,7 +125,6 @@ class DatasetPositionView extends PureComponent<Props> {
           <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
             <ButtonComponent
               onClick={this.copyPositionToClipboard}
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               style={copyPositionStyle}
               className="hide-on-small-screen"
             >
@@ -153,7 +152,6 @@ class DatasetPositionView extends PureComponent<Props> {
             <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
               <ButtonComponent
                 onClick={this.copyRotationToClipboard}
-                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                 style={{
                   padding: "0 10px",
                 }}

@@ -117,7 +117,6 @@ class SaveButton extends React.PureComponent<Props, State> {
     return (
       <ButtonComponent
         key="save-button"
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         type="primary"
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}

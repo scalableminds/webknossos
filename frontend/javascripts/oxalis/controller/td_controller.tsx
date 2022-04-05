@@ -110,7 +110,6 @@ class TDController extends React.PureComponent<Props> {
       // The rotation center of this viewport is not updated to the new position after selecing a node in the viewport.
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
       getActiveNode(this.props.tracing.skeleton).map((activeNode) =>
         this.setTargetAndFixPosition(activeNode.position),
       );

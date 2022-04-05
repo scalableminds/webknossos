@@ -227,7 +227,6 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
             style={{
               fontSize: 14,
             }}
-            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           >{`Layouts for ${mapLayoutKeysToLanguage[layoutKey]}`}</span>
         }
       >
@@ -528,7 +527,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       restrictions.allowFinish && task ? (
         <ButtonComponent
           key="next-button"
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           icon={<VerticalLeftOutlined />}
           onClick={this.handleFinishAndGetNextTask}
         >
@@ -538,7 +536,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const reopenTaskButton = this.state.isReopenAllowed ? (
       <ButtonComponent
         key="reopen-button"
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         icon={<VerticalRightOutlined />}
         onClick={this.handleReopenTask}
         danger

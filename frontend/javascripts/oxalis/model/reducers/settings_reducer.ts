@@ -91,7 +91,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_USER_SETTING": {
       const { propertyName } = action;
       let { value } = action;
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       const settingSpec = userSettings[propertyName];
 
       if (settingSpec != null && settingSpec.type === "number") {
@@ -121,7 +120,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_TEMPORARY_SETTING": {
       const { propertyName, value } = action;
-      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateTemporaryConfig(state, {
         [propertyName]: value,
       });
@@ -129,9 +127,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "TOGGLE_TEMPORARY_SETTING": {
       const { propertyName } = action;
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       const value: any = !state.temporaryConfiguration[propertyName];
-      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateTemporaryConfig(state, {
         [propertyName]: value,
       });
@@ -155,7 +151,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       }
 
       return updateKey3(newState, "datasetConfiguration", "layers", layerName, {
-        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [propertyName]: value,
       });
     }

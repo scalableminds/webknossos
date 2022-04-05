@@ -70,7 +70,6 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
   const { propertyName } = action;
 
   if (propertyName === "moveValue" || propertyName === "moveValue3d") {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
     const moveValue = yield* select((state) => state.userConfiguration[propertyName]);
     const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
     Toast.success(moveValueMessage, {

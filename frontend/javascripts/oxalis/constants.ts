@@ -167,7 +167,7 @@ export enum ControlModeEnum {
   VIEW= "VIEW",
 };
 export type ControlMode = keyof typeof ControlModeEnum;
-export const enum AnnotationToolEnum {
+export enum AnnotationToolEnum {
   MOVE= "MOVE",
   SKELETON= "SKELETON",
   BRUSH= "BRUSH",

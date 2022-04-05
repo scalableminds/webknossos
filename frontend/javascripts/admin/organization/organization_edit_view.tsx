@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { RouteComponentProps, withRouter } from "react-router-dom";
 import { Form, Button, Card, Input, Row } from "antd";
 import { MailOutlined, TagOutlined, CopyOutlined, KeyOutlined } from "@ant-design/icons";

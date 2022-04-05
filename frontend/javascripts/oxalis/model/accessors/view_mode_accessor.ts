@@ -42,7 +42,6 @@ export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rec
     return state.viewModeData.arbitrary.inputCatcherRect;
   } else {
     // $FlowIssue[prop-missing] Flow does not understand that viewport cannot be ArbitraryViewport at this point
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return state.viewModeData.plane.inputCatcherRects[viewport];
   }
 }

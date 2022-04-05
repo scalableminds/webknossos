@@ -11,7 +11,10 @@ import {
 import { useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
 import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
-import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getReadableNameByVolumeTracingId,
+  getActiveSegmentationTracingLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import { type UserBoundingBox } from "oxalis/store";
@@ -40,12 +43,13 @@ type StartingJobModalProps = {
   isBoundingBoxConfigurable?: boolean,
   chooseSegmentationLayer?: boolean,
   suggestedDatasetSuffix: string,
+  fixedLayerName?: string,
 };
 
 function StartingJobModal(props: StartingJobModalProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
-  const { handleClose, jobName, description, jobApiCall } = props;
+  const { handleClose, jobName, description, jobApiCall, fixedLayerName } = props;
   const userBoundingBoxes = useSelector(state => getUserBoundingBoxesFromState(state));
   const tracing = useSelector(store => store.tracing);
   const dataset = useSelector(store => store.dataset);
@@ -103,7 +107,7 @@ function StartingJobModal(props: StartingJobModalProps) {
             message: `Please the ${layerType} that should be used for this job.`,
           },
         ]}
-        hidden={layers.length === 1}
+        hidden={layers.length === 1 && fixedLayerName == null}
       >
         <Select
           showSearch
@@ -112,6 +116,7 @@ function StartingJobModal(props: StartingJobModalProps) {
           filterOption={(input, option) =>
             option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
           }
+          disabled={fixedLayerName}
         >
           {layers.map(layer => {
             const readableName =
@@ -185,6 +190,10 @@ function StartingJobModal(props: StartingJobModalProps) {
     </div>
   );
 
+  let initialLayerName = layers.length === 1 ? layers[0].name : null;
+  if (fixedLayerName) {
+    initialLayerName = fixedLayerName;
+  }
   return (
     <Modal
       title={`Start ${capitalizeWords(jobName)}`}
@@ -210,10 +219,7 @@ function StartingJobModal(props: StartingJobModalProps) {
       <Form
         onFinish={startJob}
         layout="vertical"
-        initialValues={{
-          layerName: layers.length === 1 ? layers[0].name : null,
-          boundingBoxId: null,
-        }}
+        initialValues={{ layerName: initialLayerName, boundingBoxId: null }}
       >
         <DatasetNameFormItem
           label="New Dataset Name"
@@ -314,12 +320,14 @@ export function NeuronInferralModal({ handleClose }: Props) {
 export function ApplyMergerModeModal({ handleClose }: Props) {
   const dataset = useSelector(state => state.dataset);
   const tracing = useSelector(store => store.tracing);
+  const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   return (
     <StartingJobModal
       handleClose={handleClose}
       jobName="apply merger mode"
       suggestedDatasetSuffix="with_merged_segmentation"
       chooseSegmentationLayer
+      fixedLayerName={activeSegmentationTracingLayer?.name}
       jobApiCall={async (newDatasetName, segmentationLayer) => {
         const volumeLayerName =
           segmentationLayer.tracingId != null

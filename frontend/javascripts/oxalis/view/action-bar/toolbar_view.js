@@ -42,6 +42,7 @@ import Constants, {
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
+import features from "features";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -242,7 +243,7 @@ function AdditionalSkeletonModesButtons() {
           />
         </Tooltip>
       )}
-      {showApplyMergerModeModal && (
+      {features().jobsEnabled && showApplyMergerModeModal && (
         <ApplyMergerModeModal handleClose={() => setShowApplyMergerModeModal(false)} />
       )}
     </React.Fragment>

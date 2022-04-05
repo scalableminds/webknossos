@@ -1083,13 +1083,20 @@ function startSegmentationAnnotationDependentJob(
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIJob> {
-  const volumeLayerArg = volumeLayerName != null ? `&volumeLayerName=${volumeLayerName}` : "";
-  return Request.receiveJSON(
-    `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}?fallbackLayerName=${fallbackLayerName}${volumeLayerArg}&annotationId=${annotationId}&annotationType=${annotationType}&newDatasetName=${newDatasetName}`,
-    {
-      method: "POST",
-    },
+  const requestURL = new URL(
+    `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}`,
+    location,
   );
+  if (volumeLayerName != null) {
+    requestURL.searchParams.append("volumeLayerName", volumeLayerName);
+  }
+  requestURL.searchParams.append("fallbackLayerName", fallbackLayerName);
+  requestURL.searchParams.append("annotationId", annotationId);
+  requestURL.searchParams.append("annotationType", annotationType);
+  requestURL.searchParams.append("newDatasetName", newDatasetName);
+  return Request.receiveJSON(requestURL.href, {
+    method: "POST",
+  });
 }
 
 export function startGlobalizeFloodfillsJob(

@@ -140,7 +140,6 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         </Item>
         <Item key={`${annotation.id}-download`}>
           <AsyncLink
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
             href="#"
             onClick={() => {
               const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
@@ -218,7 +217,6 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             })}
           </tbody>
         </table>
-        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         {this.state.currentAnnotation && this.state.currentAnnotation.user ? (
           <TransferTaskModal
             visible={this.state.isTransferModalVisible}

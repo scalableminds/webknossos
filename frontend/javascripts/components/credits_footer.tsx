@@ -1,5 +1,5 @@
 import { Layout } from "antd";
-import { Link, withRouter } from "react-router-dom";
+import { Link, RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
 const { Footer } = Layout;
 
@@ -61,4 +61,4 @@ const creditsFooter = () => (
   </Footer>
 );
 
-export default withRouter(creditsFooter);
+export default withRouter<RouteComponentProps, any>(creditsFooter);

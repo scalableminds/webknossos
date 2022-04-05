@@ -10,7 +10,7 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps, RouterHistory } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
@@ -270,7 +270,6 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         {isAdmin ? (
           <div>
             <AsyncLink
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
               href="#"
               onClick={() => {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
@@ -437,8 +436,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       short: this.state.showFinishedTasks || this.props.isAdminView,
     });
 
-    // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'task' implicitly has an 'any' typ... Remove this comment to see the full error message
-    const TaskCardTitle = ({ task }) => (
+    const TaskCardTitle = ({ task }: {task: APITaskWithAnnotation}) => (
       <React.Fragment>
         <span
           style={{
@@ -451,7 +449,6 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         {getVolumeDescriptors(task.annotation).length === 0 ? null : (
           <Tag color="orange">volume</Tag>
         )}
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mode' implicitly has an 'any' type.
         {task.type.settings.allowedModes.map((mode) => (
           <Tag key={mode}>{mode}</Tag>
         ))}
@@ -536,7 +533,6 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       <div>
         <div className="pull-right">
           <AsyncButton
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; type: string; icon: Elem... Remove this comment to see the full error message
             type="primary"
             icon={<UserAddOutlined />}
             onClick={() => this.confirmGetNewTask()}
@@ -599,4 +595,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps)
-export default connector(withRouter(DashboardTaskListView));
+export default connector(withRouter<RouteComponentProps & Props, any>(DashboardTaskListView));

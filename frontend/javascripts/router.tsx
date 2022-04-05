@@ -177,7 +177,6 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
@@ -209,7 +208,6 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/users/:userId/details"
                 render={({ match }: ContextRouter) => (
@@ -221,52 +219,44 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/users"
                 component={UserListView}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/teams"
                 component={TeamListView}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/statistics"
                 component={StatisticView}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/reports/projectProgress"
                 component={ProjectProgressReportView}
                 exact
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/reports/openTasks"
                 component={OpenTasksReportView}
                 exact
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/tasks"
                 component={TaskListView}
                 exact
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/tasks/create"
                 component={TaskCreateView}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
                 render={({ match }: ContextRouter) => (
@@ -274,12 +264,10 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId"
                 render={({ match }: ContextRouter) => (
                   <TaskListView
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialFieldValues: { taskId: any; }; }' i... Remove this comment to see the full error message
                     initialFieldValues={{
                       taskId: match.params.taskId || "",
                     }}
@@ -287,7 +275,6 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/projects"
                 render={(
@@ -296,13 +283,11 @@ class ReactRouter extends React.Component<Props> {
                 exact
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
                 render={() => <ProjectCreateView />}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/tasks"
                 render={({ match }: ContextRouter) => (
@@ -315,7 +300,6 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/edit"
                 render={({ match }: ContextRouter) => (
@@ -323,7 +307,6 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/annotations/:type/:id"
                 render={this.tracingView}
@@ -343,13 +326,11 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
                 render={() => <DatasetAddView />}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/import"
                 render={({ match }: ContextRouter) => (
@@ -368,7 +349,6 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
@@ -386,7 +366,6 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
                 render={(
@@ -398,13 +377,11 @@ class ReactRouter extends React.Component<Props> {
                 exact
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/create"
                 component={TaskTypeCreateView}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/edit"
                 render={({ match }: ContextRouter) => (
@@ -413,7 +390,6 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/tasks"
                 render={({ match }: ContextRouter) => (
@@ -426,7 +402,6 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/projects"
                 render={({ match }: ContextRouter) => (
@@ -434,13 +409,11 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
                 render={() => <ScriptCreateView />}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/scripts/:scriptId/edit"
                 render={({ match }: ContextRouter) => (
@@ -448,20 +421,17 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/scripts"
                 component={ScriptListView}
                 exact
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/jobs"
                 render={() => <JobListView />}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/organizations/:organizationName/edit"
                 // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'match' implicitly has an 'any' ty... Remove this comment to see the full error message
@@ -476,19 +446,16 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"
                 render={() => <TimeLineView />}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/auth/token"
                 component={AuthTokenView}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; co... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/auth/changePassword"
                 component={ChangePasswordView}
@@ -549,7 +516,6 @@ class ReactRouter extends React.Component<Props> {
                 render={this.tracingSandbox}
               />
               <SecuredRoute
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAuthenticated: boolean; path: string; re... Remove this comment to see the full error message
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (

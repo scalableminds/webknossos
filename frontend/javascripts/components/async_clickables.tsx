@@ -3,9 +3,13 @@ import { LoadingOutlined } from "@ant-design/icons";
 import * as React from "react";
 const { useState, useEffect, useRef } = React;
 type Props = {
+  type?: string;
+  icon?: React.ReactNode;
+  href: string;
   onClick: (arg0: React.SyntheticEvent) => Promise<any>;
   hideContentWhenLoading?: boolean;
   children?: React.ReactNode;
+  disabled?: boolean;
 };
 
 function useLoadingClickHandler(originalOnClick: (arg0: React.SyntheticEvent) => Promise<any>) {

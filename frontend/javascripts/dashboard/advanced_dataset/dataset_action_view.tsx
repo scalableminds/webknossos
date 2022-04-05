@@ -9,7 +9,7 @@ import {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { Link, withRouter } from "react-router-dom";
+import { Link, RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
 import { Unicode } from "oxalis/constants";
 import type { APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
@@ -245,5 +245,4 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   }
 }
 
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof DatasetActionView' is not... Remove this comment to see the full error message
-export default withRouter(DatasetActionView);
+export default withRouter<RouteComponentProps & Props, any>(DatasetActionView);

@@ -16,7 +16,7 @@ import Toast from "libs/toast";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import Store from "oxalis/store";
+import Store, { OxalisState } from "oxalis/store";
 import UrlManager from "oxalis/controller/url_manager";
 import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
@@ -72,10 +72,8 @@ export async function copyUrlToClipboard(url: string) {
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const annotationVisibility = useSelector((state) => state.tracing.visibility);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-  const controlMode = useSelector((state) => state.temporaryConfiguration.controlMode);
+  const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
+  const controlMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
   const isTraceMode = controlMode === ControlModeEnum.TRACE;
@@ -114,7 +112,6 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 
   return (
     <ButtonComponent
-      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       icon={<ShareAltOutlined />}
       title={messages["tracing.copy_sharing_link"]}
       onClick={copySharingUrl}
@@ -124,12 +121,9 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 }
 export default function ShareModalView(props: Props) {
   const { isVisible, onOk, annotationType, annotationId } = props;
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'Default... Remove this comment to see the full error message
-  const dataset = useSelector((state) => state.dataset);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const annotationVisibility = useSelector((state) => state.tracing.visibility);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const restrictions = useSelector((state) => state.tracing.restrictions);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
+  const restrictions = useSelector((state: OxalisState) => state.tracing.restrictions);
   const [visibility, setVisibility] = useState(annotationVisibility);
   const [sharedTeams, setSharedTeams] = useState([]);
   const sharingToken = useDatasetSharingToken(dataset);

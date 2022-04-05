@@ -22,6 +22,7 @@ import {
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
+import { OxalisState } from "oxalis/store";
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
@@ -133,12 +134,9 @@ function RightClickShortcut({ actionInfos }) {
 }
 
 function ShortcutsInfo() {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'uiInformation' does not exist on type 'D... Remove this comment to see the full error message
-  const activeTool = useSelector((state) => state.uiInformation.activeTool);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
-  const useLegacyBindings = useSelector((state) => state.userConfiguration.useLegacyBindings);
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
-  const isPlaneMode = useSelector((state) => getIsPlaneMode(state));
+  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
+  const useLegacyBindings = useSelector((state: OxalisState) => state.userConfiguration.useLegacyBindings);
+  const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
   const isAltPressed = useKeyPress("Alt");
@@ -268,26 +266,18 @@ function maybeLabelWithSegmentationWarning(hasUint64Segmentation: boolean, label
 }
 
 function Infos() {
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
-  const activeResolution = useSelector((state) => getCurrentResolution(state));
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-  const mousePosition = useSelector((state) => state.temporaryConfiguration.mousePosition);
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
-  const isPlaneMode = useSelector((state) => getIsPlaneMode(state));
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const isSkeletonAnnotation = useSelector((state) => state.tracing.skeleton != null);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const isVolumeAnnotation = useSelector((state) => state.tracing.volume != null);
-  const activeCellId = useSelector((state) =>
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
+  const activeResolution = useSelector((state: OxalisState) => getCurrentResolution(state));
+  const mousePosition = useSelector((state: OxalisState) => state.temporaryConfiguration.mousePosition);
+  const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
+  const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const isVolumeAnnotation = useSelector((state: OxalisState) => state.tracing.volume != null);
+  const activeCellId = useSelector((state: OxalisState) =>
     state.tracing.volume ? state.tracing.volume.activeCellId : null,
   );
-  const activeNodeId = useSelector((state) =>
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
+  const activeNodeId = useSelector((state: OxalisState) =>
     state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
   );
-  const activeTreeId = useSelector((state) =>
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
+  const activeTreeId = useSelector((state: OxalisState) =>
     state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
   );
   const dispatch = useDispatch();
@@ -301,15 +291,12 @@ function Infos() {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
   const onChangeActiveTreeId = (id) => dispatch(setActiveTreeAction(id));
 
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
-  const hasVisibleSegmentation = useSelector((state) => getVisibleSegmentationLayer(state) != null);
-  const hasUint64Segmentation = useSelector((state) => {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
+  const hasVisibleSegmentation = useSelector((state: OxalisState) => getVisibleSegmentationLayer(state) != null);
+  const hasUint64Segmentation = useSelector((state: OxalisState) => {
     const segmentationLayer = getVisibleSegmentationLayer(state);
     return segmentationLayer ? segmentationLayer.originalElementClass === "uint64" : false;
   });
-  const globalMousePosition = useSelector((state) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'viewModeData' does not exist on type 'De... Remove this comment to see the full error message
+  const globalMousePosition = useSelector((state: OxalisState) => {
     const { activeViewport } = state.viewModeData.plane;
 
     if (mousePosition && activeViewport !== OrthoViews.TDView) {

@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { Button, notification } from "antd";
 import { useSelector } from "react-redux";
 import features from "features";
+import { OxalisState } from "oxalis/store";
 
 function showWelcomeToast() {
   notification.open({
@@ -48,8 +49,7 @@ function showWelcomeToast() {
 }
 
 export default function WelcomeToast() {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeUser' does not exist on type 'Defa... Remove this comment to see the full error message
-  const activeUser = useSelector((state) => state.activeUser);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   useEffect(() => {
     if (!features().isDemoInstance) {
       return;

@@ -37,7 +37,7 @@ import Constants, {
   MappingStatusEnum,
 } from "oxalis/constants";
 import Model from "oxalis/model";
-import Store from "oxalis/store";
+import Store, { OxalisState } from "oxalis/store";
 const narrowButtonStyle = {
   paddingLeft: 10,
   paddingRight: 8,
@@ -142,7 +142,7 @@ const RadioButtonWithTooltip = ({
 function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
-  const overwriteMode = useSelector((state) => state.userConfiguration.overwriteMode);
+  const overwriteMode = useSelector((state: OxalisState) => state.userConfiguration.overwriteMode);
   const previousIsControlPressed = usePrevious(isControlPressed);
   const previousIsShiftPressed = usePrevious(isShiftPressed);
   useEffect(() => {
@@ -205,11 +205,9 @@ function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
 function AdditionalSkeletonModesButtons() {
   const dispatch = useDispatch();
   const isMergerModeEnabled = useSelector(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-    (state) => state.temporaryConfiguration.isMergerModeEnabled,
+    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
-  const isNewNodeNewTreeModeOn = useSelector((state) => state.userConfiguration.newNodeNewTree);
+  const isNewNodeNewTreeModeOn = useSelector((state: OxalisState) => state.userConfiguration.newNodeNewTree);
 
   const toggleNewNodeNewTreeMode = () =>
     dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
@@ -258,11 +256,9 @@ const mapId = (volumeTracing, id) => {
 };
 
 function CreateCellButton() {
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
-  const volumeTracing = useSelector((state) => getActiveSegmentationTracing(state));
+  const volumeTracing = useSelector((state: OxalisState) => getActiveSegmentationTracing(state));
   const unmappedActiveCellId = volumeTracing != null ? volumeTracing.activeCellId : 0;
-  const { mappingStatus, mappingColors } = useSelector((state) =>
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
+  const { mappingStatus, mappingColors } = useSelector((state: OxalisState) =>
     getMappingInfoForVolumeTracing(state, volumeTracing != null ? volumeTracing.tracingId : null),
   );
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
@@ -325,7 +321,7 @@ function CreateNewBoundingBoxButton() {
 function CreateTreeButton() {
   const dispatch = useDispatch();
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const activeTree = useSelector((state) => toNullable(getActiveTree(state.tracing.skeleton)));
+  const activeTree = useSelector((state: OxalisState) => toNullable(getActiveTree(state.tracing.skeleton)));
   const rgbColorString =
     activeTree != null
       ?  `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
@@ -375,10 +371,8 @@ function CreateTreeButton() {
 }
 
 function ChangeBrushSizeButton() {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
-  const brushSize = useSelector((state) => state.userConfiguration.brushSize);
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'DefaultRootState' is not assigna... Remove this comment to see the full error message
-  const maximumBrushSize = useSelector((state) => getMaximumBrushSize(state));
+  const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
+  const maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
   return (
     <Tooltip title="Change the brush size">
       <Popover
@@ -436,17 +430,12 @@ function ChangeBrushSizeButton() {
 }
 
 export default function ToolbarView() {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const hasVolume = useSelector((state) => state.tracing.volumes.length > 0);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const hasSkeleton = useSelector((state) => state.tracing.skeleton != null);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-  const viewMode = useSelector((state) => state.temporaryConfiguration.viewMode);
+  const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
+  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const viewMode = useSelector((state: OxalisState) => state.temporaryConfiguration.viewMode);
   const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
-  const useLegacyBindings = useSelector((state) => state.userConfiguration.useLegacyBindings);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'uiInformation' does not exist on type 'D... Remove this comment to see the full error message
-  const activeTool = useSelector((state) => state.uiInformation.activeTool);
+  const useLegacyBindings = useSelector((state: OxalisState) => state.userConfiguration.useLegacyBindings);
+  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
   const maybeResolutionWithZoomStep = useSelector(
     getRenderableResolutionForActiveSegmentationTracing,
   );
@@ -774,8 +763,7 @@ const handleSetFillMode = (event: {
 };
 
 function FillModeSwitch() {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'userConfiguration' does not exist on typ... Remove this comment to see the full error message
-  const fillMode = useSelector((state) => state.userConfiguration.fillMode);
+  const fillMode = useSelector((state: OxalisState) => state.userConfiguration.fillMode);
   return (
     <Radio.Group
       value={fillMode}

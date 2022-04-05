@@ -20,6 +20,8 @@ import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_boundin
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import features from "features";
+import { APIActiveUser } from "types/api_flow_types";
+import { OxalisState } from "oxalis/store";
 // NOTE: The regexp and getBBoxNameForPartialFloodfill need to stay in sync.
 // That way, bboxes created by the floodfill can be detected as such and
 // a job for globalizing floodfills can be started.
@@ -36,14 +38,15 @@ export function getBBoxNameForPartialFloodfill(
 }
 
 function StartGlobalizeFloodfillsModal({
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'onStartGlobalization' implicitly ... Remove this comment to see the full error message
   onStartGlobalization,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'handleClose' implicitly has an 'a... Remove this comment to see the full error message
   handleClose,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeUser' implicitly has an 'an... Remove this comment to see the full error message
   activeUser,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'initialName' implicitly has an 'a... Remove this comment to see the full error message
   initialName,
+}: {
+  onStartGlobalization: () => void;
+  handleClose: () => void;
+  activeUser: APIActiveUser;
+  initialName: string;
 }) {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
   const handleSubmit = async (formValues) => {
@@ -107,12 +110,9 @@ function StartGlobalizeFloodfillsModal({
 export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
   const [isGlobalizeFloodfillsModalVisible, setIsGlobalizeFloodfillsModalVisible] = useState(false);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const tracing = useSelector((state) => state.tracing);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'Default... Remove this comment to see the full error message
-  const dataset = useSelector((state) => state.dataset);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeUser' does not exist on type 'Defa... Remove this comment to see the full error message
-  const activeUser = useSelector((state) => state.activeUser);
+  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const { userBoundingBoxes } = getSomeTracing(tracing);
   const dispatch = useDispatch();

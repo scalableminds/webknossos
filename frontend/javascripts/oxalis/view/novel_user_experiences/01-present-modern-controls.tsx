@@ -3,10 +3,10 @@ import * as React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { OxalisState } from "oxalis/store";
 export default function PresentModernControls() {
   const dispatch = useDispatch();
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeUser' does not exist on type 'Defa... Remove this comment to see the full error message
-  const activeUser = useSelector((state) => state.activeUser);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [isModalVisible, setIsModalVisible] = React.useState(
     activeUser != null && activeUser.novelUserExperienceInfos.shouldSeeModernControlsModal,
   );

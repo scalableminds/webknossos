@@ -27,7 +27,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
   const [form] = Form.useForm();
   const history = useHistory();
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeUser' does not exist on type 'Defa... Remove this comment to see the full error message
-  const activeUser = useSelector((state) => enforceActiveUser(state.activeUser));
+  const activeUser = useSelector((state: OxalisState) => enforceActiveUser(state.activeUser));
   useEffect(() => {
     fetchData();
     applyDefaults();

@@ -4,16 +4,15 @@ import React from "react";
 import messages from "messages";
 import { CopyOutlined } from "@ant-design/icons";
 import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_modal_view";
+import { OxalisState } from "oxalis/store";
 const sharingActiveNode = false;
 type Props = {
   onOk: () => any;
 };
 export default function ShareViewDatasetModalView(props: Props) {
   const { onOk } = props;
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'Default... Remove this comment to see the full error message
-  const dataset = useSelector((state) => state.dataset);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'uiInformation' does not exist on type 'D... Remove this comment to see the full error message
-  const isShareModalOpen = useSelector((state) => state.uiInformation.showShareModal);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
   const sharingToken = useDatasetSharingToken(dataset);
   const url = getUrl(sharingToken, !dataset.isPublic);
   return (

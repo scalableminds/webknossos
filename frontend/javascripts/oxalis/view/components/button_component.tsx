@@ -4,6 +4,7 @@ import _ from "lodash";
 type ButtonComponentProp = {
   onClick?: (...args: Array<any>) => any;
   faIcon?: string;
+  icon?: React.ReactNode;
   loading?: boolean;
   children?: React.ReactNode;
   title?: React.ReactNode;

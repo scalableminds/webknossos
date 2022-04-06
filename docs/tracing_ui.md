@@ -8,7 +8,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 4. The right-hand side panel is occupied by several tabs providing more information on your current dataset, skeleton/volume annotations, and other lists. Depending on your editing mode these tabs might adapt.
 5. The bottom of the screen is covered by a status bar showing context-sensitive hints for mouse controls as well as additional information on mouse hover.
 
-![An overview of the webKnossos annotation UI highlighting the 4 main sections of the interface](images/tracing_ui_overview.png)
+![An overview of the webKnossos annotation UI highlighting the 4 main sections of the interface](images/tracing_ui_overview.jpeg)
 
 [Read More About Skeleton Annotation](./skeleton_annotation.md)
 [Read More About Volume Annotation](./volume_annotation.md)
@@ -31,7 +31,7 @@ A user can directly jump to any position within their datasets by entering them 
 The same is true for the camera rotation in flight/oblique modes.
 Clicking on the position or rotation labels copies the values to the clipboard.
 
-![The webKnossos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.png)
+![The webKnossos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.jpeg)
 
 The toolbar further features all available navigation and annotation tools for quick access:
 
@@ -46,7 +46,7 @@ The toolbar further features all available navigation and annotation tools for q
 
 Please see the detailed documentation on [skeleton](./skeleton_annotation.md#tools) and [volume annotation](./volume_annotation.md#tools) tools for a for explaination of all context-sensitve modifiers that are available to some tools.
 
-![The webKnossos navigation and annotation tools](images/tracing_ui_toolbar2.png)
+![The webKnossos navigation and annotation tools](images/tracing_ui_toolbar2.jpeg)
 
 ## Layers and Settings
 The left-hand side panel features both a list of all available data and annotation layers as well as settings menu to fine-tune some parameters of webKnossos.
@@ -68,7 +68,7 @@ Above the the histogram, there are icon buttons to further adjust the histogram 
 - `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggeling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview. 
 Disabling the visibility, unloads/frees these resources from your GPU hardware and can make viewing larger datasets more performant. Also, depending on your GPU hardware, there is a physical upper limit for how many layers - typically 16 or more - can be displayed at any time (WebGL limitation). Toggle layers as needed to mitigate this.
 
-![The Histogram overview](images/histogram.png)
+![The Histogram overview](images/histogram.jpeg)
 
 #### Color and Segmentation Layers
 In addition to the general layer properties mentioned above, `color` and `segmentation` layers come with a number of other settings:

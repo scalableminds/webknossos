@@ -300,6 +300,7 @@ type UserBoundingBoxInputProps = {
   onVisibilityChange: boolean => void,
   onNameChange: string => void,
   onColorChange: Vector3 => void,
+  allowUpdate: boolean,
 };
 
 type State = {
@@ -392,15 +393,15 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       onExport,
       isExportEnabled,
       onGoToBoundingBox,
+      allowUpdate,
     } = this.props;
     const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
     const iconStyle = {
       marginRight: 0,
       marginLeft: 6,
     };
-    const exportIconStyle = isExportEnabled
-      ? iconStyle
-      : { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
+    const disabledIconStyle = { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
+    const exportIconStyle = isExportEnabled ? iconStyle : disabledIconStyle;
     const exportButtonTooltip = isExportEnabled
       ? "Export data from this bounding box."
       : messages["data.bounding_box_export_not_supported"];
@@ -424,22 +425,37 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
 
           <Col span={15}>
-            <Input
-              defaultValue={name}
-              placeholder="Bounding Box Name"
-              size="small"
-              value={name}
-              onChange={(evt: SyntheticInputEvent<>) => {
-                this.setState({ name: evt.target.value });
-              }}
-              onPressEnter={this.handleNameChanged}
-              onBlur={this.handleNameChanged}
-            />
+            <Tooltip title={allowUpdate ? null : messages["tracing.read_only_mode_notification"]}>
+              <span>
+                <Input
+                  defaultValue={name}
+                  placeholder="Bounding Box Name"
+                  size="small"
+                  value={name}
+                  onChange={(evt: SyntheticInputEvent<>) => {
+                    this.setState({ name: evt.target.value });
+                  }}
+                  onPressEnter={this.handleNameChanged}
+                  onBlur={this.handleNameChanged}
+                  disabled={!allowUpdate}
+                />
+              </span>
+            </Tooltip>
           </Col>
           {exportColumn}
           <Col span={2}>
-            <Tooltip title="Delete this bounding box.">
-              <DeleteOutlined onClick={onDelete} style={iconStyle} />
+            <Tooltip
+              title={
+                allowUpdate
+                  ? "Delete this bounding box."
+                  : messages["tracing.read_only_mode_notification"]
+              }
+            >
+              <DeleteOutlined
+                onClick={onDelete}
+                style={allowUpdate ? iconStyle : disabledIconStyle}
+                disabled={!allowUpdate}
+              />
             </Tooltip>
           </Col>
         </Row>
@@ -451,28 +467,36 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
           <Col span={15}>
             <Tooltip
-              trigger={["focus"]}
-              title={tooltipTitle}
+              trigger={allowUpdate ? ["focus"] : ["hover"]}
+              title={allowUpdate ? tooltipTitle : messages["tracing.read_only_mode_notification"]}
               placement="topLeft"
               overlayStyle={tooltipStyle}
             >
-              <Input
-                onChange={this.handleChange}
-                onFocus={this.handleFocus}
-                onBlur={this.handleBlur}
-                value={this.state.text}
-                placeholder="0, 0, 0, 512, 512, 512"
-                size="small"
-              />
+              <span>
+                <Input
+                  onChange={this.handleChange}
+                  onFocus={this.handleFocus}
+                  onBlur={this.handleBlur}
+                  value={this.state.text}
+                  placeholder="0, 0, 0, 512, 512, 512"
+                  size="small"
+                  disabled={!allowUpdate}
+                />
+              </span>
             </Tooltip>
           </Col>
           <Col span={2}>
-            <ColorSetting
-              value={Utils.rgbToHex(upscaledColor)}
-              onChange={this.handleColorChange}
-              className="ant-btn"
-              style={iconStyle}
-            />
+            <Tooltip title={allowUpdate ? null : messages["tracing.read_only_mode_notification"]}>
+              <span>
+                <ColorSetting
+                  value={Utils.rgbToHex(upscaledColor)}
+                  onChange={this.handleColorChange}
+                  className="ant-btn"
+                  style={iconStyle}
+                  disabled={!allowUpdate}
+                />
+              </span>
+            </Tooltip>
           </Col>
           <Col span={2}>
             <Tooltip title="Go to the center of the bounding box.">

@@ -1,6 +1,6 @@
 // @flow
 
-import { Input } from "antd";
+import { Input, Tooltip } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
@@ -13,6 +13,7 @@ type InputComponentProp = {
   value: string,
   style?: any,
   isTextArea?: boolean,
+  title?: ?React.Node,
 };
 
 type InputComponentState = {
@@ -86,12 +87,13 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
   };
 
   render() {
-    const { isTextArea, onPressEnter, ...inputProps } = this.props;
+    const { isTextArea, onPressEnter, title, style, ...inputProps } = this.props;
     const InputClass = isTextArea ? Input.TextArea : Input;
     const defaultOnPressEnter = !isTextArea ? this.blurYourself : null;
-    return (
+    const input = (
       <InputClass
         {...inputProps}
+        style={title == null ? style : null}
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
@@ -99,6 +101,14 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
         onPressEnter={onPressEnter != null ? onPressEnter : defaultOnPressEnter}
         onKeyDown={this.blurOnEscape}
       />
+    );
+    // The input needs to be wrapped in a span in order for the tooltip to work. See https://github.com/react-component/tooltip/issues/18#issuecomment-140078802.
+    return title != null ? (
+      <Tooltip title={title} style={style}>
+        <span>{input}</span>
+      </Tooltip>
+    ) : (
+      input
     );
   }
 }

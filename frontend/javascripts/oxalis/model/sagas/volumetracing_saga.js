@@ -518,15 +518,23 @@ function* copySegmentationLayer(action: Action): Saga<void> {
 
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;
+  // When using this tool in more coarse resolutions, the distance to the previous/next slice might be larger than 1
+  const previousZ = z + direction * directionInverter * labeledResolution[thirdDim];
   for (let x = tx - halfViewportExtentX; x < tx + halfViewportExtentX; x++) {
     for (let y = ty - halfViewportExtentY; y < ty + halfViewportExtentY; y++) {
-      // When using this tool in more coarse resolutions, the distance to the previous/next slice might be larger than 1
-      const previousZ = z + direction * directionInverter * labeledResolution[thirdDim];
       copyVoxelLabel(
         Dimensions.transDim([x, y, previousZ], activeViewport),
         Dimensions.transDim([x, y, z], activeViewport),
       );
     }
+  }
+
+  if (labeledVoxelMapOfCopiedVoxel.size === 0) {
+    const dimensionLabels = ["x", "y", "z"];
+    Toast.warning(
+      `Did not copy any voxels from slice ${dimensionLabels[thirdDim]}=${previousZ}.` +
+        ` Either no voxels with cell id ${activeCellId} were found or all of the respective voxels were already labeled in the current slice.`,
+    );
   }
 
   // applyVoxelMap assumes get3DAddress to be local to the corresponding bucket (so in the labeled resolution as well)

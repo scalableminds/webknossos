@@ -602,6 +602,10 @@ export class BoundingBoxTool {
   }
 
   static onToolDeselected() {
+    const { body } = document;
+    if (body == null) {
+      return;
+    }
     getSceneController().highlightUserBoundingBox(null);
   }
 }

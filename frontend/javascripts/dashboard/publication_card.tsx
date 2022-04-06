@@ -3,7 +3,6 @@ import { LinkOutlined } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import React, { useState } from "react";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
 import classNames from "classnames";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIDatasetDetails } from "types/api_flow_types";

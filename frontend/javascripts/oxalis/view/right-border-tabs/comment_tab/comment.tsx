@@ -1,6 +1,6 @@
 import { Popover } from "antd";
 import * as React from "react";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
+
 import classNames from "classnames";
 import { MarkdownWrapper } from "oxalis/view/components/markdown_modal";
 import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";

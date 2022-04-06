@@ -5,16 +5,16 @@
 // Example:
 // updateKey2(state, "viewModeData", "plane", { activeViewport: "PLANE_XY" });
 // The last parameter can hold multiple key-value pairs. Only the used keys will be updated.
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
-export function updateKey(state, key, shape) {
+
+import { OxalisState } from "oxalis/store";
+
+export function updateKey(state: OxalisState, key: keyof OxalisState, shape) {
   return { ...state, [key]: { ...state[key], ...shape } };
 }
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
-export function updateKey2(state, key1, key2, shape) {
+export function updateKey2(state: OxalisState, key1: keyof OxalisState, key2, shape) {
   return { ...state, [key1]: { ...state[key1], [key2]: { ...state[key1][key2], ...shape } } };
 }
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
-export function updateKey3(state, key1, key2, key3, shape) {
+export function updateKey3(state: OxalisState, key1: keyof OxalisState, key2, key3, shape) {
   return {
     ...state,
     [key1]: {
@@ -23,8 +23,7 @@ export function updateKey3(state, key1, key2, key3, shape) {
     },
   };
 }
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
-export function updateKey4(state, key1, key2, key3, key4, shape) {
+export function updateKey4(state: OxalisState, key1: keyof OxalisState, key2, key3, key4, shape) {
   return {
     ...state,
     [key1]: {

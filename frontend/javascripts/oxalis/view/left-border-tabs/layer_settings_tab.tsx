@@ -13,7 +13,7 @@ import {
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
+
 import classnames from "classnames";
 import type { APIDataset, EditableLayerProperties } from "types/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";

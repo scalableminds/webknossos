@@ -11,7 +11,7 @@ import { List, Tooltip, Dropdown, Menu } from "antd";
 import { useDispatch } from "react-redux";
 import Checkbox from "antd/lib/checkbox/Checkbox";
 import React from "react";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
+
 import classnames from "classnames";
 import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";

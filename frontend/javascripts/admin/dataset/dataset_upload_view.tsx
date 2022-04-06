@@ -16,7 +16,7 @@ import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from 
 import { connect } from "react-redux";
 import React from "react";
 import moment from "moment";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
+
 import classnames from "classnames";
 import _ from "lodash";
 import { useDropzone } from "react-dropzone";
@@ -854,7 +854,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 }
 
 // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'fileList' implicitly has an 'any'... Remove this comment to see the full error message
-function FileUploadArea({ fileList, onChange }) {
+function FileUploadArea({ fileList, onChange }: {fileList: File[]}) {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'acceptedFiles' implicitly has an 'any' ... Remove this comment to see the full error message
   const onDropAccepted = (acceptedFiles) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
@@ -862,8 +862,7 @@ function FileUploadArea({ fileList, onChange }) {
     onChange(_.uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
-  const removeFile = (file) => {
+  const removeFile = (file: File) => {
     onChange(_.without(fileList, file));
   };
 
@@ -871,15 +870,14 @@ function FileUploadArea({ fileList, onChange }) {
     onDropAccepted,
   });
   const acceptedFiles = fileList;
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
-  const files = acceptedFiles.map((file) => <li key={file.path}>{file.path}</li>);
+  const files: React.ReactNode[] = acceptedFiles.map((file: File) => <li key={file.path}>{file.path}</li>);
   const showSmallFileList = files.length > 10;
   const list = (
     <List
       itemLayout="horizontal"
       dataSource={acceptedFiles}
       size={showSmallFileList ? "small" : "default"}
-      renderItem={(item) => (
+      renderItem={(item: File) => (
         <List.Item
           actions={[
             <a key="list-loadmore-edit" onClick={() => removeFile(item)}>
@@ -902,7 +900,6 @@ function FileUploadArea({ fileList, onChange }) {
                   style={{
                     color: "darkgrey",
                   }}
-                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 >{`${item.path.split("/").slice(0, -1).join("/")}/`}</span>
                 // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                 {item.name}

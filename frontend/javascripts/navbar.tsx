@@ -10,7 +10,7 @@ import {
   BellOutlined,
 } from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'clas... Remove this comment to see the full error message
+
 import classnames from "classnames";
 import { connect } from "react-redux";
 import React, { useState, useEffect } from "react";

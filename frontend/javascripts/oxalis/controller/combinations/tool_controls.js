@@ -33,6 +33,7 @@ import {
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
+import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
 
 /*

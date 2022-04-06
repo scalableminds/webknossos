@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
   - Add filter functionality to "Access Permissions" column to filter for public datasets.
   - Removed `isActive` and `isPublic` columns to save screen space.
   - Changed data layer entries to display layer names instead of categories, e.g. "color" --> "axons".
+- While viewing tracings in read-only mode, the options to manipulate the tracing are now disabled. This leads to less confusion as previously the input was silently discarded. [#6140](https://github.com/scalableminds/webknossos/pull/6140).
 
 ### Fixed
 - Fixed a bug that led to an error when drag-'n-dropping an empty volume annotation in the dataset view. [#6116](https://github.com/scalableminds/webknossos/pull/6116)

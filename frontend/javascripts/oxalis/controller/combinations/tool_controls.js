@@ -8,7 +8,6 @@ import {
   type ShowContextMenuFunction,
   type AnnotationTool,
   AnnotationToolEnum,
-  OrthoViewValuesWithoutTDView,
 } from "oxalis/constants";
 import {
   enforceActiveVolumeTracing,
@@ -34,7 +33,6 @@ import {
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
-import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
 
 /*
@@ -604,16 +602,6 @@ export class BoundingBoxTool {
   }
 
   static onToolDeselected() {
-    const { body } = document;
-    if (body == null) {
-      return;
-    }
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      const inputCatcher = document.getElementById(`inputcatcher_${planeId}`);
-      if (inputCatcher) {
-        inputCatcher.style.cursor = "auto";
-      }
-    }
     getSceneController().highlightUserBoundingBox(null);
   }
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { ArbitraryViewport, type Rect, type Viewport, type AnnotationTool, } from "oxalis/constants";
+import { ArbitraryViewport, type Rect, type Viewport, type AnnotationTool } from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
@@ -121,7 +121,9 @@ class InputCatcher extends React.PureComponent<Props, {}> {
           className={`inputcatcher ${viewportID}`}
           style={{
             position: "relative",
-            cursor: this.props.busyBlockingInfo.isBusy ? "wait" : cursorForTool[this.props.activeTool],
+            cursor: this.props.busyBlockingInfo.isBusy
+              ? "wait"
+              : cursorForTool[this.props.activeTool],
           }}
         >
           <ViewportStatusIndicator />

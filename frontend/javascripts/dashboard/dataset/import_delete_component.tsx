@@ -4,14 +4,13 @@ import type { APIDataset, APIDatasetId } from "types/api_flow_types";
 import { getDataset, deleteDatasetOnDisk } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouteComponentProps, RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import { confirmAsync } from "./helper_components";
 type Props = {
   datasetId: APIDatasetId;
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 
 const ImportDeleteComponent = ({ datasetId, history }: Props) => {

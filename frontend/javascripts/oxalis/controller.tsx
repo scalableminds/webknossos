@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
 import { AsyncButton } from "components/async_clickables";
 import { connect } from "react-redux";
@@ -49,7 +48,7 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 type PropsWithRouter = Props & {
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 type State = {
   gotUnhandledError: boolean;

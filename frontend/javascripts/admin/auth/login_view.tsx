@@ -1,13 +1,12 @@
 import { Col, Row } from "antd";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouteComponentProps, RouterHistory } from "react-router-dom";
+import type { RouteComponentProps,  } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import React from "react";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import LoginForm from "./login_form";
 type Props = {
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
   redirect?: string;
 };
 

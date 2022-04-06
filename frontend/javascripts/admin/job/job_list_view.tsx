@@ -2,8 +2,7 @@ import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { confirmAsync } from "dashboard/dataset/helper_components";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouteComponentProps, RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Spin, Input, Tooltip } from "antd";
 import {
@@ -64,7 +63,7 @@ const { Column } = Table;
 const { Search } = Input;
 const typeHint: APIJob[] = [];
 type Props = {
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 type State = {
   isLoading: boolean;
@@ -80,7 +79,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class JobListView extends React.PureComponent<Props, State> {
-  intervalID: number | null | undefined;
+  intervalID: ReturnType<typeof setTimeout> | null | undefined;
   state = {
     isLoading: true,
     jobs: [],

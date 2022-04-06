@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { Tabs, Modal, Button, Layout } from "antd";
 import { BarsOutlined, DatabaseOutlined, GoogleOutlined, UploadOutlined } from "@ant-design/icons";
@@ -24,14 +23,15 @@ const { Content, Sider } = Layout;
 type Props = {
   activeUser: APIUser;
 };
-type PropsWithRouter = Props & {
-  history: RouterHistory;
-};
+type PropsWithRouter = Props & RouteComponentProps;
 
-const renderSampleDatasetsModal = (user: APIUser, history: RouterHistory) => {
+const renderSampleDatasetsModal = (
+  activeUser: APIUser,
+  history: RouteComponentProps["history"],
+) => {
   renderIndependently((destroy) => (
     <SampleDatasetsModal
-      organizationName={user.organization}
+      organizationName={activeUser.organization}
       destroy={destroy}
       onOk={() => history.push("/dashboard/datasets")}
     />

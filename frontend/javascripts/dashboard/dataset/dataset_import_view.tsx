@@ -4,8 +4,7 @@ import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouteComponentProps, RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type {
   APIDataSource,
@@ -58,7 +57,7 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 type PropsWithFormAndRouter = Props & {
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 type TabKey = "data" | "general" | "defaultConfig";
 enum AppliedSuggestionsEnum {

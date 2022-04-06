@@ -2,8 +2,7 @@
 import { $Shape } from "utility-types";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
 
@@ -16,7 +15,7 @@ class Persistence<T extends Record<string, any>> {
     this.name = name;
   }
 
-  load(history: RouterHistory): $Shape<T> | {} {
+  load(history: RouteComponentProps["history"]): $Shape<T> | {} {
     const locationState = history.location.state;
 
     if (locationState != null && locationState[this.name] != null) {
@@ -52,7 +51,7 @@ class Persistence<T extends Record<string, any>> {
   }
 
   persist(
-    history: RouterHistory,
+    history: RouteComponentProps["history"],
     state: $Shape<T>,
     // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
     stateProperties?: Record<keyof T, (...args: Array<any>) => any> = this.stateProperties,

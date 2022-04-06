@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import { coalesce } from "libs/utils";
 
 const FormItem = Form.Item;
-export const enum PricingPlanEnum {
+export enum PricingPlanEnum {
   Basic= "Basic",
   Premium= "Premium",
   Pilot= "Pilot",

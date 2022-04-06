@@ -5,11 +5,9 @@ import { MailOutlined } from "@ant-design/icons";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
 const FormItem = Form.Item;
 type Props = {
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 
 function StartResetPasswordView({ history }: Props) {

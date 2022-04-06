@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouteComponentProps, RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
 import { Spin, Table, Tag } from "antd";
 import * as React from "react";
@@ -15,7 +14,7 @@ import { EyeOutlined } from "@ant-design/icons";
 const { Column } = Table;
 const typeHint: APIAnnotationCompact[] = [];
 type Props = {
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 type State = {
   annotations: Array<APIAnnotationCompact>;

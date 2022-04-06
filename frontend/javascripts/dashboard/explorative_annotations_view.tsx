@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import { RouteComponentProps, RouterHistory } from "react-router-dom";
+import { RouteComponentProps } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
@@ -58,7 +57,7 @@ export type TracingModeState = {
 type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 type State = {
   shouldShowArchivedTracings: boolean;

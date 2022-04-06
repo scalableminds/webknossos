@@ -12,8 +12,7 @@ import {
 } from "antd";
 import { FormInstance } from "antd/lib/form";
 import { InfoCircleOutlined } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouteComponentProps, RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
@@ -35,7 +34,7 @@ const FormItem = Form.Item;
 const { TextArea } = Input;
 type Props = {
   taskTypeId?: string | null | undefined;
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 type State = {
   teams: Array<APITeam>;

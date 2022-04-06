@@ -3,8 +3,6 @@ import { SettingOutlined, WarningFilled } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { RouteComponentProps, withRouter } from "react-router-dom";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
 import _ from "lodash";
 import Request from "libs/request";
@@ -69,7 +67,7 @@ type DispatchProps = {
 type PropsWithRouter = OwnProps &
   StateProps &
   DispatchProps & {
-    history: RouterHistory;
+    history: RouteComponentProps["history"];
   };
 type State = {
   activeLayoutName: string;

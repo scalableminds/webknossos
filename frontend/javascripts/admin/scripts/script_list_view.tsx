@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouteComponentProps, RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
@@ -18,7 +17,7 @@ const { Column } = Table;
 const { Search } = Input;
 const typeHint: APIScript[] = [];
 type Props = {
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 type State = {
   isLoading: boolean;

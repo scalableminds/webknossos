@@ -7,13 +7,13 @@ import messages from "messages";
 import Toast from "libs/toast";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
 const FormItem = Form.Item;
 const { Password } = Input;
+
 type Props = {
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
+
 
 function ChangePasswordView({ history }: Props) {
   const [form] = Form.useForm();
@@ -152,4 +152,4 @@ function ChangePasswordView({ history }: Props) {
   );
 }
 
-export default withRouter<RouteComponentProps & Props, any>(ChangePasswordView);
+export default withRouter<RouteComponentProps, any>(ChangePasswordView);

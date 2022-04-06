@@ -1,3 +1,4 @@
+import React from "react";
 import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete } from "antd";
 import {
   CloudUploadOutlined,
@@ -12,13 +13,9 @@ import {
   CustomerServiceOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
-import type { Node } from "react";
-import React from "react";
 import type { APIUser, APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
@@ -37,9 +34,7 @@ const FormItem = Form.Item;
 type StateProps = {
   activeUser: APIUser | null | undefined;
 };
-type Props = StateProps & {
-  history: RouterHistory;
-};
+type Props = StateProps & RouteComponentProps["history"]
 type State = {
   currentStep: number;
   datastores: Array<APIDataStore>;
@@ -56,9 +51,9 @@ function StepHeader({
   children,
 }: {
   header: string;
-  subheader: Node;
-  icon: Node;
-  children: Node;
+  subheader: React.ReactNode;
+  icon: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <div>
@@ -144,10 +139,10 @@ function FeatureCard({ icon, header, children }) {
 }
 
 type OptionCardProps = {
-  icon: Node;
+  icon: React.ReactNode;
   header: string;
-  children: Node;
-  action: Node;
+  children: React.ReactNode;
+  action: React.ReactNode;
   height: number;
 };
 export function OptionCard({ icon, header, children, action, height }: OptionCardProps) {

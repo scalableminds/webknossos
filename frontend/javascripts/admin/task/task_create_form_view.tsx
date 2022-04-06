@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { RouteComponentProps, RouterHistory } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import {
   Row,
@@ -57,7 +56,7 @@ const TASK_CSV_HEADER =
   "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 type Props = {
   taskId: string | null | undefined;
-  history: RouterHistory;
+  history: RouteComponentProps["history"];
 };
 export const enum SpecificationEnum {
   Manual= "Manual",

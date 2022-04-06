@@ -177,8 +177,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
-    const tryParsingFileAsProtobuf = async (file) => {
+    const tryParsingFileAsProtobuf = async (file: File) => {
       try {
         const nmlProtoBuffer = await readFileAsArrayBuffer(file);
         const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");

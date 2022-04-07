@@ -157,8 +157,7 @@ type RelevantActionsForUndoRedo = {
   updateSegment?: UpdateSegmentAction;
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
-function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
+function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo {
   if (action.type === "ADD_BUCKET_TO_UNDO") {
     return {
       addBucketToUndoAction: action,

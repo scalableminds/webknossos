@@ -3,7 +3,7 @@ import { getUid } from "libs/uid_generator";
 import Date from "libs/date";
 import Deferred from "libs/deferred";
 type TracingType = "skeleton" | "volume";
-type PushSaveQueueTransaction = {
+export type PushSaveQueueTransaction = {
   type: "PUSH_SAVE_QUEUE_TRANSACTION";
   items: Array<UpdateAction>;
   tracingType: TracingType;
@@ -13,7 +13,7 @@ type PushSaveQueueTransaction = {
 type SaveNowAction = {
   type: "SAVE_NOW";
 };
-type ShiftSaveQueueAction = {
+export type ShiftSaveQueueAction = {
   type: "SHIFT_SAVE_QUEUE";
   count: number;
   tracingType: TracingType;

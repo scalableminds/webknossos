@@ -4,7 +4,7 @@ import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SaveState, SaveQueueEntry } from "oxalis/store";
-import type { SetVersionNumberAction } from "oxalis/model/actions/save_actions";
+import type { PushSaveQueueTransaction, SetVersionNumberAction, ShiftSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
@@ -14,8 +14,7 @@ import { updateVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer
 import Date from "libs/date";
 import * as Utils from "libs/utils";
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
-function updateQueueObj(action, oldQueueObj, newQueue) {
+function updateQueueObj(action: PushSaveQueueTransaction | ShiftSaveQueueAction, oldQueueObj: SaveState["queue"], newQueue: any): SaveState["queue"] {
   if (action.tracingType === "skeleton") {
     return { ...oldQueueObj, skeleton: newQueue };
   }

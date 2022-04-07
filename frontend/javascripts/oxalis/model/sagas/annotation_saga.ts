@@ -1,6 +1,7 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
 import _ from "lodash";
+import type { Action } from "oxalis/model/actions/actions";
 import type { EditAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
 import type { EditableAnnotation } from "admin/admin_rest_api";
 import { editAnnotation, updateAnnotationLayer } from "admin/admin_rest_api";
@@ -136,8 +137,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       "SET_STORED_LAYOUTS",
       "SET_MAPPING",
       "SET_MAPPING_ENABLED",
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
-      (action) =>
+      (action: Action) =>
         action.type === "UPDATE_LAYER_SETTING" &&
         action.layerName === segmentationLayerName &&
         action.propertyName === "alpha",
@@ -155,8 +155,7 @@ export function* watchAnnotationAsync(): Saga<void> {
   yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
   yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
   yield* takeLatest(
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
-    (action) => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
+    (action: Action) => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
     pushAnnotationUpdateAsync,
   );
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);

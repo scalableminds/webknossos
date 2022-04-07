@@ -17,6 +17,7 @@ import type {
   LoadPrecomputedMeshAction,
   IsosurfaceMappingInfo,
 } from "oxalis/model/actions/segmentation_actions";
+import type { Action } from "oxalis/model/actions/actions";
 import "oxalis/model/actions/segmentation_actions";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
@@ -260,8 +261,7 @@ function* loadIsosurfaceForSegmentId(
       removeExistingIsosurface,
     ),
     cancel: take(
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
-      (action) =>
+      (action: Action) =>
         action.type === "REMOVE_ISOSURFACE" &&
         action.cellId === segmentId &&
         action.layerName === layer.name,

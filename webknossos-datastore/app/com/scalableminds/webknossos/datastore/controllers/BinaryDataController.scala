@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.controllers
 import java.io.{ByteArrayOutputStream, OutputStream}
 import java.nio.{ByteBuffer, ByteOrder}
 import java.util.Base64
-
 import akka.stream.scaladsl.StreamConverters
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
@@ -190,6 +189,105 @@ class BinaryDataController @Inject()(
       } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
     }
   }
+
+  /**
+    * Handles a request for raw binary data via a HTTP GET. Used by knossos.
+    */
+  @ApiOperation(hidden = true, value = "")
+  def requestZArray(token: Option[String],
+                    organizationName: String,
+                    dataSetName: String,
+                    dataLayerName: String,
+                    mag: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+
+      for {
+        (_, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        cubeLength = dataLayer.lengthOfUnderlyingCubes(parsedMag)
+      } yield
+        Ok(
+          Json.obj(
+            "dataLayer" -> dataLayer,
+            "dtype" -> dataLayer.elementClass, //"<f8",
+            "fill_value" -> "NaN",
+            "zarr_format" -> 2,
+            "order" -> "F", // TODO is that always true?
+            "chunks" -> List(1, cubeLength, cubeLength, cubeLength),
+            "compressor" -> Json
+              .obj("id" -> "blosc", "cname" -> "lz4", "clevel" -> 5, "shuffle" -> 1), // TODO What are those values
+            "filters" -> Json
+              .obj("id" -> "delta", "dtype" -> "<f8", "astype" -> "<f4"), // TODO unclear wha'ts happening here
+            "shape" -> List(1, dataLayer.boundingBox.width, dataLayer.boundingBox.height, dataLayer.boundingBox.depth) // TODO do we need to adapt this to the mag? Also, where is the channel coming from?
+          ))
+    }
+  }
+
+  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] =
+    if (layer.containsResolution(Vec3Int.fromForm(mag))) Some(Vec3Int.fromForm(mag)) else None
+
+  /**
+    * Handles requests for raw binary data via HTTP GET for debugging.
+    */
+  @ApiOperation(hidden = true, value = "")
+  def requestRawZarr(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      mag: String,
+      // TODO which parameters does the parameter use?
+      x: Int,
+      y: Int,
+      z: Int,
+      width: Int,
+      height: Int,
+      depth: Int,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+      for {
+        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        cubeSize = dataLayer.lengthOfUnderlyingCubes(parsedMag)
+        request = DataRequest(
+          new VoxelPosition(x * cubeSize * parsedMag.x,
+                            y * cubeSize * parsedMag.y,
+                            z * cubeSize * parsedMag.z,
+                            parsedMag),
+          width,
+          height,
+          depth,
+          DataServiceRequestSettings(halfByte = false)
+        )
+        (data, indices) <- requestData(dataSource, dataLayer, request)
+      } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+    }
+  }
+
+  def requestDataSource(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+      for {
+        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
+          "dataSource.notFound") ~> 404
+      } yield Ok(Json.obj("dataSource" -> dataSource))
+    }
+
+  }
+
+  def requestZGroup(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+  ): Result =  Ok(Json.obj("zarr_format" -> 2))
+
 
   /**
     * Handles requests for data sprite sheets.

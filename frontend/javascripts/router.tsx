@@ -292,7 +292,6 @@ class ReactRouter extends React.Component<Props> {
                 path="/projects/:projectId/tasks"
                 render={({ match }: ContextRouter) => (
                   <TaskListView
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ initialFieldValues: { projectId: any; }; }... Remove this comment to see the full error message
                     initialFieldValues={{
                       projectId: match.params.projectId || "",
                     }}
@@ -474,8 +473,7 @@ class ReactRouter extends React.Component<Props> {
               <Route
                 path="/auth/login"
                 render={() =>
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ layout: string; }' is not assignable to ty... Remove this comment to see the full error message
-                  isAuthenticated ? <Redirect to="/" /> : <LoginView layout="horizontal" />
+                  isAuthenticated ? <Redirect to="/" /> : <LoginView />
                 }
               />
               <Route

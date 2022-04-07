@@ -157,10 +157,7 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }: { isReadOnly
           </div>
         }
       >
-        {dataSource ||
-          {
-            dataLayers: [],
-          }.dataLayers.map((layer, idx) => (
+        {(dataSource ||{dataLayers: []}).dataLayers.map((layer, idx: number) => (
             <List.Item key={`layer-${layer.name}`}>
               <SimpleLayerForm
                 isReadOnlyDataset={isReadOnlyDataset}
@@ -199,7 +196,6 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
       </Col>
       <Col span={17}>
         <FormItemWithInfo
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: any[]; label: str... Remove this comment to see the full error message
           name={
             layer.dataFormat === "knossos"
               ? ["dataSource", "dataLayers", index, "sections", 0, "boundingBox"]
@@ -226,7 +222,6 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
           ]}
         >
           <BoundingBoxInput
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             disabled={isReadOnlyDataset}
             style={{
               width: 300,
@@ -236,7 +231,6 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
 
         {isSegmentation ? (
           <FormItemWithInfo
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: any[]; label: str... Remove this comment to see the full error message
             name={["dataSource", "dataLayers", index, "largestSegmentId"]}
             label="Largest segment ID"
             info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."

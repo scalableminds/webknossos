@@ -2,10 +2,14 @@ import { Alert, Form, Tooltip, Modal } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
+import { FormItemProps } from "@ant-design/compatible/lib/form/FormItem";
+
 const FormItem = Form.Item;
+
 export const jsonEditStyle = {
   fontFamily: 'Monaco, Consolas, "Courier New", monospace',
 };
+
 export function Hideable({ children, hidden }: { children: React.ReactNode; hidden: boolean }) {
   return (
     <div
@@ -22,7 +26,7 @@ export const FormItemWithInfo = ({
   info,
   children,
   ...props
-}: typeof FormItem & {
+}: FormItemProps & {
   label: React.ReactNode;
   info: React.ReactNode;
   children: React.ReactNode;

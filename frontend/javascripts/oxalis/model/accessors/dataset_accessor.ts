@@ -35,12 +35,30 @@ type UnrenderableLayersInfos = {
   layer: DataLayerType;
   smallerOrHigherInfo: SmallerOrHigherInfo;
 };
+
+function maxValue(array: Array<number>): number {
+  const value = maxValue(array);
+  if (value == undefined) {
+    throw Error(`Max of empty array: ${array}`);
+  }
+  return value;
+}
+
+function minValue(array: Array<number>): number {
+  const value = _.min(array);
+  if (value == undefined) {
+    throw Error(`Min of empty array: ${array}`);
+  }
+  return value;
+}
+
 export class ResolutionInfo {
   resolutions: ReadonlyArray<Vector3>;
   resolutionMap: Map<number, Vector3>;
 
   constructor(resolutions: Array<Vector3>) {
     this.resolutions = resolutions;
+    this.resolutionMap = new Map();
 
     this._buildResolutionMap();
   }
@@ -54,14 +72,13 @@ export class ResolutionInfo {
     const { resolutions } = this;
 
     // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
-    if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
+    if (resolutions.length !== _.uniqBy(resolutions.map(maxValue)).length) {
       throw new Error("Max dimension in resolutions is not unique.");
     }
 
-    this.resolutionMap = new Map();
 
     for (const resolution of resolutions) {
-      this.resolutionMap.set(_.max(resolution), resolution);
+      this.resolutionMap.set(maxValue(resolution), resolution);
     }
   }
 
@@ -138,13 +155,11 @@ export class ResolutionInfo {
   }
 
   getHighestResolutionPowerOf2(): number {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
-    return _.max(Array.from(this.resolutionMap.keys()));
+    return maxValue(Array.from(this.resolutionMap.keys()));
   }
 
   getLowestResolutionPowerOf2(): number {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
-    return _.min(Array.from(this.resolutionMap.keys()));
+    return minValue(Array.from(this.resolutionMap.keys()));
   }
 
   getHighestResolutionIndex(): number {
@@ -233,22 +248,19 @@ export function getResolutionUnion(
   dataset: APIDataset,
   shouldThrow: boolean = false,
 ): Array<Vector3> {
-  const resolutionUnionDict = {};
+  const resolutionUnionDict: {[key: number]: Vector3} = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
     for (const resolution of layer.resolutions) {
-      const key = _.max(resolution);
+      const key = maxValue(resolution);
 
-      // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
+
       if (resolutionUnionDict[key] == null) {
-        // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
         resolutionUnionDict[key] = resolution;
-        // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
       } else if (_.isEqual(resolutionUnionDict[key], resolution)) {
         // the same resolution was already picked up
       } else if (shouldThrow) {
         throw new Error(
-          // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
           `The resolutions of the different layers don't match. ${resolutionUnionDict[key].join(
             "-",
           )} != ${resolution.join("-")}.`,
@@ -259,7 +271,7 @@ export function getResolutionUnion(
     }
   }
 
-  return _.chain(resolutionUnionDict).values().sortBy(_.max).valueOf();
+  return _.chain(resolutionUnionDict).values().sortBy(maxValue).valueOf();
 }
 export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vector3> {
   // Each resolution entry can be characterized by it's greatest resolution dimension.
@@ -269,14 +281,13 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
   // This function returns an array of resolutions, for which each index will
   // hold a resolution with highest_dim === 2**index and where resolutions are monotonously increasing.
   // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
-  if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
+  if (resolutions.length !== _.uniqBy(resolutions.map(maxValue)).length) {
     throw new Error("Max dimension in resolutions is not unique.");
   }
 
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
-  const maxResolution = Math.log2(_.max(resolutions.map((v) => _.max(v))));
+  const maxResolution = Math.log2(maxValue(resolutions.map((v) => maxValue(v))));
 
-  const resolutionsLookUp = _.keyBy(resolutions, _.max);
+  const resolutionsLookUp = _.keyBy(resolutions, maxValue);
 
   const maxResPower = 2 ** maxResolution;
   let lastResolution = [maxResPower, maxResPower, maxResPower];
@@ -288,7 +299,6 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
       // resolution and an isotropic fallback resolution. Otherwise for anisotropic resolutions,
       // the dense resolutions wouldn't be monotonously increasing.
       const fallback = map3((i) => Math.min(lastResolution[i], resPower), [0, 1, 2]);
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | Vector3 | ((...items: Vector3[]) =>... Remove this comment to see the full error message
       lastResolution = resolutionsLookUp[resPower] || fallback;
       return lastResolution;
     })

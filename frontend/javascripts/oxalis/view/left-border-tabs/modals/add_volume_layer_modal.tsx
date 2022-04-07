@@ -67,7 +67,6 @@ export default function AddVolumeLayerModal({
     >
       Layer Name:{" "}
       <InputComponent
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         size="small"
         onChange={handleSetNewLayerName}
         value={newLayerName}

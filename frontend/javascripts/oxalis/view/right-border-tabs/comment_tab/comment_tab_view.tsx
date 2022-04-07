@@ -446,7 +446,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   />
                   <InputComponent
                     value={activeCommentContent}
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={activeNodeMaybe.isNothing}
                     onChange={(evt) => this.handleChangeInput(evt, true)}
                     onPressEnter={(evt) => evt.target.blur()}

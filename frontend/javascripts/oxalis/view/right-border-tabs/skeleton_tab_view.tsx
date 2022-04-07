@@ -861,7 +861,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <InputComponent
                     onChange={this.handleChangeTreeName}
                     value={activeTreeName || activeGroupName}
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={noTreesAndGroups}
                     style={{
                       width: "70%",

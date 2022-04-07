@@ -783,7 +783,6 @@ class ConnectomeView extends React.Component<Props, State> {
               style={{
                 width: 220,
               }}
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               disabled={disabled}
             />
           </Tooltip>

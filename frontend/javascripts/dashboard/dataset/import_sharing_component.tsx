@@ -145,7 +145,6 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
             >
               <AsyncButton
                 onClick={handleRevokeSharingLink}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; onClick: () => Promise<v... Remove this comment to see the full error message
                 style={{
                   width: "10%",
                 }}

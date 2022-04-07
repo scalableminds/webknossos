@@ -26,7 +26,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import type { APIAnnotationType, APIUser } from "types/api_flow_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
-import { AsyncButton } from "components/async_clickables";
+import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import {
@@ -66,8 +66,9 @@ import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: Props) => Element' is no... Remove this comment to see the full error message
-const AsyncButtonWithAuthentication = withAuthentication(AsyncButton);
+
+const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(AsyncButton);
+
 type OwnProps = {
   layoutMenu: React.ReactNode;
   hasVolumeFallback: boolean;
@@ -448,7 +449,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           hasTracing
             ? [
                 <AsyncButton
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; className: string; key:... Remove this comment to see the full error message
                   className="narrow"
                   key="undo-button"
                   title="Undo (Ctrl+Z)"
@@ -459,7 +459,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                   <i className="fas fa-undo" aria-hidden="true" />
                 </AsyncButton>,
                 <AsyncButton
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; className: string; key:... Remove this comment to see the full error message
                   className="narrow hide-on-small-screen"
                   key="redo-button"
                   title="Redo (Ctrl+Y)"
@@ -488,7 +487,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                 activeUser={activeUser}
                 authenticationMessage="Please register or login to copy the sandbox tracing to your account."
                 key="copy-sandbox-button"
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; activeUser: APIUser | n... Remove this comment to see the full error message
                 icon={<FileAddOutlined />}
                 onClick={this.handleCopySandboxToAccount}
                 title="Copy To My Account"
@@ -514,7 +512,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             activeUser={activeUser}
             authenticationMessage="Please register or login to copy the tracing to your account."
             key="copy-button"
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; activeUser: APIUser | n... Remove this comment to see the full error message
             icon={<FileAddOutlined />}
             onClick={this.handleCopyToAccount}
             title="Copy To My Account"

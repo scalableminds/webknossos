@@ -1,4 +1,4 @@
-import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, Modal, Input, FormInstance } from "antd";
+import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, Modal, Input, FormInstance, AlertProps } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -59,7 +59,7 @@ type Props = OwnProps & StateProps;
 type PropsWithFormAndRouter = Props & {
   history: RouteComponentProps["history"];
 };
-type TabKey = "data" | "general" | "defaultConfig";
+type TabKey = "data" | "general" | "defaultConfig"| "sharing" | "deleteDataset";
 enum AppliedSuggestionsEnum {
   Yes= "Yes",
   No= "No",
@@ -326,7 +326,9 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
         hasNoAllowedTeams: (dataset.allowedTeams || []).length === 0,
       });
     } catch (error) {
-      handleGenericError(error);
+      if (error instanceof Error) {
+        handleGenericError(error);
+      }
     } finally {
       this.setState({
         isLoading: false,
@@ -366,7 +368,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     }
 
     let message = null;
-    let type = "info";
+    let type: AlertProps["type"] = "info";
 
     const applySuggestedSettings = () => {
       const form = this.formRef.current;
@@ -524,7 +526,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
     const hasErr = hasFormError;
 
-    if (hasErr(err, "dataSource") || hasErr(err, "dataSourceJson")) {
+    if (err instanceof FormErrors && (hasErr(err, "dataSource") || hasErr(err, "dataSourceJson"))) {
       formErrors.data = true;
     }
 

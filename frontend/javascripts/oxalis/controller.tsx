@@ -328,7 +328,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     const { gotUnhandledError, organizationToSwitchTo } = this.state;
     const switchToOwningOrganizationButton = (
       <AsyncButton
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; type: string; style: { m... Remove this comment to see the full error message
         type="primary"
         style={{
           marginRight: 26,

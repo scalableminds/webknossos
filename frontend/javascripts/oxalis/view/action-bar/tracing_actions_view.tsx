@@ -499,8 +499,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       : [
           <ButtonComponent
             key="read-only-button"
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-            type="danger"
+            danger
             disabled
             style={{
               backgroundColor: "var(--ant-warning-dark-5)",

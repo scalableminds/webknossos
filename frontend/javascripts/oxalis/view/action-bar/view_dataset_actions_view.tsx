@@ -43,7 +43,6 @@ export default function ViewDatasetActionsView(props: Props) {
       {modal}
       <Dropdown overlay={overlayMenu} trigger={["click"]}>
         <ButtonComponent
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{
             padding: "0 10px",
           }}

@@ -514,7 +514,6 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           Annotation Type: {isVolume ? "Volume" : "Skeleton"}
           {allowUpdate && isExplorational ? (
             <ButtonComponent
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               style={{
                 marginLeft: 10,
               }}

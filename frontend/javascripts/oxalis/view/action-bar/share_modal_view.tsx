@@ -1,4 +1,4 @@
-import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
+import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, RadioChangeEvent } from "antd";
 import { CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { useSelector } from "react-redux";
@@ -30,8 +30,7 @@ type Props = {
   annotationId: string;
 };
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'children' implicitly has an 'any'... Remove this comment to see the full error message
-function Hint({ children, style }) {
+function Hint({ children, style } : {children: React.ReactNode, style: React.CSSProperties}) {
   return (
     <div style={{ ...style, marginBottom: 12, fontSize: 12, color: "var(--ant-text-secondary)" }}>
       {children}
@@ -142,8 +141,7 @@ export default function ShareModalView(props: Props) {
     fetchAndSetSharedTeams();
   }, [annotationType, annotationId]);
 
-  const handleCheckboxChange = (event: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  const handleCheckboxChange = (event: RadioChangeEvent) => {
     setVisibility(event.target.value as any as APIAnnotationVisibility);
   };
 

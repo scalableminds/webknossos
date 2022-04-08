@@ -129,7 +129,7 @@ const memoizedDeriveData = memoizeOne(
 );
 
 class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState> {
-  listRef: typeof List | null | undefined;
+  listRef: React.RefObject<List> | null | undefined;
   storePropertyUnsubscribers: Array<() => void> = [];
   keyboard = new InputKeyboard(
     {
@@ -162,8 +162,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     );
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nextProps' implicitly has an 'any' type... Remove this comment to see the full error message
-  shouldComponentUpdate(nextProps, nextState) {
+  shouldComponentUpdate(nextProps: PropsWithSkeleton, nextState: CommentTabState) {
     if (nextState !== this.state) {
       return true;
     }
@@ -187,8 +186,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return relevantUpdateActions.length > 0;
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'prevProps' implicitly has an 'any' type... Remove this comment to see the full error message
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps: PropsWithSkeleton) {
     if (
       this.listRef != null &&
       prevProps.skeletonTracing.trees !== this.props.skeletonTracing.trees
@@ -321,20 +319,18 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
     const onOk = () => this.setMarkdownModalVisibility(false);
 
-    return (
-      activeCommentMaybe
-        .map((comment) => (
-          <MarkdownModal
-            key={comment.nodeId}
-            source={comment.content}
-            visible={this.state.isMarkdownModalVisible}
-            onChange={this.handleChangeInput}
-            onOk={onOk}
-            label="Comment"
-          />
-        ))
-        .getOrElse(null)
-    );
+    return activeCommentMaybe
+      .map((comment) => (
+        <MarkdownModal
+          key={comment.nodeId}
+          source={comment.content}
+          visible={this.state.isMarkdownModalVisible}
+          onChange={this.handleChangeInput}
+          onOk={onOk}
+          label="Comment"
+        />
+      ))
+      .getOrElse(null);
   }
 
   renderSortIcon() {
@@ -364,8 +360,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return memoizedDeriveData(this.props.skeletonTracing.trees, this.state);
   }
 
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'index' implicitly has an 'any' ty... Remove this comment to see the full error message
-  renderRow = ({ index, key, style }) => {
+  renderRow = ({ index, key, style }: { index: number; key: string; style: React.CSSProperties }) => {
     if (this.getData()[index].treeId != null) {
       const tree = this.getData()[index];
       return (
@@ -373,7 +368,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
           key={key}
           style={style}
           tree={tree}
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           collapsed={this.state.collapsedTreeIds[tree.treeId]}
           onExpand={this.toggleExpand}
           isActive={tree.treeId === this.props.skeletonTracing.activeTreeId}
@@ -485,7 +479,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   }}
                 >
                   <AutoSizer>
-                    {({ height, width }) => (
+                    {({ height, width }: { height: number, width: number }) => (
                       <div
                         style={{
                           height,
@@ -502,8 +496,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                           rowRenderer={this.renderRow}
                           scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
                           tabIndex={null}
-                          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'listEl' implicitly has an 'any' type.
-                          ref={(listEl) => {
+                          ref={(listEl: List) => {
                             this.listRef = listEl;
                           }}
                         />

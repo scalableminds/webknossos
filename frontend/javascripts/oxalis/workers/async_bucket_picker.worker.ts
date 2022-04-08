@@ -53,7 +53,7 @@ function pick(
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
   gpuFactor: number,
-): Promise<ArrayBuffer> {
+): ArrayBuffer {
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
     comparator,

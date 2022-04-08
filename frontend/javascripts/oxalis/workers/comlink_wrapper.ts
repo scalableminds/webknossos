@@ -46,7 +46,9 @@ transferHandlers.set("throw", throwTransferHandlerWithResponseSupport);
 type UseCreateWorkerToUseMe<T> = {
   readonly _wrapped: T;
 };
-export function createWorker<T>(WorkerClass: UseCreateWorkerToUseMe<T>): T {
+export function createWorker<T extends (...args: any) => any>(
+  WorkerClass: UseCreateWorkerToUseMe<T>
+): ((...params: Parameters<T>) => Promise<ReturnType<T>>) {
   if (wrap == null) {
     // In a node context (e.g., when executing tests), we don't create web workers which is why
     // we can simply return the input function here.
@@ -73,17 +75,7 @@ export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   // $FlowExpectedError[not-a-function]
   // $FlowExpectedError[prop-missing]
   // @ts-expect-error ts-migrate(2741) FIXME: Property '_wrapped' is missing in type '(...args: ... Remove this comment to see the full error message
-  return (...args) => Promise.resolve(fn(...args));
+  return fn;
 }
-export function pretendPromise<T>(t: T): Promise<T> {
-  // The top level function within a webworker doesn't necessarily
-  // need to return a promise. However, when called from the main thread
-  // we will always get a promise. Since flow isn't able to express this
-  // for variadic function types, we have to cheat with the return type on
-  // the call side. For this scenario, this function can be used (see
-  // async_bucket_picker.worker.js as an example).
-  // $FlowExpectedError[incompatible-return]
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'T' is not assignable to type 'Promise<T>'.
-  return t;
-}
+
 export const transfer = _transfer;

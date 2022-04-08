@@ -125,7 +125,7 @@ export default class LayerRenderingManager {
   name: string;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
-  latestTaskExecutor: LatestTaskExecutor<(...args: Array<any>) => any> = new LatestTaskExecutor();
+  latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
 
   constructor(
     name: string,
@@ -221,22 +221,20 @@ export default class LayerRenderingManager {
 
       if (isVisible) {
         const { initializedGpuFactor } = state.temporaryConfiguration.gpuSetup;
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<(...args: any[]) => any>' is not ass... Remove this comment to see the full error message
-        pickingPromise = this.latestTaskExecutor.schedule(() =>
-          asyncBucketPick(
-            viewMode,
-            resolutions,
-            position,
-            sphericalCapRadius,
-            matrix,
-            logZoomStep,
-            datasetConfiguration.loadingStrategy,
-            this.cachedAnchorPoint,
-            areas,
-            subBucketLocality,
-            initializedGpuFactor,
-          ),
-        );
+
+        pickingPromise = this.latestTaskExecutor.schedule(() => asyncBucketPick(
+          viewMode,
+          resolutions,
+          position,
+          sphericalCapRadius,
+          matrix,
+          logZoomStep,
+          datasetConfiguration.loadingStrategy,
+          this.cachedAnchorPoint,
+          areas,
+          subBucketLocality,
+          initializedGpuFactor,
+        ));
       }
 
       this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);

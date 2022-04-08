@@ -9,6 +9,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -190,6 +191,9 @@ class BinaryDataController @Inject()(
     }
   }
 
+  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] =
+    if (layer.containsResolution(Vec3Int.fromForm(mag))) Some(Vec3Int.fromForm(mag)) else None
+
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
@@ -207,26 +211,42 @@ class BinaryDataController @Inject()(
         (_, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
         parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
         cubeLength = dataLayer.lengthOfUnderlyingCubes(parsedMag)
+        (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
       } yield
         Ok(
           Json.obj(
-            "dataLayer" -> dataLayer,
-            "dtype" -> dataLayer.elementClass, //"<f8",
-            "fill_value" -> "NaN",
+            "dtype" -> dtype,
+            "fill_value" -> 0,
             "zarr_format" -> 2,
-            "order" -> "F", // TODO is that always true?
-            "chunks" -> List(1, cubeLength, cubeLength, cubeLength),
+            "order" -> "F",
+            "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
             "compressor" -> Json
-              .obj("id" -> "blosc", "cname" -> "lz4", "clevel" -> 5, "shuffle" -> 1), // TODO What are those values
-            "filters" -> Json
-              .obj("id" -> "delta", "dtype" -> "<f8", "astype" -> "<f4"), // TODO unclear wha'ts happening here
-            "shape" -> List(1, dataLayer.boundingBox.width, dataLayer.boundingBox.height, dataLayer.boundingBox.depth) // TODO do we need to adapt this to the mag? Also, where is the channel coming from?
+              .obj("id" -> "lz4"), // TODO außer es ist uncompressed, lz4 hat vllt noch andere parameter
+            "filters" -> None,
+            "shape" -> List(
+              channels,
+              dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x,
+              dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y,
+              dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z
+            ),
+            "dimension_seperator" -> "/",
           ))
     }
   }
 
-  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] =
-    if (layer.containsResolution(Vec3Int.fromForm(mag))) Some(Vec3Int.fromForm(mag)) else None
+  private def zarrDtypeFromElementClass(elementClass: ElementClass.Value): (Int, String) = elementClass match {
+    case ElementClass.uint8  => (1, "<u1")
+    case ElementClass.uint16 => (1, "<u2")
+    case ElementClass.uint24 => (3, "<u1")
+    case ElementClass.uint32 => (1, "<u4")
+    case ElementClass.uint64 => (1, "<u8")
+    case ElementClass.float  => (1, "<f4")
+    case ElementClass.double => (1, "<f8")
+    case ElementClass.int8   => (1, "<i1")
+    case ElementClass.int16  => (1, "<i2")
+    case ElementClass.int32  => (1, "<i4")
+    case ElementClass.int64  => (1, "<i8")
+  }
 
   /**
     * Handles requests for raw binary data via HTTP GET for debugging.
@@ -238,31 +258,30 @@ class BinaryDataController @Inject()(
       dataSetName: String,
       dataLayerName: String,
       mag: String,
-      // TODO which parameters does the parameter use?
+      c: Int,
       x: Int,
       y: Int,
       z: Int,
-      width: Int,
-      height: Int,
-      depth: Int,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
         (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
         parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        _ <- bool2Fox(c == 0) ~> Messages("Channel must be 0") ~> 404
         cubeSize = dataLayer.lengthOfUnderlyingCubes(parsedMag)
         request = DataRequest(
           new VoxelPosition(x * cubeSize * parsedMag.x,
                             y * cubeSize * parsedMag.y,
                             z * cubeSize * parsedMag.z,
                             parsedMag),
-          width,
-          height,
-          depth,
+          cubeSize,
+          cubeSize,
+          cubeSize,
           DataServiceRequestSettings(halfByte = false)
         )
         (data, indices) <- requestData(dataSource, dataLayer, request)
+        _ = println(data.length)
       } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
     }
   }
@@ -277,7 +296,17 @@ class BinaryDataController @Inject()(
       for {
         dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
           "dataSource.notFound") ~> 404
-      } yield Ok(Json.obj("dataSource" -> dataSource))
+        dataLayers = dataSource.dataLayers
+        zarrLayers = dataLayers.collect({
+          case a: DataLayer =>
+            ZarrDataLayer(a.name,
+                          a.category,
+                          a.boundingBox,
+                          a.elementClass,
+                          a.resolutions.map(x => ZarrMag(x, None, None)))
+        })
+        zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
+      } yield Ok(Json.toJson(zarrSource))
     }
 
   }
@@ -286,8 +315,17 @@ class BinaryDataController @Inject()(
       token: Option[String],
       organizationName: String,
       dataSetName: String,
-  ): Result =  Ok(Json.obj("zarr_format" -> 2))
+      dataLayerName: String = "",
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+      for {
+        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
+          "dataSource.notFound") ~> 404
+      } yield Ok(Json.obj("zarr_format" -> 2))
+    }
 
+  }
 
   /**
     * Handles requests for data sprite sheets.

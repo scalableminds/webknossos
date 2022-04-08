@@ -48,6 +48,7 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
 object Vec3Int {
   val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
+  val urlRx = "\\s*([0-9]+)-\\s*([0-9]+)-\\s*([0-9]+)\\s*".r
   def toForm(p: Vec3Int) = Some("%d, %d, %d".format(p.x, p.y, p.z))
 
   def apply(t: (Int, Int, Int)): Vec3Int =
@@ -56,6 +57,8 @@ object Vec3Int {
   def fromForm(s: String) =
     s match {
       case formRx(x, y, z) =>
+        Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
+      case urlRx(x, y, z) =>
         Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
       case _ =>
         null

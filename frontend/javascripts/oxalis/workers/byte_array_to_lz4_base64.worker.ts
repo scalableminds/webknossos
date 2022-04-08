@@ -17,4 +17,4 @@ export function byteArrayToLz4Base64(byteArray: Uint8Array): string {
   const compressed = compressLz4Block(byteArray);
   return Base64.fromByteArray(compressed);
 }
-export default byteArrayToLz4Base64;
+export default expose(byteArrayToLz4Base64);

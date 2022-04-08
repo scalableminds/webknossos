@@ -7,16 +7,17 @@ import constants from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
-import { expose, pretendPromise } from "./comlink_wrapper";
+import { expose } from "./comlink_wrapper";
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'b' implicitly has an 'any' type.
-const comparator = (b, a) => b.priority - a.priority;
-
-function dequeueToArrayBuffer(
-  bucketQueue: PriorityQueue<{
+type PriorityItem = {
     bucketAddress: Vector4;
     priority: number;
-  }>,
+  }
+
+const comparator = (b: PriorityItem, a: PriorityItem) => b.priority - a.priority;
+
+function dequeueToArrayBuffer(
+  bucketQueue: PriorityQueue<PriorityItem>,
 ): ArrayBuffer {
   const itemCount = bucketQueue.length;
   const intsPerItem = 5; // [x, y, z, zoomStep, priority]
@@ -53,7 +54,7 @@ function pick(
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
   gpuFactor: number,
-): Promise<ArrayBuffer> {
+): ArrayBuffer {
   const bucketQueue = new PriorityQueue({
     // small priorities take precedence
     comparator,
@@ -92,7 +93,7 @@ function pick(
     );
   }
 
-  return Promise.resolve(dequeueToArrayBuffer(bucketQueue));
+  return dequeueToArrayBuffer(bucketQueue);
 }
 
-export default pick;
+export default expose(pick);

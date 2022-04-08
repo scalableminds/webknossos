@@ -8,9 +8,9 @@ import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_heade
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
 import Toast from "libs/toast";
 import handleStatus from "libs/handle_http_status";
-const fetchBufferViaWorker = FetchBufferWorker;
-const fetchBufferWithHeaders = FetchBufferWithHeadersWorker;
-const compress = CompressWorker;
+const fetchBufferViaWorker = createWorker(FetchBufferWorker);
+const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
+const compress = createWorker(CompressWorker);
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 export type RequestOptionsBase<T> = {
   compress?: boolean;

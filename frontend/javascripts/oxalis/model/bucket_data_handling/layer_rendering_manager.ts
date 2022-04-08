@@ -9,6 +9,7 @@ import { M4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import { map3 } from "libs/utils";
 import {
   getResolutions,
   getByteCount,
@@ -29,8 +30,10 @@ import type { ViewMode, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants"
 import constants from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import window from "libs/window";
+
+const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker)
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'oldArgs' implicitly has an 'any' type.
-const asyncBucketPick = memoizeOne(AsyncBucketPickerWorker, (oldArgs, newArgs) =>
+const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
   _.isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);
@@ -39,19 +42,15 @@ export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   // E.g., modAndDivide(63, 32) === 31 / 32 === ~0.97
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
-  const modAndDivide = (a, b) => (a % b) / b;
+  const modAndDivide = (a: number, b: number) => (a % b) / b;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pos' implicitly has an 'any' type.
-  const roundToNearestBucketBoundary = (pos, dimension) => {
+  const roundToNearestBucketBoundary = (pos: Vector3, dimension: 0 | 1 | 2) => {
     const bucketExtentInVoxel = constants.BUCKET_WIDTH * resolution[dimension];
     // Math.round returns 0 or 1 which will be mapped to -1 or 1
     return Math.round(modAndDivide(pos[dimension], bucketExtentInVoxel)) * 2 - 1;
   };
 
-  // $FlowIssue[invalid-tuple-arity]
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-  return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
+  return map3((_pos, idx) => roundToNearestBucketBoundary(position, idx), position);
 }
 
 function consumeBucketsFromArrayBuffer(
@@ -123,7 +122,7 @@ export default class LayerRenderingManager {
   name: string;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
-  latestTaskExecutor: LatestTaskExecutor<(...args: Array<any>) => any> = new LatestTaskExecutor();
+  latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
 
   constructor(
     name: string,
@@ -219,22 +218,20 @@ export default class LayerRenderingManager {
 
       if (isVisible) {
         const { initializedGpuFactor } = state.temporaryConfiguration.gpuSetup;
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<(...args: any[]) => any>' is not ass... Remove this comment to see the full error message
-        pickingPromise = this.latestTaskExecutor.schedule(() =>
-          asyncBucketPick(
-            viewMode,
-            resolutions,
-            position,
-            sphericalCapRadius,
-            matrix,
-            logZoomStep,
-            datasetConfiguration.loadingStrategy,
-            this.cachedAnchorPoint,
-            areas,
-            subBucketLocality,
-            initializedGpuFactor,
-          ),
-        );
+
+        pickingPromise = this.latestTaskExecutor.schedule(() => asyncBucketPick(
+          viewMode,
+          resolutions,
+          position,
+          sphericalCapRadius,
+          matrix,
+          logZoomStep,
+          datasetConfiguration.loadingStrategy,
+          this.cachedAnchorPoint,
+          areas,
+          subBucketLocality,
+          initializedGpuFactor,
+        ));
       }
 
       this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);

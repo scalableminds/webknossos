@@ -6,4 +6,4 @@ function compress(data: Uint8Array | string): Promise<Uint8Array> {
   return pako.gzip(data);
 }
 
-export default compress;
+export default expose(compress);

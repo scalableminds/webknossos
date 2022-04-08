@@ -31,4 +31,4 @@ function fetchBufferWithHeaders(
     });
 }
 
-export default fetchBufferWithHeaders;
+export default expose(fetchBufferWithHeaders);

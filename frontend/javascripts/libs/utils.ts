@@ -31,11 +31,11 @@ export function entries<K, V>(o: Record<K, V>): Array<[K, V]> {
   // @ts-expect-error ts-migrate(2322) FIXME: Type '[string, V][]' is not assignable to type '[K... Remove this comment to see the full error message
   return Object.entries(o);
 }
-export function map2<A, B>(fn: (arg0: A, arg1: number) => B, tuple: [A, A]): [B, B] {
+export function map2<A, B>(fn: (arg0: A, arg1: 0 | 1) => B, tuple: [A, A]): [B, B] {
   const [x, y] = tuple;
   return [fn(x, 0), fn(y, 1)];
 }
-export function map3<A, B>(fn: (arg0: A, arg1: number) => B, tuple: [A, A, A]): [B, B, B] {
+export function map3<A, B>(fn: (arg0: A, arg1: 0 | 1 | 2) => B, tuple: [A, A, A]): [B, B, B] {
   const [x, y, z] = tuple;
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
 }

@@ -236,7 +236,6 @@ function AdditionalSkeletonModesButtons() {
         </ButtonComponent>
       </Tooltip>
       <Tooltip title="Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.">
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         <ButtonComponent style={mergerModeButtonStyle} value="active" onClick={toggleMergerMode}>
           <img
             style={imgStyleForSpaceyIcons}

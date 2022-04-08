@@ -442,12 +442,10 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   <ButtonComponent
                     title="Jump to previous comment"
                     onClick={this.previousComment}
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     icon={<ArrowLeftOutlined />}
                   />
                   <InputComponent
                     value={activeCommentContent}
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={activeNodeMaybe.isNothing}
                     onChange={(evt) => this.handleChangeInput(evt, true)}
                     onPressEnter={(evt) => evt.target.blur()}
@@ -458,16 +456,14 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   />
                   <ButtonComponent
                     onClick={() => this.setMarkdownModalVisibility(true)}
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={activeNodeMaybe.isNothing}
-                    type={isMultilineComment ? "primary" : "button"}
+                    type={isMultilineComment ? "primary" : "default"}
                     icon={<EditOutlined />}
                     title="Open dialog to edit comment in multi-line mode"
                   />
                   <ButtonComponent
                     title="Jump to next comment"
                     onClick={this.nextComment}
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     icon={<ArrowRightOutlined />}
                   />
                   <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
@@ -477,7 +473,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   </Dropdown>
                   <ButtonComponent
                     onClick={this.toggleExpandForAllTrees}
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     icon={<ShrinkOutlined />}
                     title="Collapse or expand groups"
                   />

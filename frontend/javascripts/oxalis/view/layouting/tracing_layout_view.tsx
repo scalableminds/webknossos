@@ -320,7 +320,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   }}
                 >
                   <ButtonComponent
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     className={isLeftBorderOpen ? "highlight-togglable-button" : ""}
                     onClick={this.toggleLeftBorder}
                     shape="circle"

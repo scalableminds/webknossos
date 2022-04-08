@@ -156,7 +156,6 @@ class ConnectomeFilters extends React.Component<Props, State> {
           Filters
         </h4>
         <ButtonComponent
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           style={{
             float: "right",
           }}
@@ -198,7 +197,6 @@ class ConnectomeFilters extends React.Component<Props, State> {
     return (
       <Tooltip title="Configure Filters">
         <Popover content={this.getFilterSettings} trigger="click">
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           <ButtonComponent disabled={disabled || !isSynapseTypeFilterAvailable}>
             <FilterOutlined
               style={

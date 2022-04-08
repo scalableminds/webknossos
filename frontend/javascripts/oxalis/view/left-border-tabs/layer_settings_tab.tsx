@@ -160,7 +160,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               ? () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing)
               : () => Promise.resolve()
           }
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ icon: Element; onClick: () => Promise<void... Remove this comment to see the full error message
           style={{
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
@@ -176,7 +175,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         <AsyncIconButton
           icon={<ReloadOutlined />}
           onClick={() => this.reloadLayerData(layerName)}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ icon: Element; onClick: () => Promise<void... Remove this comment to see the full error message
           style={{
             cursor: "pointer",
           }}

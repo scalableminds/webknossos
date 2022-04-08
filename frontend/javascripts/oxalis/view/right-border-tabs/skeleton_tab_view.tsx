@@ -821,7 +821,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
                     title="Create new Tree (C)"
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={!this.props.allowUpdate}
                   >
                     <i className="fas fa-plus" />
@@ -829,7 +828,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <ButtonComponent
                     onClick={this.handleDelete}
                     title="Delete Selected Trees"
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={!this.props.allowUpdate}
                   >
                     <i className="far fa-trash-alt" />
@@ -863,7 +861,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <InputComponent
                     onChange={this.handleChangeTreeName}
                     value={activeTreeName || activeGroupName}
-                    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                     disabled={noTreesAndGroups}
                     style={{
                       width: "70%",

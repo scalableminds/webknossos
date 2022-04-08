@@ -1,18 +1,15 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import type { ContextRouter, Location, Match, RouteComponentProps } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { Route, withRouter } from "react-router-dom";
 import type { ComponentType } from "react";
 import React from "react";
 import LoginView from "admin/auth/login_view";
 
-type Props = {
+type Props = RouteComponentProps  & {
   component?: ComponentType<any>;
   path: string;
-  render?: (arg0: ContextRouter) => React.ReactNode;
+  render?: (arg0: RouteComponentProps) => React.ReactNode;
   isAuthenticated: boolean;
   serverAuthenticationCallback?: (...args: Array<any>) => any;
-  computedMatch: Match;
-  location: Location;
   exact?: boolean;
 };
 type State = {
@@ -31,6 +28,7 @@ class SecuredRoute extends React.PureComponent<Props, State> {
   async fetchData() {
     if (!this.props.isAuthenticated && this.props.serverAuthenticationCallback != null) {
       const isAdditionallyAuthenticated = await this.props.serverAuthenticationCallback({
+        // @ts-expect-error computedMatch is a private property of ReactRouter and not exposed through their types
         match: this.props.computedMatch,
         location: this.props.location,
       });
@@ -73,4 +71,4 @@ class SecuredRoute extends React.PureComponent<Props, State> {
 }
 
 
-export default withRouter<RouteComponentProps & Props, any>(SecuredRoute);
+export default withRouter<Props, any>(SecuredRoute);

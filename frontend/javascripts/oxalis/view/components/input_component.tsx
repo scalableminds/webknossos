@@ -1,19 +1,15 @@
-import { Input } from "antd";
+import { Input, InputProps } from "antd";
 import * as React from "react";
 import _ from "lodash";
-type InputComponentProp = {
-  onChange?: (...args: Array<any>) => any;
-  onFocus?: (...args: Array<any>) => any;
-  onBlur?: (...args: Array<any>) => any;
-  onPressEnter?: (...args: Array<any>) => any;
-  placeholder?: string;
-  value: string;
-  style?: any;
+import TextArea, { TextAreaProps } from "antd/lib/input/TextArea";
+
+type InputComponentProp = InputProps & TextAreaProps & {
   isTextArea?: boolean;
 };
+
 type InputComponentState = {
   isFocused: boolean;
-  currentValue: string;
+  currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"];
 }; // TODO Double check if we still need this once React v16 is released.
 
 /*
@@ -30,8 +26,7 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
     onChange: _.noop,
     onFocus: _.noop,
     onBlur: _.noop,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type '((...args: ... Remove this comment to see the full error message
-    onPressEnter: null,
+    onPressEnter: undefined,
     placeholder: "",
     value: "",
     style: {},
@@ -52,34 +47,36 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
     }
   };
 
-  handleChange = (e: React.SyntheticEvent) => {
+  handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       currentValue: e.target.value,
     });
 
     if (this.props.onChange) {
+      // @ts-expect-error HTMLInputElement and HTMLTextAreaElement have same event types
       this.props.onChange(e);
     }
   };
-
-  handleFocus = (e: React.SyntheticEvent) => {
+  
+  handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     this.setState({
       isFocused: true,
     });
-
+    
     if (this.props.onFocus) {
+      // @ts-expect-error HTMLInputElement and HTMLTextAreaElement have same event types
       this.props.onFocus(e);
     }
   };
-
-  handleBlur = (e: React.SyntheticEvent) => {
+  
+  handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     this.setState(
       {
         isFocused: false,
       },
       () => {
         if (this.props.onBlur) {
+          // @ts-expect-error HTMLInputElement and HTMLTextAreaElement have same event types
           this.props.onBlur(e);
         }
       },
@@ -88,7 +85,7 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
 
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
   blurYourself = () => (document.activeElement ? document.activeElement.blur() : null);
-  blurOnEscape = (event: KeyboardEvent) => {
+  blurOnEscape = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") {
       event.preventDefault();
       this.blurYourself();
@@ -97,21 +94,32 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
 
   render() {
     const { isTextArea, onPressEnter, ...inputProps } = this.props;
-    const InputClass = isTextArea ? Input.TextArea : Input;
-    const defaultOnPressEnter = !isTextArea ? this.blurYourself : null;
-    return (
-      <InputClass
-        {...inputProps}
-        onChange={this.handleChange}
-        onFocus={this.handleFocus}
-        onBlur={this.handleBlur}
-        value={this.state.currentValue}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '((...args: any[]) => any) | null' is not ass... Remove this comment to see the full error message
-        onPressEnter={onPressEnter != null ? onPressEnter : defaultOnPressEnter}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: KeyboardEvent) => void' is not assig... Remove this comment to see the full error message
-        onKeyDown={this.blurOnEscape}
-      />
-    );
+
+    if (isTextArea) {
+      return (
+        <TextArea
+          {...inputProps}
+          onChange={this.handleChange}
+          onFocus={this.handleFocus}
+          onBlur={this.handleBlur}
+          value={this.state.currentValue}
+          onPressEnter={onPressEnter != null ? onPressEnter : undefined}
+          onKeyDown={this.blurOnEscape}
+        />
+      );
+    } else {
+      return (
+        <Input
+          {...inputProps}
+          onChange={this.handleChange}
+          onFocus={this.handleFocus}
+          onBlur={this.handleBlur}
+          value={this.state.currentValue}
+          onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
+          onKeyDown={this.blurOnEscape}
+        />
+      );
+    }
   }
 }
 

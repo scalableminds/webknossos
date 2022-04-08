@@ -72,7 +72,6 @@ export function MarkdownModal({
             value={source}
             placeholder={`Add ${label}`}
             onChange={onChange}
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             rows={5}
             autoSize={{
               minRows: 5,

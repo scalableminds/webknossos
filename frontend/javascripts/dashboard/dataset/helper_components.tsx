@@ -114,6 +114,7 @@ type FormErrors = Array<{
   name: Array<string>;
   errors: Array<string>;
 }>;
+
 export const hasFormError = (formErrors: FormErrors, key: string): boolean => {
   // Find the number of errors for form fields whose path starts with key
   const errorsForKey = formErrors.map((errorObj) =>

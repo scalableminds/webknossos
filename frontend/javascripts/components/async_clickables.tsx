@@ -1,18 +1,14 @@
-import { Button } from "antd";
+import { Button, ButtonProps } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import * as React from "react";
 const { useState, useEffect, useRef } = React;
-type Props = {
-  type?: string;
-  icon?: React.ReactNode;
-  href: string;
-  onClick: (arg0: React.SyntheticEvent) => Promise<any>;
+
+export type AsyncButtonProps = Omit<ButtonProps, "onClick"> & {
   hideContentWhenLoading?: boolean;
-  children?: React.ReactNode;
-  disabled?: boolean;
+  onClick: (event: React.MouseEvent) => Promise<any>;
 };
 
-function useLoadingClickHandler(originalOnClick: (arg0: React.SyntheticEvent) => Promise<any>) {
+function useLoadingClickHandler(originalOnClick: (event: React.MouseEvent) => Promise<any>): [boolean, React.MouseEventHandler] {
   const [isLoading, setIsLoading] = useState(false);
   const wasUnmounted = useRef(false);
   useEffect(
@@ -22,7 +18,7 @@ function useLoadingClickHandler(originalOnClick: (arg0: React.SyntheticEvent) =>
     [],
   );
 
-  const onClick = async (event: React.SyntheticEvent) => {
+  const onClick = async (event: React.MouseEvent) => {
     if (isLoading) {
       // Ignoring the event when a previous event is still being processed.
       return;
@@ -42,16 +38,15 @@ function useLoadingClickHandler(originalOnClick: (arg0: React.SyntheticEvent) =>
   return [isLoading, onClick];
 }
 
-export function AsyncButton(props: Props) {
+export function AsyncButton(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   const { children, hideContentWhenLoading, ...rest } = props;
   const effectiveChildren = hideContentWhenLoading && isLoading ? null : children;
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'boolean | ((event: SyntheticEvent<Element, E... Remove this comment to see the full error message
   // eslint-disable-next-line react/no-children-prop
   return <Button {...rest} children={effectiveChildren} loading={isLoading} onClick={onClick} />;
 }
 export function AsyncIconButton(
-  props: Props & {
+  props: Omit<AsyncButtonProps, "icon"> & {
     icon: React.ReactElement<any>;
   },
 ) {
@@ -59,15 +54,12 @@ export function AsyncIconButton(
   return React.cloneElement(isLoading ? <LoadingOutlined /> : props.icon, { ...props, onClick });
 }
 export function AsyncLink(
-  props: Props & {
-    icon: React.ReactNode;
-  },
+  props: AsyncButtonProps 
 ) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   const icon = isLoading ? <LoadingOutlined key="loading-icon" /> : props.icon;
   return (
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'boolean | ((event: SyntheticEvent<Element, E... Remove this comment to see the full error message
-    <a {...props} onClick={onClick} className={isLoading ? "link-in-progress" : null}>
+    <a {...props} onClick={onClick} className={isLoading ? "link-in-progress" : undefined}>
       {icon}
       {props.children}
     </a>

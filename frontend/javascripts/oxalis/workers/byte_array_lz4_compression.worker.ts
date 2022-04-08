@@ -15,4 +15,4 @@ function compressLz4Block(data: Uint8Array, compress: boolean): Uint8Array {
 export function __compressLz4BlockHelper(data: Uint8Array, compress: boolean): Uint8Array {
   return compressLz4Block(data, compress);
 }
-export default compressLz4Block;
+export default expose(compressLz4Block);

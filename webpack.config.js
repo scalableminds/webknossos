@@ -76,13 +76,15 @@ module.exports = function(env = {}) {
       rules: [
         {
           test: /\.worker\.ts$/,
-          use: [{
-            loader: "babel-loader",
-            options: {
-              filename: "[name].[contenthash].worker.js",
-            },
-          }
-        ]
+          use: [
+            {
+              loader: "worker-loader",
+              options: {
+                // This property crashes webpack for some reason:
+                // filename: "[name].[contenthash].worker.ts",
+              },
+            }
+          ]
         },
         {
           test: /\.tsx?$/,

@@ -19,4 +19,4 @@ function decodeFourBit(buffer: ArrayBuffer): ArrayBuffer {
   return newColors.buffer;
 }
 
-export default decodeFourBit;
+export default expose(decodeFourBit);

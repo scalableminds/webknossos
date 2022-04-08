@@ -29,8 +29,10 @@ import type { ViewMode, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants"
 import constants from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import window from "libs/window";
+
+const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker)
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'oldArgs' implicitly has an 'any' type.
-const asyncBucketPick = memoizeOne(AsyncBucketPickerWorker, (oldArgs, newArgs) =>
+const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
   _.isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);

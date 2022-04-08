@@ -8,4 +8,4 @@ function fetchBufferViaWebworker(url: RequestInfo, options?: RequestOptions): Pr
     .then((response) => response.arrayBuffer());
 }
 
-export default fetchBufferViaWebworker;
+export default expose(fetchBufferViaWebworker);

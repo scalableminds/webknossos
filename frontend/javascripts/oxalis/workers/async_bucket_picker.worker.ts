@@ -92,7 +92,7 @@ function pick(
     );
   }
 
-  return Promise.resolve(dequeueToArrayBuffer(bucketQueue));
+  return dequeueToArrayBuffer(bucketQueue);
 }
 
-export default pick;
+export default expose(pick);

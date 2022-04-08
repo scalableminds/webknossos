@@ -28,7 +28,7 @@ import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 import { SkeletonTool } from "oxalis/controller/combinations/tool_controls";
-export function threeCameraToCameraData(camera: three.OrthographicCamera): CameraData {
+export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
 
@@ -68,7 +68,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
 
 const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
-  cameras: OrthoViewMap<three.OrthographicCamera>;
+  cameras: OrthoViewMap<THREE.OrthographicCamera>;
   planeView?: PlaneView;
   tracing?: Tracing;
 };

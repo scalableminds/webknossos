@@ -21,8 +21,8 @@ import shaderEditor from "oxalis/model/helpers/shader_editor";
 // The result is then projected on a flat surface.
 const renderDebuggerPlane = false;
 type ArbitraryMeshes = {
-  mainPlane: three.Mesh;
-  debuggerPlane: three.Mesh | null | undefined;
+  mainPlane: THREE.Mesh;
+  debuggerPlane: THREE.Mesh | null | undefined;
 };
 
 class ArbitraryPlane {
@@ -57,10 +57,9 @@ class ArbitraryPlane {
     this.meshes.mainPlane.material.setGlobalPosition(x, y, z);
   };
 
-  addToScene(scene: three.Scene) {
+  addToScene(scene: THREE.Scene) {
     _.values(this.meshes).forEach((mesh) => {
       if (mesh) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message
         scene.add(mesh);
       }
     });
@@ -122,7 +121,6 @@ class ArbitraryPlane {
     const mainPlane = adaptPlane(
       new THREE.Mesh(
         new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof ShaderMaterial' is not as... Remove this comment to see the full error message
         textureMaterial,
       ),
     );

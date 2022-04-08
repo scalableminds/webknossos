@@ -39,10 +39,10 @@ class PlaneView {
   trigger: (...args: Array<any>) => any;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
   listenTo: (...args: Array<any>) => any;
-  cameras: OrthoViewMap<three.OrthographicCamera>;
+  cameras: OrthoViewMap<THREE.OrthographicCamera>;
   throttledPerformIsosurfaceHitTest: (
     arg0: [number, number],
-  ) => three.Vector3 | null | undefined;
+  ) => THREE.Vector3 | null | undefined;
 
   running: boolean;
   needsRerender: boolean;
@@ -57,40 +57,29 @@ class PlaneView {
     this.running = false;
     const { scene } = getSceneController();
     // Initialize main THREE.js components
-    this.cameras = {};
+    const cameras: any = {};
 
     for (const plane of OrthoViewValues) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
-      // @ts-expect-error ts-migrate(2739) FIXME: Type 'OrthographicCamera' is missing the following... Remove this comment to see the full error message
-      this.cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
+      cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
-      // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'name' because it is a read-only ... Remove this comment to see the full error message
-      this.cameras[plane].name = plane;
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message
-      scene.add(this.cameras[plane]);
+      cameras[plane].name = plane;
+      scene.add(cameras[plane]);
     }
+    this.cameras = cameras;
 
     createDirLight([10, 10, 10], [0, 0, 10], 5, this.cameras[OrthoViews.TDView]);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     this.cameras[OrthoViews.TDView].position.copy(new THREE.Vector3(10, 10, -10));
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'up' does not exist on type 'typeof Ortho... Remove this comment to see the full error message
     this.cameras[OrthoViews.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'up' does not exist on type 'typeof Ortho... Remove this comment to see the full error message
     this.cameras[OrthoViews.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'up' does not exist on type 'typeof Ortho... Remove this comment to see the full error message
     this.cameras[OrthoViews.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'up' does not exist on type 'typeof Ortho... Remove this comment to see the full error message
     this.cameras[OrthoViews.TDView].up = new THREE.Vector3(0, 0, -1);
 
     for (const plane of OrthoViewValues) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'lookAt' does not exist on type 'typeof O... Remove this comment to see the full error message
       this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
     }
 
@@ -138,7 +127,6 @@ class PlaneView {
         [OrthoViews.PLANE_XZ]: getInputCatcherRect(storeState, "PLANE_XZ"),
         [OrthoViews.TDView]: getInputCatcherRect(storeState, "TDView"),
       };
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'autoClear' does not exist on type 'typeo... Remove this comment to see the full error message
       renderer.autoClear = true;
       clearCanvas(renderer);
 
@@ -148,7 +136,6 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'render' does not exist on type 'typeof W... Remove this comment to see the full error message
           renderer.render(scene, this.cameras[plane]);
         }
       }
@@ -159,7 +146,7 @@ class PlaneView {
 
   performIsosurfaceHitTest(
     mousePosition: [number, number],
-  ): three.Vector3 | null | undefined {
+  ): THREE.Vector3 | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { isosurfacesRootGroup } = SceneController;
@@ -183,11 +170,9 @@ class PlaneView {
       (mousePosition[0] / tdViewport.width) * 2 - 1,
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof OrthographicCamera' is no... Remove this comment to see the full error message
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'children' does not exist on type 'typeof... Remove this comment to see the full error message
     const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);
     const hitObject = intersections.length > 0 ? intersections[0].object : null;
 
@@ -195,7 +180,6 @@ class PlaneView {
     // in this case.
     // @ts-expect-error ts-migrate(7005) FIXME: Variable 'oldRaycasterHit' implicitly has an 'any'... Remove this comment to see the full error message
     if (hitObject === oldRaycasterHit) {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Vector3 | null' is not assignable to type 't... Remove this comment to see the full error message
       return intersections.length > 0 ? intersections[0].point : null;
     }
 
@@ -221,7 +205,6 @@ class PlaneView {
       });
       // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.cellId));
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Vector3' is not assignable to type 'typeof V... Remove this comment to see the full error message
       return intersections[0].point;
     } else {
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
@@ -240,12 +223,11 @@ class PlaneView {
 
   resize = (): void => {
     const { width, height } = getGroundTruthLayoutRect();
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setSize' does not exist on type 'typeof ... Remove this comment to see the full error message
     getSceneController().renderer.setSize(width, height);
     this.draw();
   };
 
-  getCameras(): OrthoViewMap<three.OrthographicCamera> {
+  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
     return this.cameras;
   }
 
@@ -253,7 +235,6 @@ class PlaneView {
     this.running = false;
 
     for (const plane of OrthoViewValues) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'remove' does not exist on type 'typeof S... Remove this comment to see the full error message
       getSceneController().scene.remove(this.cameras[plane]);
     }
 

@@ -7,12 +7,11 @@ export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
 
 class ContourGeometry {
-  color: three.Color;
+  color: THREE.Color;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'edge' has no initializer and is not defi... Remove this comment to see the full error message
-  edge: three.Line;
+  edge: THREE.Line;
 
   constructor() {
-    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Color' is missing the following properties f... Remove this comment to see the full error message
     this.color = CONTOUR_COLOR_NORMAL;
     this.createMeshes();
   }
@@ -22,7 +21,6 @@ class ContourGeometry {
     const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
     positionAttribute.setUsage(THREE.DynamicDrawUsage);
     edgeGeometry.setAttribute("position", positionAttribute);
-    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Line' is missing the following properties fr... Remove this comment to see the full error message
     this.edge = new THREE.Line(
       edgeGeometry,
       new THREE.LineBasicMaterial({
@@ -53,14 +51,13 @@ class ContourGeometry {
     app.vent.trigger("rerender");
   }
 
-  finalizeMesh(mesh: three.Line) {
+  finalizeMesh(mesh: THREE.Line) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
     if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {
       // Need to rebuild Geometry
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'ty... Remove this comment to see the full error message
       const positionAttribute = new THREE.BufferAttribute(mesh.vertexBuffer.getBuffer(), 3);
       positionAttribute.setUsage(THREE.DynamicDrawUsage);
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
       mesh.geometry.dispose();
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
       mesh.geometry.setAttribute("position", positionAttribute);
@@ -70,7 +67,6 @@ class ContourGeometry {
     mesh.geometry.attributes.position.needsUpdate = true;
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
     mesh.geometry.setDrawRange(0, mesh.vertexBuffer.getLength());
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
     mesh.geometry.computeBoundingSphere();
   }
 }

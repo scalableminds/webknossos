@@ -124,66 +124,52 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.input.keyboard = new InputKeyboard({
       // KeyboardJS is sensitive to ordering (complex combos first)
       // Move
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      space: (timeFactor) => {
+      space: (timeFactor: number) => {
         this.setRecord(true);
         this.move(timeFactor);
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      "ctrl + space": (timeFactor) => {
+      "ctrl + space": (timeFactor: number) => {
         this.setRecord(true);
         this.move(-timeFactor);
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      f: (timeFactor) => {
+      f: (timeFactor: number) => {
         this.setRecord(false);
         this.move(timeFactor);
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      d: (timeFactor) => {
+      d: (timeFactor: number) => {
         this.setRecord(false);
         this.move(-timeFactor);
       },
       // Rotate at centre
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      "shift + left": (timeFactor) => {
+      "shift + left": (timeFactor: number) => {
         Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor));
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      "shift + right": (timeFactor) => {
+      "shift + right": (timeFactor: number) => {
         Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor));
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      "shift + up": (timeFactor) => {
+      "shift + up": (timeFactor: number) => {
         Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor));
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      "shift + down": (timeFactor) => {
+      "shift + down": (timeFactor: number) => {
         Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor));
       },
       // Rotate in distance
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      left: (timeFactor) => {
+      left: (timeFactor: number) => {
         Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      right: (timeFactor) => {
+      right: (timeFactor: number) => {
         Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      up: (timeFactor) => {
+      up: (timeFactor: number) => {
         Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
-      down: (timeFactor) => {
+      down: (timeFactor: number) => {
         Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
       },
       // Zoom in/out
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
       i: () => {
         Store.dispatch(zoomInAction());
       },
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
       o: () => {
         Store.dispatch(zoomOutAction());
       },
@@ -191,9 +177,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
-        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         h: () => this.changeMoveValue(25),
-        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         g: () => this.changeMoveValue(-25),
       },
       {
@@ -220,7 +204,6 @@ class ArbitraryController extends React.PureComponent<Props> {
           return;
         }
 
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeNode' implicitly has an 'any' typ... Remove this comment to see the full error message
         getActiveNode(skeletonTracing).map((activeNode) =>
           api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
         );
@@ -262,7 +245,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     Utils.zipMaybe(getActiveNode(skeletonTracing), getMaxNodeId(skeletonTracing)).map(
-      // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeNode' implicitly has an 'an... Remove this comment to see the full error message
       ([activeNode, maxNodeId]) => {
         if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
           return;
@@ -375,13 +357,10 @@ class ArbitraryController extends React.PureComponent<Props> {
   };
 
   destroyInput() {
-    Utils.__guard__(this.input.mouseController, (x) => x.destroy());
-
-    Utils.__guard__(this.input.keyboard, (x) => x.destroy());
-
-    Utils.__guard__(this.input.keyboardLoopDelayed, (x) => x.destroy());
-
-    Utils.__guard__(this.input.keyboardNoLoop, (x) => x.destroy());
+    this.input.mouseController?.destroy();
+    this.input.keyboard?.destroy();
+    this.input.keyboardLoopDelayed?.destroy();
+    this.input.keyboardNoLoop?.destroy();
   }
 
   setWaypoint(): void {

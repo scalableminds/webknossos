@@ -152,7 +152,7 @@ export function handleOpenContextMenu(
     activeViewport,
   );
 }
-export function moveNode(dx: number, dy: number, nodeId: number | null | undefined) {
+export function moveNode(dx: number, dy: number, nodeId?: number | null | undefined) {
   // dx and dy are measured in pixel.
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
     // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
@@ -282,13 +282,11 @@ export function maybeGetNodeIdFromPosition(
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
   const pickingNode = skeleton.startPicking(isTouch);
   const pickingScene = new THREE.Scene();
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof Object3D' is not assignab... Remove this comment to see the full error message
   pickingScene.add(pickingNode);
   const camera = planeView.getCameras()[plane];
   let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Scene' is not assignable to para... Remove this comment to see the full error message
   const buffer = renderToTexture(plane, pickingScene, camera, true);
   // Beware of the fact that new browsers yield float numbers for the mouse position
   // Subtract the CSS border as the renderer viewport is smaller than the inputcatcher

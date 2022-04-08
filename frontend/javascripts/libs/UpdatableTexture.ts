@@ -3,10 +3,9 @@ import * as THREE from "three";
 import { document } from "libs/window";
 
 function UpdatableTexture(
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'width' implicitly has an 'any' type.
-  width,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'height' implicitly has an 'any' type.
-  height,
+  this: THREE.Texture,
+  width: number,
+  height: number,
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'format' implicitly has an 'any' type.
   format,
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'type' implicitly has an 'any' type.
@@ -27,7 +26,6 @@ function UpdatableTexture(
   encoding,
 ) {
   THREE.Texture.call(
-    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
     this,
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
     null,
@@ -47,19 +45,12 @@ function UpdatableTexture(
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   const imageData = ctx.createImageData(1, 1);
-  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.image = imageData;
-  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
-  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;
-  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.generateMipmaps = false;
-  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.flipY = false;
-  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.unpackAlignment = 1;
-  // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
   this.needsUpdate = true;
 }
 

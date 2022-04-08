@@ -219,7 +219,6 @@ class Skeleton {
    * Creates or reuses the WebGL buffers depending on how much capacity is left.
    * @param id - Id of a node or edge to look up its corresponding buffer
    * @param collection - collection of all buffers
-   * @param updateBoundingSphere - toggle to update ThreeJS's internals
    * @param createFunc - callback(buffer, index) that actually creates a node / edge
    */
   create(id: string, collection: BufferCollection, createFunc: BufferOperation) {
@@ -269,7 +268,6 @@ class Skeleton {
    * Finds the corresponding WebGL buffer for a node/edge for updates
    * @param id - Id of a node or edge to look up its corresponding buffer
    * @param collection - collection of all buffers
-   * @param deleteFunc - callback(buffer, index) that actually updates a node / edge
    */
   update(id: string, collection: BufferCollection, updateFunc: BufferOperation) {
     const bufferPosition = collection.idToBufferPosition.get(id);
@@ -289,9 +287,6 @@ class Skeleton {
    * Called on every store update. Diffs the old and new skeleton to identify
    * the changes and manipulate the WebGL buffers more fine granularly instead
    * of replacing them completely on every change.
-   * @param id - Id of a node or edge to look up its corresponding buffer
-   * @param collection - collection of all buffers
-   * @param deleteFunc - callback(buffer, index) that actually updates a node / edge
    */
   refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();

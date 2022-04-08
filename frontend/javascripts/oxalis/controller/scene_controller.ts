@@ -179,7 +179,7 @@ class SceneController {
       renderedLines = [];
     };
 
-    window.removeBucketMesh = (mesh: three.LineSegments) => this.rootNode.remove(mesh);
+    window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
   getIsosurfaceGeometry(cellId: number): THREE.Geometry {
@@ -527,7 +527,6 @@ class SceneController {
         isHighlighted: this.highlightedBBoxId === id,
       });
       bbCube.setVisibility(isVisible);
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof Line' is not assignable t... Remove this comment to see the full error message
       bbCube.getMeshes().forEach((mesh) => newUserBoundingBoxGroup.add(mesh));
       return bbCube;
     });

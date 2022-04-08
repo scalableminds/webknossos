@@ -117,13 +117,9 @@ class SkeletonKeybindings {
 
   static getLoopedKeyboardControls() {
     return {
-      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       "ctrl + left": () => SkeletonHandlers.moveNode(-1, 0),
-      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       "ctrl + right": () => SkeletonHandlers.moveNode(1, 0),
-      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       "ctrl + up": () => SkeletonHandlers.moveNode(0, -1),
-      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       "ctrl + down": () => SkeletonHandlers.moveNode(0, 1),
     };
   }
@@ -355,13 +351,9 @@ class PlaneController extends React.PureComponent<Props> {
     });
     this.input.keyboard = new InputKeyboard({
       // Move
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       left: (timeFactor) => MoveHandlers.moveU(-getMoveValue(timeFactor)),
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       right: (timeFactor) => MoveHandlers.moveU(getMoveValue(timeFactor)),
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       up: (timeFactor) => MoveHandlers.moveV(-getMoveValue(timeFactor)),
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '(timeFactor: number) => void' is missing the... Remove this comment to see the full error message
       down: (timeFactor) => MoveHandlers.moveV(getMoveValue(timeFactor)),
     });
     const notLoopedKeyboardControls = this.getNotLoopedKeyboardControls();
@@ -370,32 +362,19 @@ class PlaneController extends React.PureComponent<Props> {
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
         // KeyboardJS is sensitive to ordering (complex combos first)
-        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         "shift + i": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1),
-        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         "shift + o": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1),
-        // @ts-expect-error ts-migrate(2739) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         "shift + f": createDelayAwareMoveHandler(5),
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         "shift + d": createDelayAwareMoveHandler(-5),
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         "shift + space": createDelayAwareMoveHandler(-1),
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         "ctrl + space": createDelayAwareMoveHandler(-1),
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         space: createDelayAwareMoveHandler(1),
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         f: createDelayAwareMoveHandler(1),
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ (timeFactor: any, first: any): void; custo... Remove this comment to see the full error message
         d: createDelayAwareMoveHandler(-1),
         // Zoom in/out
-        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         i: () => MoveHandlers.zoom(1, false),
-        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         o: () => MoveHandlers.zoom(-1, false),
-        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         h: () => this.changeMoveValue(25),
-        // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
         g: () => this.changeMoveValue(-25),
         ...loopedKeyboardControls,
       },

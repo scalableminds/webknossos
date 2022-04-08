@@ -16,7 +16,7 @@ class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: three.Mesh;
+  plane: THREE.Mesh;
   planeID: OrthoView;
   displayCrosshair: boolean;
   baseScaleVector: THREE.Vector3;

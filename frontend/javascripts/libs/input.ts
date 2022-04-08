@@ -27,8 +27,8 @@ type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
 // Callable Object, see https://flow.org/en/docs/types/functions/#toc-callable-objects
 type KeyboardLoopHandler = {
   (arg0: number, isOriginalEvent: boolean): void;
-  delayed: boolean;
-  lastTime: number | null | undefined;
+  delayed?: boolean;
+  lastTime?: number | null | undefined;
   customAdditionalDelayFn?: () => number;
 };
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
@@ -221,9 +221,7 @@ export class InputKeyboard {
           delete this.keyCallbackMap[key];
         }
 
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'delayTimeoutId' implicitly has an 'any' ... Remove this comment to see the full error message
         if (delayTimeoutId != null) {
-          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'delayTimeoutId' implicitly has an 'any' ... Remove this comment to see the full error message
           clearTimeout(delayTimeoutId);
           delayTimeoutId = null;
         }

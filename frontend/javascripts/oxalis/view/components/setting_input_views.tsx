@@ -42,8 +42,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     // checked more thoroughly against invalid values.
     const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
     return (
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; type: string; align: ... Remove this comment to see the full error message
-      <Row type="flex" align="middle" gutter={rowGutter}>
+      <Row align="middle" gutter={rowGutter}>
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -130,8 +129,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled, spans } = this.props;
     return (
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; type: string; align: ... Remove this comment to see the full error message
-      <Row type="flex" align="middle" gutter={rowGutter}>
+      <Row align="middle" gutter={rowGutter}>
         <Col span={spans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -139,7 +137,6 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string | number' is not a... Remove this comment to see the full error message
             tipFormatter={this.formatTooltip}
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
@@ -181,8 +178,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   render() {
     const { label, onChange, value, disabled, tooltipText, loading } = this.props;
     return (
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; className: string; ty... Remove this comment to see the full error message
-      <Row className="margin-bottom" type="flex" align="middle" gutter={rowGutter}>
+      <Row className="margin-bottom" align="middle" gutter={rowGutter}>
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>

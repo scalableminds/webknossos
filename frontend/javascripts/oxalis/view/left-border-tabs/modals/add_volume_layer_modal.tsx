@@ -84,7 +84,7 @@ export default function AddVolumeLayerModal({
           setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
         />
       ) : null}
-      <Row type="flex" justify="center" align="middle">
+      <Row justify="center" align="middle">
         <AsyncButton onClick={handleAddVolumeLayer} type="primary" icon={<PlusOutlined />}>
           Add Volume Annotation Layer
         </AsyncButton>

@@ -169,7 +169,7 @@ function DatasetView(props: Props) {
     );
     const uploadPlaceholder = (
       <React.Fragment>
-        <Row type="flex" gutter={16} justify="center" align="bottom">
+        <Row gutter={16} justify="center" align="bottom">
           {features().isDemoInstance ? openPublicDatasetCard : addSampleDatasetCard}
           <OptionCard
             header="Upload Dataset"

@@ -146,7 +146,7 @@ export class Vector3Input extends BaseVector<Vector3> {
 export class Vector6Input extends BaseVector<Vector6> {
   defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
 }
-type BoundingBoxInputProps = {
+type BoundingBoxInputProps = Omit<InputComponentProps, "value"> & {
   value: ServerBoundingBoxTypeTuple;
   onChange: (arg0: ServerBoundingBoxTypeTuple) => void;
 };

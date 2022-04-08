@@ -1,4 +1,4 @@
-import { Alert, List, Input, Form, InputNumber, Col, Row, Switch, Tooltip } from "antd";
+import { Alert, List, Input, Form, InputNumber, Col, Row, Switch, Tooltip, FormInstance } from "antd";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
@@ -10,6 +10,7 @@ import {
   jsonEditStyle,
 } from "./helper_components";
 import { APIDataLayer } from "types/api_flow_types";
+import { BoundingBoxObject } from "oxalis/store";
 const FormItem = Form.Item;
 export default function SimpleAdvancedDataForm({
   isReadOnlyDataset,
@@ -19,7 +20,7 @@ export default function SimpleAdvancedDataForm({
   additionalAlert,
 }: {
   isReadOnlyDataset: boolean;
-  form: Record<string, any>;
+  form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
   additionalAlert: React.ReactNode | null | undefined;
@@ -158,13 +159,12 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }: { isReadOnly
           </div>
         }
       >
-        {(dataSource ||{dataLayers: []}).dataLayers.map((layer, idx: number) => (
+        {(dataSource ||{dataLayers: []}).dataLayers.map((layer: APIDataLayer, idx: number) => (
             <List.Item key={`layer-${layer.name}`}>
               <SimpleLayerForm
                 isReadOnlyDataset={isReadOnlyDataset}
                 layer={layer}
                 index={idx}
-                form={form}
               />
             </List.Item>
           ))}
@@ -214,8 +214,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }: { isReadOnlyDatase
             },
             {
               validator: syncValidator(
-                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                (value) => value.width !== 0 && value.height !== 0 && value.depth !== 0,
+                (value: BoundingBoxObject) => value.width !== 0 && value.height !== 0 && value.depth !== 0,
                 "Width, height and depth must not be zero",
               ),
             },

@@ -17,14 +17,14 @@ class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: typeof THREE.Mesh;
+  plane: three.Mesh;
   planeID: OrthoView;
   displayCrosshair: boolean;
-  baseScaleVector: typeof THREE.Vector3;
+  baseScaleVector: three.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
-  crosshair: Array<typeof THREE.LineSegments>;
+  crosshair: Array<three.LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
-  TDViewBorders: typeof THREE.Line;
+  TDViewBorders: three.Line;
   lastScaleFactors: [number, number];
 
   constructor(planeID: OrthoView) {

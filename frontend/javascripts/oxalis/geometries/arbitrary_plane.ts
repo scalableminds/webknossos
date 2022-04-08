@@ -21,8 +21,8 @@ import shaderEditor from "oxalis/model/helpers/shader_editor";
 // The result is then projected on a flat surface.
 const renderDebuggerPlane = false;
 type ArbitraryMeshes = {
-  mainPlane: typeof THREE.Mesh;
-  debuggerPlane: typeof THREE.Mesh | null | undefined;
+  mainPlane: three.Mesh;
+  debuggerPlane: three.Mesh | null | undefined;
 };
 
 class ArbitraryPlane {
@@ -57,7 +57,7 @@ class ArbitraryPlane {
     this.meshes.mainPlane.material.setGlobalPosition(x, y, z);
   };
 
-  addToScene(scene: typeof THREE.Scene) {
+  addToScene(scene: three.Scene) {
     _.values(this.meshes).forEach((mesh) => {
       if (mesh) {
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message

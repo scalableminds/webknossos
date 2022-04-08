@@ -3,7 +3,7 @@ import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 
 class Crosshair {
-  mesh: typeof THREE.Mesh;
+  mesh: three.Mesh;
   WIDTH: number;
   COLOR: string;
   SCALE_MIN: number;
@@ -70,7 +70,7 @@ class Crosshair {
     }
   }
 
-  addToScene(scene: typeof THREE.Scene) {
+  addToScene(scene: three.Scene) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'add' does not exist on type 'typeof Scen... Remove this comment to see the full error message
     scene.add(this.mesh);
   }

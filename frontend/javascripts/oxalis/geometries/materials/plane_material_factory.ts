@@ -83,7 +83,7 @@ class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'material' has no initializer and is not ... Remove this comment to see the full error message
-  material: typeof THREE.ShaderMaterial;
+  material: three.ShaderMaterial;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'uniforms' has no initializer and is not ... Remove this comment to see the full error message
   uniforms: Uniforms;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'attributes' has no initializer and is no... Remove this comment to see the full error message
@@ -608,7 +608,7 @@ class PlaneMaterialFactory {
     this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
   }
 
-  getMaterial(): typeof THREE.ShaderMaterial {
+  getMaterial(): three.ShaderMaterial {
     return this.material;
   }
 

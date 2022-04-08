@@ -10,8 +10,8 @@ export const channelCountToFormat = {
 export function createUpdatableTexture(
   width: number,
   channelCount: number,
-  type: typeof THREE.FloatType | typeof THREE.UnsignedByteType | typeof THREE.Uint32BufferAttribute,
-  renderer: typeof THREE.WebGLRenderer,
+  type: three.FloatType | three.UnsignedByteType | three.Uint32BufferAttribute,
+  renderer: three.WebGLRenderer,
 ): typeof UpdatableTexture {
   // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const format = channelCountToFormat[channelCount];

@@ -50,7 +50,7 @@ export default class TextureBucketManager {
   dataTextures: Array<typeof UpdatableTexture>;
   lookUpBuffer: Float32Array;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'lookUpTexture' has no initializer and is... Remove this comment to see the full error message
-  lookUpTexture: typeof THREE.DataTexture;
+  lookUpTexture: three.DataTexture;
   // Holds the index for each active bucket, to which it should (or already
   // has been was) written in the data texture.
   activeBucketToIndexMap: Map<DataBucket, number> = new Map();
@@ -252,7 +252,7 @@ export default class TextureBucketManager {
     });
   }
 
-  getTextures(): Array<typeof THREE.DataTexture | typeof UpdatableTexture> {
+  getTextures(): Array<three.DataTexture | typeof UpdatableTexture> {
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     return [this.lookUpTexture].concat(this.dataTextures);
   }

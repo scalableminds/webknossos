@@ -18,7 +18,7 @@ type CenterTDViewAction = {
 type ZoomTDViewAction = {
   type: "ZOOM_TD_VIEW";
   value: number;
-  targetPosition: typeof THREE.Vector3;
+  targetPosition: three.Vector3;
   curWidth: number;
   curHeight: number;
 };
@@ -71,7 +71,7 @@ export const centerTDViewAction = (): CenterTDViewAction => ({
 });
 export const zoomTDViewAction = (
   value: number,
-  targetPosition: typeof THREE.Vector3,
+  targetPosition: three.Vector3,
   curWidth: number,
   curHeight: number,
 ): ZoomTDViewAction => ({

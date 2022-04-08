@@ -3,11 +3,11 @@ import { COLOR_TEXTURE_WIDTH_FIXED } from "oxalis/geometries/materials/node_shad
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
 
 class EdgeShader {
-  material: typeof THREE.RawShaderMaterial;
+  material: three.RawShaderMaterial;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'uniforms' has no initializer and is not ... Remove this comment to see the full error message
   uniforms: Uniforms;
 
-  constructor(treeColorTexture: typeof THREE.DataTexture) {
+  constructor(treeColorTexture: three.DataTexture) {
     this.setupUniforms(treeColorTexture);
     // @ts-expect-error ts-migrate(2741) FIXME: Property 'prototype' is missing in type 'RawShader... Remove this comment to see the full error message
     this.material = new THREE.RawShaderMaterial({
@@ -18,7 +18,7 @@ class EdgeShader {
     });
   }
 
-  setupUniforms(treeColorTexture: typeof THREE.DataTexture): void {
+  setupUniforms(treeColorTexture: three.DataTexture): void {
     this.uniforms = {
       activeTreeId: {
         type: "f",
@@ -31,7 +31,7 @@ class EdgeShader {
     };
   }
 
-  getMaterial(): typeof THREE.RawShaderMaterial {
+  getMaterial(): three.RawShaderMaterial {
     return this.material;
   }
 

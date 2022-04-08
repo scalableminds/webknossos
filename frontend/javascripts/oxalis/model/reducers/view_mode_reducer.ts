@@ -135,7 +135,7 @@ function centerTDViewReducer(state: OxalisState): OxalisState {
 function zoomTDView(
   state: OxalisState,
   value: number,
-  targetPosition: typeof THREE.Vector3,
+  targetPosition: three.Vector3,
   curWidth: number,
   curHeight: number,
 ): OxalisState {

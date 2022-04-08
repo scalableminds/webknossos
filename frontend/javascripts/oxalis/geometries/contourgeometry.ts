@@ -7,9 +7,9 @@ export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
 
 class ContourGeometry {
-  color: typeof THREE.Color;
+  color: three.Color;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'edge' has no initializer and is not defi... Remove this comment to see the full error message
-  edge: typeof THREE.Line;
+  edge: three.Line;
 
   constructor() {
     // @ts-expect-error ts-migrate(2739) FIXME: Type 'Color' is missing the following properties f... Remove this comment to see the full error message
@@ -53,7 +53,7 @@ class ContourGeometry {
     app.vent.trigger("rerender");
   }
 
-  finalizeMesh(mesh: typeof THREE.Line) {
+  finalizeMesh(mesh: three.Line) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
     if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {
       // Need to rebuild Geometry

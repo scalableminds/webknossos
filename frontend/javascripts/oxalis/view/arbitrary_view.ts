@@ -23,7 +23,7 @@ class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
   trigger: (...args: Array<any>) => any;
-  cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
+  cameras: OrthoViewMap<three.OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
   animate: () => void;
@@ -34,12 +34,12 @@ class ArbitraryView {
   animationRequestId: number | null | undefined = null;
   camDistance: number;
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'typeof Pers... Remove this comment to see the full error message
-  camera: typeof THREE.PerspectiveCamera = null;
+  camera: three.PerspectiveCamera = null;
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'typeof Orth... Remove this comment to see the full error message
-  tdCamera: typeof THREE.OrthographicCamera = null;
-  geometries: Array<typeof THREE.Geometry> = [];
+  tdCamera: three.OrthographicCamera = null;
+  geometries: Array<three.Geometry> = [];
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
-  group: typeof THREE.Object3D;
+  group: three.Object3D;
   cameraPosition: Array<number>;
 
   constructor() {
@@ -93,7 +93,7 @@ class ArbitraryView {
     });
   }
 
-  getCameras(): OrthoViewMap<typeof THREE.OrthographicCamera> {
+  getCameras(): OrthoViewMap<three.OrthographicCamera> {
     return this.cameras;
   }
 
@@ -275,7 +275,7 @@ class ArbitraryView {
     return usedBuckets;
   };
 
-  addGeometry(geometry: typeof THREE.Geometry): void {
+  addGeometry(geometry: three.Geometry): void {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
     this.geometries.push(geometry);

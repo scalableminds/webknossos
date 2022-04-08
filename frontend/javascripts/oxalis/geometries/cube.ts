@@ -18,8 +18,8 @@ type Properties = {
 };
 
 class Cube {
-  crossSections: OrthoViewMap<typeof THREE.Line>;
-  cube: typeof THREE.Line;
+  crossSections: OrthoViewMap<three.Line>;
+  cube: three.Line;
   min: Vector3;
   max: Vector3;
   showCrossSections: boolean;
@@ -159,7 +159,7 @@ class Cube {
     }
   }
 
-  getMeshes(): Array<typeof THREE.Line> {
+  getMeshes(): Array<three.Line> {
     return [this.cube].concat(_.values(this.crossSections));
   }
 

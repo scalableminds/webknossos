@@ -39,10 +39,10 @@ class PlaneView {
   trigger: (...args: Array<any>) => any;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
   listenTo: (...args: Array<any>) => any;
-  cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
+  cameras: OrthoViewMap<three.OrthographicCamera>;
   throttledPerformIsosurfaceHitTest: (
     arg0: [number, number],
-  ) => typeof THREE.Vector3 | null | undefined;
+  ) => three.Vector3 | null | undefined;
 
   running: boolean;
   needsRerender: boolean;
@@ -159,7 +159,7 @@ class PlaneView {
 
   performIsosurfaceHitTest(
     mousePosition: [number, number],
-  ): typeof THREE.Vector3 | null | undefined {
+  ): three.Vector3 | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { isosurfacesRootGroup } = SceneController;
@@ -245,7 +245,7 @@ class PlaneView {
     this.draw();
   };
 
-  getCameras(): OrthoViewMap<typeof THREE.OrthographicCamera> {
+  getCameras(): OrthoViewMap<three.OrthographicCamera> {
     return this.cameras;
   }
 

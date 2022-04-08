@@ -158,7 +158,7 @@ export default class LayerRenderingManager {
     shaderEditor.addBucketManagers(this.textureBucketManager);
   }
 
-  getDataTextures(): Array<typeof THREE.DataTexture | typeof UpdatableTexture> {
+  getDataTextures(): Array<three.DataTexture | typeof UpdatableTexture> {
     if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not available earlier
       this.setupDataTextures();

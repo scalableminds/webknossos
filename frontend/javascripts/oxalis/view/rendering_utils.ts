@@ -18,7 +18,7 @@ const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
 
 export const setupRenderArea = (
-  renderer: typeof THREE.WebGLRenderer,
+  renderer: three.WebGLRenderer,
   x: number,
   y: number,
   viewportWidth: number,
@@ -38,7 +38,7 @@ export const setupRenderArea = (
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'setClearColor' does not exist on type 't... Remove this comment to see the full error message
   renderer.setClearColor(color === 0xffffff ? getBackgroundColor() : color, 1);
 };
-export const clearCanvas = (renderer: typeof THREE.WebGLRenderer) => {
+export const clearCanvas = (renderer: three.WebGLRenderer) => {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'domElement' does not exist on type 'type... Remove this comment to see the full error message
   setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'clear' does not exist on type 'typeof We... Remove this comment to see the full error message
@@ -46,8 +46,8 @@ export const clearCanvas = (renderer: typeof THREE.WebGLRenderer) => {
 };
 export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
-  scene?: typeof THREE.Scene,
-  camera?: typeof THREE.Camera, // When withFarClipping is true, the user-specified clipping distance is used.
+  scene?: three.Scene,
+  camera?: three.Camera, // When withFarClipping is true, the user-specified clipping distance is used.
   // Note that the data planes might not be included in the rendered texture, since
   // these are exactly offset by the clipping distance. Currently, `withFarClipping`
   // is only used for node picking (which does not render the data planes), which is why

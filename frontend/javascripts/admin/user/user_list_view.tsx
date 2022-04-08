@@ -57,7 +57,7 @@ type State = {
   searchQuery: string;
   domainToEdit: string | null | undefined;
 };
-const persistence: Persistence<State> = new Persistence(
+const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
   {
     searchQuery: PropTypes.string,
     activationFilter: PropTypes.arrayOf(PropTypes.string),

@@ -218,7 +218,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         state,
         "localSegmentationData",
         layerName,
-        "isosurfaces", // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+        "isosurfaces",
         id,
         isosurfaceInfo,
       );
@@ -263,9 +263,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         state,
         "localSegmentationData",
         layerName,
-        "isosurfaces", // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-        cellId, // $FlowIgnore[incompatible-call]
-        // $FlowIgnore[prop-missing] updateKey has problems with union types
+        "isosurfaces",
+        cellId,
         isosurfaceInfo,
       );
     }
@@ -284,9 +283,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         state,
         "localSegmentationData",
         layerName,
-        "isosurfaces", // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-        cellId, // $FlowIgnore[incompatible-call]
-        // $FlowIgnore[prop-missing] updateKey has problems with union types
+        "isosurfaces",
+        cellId,
         isosurfaceInfo,
       );
     }
@@ -300,7 +298,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         state,
         "localSegmentationData",
         layerName,
-        "isosurfaces", // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+        "isosurfaces",
         cellId,
         isosurfaceInfo,
       );
@@ -315,7 +313,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         state,
         "localSegmentationData",
         layerName,
-        "isosurfaces", // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+        "isosurfaces",
         cellId,
         isosurfaceInfo,
       );

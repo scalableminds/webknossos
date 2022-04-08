@@ -9,6 +9,7 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "./helper_components";
+import { APIDataLayer } from "types/api_flow_types";
 const FormItem = Form.Item;
 export default function SimpleAdvancedDataForm({
   isReadOnlyDataset,
@@ -172,8 +173,7 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }: { isReadOnly
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isReadOnlyDataset' implicitly has... Remove this comment to see the full error message
-function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
+function SimpleLayerForm({ isReadOnlyDataset, layer, index }: { isReadOnlyDataset: boolean; layer: APIDataLayer; index: number }) {
   const isSegmentation = layer.category === "segmentation";
   const bitDepth = getBitDepth(layer);
   const boundingBoxValue =
@@ -241,7 +241,6 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
                 message: "Please provide a largest segment ID for the segmentation layer",
               },
               {
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rule' implicitly has an 'any' type.
                 validator: (rule, value) =>
                   value > 0 && value < 2 ** bitDepth
                     ? Promise.resolve()

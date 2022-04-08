@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 import React from "react";
 import LoginView from "admin/auth/login_view";
 
-type Props = RouteComponentProps  & {
+type Props = RouteComponentProps & {
   component?: ComponentType<any>;
   path: string;
   render?: (arg0: RouteComponentProps) => React.ReactNode;

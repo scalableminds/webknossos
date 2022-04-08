@@ -728,7 +728,6 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
         <Alert
           key={i}
           message={Object.values(message)[0]}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type '"info" | ... Remove this comment to see the full error message
           type={Object.keys(message)[0]}
           showIcon
         />

@@ -23,7 +23,6 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   const [dataSet, setDataSet] = useState<APIDataset | null | undefined>(null);
   const allowedTeamsComponent = (
     <FormItemWithInfo
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string[]; label: ... Remove this comment to see the full error message
       name={["dataset", "allowedTeams"]}
       label="Teams allowed to access this dataset"
       info="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset."
@@ -77,7 +76,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   }
 
   function getSharingLink() {
-    if (!form) return null;
+    if (!form) return undefined;
     const doesNeedToken = !form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${sharingToken}`;
     return `${window.location.origin}/datasets/${datasetId.owningOrganization}/${
@@ -96,7 +95,6 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   return form ? (
     <div>
       <FormItemWithInfo
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string[]; label: ... Remove this comment to see the full error message
         name={["dataset", "isPublic"]}
         label="Visibility"
         info="Make your dataset public, for anonymous/unregistered users to access your dataset."
@@ -117,7 +115,6 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
       >
         <Input.Group compact>
           <Input
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
             value={getSharingLink()}
             onClick={handleSelectCode}
             style={{

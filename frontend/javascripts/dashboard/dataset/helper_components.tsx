@@ -3,6 +3,8 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import { FormItemProps } from "@ant-design/compatible/lib/form/FormItem";
+import { NamePath } from "antd/lib/form/interface";
+import { Rule } from "antd/lib/form";
 
 const FormItem = Form.Item;
 
@@ -21,15 +23,19 @@ export function Hideable({ children, hidden }: { children: React.ReactNode; hidd
     </div>
   );
 }
+
 export const FormItemWithInfo = ({
   label,
   info,
   children,
   ...props
 }: FormItemProps & {
-  label: React.ReactNode;
   info: React.ReactNode;
   children: React.ReactNode;
+  name?: NamePath;
+  initialValue?: string;
+  rules?: Rule[];
+  valuePropName?: string;
 }) => (
   <FormItem
     {...props}
@@ -38,11 +44,7 @@ export const FormItemWithInfo = ({
       <span>
         {label}{" "}
         <Tooltip title={info}>
-          <InfoCircleOutlined
-            style={{
-              color: "gray",
-            }}
-          />
+          <InfoCircleOutlined style={{ color: "gray" }} />
         </Tooltip>
       </span>
     }
@@ -50,6 +52,7 @@ export const FormItemWithInfo = ({
     {children}
   </FormItem>
 );
+
 export class RetryingErrorBoundary extends React.Component<
   {
     children: React.ReactNode;

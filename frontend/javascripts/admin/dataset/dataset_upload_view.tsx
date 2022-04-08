@@ -716,7 +716,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             {features().jobsEnabled && needsConversion ? (
               <React.Fragment>
                 <FormItemWithInfo
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string; label: st... Remove this comment to see the full error message
                   name="scale"
                   label="Voxel Size"
                   info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
@@ -737,7 +736,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   ]}
                 >
                   <Vector3Input
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ style: { width: number; }; allowDecimals: ... Remove this comment to see the full error message
                     style={{
                       width: 400,
                     }}

@@ -197,7 +197,6 @@ function DatasetView(props: Props) {
     );
     return context.isLoading ? null : (
       <Row
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
         type="flex"
         justify="center"
         style={{

@@ -134,7 +134,6 @@ class DatasetPositionView extends PureComponent<Props> {
           <Vector3Input
             value={position}
             onChange={this.handleChangePosition}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ value: any; onChange: (position: Vector3) ... Remove this comment to see the full error message
             autoSize
             style={positionInputStyle}
             allowDecimals
@@ -163,7 +162,6 @@ class DatasetPositionView extends PureComponent<Props> {
             <Vector3Input
               value={rotation}
               onChange={this.handleChangeRotation}
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ value: any; onChange: (rotation: Vector3) ... Remove this comment to see the full error message
               style={{
                 textAlign: "center",
                 width: 120,

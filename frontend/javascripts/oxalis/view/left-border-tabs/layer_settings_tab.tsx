@@ -941,7 +941,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
-            <Row type="flex" justify="center" align="middle">
+            <Row justify="center" align="middle">
               <Button onClick={this.showAddVolumeLayerModal}>
                 <PlusOutlined />
                 Add Volume Annotation Layer

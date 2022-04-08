@@ -107,7 +107,7 @@ function AuthTokenView() {
           </Spin>
         </Col>
       </Row>
-      <Row type="flex" justify="center" align="middle">
+      <Row justify="center" align="middle">
         <Col span={8}>
           <p>
             An Auth Token is a series of symbols that serves to authenticate you. It is used in

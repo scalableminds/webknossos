@@ -1,4 +1,4 @@
-import { Alert, List, Input, Form, InputNumber, Col, Row, Switch, Tooltip } from "antd";
+import { Alert, List, Input, Form, InputNumber, Col, Row, Switch, Tooltip, FormInstance } from "antd";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
@@ -9,6 +9,8 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "./helper_components";
+import { APIDataLayer } from "types/api_flow_types";
+import { BoundingBoxObject } from "oxalis/store";
 const FormItem = Form.Item;
 export default function SimpleAdvancedDataForm({
   isReadOnlyDataset,
@@ -18,7 +20,7 @@ export default function SimpleAdvancedDataForm({
   additionalAlert,
 }: {
   isReadOnlyDataset: boolean;
-  form: Record<string, any>;
+  form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
   additionalAlert: React.ReactNode | null | undefined;
@@ -157,16 +159,12 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }: { isReadOnly
           </div>
         }
       >
-        {dataSource ||
-          {
-            dataLayers: [],
-          }.dataLayers.map((layer, idx) => (
+        {(dataSource ||{dataLayers: []}).dataLayers.map((layer: APIDataLayer, idx: number) => (
             <List.Item key={`layer-${layer.name}`}>
               <SimpleLayerForm
                 isReadOnlyDataset={isReadOnlyDataset}
                 layer={layer}
                 index={idx}
-                form={form}
               />
             </List.Item>
           ))}
@@ -175,8 +173,7 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }: { isReadOnly
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isReadOnlyDataset' implicitly has... Remove this comment to see the full error message
-function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
+function SimpleLayerForm({ isReadOnlyDataset, layer, index }: { isReadOnlyDataset: boolean; layer: APIDataLayer; index: number }) {
   const isSegmentation = layer.category === "segmentation";
   const bitDepth = getBitDepth(layer);
   const boundingBoxValue =
@@ -199,7 +196,6 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
       </Col>
       <Col span={17}>
         <FormItemWithInfo
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: any[]; label: str... Remove this comment to see the full error message
           name={
             layer.dataFormat === "knossos"
               ? ["dataSource", "dataLayers", index, "sections", 0, "boundingBox"]
@@ -218,15 +214,13 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
             },
             {
               validator: syncValidator(
-                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                (value) => value.width !== 0 && value.height !== 0 && value.depth !== 0,
+                (value: BoundingBoxObject) => value.width !== 0 && value.height !== 0 && value.depth !== 0,
                 "Width, height and depth must not be zero",
               ),
             },
           ]}
         >
           <BoundingBoxInput
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             disabled={isReadOnlyDataset}
             style={{
               width: 300,
@@ -236,7 +230,6 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
 
         {isSegmentation ? (
           <FormItemWithInfo
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: any[]; label: str... Remove this comment to see the full error message
             name={["dataSource", "dataLayers", index, "largestSegmentId"]}
             label="Largest segment ID"
             info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
@@ -247,7 +240,6 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
                 message: "Please provide a largest segment ID for the segmentation layer",
               },
               {
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rule' implicitly has an 'any' type.
                 validator: (rule, value) =>
                   value > 0 && value < 2 ** bitDepth
                     ? Promise.resolve()

@@ -3,7 +3,7 @@ import * as React from "react";
 import _ from "lodash";
 import TextArea, { TextAreaProps } from "antd/lib/input/TextArea";
 
-type InputComponentProp = InputProps & TextAreaProps & {
+export type InputComponentProps = InputProps & TextAreaProps & {
   isTextArea?: boolean;
 };
 
@@ -21,8 +21,8 @@ type InputComponentState = {
  * @class
  */
 
-class InputComponent extends React.PureComponent<InputComponentProp, InputComponentState> {
-  static defaultProps: InputComponentProp = {
+class InputComponent extends React.PureComponent<InputComponentProps, InputComponentState> {
+  static defaultProps: InputComponentProps = {
     onChange: _.noop,
     onFocus: _.noop,
     onBlur: _.noop,
@@ -38,7 +38,7 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
     currentValue: this.props.value,
   };
 
-  componentDidUpdate = (prevProps: InputComponentProp) => {
+  componentDidUpdate = (prevProps: InputComponentProps) => {
     if (!this.state.isFocused && prevProps.value !== this.props.value) {
       // eslint-disable-next-line react/no-did-update-set-state
       this.setState({

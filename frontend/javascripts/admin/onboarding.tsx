@@ -89,8 +89,15 @@ function StepHeader({
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'icon' implicitly has an 'any' typ... Remove this comment to see the full error message
-function FeatureCard({ icon, header, children }) {
+function FeatureCard({
+  icon,
+  header,
+  children,
+}: {
+  icon: React.ReactNode;
+  header: React.ReactNode;
+  children: React.ReactNode;
+}) {
   const columnSpan = {
     xs: 24,
     sm: 24,
@@ -283,8 +290,7 @@ export class InviteUsersModal extends React.Component<
   }
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'onComplete' implicitly has an 'an... Remove this comment to see the full error message
-const OrganizationForm = ({ onComplete }) => {
+const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) => {
   const [form] = Form.useForm();
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'values' implicitly has an 'any' type.
@@ -301,7 +307,6 @@ const OrganizationForm = ({ onComplete }) => {
       }}
     >
       <Row
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; type: string; justify... Remove this comment to see the full error message
         type="flex"
         justify="center"
         style={{
@@ -405,7 +410,6 @@ class OnboardingView extends React.PureComponent<Props, State> {
       icon={<i className="far fa-building icon-big" />}
     >
       <OrganizationForm
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'organizationName' implicitly has an 'an... Remove this comment to see the full error message
         onComplete={(organizationName) => {
           this.setState({
             organizationName,
@@ -507,7 +511,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           />
         </Modal>
       )}
-      <Row type="flex" gutter={16} justify="center" align="bottom">
+      <Row gutter={16} justify="center" align="bottom">
         <OptionCard
           header="Upload Dataset"
           icon={<CloudUploadOutlined />}
@@ -566,7 +570,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       }
       icon={<RocketOutlined className="icon-big" />}
     >
-      <Row type="flex" gutter={50}>
+      <Row gutter={50}>
         <FeatureCard header="Data Annotation" icon={<PlayCircleOutlined />}>
           <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
           <a href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s">watch this video</a>.
@@ -692,7 +696,6 @@ class OnboardingView extends React.PureComponent<Props, State> {
             }}
           >
             <Row
-              type="flex"
               justify="center"
               style={{
                 flex: "1 1 auto",
@@ -700,7 +703,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
               align="middle"
             >
               <Col span={18}>
-                <Row type="flex" justify="center" align="middle">
+                <Row justify="center" align="middle">
                   <Col span={24}>{currentStepContent}</Col>
                 </Row>
               </Col>
@@ -718,4 +721,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter(OnboardingView));
+export default connector(withRouter<RouteComponentProps & Props, any>(OnboardingView));

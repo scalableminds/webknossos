@@ -2,9 +2,10 @@ import * as React from "react";
 import _ from "lodash";
 import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
-import InputComponent from "oxalis/view/components/input_component";
+import InputComponent, { InputComponentProps } from "oxalis/view/components/input_component";
 import * as Utils from "libs/utils";
-type BaseProps<T> = {
+
+type BaseProps<T> = Omit<InputComponentProps, "value"> & {
   value: T | string;
   onChange: (value: T) => void;
   changeOnlyOnBlur?: boolean;
@@ -96,8 +97,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
       isValid: true,
     });
   };
-  handleChange = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const text = evt.target.value;
     // only numbers, commas and whitespace is allowed
     const isValidInput = this.props.allowDecimals
@@ -118,7 +118,6 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
   };
 
   render() {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'style' does not exist on type 'Omit<Read... Remove this comment to see the full error message
     const { style, autoSize, ...props } = _.omit(this.props, [
       "onChange",
       "value",
@@ -127,7 +126,6 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
     ]);
 
     return (
-      // $FlowIgnore[cannot-spread-inexact] Flow cannot infer the type of props
       <InputComponent
         onChange={this.handleChange}
         onFocus={this.handleFocus}
@@ -148,7 +146,7 @@ export class Vector3Input extends BaseVector<Vector3> {
 export class Vector6Input extends BaseVector<Vector6> {
   defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
 }
-type BoundingBoxInputProps = {
+type BoundingBoxInputProps = Omit<InputComponentProps, "value"> & {
   value: ServerBoundingBoxTypeTuple;
   onChange: (arg0: ServerBoundingBoxTypeTuple) => void;
 };
@@ -165,6 +163,7 @@ const emptyBoundingBox = {
   height: 0,
   depth: 0,
 };
+
 export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps> {
   static defaultProps = {
     value: emptyBoundingBox,
@@ -173,7 +172,7 @@ export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps>
 
   render() {
     const { value, onChange, ...props } = this.props;
-    const vector6Value = boundingBoxToVector6(value || emptyBoundingBox);
+    const vector6Value = boundingBoxToVector6(value || emptyBoundingBox)
     return (
       <Vector6Input
         {...props}

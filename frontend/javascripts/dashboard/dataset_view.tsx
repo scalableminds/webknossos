@@ -13,7 +13,7 @@ import {
 } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIJob, APIUser } from "types/api_flow_types";
+import type { APIJob, APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
@@ -53,10 +53,9 @@ const persistence: Persistence<PersistenceState> = new Persistence(
   "datasetList",
 );
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
-function filterDatasetsForUsersOrganization(datasets, user) {
+function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[], user: APIUser) {
   return features().isDemoInstance
-    ? // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'd' implicitly has an 'any' type.
+    ? 
       datasets.filter((d) => d.owningOrganization === user.organization)
     : datasets;
 }
@@ -99,8 +98,7 @@ function DatasetView(props: Props) {
     });
   }, []);
   useEffect(() => {
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'interval' implicitly has type 'any' in s... Remove this comment to see the full error message
-    let interval = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
     if (features().jobsEnabled) {
       interval = setInterval(() => {
@@ -108,7 +106,6 @@ function DatasetView(props: Props) {
       }, CONVERSION_JOBS_REFRESH_INTERVAL);
     }
 
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'interval' implicitly has an 'any' type.
     return () => (interval != null ? clearInterval(interval) : undefined);
   }, []);
   useEffect(() => {
@@ -169,7 +166,7 @@ function DatasetView(props: Props) {
     );
     const uploadPlaceholder = (
       <React.Fragment>
-        <Row type="flex" gutter={16} justify="center" align="bottom">
+        <Row gutter={16} justify="center" align="bottom">
           {features().isDemoInstance ? openPublicDatasetCard : addSampleDatasetCard}
           <OptionCard
             header="Upload Dataset"
@@ -197,8 +194,6 @@ function DatasetView(props: Props) {
     );
     return context.isLoading ? null : (
       <Row
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-        type="flex"
         justify="center"
         style={{
           padding: "20px 50px 70px",

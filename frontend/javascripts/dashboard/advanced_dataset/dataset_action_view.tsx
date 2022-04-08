@@ -125,7 +125,6 @@ function LinkWithDisabled({
   return (
     <Link
       {...rest}
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ pointerEvents?: string | undefined; color?... Remove this comment to see the full error message
       style={adaptedStyle}
       onClick={(e) => (disabled ? e.preventDefault() : onClick)}
     />
@@ -162,7 +161,6 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       <a
         onClick={() => this.clearCache(dataset)}
         title="Reload Dataset"
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ pointerEvents: string; color: string; } | ... Remove this comment to see the full error message
         style={disabledWhenReloadingStyle}
         type="link"
       >
@@ -205,7 +203,6 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 }
               />
             ) : (
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ pointerEvents: string; color: string; } | ... Remove this comment to see the full error message
               <p style={disabledWhenReloadingStyle}>
                 New Annotation {Unicode.NonBreakingSpace}
                 <Tooltip title="Cannot create annotations for read-only datasets">

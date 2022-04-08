@@ -31,10 +31,10 @@ type Props = {
 };
 type State = {
   isLoading: boolean;
-  tasktypes: Array<APITaskType>;
+  tasktypes: APITaskType[];
   searchQuery: string;
 };
-const persistence: Persistence<State> = new Persistence(
+const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
   {
     searchQuery: PropTypes.string,
   },
@@ -42,7 +42,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class TaskTypeListView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     isLoading: true,
     tasktypes: [],
     searchQuery: "",
@@ -72,9 +72,8 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
     });
   }
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -119,203 +118,190 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
     const typeHint: Array<APITaskType> = [];
     return (
       <div className="container">
-        <div
-          style={{
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTag: number; }' is not assignable to... Remove this comment to see the full error message
-            marginTag: 20,
-          }}
-        >
-          <div className="pull-right">
-            <Link to="/taskTypes/create">
-              <Button icon={<PlusOutlined />} style={marginRight} type="primary">
-                Add Task Type
-              </Button>
-            </Link>
-            <Search
-              style={{
-                width: 200,
-              }}
-              onPressEnter={this.handleSearch}
-              onChange={this.handleSearch}
-              value={this.state.searchQuery}
-            />
-          </div>
-          <h3>Task Types</h3>
-          <div
-            className="clearfix"
+        <div className="pull-right">
+          <Link to="/taskTypes/create">
+            <Button icon={<PlusOutlined />} style={marginRight} type="primary">
+              Add Task Type
+            </Button>
+          </Link>
+          <Search
             style={{
-              margin: "20px 0px",
+              width: 200,
             }}
+            onPressEnter={this.handleSearch}
+            onChange={this.handleSearch}
+            value={this.state.searchQuery}
           />
-
-          <Spin spinning={this.state.isLoading} size="large">
-            <Table
-              dataSource={Utils.filterWithSearchQueryAND(
-                this.state.tasktypes,
-                ["id", "teamName", "summary", "description", "settings"],
-                this.state.searchQuery,
-              )}
-              rowKey="id"
-              pagination={{
-                defaultPageSize: 50,
-              }}
-              style={{
-                marginTop: 30,
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
-                marginBotton: 30,
-              }}
-              locale={{
-                emptyText: this.renderPlaceholder(),
-              }}
-              scroll={{
-                x: "max-content",
-              }}
-              className="large-table"
-            >
-              <Column
-                title="ID"
-                dataIndex="id"
-                key="id"
-                width={120}
-                sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.id)}
-                className="monospace-id"
-              />
-              <Column
-                title="Team"
-                dataIndex="teamName"
-                key="team"
-                width={230}
-                sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.teamName)}
-              />
-              <Column
-                title="Summary"
-                dataIndex="summary"
-                key="summary"
-                width={230}
-                sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.summary)}
-              />
-              <Column
-                title="Description"
-                dataIndex="description"
-                key="description"
-                sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.description)}
-                render={(description) => (
-                  <div className="task-type-description short">
-                    <Markdown
-                      source={description}
-                      options={{
-                        html: false,
-                        breaks: true,
-                        linkify: true,
-                      }}
-                    />
-                  </div>
-                )}
-              />
-              <Column
-                title="Modes"
-                dataIndex="settings"
-                key="allowedModes"
-                width={200}
-                render={(settings, taskType) =>
-                  [
-                    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                    taskType.tracingType === "skeleton" || taskType.tracingType === "hybrid" ? (
-                      <Tag color="green" key="tracingType">
-                        skeleton
-                      </Tag>
-                    ) : null,
-                    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                    taskType.tracingType === "volume" || taskType.tracingType === "hybrid" ? (
-                      <Tag color="orange" key="tracingType">
-                        volume
-                      </Tag>
-                    ) : null,
-                  ].concat(
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mode' implicitly has an 'any' type.
-                    settings.allowedModes.map((mode) => (
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type '"blue" | null' is not assignable to type 'Li... Remove this comment to see the full error message
-                      <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
-                        {mode}
-                      </Tag>
-                    )),
-                  )
-                }
-              />
-              <Column
-                title="Settings"
-                dataIndex="settings"
-                key="settings"
-                render={(settings) => {
-                  const elements = [];
-                  if (settings.branchPointsAllowed)
-                    elements.push(<Tag key="branchPointsAllowed">Branchpoints</Tag>);
-                  if (settings.somaClickingAllowed)
-                    elements.push(
-                      <Tag key="somaClickingAllowed">
-                        Allow Single-node-tree mode (&quot;Soma clicking&quot;)
-                      </Tag>,
-                    );
-                  if (settings.mergerMode)
-                    elements.push(
-                      <Tag color="purple" key="mergerMode">
-                        Merger Mode
-                      </Tag>,
-                    );
-                  return elements;
-                }}
-                width={200}
-              />
-              <Column
-                title="Action"
-                key="actions"
-                width={140}
-                fixed="right"
-                render={(__, taskType: APITaskType) => (
-                  <span>
-                    <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
-                      <EyeOutlined />
-                      View
-                    </Link>
-                    <br />
-                    <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
-                      <EditOutlined />
-                      Edit
-                    </Link>
-                    <br />
-                    <Link to={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">
-                      <ScheduleOutlined />
-                      Tasks
-                    </Link>
-                    <br />
-                    <Link to={`/taskTypes/${taskType.id}/projects`} title="View Projects">
-                      <EyeOutlined />
-                      Projects
-                    </Link>
-                    <br />
-                    <AsyncLink
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
-                      href="#"
-                      onClick={() => {
-                        const includesVolumeData = taskType.tracingType !== "skeleton";
-                        return downloadNml(taskType.id, "CompoundTaskType", includesVolumeData);
-                      }}
-                      title="Download all Finished Annotations"
-                      icon={<DownloadOutlined />}
-                    >
-                      Download
-                    </AsyncLink>
-                    <br />
-                    <LinkButton onClick={_.partial(this.deleteTaskType, taskType)}>
-                      <DeleteOutlined />
-                      Delete
-                    </LinkButton>
-                  </span>
-                )}
-              />
-            </Table>
-          </Spin>
         </div>
+        <h3>Task Types</h3>
+        <div
+          className="clearfix"
+          style={{
+            margin: "20px 0px",
+          }}
+        />
+
+        <Spin spinning={this.state.isLoading} size="large">
+          <Table
+            dataSource={Utils.filterWithSearchQueryAND(
+              this.state.tasktypes,
+              ["id", "teamName", "summary", "description", "settings"],
+              this.state.searchQuery,
+            )}
+            rowKey="id"
+            pagination={{
+              defaultPageSize: 50,
+            }}
+            style={{
+              marginTop: 30,
+              marginBottom: 30,
+            }}
+            locale={{
+              emptyText: this.renderPlaceholder(),
+            }}
+            scroll={{
+              x: "max-content",
+            }}
+            className="large-table"
+          >
+            <Column
+              title="ID"
+              dataIndex="id"
+              key="id"
+              width={120}
+              sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.id)}
+              className="monospace-id"
+            />
+            <Column
+              title="Team"
+              dataIndex="teamName"
+              key="team"
+              width={230}
+              sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.teamName)}
+            />
+            <Column
+              title="Summary"
+              dataIndex="summary"
+              key="summary"
+              width={230}
+              sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.summary)}
+            />
+            <Column
+              title="Description"
+              dataIndex="description"
+              key="description"
+              sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.description)}
+              render={(description) => (
+                <div className="task-type-description short">
+                  <Markdown
+                    source={description}
+                    options={{
+                      html: false,
+                      breaks: true,
+                      linkify: true,
+                    }}
+                  />
+                </div>
+              )}
+            />
+            <Column
+              title="Modes"
+              dataIndex="settings"
+              key="allowedModes"
+              width={200}
+              render={(settings: APITaskType["settings"], taskType: APITaskType) =>
+                [
+                  taskType.tracingType === "skeleton" || taskType.tracingType === "hybrid" ? (
+                    <Tag color="green" key={`${taskType.id}_skeleton`}>
+                      skeleton
+                    </Tag>
+                  ) : null,
+                  taskType.tracingType === "volume" || taskType.tracingType === "hybrid" ? (
+                    <Tag color="orange" key={`${taskType.id}_volume`}>
+                      volume
+                    </Tag>
+                  ) : null,
+                ].concat(
+                  settings.allowedModes.map((mode) => (
+                    <Tag key={mode} color={mode === settings.preferredMode ? "blue" : undefined}>
+                      {mode}
+                    </Tag>
+                  )),
+                )
+              }
+            />
+            <Column
+              title="Settings"
+              dataIndex="settings"
+              key="settings"
+              render={(settings) => {
+                const elements = [];
+                if (settings.branchPointsAllowed)
+                  elements.push(<Tag key="branchPointsAllowed">Branchpoints</Tag>);
+                if (settings.somaClickingAllowed)
+                  elements.push(
+                    <Tag key="somaClickingAllowed">
+                      Allow Single-node-tree mode (&quot;Soma clicking&quot;)
+                    </Tag>,
+                  );
+                if (settings.mergerMode)
+                  elements.push(
+                    <Tag color="purple" key="mergerMode">
+                      Merger Mode
+                    </Tag>,
+                  );
+                return elements;
+              }}
+              width={200}
+            />
+            <Column
+              title="Action"
+              key="actions"
+              width={140}
+              fixed="right"
+              render={(__, taskType: APITaskType) => (
+                <span>
+                  <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
+                    <EyeOutlined />
+                    View
+                  </Link>
+                  <br />
+                  <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
+                    <EditOutlined />
+                    Edit
+                  </Link>
+                  <br />
+                  <Link to={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">
+                    <ScheduleOutlined />
+                    Tasks
+                  </Link>
+                  <br />
+                  <Link to={`/taskTypes/${taskType.id}/projects`} title="View Projects">
+                    <EyeOutlined />
+                    Projects
+                  </Link>
+                  <br />
+                  <AsyncLink
+                    href="#"
+                    onClick={() => {
+                      const includesVolumeData = taskType.tracingType !== "skeleton";
+                      return downloadNml(taskType.id, "CompoundTaskType", includesVolumeData);
+                    }}
+                    title="Download all Finished Annotations"
+                    icon={<DownloadOutlined />}
+                  >
+                    Download
+                  </AsyncLink>
+                  <br />
+                  <LinkButton onClick={_.partial(this.deleteTaskType, taskType)}>
+                    <DeleteOutlined />
+                    Delete
+                  </LinkButton>
+                </span>
+              )}
+            />
+          </Table>
+        </Spin>
       </div>
     );
   }

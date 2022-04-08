@@ -68,7 +68,7 @@ type State = {
   finishedModeState: TaskModeState;
   unfinishedModeState: TaskModeState;
 };
-const persistence: Persistence<State> = new Persistence(
+const persistence: Persistence<Pick<State, "showFinishedTasks">> = new Persistence(
   {
     showFinishedTasks: PropTypes.bool,
   },

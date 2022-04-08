@@ -60,7 +60,7 @@ type State = {
   selectedProject: APIProjectWithAssignments | null | undefined;
   taskTypeName: string | null | undefined;
 };
-const persistence: Persistence<State> = new Persistence(
+const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
   {
     searchQuery: PropTypes.string,
   },
@@ -142,7 +142,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
             projects: prevState.projects.filter((p) => p.id !== project.id),
           }));
         } catch (error) {
-          handleGenericError(error);
+          handleGenericError(error as Error);
         } finally {
           this.setState({
             isLoading: false,
@@ -182,7 +182,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
             projects: prevState.projects.map((p) => (p.id === project.id ? updatedProject : p)),
           }));
         } catch (error) {
-          handleGenericError(error);
+          handleGenericError(error as Error);
         } finally {
           this.setState({
             isLoading: false,
@@ -406,7 +406,6 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                     </a>
                     <br />
                     <AsyncLink
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; href: string; onClick: (... Remove this comment to see the full error message
                       href="#"
                       onClick={async () => {
                         this.maybeShowNoFallbackDataInfo(project.id);

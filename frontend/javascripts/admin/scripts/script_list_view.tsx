@@ -24,7 +24,7 @@ type State = {
   scripts: Array<APIScript>;
   searchQuery: string;
 };
-const persistence: Persistence<State> = new Persistence(
+const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
   {
     searchQuery: PropTypes.string,
   },

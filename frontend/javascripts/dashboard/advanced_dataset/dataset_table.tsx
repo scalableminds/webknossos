@@ -243,7 +243,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="name"
           width={280}
           sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(name: string, dataset: APIMaybeUnimportedDataset) => (
             <div>
@@ -264,7 +263,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="tags"
           key="tags"
           width={280}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
             dataset.isActive ? (
@@ -275,7 +273,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
                     key={tag}
                     kind="datasets"
                     onClick={_.partial(this.props.addTagToSearch, tag)}
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Function1<SyntheticEvent<Element, Event>, vo... Remove this comment to see the full error message
                     onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
                     closable
                   />
@@ -313,7 +310,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="created"
           key="created"
           sorter={Utils.compareBy(typeHint, (dataset) => dataset.created)}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
           render={(created) => <FormattedDate timestamp={created} />}
         />
@@ -341,7 +337,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           width={130}
           // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
           sorter={(a, b) => a.isActive - b.isActive}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
           render={(isActive: boolean) =>
             isActive ? (
@@ -364,9 +359,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="isPublic"
           key="isPublic"
           width={130}
-          // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
           sorter={(a, b) => a.isPublic - b.isPublic}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | false' is not assignable to type 'S... Remove this comment to see the full error message
           sortOrder={sortedInfo.columnKey === "isPublic" && sortedInfo.order}
           render={(isPublic: boolean) =>
             isPublic ? (
@@ -411,7 +404,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ dataset: any; reloadDataset: (datasetId: a... Remove this comment to see the full error message
             <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
           )}
         />

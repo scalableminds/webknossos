@@ -41,7 +41,6 @@ export default function DefaultConfigComponent() {
       <Row gutter={24}>
         <Col span={6}>
           <FormItemWithInfo
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string[]; label: ... Remove this comment to see the full error message
             name={["defaultConfiguration", "position"]}
             label="Position"
             info="The default position is defined in voxel-coordinates (x, y, z)."
@@ -51,14 +50,12 @@ export default function DefaultConfigComponent() {
         </Col>
         <Col span={6}>
           <FormItemWithInfo
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string[]; label: ... Remove this comment to see the full error message
             name={["defaultConfiguration", "zoom"]}
             label="Zoom"
             info="A zoom of &ldquo;1&rdquo; will display the data in its original resolution."
             rules={[
               {
                 validator: syncValidator(
-                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                   (value) => value == null || value > 0,
                   "The zoom value must be greater than 0.",
                 ),
@@ -95,7 +92,6 @@ export default function DefaultConfigComponent() {
       <Row gutter={32}>
         <Col span={12}>
           <FormItemWithInfo
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string; label: st... Remove this comment to see the full error message
             name="defaultConfigurationLayersJson"
             label="Layer Configuration"
             info="Use the following JSON to define layer-specific properties, such as color, alpha and intensityRange."
@@ -105,9 +101,7 @@ export default function DefaultConfigComponent() {
               },
             ]}
           >
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type
-            'number | ... Remove this comment to see the full error message
-            <Input.TextArea rows="10" style={jsonEditStyle} />
+            <Input.TextArea rows={10} style={jsonEditStyle} />
           </FormItemWithInfo>
         </Col>
         <Col span={12}>

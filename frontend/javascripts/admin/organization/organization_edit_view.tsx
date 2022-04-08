@@ -224,7 +224,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 </span>
               </div>
             </FormItem>
-            <Row type="flex" justify="center">
+            <Row justify="center">
               <FormItem
                 style={{
                   marginRight: 20,
@@ -235,8 +235,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 </Button>
               </FormItem>
               <Button
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '"danger"' is not assignable to type '"link" ... Remove this comment to see the full error message
-                type="danger"
+                danger
                 loading={this.state.isDeleting}
                 onClick={this.handleDeleteButtonClicked}
                 disabled={this.state.isFetchingData}

@@ -11,7 +11,6 @@ import constants, {
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
 } from "oxalis/constants";
-import ThreeDMap from "libs/ThreeDMap";
 
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
@@ -20,11 +19,11 @@ class Plane {
   plane: three.Mesh;
   planeID: OrthoView;
   displayCrosshair: boolean;
-  baseScaleVector: three.Vector3;
+  baseScaleVector: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
-  crosshair: Array<three.LineSegments>;
+  crosshair: Array<THREE.LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
-  TDViewBorders: three.Line;
+  TDViewBorders: THREE.Line;
   lastScaleFactors: [number, number];
 
   constructor(planeID: OrthoView) {
@@ -37,7 +36,6 @@ class Plane {
     // --> scaleInfo.baseVoxel
     const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
-    // @ts-expect-error ts-migrate(2741) FIXME: Property 'prototype' is missing in type 'Vector3' ... Remove this comment to see the full error message
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
     this.createMeshes();
   }
@@ -53,7 +51,6 @@ class Plane {
     )
       .setup()
       .getMaterial();
-    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Mesh' is missing the following properties fr... Remove this comment to see the full error message
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
     // create crosshair
     const crosshairGeometries = new Array(2);
@@ -69,7 +66,6 @@ class Plane {
       crosshairGeometries[i].vertices.push(
         new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0),
       );
-      // @ts-expect-error ts-migrate(2739) FIXME: Type 'LineSegments' is missing the following prope... Remove this comment to see the full error message
       this.crosshair[i] = new THREE.LineSegments(
         crosshairGeometries[i],
         this.getLineBasicMaterial(OrthoViewCrosshairColors[this.planeID][i], 1),
@@ -77,7 +73,6 @@ class Plane {
       // Objects are rendered according to their renderOrder (lowest to highest).
       // The default renderOrder is 0. In order for the crosshairs to be shown
       // render them AFTER the plane has been rendered.
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'renderOrder' does not exist on type 'typ... Remove this comment to see the full error message
       this.crosshair[i].renderOrder = 1;
     }
 
@@ -88,7 +83,6 @@ class Plane {
     TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, pWidth / 2, 0));
     TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, -pWidth / 2, 0));
     TDViewBordersGeo.vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
-    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Line' is missing the following properties fr... Remove this comment to see the full error message
     this.TDViewBorders = new THREE.Line(
       TDViewBordersGeo,
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
@@ -110,7 +104,6 @@ class Plane {
 
   setOriginalCrosshairColor = (): void => {
     [0, 1].forEach((i) => {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
       this.crosshair[i].material = this.getLineBasicMaterial(
         OrthoViewCrosshairColors[this.planeID][i],
         1,
@@ -120,7 +113,6 @@ class Plane {
 
   setGrayCrosshairColor = (): void => {
     [0, 1].forEach((i) => {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
       this.crosshair[i].material = this.getLineBasicMaterial(OrthoViewGrayCrosshairColor, 1);
     });
   };
@@ -130,12 +122,10 @@ class Plane {
     fallbackAnchorPoint: Vector4 | null | undefined,
   ): void {
     if (anchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
       this.plane.material.setAnchorPoint(anchorPoint);
     }
 
     if (fallbackAnchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
       this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
     }
   }
@@ -150,22 +140,16 @@ class Plane {
 
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof Vector3' is not assignabl... Remove this comment to see the full error message
       this.baseScaleVector,
     );
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'scale' does not exist on type 'typeof Me... Remove this comment to see the full error message
     this.plane.scale.copy(scaleVec);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'scale' does not exist on type 'typeof Li... Remove this comment to see the full error message
     this.TDViewBorders.scale.copy(scaleVec);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'scale' does not exist on type 'typeof Li... Remove this comment to see the full error message
     this.crosshair[0].scale.copy(scaleVec);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'scale' does not exist on type 'typeof Li... Remove this comment to see the full error message
     this.crosshair[1].scale.copy(scaleVec);
   }
 
   setRotation = (rotVec: THREE.Euler): void => {
     [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map((mesh) =>
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setRotationFromEuler' does not exist on ... Remove this comment to see the full error message
       mesh.setRotationFromEuler(rotVec),
     );
   };
@@ -176,20 +160,14 @@ class Plane {
   // shader)
   setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
     const [x, y, z] = pos;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     this.TDViewBorders.position.set(x, y, z);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     this.crosshair[0].position.set(x, y, z);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     this.crosshair[1].position.set(x, y, z);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
     this.plane.position.set(x, y, z);
 
     if (originalPosition == null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(x, y, z);
     } else {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(
         originalPosition[0],
         originalPosition[1],
@@ -199,19 +177,14 @@ class Plane {
   };
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.plane.visible = isDataVisible != null ? isDataVisible : isVisible;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.TDViewBorders.visible = isVisible;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.crosshair[0].visible = isVisible && this.displayCrosshair;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'visible' does not exist on type 'typeof ... Remove this comment to see the full error message
     this.crosshair[1].visible = isVisible && this.displayCrosshair;
   };
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
   setLinearInterpolationEnabled = (enabled: boolean) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
     this.plane.material.setUseBilinearFiltering(enabled);
   };
 }

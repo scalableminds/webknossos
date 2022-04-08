@@ -9,6 +9,7 @@ import { M4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import { map3 } from "libs/utils";
 import {
   getResolutions,
   getByteCount,
@@ -41,19 +42,15 @@ export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   // E.g., modAndDivide(63, 32) === 31 / 32 === ~0.97
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
-  const modAndDivide = (a, b) => (a % b) / b;
+  const modAndDivide = (a: number, b: number) => (a % b) / b;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pos' implicitly has an 'any' type.
-  const roundToNearestBucketBoundary = (pos, dimension) => {
+  const roundToNearestBucketBoundary = (pos: Vector3, dimension: 0 | 1 | 2) => {
     const bucketExtentInVoxel = constants.BUCKET_WIDTH * resolution[dimension];
     // Math.round returns 0 or 1 which will be mapped to -1 or 1
     return Math.round(modAndDivide(pos[dimension], bucketExtentInVoxel)) * 2 - 1;
   };
 
-  // $FlowIssue[invalid-tuple-arity]
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-  return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
+  return map3((_pos, idx) => roundToNearestBucketBoundary(position, idx), position);
 }
 
 function consumeBucketsFromArrayBuffer(

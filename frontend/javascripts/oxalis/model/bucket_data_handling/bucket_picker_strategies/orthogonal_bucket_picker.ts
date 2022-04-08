@@ -12,6 +12,7 @@ import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_co
 import Dimensions from "oxalis/model/dimensions";
 import ThreeDMap from "libs/ThreeDMap";
 import { extraBucketPerEdge } from "./orthogonal_bucket_picker_constants";
+
 export const getAnchorPositionToCenterDistance = (
   bucketPerDim: number, // Example I:
 ) =>

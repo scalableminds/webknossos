@@ -28,12 +28,11 @@ import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 import { SkeletonTool } from "oxalis/controller/combinations/tool_controls";
+
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'typeof... Remove this comment to see the full error message
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
 
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'x' implicitly has an 'any' type.
-  const objToArr = ({ x, y, z }) => [x, y, z];
+  const objToArr = ({x, y, z}: { x: number, y: number, z: number }): Vector3 => [x, y, z];
 
   return {
     left,
@@ -42,9 +41,7 @@ export function threeCameraToCameraData(camera: THREE.OrthographicCamera): Camer
     bottom,
     near,
     far,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'Vector3'.
     position: objToArr(position),
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'Vector3'.
     up: objToArr(up),
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'Vector3'.
     lookAt: objToArr(lookAt),
@@ -85,7 +82,8 @@ function maybeGetActiveNodeFromProps(props: Props) {
 }
 
 class TDController extends React.PureComponent<Props> {
-  controls: typeof TrackballControls | null | undefined;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'TrackballControls' has no initializer and ... Remove this comment to see the full error message
+  controls: typeof TrackballControls;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'mouseController' has no initializer and ... Remove this comment to see the full error message
   mouseController: InputMouse;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'oldNmPos' has no initializer and is not ... Remove this comment to see the full error message
@@ -124,7 +122,6 @@ class TDController extends React.PureComponent<Props> {
     }
 
     if (this.controls != null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'destroy' does not exist on type 'typeof ... Remove this comment to see the full error message
       this.controls.destroy();
     }
   }
@@ -145,20 +142,15 @@ class TDController extends React.PureComponent<Props> {
   initTrackballControls(view: HTMLElement): void {
     const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    // @ts-expect-error ts-migrate(7009) FIXME: 'new' expression, whose target lacks a construct s... Remove this comment to see the full error message
     this.controls = new TrackballControls(
       tdCamera,
       view,
       new THREE.Vector3(...pos),
       this.onTDCameraChanged,
     );
-    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
     this.controls.noZoom = true;
-    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
     this.controls.noPan = true;
-    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
     this.controls.staticMoving = true;
-    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
     this.controls.target.set(...pos);
     // This is necessary, since we instantiated this.controls now. This should be removed
     // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
@@ -170,7 +162,6 @@ class TDController extends React.PureComponent<Props> {
       return;
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof T... Remove this comment to see the full error message
     this.controls.update(true);
   };
 
@@ -242,13 +233,10 @@ class TDController extends React.PureComponent<Props> {
   setTargetAndFixPosition = (position?: Vector3): void => {
     const { controls } = this;
     position = position || getPosition(this.props.flycam);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3 | undefined' is not assi... Remove this comment to see the full error message
     const nmPosition = voxelToNm(this.props.scale, position);
 
     if (controls != null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'target' does not exist on type 'typeof T... Remove this comment to see the full error message
       controls.target.set(...nmPosition);
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof T... Remove this comment to see the full error message
       controls.update();
     }
 
@@ -268,7 +256,6 @@ class TDController extends React.PureComponent<Props> {
     const nmVector = new THREE.Vector3(...invertedDiff);
     // moves camera by the nm vector
     const camera = this.props.cameras[OrthoViews.TDView];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'rotation' does not exist on type 'typeof... Remove this comment to see the full error message
     const rotation = THREE.Vector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
     // reverse euler order
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'order' does not exist on type 'Vector3'.

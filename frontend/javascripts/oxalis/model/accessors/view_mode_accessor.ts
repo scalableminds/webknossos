@@ -103,7 +103,7 @@ export function getViewportScale(state: OxalisState, viewport: Viewport): [numbe
 function _calculateMaybeGlobalPos(
   state: OxalisState,
   clickPos: Point2,
-  planeId: OrthoView | null | undefined,
+  planeId?: OrthoView | null | undefined,
 ): Vector3 | null | undefined {
   let position;
   planeId = planeId || state.viewModeData.plane.activeViewport;
@@ -151,7 +151,7 @@ function _calculateMaybeGlobalPos(
 function _calculateGlobalPos(
   state: OxalisState,
   clickPos: Point2,
-  planeId: OrthoView | null | undefined,
+  planeId?: OrthoView | null | undefined,
 ): Vector3 {
   const position = _calculateMaybeGlobalPos(state, clickPos, planeId);
 

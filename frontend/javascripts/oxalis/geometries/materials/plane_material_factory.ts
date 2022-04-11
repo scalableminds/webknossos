@@ -49,8 +49,7 @@ export type Uniforms = Record<
     value: any;
   }
 >;
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
-const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
+const DEFAULT_COLOR = new THREE.Vector3(255, 255, 255);
 
 function sanitizeName(name: string | null | undefined): string {
   if (name == null) {
@@ -298,7 +297,6 @@ class PlaneMaterialFactory {
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {
-    // @ts-expect-error ts-migrate(2741) FIXME: Property 'prototype' is missing in type 'ShaderMat... Remove this comment to see the full error message
     this.material = new THREE.ShaderMaterial(
       _.extend(options, {
         uniforms: this.uniforms,
@@ -328,7 +326,6 @@ class PlaneMaterialFactory {
       this.uniforms.useBilinearFiltering.value = isEnabled;
     };
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'side' does not exist on type 'typeof Sha... Remove this comment to see the full error message
     this.material.side = THREE.DoubleSide;
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -478,7 +475,6 @@ class PlaneMaterialFactory {
               return;
             }
 
-            // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
             const [x, y, z] = calculateGlobalPos(state, {
               x: globalMousePosition[0],
               y: globalMousePosition[1],
@@ -622,9 +618,7 @@ class PlaneMaterialFactory {
     }
 
     this.oldShaderCode = newShaderCode;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'fragmentShader' does not exist on type '... Remove this comment to see the full error message
     this.material.fragmentShader = newShaderCode;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsUpdate' does not exist on type 'typ... Remove this comment to see the full error message
     this.material.needsUpdate = true;
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
     window.needsRerender = true;

@@ -31,7 +31,7 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
         datasetUsers,
       });
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

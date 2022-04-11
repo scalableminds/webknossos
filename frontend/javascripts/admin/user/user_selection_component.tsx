@@ -38,7 +38,7 @@ class UserSelectionComponent extends React.PureComponent<Props, State> {
         users: sortedUsers,
       });
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

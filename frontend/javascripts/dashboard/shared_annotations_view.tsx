@@ -47,7 +47,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
         annotations,
       });
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

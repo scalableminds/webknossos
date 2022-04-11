@@ -149,7 +149,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         this.props.onChange(newUsers);
       },
       (error) => {
-        handleGenericError(error);
+        handleGenericError(error as Error);
       },
     );
   }

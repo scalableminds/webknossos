@@ -78,7 +78,7 @@ class TeamListView extends React.PureComponent<Props, State> {
             teams: prevState.teams.filter((t) => t.id !== team.id),
           }));
         } catch (error) {
-          handleGenericError(error);
+          handleGenericError(error as Error);
         } finally {
           this.setState({
             isLoading: false,

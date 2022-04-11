@@ -164,7 +164,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         showArchivedTracings,
       );
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

@@ -69,7 +69,7 @@ function useSampleDatasets(
       // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       setPendingDatasets(pendingDatasets.concat(name));
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     }
   };
 

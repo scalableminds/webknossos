@@ -99,7 +99,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
         setDatasets(newDatasets);
       }
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +129,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       });
       setIsChecking(false);
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       setIsLoading(false);
       setIsChecking(false);
@@ -174,7 +174,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       datasetCache.set(newInternalDatasets);
       if (!datasetsToUpdate) setDatasets(newInternalDatasets);
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       setIsLoading(false);
     }
@@ -206,7 +206,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       });
       await newDatasetUpdatePromise;
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       setIsLoading(false);
     }

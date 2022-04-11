@@ -91,7 +91,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
             tasktypes: prevState.tasktypes.filter((p) => p.id !== taskType.id),
           }));
         } catch (error) {
-          handleGenericError(error);
+          handleGenericError(error as Error);
         } finally {
           this.setState({
             isLoading: false,

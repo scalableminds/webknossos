@@ -1,13 +1,12 @@
 // @flow
 
-import { Button, Col, Divider, Modal, Row, Switch, Tooltip } from "antd";
+import { Button, Col, Divider, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
   ScanOutlined,
-  StopOutlined,
   WarningOutlined,
   PlusOutlined,
   VerticalAlignMiddleOutlined,
@@ -35,7 +34,6 @@ import {
   findDataPositionForLayer,
   clearCache,
   findDataPositionForVolumeTracing,
-  unlinkFallbackSegmentation,
 } from "admin/admin_rest_api";
 import {
   getDefaultIntensityRangeOfLayer,
@@ -81,7 +79,7 @@ import Store, {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import messages, { settings } from "messages";
+import { settings } from "messages";
 
 import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
@@ -105,7 +103,6 @@ type DatasetSettingsProps = {|
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
-  onUnlinkFallbackLayer: (Tracing, VolumeTracing) => Promise<void>,
   tracing: Tracing,
   task: ?Task,
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void,
@@ -183,37 +180,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         />
       </Tooltip>
     );
-  };
-
-  getDeleteButton = (volumeTracing: VolumeTracing) => (
-    <Tooltip title="Unlink dataset's original segmentation layer">
-      <StopOutlined
-        onClick={() => {
-          this.removeFallbackLayer(volumeTracing);
-        }}
-        style={{
-          cursor: "pointer",
-        }}
-      />
-    </Tooltip>
-  );
-
-  removeFallbackLayer = (volumeTracing: VolumeTracing) => {
-    Modal.confirm({
-      title: messages["tracing.confirm_remove_fallback_layer.title"],
-      content: (
-        <div>
-          <p>{messages["tracing.confirm_remove_fallback_layer.explanation"]}</p>
-          <p>
-            <b>{messages["tracing.confirm_remove_fallback_layer.notes"]}</b>
-          </p>
-        </div>
-      ),
-      onOk: async () => {
-        this.props.onUnlinkFallbackLayer(this.props.tracing, volumeTracing);
-      },
-      width: 600,
-    });
   };
 
   getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
@@ -326,8 +292,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const maybeTracingId = layer.category === "segmentation" ? layer.tracingId : null;
     const maybeVolumeTracing =
       maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
-    const hasFallbackLayer =
-      maybeVolumeTracing != null ? maybeVolumeTracing.fallbackLayer != null : false;
     const maybeFallbackLayer =
       maybeVolumeTracing != null && maybeVolumeTracing.fallbackLayer != null
         ? maybeVolumeTracing.fallbackLayer
@@ -456,11 +420,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         </div>
 
         <div className="flex-container">
-          <div className="flex-item">
-            {maybeVolumeTracing && hasFallbackLayer
-              ? this.getDeleteButton(maybeVolumeTracing)
-              : null}
-          </div>
           <div className="flex-item">
             {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
           </div>
@@ -902,11 +861,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
-  },
-  async onUnlinkFallbackLayer(tracing: Tracing, volumeTracing: VolumeTracing) {
-    const { annotationId, annotationType } = tracing;
-    await unlinkFallbackSegmentation(annotationId, annotationType, volumeTracing.tracingId);
-    await api.tracing.hardReload();
   },
   onEditAnnotationLayer(tracingId: string, layerProperties: EditableLayerProperties) {
     dispatch(editAnnotationLayerAction(tracingId, layerProperties));

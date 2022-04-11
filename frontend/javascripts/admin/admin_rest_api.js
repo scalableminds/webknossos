@@ -895,19 +895,6 @@ export async function downloadNml(
   saveAs(blob, filename);
 }
 
-export async function unlinkFallbackSegmentation(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  tracingId: string,
-): Promise<void> {
-  await Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/unlinkFallback?tracingId=${tracingId}`,
-    {
-      method: "PATCH",
-    },
-  );
-}
-
 // When the annotation is open, please use the corresponding method
 // in api_latest.js. It will take care of saving the annotation and
 // reloading it.

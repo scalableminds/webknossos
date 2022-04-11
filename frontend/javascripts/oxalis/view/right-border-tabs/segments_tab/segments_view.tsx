@@ -151,20 +151,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>): any => ({
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'info' implicitly has an 'any' type.
-  async onStlUpload(layerName: string, info) {
-    dispatch(setImportingMeshStateAction(true));
-    const buffer = await readFileAsArrayBuffer(info.file);
-
-    if (isIsosurfaceStl(buffer)) {
-      trackAction("Import Isosurface Mesh from STL");
-      dispatch(importIsosurfaceFromStlAction(layerName, buffer));
-    } else {
-      trackAction("Import STL");
-      dispatch(createMeshFromBufferAction(info.file.name, buffer));
-    }
-  },
-
   loadAdHocMesh(cellId: number, seedPosition: Vector3) {
     dispatch(loadAdHocMeshAction(cellId, seedPosition));
   },

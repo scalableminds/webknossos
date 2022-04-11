@@ -193,7 +193,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   onLayoutChange = (model?: Record<string, any>, layoutName?: string) => {
     recalculateInputCatcherSizes();
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
+    // @ts-ignore
     window.needsRerender = true;
 
     if (model != null) {

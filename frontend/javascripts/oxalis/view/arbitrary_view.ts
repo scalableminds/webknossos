@@ -200,7 +200,7 @@ class ArbitraryView {
       }
 
       this.needsRerender = false;
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
+      // @ts-ignore
       window.needsRerender = false;
     }
 

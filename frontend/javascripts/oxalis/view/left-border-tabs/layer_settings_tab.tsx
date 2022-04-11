@@ -716,7 +716,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
     await api.data.reloadBuckets(layerName);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
+    // @ts-ignore
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };

@@ -64,10 +64,10 @@ type StateProps = {
 type Props = StateProps;
 const browserHistory = createBrowserHistory();
 browserHistory.listen((location) => {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'ga' does not exist on type '(Window & ty... Remove this comment to see the full error message
+  // @ts-ignore
   if (typeof window.ga !== "undefined" && window.ga !== null && window.ga.getByName != null) {
     // t0 is the default tracker name
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'ga' does not exist on type '(Window & ty... Remove this comment to see the full error message
+    // @ts-ignore
     const tracker = window.ga.getByName("t0");
     if (tracker == null) return;
     const lastPage = tracker.get("page");
@@ -76,9 +76,9 @@ browserHistory.listen((location) => {
     // The listener is called repeatedly for a single page change, don't send repeated pageviews
     if (lastPage !== newPage) {
       // Update the tracker state first, so that subsequent pageviews AND events use the correct page
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'gtag' does not exist on type '(Window & ... Remove this comment to see the full error message
+      // @ts-ignore
       window.gtag("set", "page_path", newPage);
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'gtag' does not exist on type '(Window & ... Remove this comment to see the full error message
+      // @ts-ignore
       window.gtag("event", "page_view");
     }
   }

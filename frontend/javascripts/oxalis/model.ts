@@ -26,13 +26,11 @@ import * as Utils from "libs/utils";
 import { initialize } from "./model_initialization";
 // TODO: Non-reactive
 export class OxalisModel {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'connectionInfo' has no initializer and i... Remove this comment to see the full error message
-  connectionInfo: ConnectionInfo;
+  connectionInfo: ConnectionInfo | null = null;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
   isMappingSupported: boolean = true;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'maximumTextureCountForLayer' has no init... Remove this comment to see the full error message
-  maximumTextureCountForLayer: number;
+  maximumTextureCountForLayer: number = 0;
 
   async fetch(
     annotationType: AnnotationType,

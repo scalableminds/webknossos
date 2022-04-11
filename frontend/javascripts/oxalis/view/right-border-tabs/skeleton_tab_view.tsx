@@ -20,7 +20,6 @@ import {
 } from "@ant-design/icons";
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import * as React from "react";
@@ -136,7 +135,7 @@ type State = {
 };
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
-    const wrappedAddTreesAndGroupsAction = (trees: MutableTreeMap, treeGroups: TreeGroup[], groupName: string, userBoundingBoxes: UserBoundingBox[]) => {
+    const wrappedAddTreesAndGroupsAction = (trees: MutableTreeMap, treeGroups: TreeGroup[], groupName: string, userBoundingBoxes?: UserBoundingBox[]) => {
       const actions =
         userBoundingBoxes && userBoundingBoxes.length > 0
           ? [addUserBoundingBoxesAction(userBoundingBoxes)]
@@ -181,17 +180,14 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const nmlProtoBuffer = await readFileAsArrayBuffer(file);
         const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
-        if (!parsedTracing.trees) {
+        if (!("trees" in parsedTracing)) {
           // This check is only for flow to realize that we have a skeleton tracing
           // on our hands.
           throw new Error("Skeleton tracing doesn't contain trees");
         }
 
         return {
-          // @ts-expect-error ts-migrate(2554) FIXME: Expected 4 arguments, but got 3.
           importActions: wrappedAddTreesAndGroupsAction(
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type 'ServerTra... Remove this comment to see the full error message
             createMutableTreeMapFromTreeArray(parsedTracing.trees),
             // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeGroups' does not exist on type 'Serv... Remove this comment to see the full error message
             parsedTracing.treeGroups,
@@ -205,8 +201,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
-    const tryParsingFileAsZip = async (file) => {
+    const tryParsingFileAsZip = async (file: File) => {
       try {
         // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Promise<ArrayBuffer>' is not ass... Remove this comment to see the full error message
         const zipFile = await JSZip().loadAsync(readFileAsArrayBuffer(file));
@@ -258,7 +253,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             Store.dispatch(setMaxCellAction(newLargestSegmentId));
             await clearCache(dataset, oldVolumeTracing.tracingId);
             await api.data.reloadBuckets(oldVolumeTracing.tracingId);
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
+            // @ts-ignore
             window.needsRerender = true;
           }
         }
@@ -272,8 +267,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
     const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async (file) => {
-        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-        const ext = _.last(file.name.split(".")).toLowerCase();
+        const ext = (_.last(file.name.split(".")) || "").toLowerCase();
 
         let tryImportFunctions;
         if (ext === "nml" || ext === "xml")
@@ -320,16 +314,14 @@ function checkAndConfirmDeletingInitialNode(treeIds) {
   const hasNodeWithIdOne = (id) => getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
 
   const needsCheck = state.task != null && treeIds.find(hasNodeWithIdOne) != null;
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     if (needsCheck) {
       Modal.confirm({
         title: messages["tracing.delete_tree_with_initial_node"],
-        // @ts-expect-error ts-migrate(2794) FIXME: Expected 1 arguments, but got 0. Did you forget to... Remove this comment to see the full error message
         onOk: () => resolve(),
         onCancel: () => reject(),
       });
     } else {
-      // @ts-expect-error ts-migrate(2794) FIXME: Expected 1 arguments, but got 0. Did you forget to... Remove this comment to see the full error message
       resolve();
     }
   });
@@ -421,8 +413,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const newTreeGroups = _.cloneDeep(treeGroups);
 
     const groupToTreesMap = createGroupToTreesMap(trees);
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'treeIdsToDelete' implicitly has type 'an... Remove this comment to see the full error message
-    let treeIdsToDelete = [];
+    let treeIdsToDelete: number[] = [];
     callDeep(newTreeGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
       // Remove group
@@ -449,7 +440,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         const currentSubtrees =
           groupToTreesMap[group.groupId] != null ? groupToTreesMap[group.groupId] : [];
         // Delete all trees of the current group
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'treeIdsToDelete' implicitly has an 'any[... Remove this comment to see the full error message
         treeIdsToDelete = treeIdsToDelete.concat(currentSubtrees.map((tree) => tree.treeId));
         // Also delete the trees of all subgroups
         // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'subgroup' implicitly has an 'any' type.
@@ -458,10 +448,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
       findSubtreesRecursively(item);
     });
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'treeIdsToDelete' implicitly has an 'any[... Remove this comment to see the full error message
     checkAndConfirmDeletingInitialNode(treeIdsToDelete).then(() => {
       // Update the store at once
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'treeIdsToDelete' implicitly has an 'any[... Remove this comment to see the full error message
       const deleteTreeActions = treeIdsToDelete.map((treeId) => deleteTreeAction(treeId));
       this.props.onBatchActions(
         // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
@@ -940,8 +928,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(shuffleAllTreeColorsAction());
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'shouldSortTreesByName' implicitly has a... Remove this comment to see the full error message
-  onSortTree(shouldSortTreesByName) {
+  onSortTree(shouldSortTreesByName: boolean) {
     dispatch(updateUserSettingAction("sortTreesByName", shouldSortTreesByName));
   },
 

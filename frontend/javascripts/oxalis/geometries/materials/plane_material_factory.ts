@@ -620,7 +620,7 @@ class PlaneMaterialFactory {
     this.oldShaderCode = newShaderCode;
     this.material.fragmentShader = newShaderCode;
     this.material.needsUpdate = true;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
+    // @ts-ignore
     window.needsRerender = true;
   }, RECOMPILATION_THROTTLE_TIME);
 

@@ -213,7 +213,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       // Rotate view by 180 deg
       r: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type 'W... Remove this comment to see the full error message
+        // @ts-ignore
         window.needsRerender = true;
       },
       // Delete active node and recenter last node

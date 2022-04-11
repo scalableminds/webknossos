@@ -242,7 +242,7 @@ export default class TextureBucketManager {
       this.committedBucketSet.add(bucket);
       // bucket.setVisualizationColor("#00ff00");
       // bucket.visualize();
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
+      // @ts-ignore
       window.needsRerender = true;
       this.isRefreshBufferOutOfDate = true;
     }
@@ -253,7 +253,7 @@ export default class TextureBucketManager {
   }
 
   getTextures(): Array<three.DataTexture | typeof UpdatableTexture> {
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
+    // @ts-ignore
     return [this.lookUpTexture].concat(this.dataTextures);
   }
 
@@ -433,7 +433,7 @@ export default class TextureBucketManager {
       this.lookUpBufferWidth,
     );
     this.isRefreshBufferOutOfDate = false;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
+    // @ts-ignore
     window.needsRerender = true;
   }
 

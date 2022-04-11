@@ -3,17 +3,17 @@ import window, { document } from "libs/window";
 export default {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'textureBucketManager' implicitly has an... Remove this comment to see the full error message
   addBucketManagers(textureBucketManager) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'managers' does not exist on type '(Windo... Remove this comment to see the full error message
+    // @ts-ignore
     window.managers = window.managers || [];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'managers' does not exist on type '(Windo... Remove this comment to see the full error message
+    // @ts-ignore
     window.managers.push(textureBucketManager);
   },
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'identifier' implicitly has an 'any' typ... Remove this comment to see the full error message
   addMaterial(identifier, material) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'materials' does not exist on type '(Wind... Remove this comment to see the full error message
+    // @ts-ignore
     window.materials = window.materials || [];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'materials' does not exist on type '(Wind... Remove this comment to see the full error message
+    // @ts-ignore
     window.materials[identifier] = material;
   },
 };
@@ -33,11 +33,11 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   const buttonContainer = document.createElement("div");
 
   function overrideShader() {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'materials' does not exist on type '(Wind... Remove this comment to see the full error message
+    // @ts-ignore
     window.materials[identifier][shaderType] = input.value;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'materials' does not exist on type '(Wind... Remove this comment to see the full error message
+    // @ts-ignore
     window.materials[identifier].needsUpdate = true;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
+    // @ts-ignore
     window.needsRerender = true;
   }
 

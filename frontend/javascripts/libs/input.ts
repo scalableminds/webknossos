@@ -3,7 +3,7 @@ import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
-// @ts-expect-error ts-migrate(2306) FIXME: File '/Users/therold/Programming/scalableminds/web... Remove this comment to see the full error message
+// @ts-expect-error
 import KeyboardJS from "libs/keyboard";
 import * as Utils from "libs/utils";
 import type { Point2 } from "oxalis/constants";
@@ -91,8 +91,7 @@ export class InputKeyboardNoLoop {
   attach(key: KeyboardKey, callback: KeyboardHandler) {
     const binding = [
       key,
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-      (event) => {
+      (event: KeyboardEvent) => {
         if (!this.isStarted) {
           return;
         }
@@ -131,7 +130,7 @@ export class InputKeyboardNoLoop {
 // It is able to handle key-presses and will continuously
 // fire the attached callback.
 export class InputKeyboard {
-  keyCallbackMap = {};
+  keyCallbackMap: Record<string, KeyboardLoopHandler> = {};
   keyPressedCount: number = 0;
   bindings: Array<KeyboardBindingDownUp> = [];
   isStarted: boolean = true;
@@ -158,10 +157,9 @@ export class InputKeyboard {
 
   attach(key: KeyboardKey, callback: KeyboardLoopHandler) {
     let delayTimeoutId: ReturnType<typeof setTimeout> | null = null;
-    const binding = [
+    const binding: KeyboardBindingDownUp = [
       key,
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-      (event) => {
+      (event: KeyboardEvent) => {
         // When first pressed, insert the callback into
         // keyCallbackMap and start the buttonLoop.
         // Then, ignore any other events fired from the operating
@@ -173,7 +171,6 @@ export class InputKeyboard {
           return;
         }
 
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if (this.keyCallbackMap[key] != null) {
           return;
         }
@@ -190,7 +187,6 @@ export class InputKeyboard {
         // reset lastTime
         callback.lastTime = null;
         callback.delayed = true;
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         this.keyCallbackMap[key] = callback;
         this.keyPressedCount++;
 
@@ -214,10 +210,8 @@ export class InputKeyboard {
           return;
         }
 
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if (this.keyCallbackMap[key] != null) {
           this.keyPressedCount--;
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           delete this.keyCallbackMap[key];
         }
 
@@ -228,7 +222,6 @@ export class InputKeyboard {
       },
     ];
     KeyboardJS.bind(...binding);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(string | ((event: any) => void)... Remove this comment to see the full error message
     this.bindings.push(binding);
   }
 
@@ -241,7 +234,6 @@ export class InputKeyboard {
 
     if (this.keyPressedCount > 0) {
       for (const key of Object.keys(this.keyCallbackMap)) {
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         const callback = this.keyCallbackMap[key];
 
         if (!callback.delayed) {
@@ -383,11 +375,11 @@ export class InputMouse {
     this.lastPosition = null;
     this.delegatedEvents = {};
     this.ignoreScrollingWhileDragging = ignoreScrollingWhileDragging;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
+    // @ts-ignore
     document.addEventListener("mousemove", this.mouseMove);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
+    // @ts-ignore
     document.addEventListener("mouseup", this.mouseUp);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
+    // @ts-ignore
     document.addEventListener("touchend", this.touchEnd);
 
     _.extend(

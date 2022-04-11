@@ -1,7 +1,7 @@
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
-import type { Node } from "oxalis/store";
+import type { MutableNode, Node } from "oxalis/store";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -12,7 +12,7 @@ import {
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getResolutionInfo, ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
@@ -20,6 +20,7 @@ import * as Utils from "libs/utils";
 import createProgressCallback from "libs/progress_callback";
 import api from "oxalis/api/internal_api";
 import window from "libs/window";
+import { APISegmentationLayer } from "types/api_flow_types";
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
 // the min-cut is computed.
@@ -56,10 +57,9 @@ const VOXEL_THRESHOLD = 2000000;
 // optimization (unless it's the only existent mag).
 const ALWAYS_IGNORE_FIRST_MAG_INITIALLY = true;
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'boundingBoxMag1' implicitly has an 'any... Remove this comment to see the full error message
-function selectAppropriateResolutions(boundingBoxMag1, resolutionInfo): Array<[number, Vector3]> {
+function selectAppropriateResolutions(boundingBoxMag1: BoundingBox, resolutionInfo: ResolutionInfo): Array<[number, Vector3]> {
   const resolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
-  const appropriateResolutions = [];
+  const appropriateResolutions: Array<[number, Vector3]> = [];
 
   for (const [resolutionIndex, resolution] of resolutionsWithIndices) {
     if (
@@ -78,7 +78,6 @@ function selectAppropriateResolutions(boundingBoxMag1, resolutionInfo): Array<[n
     }
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[][]' is not assignable to type '[number,... Remove this comment to see the full error message
   return appropriateResolutions;
 }
 
@@ -98,8 +97,7 @@ const NEIGHBOR_LOOKUP = [
 // neighborToIndex is a mapping from neighbor to neighbor index (e.g., neighbor [0, -1, 0] ==> idx=1)
 const neighborToIndex = new Map(_.zip(NEIGHBOR_LOOKUP, _.range(NEIGHBOR_LOOKUP.length)));
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'neighbor' implicitly has an 'any' type.
-function getNeighborIdx(neighbor) {
+function getNeighborIdx(neighbor: Vector3): number {
   const neighborIdx = neighborToIndex.get(neighbor);
 
   if (neighborIdx == null) {
@@ -121,8 +119,7 @@ function getNeighborIdx(neighbor) {
 const invertNeighborIdx = (neighborIdx: number) =>
   (neighborIdx + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bitMask' implicitly has an 'any' type.
-function _getNeighborsFromBitMask(bitMask) {
+function _getNeighborsFromBitMask(bitMask: number): {ingoing: Vector3[], outgoing: Vector3[]} {
   // Note: Use the memoized version of this: getNeighborsFromBitMask.
   // Ingoing and outgoing edges are stored as a bitmask. The first half
   // (higher significance) of the bitmask holds the ingoing edges as bits.
@@ -155,23 +152,19 @@ function _getNeighborsFromBitMask(bitMask) {
 const getNeighborsFromBitMask = _.memoize(_getNeighborsFromBitMask);
 
 // Functions to add/remove edges which mutate the bitmask.
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edgeBuffer' implicitly has an 'any' typ... Remove this comment to see the full error message
-function addOutgoingEdge(edgeBuffer, idx, neighborIdx) {
+function addOutgoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: number) {
   edgeBuffer[idx] |= 2 ** neighborIdx;
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edgeBuffer' implicitly has an 'any' typ... Remove this comment to see the full error message
-function addIngoingEdge(edgeBuffer, idx, neighborIdx) {
+function addIngoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: number) {
   edgeBuffer[idx] |= 2 ** (NEIGHBOR_LOOKUP.length + neighborIdx);
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edgeBuffer' implicitly has an 'any' typ... Remove this comment to see the full error message
-function removeIngoingEdge(edgeBuffer, idx, neighborIdx) {
+function removeIngoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: number) {
   edgeBuffer[idx] &= ~(2 ** (NEIGHBOR_LOOKUP.length + neighborIdx));
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edgeBuffer' implicitly has an 'any' typ... Remove this comment to see the full error message
-function removeOutgoingEdge(edgeBuffer, idx, neighborIdx) {
+function removeOutgoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: number) {
   edgeBuffer[idx] &= ~(2 ** neighborIdx);
 }
 
@@ -179,6 +172,9 @@ export function isBoundingBoxUsableForMinCut(boundingBoxObj: BoundingBoxType, no
   const bbox = new BoundingBox(boundingBoxObj);
   return bbox.containsPoint(nodes[0].position) && bbox.containsPoint(nodes[1].position);
 }
+
+type L = (x: number, y: number, z: number) => number;
+type LL = (vec: Vector3) => number;
 
 //
 // Actual min cut implementation.
@@ -404,18 +400,12 @@ function* performMinCut(action: Action): Saga<void> {
 // cannot be reached, anymore. These nodes are the ones that should be erased
 // to separate A from B.
 function* tryMinCutAtMag(
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetMag' implicitly has an 'any' type... Remove this comment to see the full error message
-  targetMag,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolutionIndex' implicitly has an 'any... Remove this comment to see the full error message
-  resolutionIndex,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'boundingBoxMag1' implicitly has an 'any... Remove this comment to see the full error message
-  boundingBoxMag1,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodes' implicitly has an 'any' type.
-  nodes,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'volumeTracingLayer' implicitly has an '... Remove this comment to see the full error message
-  volumeTracingLayer,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'maxTimeoutDuration' implicitly has an '... Remove this comment to see the full error message
-  maxTimeoutDuration,
+  targetMag: Vector3,
+  resolutionIndex: number,
+  boundingBoxMag1: BoundingBox,
+  nodes: MutableNode[],
+  volumeTracingLayer: APISegmentationLayer,
+  maxTimeoutDuration: number,
 ): Saga<void> {
   const targetMagString = `${targetMag.join(",")}`;
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
@@ -437,11 +427,8 @@ function* tryMinCutAtMag(
   // l(x, y, z) and l([x, y, z]).
   const size = boundingBoxTarget.getSize();
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
-  const l = (x, y, z) => z * size[1] * size[0] + y * size[0] + x;
-
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'x' implicitly has an 'any' type.
-  const ll = ([x, y, z]) => z * size[1] * size[0] + y * size[0] + x;
+  const l = (x: number, y: number, z: number): number => z * size[1] * size[0] + y * size[0] + x;
+  const ll = ([x, y, z]: Vector3): number => z * size[1] * size[0] + y * size[0] + x;
 
   if (inputData[ll(seedA)] !== inputData[ll(seedB)]) {
     yield* call(
@@ -522,8 +509,7 @@ function* tryMinCutAtMag(
   console.timeEnd(`Total min-cut (${targetMagString})`);
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'position' implicitly has an 'any' type.
-function isPositionOutside(position, size) {
+function isPositionOutside(position: Vector3, size: Vector3) {
   return (
     position[0] < 0 ||
     position[1] < 0 ||
@@ -534,8 +520,18 @@ function isPositionOutside(position, size) {
   );
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'inputData' implicitly has an 'any' type... Remove this comment to see the full error message
-function buildGraph(inputData, segmentId, size, length, l, ll, timeoutThreshold) {
+type TypedArray =
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array;
+
+function buildGraph(inputData: TypedArray, segmentId: number, size: Vector3, length: number, l: L, ll: LL, timeoutThreshold: number) {
   const edgeBuffer = new Uint16Array(length);
 
   for (let z = 0; z < size[2]; z++) {
@@ -584,8 +580,7 @@ function populateDistanceField(
   boundingBoxTarget: BoundingBox,
   seedA: Vector3,
   seedB: Vector3,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'll' implicitly has an 'any' type.
-  ll,
+  ll: LL,
   timeoutThreshold: number,
 ) {
   // Perform a breadth-first search from seedA to seedB.
@@ -663,18 +658,12 @@ function populateDistanceField(
 function removeShortestPath(
   distanceField: Uint16Array,
   directionField: Uint8Array,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'seedA' implicitly has an 'any' type.
-  seedA,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'seedB' implicitly has an 'any' type.
-  seedB,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'll' implicitly has an 'any' type.
-  ll,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'size' implicitly has an 'any' type.
-  size,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edgeBuffer' implicitly has an 'any' typ... Remove this comment to see the full error message
-  edgeBuffer,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'minDistToSeed' implicitly has an 'any' ... Remove this comment to see the full error message
-  minDistToSeed,
+  seedA: Vector3,
+  seedB: Vector3,
+  ll: LL,
+  size: Vector3,
+  edgeBuffer: Uint16Array,
+  minDistToSeed: number,
 ) {
   // Extract shortest path from seedB to seedA and remove edges which
   // belong to that path.
@@ -686,6 +675,9 @@ function removeShortestPath(
 
   while (voxelStack.length > 0) {
     const currentVoxel = voxelStack.pop();
+    if (currentVoxel == null) {
+      throw new Error("Satisfy typescript");
+    }
     const currentDistance = distanceField[ll(currentVoxel)];
 
     if (V3.equals(currentVoxel, seedA)) {
@@ -739,8 +731,7 @@ function removeShortestPath(
 function traverseResidualsField(
   boundingBoxTarget: BoundingBox,
   seedA: Vector3,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'll' implicitly has an 'any' type.
-  ll,
+  ll: LL,
   edgeBuffer: Uint16Array,
 ) {
   // Perform a breadth-first search from seedA and return
@@ -751,6 +742,9 @@ function traverseResidualsField(
 
   while (queue.length > 0) {
     const currVoxel = queue.shift();
+    if (currVoxel == null) {
+      throw new Error("Satisfy typescript");
+    }
     const currVoxelIdx = ll(currVoxel);
 
     if (visitedField[currVoxelIdx] > 0) {
@@ -772,20 +766,13 @@ function traverseResidualsField(
 }
 
 function labelDeletedEdges(
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'visitedField' implicitly has an 'any' t... Remove this comment to see the full error message
-  visitedField,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'boundingBoxTarget' implicitly has an 'a... Remove this comment to see the full error message
-  boundingBoxTarget,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'size' implicitly has an 'any' type.
-  size,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'originalEdgeBuffer' implicitly has an '... Remove this comment to see the full error message
-  originalEdgeBuffer,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetMag' implicitly has an 'any' type... Remove this comment to see the full error message
-  targetMag,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'l' implicitly has an 'any' type.
-  l,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'll' implicitly has an 'any' type.
-  ll,
+  visitedField: Uint8Array,
+  boundingBoxTarget: BoundingBox,
+  size: Vector3,
+  originalEdgeBuffer: Uint16Array,
+  targetMag: Vector3,
+  l: L,
+  ll: LL,
 ) {
   for (let z = 0; z < size[2]; z++) {
     for (let y = 0; y < size[1]; y++) {
@@ -813,9 +800,9 @@ function labelDeletedEdges(
                 }
               }
 
-              // @ts-expect-error ts-migrate(2339) FIXME: Property 'visualizeRemovedVoxelsOnMinCut' does not... Remove this comment to see the full error message
+              // @ts-ignore
               if (window.visualizeRemovedVoxelsOnMinCut) {
-                // @ts-expect-error ts-migrate(2339) FIXME: Property 'addVoxelMesh' does not exist on type '(W... Remove this comment to see the full error message
+                // @ts-ignore
                 window.addVoxelMesh(position, targetMag);
               }
             }

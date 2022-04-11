@@ -463,7 +463,7 @@ class SegmentsView extends React.Component<Props, State> {
           )}
           onChange={this.handleQualityChangeForAdHocGeneration}
         >
-          {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag], index) => (
+          {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag]: [number, Vector3], index: number) => (
             <Option value={log2Index} key={log2Index}>
               {formatMagWithLabel(mag, index)}
             </Option>
@@ -510,7 +510,7 @@ class SegmentsView extends React.Component<Props, State> {
             )}
             onChange={this.handleQualityChangeForPrecomputation}
           >
-            {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag], index) => (
+            {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag]: [number, Vector3], index: number) => (
               <Option value={log2Index} key={log2Index}>
                 {formatMagWithLabel(mag, index)}
               </Option>

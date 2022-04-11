@@ -22,7 +22,7 @@ import {
 import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
-import Store from "oxalis/store";
+import Store, { DatasetConfiguration, RecommendedConfiguration, UserConfiguration } from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
@@ -54,8 +54,8 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const zoomStep = yield* select((state) => state.flycam.zoomStep);
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
 
-  // $FlowFixMe[incompatible-call] Cannot call `_.find` because number [1] is incompatible with boolean [2] in property `brushSize` of type argument `T`.
-  const configurationDifference = _.find(recommendedConfiguration, (value, key: string) => {
+  const configurationDifference = _.find(recommendedConfiguration, (value, _key) => {
+    const key = _key as (keyof RecommendedConfiguration);
     if (key === "zoom" && zoomStep !== value) {
       return true;
     } else if (key === "segmentationOpacity") {
@@ -70,8 +70,10 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
       } else {
         return false;
       }
+    // @ts-ignore
     } else if (key in userConfiguration && userConfiguration[key] !== value) {
       return true;
+    // @ts-ignore
     } else if (key in datasetConfiguration && datasetConfiguration[key] !== value) {
       return true;
     }
@@ -96,6 +98,7 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   if (confirmed) {
     for (const key of Object.keys(recommendedConfiguration)) {
       if (key === "zoom") {
+        // @ts-ignore
         yield* put(setZoomStepAction(recommendedConfiguration[key]));
       } else if (key === "segmentationOpacity") {
         for (const segmentationLayer of segmentationLayers) {
@@ -108,14 +111,14 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
           );
         }
       } else if (key in userConfiguration) {
-        // $FlowFixMe[prop-missing] Cannot call updateUserSettingAction with key bound to propertyName because an indexer property is missing in UserConfiguration
+        // @ts-ignore
         yield* put(updateUserSettingAction(key, recommendedConfiguration[key]));
       } else if (key in datasetConfiguration) {
-        // $FlowFixMe[prop-missing] Cannot call updateDatasetSettingAction with key bound to propertyName because an indexer property is missing in DatasetConfiguration
+        // @ts-ignore
         yield* put(updateDatasetSettingAction(key, recommendedConfiguration[key]));
       } else {
         console.warn(
-          // $FlowFixMe[incompatible-type]
+          // @ts-ignore
           `Cannot apply recommended default for key/value: ${key}/${recommendedConfiguration[key]}`,
         );
       }

@@ -2,8 +2,6 @@ import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Menu, notification, Tooltip, Popover, Input } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
-import type { Node } from "react";
 import React, { useEffect } from "react";
 import type {
   APIConnectomeFile,
@@ -13,8 +11,10 @@ import type {
 } from "types/api_flow_types";
 import type {
   ActiveMappingInfo,
+  MutableNode,
   OxalisState,
   SkeletonTracing,
+  Tree,
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
@@ -209,7 +209,7 @@ function positionToString(pos: Vector3): string {
   return pos.map((value) => roundTo(value, 2)).join(", ");
 }
 
-function shortcutBuilder(shortcuts: Array<string>): Node {
+function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
   const lineColor = "var(--ant-text-secondary)";
 
   const mapNameToShortcutIcon = (name: string) => {
@@ -876,11 +876,11 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
   if (contextMenuPosition != null && maybeViewport != null) {
     const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
     const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
-    let nodeContextMenuTree = null;
-    let nodeContextMenuNode = null;
+    
+    let nodeContextMenuTree: Tree | null = null;
+    let nodeContextMenuNode: MutableNode | null = null;
 
     if (skeletonTracing != null && maybeClickedNodeId != null) {
-      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       getNodeAndTree(skeletonTracing, maybeClickedNodeId).map(([tree, node]) => {
         nodeContextMenuNode = node;
         nodeContextMenuTree = tree;
@@ -888,7 +888,6 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     }
 
     const positionToMeasureDistanceTo =
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
       nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
     const activeNode =
       activeNodeId != null && skeletonTracing != null
@@ -903,9 +902,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
             formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
           ]
         : null;
-    const nodePositionAsString =
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
-      nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
+    const nodePositionAsString = nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
     const segmentIdAtPosition = getSegmentIdForPosition(globalPosition);
     const infoRows = [];
 
@@ -947,7 +944,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     if (segmentIdAtPosition > 0) {
       infoRows.push(
         <div key="copy-cell" className="node-context-menu-item">
-          <div className="cell-context-icon" alt="Segment Icon" />
+          <div className="cell-context-icon" />
           Segment ID: {segmentIdAtPosition}{" "}
           {copyIconWithTooltip(segmentIdAtPosition, "Copy Segment ID")}
         </div>,

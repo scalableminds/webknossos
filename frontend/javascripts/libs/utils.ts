@@ -464,17 +464,15 @@ export function busyWaitDevHelper(time: number) {
   }
 }
 export function animationFrame(maxTimeout?: number): Promise<void> {
-  const rafPromise = new Promise((resolve) => {
+  const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise((resolve) => {
     window.requestAnimationFrame(resolve);
   });
 
   if (maxTimeout == null) {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<unknown>' is not assignable to type ... Remove this comment to see the full error message
     return rafPromise;
   }
 
   const timeoutPromise = sleep(maxTimeout);
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<unknown>' is not assignable to type ... Remove this comment to see the full error message
   return Promise.race([rafPromise, timeoutPromise]);
 }
 export function diffArrays<T>(

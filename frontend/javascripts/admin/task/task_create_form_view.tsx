@@ -14,6 +14,7 @@ import {
   InputNumber,
   Input,
   Spin,
+  RadioChangeEvent,
 } from "antd";
 import { FormInstance } from "antd/lib/form";
 import Toast from "libs/toast";
@@ -57,7 +58,7 @@ type Props = {
   taskId: string | null | undefined;
   history: RouteComponentProps["history"];
 };
-export const enum SpecificationEnum {
+export enum SpecificationEnum {
   Manual= "Manual",
   Nml= "Nml",
   BaseAnnotation= "BaseAnnotation",
@@ -682,8 +683,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               <FormItem label="Task Specification" hasFeedback>
                 <RadioGroup
                   value={this.state.specificationType}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(evt: React.SyntheticEvent<any>) => void' is... Remove this comment to see the full error message
-                  onChange={(evt: React.SyntheticEvent<any>) =>
+                  onChange={(evt: RadioChangeEvent) =>
                     this.setState({
                       specificationType: coalesce(SpecificationEnum, evt.target.value),
                     })

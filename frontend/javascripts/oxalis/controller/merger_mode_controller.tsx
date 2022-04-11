@@ -18,7 +18,7 @@ type State = {
 };
 
 class MergerModeController extends PureComponent<MergerModeControllerProps, State> {
-  state = {
+  state: State = {
     isMergerModeModalVisible: false,
     isMergerModeModalClosable: false,
     mergerModeProgress: 0,

@@ -127,7 +127,11 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   const { contourTracingMode } = volumeTracing;
   return contourTracingMode;
 }
+
 const MAG_THRESHOLDS_FOR_ZOOM: Record<AnnotationTool, number> = {
+  // Note that these are relative to the lowest existing resolution index.
+  // A threshold of 1 indicates that the respective tool can be used in the
+  // lowest existing resolution as well as the next highest one.
   [AnnotationToolEnum.TRACE]: 1,
   [AnnotationToolEnum.ERASE_TRACE]: 1,
   [AnnotationToolEnum.BRUSH]: 3,

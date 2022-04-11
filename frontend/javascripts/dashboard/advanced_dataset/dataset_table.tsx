@@ -1,11 +1,6 @@
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
 import { $Shape } from "utility-types";
-import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  PlusOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Table, Tag, Tooltip } from "antd";
 import * as React from "react";
@@ -219,6 +214,34 @@ class DatasetTable extends React.PureComponent<Props, State> {
             .reverse()
             .value()
         : dataSourceSortedByRank;
+
+    // antd table filter entries for access permissions / teams
+    const accessPermissionFilters = _.uniqBy(
+      [
+        { text: "public", value: "public" },
+        ...sortedDataSource.flatMap(dataset =>
+          dataset.allowedTeams.map(team => ({ text: team.name, value: team.name })),
+        ),
+      ],
+      "text",
+    );
+
+    // antd table filter entries for data layer names
+    const dataLayersFilter = _.uniqBy(
+      _.compact(
+        sortedDataSource.flatMap(dataset => {
+          if (dataset.dataSource.dataLayers) {
+            return dataset.dataSource.dataLayers.map(layer => ({
+              text: layer.name,
+              value: layer.name,
+            }));
+          }
+          return null;
+        }),
+      ),
+      "text",
+    );
+
     return (
       <FixedExpandableTable
         dataSource={sortedDataSource}
@@ -262,12 +285,11 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Tags"
           dataIndex="tags"
           key="tags"
-          width={280}
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
             dataset.isActive ? (
-              <div>
-                {tags.map((tag) => (
+              <div style={{ maxWidth: 280 }}>
+                {tags.map(tag => (
                   <CategorizationLabel
                     tag={tag}
                     key={tag}
@@ -315,83 +337,55 @@ class DatasetTable extends React.PureComponent<Props, State> {
         />
 
         <Column
-          title="Allowed Teams"
+          title="Access Permissions"
           dataIndex="allowedTeams"
           key="allowedTeams"
-          width={230}
-          render={(teams: Array<APITeam>, dataset: APIMaybeUnimportedDataset) =>
-            teams.map((team) => (
-              <Tag
-                color={stringToColor(team.name)}
-                key={`allowed_teams_${dataset.name}_${team.name}`}
-              >
-                {team.name}
-              </Tag>
-            ))
-          }
-        />
-        <Column
-          title="Active"
-          dataIndex="isActive"
-          key="isActive"
-          width={130}
-          // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-          sorter={(a, b) => a.isActive - b.isActive}
-          sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
-          render={(isActive: boolean) =>
-            isActive ? (
-              <CheckCircleOutlined
-                style={{
-                  fontSize: 20,
-                }}
-              />
-            ) : (
-              <CloseCircleOutlined
-                style={{
-                  fontSize: 20,
-                }}
-              />
-            )
-          }
-        />
-        <Column
-          title="Public"
-          dataIndex="isPublic"
-          key="isPublic"
-          width={130}
-          sorter={(a, b) => a.isPublic - b.isPublic}
-          sortOrder={sortedInfo.columnKey === "isPublic" && sortedInfo.order}
-          render={(isPublic: boolean) =>
-            isPublic ? (
-              <CheckCircleOutlined
-                style={{
-                  fontSize: 20,
-                }}
-              />
-            ) : (
-              <CloseCircleOutlined
-                style={{
-                  fontSize: 20,
-                }}
-              />
-            )
-          }
+          filters={accessPermissionFilters}
+          onFilter={(value, dataset) => dataset.allowedTeams.some(team => team.name === value)}
+          render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
+            const permittedTeams = [...teams];
+            if (dataset.isPublic) {
+              permittedTeams.push({ name: "public" });
+            }
+
+            return permittedTeams.map(team => (
+              <div key={`allowed_teams_${dataset.name}_${team.name}`}>
+                <Tag
+                  style={{
+                    maxWidth: 200,
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                  }}
+                  color={stringToColor(team.name)}
+                >
+                  {team.name}
+                </Tag>
+              </div>
+            ));
+          }}
         />
         <Column
           title="Data Layers"
           key="dataLayers"
           dataIndex="dataSource.dataLayers"
+          filters={dataLayersFilter}
+          onFilter={(value, dataset) =>
+            dataset.dataSource.dataLayers?.some(layer => layer.name === value)
+          }
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <div
-              style={{
-                maxWidth: 300,
-              }}
-            >
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layer' implicitly has an 'any'
-              type.
-              {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
-                <Tag key={layer.name}>
-                  {layer.category} - {layer.elementClass}
+            <div style={{ maxWidth: 250 }}>
+              {(dataset.isActive ? dataset.dataSource.dataLayers : []).map(layer => (
+                <Tag
+                  key={layer.name}
+                  style={{
+                    maxWidth: 250,
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {layer.name} - {layer.elementClass}
                 </Tag>
               ))}
             </div>

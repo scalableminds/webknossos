@@ -119,7 +119,7 @@ class Plane {
 
   updateAnchorPoints(
     anchorPoint: Vector4 | null | undefined,
-    fallbackAnchorPoint: Vector4 | null | undefined,
+    fallbackAnchorPoint?: Vector4 | null | undefined,
   ): void {
     if (anchorPoint) {
       this.plane.material.setAnchorPoint(anchorPoint);

@@ -57,7 +57,7 @@ class SceneController {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'planes' has no initializer and is not de... Remove this comment to see the full error message
-  planes: OrthoViewMap<Plane>;
+  planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
   rootNode: THREE.Object3D;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'renderer' has no initializer and is not ... Remove this comment to see the full error message
@@ -266,6 +266,7 @@ class SceneController {
       const newGroup = new THREE.Group();
       this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
       this.isosurfacesRootGroup.add(newGroup);
+      // @ts-ignore
       newGroup.cellId = segmentationId;
     }
 
@@ -469,7 +470,6 @@ class SceneController {
       optArbitraryPlane.updateAnchorPoints(anchorPoint);
     } else {
       for (const currentPlane of _.values(this.planes)) {
-        // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
         currentPlane.updateAnchorPoints(anchorPoint);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;

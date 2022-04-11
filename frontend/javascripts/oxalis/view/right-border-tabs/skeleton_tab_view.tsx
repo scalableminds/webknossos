@@ -90,6 +90,8 @@ import type {
   TreeMap,
   TreeGroup,
   UserConfiguration,
+  MutableTreeMap,
+  UserBoundingBox,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -135,8 +137,7 @@ type State = {
 };
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'trees' implicitly has an 'any' type.
-    const wrappedAddTreesAndGroupsAction = (trees, treeGroups, groupName, userBoundingBoxes) => {
+    const wrappedAddTreesAndGroupsAction = (trees: MutableTreeMap, treeGroups: TreeGroup[], groupName: string, userBoundingBoxes: UserBoundingBox[]) => {
       const actions =
         userBoundingBoxes && userBoundingBoxes.length > 0
           ? [addUserBoundingBoxesAction(userBoundingBoxes)]
@@ -150,8 +151,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
-    const tryParsingFileAsNml = async (file) => {
+    const tryParsingFileAsNml = async (file: File) => {
       try {
         const nmlString = await readFileAsText(file);
         const { trees, treeGroups, userBoundingBoxes, datasetName } = await parseNml(nmlString);

@@ -29,8 +29,7 @@ const createDirLight = (position, target, intensity, parent) => {
 };
 
 const raycaster = new THREE.Raycaster();
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'oldRaycasterHit' implicitly has type 'an... Remove this comment to see the full error message
-let oldRaycasterHit = null;
+let oldRaycasterHit: THREE.Object3D | null = null;
 const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
@@ -178,16 +177,14 @@ class PlaneView {
 
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'oldRaycasterHit' implicitly has an 'any'... Remove this comment to see the full error message
     if (hitObject === oldRaycasterHit) {
       return intersections.length > 0 ? intersections[0].point : null;
     }
 
     // Undo highlighting of old hit
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'oldRaycasterHit' implicitly has an 'any'... Remove this comment to see the full error message
-    if (oldRaycasterHit != null) {
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'oldRaycasterHit' implicitly has an 'any'... Remove this comment to see the full error message
+    if (oldRaycasterHit != null && oldRaycasterHit.parent != null) {
       oldRaycasterHit.parent.children.forEach((meshPart) => {
+        // @ts-ignore
         meshPart.material.emissive.setHex("#000000");
       });
       oldRaycasterHit = null;

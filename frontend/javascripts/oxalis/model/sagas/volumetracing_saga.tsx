@@ -15,10 +15,9 @@ import {
   call,
   fork,
   put,
-  take,
   actionChannel,
 } from "typed-redux-saga";
-import {select} from "oxalis/model/sagas/effect-generators";
+import {select, take} from "oxalis/model/sagas/effect-generators";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import {
   updateVolumeTracing,
@@ -205,7 +204,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       createVolumeLayer,
       volumeTracing,
       startEditingAction.planeId,
-      labeledResolution,
+      labeledResolution
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
@@ -231,7 +230,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       if (finishEditingAction) break;
 
       if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
-        throw new Error("Unexpected action. Satisfy flow.");
+        throw new Error("Unexpected action. Satisfy typescript.");
       }
 
       const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
@@ -693,7 +692,7 @@ export function* floodFill(): Saga<void> {
     console.timeEnd("applyLabeledVoxelMapToAllMissingResolutions");
 
     if (wasBoundingBoxExceeded) {
-      yield* call({context: null, fn: progressCallback},
+      yield* call(progressCallback,
         true,
         <>
           Floodfill is done, but terminated since the labeled volume got too large. A bounding box

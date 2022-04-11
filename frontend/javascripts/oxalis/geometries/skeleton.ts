@@ -510,7 +510,8 @@ class Skeleton {
   deleteNode(treeId: number, nodeId: number) {
     const id = this.combineIds(nodeId, treeId);
     this.delete(id, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.type;
+      // @ts-expect-error
+      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.type;
       attribute.array[index] = NodeTypes.INVALID;
       return [attribute];
     });
@@ -522,7 +523,8 @@ class Skeleton {
   updateNodeRadius(treeId: number, nodeId: number, radius: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.radius;
+      // @ts-expect-error
+      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.radius;
       attribute.array[index] = radius;
       return [attribute];
     });
@@ -535,7 +537,8 @@ class Skeleton {
     const { treeId } = tree;
     const bufferNodeId = this.combineIds(nodeId, treeId);
     this.update(bufferNodeId, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.position;
+      // @ts-expect-error
+      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.position;
       attribute.set(position, index * 3);
       return [attribute];
     });
@@ -569,7 +572,8 @@ class Skeleton {
   updateNodeType(treeId: number, nodeId: number, type: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.type;
+      // @ts-expect-error
+      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.type;
       attribute.array[index] = type;
       return [attribute];
     });
@@ -578,7 +582,8 @@ class Skeleton {
   updateIsCommented(treeId: number, nodeId: number, isCommented: boolean) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.isCommented;
+      // @ts-expect-error
+      const attribute: THREE.BufferAttribute = buffer.geometry.attributes.isCommented;
       attribute.array[index] = isCommented;
       return [attribute];
     });

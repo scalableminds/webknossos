@@ -519,11 +519,9 @@ class PlaneController extends React.PureComponent<Props> {
 
     this.input.mouseControllers = {};
 
-    Utils.__guard__(this.input.keyboard, (x) => x.destroy());
-
-    Utils.__guard__(this.input.keyboardNoLoop, (x1) => x1.destroy());
-
-    Utils.__guard__(this.input.keyboardLoopDelayed, (x2) => x2.destroy());
+    this.input.keyboard?.destroy();
+    this.input.keyboardNoLoop?.destroy();
+    this.input.keyboardLoopDelayed?.destroy();
 
     this.unsubscribeStoreListeners();
   }

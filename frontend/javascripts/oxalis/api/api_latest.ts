@@ -146,7 +146,7 @@ import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
-export function assertExists(value: any, message: string) {
+export function assertExists<T>(value: any, message: string): asserts value is NonNullable<T> {
   if (value == null) {
     throw new Error(message);
   }
@@ -662,7 +662,6 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
       Store.dispatch(setPositionAction(node.position)),
     );

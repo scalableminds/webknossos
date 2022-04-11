@@ -122,7 +122,7 @@ export function getTree(
 export function getNodeAndTree(
   skeletonTracing: SkeletonTracing,
   nodeId: number | null | undefined,
-  treeId: number | null | undefined,
+  treeId?: number | null | undefined,
 ): Maybe<[Tree, Node]> {
   let tree;
 

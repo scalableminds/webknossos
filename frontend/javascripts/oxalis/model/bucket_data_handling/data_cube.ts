@@ -367,7 +367,7 @@ class DataCube {
   async _labelVoxelInAllResolutions_DEPRECATED(
     voxel: Vector3,
     label: number,
-    activeCellId: number | null | undefined,
+    activeCellId?: number | null | undefined,
   ): Promise<void> {
     // This function is only provided for the wK front-end api and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized.

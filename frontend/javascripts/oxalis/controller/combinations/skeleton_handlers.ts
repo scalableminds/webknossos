@@ -155,7 +155,6 @@ export function handleOpenContextMenu(
 export function moveNode(dx: number, dy: number, nodeId?: number | null | undefined) {
   // dx and dy are measured in pixel.
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, activeNode]) => {
       const state = Store.getState();
       const { activeViewport } = state.viewModeData.plane;

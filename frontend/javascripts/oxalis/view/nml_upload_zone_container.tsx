@@ -3,7 +3,7 @@ import { $Shape } from "utility-types";
 import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
 import { FileOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-import Dropzone from "react-dropzone";
+import Dropzone, { DropzoneInputProps } from "react-dropzone";
 import * as React from "react";
 import prettyBytes from "pretty-bytes";
 import type { Dispatch } from "redux";
@@ -12,6 +12,7 @@ import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
 import { trackAction } from "oxalis/model/helpers/analytics";
+
 type State = {
   files: Array<File>;
   dropzoneActive: boolean;
@@ -30,8 +31,7 @@ type StateProps = {
 };
 type Props = StateProps & OwnProps;
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'children' implicitly has an 'any'... Remove this comment to see the full error message
-function OverlayDropZone({ children }) {
+function OverlayDropZone({ children }: {children: React.ReactNode}) {
   return (
     <div className="nml-upload-zone-overlay">
       <div className="nml-upload-zone-modal">{children}</div>
@@ -39,9 +39,16 @@ function OverlayDropZone({ children }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'clickAllowed' implicitly has an '... Remove this comment to see the full error message
-function NmlDropArea({ clickAllowed, isUpdateAllowed, getInputProps }) {
-  const clickInput = clickAllowed ? <input {...getInputProps()} /> : null;
+function NmlDropArea({
+  isClickAllowed,
+  isUpdateAllowed,
+  getInputProps,
+}: {
+  isClickAllowed: boolean;
+  isUpdateAllowed: boolean;
+  getInputProps: (props?: DropzoneInputProps) => DropzoneInputProps;
+}) {
+  const clickInput = isClickAllowed ? <input {...getInputProps()} /> : null;
   return (
     <div
       style={{
@@ -59,7 +66,7 @@ function NmlDropArea({ clickAllowed, isUpdateAllowed, getInputProps }) {
         />
       </div>
       {isUpdateAllowed ? (
-        <h5>Drop NML files here{clickAllowed ? " or click to select files" : null}...</h5>
+        <h5>Drop NML files here{isClickAllowed ? " or click to select files" : null}...</h5>
       ) : (
         <h5>
           Drop NML files here to <b>create a new tracing</b>.
@@ -173,11 +180,11 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             }}
           />
         ) : null}
-        <Dropzone multiple disablePreview onDrop={this.onDrop}>
+        <Dropzone multiple onDrop={this.onDrop}>
           {({ getRootProps, getInputProps }) => (
             <div {...getRootProps()}>
               <NmlDropArea
-                clickAllowed
+                isClickAllowed
                 isUpdateAllowed={this.props.isUpdateAllowed}
                 getInputProps={getInputProps}
               />
@@ -242,10 +249,8 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     // That way, files can be dropped over the entire view.
     return (
       <Dropzone
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: ({ getRootProps, getInputProps }... Remove this comment to see the full error message
-        disableClick
+        noClick
         multiple
-        disablePreview
         onDrop={this.onDrop}
         onDragEnter={this.onDragEnter}
         onDragLeave={this.onDragLeave}
@@ -266,7 +271,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
               <OverlayDropZone>
                 <NmlDropArea
-                  clickAllowed={false}
+                  isClickAllowed={false}
                   isUpdateAllowed={this.props.isUpdateAllowed}
                   getInputProps={getInputProps}
                 />

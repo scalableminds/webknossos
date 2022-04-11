@@ -19,7 +19,7 @@ type Buffer = {
   capacity: number;
   nextIndex: number;
   geometry: THREE.BufferGeometry;
-  mesh: THREE.Mesh;
+  mesh: THREE.Object3D;
 };
 type BufferPosition = {
   buffer: Buffer;
@@ -45,9 +45,8 @@ const NodeBufferHelperType = {
 
   buildMesh(
     geometry: THREE.BufferGeometry,
-    material: THREE.RawShaderMaterial,
-  ): THREE.Mesh {
-    // @ts-expect-error ts-migrate(2739) FIXME: Type 'Points' is missing the following properties ... Remove this comment to see the full error message
+    material: THREE.Material,
+  ): THREE.Object3D {
     return new THREE.Points(geometry, material);
   },
 
@@ -61,9 +60,8 @@ const EdgeBufferHelperType = {
 
   buildMesh(
     geometry: THREE.BufferGeometry,
-    material: THREE.LineBasicMaterial,
-  ): THREE.Mesh {
-    // @ts-expect-error ts-migrate(2739) FIXME: Type 'LineSegments' is missing the following prope... Remove this comment to see the full error message
+    material: THREE.Material,
+  ): THREE.Object3D {
     return new THREE.LineSegments(geometry, material);
   },
 
@@ -202,7 +200,6 @@ class Skeleton {
     this.rootGroup.add(mesh);
 
     if (helper.supportsPicking) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'BufferGeometry' is not assignabl... Remove this comment to see the full error message
       const pickingMesh = helper.buildMesh(geometry, material);
       this.pickingNode.add(pickingMesh);
     }
@@ -426,7 +423,7 @@ class Skeleton {
     this.prevTracing = skeletonTracing;
   }
 
-  getAllNodes(): Array<THREE.Mesh> {
+  getAllNodes(): Array<THREE.Object3D> {
     return this.nodes.buffers.map((buffer) => buffer.mesh);
   }
 
@@ -492,14 +489,21 @@ class Skeleton {
    */
   createNode(treeId: number, node: Node) {
     const id = this.combineIds(node.id, treeId);
-    this.create(id, this.nodes, ({ buffer, index }) => {
+    this.create(id, this.nodes, ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
       const { attributes } = buffer.geometry;
+      // @ts-expect-error
       attributes.position.set(node.position, index * 3);
+      // @ts-expect-error
       attributes.radius.array[index] = node.radius;
+      // @ts-expect-error
       attributes.type.array[index] = NodeTypes.NORMAL;
+      // @ts-expect-error
       attributes.isCommented.array[index] = false;
+      // @ts-expect-error
       attributes.nodeId.array[index] = node.id;
+      // @ts-expect-error
       attributes.treeId.array[index] = treeId;
+      // @ts-expect-error
       return _.values(attributes);
     });
   }
@@ -512,6 +516,7 @@ class Skeleton {
     this.delete(id, this.nodes, ({ buffer, index }) => {
       // @ts-expect-error
       const attribute: THREE.BufferAttribute = buffer.geometry.attributes.type;
+      // @ts-expect-error
       attribute.array[index] = NodeTypes.INVALID;
       return [attribute];
     });
@@ -525,6 +530,7 @@ class Skeleton {
     this.update(id, this.nodes, ({ buffer, index }) => {
       // @ts-expect-error
       const attribute: THREE.BufferAttribute = buffer.geometry.attributes.radius;
+      // @ts-expect-error
       attribute.array[index] = radius;
       return [attribute];
     });
@@ -574,6 +580,7 @@ class Skeleton {
     this.update(id, this.nodes, ({ buffer, index }) => {
       // @ts-expect-error
       const attribute: THREE.BufferAttribute = buffer.geometry.attributes.type;
+      // @ts-expect-error
       attribute.array[index] = type;
       return [attribute];
     });
@@ -584,6 +591,7 @@ class Skeleton {
     this.update(id, this.nodes, ({ buffer, index }) => {
       // @ts-expect-error
       const attribute: THREE.BufferAttribute = buffer.geometry.attributes.isCommented;
+      // @ts-expect-error
       attribute.array[index] = isCommented;
       return [attribute];
     });

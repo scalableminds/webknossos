@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import {
   DeleteOutlined,
   LoadingOutlined,
@@ -151,7 +150,7 @@ type Props = {
   handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
   activeDropdownSegmentId: number | null | undefined;
   allowUpdate: boolean;
-  updateSegment: (arg0: number, arg1: $Shape<Segment>, arg2: string) => void;
+  updateSegment: (arg0: number, arg1: Partial<Segment>, arg2: string) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (arg0: number, arg1: Vector3) => void;

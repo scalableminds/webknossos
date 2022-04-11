@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
@@ -78,7 +77,7 @@ export type UrlManagerState = {
   rotation?: Vector3;
   stateByLayer?: UrlStateByLayer;
 };
-export type PartialUrlManagerState = $Shape<UrlManagerState>;
+export type PartialUrlManagerState = Partial<UrlManagerState>;
 
 class UrlManager {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'baseUrl' has no initializer and is not d... Remove this comment to see the full error message

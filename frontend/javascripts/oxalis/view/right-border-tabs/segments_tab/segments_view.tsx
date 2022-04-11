@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import { Button, ConfigProvider, List, Tooltip, Select, Popover, Empty } from "antd";
 import type { Dispatch } from "redux";
 import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
@@ -187,7 +186,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>): any => ({
     dispatch(setPositionAction(position));
   },
 
-  updateSegment(segmentId: number, segmentShape: $Shape<Segment>, layerName: string) {
+  updateSegment(segmentId: number, segmentShape: Partial<Segment>, layerName: string) {
     dispatch(updateSegmentAction(segmentId, segmentShape, layerName));
   },
 });

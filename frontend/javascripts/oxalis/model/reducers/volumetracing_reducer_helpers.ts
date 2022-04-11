@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import update from "immutability-helper";
 import type { ContourMode, Vector3 } from "oxalis/constants";
 import "oxalis/constants";
@@ -10,7 +9,7 @@ import { updateKey } from "oxalis/model/helpers/deep_update";
 export function updateVolumeTracing(
   state: OxalisState,
   volumeTracingId: string,
-  shape: $Shape<VolumeTracing>,
+  shape: Partial<VolumeTracing>,
 ) {
   const newVolumes = state.tracing.volumes.map((volume) => {
     if (volume.tracingId === volumeTracingId) {

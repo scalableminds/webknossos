@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
 import type {
   APIAnnotation,
   APIAnnotationVisibility,
@@ -72,12 +70,12 @@ type DeleteUserBoundingBox = {
 export type UpdateRemoteMeshMetaDataAction = {
   type: "UPDATE_REMOTE_MESH_METADATA";
   id: string;
-  meshShape: $Shape<RemoteMeshMetaData>;
+  meshShape: Partial<RemoteMeshMetaData>;
 };
 export type UpdateLocalMeshMetaDataAction = {
   type: "UPDATE_LOCAL_MESH_METADATA";
   id: string;
-  meshShape: $Shape<LocalMeshMetaData>;
+  meshShape: Partial<LocalMeshMetaData>;
 };
 export type UpdateIsosurfaceVisibilityAction = {
   type: "UPDATE_ISOSURFACE_VISIBILITY";
@@ -276,7 +274,7 @@ export const addUserBoundingBoxesAction = (
 });
 export const updateRemoteMeshMetaDataAction = (
   id: string,
-  meshShape: $Shape<RemoteMeshMetaData>,
+  meshShape: Partial<RemoteMeshMetaData>,
 ): UpdateRemoteMeshMetaDataAction => ({
   type: "UPDATE_REMOTE_MESH_METADATA",
   id,
@@ -284,7 +282,7 @@ export const updateRemoteMeshMetaDataAction = (
 });
 export const updateLocalMeshMetaDataAction = (
   id: string,
-  meshShape: $Shape<LocalMeshMetaData>,
+  meshShape: Partial<LocalMeshMetaData>,
 ): UpdateLocalMeshMetaDataAction => ({
   type: "UPDATE_LOCAL_MESH_METADATA",
   id,

@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import type { RouteComponentProps } from "react-router-dom";
@@ -15,7 +13,7 @@ class Persistence<T extends Record<string, any>> {
     this.name = name;
   }
 
-  load(history: RouteComponentProps["history"]): $Shape<T> | {} {
+  load(history: RouteComponentProps["history"]): Partial<T> | {} {
     const locationState = history.location.state;
 
     if (locationState != null && locationState[this.name] != null) {
@@ -52,7 +50,7 @@ class Persistence<T extends Record<string, any>> {
 
   persist(
     history: RouteComponentProps["history"],
-    state: $Shape<T>,
+    state: Partial<T>,
     // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
     stateProperties?: Record<keyof T, (...args: Array<any>) => any> = this.stateProperties,
   ) {

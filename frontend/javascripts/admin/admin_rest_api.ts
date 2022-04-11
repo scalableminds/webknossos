@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape, $Diff } from "utility-types";
+import { $Diff } from "utility-types";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
@@ -207,7 +206,7 @@ export async function getEditableUsers(): Promise<Array<APIUser>> {
 export function getUser(userId: string): Promise<APIUser> {
   return Request.receiveJSON(`/api/users/${userId}`);
 }
-export function updateUser(newUser: $Shape<APIUser>): Promise<APIUser> {
+export function updateUser(newUser: Partial<APIUser>): Promise<APIUser> {
   return Request.sendJSONReceiveJSON(`/api/users/${newUser.id}`, {
     method: "PATCH",
     data: newUser,
@@ -568,7 +567,7 @@ export type EditableAnnotation = {
 export function editAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
-  data: $Shape<EditableAnnotation>,
+  data: Partial<EditableAnnotation>,
 ): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
     data,

@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import type { ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
@@ -102,7 +101,7 @@ export type SetSegmentsAction = {
 export type UpdateSegmentAction = {
   type: "UPDATE_SEGMENT";
   segmentId: number;
-  segment: $Shape<Segment>;
+  segment: Partial<Segment>;
   layerName: string;
   timestamp: number;
 };
@@ -196,7 +195,7 @@ export const setSegmentsActions = (segments: SegmentMap, layerName: string): Set
 });
 export const updateSegmentAction = (
   segmentId: number,
-  segment: $Shape<Segment>,
+  segment: Partial<Segment>,
   layerName: string,
   timestamp: number = Date.now(),
 ): UpdateSegmentAction => ({

@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import {  $Shape } from "utility-types";
 import type {
   BoundingBoxObject,
   Edge,
@@ -318,7 +316,7 @@ export type AnnotationLayerDescriptor = {
   tracingId: string;
   typ: "Skeleton" | "Volume";
 };
-export type EditableLayerProperties = $Shape<{
+export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
 }>;
 export type APIAnnotationCompact = {

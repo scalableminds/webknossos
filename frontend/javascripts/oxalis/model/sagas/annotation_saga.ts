@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import type { EditAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
@@ -38,7 +36,7 @@ export function* pushAnnotationUpdateAsync() {
     })),
   };
   // The extra type annotation is needed here for flow
-  const editObject: $Shape<EditableAnnotation> = {
+  const editObject: Partial<EditableAnnotation> = {
     name: tracing.name,
     visibility: tracing.visibility,
     description: tracing.description,

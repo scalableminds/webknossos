@@ -6,7 +6,7 @@ import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumet
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import type { OxalisState, Tracing } from "oxalis/store";
-import type { TracingType } from "types/api_flow_types";
+import { TracingType, TracingTypeEnum } from "types/api_flow_types";
 import Store from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
 const { TabPane } = Tabs;
@@ -28,7 +28,7 @@ type State = {
 
 class VersionView extends React.Component<Props, State> {
   state = {
-    activeTracingType: this.props.tracing.skeleton != null ? "skeleton" : "volume",
+    activeTracingType: this.props.tracing.skeleton != null ? TracingTypeEnum.skeleton : TracingTypeEnum.volume,
     // Remember whether the tracing could originally be updated
     initialAllowUpdate: this.props.allowUpdate,
   };

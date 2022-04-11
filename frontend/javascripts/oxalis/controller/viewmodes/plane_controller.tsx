@@ -411,7 +411,6 @@ class PlaneController extends React.PureComponent<Props> {
 
         if (mousePosition) {
           const [x, y] = mousePosition;
-          // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
           const globalMousePosition = calculateGlobalPos(Store.getState(), {
             x,
             y,

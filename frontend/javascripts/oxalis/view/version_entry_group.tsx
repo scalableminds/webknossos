@@ -5,8 +5,9 @@ import type { APIUpdateActionBatch } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import VersionEntry from "oxalis/view/version_entry";
 import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
+
 type Props = {
-  batches: Array<APIUpdateActionBatch>;
+  batches: APIUpdateActionBatch[];
   allowUpdate: boolean;
   newestVersion: number;
   activeVersion: number;
@@ -16,6 +17,7 @@ type Props = {
 type State = {
   expanded: boolean;
 };
+
 export default class VersionEntryGroup extends React.Component<Props, State> {
   state = {
     expanded: false,
@@ -50,7 +52,6 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
         <List.Item.Meta
           title={
             <React.Fragment>
-              // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'. Versions{" "}
               {_.last(batches).version} to {batches[0].version} (
               <FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
             </React.Fragment>

@@ -301,7 +301,6 @@ function Infos() {
 
     if (mousePosition && activeViewport !== OrthoViews.TDView) {
       const [x, y] = mousePosition;
-      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       return calculateGlobalPos(state, {
         x,
         y,

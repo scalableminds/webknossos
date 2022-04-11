@@ -27,7 +27,7 @@ type State = {
 };
 
 class VersionView extends React.Component<Props, State> {
-  state = {
+  state: State = {
     activeTracingType: this.props.tracing.skeleton != null ? TracingTypeEnum.skeleton : TracingTypeEnum.volume,
     // Remember whether the tracing could originally be updated
     initialAllowUpdate: this.props.allowUpdate,

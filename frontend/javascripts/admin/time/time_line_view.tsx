@@ -74,8 +74,7 @@ function compressTimeLogs(logs) {
 }
 
 class TimeLineView extends React.PureComponent<Props, State> {
-  // @ts-expect-error ts-migrate(2416) FIXME: Property 'state' in type 'TimeLineView' is not ass... Remove this comment to see the full error message
-  state = {
+  state: State = {
     user: null,
     users: [],
     dateRange: [moment().startOf("day"), moment().endOf("day")],
@@ -119,7 +118,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
       /* eslint-disable react/no-access-state-in-setstate */
       const timeTrackingData = compressTimeLogs(
         await getTimeTrackingForUser(
-          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           this.state.user.id,
           this.state.dateRange[0],
           this.state.dateRange[1],
@@ -317,7 +315,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
                     onChange={this.handleUserChange}
                     notFoundContent={this.state.isFetchingUsers ? <Spin size="small" /> : "No Data"}
                     options={this.state.users
-                      // @ts-expect-error ts-migrate(2339) FIXME: Property 'isActive' does not exist on type 'never'... Remove this comment to see the full error message
                       .filter((u) => u.isActive)
                       .map((user: APIUser) => ({
                         value: user.id,
@@ -363,7 +360,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   style={{
                     width: "100%",
                   }}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Moment[]' is not assignable to type '[EventV... Remove this comment to see the full error message
                   value={dateRange}
                   // @ts-expect-error ts-migrate(2322) FIXME: Type '(dates: DateRange) => Promise<void>' is not ... Remove this comment to see the full error message
                   onChange={this.handleDateChange}
@@ -409,7 +405,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 columns={columns}
                 rows={rows}
                 timeAxisFormat={timeAxisFormat}
-                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                 dateRange={dateRange}
                 timeTrackingData={timeTrackingData}
               />

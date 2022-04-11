@@ -36,7 +36,7 @@ type GoogleCharts = {
 };
 
 class StatisticView extends React.PureComponent<{}, State> {
-  state = {
+  state: State = {
     isAchievementsLoading: true,
     isTimeEntriesLoading: true,
     startDate: moment().startOf("week"),
@@ -95,7 +95,6 @@ class StatisticView extends React.PureComponent<{}, State> {
   selectDataPoint = ({ chartWrapper }: GoogleCharts) => {
     const chart = chartWrapper.getChart();
     const indicies = chart.getSelection()[0];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'start' does not exist on type 'never'.
     const startDate = this.state.achievements.tracingTimes[indicies.row].start;
     this.setState(
       {
@@ -124,13 +123,10 @@ class StatisticView extends React.PureComponent<{}, State> {
       },
     ];
     const rows = this.state.achievements.tracingTimes.map((item) => {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingTime' does not exist on type 'nev... Remove this comment to see the full error message
       const duration = Utils.roundTo(moment.duration(item.tracingTime).asHours(), 2);
       return [
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'start' does not exist on type 'never'.
         new Date(item.start),
         duration,
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'start' does not exist on type 'never'.
         `${moment(item.start).format("DD.MM.YYYY")} - ${moment(item.end).format("DD.MM.YYYY")}
         ${duration}h`,
       ];

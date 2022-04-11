@@ -105,7 +105,7 @@ const convertAnnotationToTaskWithAnnotationType = (
 };
 
 class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> {
-  state = {
+  state: State = {
     showFinishedTasks: false,
     isLoading: false,
     isTransferModalVisible: false,

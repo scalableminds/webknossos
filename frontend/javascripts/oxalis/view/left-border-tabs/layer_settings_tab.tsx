@@ -122,7 +122,7 @@ type State = {
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeUser' has no initializer and is ... Remove this comment to see the full error message
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
-  state = {
+  state: State = {
     volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,
   };

@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
-import type { Node } from "react";
 import React, { createContext, useState } from "react";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
@@ -59,7 +57,7 @@ export const DatasetCacheContext = createContext<Context>({
   reloadDataset: async () => {},
   updateCachedDataset: async () => {},
 });
-export default function DatasetCacheProvider({ children }: { children: Node }) {
+export default function DatasetCacheProvider({ children }: { children: React.ReactNode }) {
   const [datasets, setDatasets] = useState(datasetCache.get());
   const [isLoading, setIsLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(false);

@@ -68,7 +68,7 @@ const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
 );
 
 class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
-  state = {
+  state: State = {
     isLoading: true,
     projects: [],
     searchQuery: "",

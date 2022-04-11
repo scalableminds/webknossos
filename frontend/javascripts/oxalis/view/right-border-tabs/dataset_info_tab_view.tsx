@@ -145,7 +145,7 @@ export function convertNmToPixels(
 }
 
 class DatasetInfoTabView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     showJobsDetailsModal: null,
   };
 

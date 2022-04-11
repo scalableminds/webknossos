@@ -46,7 +46,7 @@ type State = {
 };
 
 class DatasetTable extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     sortedInfo: {
       columnKey: useLruRank ? "" : "created",
       order: "descend",

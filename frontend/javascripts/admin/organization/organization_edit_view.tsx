@@ -27,7 +27,7 @@ type State = {
 };
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     displayName: "",
     newUserMailingList: "",
     pricingPlan: null,

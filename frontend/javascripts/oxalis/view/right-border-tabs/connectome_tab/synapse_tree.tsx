@@ -64,6 +64,7 @@ export type TreeNode = {
   data: TreeNodeData;
 };
 type TreeData = Array<TreeNode>;
+
 export const directionCaptions = {
   in: "Incoming",
   out: "Outgoing",
@@ -171,7 +172,7 @@ type Props = {
 };
 
 class SynapseTree extends React.Component<Props, State> {
-  state = {
+  state: State = {
     activeSegmentDropdownKey: null,
   };
 
@@ -290,9 +291,7 @@ class SynapseTree extends React.Component<Props, State> {
         {/* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
          This has a major performance impact. */}
         <AutoSizer defaultHeight={500}>
-          // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'height' implicitly has an
-          'any' t... Remove this comment to see the full error message
-          {({ height, width }) => (
+          {({ height, width}: { height: number, width: number }) => (
             <div
               style={{
                 height,

@@ -10,7 +10,7 @@ type State = {
 };
 
 class AddNewLayoutModal extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     value: "",
   };
   onConfirm = () => {

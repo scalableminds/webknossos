@@ -55,7 +55,7 @@ const persistence: Persistence<Pick<State, "fieldValues">> = new Persistence(
 
 class TaskSearchForm extends React.Component<Props, State> {
   formRef = React.createRef<FormInstance>();
-  state = {
+  state: State = {
     users: [],
     projects: [],
     taskTypes: [],
@@ -262,7 +262,6 @@ class TaskSearchForm extends React.Component<Props, State> {
                 }}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 options={this.state.users
-                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'isActive' does not exist on type 'never'... Remove this comment to see the full error message
                   .filter((u) => u.isActive)
                   .map((user: APIUser) => ({
                     value: user.id,

@@ -19,7 +19,7 @@ type State = {
 };
 
 class TeamSelectionComponent extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     possibleTeams: [],
     selectedTeams: this.props.value ? _.flatten([this.props.value]) : [],
     isFetchingData: false,

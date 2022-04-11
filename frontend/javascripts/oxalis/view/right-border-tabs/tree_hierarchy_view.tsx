@@ -90,7 +90,7 @@ const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
   prevProps.sortBy !== nextProps.sortBy;
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     expandedGroupIds: {
       [MISSING_GROUP_ID]: true,
     },
@@ -232,7 +232,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         forEachTreeNode(item.children, (node) => {
           if (node.type === TYPE_GROUP) {
             node.expanded = expanded;
-            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             newExpandedGroupIds[node.id] = expanded;
           }
         });
@@ -614,7 +613,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const { activeTreeId, activeGroupId } = this.props;
     return (
       <AutoSizer>
-        {({ height, width }) => (
+        {({ height, width }: { height: number, width: number }) => (
           <div
             style={{
               height,

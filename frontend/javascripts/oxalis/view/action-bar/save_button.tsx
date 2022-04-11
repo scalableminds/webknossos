@@ -51,7 +51,7 @@ const reportUnsavedDurationThresholdExceeded = _.throttle(() => {
 
 class SaveButton extends React.PureComponent<Props, State> {
   savedPollingInterval: number = 0;
-  state = {
+  state: State = {
     isStateSaved: false,
     showUnsavedWarning: false,
     saveInfo: {

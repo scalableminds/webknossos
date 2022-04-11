@@ -13,7 +13,7 @@ type State = {
 };
 
 class OpenTasksReportView extends React.PureComponent<{}, State> {
-  state = {
+  state: State = {
     data: [],
     isLoading: false,
   };

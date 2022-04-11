@@ -15,7 +15,7 @@ export default class DomVisibilityObserver extends React.Component<Props, State>
   observer: IntersectionObserver | null | undefined;
   target: HTMLElement | null | undefined;
   timeoutId: ReturnType<typeof setTimeout> | null | undefined;
-  state = {
+  state: State = {
     isVisibleInDom: true,
     wasEverVisibleInDom: false,
   };

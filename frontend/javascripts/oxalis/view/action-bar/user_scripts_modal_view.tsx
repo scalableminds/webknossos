@@ -21,7 +21,7 @@ type State = {
 };
 
 class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps, State> {
-  state = {
+  state: State = {
     code: "",
     isCodeChanged: false,
     scripts: [],
@@ -66,7 +66,6 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
   };
 
   handleScriptChange = async (scriptId: string) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
     const script = this.state.scripts.find((s) => s.id === scriptId);
     if (script == null) return;
 

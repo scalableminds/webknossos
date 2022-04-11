@@ -47,9 +47,7 @@ type StateProps = {
   user: APIUser | null | undefined;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+type PropsWithRouter = Props & RouteComponentProps
 type State = {
   gotUnhandledError: boolean;
   organizationToSwitchTo: APIOrganization | null | undefined;
@@ -60,7 +58,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   keyboardNoLoop: InputKeyboardNoLoop;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isMounted' has no initializer and is not... Remove this comment to see the full error message
   isMounted: boolean;
-  state = {
+  state: State = {
     gotUnhandledError: false,
     organizationToSwitchTo: null,
   };
@@ -334,7 +332,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         }}
         onClick={async () => {
           if (organizationToSwitchTo != null) {
-            // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
             await switchToOrganization(organizationToSwitchTo.name);
           }
         }}
@@ -348,8 +345,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     } else if (status === "failedLoading" && user != null) {
       const message =
         organizationToSwitchTo != null
-          ? // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-            `This dataset belongs to the organization ${organizationToSwitchTo.displayName} which is currently not your active organization. Do you want to switch to that organization?`
+          ? `This dataset belongs to the organization ${organizationToSwitchTo.displayName} which is currently not your active organization. Do you want to switch to that organization?`
           : "Either the dataset does not exist or you do not have the necessary access rights.";
       return (
         <BrainSpinner
@@ -438,4 +434,4 @@ function mapStateToProps(state: OxalisState): StateProps {
 }
 
 const connector = connect(mapStateToProps)
-export default connector(withRouter(Controller));
+export default connector(withRouter<PropsWithRouter, any>(Controller));

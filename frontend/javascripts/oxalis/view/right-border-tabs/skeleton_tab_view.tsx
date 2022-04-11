@@ -336,7 +336,7 @@ function checkAndConfirmDeletingInitialNode(treeIds) {
 }
 
 class SkeletonTabView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     isUploading: false,
     isDownloading: false,
     selectedTrees: [],
@@ -588,7 +588,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { selectedTrees } = this.state;
 
     // If the tree was already selected
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
     if (selectedTrees.includes(id)) {
       // If the tree is the second last -> set remaining tree to be the active tree
       if (selectedTrees.length === 2) {

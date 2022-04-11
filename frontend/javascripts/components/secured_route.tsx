@@ -17,7 +17,7 @@ type State = {
 };
 
 class SecuredRoute extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     isAdditionallyAuthenticated: false,
   };
 

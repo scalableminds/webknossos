@@ -34,7 +34,7 @@ const FormItem = Form.Item;
 type StateProps = {
   activeUser: APIUser | null | undefined;
 };
-type Props = StateProps & RouteComponentProps["history"]
+type Props = StateProps & RouteComponentProps
 type State = {
   currentStep: number;
   datastores: Array<APIDataStore>;
@@ -213,17 +213,20 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
     </div>
   );
 }
+
+type InviteUsersModalState = {
+    inviteesString: string;
+  }
+
 export class InviteUsersModal extends React.Component<
   {
     visible?: boolean;
     handleVisibleChange?: (...args: Array<any>) => any;
     destroy?: (...args: Array<any>) => any;
   },
-  {
-    inviteesString: string;
-  }
+  InviteUsersModalState
 > {
-  state = {
+  state: InviteUsersModalState = {
     inviteesString: "",
   };
   sendInvite = async () => {
@@ -307,7 +310,6 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
       }}
     >
       <Row
-        type="flex"
         justify="center"
         style={{
           padding: "20px 50px",
@@ -357,7 +359,7 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
 };
 
 class OnboardingView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     currentStep: 0,
     datastores: [],
     organizationName: "",
@@ -667,8 +669,6 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <>
         <div className="onboarding">
           <Row
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-            type="flex"
             justify="center"
             style={{
               padding: "20px 50px 70px",

@@ -46,7 +46,7 @@ type State = {
 };
 
 class TaskAnnotationView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     currentAnnotation: null,
     isTransferModalVisible: false,
     annotations: [],
@@ -220,7 +220,6 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         {this.state.currentAnnotation && this.state.currentAnnotation.user ? (
           <TransferTaskModal
             visible={this.state.isTransferModalVisible}
-            // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
             annotationId={this.state.currentAnnotation.id}
             onCancel={() =>
               this.setState({

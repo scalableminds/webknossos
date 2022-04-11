@@ -238,7 +238,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
 };
 
 class TracingActionsView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     isMergeModalOpen: false,
     isUserScriptsModalOpen: false,
     isReopenAllowed: false,

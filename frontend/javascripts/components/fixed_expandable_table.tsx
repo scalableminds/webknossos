@@ -14,7 +14,7 @@ type State = {
  */
 
 export default class FixedExpandableTable extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     expandedColumns: [],
   };
 

@@ -77,7 +77,7 @@ function NmlDropArea({
 }
 
 class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     files: [],
     dropzoneActive: false,
     isImporting: false,

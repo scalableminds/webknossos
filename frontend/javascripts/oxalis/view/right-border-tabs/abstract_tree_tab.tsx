@@ -22,7 +22,7 @@ type State = {
 class AbstractTreeTab extends Component<Props, State> {
   canvas: HTMLCanvasElement | null | undefined;
   nodeList: Array<NodeListItem> = [];
-  state = {
+  state: State = {
     visible: false,
   };
 

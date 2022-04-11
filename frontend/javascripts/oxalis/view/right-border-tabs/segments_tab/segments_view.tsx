@@ -238,7 +238,7 @@ function renderEmptyMeshFileSelect() {
 
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
-  state = {
+  state: State = {
     selectedSegmentId: null,
     activeMeshJobId: null,
     activeDropdownSegmentId: null,
@@ -511,7 +511,7 @@ class SegmentsView extends React.Component<Props, State> {
             )}
             onChange={this.handleQualityChangeForPrecomputation}
           >
-            {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag], index) => (
+            {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag], index: number) => (
               <Option value={log2Index} key={log2Index}>
                 {formatMagWithLabel(mag, index)}
               </Option>

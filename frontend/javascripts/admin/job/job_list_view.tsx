@@ -80,7 +80,7 @@ const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
 
 class JobListView extends React.PureComponent<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
-  state = {
+  state: State = {
     isLoading: true,
     jobs: [],
     searchQuery: "",

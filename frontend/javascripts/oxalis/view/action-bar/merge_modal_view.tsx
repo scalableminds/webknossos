@@ -53,7 +53,7 @@ type ButtonWithCheckboxState = {
 };
 
 class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWithCheckboxState> {
-  state = {
+  state: ButtonWithCheckboxState = {
     isChecked: true,
   };
 
@@ -84,7 +84,7 @@ class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWi
 }
 
 class MergeModalView extends PureComponent<Props, MergeModalViewState> {
-  state = {
+  state: MergeModalViewState = {
     projects: [],
     selectedProject: null,
     selectedExplorativeAnnotation: "",
@@ -264,9 +264,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 onChange={this.handleChangeMergeProject}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 options={this.state.projects.map((project) => ({
-                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
                   value: project.id,
-                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'label' does not exist on type 'never'.
                   label: project.label,
                 }))}
               />

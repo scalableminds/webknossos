@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
-import type { Node } from "react";
 import React from "react";
 import { Dropdown, Menu } from "antd";
 import { ShareAltOutlined, DownOutlined, CameraOutlined } from "@ant-design/icons";
@@ -8,8 +6,9 @@ import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import Store from "oxalis/store";
+
 type Props = {
-  layoutMenu: Node;
+  layoutMenu: React.ReactNode;
 };
 export const screenshotMenuItem = (
   <Menu.Item key="screenshot-button" onClick={downloadScreenshot}>

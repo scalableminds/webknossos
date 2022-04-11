@@ -257,7 +257,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {
   formRef = React.createRef<FormInstance>();
-  state = {
+  state: State = {
     datasets: [],
     taskTypes: [],
     projects: [],

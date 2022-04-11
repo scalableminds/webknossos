@@ -142,7 +142,7 @@ function MultiLayerImageStackExample() {
 }
 
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
-  state = {
+  state: State = {
     isUploading: false,
     isFinishing: false,
     needsConversion: false,
@@ -395,7 +395,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   cancelUpload = async () => {
     const { uploadId, resumableUpload, datastoreUrl } = this.state;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'pause' does not exist on type '{}'.
     resumableUpload.pause();
     const shouldCancel = await confirmAsync({
       title:
@@ -405,12 +404,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     });
 
     if (!shouldCancel) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'upload' does not exist on type '{}'.
       resumableUpload.upload();
       return;
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'cancel' does not exist on type '{}'.
     resumableUpload.cancel();
     await cancelDatasetUpload(datastoreUrl, {
       uploadId,

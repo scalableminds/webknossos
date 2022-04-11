@@ -13,22 +13,19 @@ import type {
   ColorObject,
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
+
 export type Comparator<T> = (arg0: T, arg1: T) => -1 | 0 | 1;
+
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
 // http://javascript.about.com/od/problemsolving/a/modulobug.htm
 export function mod(x: number, n: number) {
   return ((x % n) + n) % n;
 }
-// @ts-expect-error ts-migrate(2344) FIXME: Type 'K' does not satisfy the constraint 'string |... Remove this comment to see the full error message
-export function values<K, V>(o: Record<K, V>): Array<V> {
-  // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
+export function values<T>(o: { [s: string]: T } | ArrayLike<T>): T[] {
   return Object.values(o);
 }
-// @ts-expect-error ts-migrate(2344) FIXME: Type 'K' does not satisfy the constraint 'string |... Remove this comment to see the full error message
-export function entries<K, V>(o: Record<K, V>): Array<[K, V]> {
-  // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '[string, V][]' is not assignable to type '[K... Remove this comment to see the full error message
+export function entries<T>(o: { [s: string]: T } | ArrayLike<T>): [string, T][] {
   return Object.entries(o);
 }
 export function map2<A, B>(fn: (arg0: A, arg1: 0 | 1) => B, tuple: [A, A]): [B, B] {

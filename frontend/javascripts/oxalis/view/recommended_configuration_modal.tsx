@@ -27,7 +27,7 @@ type State = {
   visible: boolean;
 };
 export default class RecommendedConfigurationModal extends React.Component<Props, State> {
-  state = {
+  state: State = {
     visible: true,
   };
 

@@ -14,7 +14,7 @@ type State = {
 };
 
 class UserSelectionComponent extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     isLoading: false,
     users: [],
     currentUserIdValue: "",

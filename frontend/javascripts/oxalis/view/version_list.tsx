@@ -69,7 +69,7 @@ export async function previewVersion(versions?: Versions) {
 }
 
 class VersionList extends React.Component<Props, State> {
-  state = {
+  state: State = {
     isLoading: false,
     versions: [],
   };
@@ -109,7 +109,6 @@ class VersionList extends React.Component<Props, State> {
   }
 
   getNewestVersion(): number {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'never'.
     return _.max(this.state.versions.map((batch) => batch.version)) || 0;
   }
 
@@ -206,7 +205,6 @@ class VersionList extends React.Component<Props, State> {
               // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
               batches={batchesOrDateString}
               allowUpdate={this.props.allowUpdate}
-              // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'never'.
               newestVersion={this.state.versions[0].version}
               activeVersion={this.props.tracing.version}
               onRestoreVersion={this.handleRestoreVersion}

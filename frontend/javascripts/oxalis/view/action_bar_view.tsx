@@ -58,7 +58,7 @@ type State = {
 };
 
 class ActionBarView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     isNewLayoutModalVisible: false,
   };
 

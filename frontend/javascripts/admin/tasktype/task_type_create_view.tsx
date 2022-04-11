@@ -75,7 +75,7 @@ function getMagnificationAdaptedSettings(rawSettings) {
 
 class TaskTypeCreateView extends React.PureComponent<Props, State> {
   formRef = React.createRef<FormInstance>();
-  state = {
+  state: State = {
     teams: [],
     useRecommendedConfiguration: false,
     isFetchingData: false,

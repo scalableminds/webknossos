@@ -28,7 +28,7 @@ export const SimpleHeader = () => (
 );
 
 class PublicationDetailView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     datasets: [],
     isLoading: true,
   };
@@ -59,7 +59,6 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
     const { isLoading, datasets } = this.state;
     const datasetsOfPublication = datasets.filter(
       (ds) =>
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'isActive' does not exist on type 'never'... Remove this comment to see the full error message
         ds.isActive && ds.publication != null && ds.publication.id === this.props.publicationId,
     ) as any as Array<APIDataset>;
     return (

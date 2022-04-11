@@ -23,7 +23,7 @@ type State = {
 };
 
 class ProjectProgressReportView extends React.PureComponent<{}, State> {
-  state = {
+  state: State = {
     areSettingsVisible: true,
     data: [],
     team: undefined,
@@ -43,7 +43,6 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       const errorToastKey = "progress-report-failed-to-refresh";
 
       try {
-        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
         const progessData = await getProjectProgressReport(team.id);
         this.setState({
           data: progessData,
@@ -60,7 +59,6 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       this.setState({
         isLoading: true,
       });
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       const progessData = await getProjectProgressReport(team.id);
       this.setState({
         data: progessData,

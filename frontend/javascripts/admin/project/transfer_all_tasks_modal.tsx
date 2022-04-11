@@ -24,7 +24,7 @@ type State = {
 };
 
 class TransferAllTasksModal extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     users: [],
     selectedUser: null,
     usersWithActiveTasks: [],
@@ -68,12 +68,10 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
 
     try {
       const selectedUser = this.state.selectedUser;
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       await transferActiveTasksOfProject(this.props.project.id, selectedUser.id);
 
       if (selectedUser) {
         Toast.success(
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'lastName' does not exist on type 'never'... Remove this comment to see the full error message
           `${messages["project.successful_active_tasks_transfer"]} ${selectedUser.lastName}, ${selectedUser.firstName}`,
         );
       }
@@ -86,23 +84,17 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
 
   renderTableContent() {
     const activeUsersWithKey = this.state.usersWithActiveTasks.map((activeUser) => ({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'email' does not exist on type 'never'.
       email: activeUser.email,
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'firstName' does not exist on type 'never... Remove this comment to see the full error message
       firstName: activeUser.firstName,
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'lastName' does not exist on type 'never'... Remove this comment to see the full error message
       lastName: activeUser.lastName,
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeTasks' does not exist on type 'nev... Remove this comment to see the full error message
       activeTasks: activeUser.activeTasks,
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'email' does not exist on type 'never'.
       key: activeUser.email,
     }));
     const columns = [
       {
         title: "User",
         dataIndex: "email",
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'email' implicitly has an 'any' type.
-        render: (email, record) => `${record.lastName}, ${record.firstName} (${email})`,
+        render: (email:string , record: APIActiveUser) => `${record.lastName}, ${record.firstName} (${email})`,
         key: "email",
       },
       {

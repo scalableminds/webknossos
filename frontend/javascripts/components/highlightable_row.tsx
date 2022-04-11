@@ -12,13 +12,9 @@ type State = {
 // the initial prop, would abort the animation too early.
 
 export default class HighlightableRow extends React.PureComponent<Props, State> {
-  constructor(props: Props) {
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1-2 arguments, but got 0.
-    super();
-    this.state = {
-      persistedShouldHighlight: props.shouldHighlight,
-    };
-  }
+  state: State = {
+    persistedShouldHighlight: this.props.shouldHighlight,
+  };
 
   render() {
     const { shouldHighlight, style, ...restProps } = this.props;

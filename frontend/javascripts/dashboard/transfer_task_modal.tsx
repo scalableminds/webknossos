@@ -15,7 +15,7 @@ type State = {
 };
 
 class TransferTaskModal extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     currentUserIdValue: "",
   };
 

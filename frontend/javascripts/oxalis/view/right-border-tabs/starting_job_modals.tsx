@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2305) FIXME: Module '"react"' has no exported member 'Node'.
-import type { Node } from "react";
 import React, { useEffect, useState } from "react";
 import type { APIDataset, APIJob } from "types/api_flow_types";
 import "types/api_flow_types";
@@ -26,10 +24,10 @@ type StartingJobModalProps = Props & {
   dataset: APIDataset;
   jobApiCall: (
     arg0: string,
-    arg1: UserBoundingBox | null | undefined,
+    arg1?: UserBoundingBox | null | undefined,
   ) => Promise<APIJob | null | undefined>;
   jobName: string;
-  description: Node;
+  description: React.ReactNode;
   isBoundingBoxConfigurable?: boolean;
 };
 
@@ -75,7 +73,6 @@ function StartingJobModal(props: StartingJobModalProps) {
       if (isBoundingBoxConfigurable) {
         apiJob = await jobApiCall(selectedColorLayerName, selectedBoundingBox);
       } else {
-        // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
         apiJob = await jobApiCall(selectedColorLayerName);
       }
 
@@ -102,7 +99,7 @@ function StartingJobModal(props: StartingJobModalProps) {
     }
   };
 
-  const ColorLayerSelection = (): Node =>
+  const ColorLayerSelection = (): React.ReactNode =>
     colorLayerNames.length > 1 ? (
       <React.Fragment>
         <p>Please select the layer that should be used for the inferral.</p>
@@ -160,7 +157,7 @@ function StartingJobModal(props: StartingJobModalProps) {
     );
   };
 
-  const BoundingBoxSelection = (): Node =>
+  const BoundingBoxSelection = (): React.ReactNode =>
     isBoundingBoxConfigurable ? (
       <React.Fragment>
         <p>

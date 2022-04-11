@@ -45,7 +45,6 @@ export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rec
   }
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rects' implicitly has an 'any' type.
 const _getViewportExtents = memoizeOne((rects) => {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rect' implicitly has an 'any' type.
   const getExtent = (rect) => [rect.width, rect.height];

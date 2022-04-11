@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $ElementType } from "utility-types";
 import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
@@ -22,13 +20,12 @@ function updateQueueObj(action: PushSaveQueueTransaction | ShiftSaveQueueAction,
   return { ...oldQueueObj, volumes: { ...oldQueueObj.volumes, [action.tracingId]: newQueue } };
 }
 
-export function getTotalSaveQueueLength(queueObj: $ElementType<SaveState, "queue">) {
+export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
   return (
     queueObj.skeleton.length +
     _.sum(
       Utils.values(queueObj.volumes).map(
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(volumeQueue: Array<SaveQueueEnt... Remove this comment to see the full error message
-        (volumeQueue: Array<SaveQueueEntry>) => volumeQueue.length,
+        (volumeQueue: SaveQueueEntry[]) => volumeQueue.length,
       ),
     )
   );

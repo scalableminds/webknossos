@@ -14,7 +14,7 @@ type State = {
 export default class NewTaskDescriptionModal extends React.Component<Props, State> {
   // @ts-expect-error timeoutId is not initialized in constructor
   timeoutId: ReturnType<typeof setTimeout>;
-  state = {
+  state: State = {
     mayClose: false,
     visible: true,
   };

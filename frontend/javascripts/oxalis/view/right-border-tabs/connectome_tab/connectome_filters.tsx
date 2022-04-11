@@ -8,10 +8,12 @@ import type {
 } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
 import { directionCaptions } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
 import ButtonComponent from "oxalis/view/components/button_component";
+
 type SynapseDirection = "in" | "out";
+
 type ConnectomeFiltersType = {
-  synapseTypes: Array<string>;
-  synapseDirections: Array<SynapseDirection>;
+  synapseTypes: string[];
+  synapseDirections: SynapseDirection[];
 };
 
 const getFilteredConnectomeData = (
@@ -45,7 +47,7 @@ const getFilteredConnectomeData = (
   };
 };
 
-const defaultFilters = {
+const defaultFilters: ConnectomeFiltersType = {
   synapseTypes: [],
   synapseDirections: ["in", "out"],
 };
@@ -60,8 +62,7 @@ type State = {
 };
 
 class ConnectomeFilters extends React.Component<Props, State> {
-  // @ts-expect-error ts-migrate(2416) FIXME: Property 'state' in type 'ConnectomeFilters' is no... Remove this comment to see the full error message
-  state = {
+  state: State = {
     filters: defaultFilters,
   };
 
@@ -70,7 +71,6 @@ class ConnectomeFilters extends React.Component<Props, State> {
 
     if (prevProps.availableSynapseTypes !== this.props.availableSynapseTypes) {
       // Avoid using outdated filters in the call to updateFilteredConnectomeData
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ synapseTypes: string[]; synapseDirections:... Remove this comment to see the full error message
       filters = this.updateFilters(prevProps.availableSynapseTypes);
     }
 
@@ -78,14 +78,12 @@ class ConnectomeFilters extends React.Component<Props, State> {
       prevProps.connectomeData !== this.props.connectomeData ||
       prevState.filters !== this.state.filters
     ) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ synapseTypes: never[]; synapse... Remove this comment to see the full error message
       this.updateFilteredConnectomeData(filters);
     }
   }
 
   resetFilters = () => {
     this.setState({
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ synapseTypes: string[]; synapseDirections:... Remove this comment to see the full error message
       filters: { ...defaultFilters, synapseTypes: this.props.availableSynapseTypes },
     });
   };
@@ -106,7 +104,6 @@ class ConnectomeFilters extends React.Component<Props, State> {
       synapseTypes: [...validOldSynapseTypes, ...newlyAddedSynapseTypes],
     };
     this.setState({
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ synapseTypes: string[]; synapseDirections:... Remove this comment to see the full error message
       filters: newFilters,
     });
     return newFilters;

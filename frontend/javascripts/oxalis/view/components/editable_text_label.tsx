@@ -31,7 +31,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
   static defaultProps = {
     rows: 1,
   };
-  state = {
+  state: State = {
     isEditing: false,
     value: "",
   };

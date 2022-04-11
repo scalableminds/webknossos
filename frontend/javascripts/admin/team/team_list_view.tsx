@@ -34,7 +34,7 @@ const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
 );
 
 class TeamListView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     isLoading: true,
     teams: [],
     searchQuery: "",

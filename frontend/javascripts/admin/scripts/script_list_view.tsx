@@ -32,7 +32,7 @@ const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
 );
 
 class ScriptListView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     isLoading: true,
     scripts: [],
     searchQuery: "",

@@ -75,7 +75,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
             scripts: prevState.scripts.filter((s) => s.id !== script.id),
           }));
         } catch (error) {
-          handleGenericError(error);
+          handleGenericError(error as Error);
         } finally {
           this.setState({
             isLoading: false,

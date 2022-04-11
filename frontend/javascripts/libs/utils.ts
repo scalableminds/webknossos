@@ -593,7 +593,6 @@ export function millisecondsToHours(ms: number) {
 export function isNoElementFocussed(): boolean {
   // checks whether an <input> or <button> element has the focus
   // when no element is focused <body> gets the focus
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeElement' does not exist on type 'D... Remove this comment to see the full error message
   return document.activeElement === document.body;
 }
 

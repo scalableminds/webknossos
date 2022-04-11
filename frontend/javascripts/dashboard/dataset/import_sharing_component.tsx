@@ -1,4 +1,4 @@
-import { Button, Input, Checkbox, Tooltip } from "antd";
+import { Button, Input, Checkbox, Tooltip, FormInstance } from "antd";
 import React, { useState, useEffect } from "react";
 import type { APIDataset, APIDatasetId } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -14,7 +14,7 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { CopyOutlined, RetweetOutlined } from "@ant-design/icons";
 import { FormItemWithInfo } from "./helper_components";
 type Props = {
-  form: Record<string, any>;
+  form: FormInstance | null;
   datasetId: APIDatasetId;
   hasNoAllowedTeams: boolean;
 };

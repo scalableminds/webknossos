@@ -43,6 +43,7 @@ import ImportGeneralComponent from "./import_general_component";
 import ImportSharingComponent from "./import_sharing_component";
 import ImportDeleteComponent from "./import_delete_component";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
+import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
@@ -141,8 +142,8 @@ function ensureValidScaleOnInferredDataSource(
 
 class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, State> {
   formRef = React.createRef<FormInstance>();
-  unblock: ((...args: Array<any>) => any) | null | undefined;
-  blockTimeoutId: ReturnType<typeof setTimeout> | null | undefined;
+  unblock: UnregisterCallback | null | undefined;
+  blockTimeoutId: number | null | undefined;
 
   state: State = {
     hasUnsavedChanges: false,
@@ -168,8 +169,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
     });
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newLocation' implicitly has an 'any' ty... Remove this comment to see the full error message
-    const beforeUnload = (newLocation, action) => {
+    const beforeUnload = (newLocation: HistoryLocation<unknown>, action: HistoryAction): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
@@ -188,7 +188,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
         }
       }
 
-      return null;
+      return;
     };
 
     this.unblock = this.props.history.block(beforeUnload);
@@ -246,7 +246,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
             dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.Yes;
           }
 
-          const diff = diffObjects(inferredDataSource, savedDataSourceOnServer);
+          const diff = diffObjects(inferredDataSource || {}, savedDataSourceOnServer);
           const areObjectsEqual = _.size(diff) === 0;
 
           if (!areObjectsEqual) {
@@ -518,7 +518,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
     const err = form.getFieldsError();
     const { dataset } = this.state;
-    const formErrors = {};
+    const formErrors: Record<string, any> = {};
 
     if (!err || !dataset) {
       return formErrors;
@@ -531,12 +531,10 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     }
 
     if (hasErr(err, "dataset")) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'general' does not exist on type '{}'.
       formErrors.general = true;
     }
 
     if (hasErr(err, "defaultConfiguration") || hasErr(err, "defaultConfigurationLayersJson")) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'defaultConfig' does not exist on type '{... Remove this comment to see the full error message
       formErrors.defaultConfig = true;
     }
 
@@ -728,6 +726,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
         <Alert
           key={i}
           message={Object.values(message)[0]}
+          /* @ts-expect-error */
           type={Object.keys(message)[0]}
           showIcon
         />
@@ -797,6 +796,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
   render() {
     const form = this.formRef.current;
+
     const { isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const confirmString =
@@ -913,7 +913,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
                 <TabPane tab={<span>Metadata</span>} key="general" forceRender>
                   <Hideable hidden={this.state.activeTabKey !== "general"}>
-                    <ImportGeneralComponent form={form} />
+                    <ImportGeneralComponent />
                   </Hideable>
                 </TabPane>
 
@@ -923,7 +923,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
                   forceRender
                 >
                   <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
-                    <DefaultConfigComponent form={form} />
+                    <DefaultConfigComponent />
                   </Hideable>
                 </TabPane>
 

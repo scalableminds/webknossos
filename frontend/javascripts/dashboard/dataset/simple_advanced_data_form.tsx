@@ -20,7 +20,7 @@ export default function SimpleAdvancedDataForm({
   additionalAlert,
 }: {
   isReadOnlyDataset: boolean;
-  form: FormInstance;
+  form: FormInstance | null;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
   additionalAlert: React.ReactNode | null | undefined;
@@ -233,7 +233,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }: { isReadOnlyDatase
             name={["dataSource", "dataLayers", index, "largestSegmentId"]}
             label="Largest segment ID"
             info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
-            initialValue={layer.largestSegmentId}
+            initialValue={`${layer.largestSegmentId}`}
             rules={[
               {
                 required: true,

@@ -6,7 +6,6 @@ import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";

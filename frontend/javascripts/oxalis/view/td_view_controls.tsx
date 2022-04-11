@@ -1,6 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Values } from "utility-types";
-import { Button, Radio, Tooltip, Menu, Dropdown, Col, Row, Switch } from "antd";
+import { Button, Radio, Tooltip, Menu, Dropdown, Col, Row, Switch, RadioChangeEvent } from "antd";
 import {
   StopOutlined,
   BorderInnerOutlined,
@@ -15,11 +13,12 @@ import type { TDViewDisplayMode } from "oxalis/constants";
 import { TDViewDisplayModeEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import api from "oxalis/api/internal_api";
+import { SwitchChangeEventHandler } from "antd/lib/switch";
 type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
-  onChangeTdViewDisplayPlanes: (arg0: React.SyntheticEvent) => void;
-  onChangeTdViewDisplayDatasetBorders: (arg0: boolean) => void;
+  onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
+  onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler
 };
 
 function TDViewControls({
@@ -115,9 +114,8 @@ function mapStateToProps(state: OxalisState) {
 
 function mapDispatchToProps(dispatch: Dispatch<any>) {
   return {
-    onChangeTdViewDisplayPlanes(evt: React.SyntheticEvent) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-      const tdViewDisplayPlanes: $Values<typeof TDViewDisplayModeEnum> = evt.target.value;
+    onChangeTdViewDisplayPlanes(evt: RadioChangeEvent) {
+      const tdViewDisplayPlanes: TDViewDisplayModeEnum = evt.target.value;
       dispatch(updateUserSettingAction("tdViewDisplayPlanes", tdViewDisplayPlanes));
     },
 

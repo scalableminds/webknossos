@@ -18,7 +18,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import update from "immutability-helper";
 import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
-import type { Comparator } from "libs/utils";
+import { Comparator, toNullable } from "libs/utils";
 import { compareBy, localeCompareBy, zipMaybe } from "libs/utils";
 import { InputKeyboard } from "libs/input";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
@@ -34,7 +34,7 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
-import type { CommentType, OxalisState, SkeletonTracing, Tree } from "oxalis/store";
+import type { CommentType, OxalisState, SkeletonTracing, Tree, TreeMap } from "oxalis/store";
 import Store from "oxalis/store";
 import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_with_comments";
 import messages from "messages";
@@ -101,8 +101,7 @@ const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "revertToVersion",
 ];
 const memoizedDeriveData = memoizeOne(
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'trees' implicitly has an 'any' type.
-  (trees, state: CommentTabState): Array<Tree | CommentType> => {
+  (trees: TreeMap, state: CommentTabState): Array<Tree | CommentType> => {
     const sortedTrees = _.values(trees)
       .filter((tree) => tree.comments.length > 0)
       .sort(getTreeSorter(state));
@@ -133,16 +132,14 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
   storePropertyUnsubscribers: Array<() => void> = [];
   keyboard = new InputKeyboard(
     {
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
       n: () => this.nextComment(),
-      // @ts-expect-error ts-migrate(2739) FIXME: Type '() => void' is missing the following propert... Remove this comment to see the full error message
       p: () => this.previousComment(),
     },
     {
       delay: Store.getState().userConfiguration.keyboardDelay,
     },
   );
-  state = {
+  state: CommentTabState = {
     isSortedAscending: true,
     sortBy: SortByEnum.NAME,
     collapsedTreeIds: {},
@@ -193,6 +190,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     ) {
       // Force the virtualized list to update if a comment was changed
       // as it only rerenders if the rowCount changed otherwise
+      // @ts-expect-error
       this.listRef.forceUpdateGrid();
     }
   }
@@ -319,7 +317,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
     const onOk = () => this.setMarkdownModalVisibility(false);
 
-    return activeCommentMaybe
+    return toNullable(activeCommentMaybe
       .map((comment) => (
         <MarkdownModal
           key={comment.nodeId}
@@ -329,8 +327,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
           onOk={onOk}
           label="Comment"
         />
-      ))
-      .getOrElse(null);
+      )));
   }
 
   renderSortIcon() {
@@ -361,8 +358,9 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
   }
 
   renderRow = ({ index, key, style }: { index: number; key: string; style: React.CSSProperties }) => {
-    if (this.getData()[index].treeId != null) {
-      const tree = this.getData()[index];
+    const element = this.getData()[index];
+    if ("treeId" in element) {
+      const tree = element;
       return (
         <TreeWithComments
           key={key}
@@ -374,7 +372,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
         />
       );
     } else {
-      const comment = this.getData()[index];
+      const comment = element;
       const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
       return <Comment key={key} style={style} comment={comment} isActive={isActive} />;
     }
@@ -442,7 +440,10 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     value={activeCommentContent}
                     disabled={activeNodeMaybe.isNothing}
                     onChange={(evt) => this.handleChangeInput(evt, true)}
-                    onPressEnter={(evt) => evt.target.blur()}
+                    onPressEnter={(evt) =>
+                      // @ts-expect-error
+                      evt.target.blur()
+                    }
                     placeholder="Add comment"
                     style={{
                       width: "50%",
@@ -457,7 +458,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   />
                   <ButtonComponent
                     title="Jump to next comment"
-                    onClick={this.nextComment}
+                    onClick={() => this.nextComment()}
                     icon={<ArrowRightOutlined />}
                   />
                   <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>

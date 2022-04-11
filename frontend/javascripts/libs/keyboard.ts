@@ -1,10 +1,9 @@
+// @ts-nocheck
 /* eslint-disable eslint-comments/no-unlimited-disable */
 
 /* eslint-disable */
-// @ts-expect-error ts-migrate(1345) FIXME: An expression of type 'void' cannot be tested for ... Remove this comment to see the full error message
 !(function (e) {
   if ("object" == typeof exports && "undefined" != typeof module) module.exports = e();
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'define'.
   else if ("function" == typeof define && define.amd) define([], e);
   else {
     var f;
@@ -13,41 +12,28 @@
       : "undefined" != typeof global
       ? (f = global)
       : "undefined" != typeof self && (f = self),
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       (f.keyboardJS = e());
   }
 })(function () {
   var define, module, exports;
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
   return (function e(t, n, r) {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'o' implicitly has an 'any' type.
     function s(o, u) {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       if (!n[o]) {
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if (!t[o]) {
           var a = typeof require == "function" && require;
-          // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 2.
           if (!u && a) return a(o, !0);
-          // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 2.
           if (i) return i(o, !0);
           var f = new Error("Cannot find module '" + o + "'");
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'code' does not exist on type 'Error'.
           throw ((f.code = "MODULE_NOT_FOUND"), f);
         }
 
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         var l = (n[o] = {
           exports: {},
         });
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         t[o][0].call(
           l.exports,
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'e' implicitly has an 'any' type.
           function (e) {
-            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             var n = t[o][1][e];
-            // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
             return s(n ? n : e);
           },
           l,
@@ -59,20 +45,17 @@
         );
       }
 
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       return n[o].exports;
     }
 
     var i = typeof require == "function" && require;
 
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
     for (var o = 0; o < r.length; o++) s(r[o]);
 
     return s;
   })(
     {
       1: [
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'require' implicitly has an 'any' type.
         function (require, module, exports) {
           var Keyboard = require("./lib/keyboard");
 
@@ -95,15 +78,10 @@
         },
       ],
       2: [
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'require' implicitly has an 'any' type.
         function (require, module, exports) {
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyComboStr' implicitly has an 'any' ty... Remove this comment to see the full error message
           function KeyCombo(keyComboStr) {
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this.sourceStr = keyComboStr;
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this.subCombos = KeyCombo.parseComboStr(keyComboStr);
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this.keyNames = this.subCombos.reduce(function (memo, nextSubCombo) {
               return memo.concat(nextSubCombo);
             });
@@ -114,7 +92,6 @@
           KeyCombo.comboDeliminator = ">";
           KeyCombo.keyDeliminator = "+";
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyComboStr' implicitly has an 'any' ty... Remove this comment to see the full error message
           KeyCombo.parseComboStr = function (keyComboStr) {
             var subComboStrs = KeyCombo._splitStr(keyComboStr, KeyCombo.comboDeliminator);
 
@@ -127,7 +104,6 @@
             return combo;
           };
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pressedKeyNames' implicitly has an 'any... Remove this comment to see the full error message
           KeyCombo.prototype.check = function (pressedKeyNames) {
             var startingKeyNameIndex = 0;
 
@@ -146,7 +122,6 @@
             return true;
           };
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'otherKeyCombo' implicitly has an 'any' ... Remove this comment to see the full error message
           KeyCombo.prototype.isEqual = function (otherKeyCombo) {
             if (
               !otherKeyCombo ||
@@ -156,7 +131,6 @@
             }
 
             if (typeof otherKeyCombo === "string") {
-              // @ts-expect-error ts-migrate(7009) FIXME: 'new' expression, whose target lacks a construct s... Remove this comment to see the full error message
               otherKeyCombo = new KeyCombo(otherKeyCombo);
             }
 
@@ -191,7 +165,6 @@
             return true;
           };
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'str' implicitly has an 'any' type.
           KeyCombo._splitStr = function (str, deliminator) {
             var s = str;
             var d = deliminator;
@@ -216,11 +189,8 @@
           };
 
           KeyCombo.prototype._checkSubCombo = function (
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'subCombo' implicitly has an 'any' type.
             subCombo,
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'startingKeyNameIndex' implicitly has an... Remove this comment to see the full error message
             startingKeyNameIndex,
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pressedKeyNames' implicitly has an 'any... Remove this comment to see the full error message
             pressedKeyNames,
           ) {
             subCombo = subCombo.slice(0);
@@ -265,53 +235,32 @@
         {},
       ],
       3: [
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'require' implicitly has an 'any' type.
         function (require, module, exports) {
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'global' implicitly has an 'any' type.
           (function (global) {
             var Locale = require("./locale");
 
             var KeyCombo = require("./key-combo");
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetWindow' implicitly has an 'any' t... Remove this comment to see the full error message
             function Keyboard(targetWindow, targetElement, platform, userAgent) {
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._locale = null;
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._currentContext = null;
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._contexts = {};
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._listeners = [];
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._appliedListeners = [];
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._locales = {};
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._targetElement = null;
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._targetWindow = null;
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._targetPlatform = "";
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._targetUserAgent = "";
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._isModernBrowser = false;
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._targetKeyDownBinding = null;
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._targetKeyUpBinding = null;
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._targetResetBinding = null;
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this._paused = false;
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this.setContext("global");
-              // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
               this.watch(targetWindow, targetElement, platform, userAgent);
             }
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'localeName' implicitly has an 'any' typ... Remove this comment to see the full error message
             Keyboard.prototype.setLocale = function (localeName, localeBuilder) {
               var locale = null;
 
@@ -335,20 +284,15 @@
               }
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'localName' implicitly has an 'any' type... Remove this comment to see the full error message
             Keyboard.prototype.getLocale = function (localName) {
               localName || (localName = this._locale.localeName);
               return this._locales[localName] || null;
             };
 
             Keyboard.prototype.bind = function (
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyComboStr' implicitly has an 'any' ty... Remove this comment to see the full error message
               keyComboStr,
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pressHandler' implicitly has an 'any' t... Remove this comment to see the full error message
               pressHandler,
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'releaseHandler' implicitly has an 'any'... Remove this comment to see the full error message
               releaseHandler,
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'preventRepeatByDefault' implicitly has ... Remove this comment to see the full error message
               preventRepeatByDefault,
             ) {
               if (keyComboStr === null || typeof keyComboStr === "function") {
@@ -382,7 +326,6 @@
             Keyboard.prototype.addListener = Keyboard.prototype.bind;
             Keyboard.prototype.on = Keyboard.prototype.bind;
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyComboStr' implicitly has an 'any' ty... Remove this comment to see the full error message
             Keyboard.prototype.unbind = function (keyComboStr, pressHandler, releaseHandler) {
               if (keyComboStr === null || typeof keyComboStr === "function") {
                 releaseHandler = pressHandler;
@@ -427,7 +370,6 @@
             Keyboard.prototype.removeListener = Keyboard.prototype.unbind;
             Keyboard.prototype.off = Keyboard.prototype.unbind;
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'contextName' implicitly has an 'any' ty... Remove this comment to see the full error message
             Keyboard.prototype.setContext = function (contextName) {
               if (this._locale) {
                 this.releaseAllKeys();
@@ -445,7 +387,6 @@
               return this._currentContext;
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'contextName' implicitly has an 'any' ty... Remove this comment to see the full error message
             Keyboard.prototype.withContext = function (contextName, callback) {
               var previousContextName = this.getContext();
               this.setContext(contextName);
@@ -454,13 +395,9 @@
             };
 
             Keyboard.prototype.watch = function (
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetWindow' implicitly has an 'any' t... Remove this comment to see the full error message
               targetWindow,
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetElement' implicitly has an 'any' ... Remove this comment to see the full error message
               targetElement,
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetPlatform' implicitly has an 'any'... Remove this comment to see the full error message
               targetPlatform,
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetUserAgent' implicitly has an 'any... Remove this comment to see the full error message
               targetUserAgent,
             ) {
               var _this = this;
@@ -496,19 +433,16 @@
               (targetPlatform && targetPlatform !== null) || (targetPlatform = platform);
               (targetUserAgent && targetUserAgent !== null) || (targetUserAgent = userAgent);
 
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
               this._targetKeyDownBinding = function (event) {
                 _this.pressKey(event.keyCode, event);
 
                 _this._bugCatcher(event, platform);
               };
 
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
               this._targetKeyUpBinding = function (event) {
                 _this.releaseKey(event.keyCode, event);
               };
 
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
               this._targetResetBinding = function (event) {
                 _this.releaseAllKeys(event);
               };
@@ -546,7 +480,6 @@
               this._targetElement = null;
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyCode' implicitly has an 'any' type.
             Keyboard.prototype.pressKey = function (keyCode, event) {
               if (this._paused) {
                 return;
@@ -561,7 +494,6 @@
               this._applyBindings(event);
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyCode' implicitly has an 'any' type.
             Keyboard.prototype.releaseKey = function (keyCode, event) {
               if (this._paused) {
                 return;
@@ -576,7 +508,6 @@
               this._clearBindings(event);
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
             Keyboard.prototype.releaseAllKeys = function (event) {
               if (this._paused) {
                 return;
@@ -612,15 +543,12 @@
               this._listeners.length = 0;
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'array1' implicitly has an 'any' type.
             function intersection(array1, array2) {
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'n' implicitly has an 'any' type.
               return array1.filter(function (n) {
                 return array2.indexOf(n) !== -1;
               });
             }
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
             Keyboard.prototype._bugCatcher = function (event, platform) {
               // This seems to be Mac specific weirdness, so we'll target "cmd" as metaKey
               // Force a keyup for non-modifier keys when command is held because they don't fire
@@ -644,14 +572,12 @@
               // Perhaps we should fire keyup on all active combos when we press cmd?
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetElement' implicitly has an 'any' ... Remove this comment to see the full error message
             Keyboard.prototype._bindEvent = function (targetElement, eventName, handler) {
               return this._isModernBrowser
                 ? targetElement.addEventListener(eventName, handler, false)
                 : targetElement.attachEvent("on" + eventName, handler);
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetElement' implicitly has an 'any' ... Remove this comment to see the full error message
             Keyboard.prototype._unbindEvent = function (targetElement, eventName, handler) {
               return this._isModernBrowser
                 ? targetElement.removeEventListener(eventName, handler, false)
@@ -659,9 +585,7 @@
             };
 
             Keyboard.prototype._getGroupedListeners = function () {
-              // @ts-expect-error ts-migrate(7034) FIXME: Variable 'listenerGroups' implicitly has type 'any... Remove this comment to see the full error message
               var listenerGroups = [];
-              // @ts-expect-error ts-migrate(7034) FIXME: Variable 'listenerGroupMap' implicitly has type 'a... Remove this comment to see the full error message
               var listenerGroupMap = [];
               var listeners = this._listeners;
 
@@ -670,22 +594,18 @@
               }
 
               listeners
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
                 .sort(function (a, b) {
                   return (
                     (b.keyCombo ? b.keyCombo.keyNames.length : 0) -
                     (a.keyCombo ? a.keyCombo.keyNames.length : 0)
                   );
                 })
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'l' implicitly has an 'any' type.
                 .forEach(function (l) {
                   var mapIndex = -1;
 
                   for (var i = 0; i < listenerGroupMap.length; i += 1) {
                     if (
-                      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'listenerGroupMap' implicitly has an 'any... Remove this comment to see the full error message
                       (listenerGroupMap[i] === null && l.keyCombo === null) ||
-                      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'listenerGroupMap' implicitly has an 'any... Remove this comment to see the full error message
                       (listenerGroupMap[i] !== null && listenerGroupMap[i].isEqual(l.keyCombo))
                     ) {
                       mapIndex = i;
@@ -697,19 +617,15 @@
                     listenerGroupMap.push(l.keyCombo);
                   }
 
-                  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'listenerGroups' implicitly has an 'any[]... Remove this comment to see the full error message
                   if (!listenerGroups[mapIndex]) {
                     listenerGroups[mapIndex] = [];
                   }
 
-                  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'listenerGroups' implicitly has an 'any[]... Remove this comment to see the full error message
                   listenerGroups[mapIndex].push(l);
                 });
-              // @ts-expect-error ts-migrate(7005) FIXME: Variable 'listenerGroups' implicitly has an 'any[]... Remove this comment to see the full error message
               return listenerGroups;
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
             Keyboard.prototype._applyBindings = function (event) {
               var preventRepeat = false;
               event || (event = {});
@@ -773,7 +689,6 @@
               }
             };
 
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
             Keyboard.prototype._clearBindings = function (event) {
               event || (event = {});
 
@@ -794,7 +709,6 @@
 
             module.exports = Keyboard;
           }.call(
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this,
             typeof global !== "undefined"
               ? global
@@ -811,27 +725,18 @@
         },
       ],
       4: [
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'require' implicitly has an 'any' type.
         function (require, module, exports) {
           var KeyCombo = require("./key-combo");
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'name' implicitly has an 'any' type.
           function Locale(name) {
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this.localeName = name;
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this.pressedKeys = [];
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this._appliedMacros = [];
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this._keyMap = {};
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this._killKeyCodes = [];
-            // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
             this._macros = [];
           }
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyCode' implicitly has an 'any' type.
           Locale.prototype.bindKeyCode = function (keyCode, keyNames) {
             if (typeof keyNames === "string") {
               keyNames = [keyNames];
@@ -840,7 +745,6 @@
             this._keyMap[keyCode] = keyNames;
           };
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyComboStr' implicitly has an 'any' ty... Remove this comment to see the full error message
           Locale.prototype.bindMacro = function (keyComboStr, keyNames) {
             if (typeof keyNames === "string") {
               keyNames = [keyNames];
@@ -862,7 +766,6 @@
             this._macros.push(macro);
           };
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyName' implicitly has an 'any' type.
           Locale.prototype.getKeyCodes = function (keyName) {
             var keyCodes = [];
 
@@ -870,7 +773,6 @@
               var index = this._keyMap[keyCode].indexOf(keyName);
 
               if (index > -1) {
-                // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
                 keyCodes.push(keyCode | 0);
               }
             }
@@ -878,12 +780,10 @@
             return keyCodes;
           };
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyCode' implicitly has an 'any' type.
           Locale.prototype.getKeyNames = function (keyCode) {
             return this._keyMap[keyCode] || [];
           };
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyCode' implicitly has an 'any' type.
           Locale.prototype.setKillKey = function (keyCode) {
             if (typeof keyCode === "string") {
               var keyCodes = this.getKeyCodes(keyCode);
@@ -898,7 +798,6 @@
             this._killKeyCodes.push(keyCode);
           };
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyCode' implicitly has an 'any' type.
           Locale.prototype.pressKey = function (keyCode) {
             if (typeof keyCode === "string") {
               var keyCodes = this.getKeyCodes(keyCode);
@@ -921,7 +820,6 @@
             this._applyMacros();
           };
 
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'keyCode' implicitly has an 'any' type.
           Locale.prototype.releaseKey = function (keyCode) {
             if (typeof keyCode === "string") {
               var keyCodes = this.getKeyCodes(keyCode);
@@ -1003,9 +901,7 @@
         },
       ],
       5: [
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'require' implicitly has an 'any' type.
         function (require, module, exports) {
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'locale' implicitly has an 'any' type.
           module.exports = function (locale, platform, userAgent) {
             // general
             locale.bindKeyCode(3, ["cancel"]);

@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import _ from "lodash";
 import type { Tree, TreeMap, TreeGroup } from "oxalis/store";
 export const MISSING_GROUP_ID = -1;
@@ -37,7 +36,7 @@ function makeTreeNode(
   id: number,
   name: string,
   type: TreeOrGroup,
-  optionalProperties: $Shape<TreeNode>,
+  optionalProperties: Partial<TreeNode>,
 ): TreeNode {
   return _.extend(
     {
@@ -63,7 +62,7 @@ function makeTreeNodeFromTree(tree: Tree): TreeNode {
   });
 }
 
-function makeTreeNodeFromGroup(group: TreeGroup, optionalProperties: $Shape<TreeNode>): TreeNode {
+function makeTreeNodeFromGroup(group: TreeGroup, optionalProperties: Partial<TreeNode>): TreeNode {
   return makeTreeNode(group.groupId, group.name, TYPE_GROUP, optionalProperties);
 }
 

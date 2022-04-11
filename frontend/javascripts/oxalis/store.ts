@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import type { Dispatch } from "redux";
 import { createStore, applyMiddleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
@@ -153,6 +152,11 @@ export type TreeGroupTypeFlat = {
 export type TreeGroup = TreeGroupTypeFlat & {
   readonly children: Array<TreeGroup>;
 };
+export type MutableTreeGroup = {
+  name: string;
+  groupId: number;
+  children: Array<MutableTreeGroup>;
+};
 export type DataLayerType = APIDataLayer;
 export type Restrictions = APIRestrictions;
 export type AllowedMode = APIAllowedMode;
@@ -265,9 +269,9 @@ export type DatasetConfiguration = {
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
 };
-export type PartialDatasetConfiguration = $Shape<
+export type PartialDatasetConfiguration = Partial<
   DatasetConfiguration & {
-    readonly layers: Record<string, $Shape<DatasetLayerConfiguration>>;
+    readonly layers: Record<string, Partial<DatasetLayerConfiguration>>;
   }
 >;
 export type UserConfiguration = {
@@ -302,7 +306,7 @@ export type UserConfiguration = {
   readonly fillMode: FillMode;
   readonly useLegacyBindings: boolean;
 };
-export type RecommendedConfiguration = $Shape<
+export type RecommendedConfiguration = Partial<
   UserConfiguration &
     DatasetConfiguration & {
       zoom: number;

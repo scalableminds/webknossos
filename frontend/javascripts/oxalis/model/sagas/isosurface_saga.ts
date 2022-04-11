@@ -296,7 +296,11 @@ function* loadIsosurfaceWithNeighbors(
 
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
-    const neighbors = yield* call({context: null, fn: maybeLoadIsosurface},
+    if (currentPosition == null) {
+      throw new Error("Satisfy typescript");
+    }
+
+    const neighbors = yield* call(maybeLoadIsosurface,
       layer,
       segmentId,
       currentPosition,

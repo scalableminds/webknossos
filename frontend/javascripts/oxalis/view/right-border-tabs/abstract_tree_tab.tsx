@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import { Button } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
@@ -109,7 +108,7 @@ class AbstractTreeTab extends Component<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState): $Shape<Props> {
+function mapStateToProps(state: OxalisState): Partial<Props> {
   return {
     skeletonTracing: state.tracing.skeleton,
   };

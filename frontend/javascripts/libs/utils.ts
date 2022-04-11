@@ -54,8 +54,7 @@ export function iterateThroughBounds(
   }
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'arr' implicitly has an 'any' type.
-function swap(arr, a, b) {
+function swap<T>(arr: Array<T>, a: number, b: number) {
   let tmp;
 
   if (arr[a] > arr[b]) {
@@ -75,7 +74,7 @@ function getRecursiveValuesUnflat(obj: {} | Array<any> | string): Array<any> {
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+    // @ts-ignore
     return Object.keys(obj).map((key) => getRecursiveValuesUnflat(obj[key]));
   } else {
     return [obj];
@@ -599,7 +598,6 @@ const areEventListenerOptionsSupported = _.once(() => {
 
   try {
     const options = {
-      // $FlowExpectedError[unsafe-getters-setters]
       get passive() {
         // This function will be called when the browser
         //   attempts to access the passive property.
@@ -627,11 +625,9 @@ export function addEventListenerWithDelegation(
   options: Record<string, any> = {},
 ) {
   const wrapperFunc = function (event: Event) {
-    // $FlowIssue[prop-missing] Flow doesn't know native InputEvents
-    // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
+    // @ts-ignore
     for (let { target } = event; target && target !== this; target = target.parentNode) {
-      // $FlowIssue[prop-missing] Flow doesn't know native InputEvents
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'matches' does not exist on type 'EventTa... Remove this comment to see the full error message
+      // @ts-ignore
       if (target.matches(delegateSelector)) {
         handlerFunc.call(target, event);
         break;
@@ -706,8 +702,7 @@ export function sortArray8(arr: Array<number>): void {
 // setTimeout is used instead of requestAnimationFrame.
 const RAF_INTERVAL_THRESHOLD = 20;
 export function waitForCondition(pred: () => boolean, interval: number = 0): Promise<void> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolve' implicitly has an 'any' type.
-  const tryToResolve = (resolve) => {
+  const tryToResolve = (resolve: () => void) => {
     if (pred()) {
       resolve();
     } else if (interval > RAF_INTERVAL_THRESHOLD) {

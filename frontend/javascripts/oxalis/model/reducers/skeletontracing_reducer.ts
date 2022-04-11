@@ -668,9 +668,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               return state;
             }
 
-            // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
             const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId);
-            // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
             const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId);
             return (
               sourceTreeMaybe

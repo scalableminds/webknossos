@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import type { Action } from "oxalis/model/actions/actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
@@ -31,7 +30,7 @@ const updateTemporaryConfig = (state: OxalisState, shape: StateShape1<"temporary
 
 const updateActiveMapping = (
   state: OxalisState,
-  shape: $Shape<ActiveMappingInfo>,
+  shape: Partial<ActiveMappingInfo>,
   layerName: string,
 ) => {
   const oldMappingInfo = getMappingInfo(

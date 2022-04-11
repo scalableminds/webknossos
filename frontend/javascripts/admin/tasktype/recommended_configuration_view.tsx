@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
 import { Checkbox, Col, Collapse, Form, Input, Row, Table, Button } from "antd";
 import { FormInstance } from "antd/lib/form";
 import * as React from "react";
@@ -56,7 +54,7 @@ function getRecommendedConfigByCategory() {
   };
 }
 
-export function getDefaultRecommendedConfiguration(): $Shape<
+export function getDefaultRecommendedConfiguration(): Partial<
   UserConfiguration &
     DatasetConfiguration & {
       segmentationOpacity: number;

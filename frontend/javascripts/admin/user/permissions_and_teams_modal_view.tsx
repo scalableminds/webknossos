@@ -55,7 +55,7 @@ function getSingleUserMaybe(props: TeamRoleModalProp) {
 }
 
 class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp, State> {
-  
+
   state: State = {
     selectedTeams: {},
     teams: [],

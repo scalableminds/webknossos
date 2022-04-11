@@ -57,7 +57,7 @@ class SceneController {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'planes' has no initializer and is not de... Remove this comment to see the full error message
-  planes: OrthoViewMap<Plane>;
+  planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
   rootNode: THREE.Object3D;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'renderer' has no initializer and is not ... Remove this comment to see the full error message
@@ -120,6 +120,7 @@ class SceneController {
   setupDebuggingMethods() {
     // These methods are attached to window, since we would run into circular import errors
     // otherwise.
+    // @ts-ignore
     window.addBucketMesh = (position: Vector3, zoomStep: number, optColor?: string) => {
       const bucketExtent = constants.BUCKET_WIDTH * 2 ** zoomStep;
       const bucketSize = [bucketExtent, bucketExtent, bucketExtent];
@@ -137,6 +138,7 @@ class SceneController {
       return cube;
     };
 
+    // @ts-ignore
     window.addVoxelMesh = (position: Vector3, _cubeLength: Vector3, optColor?: string) => {
       // Shrink voxels a bit so that it's easier to identify individual voxels.
       const cubeLength = _cubeLength.map((el) => el * 0.9);
@@ -157,6 +159,7 @@ class SceneController {
     // @ts-expect-error ts-migrate(7034) FIXME: Variable 'renderedLines' implicitly has type 'any[... Remove this comment to see the full error message
     let renderedLines = [];
 
+    // @ts-ignore
     window.addLine = (a: Vector3, b: Vector3) => {
       const material = new THREE.LineBasicMaterial({
         color: 0x0000ff,
@@ -170,6 +173,7 @@ class SceneController {
       renderedLines.push(line);
     };
 
+    // @ts-ignore
     window.removeLines = () => {
       // @ts-expect-error ts-migrate(7005) FIXME: Variable 'renderedLines' implicitly has an 'any[]'... Remove this comment to see the full error message
       for (const line of renderedLines) {
@@ -179,6 +183,7 @@ class SceneController {
       renderedLines = [];
     };
 
+    // @ts-ignore
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
@@ -187,7 +192,7 @@ class SceneController {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
-  constructSceneMesh(cellId: number, geometry: THREE.Geometry) {
+  constructSceneMesh(cellId: number, geometry: THREE.Geometry | THREE.BufferGeometry) {
     const [hue] = jsConvertCellIdToHSLA(cellId);
     const color = new THREE.Color().setHSL(hue, 0.75, 0.05);
     const meshMaterial = new THREE.MeshLambertMaterial({
@@ -237,11 +242,10 @@ class SceneController {
   }
 
   addIsosurfaceFromVertices(vertices: Float32Array, segmentationId: number): void {
-    let geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+    let bufferGeometry = new THREE.BufferGeometry();
+    bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
     // convert to normal (unbuffered) geometry to merge vertices
-    // @ts-expect-error ts-migrate(2740) FIXME: Type 'Geometry' is missing the following propertie... Remove this comment to see the full error message
-    geometry = new THREE.Geometry().fromBufferGeometry(geometry);
+    const geometry = new THREE.Geometry().fromBufferGeometry(bufferGeometry);
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceMergeVertices' does not exis... Remove this comment to see the full error message
     if (window.__isosurfaceMergeVertices) {
@@ -251,19 +255,18 @@ class SceneController {
     geometry.computeVertexNormals();
     geometry.computeFaceNormals();
     // and back to a BufferGeometry
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'BufferGeometry' is not assignabl... Remove this comment to see the full error message
-    geometry = new THREE.BufferGeometry().fromGeometry(geometry);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'BufferGeometry' is not assignabl... Remove this comment to see the full error message
-    this.addIsosurfaceFromGeometry(geometry, segmentationId);
+    bufferGeometry = new THREE.BufferGeometry().fromGeometry(geometry);
+    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId);
   }
 
-  addIsosurfaceFromGeometry(geometry: THREE.Geometry, segmentationId: number): void {
+  addIsosurfaceFromGeometry(geometry: THREE.Geometry | THREE.BufferGeometry, segmentationId: number): void {
     const mesh = this.constructSceneMesh(segmentationId, geometry);
 
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       const newGroup = new THREE.Group();
       this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
       this.isosurfacesRootGroup.add(newGroup);
+      // @ts-ignore
       newGroup.cellId = segmentationId;
     }
 
@@ -467,7 +470,6 @@ class SceneController {
       optArbitraryPlane.updateAnchorPoints(anchorPoint);
     } else {
       for (const currentPlane of _.values(this.planes)) {
-        // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
         currentPlane.updateAnchorPoints(anchorPoint);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;

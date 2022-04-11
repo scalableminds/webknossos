@@ -1,8 +1,7 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Table, Tag, Tooltip } from "antd";
+import type { SorterResult, SortOrder } from "antd/lib/table/interface"
 import * as React from "react";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'dice... Remove this comment to see the full error message
@@ -42,7 +41,7 @@ type Props = {
 };
 type State = {
   prevSearchQuery: string;
-  sortedInfo: Record<string, any>;
+  sortedInfo: SorterResult<string>;
 };
 
 class DatasetTable extends React.PureComponent<Props, State> {
@@ -54,13 +53,13 @@ class DatasetTable extends React.PureComponent<Props, State> {
     prevSearchQuery: "",
   };
 
-  static getDerivedStateFromProps(nextProps: Props, prevState: State): $Shape<State> {
-    const maybeSortedInfo = // Clear the sorting exactly when the search box is initially filled
+  static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> {
+    const maybeSortedInfo: SorterResult<string> | {} = // Clear the sorting exactly when the search box is initially filled
       // (searchQuery changes from empty string to non-empty string)
       nextProps.searchQuery !== "" && prevState.prevSearchQuery === ""
         ? {
             sortedInfo: {
-              columnKey: null,
+              columnKey: "",
               order: "ascend",
             },
           }
@@ -74,7 +73,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   handleChange = (
     pagination: Record<string, any>,
     filters: Record<string, any>,
-    sorter: Record<string, any>,
+    sorter: SorterResult<string>,
   ) => {
     this.setState({
       sortedInfo: sorter,
@@ -230,7 +229,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     const dataLayersFilter = _.uniqBy(
       _.compact(
         sortedDataSource.flatMap(dataset => {
-          if (dataset.dataSource.dataLayers) {
+          if ("dataLayers" in dataset.dataSource) {
             return dataset.dataSource.dataLayers.map(layer => ({
               text: layer.name,
               value: layer.name,
@@ -266,7 +265,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="name"
           width={280}
           sorter={Utils.localeCompareBy(typeHint, (dataset) => dataset.name)}
-          sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
+          sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
           render={(name: string, dataset: APIMaybeUnimportedDataset) => (
             <div>
               <Link
@@ -285,7 +284,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Tags"
           dataIndex="tags"
           key="tags"
-          sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
+          sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
           render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
             dataset.isActive ? (
               <div style={{ maxWidth: 280 }}>
@@ -295,6 +294,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                     key={tag}
                     kind="datasets"
                     onClick={_.partial(this.props.addTagToSearch, tag)}
+                    /* @ts-ignore */
                     onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
                     closable
                   />
@@ -332,7 +332,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="created"
           key="created"
           sorter={Utils.compareBy(typeHint, (dataset) => dataset.created)}
-          sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
+          sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
           render={(created) => <FormattedDate timestamp={created} />}
         />
 
@@ -345,7 +345,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
             const permittedTeams = [...teams];
             if (dataset.isPublic) {
-              permittedTeams.push({ name: "public" });
+              permittedTeams.push({ name: "public", id: "", organization: "" });
             }
 
             return permittedTeams.map(team => (
@@ -370,8 +370,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="dataLayers"
           dataIndex="dataSource.dataLayers"
           filters={dataLayersFilter}
-          onFilter={(value, dataset) =>
-            dataset.dataSource.dataLayers?.some(layer => layer.name === value)
+          onFilter={(value, dataset: APIMaybeUnimportedDataset) =>
+            "dataLayers" in dataset.dataSource ?
+              dataset.dataSource.dataLayers.some(layer => layer.name === value)
+              : false
           }
           render={(__, dataset: APIMaybeUnimportedDataset) => (
             <div style={{ maxWidth: 250 }}>

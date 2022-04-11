@@ -56,7 +56,10 @@ export const enum OrthoViewsToName {
   TDView = "3D",
 };
 export type OrthoView = keyof typeof OrthoViews;
+export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, OrthoViews.TDView>;
+
 export type OrthoViewMap<T> = Record<OrthoView, T>;
+export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
 export type OrthoViewExtents = Readonly<OrthoViewMap<Vector2>>;
 export type OrthoViewRects = Readonly<OrthoViewMap<Rect>>;
 export const ArbitraryViewport = "arbitraryViewport";

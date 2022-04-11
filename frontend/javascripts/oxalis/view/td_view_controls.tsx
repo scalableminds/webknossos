@@ -81,7 +81,7 @@ function TDViewControls({
   );
   return (
     <div id="TDViewControls" className="antd-legacy-group">
-      <Button size="small" onClick={api.tracing.rotate3DViewToDiagonal}>
+      <Button size="small" onClick={() => api.tracing.rotate3DViewToDiagonal()}>
         3D
       </Button>
       <Button size="small" onClick={api.tracing.rotate3DViewToXY}>

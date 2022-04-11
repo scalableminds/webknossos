@@ -1,12 +1,10 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
 import { message } from "antd";
 import { sleep } from "libs/utils";
 type HideFn = () => void;
 export type ProgressCallback = (
   isDone: boolean,
   progressState: string | React.ReactNode,
-  overridingOptions?: $Shape<Options>,
+  overridingOptions?: Partial<Options>,
   finalFeedbackMethod?: "success" | "error" | "info" | "warning",
 ) => Promise<{
   hideFn: HideFn;
@@ -32,7 +30,7 @@ export default function createProgressCallback(options: Options): ProgressCallba
   return async (
     isDone: boolean,
     status: string | React.ReactNode,
-    overridingOptions: $Shape<Options> = {},
+    overridingOptions: Partial<Options> = {},
     finalFeedbackMethod: "success" | "error" | "info" | "warning" = "success",
   ): Promise<{
     hideFn: HideFn;

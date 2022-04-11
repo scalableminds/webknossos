@@ -1,5 +1,4 @@
-// @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'utility-types' or its correspo... Remove this comment to see the full error message
-import { $Shape } from "utility-types";
+
 import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
 import { FileOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -296,7 +295,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): $Shape<StateProps> => ({
+const mapStateToProps = (state: OxalisState): Partial<StateProps> => ({
   showDropzoneModal: state.uiInformation.showDropzoneModal,
 });
 

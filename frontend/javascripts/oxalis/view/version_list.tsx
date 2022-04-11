@@ -100,7 +100,7 @@ class VersionList extends React.Component<Props, State> {
         versions: updateActionLog,
       });
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

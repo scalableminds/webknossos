@@ -84,7 +84,9 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
+
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
+
 type NewTeam = {
   readonly name: string;
 };
@@ -99,13 +101,10 @@ function assertResponseLimit(collection) {
 }
 
 // ### Do with userToken
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'tokenRequestPromise' implicitly has type... Remove this comment to see the full error message
-let tokenRequestPromise;
+let tokenRequestPromise: Promise<string> | null;
 
 function requestUserToken(): Promise<string> {
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'tokenRequestPromise' implicitly has an '... Remove this comment to see the full error message
   if (tokenRequestPromise) {
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'tokenRequestPromise' implicitly has an '... Remove this comment to see the full error message
     return tokenRequestPromise;
   }
 
@@ -113,8 +112,9 @@ function requestUserToken(): Promise<string> {
     method: "POST",
   }).then((tokenObj) => {
     tokenRequestPromise = null;
-    return tokenObj.token;
+    return tokenObj.token as string;
   });
+  
   return tokenRequestPromise;
 }
 
@@ -129,8 +129,7 @@ export function getSharingToken(): string | null | undefined {
 
   return null;
 }
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'tokenPromise' implicitly has type 'any' ... Remove this comment to see the full error message
-let tokenPromise;
+let tokenPromise: Promise<string>;
 export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<any> {
   const sharingToken = getSharingToken();
 
@@ -138,9 +137,7 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
     return fn(sharingToken);
   }
 
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'tokenPromise' implicitly has an 'any' ty... Remove this comment to see the full error message
   if (!tokenPromise) tokenPromise = requestUserToken();
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'tokenPromise' implicitly has an 'any' ty... Remove this comment to see the full error message
   return tokenPromise.then(fn).catch((error) => {
     if (error.status === 403) {
       console.warn("Token expired. Requesting new token...");

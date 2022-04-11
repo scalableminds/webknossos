@@ -3,6 +3,7 @@ import * as React from "react";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
 import messages from "messages";
+import { CheckboxChangeEvent } from "antd/lib/checkbox";
 type Props = {
   onOk: (...args: Array<any>) => any;
 };
@@ -16,9 +17,8 @@ export default class TreeRemovalModal extends React.Component<Props, State> {
     visible: true,
   };
 
-  handleCheckboxChange = (event: React.SyntheticEvent) => {
+  handleCheckboxChange = (event: CheckboxChangeEvent) => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
       shouldNotWarnAgain: event.target.checked,
     });
   };

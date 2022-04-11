@@ -85,7 +85,6 @@ function getMousePosition() {
     return null;
   }
 
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   return calculateGlobalPos(state, {
     x: mousePosition[0],
     y: mousePosition[1],

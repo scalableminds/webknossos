@@ -237,7 +237,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <Tooltip title={tooltipText}>
         <AsyncIconButton
           icon={<VerticalAlignMiddleOutlined />}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ icon: Element; style: { cursor: string; tr... Remove this comment to see the full error message
           style={{
             cursor: "pointer",
             transform: "rotate(90deg)",
@@ -263,7 +262,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
   getEnableDisableLayerSwitch = (
     isDisabled: boolean,
-    onChange: (arg0: boolean, arg1: React.MouseEvent) => void,
+    onChange: (arg0: boolean, arg1: MouseEvent) => void,
   ) => (
     <Tooltip title={isDisabled ? "Show" : "Hide"} placement="top">
       {/* This div is necessary for the tooltip to be displayed */}

@@ -78,7 +78,6 @@ export function hasConnectomeFile(state: OxalisState) {
 }
 export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const state = Store.getState();
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   const globalPosition = calculateGlobalPos(state, clickPosition);
   loadAgglomerateSkeletonAtPosition(globalPosition);
 }
@@ -135,7 +134,6 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
 }
 export function handleClickSegment(clickPosition: Point2) {
   const state = Store.getState();
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   const globalPosition = calculateGlobalPos(state, clickPosition);
   const cellId = getSegmentIdForPosition(globalPosition);
 

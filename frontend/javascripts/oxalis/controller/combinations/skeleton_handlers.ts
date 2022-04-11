@@ -119,7 +119,6 @@ export function handleCreateNode(planeView: PlaneView, position: Point2, ctrlPre
     return;
   }
 
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   const globalPosition = calculateGlobalPos(state, position);
   setWaypoint(globalPosition, activeViewport, ctrlPressed);
 }
@@ -139,7 +138,6 @@ export function handleOpenContextMenu(
 
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
   const state = Store.getState();
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
   const globalPosition = calculateGlobalPos(state, position);
   const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, plane);
   const clickedBoundingBoxId = hoveredEdgesInfo != null ? hoveredEdgesInfo[0].boxId : null;

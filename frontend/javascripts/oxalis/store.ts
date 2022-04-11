@@ -319,8 +319,8 @@ export type MappingType = "JSON" | "HDF5";
 export type ActiveMappingInfo = {
   readonly mappingName: string | null | undefined;
   readonly mapping: Mapping | null | undefined;
-  readonly mappingKeys: Array<number> | null | undefined;
-  readonly mappingColors: Array<number> | null | undefined;
+  readonly mappingKeys: number[] | null | undefined;
+  readonly mappingColors: number[] | null | undefined;
   readonly hideUnmappedIds: boolean;
   readonly mappingStatus: MappingStatus;
   readonly mappingSize: number;

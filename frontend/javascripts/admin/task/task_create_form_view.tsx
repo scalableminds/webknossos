@@ -43,7 +43,6 @@ import {
 import { coalesce, tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 const FormItem = Form.Item;

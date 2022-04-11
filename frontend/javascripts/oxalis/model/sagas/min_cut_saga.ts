@@ -1,6 +1,6 @@
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
-import type { BoundingBoxType, Vector3 } from "oxalis/constants";
+import type { BoundingBoxType, TypedArray, Vector3 } from "oxalis/constants";
 import type { MutableNode, Node } from "oxalis/store";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put } from "typed-redux-saga";
@@ -520,16 +520,6 @@ function isPositionOutside(position: Vector3, size: Vector3) {
   );
 }
 
-type TypedArray =
-  | Int8Array
-  | Uint8Array
-  | Uint8ClampedArray
-  | Int16Array
-  | Uint16Array
-  | Int32Array
-  | Uint32Array
-  | Float32Array
-  | Float64Array;
 
 function buildGraph(inputData: TypedArray, segmentId: number, size: Vector3, length: number, l: L, ll: LL, timeoutThreshold: number) {
   const edgeBuffer = new Uint16Array(length);

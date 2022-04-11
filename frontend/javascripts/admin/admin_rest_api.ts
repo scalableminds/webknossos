@@ -1,5 +1,3 @@
-import { $Diff } from "utility-types";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
 import _ from "lodash";
@@ -306,13 +304,7 @@ export function getTaskType(taskTypeId: string): Promise<APITaskType> {
   return Request.receiveJSON(`/api/taskTypes/${taskTypeId}`);
 }
 export function createTaskType(
-  taskType: $Diff<
-    APITaskType,
-    {
-      id: string;
-      teamName: string;
-    }
-  >,
+  taskType: Omit<APITaskType,"id" | "teamName" >,
 ): Promise<APITaskType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
     data: taskType,
@@ -1645,13 +1637,9 @@ export function setMaintenance(bool: boolean): Promise<void> {
 }
 // @ts-expect-error ts-migrate(2339) FIXME: Property 'setMaintenance' does not exist on type '... Remove this comment to see the full error message
 window.setMaintenance = setMaintenance;
+
 // ### Meshes
-type MeshMetaDataForCreation = $Diff<
-  MeshMetaData,
-  {
-    id: string;
-  }
->;
+type MeshMetaDataForCreation = Omit<MeshMetaData,"id">;
 export async function createMesh(
   metadata: MeshMetaDataForCreation,
   data: ArrayBuffer,

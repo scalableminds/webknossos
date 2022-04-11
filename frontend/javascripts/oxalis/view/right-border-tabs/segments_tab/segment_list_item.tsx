@@ -32,7 +32,10 @@ const convertCellIdToCSS = (id: number, mappingColors: ActiveMappingInfo["mappin
   return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 };
 
-function getColoredDotIconForSegment(segmentId: number, mappingColors: ActiveMappingInfo["mappingColors"]) {
+function getColoredDotIconForSegment(
+  segmentId: number,
+  mappingColors: ActiveMappingInfo["mappingColors"],
+) {
   return (
     <span
       className="circle"
@@ -49,10 +52,10 @@ const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmat
 
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
-  currentMeshFile: Props["currentMeshFile"],
-  loadPrecomputedMesh: Props["loadPrecomputedMesh"],
+  currentMeshFile: APIMeshFile | null | undefined,
+  loadPrecomputedMesh: (arg0: number, arg1: Vector3, arg2: string) => void,
   andCloseContextMenu: (_ignore: any) => void,
-  layerName: string | null,
+  layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
@@ -60,7 +63,6 @@ const getLoadPrecomputedMeshMenuItem = (
     <MenuItemWithMappingActivationConfirmation
       onClick={() =>
         andCloseContextMenu(
-          // @ts-ignore
           loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
         )
       }
@@ -87,7 +89,7 @@ const getLoadPrecomputedMeshMenuItem = (
 
 const getComputeMeshAdHocMenuItem = (
   segment: Segment,
-  loadAdHocMesh: Props["loadAdHocMesh"],
+  loadAdHocMesh: (arg0: number, arg1: Vector3) => void,
   isSegmentationLayerVisible: boolean,
   andCloseContextMenu: (_ignore: any) => void,
 ) => {
@@ -104,8 +106,8 @@ const getComputeMeshAdHocMenuItem = (
 
 const getMakeSegmentActiveMenuItem = (
   segment: Segment,
-  setActiveCell: Props["setActiveCell"],
-  activeCellId: Props["activeCellId"],
+  setActiveCell: (arg0: number, somePosition?: Vector3) => void,
+  activeCellId: number | null | undefined,
   andCloseContextMenu: (_ignore: any) => void,
 ) => {
   const disabled = segment.id === activeCellId;

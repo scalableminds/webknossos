@@ -73,9 +73,7 @@ class UserSelectionComponent extends React.PureComponent<Props, State> {
           option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
         }
         options={this.state.users.map((user) => ({
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
           value: user.id,
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'lastName' does not exist on type 'never'... Remove this comment to see the full error message
           label: `${user.lastName}, ${user.firstName} (${user.email})`,
         }))}
       />

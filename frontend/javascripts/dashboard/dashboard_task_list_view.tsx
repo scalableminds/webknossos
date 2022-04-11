@@ -322,7 +322,6 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       onOk: async () => {
         await deleteAnnotation(annotationId, annotation.typ);
         this.setCurrentModeState({
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'annotation' does not exist on type 'neve... Remove this comment to see the full error message
           tasks: this.getCurrentModeState().tasks.filter((t) => t.annotation.id !== annotationId),
         });
       },

@@ -744,7 +744,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const sourceMag = _.minBy(volumeTracingResolutions, getMaxDim);
 
     const possibleMags = volumeTargetResolutions.filter(
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolution' implicitly has an 'any' typ... Remove this comment to see the full error message
       (resolution) => getMaxDim(resolution) >= getMaxDim(sourceMag),
     );
 

@@ -139,7 +139,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         </TabPane>,
         <TabPane tab={`${optionalMyPrefix} Annotations`} key="explorativeAnnotations">
           <ExplorativeAnnotationsView
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isAdminView: boolean; userId: string | nul... Remove this comment to see the full error message
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}
           />

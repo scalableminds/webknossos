@@ -125,8 +125,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
             rowKey="projectName"
             style={{
               marginTop: 30,
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
-              marginBotton: 30,
+              marginBottom: 30,
             }}
             size="small"
             className="large-table"
@@ -135,11 +134,9 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               title="Project"
               dataIndex="projectName"
               defaultSortOrder="ascend"
-              // @ts-expect-error ts-migrate(2322) FIXME: Type 'Comparator<APIProjectProgressReport>' is not... Remove this comment to see the full error message
               sorter={Utils.localeCompareBy(typeHint, (project) => project.projectName)}
-              render={(text, item) => (
+              render={(text: string, item: APIProjectProgressReport) => (
                 <span>
-                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                   {item.paused ? <PauseCircleOutlined /> : null} {text}
                 </span>
               )}

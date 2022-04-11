@@ -3,7 +3,6 @@ import { AutoSizer } from "react-virtualized";
 import { Dropdown, Menu, Tag, Tree } from "antd";
 import React from "react";
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import { stringToAntdColorPreset } from "libs/format_utils";
 import api from "oxalis/api/internal_api";

@@ -30,7 +30,7 @@ class ErrorWithParams extends Error {
 // try {
 //   this.setState({ isLoading: true });
 // } except (error) {
-//   handleGenericError(error);
+//   handleGenericError(error as Error);
 // } finally {
 //   this.setState({isLoading: false});
 // }

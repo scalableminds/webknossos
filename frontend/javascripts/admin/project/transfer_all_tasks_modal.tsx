@@ -53,7 +53,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
         usersWithActiveTasks,
       });
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

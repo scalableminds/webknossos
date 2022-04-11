@@ -168,7 +168,7 @@
     "jszip": "^3.7.0",
     "lodash": "^4.17.21",
     "lz4js": "^0.2.0",
-    "memoize-one": "^4.0.2",
+    "memoize-one": "^6.0.0",
     "mini-css-extract-plugin": "^2.5.2",
     "mjs": "^1.0.0",
     "moment": "^2.21.0",

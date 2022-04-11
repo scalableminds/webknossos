@@ -397,7 +397,6 @@ export async function enableMergerMode(
   unsubscribeFunctions.push(
     Store.subscribe(() => {
       const state = Store.getState();
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'skeletonTracing' implicitly has an 'any... Remove this comment to see the full error message
       getSkeletonTracing(state.tracing).map((skeletonTracing) => {
         const { segmentationLayerName } = mergerModeState;
 

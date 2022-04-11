@@ -3,7 +3,7 @@ import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 
 class Crosshair {
-  mesh: THREE.Mesh;
+  mesh: THREE.Group;
   WIDTH: number;
   COLOR: string;
   SCALE_MIN: number;
@@ -86,8 +86,6 @@ class Crosshair {
     mesh.add(innerCircle);
     mesh.rotation.x = Math.PI;
     mesh.matrixAutoUpdate = false;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'doubleSided' does not exist on type 'Gro... Remove this comment to see the full error message
-    mesh.doubleSided = true;
     return mesh;
   }
 }

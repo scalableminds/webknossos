@@ -81,7 +81,7 @@ class TaskListView extends React.PureComponent<Props, State> {
           tasks,
         });
       } catch (error) {
-        handleGenericError(error);
+        handleGenericError(error as Error);
       } finally {
         this.setState({
           isLoading: false,
@@ -114,7 +114,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             tasks: prevState.tasks.filter((t) => t.id !== task.id),
           }));
         } catch (error) {
-          handleGenericError(error);
+          handleGenericError(error as Error);
         } finally {
           this.setState({
             isLoading: false,

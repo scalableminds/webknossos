@@ -177,7 +177,6 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
           </FormItem>
 
           <FormItemWithInfo
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; name: string; label: st... Remove this comment to see the full error message
             name="isBlacklistedFromReport"
             label="Visibility in Project Progress View"
             info="If checked, the project will not be listed in the project progress view."

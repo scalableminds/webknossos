@@ -8,6 +8,7 @@ import type {
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3, ColorObject } from "oxalis/constants";
+import { PricingPlan, PricingPlanEnum } from "admin/organization/organization_edit_view";
 export type APIMessage = { [key in "info" | "warning" | "error"]?: string };
 export type ElementClass =
   | "uint8"
@@ -438,7 +439,7 @@ export type APIOrganization = {
   readonly name: string;
   readonly additionalInformation: string;
   readonly displayName: string;
-  readonly pricingPlan: string;
+  readonly pricingPlan: PricingPlan;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;
 };

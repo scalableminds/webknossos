@@ -1,6 +1,5 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import type {
@@ -330,7 +329,6 @@ function _getMaxZoomStep(maybeDataset: APIDataset | null | undefined): number {
     .map((dataset) =>
       Math.max(
         minimumZoomStepCount,
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'r' implicitly has an 'any' type.
         Math.max(0, ...getResolutions(dataset).map((r) => Math.max(r[0], r[1], r[2]))),
       ),
     )

@@ -14,7 +14,7 @@ export enum PricingPlanEnum {
   Pilot= "Pilot",
   Custom= "Custom",
 };
-type PricingPlan = keyof typeof PricingPlanEnum;
+export type PricingPlan = keyof typeof PricingPlanEnum;
 type Props = {
   organizationName: string;
 };
@@ -142,7 +142,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               newUserMailingList: this.state.newUserMailingList,
             }}
           >
-            <FormItem label="ID" readOnly>
+            <FormItem label="ID">
               <Input.Group compact>
                 <Input
                   prefix={<KeyOutlined />}

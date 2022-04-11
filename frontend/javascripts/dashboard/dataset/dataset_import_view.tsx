@@ -326,9 +326,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
         hasNoAllowedTeams: (dataset.allowedTeams || []).length === 0,
       });
     } catch (error) {
-      if (error instanceof Error) {
-        handleGenericError(error);
-      }
+        handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

@@ -42,13 +42,12 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
       this.setState({
         isLoading: true,
       });
-      // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
       const datasets = await getDatasets();
       this.setState({
         datasets,
       });
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

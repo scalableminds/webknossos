@@ -8,11 +8,11 @@ type Props = {
   dataset: APIDataset;
 };
 type State = {
-  datasetUsers: Array<APIUser>;
+  datasetUsers: APIUser[];
   isLoading: boolean;
 };
 export default class DatasetAccessListView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     datasetUsers: [],
     isLoading: false,
   };
@@ -31,7 +31,7 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
         datasetUsers,
       });
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,
@@ -68,8 +68,7 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
       <div>
         <h5>Users with Access Rights</h5>
         <ul>
-          {this.state.datasetUsers.map((user) => (
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
+          {this.state.datasetUsers.map((user: APIUser) => (
             <li key={user.id}>
               <div
                 style={{
@@ -77,8 +76,6 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
                   display: "inline-block",
                 }}
               >
-                // @ts-expect-error ts-migrate(2339) FIXME: Property 'firstName' does not exist on
-                type 'never... Remove this comment to see the full error message
                 {user.firstName} {user.lastName}
               </div>
               {this.renderUserTags(user)}

@@ -37,10 +37,12 @@ import {
   NucleiInferralModal,
   NeuronInferralModal,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
-const StartableJobsEnum = {
-  NUCLEI_INFERRAL: "nuclei inferral",
-  NEURON_INFERRAL: "neuron inferral",
+
+const enum StartableJobsEnum  {
+  NUCLEI_INFERRAL= "nuclei inferral",
+  NEURON_INFERRAL= "neuron inferral",
 };
+
 type StateProps = {
   tracing: Tracing;
   dataset: APIDataset;
@@ -54,7 +56,7 @@ type DispatchProps = {
 };
 type Props = StateProps & DispatchProps;
 type State = {
-  showJobsDetailsModal: $Values<typeof StartableJobsEnum> | null | undefined;
+  showJobsDetailsModal: StartableJobsEnum | null | undefined;
 };
 const shortcuts = [
   {
@@ -159,16 +161,11 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const statsMaybe = getStats(this.props.tracing);
     return this.props.tracing.skeleton != null ? (
       <div>
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats' implicitly has an 'any' type.
         <p>Number of Trees: {statsMaybe.map((stats) => stats.treeCount).getOrElse(null)}</p>
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats' implicitly has an 'any' type.
         <p>Number of Nodes: {statsMaybe.map((stats) => stats.nodeCount).getOrElse(null)}</p>
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats' implicitly has an 'any' type.
         <p>Number of Edges: {statsMaybe.map((stats) => stats.edgeCount).getOrElse(null)}</p>
         <p>
-          Number of Branch Points: // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'stats'
-          implicitly has an 'any' type.
-          {statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}
+          Number of Branch Points: {statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}
         </p>
       </div>
     ) : null;
@@ -580,8 +577,6 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
               <br />
               Available resolutions:
               <ul>
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'r' implicitly has an 'any'
-                type.
                 {resolutions.map((r) => (
                   <li key={r.join()}>{r.join("-")}</li>
                 ))}

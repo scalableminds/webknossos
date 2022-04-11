@@ -1,5 +1,3 @@
-
-import { $Values } from "utility-types";
 import { Modal, Button, Radio, Col, Row, Checkbox, Divider, RadioChangeEvent } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
@@ -9,22 +7,24 @@ import type { APIUser, APITeam, APITeamMembership } from "types/api_flow_types";
 import { updateUser, getEditableTeams } from "admin/admin_rest_api";
 import messages from "messages";
 import * as Utils from "libs/utils";
+import { Key } from "antd/lib/table/interface";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
-const ROLES = {
-  teammanager: "teammanager",
-  user: "user",
+
+enum ROLES {
+  teammanager= "teammanager",
+  user= "user",
 };
-const PERMISSIONS = {
-  admin: "admin",
-  datasetManager: "datasetManager",
-  member: "member",
+enum PERMISSIONS {
+  admin= "admin",
+  datasetManager= "datasetManager",
+  member= "member",
 };
 type TeamRoleModalProp = {
   onChange: (...args: Array<any>) => any;
   onCancel: (...args: Array<any>) => any;
   visible: boolean;
-  selectedUserIds: Array<string>;
+  selectedUserIds: Key[];
   users: Array<APIUser>;
   activeUser: APIUser;
 };
@@ -55,7 +55,8 @@ function getSingleUserMaybe(props: TeamRoleModalProp) {
 }
 
 class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp, State> {
-  state = {
+
+  state: State = {
     selectedTeams: {},
     teams: [],
     selectedPermission: PERMISSIONS.member,
@@ -185,19 +186,17 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     );
   };
   handlePermissionChanged = (evt: RadioChangeEvent) => {
-    const selectedPermission: $Values<typeof PERMISSIONS> = evt.target.value;
+    const selectedPermission: PERMISSIONS = evt.target.value;
     this.setState({
       selectedPermission,
     });
   };
 
   handleSelectTeamRole(teamName: string, isTeamManager: boolean) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'name' does not exist on type 'never'.
     const team = this.state.teams.find((t) => t.name === teamName);
 
     if (team) {
       const selectedTeam = {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
         id: team.id,
         name: teamName,
         isTeamManager,
@@ -242,7 +241,6 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
   }
 
   getRoleComponent(team: APITeam, isDisabled: boolean) {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     const selectedTeam = this.state.selectedTeams[team.name];
     let selectedValue = null;
 
@@ -335,7 +333,6 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     );
     const isAdminSelected = this.state.selectedPermission === PERMISSIONS.admin;
     const teamsRoleComponents = this.state.teams.map((team) => (
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
       <Row key={team.id}>
         <Col span={12}>{this.getTeamComponent(team, isAdminSelected)}</Col>
         <Col span={12}>{this.getRoleComponent(team, isAdminSelected)}</Col>

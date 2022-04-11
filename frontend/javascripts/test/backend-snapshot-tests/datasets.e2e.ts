@@ -22,12 +22,10 @@ test.before("Reset database and change token", async () => {
   setCurrToken(tokenUserA);
 });
 test.serial("getDatasets", async (t) => {
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
   let datasets = await api.getDatasets();
   let retry = 0;
 
   while (JSON.stringify(datasets).indexOf("Not imported yet") === -1 && retry < 10) {
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
     // eslint-disable-next-line no-await-in-loop
     datasets = await api.getDatasets();
     retry++;

@@ -151,7 +151,7 @@ class UrlManager {
     } catch (e) {
       Toast.error(messages["tracing.invalid_json_url_hash"]);
       console.error(e);
-      ErrorHandling.notify(e);
+      ErrorHandling.notify(e as Error);
       return {};
     }
   }

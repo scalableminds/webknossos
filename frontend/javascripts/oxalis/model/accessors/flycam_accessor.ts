@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'memo... Remove this comment to see the full error message
 import memoizeOne from "memoize-one";
 import type { Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import type { Matrix4x4 } from "libs/mjs";

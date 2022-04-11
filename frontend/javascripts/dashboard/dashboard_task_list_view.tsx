@@ -202,7 +202,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         lastLoadedPage: pageNumber,
       });
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

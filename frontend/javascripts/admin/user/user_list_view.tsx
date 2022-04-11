@@ -35,20 +35,20 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
+import { Key } from "antd/lib/table/interface";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APIUser[] = [];
+
 type StateProps = {
   activeUser: APIUser;
 };
-type Props = StateProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+type Props = RouteComponentProps & StateProps;
+
 type State = {
   isLoading: boolean;
   users: Array<APIUser>;
-  selectedUserIds: Array<string>;
+  selectedUserIds: Key[];
   isExperienceModalVisible: boolean;
   isTeamRoleModalVisible: boolean;
   isInviteModalVisible: boolean;
@@ -65,7 +65,7 @@ const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
   "userList",
 );
 
-class UserListView extends React.PureComponent<PropsWithRouter, State> {
+class UserListView extends React.PureComponent<Props, State> {
   state: State = {
     isLoading: true,
     users: [],
@@ -290,14 +290,13 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
       preserveSelectedRowKeys: true,
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'selectedUserIds' implicitly has an 'any... Remove this comment to see the full error message
-      onChange: (selectedUserIds) => {
+
+      onChange: (selectedUserIds: Key[]) => {
         this.setState({
           selectedUserIds,
         });
       },
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'user' implicitly has an 'any' type.
-      getCheckboxProps: (user) => ({
+      getCheckboxProps: (user: APIUser) => ({
         disabled: !user.isActive,
       }),
       selectedRowKeys: this.state.selectedUserIds,
@@ -647,4 +646,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter(UserListView));
+export default connector(withRouter<RouteComponentProps & Props, any>(UserListView));

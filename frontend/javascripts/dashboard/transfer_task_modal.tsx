@@ -30,7 +30,7 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
       const updatedAnnotation = await transferTask(annotationId, this.state.currentUserIdValue);
       this.props.onChange(updatedAnnotation);
     } catch (error) {
-      handleGenericError(error);
+      handleGenericError(error as Error);
     }
   }
 

@@ -106,7 +106,7 @@ const getComputeMeshAdHocMenuItem = (
 
 const getMakeSegmentActiveMenuItem = (
   segment: Segment,
-  setActiveCell: (arg0: number, somePosition?: Vector3) => void, 
+  setActiveCell: (arg0: number, somePosition?: Vector3) => void,
   activeCellId: number | null | undefined,
   andCloseContextMenu: (_ignore: any) => void,
 ) => {

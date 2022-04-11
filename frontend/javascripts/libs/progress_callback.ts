@@ -6,6 +6,8 @@ type HideFn = () => void;
 export type ProgressCallback = (
   isDone: boolean,
   progressState: string | React.ReactNode,
+  overridingOptions?: $Shape<Options>,
+  finalFeedbackMethod?: "success" | "error" | "info" | "warning",
 ) => Promise<{
   hideFn: HideFn;
 }>;
@@ -26,8 +28,7 @@ type Options = {
 // with rendering the actual feedback.
 
 export default function createProgressCallback(options: Options): ProgressCallback {
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'hideFn' implicitly has type 'any' in som... Remove this comment to see the full error message
-  let hideFn = null;
+  let hideFn: HideFn | null = null;
   return async (
     isDone: boolean,
     status: string | React.ReactNode,
@@ -36,10 +37,8 @@ export default function createProgressCallback(options: Options): ProgressCallba
   ): Promise<{
     hideFn: HideFn;
   }> => {
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hideFn' implicitly has an 'any' type.
     if (hideFn != null) {
       // Clear old progress message
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hideFn' implicitly has an 'any' type.
       hideFn();
       hideFn = null;
     }
@@ -65,12 +64,10 @@ export default function createProgressCallback(options: Options): ProgressCallba
         key: overridingOptions.key || options.key,
       });
       setTimeout(() => {
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hideFn' implicitly has an 'any' type.
         if (hideFn == null) {
           return;
         }
 
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hideFn' implicitly has an 'any' type.
         hideFn();
         hideFn = null;
       }, successDelay);

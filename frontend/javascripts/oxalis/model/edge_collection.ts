@@ -167,9 +167,7 @@ export function diffEdgeCollections(
   // Since inMap and outMap are symmetrical to each other, it suffices to only diff the outMaps
   const mapDiff = diffDiffableMaps(edgeCollectionA.outMap, edgeCollectionB.outMap);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodeIds' implicitly has an 'any' type.
-  const getEdgesForNodes = (nodeIds, diffableMap) =>
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodeId' implicitly has an 'any' type.
+  const getEdgesForNodes = (nodeIds: number[], diffableMap: EdgeMap) =>
     _.flatten(nodeIds.map((nodeId) => diffableMap.get(nodeId)));
 
   const edgeDiff = {

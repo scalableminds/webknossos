@@ -17,6 +17,8 @@ import type {
   CommentType,
   TreeGroup,
   RestrictionsAndSettings,
+  MutableTreeGroup,
+  MutableNodeMap,
 } from "oxalis/store";
 import type {
   ServerSkeletonTracingTree,
@@ -100,8 +102,7 @@ export function* mapGroups<R>(
 export function getMaximumGroupId(groups: Array<TreeGroup>): number {
   const maxGroupId = _.max(Array.from(mapGroups(groups, (group) => group.groupId)));
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
-  return maxGroupId >= 0 ? maxGroupId : 0;
+  return maxGroupId != null && maxGroupId >= 0 ? maxGroupId : 0;
 }
 
 function forEachGroups(groups: Array<TreeGroup>, callback: (arg0: TreeGroup) => any) {
@@ -174,10 +175,10 @@ export function deleteNode(
         $apply: (nodes) => nodes.delete(node.id),
       },
       comments: {
-        $apply: (comments) => comments.filter((comment) => comment.nodeId !== node.id),
+        $apply: (comments: CommentType[]) => comments.filter((comment) => comment.nodeId !== node.id),
       },
       branchPoints: {
-        $apply: (branchPoints) =>
+        $apply: (branchPoints: BranchPoint[]) =>
           branchPoints.filter((branchPoint) => branchPoint.nodeId !== node.id),
       },
     });
@@ -277,15 +278,13 @@ function splitTreeByNodes(
 
   // Traverse from each possible new root node in all directions (i.e., use each edge) and
   // remember which edges were already visited.
-  const visitedEdges = {};
+  const visitedEdges: Record<string, boolean> = {};
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edge' implicitly has an 'any' type.
-  const getEdgeHash = (edge) => `${edge.source}-${edge.target}`;
+  const getEdgeHash = (edge: Edge) => `${edge.source}-${edge.target}`;
 
-  const visitedNodes = {};
+  const visitedNodes: Record<number, boolean> = {};
   // Mark deletedEdges as visited, so they are not traversed.
   deletedEdges.forEach((deletedEdge) => {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     visitedEdges[getEdgeHash(deletedEdge)] = true;
   });
 
@@ -294,22 +293,21 @@ function splitTreeByNodes(
 
     while (nodeQueue.length !== 0) {
       const nodeId = nodeQueue.shift();
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
+      if (nodeId == null) {
+        throw new Error("Satisfy typescript")
+      }
+      // ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
       const edges = activeTree.edges.getEdgesForNode(nodeId);
-      // @ts-expect-error ts-migrate(2538) FIXME: Type 'undefined' cannot be used as an index type.
       visitedNodes[nodeId] = true;
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
       newTree.nodes.mutableSet(nodeId, activeTree.nodes.get(nodeId));
 
       for (const edge of edges) {
         const edgeHash = getEdgeHash(edge);
 
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if (visitedEdges[edgeHash]) {
           continue;
         }
 
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         visitedEdges[edgeHash] = true;
         newTree.edges.addEdge(edge, true);
 
@@ -327,7 +325,7 @@ function splitTreeByNodes(
   let intermediateState = state;
 
   // For each new tree root create a new tree
-  const cutTrees = _.compact(
+  const cutTrees: MutableTree[] = _.compact(
     // Sort the treeRootIds, so the tree connected to the node with the lowest id will remain the original tree (treeId, name, timestamp)
     newTreeRootIds
       .slice()
@@ -336,12 +334,12 @@ function splitTreeByNodes(
         // The rootNodeId could have already been traversed from another rootNodeId
         // as there are cyclic trees
         // In this case we do not need to create a new tree for this rootNodeId
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+
         if (visitedNodes[rootNodeId] === true) {
           return null;
         }
 
-        let newTree;
+        let newTree: MutableTree | null;
 
         if (index === 0) {
           // Reuse the properties of the original tree for the first tree
@@ -446,9 +444,14 @@ export function deleteBranchPoint(
   // Find most recent branchpoint across all trees
   const treesWithBranchPoints = _.values(trees).filter((tree) => !_.isEmpty(tree.branchPoints));
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeId' does not exist on type 'Tree | u... Remove this comment to see the full error message
-  const { treeId } = _.maxBy(treesWithBranchPoints, (tree) => _.last(tree.branchPoints).timestamp);
-
+  const treeWithLastBranchpoint = _.maxBy(treesWithBranchPoints, (tree) =>
+    // @ts-ignore
+    _.last(tree.branchPoints).timestamp
+  );
+  if (treeWithLastBranchpoint == null) {
+    return Maybe.Nothing();
+  }
+  const { treeId } = treeWithLastBranchpoint;
   const branchPoint = _.last(trees[treeId].branchPoints);
 
   if (branchPoint) {
@@ -525,7 +528,7 @@ export function ensureTreeNames(state: OxalisState, trees: MutableTreeMap) {
 export function addTreesAndGroups(
   skeletonTracing: SkeletonTracing,
   trees: MutableTreeMap,
-  treeGroups: Array<TreeGroup>,
+  treeGroups: Array<MutableTreeGroup>,
 ): Maybe<[MutableTreeMap, Array<TreeGroup>, number]> {
   const treeIds = Object.keys(trees).map((treeId) => Number(treeId));
   // TreeIds > 1024^2 break webKnossos, see https://github.com/scalableminds/webknossos/issues/5009
@@ -539,13 +542,11 @@ export function addTreesAndGroups(
     return Maybe.Just([trees, treeGroups, newMaxNodeId]);
   }
 
-  const groupIdMap = {};
+  const groupIdMap: Record<number, number> = {};
   let nextGroupId = getMaximumGroupId(skeletonTracing.treeGroups) + 1;
-  forEachGroups(treeGroups, (group: TreeGroup) => {
+  forEachGroups(treeGroups, (group: MutableTreeGroup) => {
     // Assign new group ids for all groups
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     groupIdMap[group.groupId] = nextGroupId;
-    // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'groupId' because it is a read-on... Remove this comment to see the full error message
     group.groupId = nextGroupId;
     nextGroupId++;
   });
@@ -554,59 +555,49 @@ export function addTreesAndGroups(
   let newNodeId = skeletonTracing.cachedMaxNodeId + 1;
   // Create a map from old node ids to new node ids
   // This needs to be done in advance to replace nodeId references in comments
-  const idMap = {};
+  const idMap: Record<number, number> = {};
 
   for (const tree of _.values(trees)) {
     for (const node of tree.nodes.values()) {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       idMap[node.id] = newNodeId++;
     }
   }
 
-  const newTrees = {};
+  const newTrees: MutableTreeMap = {};
 
   for (const treeId of treeIds) {
     const tree = trees[treeId];
-    const newNodes = new DiffableMap();
+    const newNodes: MutableNodeMap = new DiffableMap();
 
     for (const node of tree.nodes.values()) {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       node.id = idMap[node.id];
       newNodes.mutableSet(node.id, node);
     }
 
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'DiffableMap<number, unknown>' is not assigna... Remove this comment to see the full error message
     tree.nodes = newNodes;
     tree.edges = EdgeCollection.loadFromArray(
       tree.edges.map((edge) => ({
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         source: idMap[edge.source],
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         target: idMap[edge.target],
       })),
     );
 
     for (const comment of tree.comments) {
       // Comments can reference other nodes, rewrite those references if the referenced id changed
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       comment.nodeId = idMap[comment.nodeId];
       comment.content = comment.content.replace(
         NODE_ID_REF_REGEX,
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         (__, p1) => `#${idMap[Number(p1)] != null ? idMap[Number(p1)] : p1}`,
       );
     }
 
     for (const bp of tree.branchPoints) {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       bp.nodeId = idMap[bp.nodeId];
     }
 
     // Assign the new group id to the tree if the tree belongs to a group
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     tree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
     tree.treeId = newTreeId;
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     newTrees[tree.treeId] = tree;
     newTreeId++;
   }
@@ -626,7 +617,7 @@ export function deleteTree(
   if (_.size(newTrees) > 0) {
     // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
     newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
-    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+    // @ts-ignore
     newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
   }
 
@@ -729,14 +720,13 @@ export function toggleAllTreesReducer(
   // Let's make all trees visible if there is one invisible tree
   const shouldBecomeVisible = _.values(skeletonTracing.trees).some((tree) => !tree.isVisible);
 
-  const updateTreeObject = {};
   const isVisibleUpdater = {
     isVisible: {
       $set: shouldBecomeVisible,
     },
   };
+  const updateTreeObject: Record<string, typeof isVisibleUpdater> = {};
   Object.keys(skeletonTracing.trees).forEach((treeId) => {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     updateTreeObject[treeId] = isVisibleUpdater;
   });
   return update(state, {
@@ -765,20 +755,17 @@ export function toggleTreeGroupReducer(
     targetVisibility != null
       ? targetVisibility
       : _.values(skeletonTracing.trees).some(
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | null | undefined' is no... Remove this comment to see the full error message
-          (tree) => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
+          (tree) => typeof tree.groupId == "number" && affectedGroupIds.has(tree.groupId) && !tree.isVisible,
         );
-  const updateTreeObject = {};
   const isVisibleUpdater = {
     isVisible: {
       $set: shouldBecomeVisible,
     },
   };
+  const updateTreeObject: Record<string, typeof isVisibleUpdater> = {};
 
   _.values(skeletonTracing.trees).forEach((tree) => {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | null | undefined' is no... Remove this comment to see the full error message
-    if (affectedGroupIds.has(tree.groupId)) {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+    if (typeof tree.groupId == "number" && affectedGroupIds.has(tree.groupId)) {
       updateTreeObject[tree.treeId] = isVisibleUpdater;
     }
   });
@@ -848,12 +835,12 @@ export function removeMissingGroupsFromTrees(
 ): TreeMap {
   // Change the groupId of trees for groups that no longer exist
   const groupIds = Array.from(mapGroups(treeGroups, (group) => group.groupId));
-  const changedTrees = {};
+  const changedTrees: TreeMap = {};
   Object.keys(skeletonTracing.trees).forEach((treeId) => {
     const tree = skeletonTracing.trees[Number(treeId)];
 
     if (tree.groupId != null && !groupIds.includes(tree.groupId)) {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+      // @ts-ignore
       changedTrees[treeId] = { ...tree, groupId: null };
     }
   });

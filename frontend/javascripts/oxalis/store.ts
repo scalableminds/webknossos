@@ -152,6 +152,11 @@ export type TreeGroupTypeFlat = {
 export type TreeGroup = TreeGroupTypeFlat & {
   readonly children: Array<TreeGroup>;
 };
+export type MutableTreeGroup = {
+  name: string;
+  groupId: number;
+  children: Array<MutableTreeGroup>;
+};
 export type DataLayerType = APIDataLayer;
 export type Restrictions = APIRestrictions;
 export type AllowedMode = APIAllowedMode;

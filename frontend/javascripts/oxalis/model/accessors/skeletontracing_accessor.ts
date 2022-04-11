@@ -105,7 +105,7 @@ export function findTreeByName(trees: TreeMap, treeName: string): Maybe<Tree> {
 }
 export function getTree(
   skeletonTracing: SkeletonTracing,
-  treeId: number | null | undefined,
+  treeId?: number | null | undefined,
 ): Maybe<Tree> {
   if (treeId != null) {
     return Maybe.fromNullable(skeletonTracing.trees[treeId]);

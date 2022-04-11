@@ -890,7 +890,7 @@ export async function downsampleSegmentation(
 }
 // ### Datasets
 export async function getDatasets(
-  isUnreported: boolean | null | undefined,
+  isUnreported: boolean | null | undefined = null,
 ): Promise<Array<APIMaybeUnimportedDataset>> {
   const parameters = isUnreported != null ? `?isUnreported=${String(isUnreported)}` : "";
   const datasets = await Request.receiveJSON(`/api/datasets${parameters}`);

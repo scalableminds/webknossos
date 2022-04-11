@@ -27,14 +27,12 @@ import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs
 import type { ActiveMappingInfo, IsosurfaceInformation, Segment } from "oxalis/store";
 import Store from "oxalis/store";
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mappingColors' implicitly has an 'any' ... Remove this comment to see the full error message
-const convertCellIdToCSS = (id: number, mappingColors) => {
+const convertCellIdToCSS = (id: number, mappingColors: ActiveMappingInfo["mappingColors"]) => {
   const [h, s, l, a] = jsConvertCellIdToHSLA(id, mappingColors);
   return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mappingColors' implicitly has an 'any' ... Remove this comment to see the full error message
-function getColoredDotIconForSegment(segmentId: number, mappingColors) {
+function getColoredDotIconForSegment(segmentId: number, mappingColors: ActiveMappingInfo["mappingColors"]) {
   return (
     <span
       className="circle"
@@ -51,23 +49,18 @@ const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmat
 
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'currentMeshFile' implicitly has an 'any... Remove this comment to see the full error message
-  currentMeshFile,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'loadPrecomputedMesh' implicitly has an ... Remove this comment to see the full error message
-  loadPrecomputedMesh,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'andCloseContextMenu' implicitly has an ... Remove this comment to see the full error message
-  andCloseContextMenu,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerName' implicitly has an 'any' type... Remove this comment to see the full error message
-  layerName,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mappingInfo' implicitly has an 'any' ty... Remove this comment to see the full error message
-  mappingInfo,
+  currentMeshFile: Props["currentMeshFile"],
+  loadPrecomputedMesh: Props["loadPrecomputedMesh"],
+  andCloseContextMenu: (_ignore: any) => void,
+  layerName: string | null,
+  mappingInfo: ActiveMappingInfo,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
   return (
     <MenuItemWithMappingActivationConfirmation
       onClick={() =>
         andCloseContextMenu(
-          // $FlowIgnore[incompatible-call] If currentMeshFile is null, the menu entry is disabled and cannot be clicked
+          // @ts-ignore
           loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
         )
       }
@@ -93,14 +86,10 @@ const getLoadPrecomputedMeshMenuItem = (
 };
 
 const getComputeMeshAdHocMenuItem = (
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'segment' implicitly has an 'any' type.
-  segment,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'loadAdHocMesh' implicitly has an 'any' ... Remove this comment to see the full error message
-  loadAdHocMesh,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isSegmentationLayerVisible' implicitly ... Remove this comment to see the full error message
-  isSegmentationLayerVisible,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'andCloseContextMenu' implicitly has an ... Remove this comment to see the full error message
-  andCloseContextMenu,
+  segment: Segment,
+  loadAdHocMesh: Props["loadAdHocMesh"],
+  isSegmentationLayerVisible: boolean,
+  andCloseContextMenu: (_ignore: any) => void,
 ) => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
   return (
@@ -114,14 +103,10 @@ const getComputeMeshAdHocMenuItem = (
 };
 
 const getMakeSegmentActiveMenuItem = (
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'segment' implicitly has an 'any' type.
-  segment,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'setActiveCell' implicitly has an 'any' ... Remove this comment to see the full error message
-  setActiveCell,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeCellId' implicitly has an 'any' t... Remove this comment to see the full error message
-  activeCellId,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'andCloseContextMenu' implicitly has an ... Remove this comment to see the full error message
-  andCloseContextMenu,
+  segment: Segment,
+  setActiveCell: Props["setActiveCell"],
+  activeCellId: Props["activeCellId"],
+  andCloseContextMenu: (_ignore: any) => void,
 ) => {
   const disabled = segment.id === activeCellId;
   const title = disabled

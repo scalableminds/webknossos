@@ -41,7 +41,7 @@ type State = {
   fieldValues: TaskFormFieldValues;
   isFetchingData: boolean;
 };
-const persistence: Persistence<Pick<State, "fieldValues">> = new Persistence(
+const persistence = new Persistence<Pick<State, "fieldValues">>(
   {
     fieldValues: PropTypes.shape({
       taskId: PropTypes.string,

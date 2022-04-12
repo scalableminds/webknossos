@@ -5,16 +5,16 @@ import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
 
 class Persistence<T extends Record<string, any>> {
-  stateProperties: Record<keyof T, (...args: Array<any>) => any>;
+  stateProperties: Record<keyof T, any>;
   name: string;
 
-  constructor(stateProperties: Record<keyof T, (...args: Array<any>) => any>, name: string) {
+  constructor(stateProperties: Record<keyof T, any>, name: string) {
     this.stateProperties = stateProperties;
     this.name = name;
   }
 
-  load(history: RouteComponentProps["history"]): Partial<T> | {} {
-    const locationState = history.location.state;
+  load(history: RouteComponentProps["history"]): Partial<T> {
+    const locationState = history.location.state as Record<string, T>;
 
     if (locationState != null && locationState[this.name] != null) {
       console.log(
@@ -24,7 +24,7 @@ class Persistence<T extends Record<string, any>> {
         locationState[this.name],
       );
 
-      const persistedState = _.pick(locationState[this.name], Object.keys(this.stateProperties));
+      const persistedState = _.pick(locationState[this.name], Object.keys(this.stateProperties)) as T;
 
       try {
         // Check whether the type of the persisted state conforms to that of the component to avoid messing up
@@ -38,6 +38,7 @@ class Persistence<T extends Record<string, any>> {
       } catch (e) {
         // Reset the persisted state and log the error to airbrake so we learn whether and how often this happens
         this.persist(history, {}, {});
+        // @ts-ignore
         ErrorHandling.notify(e);
         return {};
       }
@@ -51,10 +52,9 @@ class Persistence<T extends Record<string, any>> {
   persist(
     history: RouteComponentProps["history"],
     state: Partial<T>,
-    // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
-    stateProperties?: Record<keyof T, (...args: Array<any>) => any> = this.stateProperties,
+    stateProperties: Record<keyof T, any> | {} = this.stateProperties,
   ) {
-    const locationState = history.location.state || {};
+    const locationState = (history.location.state || {}) as Record<string, T>;
 
     const stateToBePersisted = _.pick(state, Object.keys(stateProperties));
 

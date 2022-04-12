@@ -67,7 +67,8 @@ type State = {
   tags: Array<string>;
   isLoading: boolean;
 };
-const persistence: Persistence<State> = new Persistence(
+type PartialState = Pick<State, 'searchQuery' | 'shouldShowArchivedTracings'>;
+const persistence = new Persistence<PartialState>(
   {
     searchQuery: PropTypes.string,
     shouldShowArchivedTracings: PropTypes.bool,
@@ -94,11 +95,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    this.setState(persistence.load(this.props.history), () => this.fetchNextPage(0));
+    this.setState(
+      persistence.load(this.props.history) as PartialState,
+      () => this.fetchNextPage(0)
+    );
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_prevProps' implicitly has an 'any' typ... Remove this comment to see the full error message
-  componentDidUpdate(_prevProps, prevState) {
+  componentDidUpdate(_prevProps: Props, prevState: State) {
     persistence.persist(this.props.history, this.state);
 
     if (this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings) {
@@ -111,33 +114,27 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       ? this.state.archivedModeState
       : this.state.unarchivedModeState;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'modeShape' implicitly has an 'any' type... Remove this comment to see the full error message
-  setModeState = (modeShape, addToArchivedTracings) =>
+  setModeState = (modeShape: Partial<TracingModeState>, addToArchivedTracings: boolean) =>
     this.addToShownTracings(modeShape, addToArchivedTracings);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'modeShape' implicitly has an 'any' type... Remove this comment to see the full error message
-  setOppositeModeState = (modeShape, addToArchivedTracings) =>
+  setOppositeModeState = (modeShape: Partial<TracingModeState>, addToArchivedTracings: boolean) =>
     this.addToShownTracings(modeShape, !addToArchivedTracings);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'modeShape' implicitly has an 'any' type... Remove this comment to see the full error message
-  addToShownTracings = (modeShape, addToArchivedTracings) => {
+  addToShownTracings = (modeShape: Partial<TracingModeState>, addToArchivedTracings: boolean) => {
     const mode = addToArchivedTracings ? "archivedModeState" : "unarchivedModeState";
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(prevState: Readonly<State>) => ... Remove this comment to see the full error message
     this.setState((prevState) => {
       const newSubState = {
-        // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
         ...prevState[mode],
         ...modeShape,
       };
       return {
-        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [mode]: newSubState,
       };
     });
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pageNumber' implicitly has an 'any' typ... Remove this comment to see the full error message
-  fetchNextPage = async (pageNumber) => {
+  fetchNextPage = async (pageNumber: number) => {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
     const previousTracings = this.getCurrentModeState().tracings;
@@ -496,11 +493,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           width={150}
           render={(
             __,
-            annotation: APIAnnotationCompact, // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
+            annotation: APIAnnotationCompact,
           ) =>
-            annotation.stats.treeCount != null &&
-            annotation.stats.nodeCount != null &&
-            annotation.stats.edgeCount != null ? (
+            "treeCount" in annotation.stats &&
+            "nodeCount" in annotation.stats &&
+            "edgeCount" in annotation.stats ? (
               <div
                 style={{
                   display: "grid",

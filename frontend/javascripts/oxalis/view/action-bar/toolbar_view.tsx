@@ -37,7 +37,7 @@ import Constants, {
   MappingStatusEnum,
 } from "oxalis/constants";
 import Model from "oxalis/model";
-import Store, { OxalisState } from "oxalis/store";
+import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 const narrowButtonStyle = {
   paddingLeft: 10,
   paddingRight: 8,
@@ -50,14 +50,10 @@ const imgStyleForSpaceyIcons = {
 };
 
 function getSkeletonToolHint(
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTool' implicitly has an 'any' typ... Remove this comment to see the full error message
-  activeTool,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isShiftPressed' implicitly has an 'any'... Remove this comment to see the full error message
-  isShiftPressed,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isControlPressed' implicitly has an 'an... Remove this comment to see the full error message
-  isControlPressed,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isAltPressed' implicitly has an 'any' t... Remove this comment to see the full error message
-  isAltPressed,
+  activeTool: AnnotationTool,
+  isShiftPressed: boolean,
+  isControlPressed:  boolean,
+  isAltPressed:  boolean,
 ): string | null | undefined {
   if (activeTool !== AnnotationToolEnum.SKELETON) {
     return null;
@@ -86,8 +82,7 @@ function getSkeletonToolHint(
   return null;
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'overwriteMode' implicitly has an 'any' ... Remove this comment to see the full error message
-function toggleOverwriteMode(overwriteMode) {
+function toggleOverwriteMode(overwriteMode: OverwriteMode) {
   if (overwriteMode === OverwriteModeEnum.OVERWRITE_ALL) {
     return OverwriteModeEnum.OVERWRITE_EMPTY;
   } else {
@@ -138,8 +133,7 @@ const RadioButtonWithTooltip = ({
   </Tooltip>
 );
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isControlPressed' implicitly has ... Remove this comment to see the full error message
-function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
+function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }: {isControlPressed: boolean, isShiftPressed: boolean, visible: boolean}) {
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
   const overwriteMode = useSelector((state: OxalisState) => state.userConfiguration.overwriteMode);
@@ -248,8 +242,7 @@ function AdditionalSkeletonModesButtons() {
   );
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'volumeTracing' implicitly has an 'any' ... Remove this comment to see the full error message
-const mapId = (volumeTracing, id) => {
+const mapId = (volumeTracing: VolumeTracing, id: number) => {
   const { cube } = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   return cube.mapId(id);
 };
@@ -488,7 +481,9 @@ export default function ToolbarView() {
   return (
     <div
       onClick={() => {
-        if (document.activeElement) document.activeElement.blur();
+        if (document.activeElement)
+          // @ts-ignore
+          document.activeElement.blur();
       }}
     >
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
@@ -684,16 +679,17 @@ export default function ToolbarView() {
 }
 
 function ToolSpecificSettings({
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'hasSkeleton' implicitly has an 'a... Remove this comment to see the full error message
   hasSkeleton,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'adaptedActiveTool' implicitly has... Remove this comment to see the full error message
   adaptedActiveTool,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isVolumeSupported' implicitly has... Remove this comment to see the full error message
   isVolumeSupported,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isControlPressed' implicitly has ... Remove this comment to see the full error message
   isControlPressed,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isShiftPressed' implicitly has an... Remove this comment to see the full error message
   isShiftPressed,
+}: {
+  hasSkeleton: boolean,
+  adaptedActiveTool: AnnotationTool,
+  isVolumeSupported: boolean,
+  isControlPressed: boolean,
+  isShiftPressed: boolean
 }) {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationToolEnum.BOUNDING_BOX;
@@ -753,11 +749,7 @@ function ToolSpecificSettings({
   );
 }
 
-const handleSetFillMode = (event: {
-  target: {
-    value: OverwriteMode;
-  };
-}) => {
+const handleSetFillMode = (event: RadioChangeEvent) => {
   Store.dispatch(updateUserSettingAction("fillMode", event.target.value));
 };
 

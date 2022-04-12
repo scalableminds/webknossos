@@ -24,7 +24,7 @@ type State = {
   scripts: Array<APIScript>;
   searchQuery: string;
 };
-const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
+const persistence = new Persistence<Pick<State, "searchQuery">>(
   {
     searchQuery: PropTypes.string,
   },
@@ -39,6 +39,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
+    // @ts-ignore
     this.setState(persistence.load(this.props.history));
     this.fetchData();
   }

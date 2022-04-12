@@ -1,4 +1,4 @@
-import { Avatar, Button, Badge, Tooltip, Layout, Menu, Popover } from "antd";
+import { Avatar, Button, Badge, Tooltip, Layout, Menu, Popover, type SubMenuProps } from "antd";
 import {
   SwapOutlined,
   TeamOutlined,
@@ -15,7 +15,7 @@ import classnames from "classnames";
 import { connect } from "react-redux";
 import React, { useState, useEffect } from "react";
 import Toast from "libs/toast";
-import type { APIUser, APIUserTheme } from "types/api_flow_types";
+import type { APIOrganization, APIUser, APIUserTheme } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import {
   getBuildInfo,
@@ -87,8 +87,7 @@ function useOlvy() {
   return isInitialized;
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeUser' implicitly has an 'any' typ... Remove this comment to see the full error message
-function useOlvyUnreadReleasesCount(activeUser) {
+function useOlvyUnreadReleasesCount(activeUser: APIUser) {
   const lastViewedTimestampWithFallback =
     activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp != null
       ? activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp
@@ -130,12 +129,10 @@ function NavbarMenuItem({ children, ...props }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeUser' implicitly has an 'an... Remove this comment to see the full error message
-function UserInitials({ activeUser, isMultiMember }) {
+function UserInitials({ activeUser, isMultiMember }: {activeUser: APIUser, isMultiMember: boolean}) {
   const { firstName, lastName } = activeUser;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'str' implicitly has an 'any' type.
-  const initialOf = (str) => str.slice(0, 1).toUpperCase();
+  const initialOf = (str: string) => str.slice(0, 1).toUpperCase();
 
   return (
     <div
@@ -174,8 +171,7 @@ function UserInitials({ activeUser, isMultiMember }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'title' implicitly has an 'any' ty... Remove this comment to see the full error message
-function CollapsibleMenuTitle({ title, collapse, icon }) {
+function CollapsibleMenuTitle({ title, collapse, icon }: {title: string, collapse: boolean, icon: any}) {
   if (collapse) {
     return <span title={title}>{icon}</span>;
   } else {
@@ -188,8 +184,7 @@ function CollapsibleMenuTitle({ title, collapse, icon }) {
   }
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'collapse' implicitly has an 'any'... Remove this comment to see the full error message
-function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }) {
+function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }: {collapse: boolean, isAdmin: boolean, organization: string} & SubMenuProps) {
   return (
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
@@ -231,8 +226,7 @@ function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'collapse' implicitly has an 'any'... Remove this comment to see the full error message
-function StatisticsSubMenu({ collapse, ...menuProps }) {
+function StatisticsSubMenu({ collapse, ...menuProps }: {collapse: boolean} & SubMenuProps) {
   return (
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
@@ -258,8 +252,7 @@ function StatisticsSubMenu({ collapse, ...menuProps }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'collapse' implicitly has an 'any'... Remove this comment to see the full error message
-function getTimeTrackingMenu({ collapse }) {
+function getTimeTrackingMenu({ collapse }: {collapse: boolean}) {
   return (
     <Menu.Item key="timeStatisticMenu">
       <Link
@@ -278,8 +271,11 @@ function getTimeTrackingMenu({ collapse }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isAdminOrTeamManager' implicitly ... Remove this comment to see the full error message
-function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
+function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }: {
+  isAdminOrTeamManager: boolean,
+  version: string | null,
+  collapse: boolean,
+} & SubMenuProps) {
   return (
     <SubMenu
       title={
@@ -336,8 +332,7 @@ function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'collapse' implicitly has an 'any'... Remove this comment to see the full error message
-function DashboardSubMenu({ collapse, ...other }) {
+function DashboardSubMenu({ collapse, ...other }: {collapse: boolean} & SubMenuProps) {
   return (
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
@@ -361,8 +356,7 @@ function DashboardSubMenu({ collapse, ...other }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeUser' implicitly has an 'an... Remove this comment to see the full error message
-function NotificationIcon({ activeUser }) {
+function NotificationIcon({ activeUser }: {activeUser: APIUser}) {
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   if (!features().isDemoInstance) {
@@ -376,9 +370,9 @@ function NotificationIcon({ activeUser }) {
     Store.dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
+    // @ts-ignore
     if (window.Olvy) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
+      // @ts-ignore
       window.Olvy.show();
     }
   };
@@ -404,8 +398,7 @@ function NotificationIcon({ activeUser }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'activeUser' implicitly has an 'an... Remove this comment to see the full error message
-function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
+function LoggedInAvatar({ activeUser, handleLogout, ...other }: {activeUser: APIUser, handleLogout: (event: React.SyntheticEvent) => void} & SubMenuProps) {
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.name === organizationName);
@@ -415,8 +408,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'org' implicitly has an 'any' type.
-  const switchTo = async (org) => {
+  const switchTo = async (org: APIOrganization) => {
     Toast.info(`Switching to ${org.displayName || org.name}`);
     await switchToOrganization(org.name);
   };
@@ -426,9 +418,9 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
 
     if (newTheme === "auto") {
       newTheme =
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'matchMedia' does not exist on type '(Win... Remove this comment to see the full error message
+        // @ts-ignore
         window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'matchMedia' does not exist on type '(Win... Remove this comment to see the full error message
+        // @ts-ignore
         window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "dark"
           : "light";

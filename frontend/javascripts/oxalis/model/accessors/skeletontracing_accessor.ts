@@ -170,7 +170,10 @@ export function getNodeAndTreeOrNull(
 } {
   return (
     getNodeAndTree(skeletonTracing, nodeId, treeId)
-      .map(([maybeTree, maybeNode]) => ({
+      .map(([maybeTree, maybeNode]): {
+        tree: Tree | null;
+        node: Node | null;
+      } => ({
         tree: maybeTree,
         node: maybeNode,
       }))

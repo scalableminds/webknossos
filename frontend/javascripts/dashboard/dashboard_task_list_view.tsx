@@ -70,7 +70,7 @@ type State = {
   finishedModeState: TaskModeState;
   unfinishedModeState: TaskModeState;
 };
-const persistence: Persistence<Pick<State, "showFinishedTasks">> = new Persistence(
+const persistence = new Persistence<Pick<State, "showFinishedTasks">>(
   {
     showFinishedTasks: PropTypes.bool,
   },
@@ -125,6 +125,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
   };
 
   componentDidMount() {
+    // @ts-ignore
     this.setState(persistence.load(this.props.history));
     this.fetchNextPage(0);
   }
@@ -530,7 +531,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
             type="primary"
             icon={<UserAddOutlined />}
             onClick={() => this.confirmGetNewTask()}
-            disabled={this.props.isAdminView && this.props.userId}
+            disabled={this.props.isAdminView && this.props.userId != null}
           >
             Get a New Task
           </AsyncButton>

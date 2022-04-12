@@ -46,7 +46,7 @@ type State = {
   isAnonymousTaskLinkModalVisible: boolean;
 };
 const typeHint: Array<APITask> = [];
-const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
+const persistence = new Persistence<Pick<State, "searchQuery">>(
   {
     searchQuery: PropTypes.string,
   },
@@ -62,6 +62,7 @@ class TaskListView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
+    // @ts-ignore
     this.setState(persistence.load(this.props.history));
   }
 

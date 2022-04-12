@@ -26,7 +26,7 @@ declare module "data.maybe" {
     toString(): string;
     toJSON(): Record<string, any>;
     get(): T;
-    getOrElse(defaultValue: T): T;
+    getOrElse<S>(defaultValue: S | T): S | T;
     map<B>(f: (v: T) => B): IMaybe<B>;
     ap<B>(fb: IMaybe<B> | Applicative<B>): IMaybe<B>;
     chain<B>(f: (v: T) => IMaybe<B>): IMaybe<B>;

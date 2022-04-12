@@ -309,6 +309,7 @@ class TracingApi {
       newAnnotationType,
       {
         annotationId: newAnnotationId,
+        // @ts-ignore
         type: newControlMode,
       },
       false,
@@ -353,7 +354,6 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
       Store.dispatch(setPositionAction(node.position)),
     );
@@ -419,7 +419,6 @@ class TracingApi {
     const curPosition = getPosition(Store.getState().flycam);
     const curRotation = getRotation(Store.getState().flycam);
     if (!Array.isArray(rotation)) rotation = curRotation;
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3 | undefined' is not assi... Remove this comment to see the full error message
     rotation = this.getShortestRotation(curRotation, rotation);
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
@@ -500,7 +499,6 @@ class TracingApi {
   setAnnotationTool(tool: AnnotationTool) {
     assertExists(tool, "Volume tool is missing.");
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     if (AnnotationToolEnum[tool] == null) {
       throw new Error(
         `Volume tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,

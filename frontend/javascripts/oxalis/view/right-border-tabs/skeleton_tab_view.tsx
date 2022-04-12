@@ -170,6 +170,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           throw error;
         }
 
+        // @ts-ignore
         console.error(`Tried parsing file "${file.name}" as NML but failed. ${error.message}`);
         return undefined;
       }
@@ -196,6 +197,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           datasetName: parsedTracing.dataSetName,
         };
       } catch (error) {
+        // @ts-ignore
         console.error(`Tried parsing file "${file.name}" as protobuf but failed. ${error.message}`);
         return undefined;
       }
@@ -260,6 +262,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
         return nmlImportActions;
       } catch (error) {
+        // @ts-ignore
         console.error(`Tried parsing file "${file.name}" as ZIP but failed. ${error.message}`);
         return undefined;
       }
@@ -305,13 +308,11 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 }
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeIds' implicitly has an 'any' type.
-function checkAndConfirmDeletingInitialNode(treeIds) {
+function checkAndConfirmDeletingInitialNode(treeIds: number[]) {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
-  const hasNodeWithIdOne = (id) => getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
+  const hasNodeWithIdOne = (id: number) => getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
 
   const needsCheck = state.task != null && treeIds.find(hasNodeWithIdOne) != null;
   return new Promise<void>((resolve, reject) => {
@@ -344,15 +345,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         children: treeGroups,
       };
 
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
-      const makeTree = (tree) => ({
+      const makeTree = (tree: Tree) => ({
         name: tree.name,
         type: "TREE",
         id: tree.treeId,
       });
 
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
-      const makeGroup = (group) => ({
+      const makeGroup = (group: TreeGroup) => ({
         name: group.name,
         type: "GROUP",
         id: group.groupId,
@@ -435,14 +434,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       }
 
       // Finds all subtrees of the passed group recursively
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'group' implicitly has an 'any' type.
-      const findSubtreesRecursively = (group) => {
+      const findSubtreesRecursively = (group: TreeGroup) => {
         const currentSubtrees =
           groupToTreesMap[group.groupId] != null ? groupToTreesMap[group.groupId] : [];
         // Delete all trees of the current group
         treeIdsToDelete = treeIdsToDelete.concat(currentSubtrees.map((tree) => tree.treeId));
         // Also delete the trees of all subgroups
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'subgroup' implicitly has an 'any' type.
         group.children.forEach((subgroup) => findSubtreesRecursively(subgroup));
       };
 
@@ -948,24 +945,19 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(deleteTreeAsUserAction());
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'actions' implicitly has an 'any' type.
-  onBatchActions(actions, actionName) {
+  onBatchActions(actions: Array<Action>, actionName: string) {
     dispatch(batchActions(actions, actionName));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupId' implicitly has an 'any' type.
-  onSetTreeGroup(groupId, treeId) {
+  onSetTreeGroup(groupId: number | null | undefined, treeId: number) {
     dispatch(setTreeGroupAction(groupId, treeId));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'name' implicitly has an 'any' type.
-  onChangeTreeName(name) {
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
+  onChangeTreeName(name: string) {
     dispatch(setTreeNameAction(name));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
-  onSetActiveTree(treeId) {
+  onSetActiveTree(treeId: number) {
     dispatch(setActiveTreeAction(treeId));
   },
 
@@ -973,8 +965,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(deselectActiveTreeAction());
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupId' implicitly has an 'any' type.
-  onSetActiveGroup(groupId) {
+  onSetActiveGroup(groupId: number) {
     dispatch(setActiveGroupAction(groupId));
   },
 

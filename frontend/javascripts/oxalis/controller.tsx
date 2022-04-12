@@ -2,7 +2,7 @@ import type { RouteComponentProps } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
 import { AsyncButton } from "components/async_clickables";
 import { connect } from "react-redux";
-import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
+import { Location as HistoryLocation, Action as HistoryAction } from "history";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";

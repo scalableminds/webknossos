@@ -7,7 +7,7 @@ import _ from "lodash";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type { OrthoViewMap } from "oxalis/constants";
+import type { OrthoViewMap, Vector3 } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
@@ -15,15 +15,12 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'position' implicitly has an 'any' type.
-const createDirLight = (position, target, intensity, parent) => {
+const createDirLight = (position: Vector3, target: Vector3, intensity: number, parent: THREE.OrthographicCamera) => {
   const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
   dirLight.color.setHSL(0.1, 1, 0.95);
-  // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
   dirLight.position.set(...position);
   parent.add(dirLight);
   parent.add(dirLight.target);
-  // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
   dirLight.target.position.set(...target);
   return dirLight;
 };
@@ -197,7 +194,7 @@ class PlaneView {
       const hoveredColor = [0.7, 0.5, 0.1];
       // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       hitObject.parent.children.forEach((meshPart) => {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'Object... Remove this comment to see the full error message
+        // @ts-ignore
         meshPart.material.emissive.setHSL(...hoveredColor);
       });
       // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.

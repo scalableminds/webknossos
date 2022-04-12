@@ -448,15 +448,12 @@ export type APIBuildInfo = {
     name: string;
     commitHash: string;
     scalaVersion: string;
-    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'version'.
     version: string;
     sbtVersion: string;
     commitDate: string;
     ciTag: string;
     ciBuild: string;
     gitTag: string;
-    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'version'.
-    version: string;
     datastoreApiVersion: string;
   };
   "webknossos-wrap": {
@@ -472,15 +469,12 @@ export type APIBuildInfo = {
     name: string;
     commitHash: string;
     scalaVersion: string;
-    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'version'.
     version: string;
     sbtVersion: string;
     commitDate: string;
     ciTag: string;
     ciBuild: string;
     gitTag: string;
-    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'version'.
-    version: string;
     datastoreApiVersion: string;
   };
 };

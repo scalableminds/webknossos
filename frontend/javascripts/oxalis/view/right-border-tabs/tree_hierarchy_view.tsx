@@ -151,9 +151,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   onChange = (treeData: Array<TreeNode>) => {
-    const expandedGroupIds = {};
-    forEachTreeNode(treeData, (node) => {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+    const expandedGroupIds: Record<number, boolean> = {};
+    forEachTreeNode(treeData, (node: TreeNode) => {
       if (node.type === TYPE_GROUP && node.expanded) expandedGroupIds[node.id] = true;
     });
     this.setState({
@@ -219,8 +218,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   setExpansionOfAllSubgroupsTo = (groupId: number, expanded: boolean) => {
     const newExpandedGroupIds = Object.assign({}, this.state.expandedGroupIds);
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupTree' implicitly has an 'any' type... Remove this comment to see the full error message
-    const collapseAllGroups = (groupTree) => {
+    const collapseAllGroups = (groupTree: TreeNode[]) => {
       const copyOfGroupTree = _.cloneDeep(groupTree);
 
       findTreeNode(copyOfGroupTree, groupId, (item) => {
@@ -655,38 +653,31 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
-  onSetActiveTree(treeId) {
+  onSetActiveTree(treeId: number) {
     dispatch(setActiveTreeAction(treeId));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupId' implicitly has an 'any' type.
-  onSetActiveGroup(groupId) {
+  onSetActiveGroup(groupId: number) {
     dispatch(setActiveGroupAction(groupId));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
-  onSetTreeColor(treeId, color) {
+  onSetTreeColor(treeId: number, color: Vector3) {
     dispatch(setTreeColorAction(treeId, color));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
-  onShuffleTreeColor(treeId) {
+  onShuffleTreeColor(treeId: number) {
     dispatch(shuffleTreeColorAction(treeId));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
-  onDeleteTree(treeId) {
+  onDeleteTree(treeId: number) {
     dispatch(deleteTreeAction(treeId));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeId' implicitly has an 'any' type.
-  onToggleTree(treeId) {
+  onToggleTree(treeId: number) {
     dispatch(toggleTreeAction(treeId));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupId' implicitly has an 'any' type.
-  onToggleTreeGroup(groupId) {
+  onToggleTreeGroup(groupId: number) {
     dispatch(toggleTreeGroupAction(groupId));
   },
 
@@ -694,13 +685,11 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(toggleAllTreesAction());
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeGroups' implicitly has an 'any' typ... Remove this comment to see the full error message
-  onUpdateTreeGroups(treeGroups) {
+  onUpdateTreeGroups(treeGroups: TreeGroup[]) {
     dispatch(setTreeGroupsAction(treeGroups));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'actions' implicitly has an 'any' type.
-  onBatchActions(actions, actionName) {
+  onBatchActions(actions: Array<Action>, actionName: string) {
     dispatch(batchActions(actions, actionName));
   },
 

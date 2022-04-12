@@ -9,7 +9,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -191,8 +191,68 @@ class BinaryDataController @Inject()(
     }
   }
 
-  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] =
-    if (layer.containsResolution(Vec3Int.fromForm(mag))) Some(Vec3Int.fromForm(mag)) else None
+//  def redirectToDataset(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
+//    Action {
+//      Redirect(routes..requestDatasourceFolderContents(token, organizationName, dataSetName))
+//    }
+
+  def requestDatasourceFolderContents(token: Option[String],
+                                      organizationName: String,
+                                      dataSetName: String): Action[AnyContent] =
+    Action { implicit request =>
+      {
+        Ok(
+          views.html.datastoreZarrDatasourceDir(
+            "Datastore",
+            "%s/%s".format(organizationName, dataSetName),
+            "http://localhost:9000/data/zarr/sample_organization/l4_sample/",
+            Map("datasource" -> ".", "color" -> "color")
+          )).withHeaders()
+      }
+    }
+
+  def requestDatalayerFolderContents(token: Option[String],
+                                     organizationName: String,
+                                     dataSetName: String,
+                                     dataLayerName: String): Action[AnyContent] =
+    Action { implicit request =>
+      {
+        Ok(
+          views.html.datastoreZarrDatasourceDir(
+            "Datastore",
+            "%s/%s".format(organizationName, dataSetName),
+            "http://localhost:9000/data/zarr/sample_organization/l4_sample/color/",
+            Map("color" -> ".", "1-1-1" -> "1-1-1")
+          )).withHeaders()
+      }
+    }
+
+  def requestDatalayerMagFolderContents(token: Option[String],
+                                        organizationName: String,
+                                        dataSetName: String,
+                                        dataLayerName: String,
+                                        mag: String): Action[AnyContent] =
+    Action { implicit request =>
+      {
+        Ok(
+          views.html.datastoreZarrDatasourceDir(
+            "Datastore",
+            "%s/%s".format(organizationName, dataSetName),
+            "http://localhost:9000/data/zarr/sample_organization/l4_sample/color/1-1-1/",
+            Map("1-1-1" -> ".")
+          )).withHeaders()
+      }
+    }
+
+  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] = {
+    val singleRx = "\\s*([0-9]+)\\s*".r
+    val longMag = mag match {
+      case singleRx(x) => "%s-%s-%s".format(x, x, x)
+      case _           => mag
+    }
+    val parsedMag = Vec3Int.fromForm(longMag)
+    Some(parsedMag).filter(layer.containsResolution)
+  }
 
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
@@ -203,35 +263,34 @@ class BinaryDataController @Inject()(
                     dataSetName: String,
                     dataLayerName: String,
                     mag: String,
-  ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
-
-      for {
-        (_, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
-        cubeLength = dataLayer.lengthOfUnderlyingCubes(parsedMag)
-        (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
-      } yield
-        Ok(
-          Json.obj(
-            "dtype" -> dtype,
-            "fill_value" -> 0,
-            "zarr_format" -> 2,
-            "order" -> "F",
-            "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
-            "compressor" -> Json
-              .obj("id" -> "lz4"), // TODO außer es ist uncompressed, lz4 hat vllt noch andere parameter
-            "filters" -> None,
-            "shape" -> List(
-              channels,
-              dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x,
-              dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y,
-              dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z
-            ),
-            "dimension_seperator" -> "/",
-          ))
-    }
+  ): Action[AnyContent] = Action.async { implicit request => //    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+//                                      token)
+  {
+    logger.info("requesting .zarray")
+    for {
+      (_, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+      parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+      cubeLength = 512 //dataLayer.lengthOfUnderlyingCubes(parsedMag)
+      (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
+    } yield
+      Ok(
+        Json.obj(
+          "dtype" -> dtype,
+          "fill_value" -> 0,
+          "zarr_format" -> 2,
+          "order" -> "F",
+          "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
+          "compressor" -> None, //Json.obj("id" -> "lz4"), // TODO außer es ist uncompressed, lz4 hat vllt noch andere parameter
+          "filters" -> None,
+          "shape" -> List(
+            channels,
+            dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x,
+            dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y,
+            dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z
+          ),
+          "dimension_seperator" -> "/",
+        ))
+  }
   }
 
   private def zarrDtypeFromElementClass(elementClass: ElementClass.Value): (Int, String) = elementClass match {
@@ -248,6 +307,30 @@ class BinaryDataController @Inject()(
     case ElementClass.int64  => (1, "<i8")
   }
 
+  def requestRawZarrWithDot(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      mag: String,
+      cxyz: String,
+  ): Action[AnyContent] = {
+    val singleRx = "\\s*([0-9]+).([0-9]+).([0-9]+).([0-9]+)\\s*".r
+    cxyz match {
+      case singleRx(c, x, y, z) =>
+        requestRawZarr(token,
+                       organizationName,
+                       dataSetName,
+                       dataLayerName,
+                       mag,
+                       Integer.parseInt(c),
+                       Integer.parseInt(x),
+                       Integer.parseInt(y),
+                       Integer.parseInt(z))
+      case _ => Action { NotFound("Coordinates not valid") }
+    }
+  }
+
   /**
     * Handles requests for raw binary data via HTTP GET for debugging.
     */
@@ -262,52 +345,68 @@ class BinaryDataController @Inject()(
       x: Int,
       y: Int,
       z: Int,
-  ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
-      for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
-        _ <- bool2Fox(c == 0) ~> Messages("Channel must be 0") ~> 404
-        cubeSize = dataLayer.lengthOfUnderlyingCubes(parsedMag)
-        request = DataRequest(
-          new VoxelPosition(x * cubeSize * parsedMag.x,
-                            y * cubeSize * parsedMag.y,
-                            z * cubeSize * parsedMag.z,
-                            parsedMag),
-          cubeSize,
-          cubeSize,
-          cubeSize,
-          DataServiceRequestSettings(halfByte = false)
-        )
-        (data, indices) <- requestData(dataSource, dataLayer, request)
-        _ = println(data.length)
-      } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
-    }
+  ): Action[AnyContent] = Action.async { implicit request => //    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+//                                      token)
+  {
+    logger.info("Requesting %d, %d, %d".format(x, y, z))
+
+    for {
+      (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+      parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+      _ <- bool2Fox(c == 0) ~> Messages("Channel must be 0") ~> 404
+      cubeSize = 512 //dataLayer.lengthOfUnderlyingCubes(parsedMag)
+      _ = logger.info(
+        "Requesting %d, %d, %d"
+          .format(x * cubeSize * parsedMag.x, y * cubeSize * parsedMag.y, z * cubeSize * parsedMag.z))
+      request = DataRequest(
+        new VoxelPosition(x * cubeSize * parsedMag.x,
+                          y * cubeSize * parsedMag.y,
+                          z * cubeSize * parsedMag.z,
+                          parsedMag),
+        cubeSize,
+        cubeSize,
+        cubeSize,
+        DataServiceRequestSettings(halfByte = false)
+      )
+      (data, indices) <- requestData(dataSource, dataLayer, request)
+    } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+  }
   }
 
   def requestDataSource(
       token: Option[String],
       organizationName: String,
       dataSetName: String,
-  ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
-      for {
-        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-          "dataSource.notFound") ~> 404
-        dataLayers = dataSource.dataLayers
-        zarrLayers = dataLayers.collect({
-          case a: DataLayer =>
-            ZarrDataLayer(a.name,
-                          a.category,
-                          a.boundingBox,
-                          a.elementClass,
-                          a.resolutions.map(x => ZarrMag(x, None, None)))
-        })
-        zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
-      } yield Ok(Json.toJson(zarrSource))
-    }
+  ): Action[AnyContent] = Action.async { implicit request => //    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+//                                      token)
+  {
+    logger.info("requesting datasource-properties.json")
+    for {
+      dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
+        "dataSource.notFound") ~> 404
+      dataLayers = dataSource.dataLayers
+      zarrLayers = dataLayers.collect({
+//        case b: SegmentationLayer =>
+//          ZarrSegmentationLayer(
+//            b.name,
+//            b.boundingBox,
+//            b.elementClass,
+//            b.resolutions.map(x => ZarrMag(x, None, None)),
+//            b.largestSegmentId,
+//            b.mappings,
+//            numChannels = if (b.elementClass == ElementClass.uint24) 3 else 1
+//          )
+        case a: DataLayer =>
+          ZarrDataLayer(a.name,
+                        a.category,
+                        a.boundingBox,
+                        a.elementClass,
+                        a.resolutions.map(x => ZarrMag(x, None, None)),
+                        numChannels = if (a.elementClass == ElementClass.uint24) 3 else 1)
+      })
+      zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
+    } yield Ok(Json.toJson(zarrSource))
+  }
 
   }
 
@@ -316,14 +415,14 @@ class BinaryDataController @Inject()(
       organizationName: String,
       dataSetName: String,
       dataLayerName: String = "",
-  ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
-      for {
-        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-          "dataSource.notFound") ~> 404
-      } yield Ok(Json.obj("zarr_format" -> 2))
-    }
+  ): Action[AnyContent] = Action.async { implicit request => //    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+//                                      token)
+  {
+    for {
+      dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
+        "dataSource.notFound") ~> 404
+    } yield Ok(Json.obj("zarr_format" -> 2))
+  }
 
   }
 
@@ -609,6 +708,7 @@ class BinaryDataController @Inject()(
   ): Fox[(Array[Byte], List[Int])] = {
     val requests =
       dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, None, r.cuboid(dataLayer), r.settings))
+    logger.info(s"requests: $requests")
     binaryDataService.handleDataRequests(requests)
   }
 

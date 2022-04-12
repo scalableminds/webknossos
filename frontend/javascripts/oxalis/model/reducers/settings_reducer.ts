@@ -93,11 +93,11 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const settingSpec = userSettings[propertyName];
 
       if (settingSpec != null && settingSpec.type === "number") {
-        const min = settingSpec.minimum != null ? settingSpec.minimum : -Infinity;
-        const max = settingSpec.maximum != null ? settingSpec.maximum : Infinity;
+        const min = "minimum" in settingSpec ? settingSpec.minimum : -Infinity;
+        const max = "maximum" in settingSpec ? settingSpec.maximum : Infinity;
         value = clamp(min, value, max);
 
-        if (settingSpec.dynamicMaximumFn != null) {
+        if ("dynamicMaximumFn" in settingSpec) {
           const dynamicMaximum = settingSpec.dynamicMaximumFn(state);
           value = Math.min(value, dynamicMaximum);
         }

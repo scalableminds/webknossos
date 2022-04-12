@@ -1,5 +1,4 @@
 import * as THREE from "three";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
 import type { OrthoView } from "oxalis/constants";
@@ -40,7 +39,7 @@ export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
 export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
   scene?: THREE.Scene,
-  camera?: THREE.Camera, // When withFarClipping is true, the user-specified clipping distance is used.
+  camera?: THREE.OrthographicCamera, // When withFarClipping is true, the user-specified clipping distance is used.
   // Note that the data planes might not be included in the rendered texture, since
   // these are exactly offset by the clipping distance. Currently, `withFarClipping`
   // is only used for node picking (which does not render the data planes), which is why
@@ -52,7 +51,7 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  camera = ((camera || scene.getObjectByName(plane)) as THREE.Camera);
+  camera = ((camera || scene.getObjectByName(plane)) as THREE.OrthographicCamera);
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.
@@ -95,13 +94,13 @@ export async function downloadScreenshot() {
   const datasetName = dataset.name;
   const [x, y, z] = getFlooredPosition(flycam);
   const baseName = `${datasetName}__${x}_${y}_${z}`;
-  const planeIds =
+  const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
     viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
     if (width === 0 || height === 0) continue;
-    // $FlowIssue[prop-missing] planeId cannot be arbitraryViewport in OrthoViewColors access
+    // @ts-ignore planeId cannot be arbitraryViewport in OrthoViewColors access
     const clearColor = OrthoViewValues.includes(planeId) ? OrthoViewColors[planeId] : 0xffffff;
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
     const buffer = renderToTexture(planeId, null, null, false, clearColor);

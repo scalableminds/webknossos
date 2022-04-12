@@ -12,6 +12,7 @@ import {
   List,
   Spin,
 } from "antd";
+import { Location as HistoryLocation, Action as HistoryAction } from "history";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -19,7 +20,7 @@ import moment from "moment";
 
 import classnames from "classnames";
 import _ from "lodash";
-import { useDropzone } from "react-dropzone";
+import { useDropzone, FileWithPath } from "react-dropzone";
 import ErrorHandling from "libs/error_handling";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
@@ -38,7 +39,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
-// @ts-expect-error ts-migrate(2306) FIXME: File '/Users/therold/Programming/scalableminds/web... Remove this comment to see the full error message
+// @ts-expect-error ts-migrate(2306)
 import { createReader, BlobReader } from "zip-js-webpack";
 import {
   CardContainer,
@@ -155,7 +156,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
-  blockTimeoutId: ReturnType<typeof setTimeout> | null | undefined;
+  blockTimeoutId: number | null = null;
   formRef = React.createRef<FormInstance>();
 
   componentDidMount() {
@@ -211,8 +212,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     return uploadableDatastores.find((ds) => ds.url === url);
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'formValues' implicitly has an 'any' typ... Remove this comment to see the full error message
-  handleSubmit = async (formValues) => {
+  handleSubmit = async (formValues: Record<string, any>) => {
     const { activeUser } = this.props;
 
     if (activeUser != null) {
@@ -221,8 +221,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         isUploading: true,
       });
 
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newLocation' implicitly has an 'any' ty... Remove this comment to see the full error message
-      const beforeUnload = (newLocation, action) => {
+      const beforeUnload = (newLocation: HistoryLocation<unknown>, action: HistoryAction): string | false | void => {
         // Only show the prompt if this is a proper beforeUnload event from the browser
         // or the pathname changed
         // This check has to be done because history.block triggers this function even if only the url hash changed
@@ -234,18 +233,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
             this.blockTimeoutId = window.setTimeout(() => {
               // restore the event handler in case a user chose to stay on the page
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
+              // @ts-ignore
               window.onbeforeunload = beforeUnload;
             }, 500);
             return messages["dataset.leave_during_upload"];
           }
         }
 
-        return null;
+        return;
       };
 
       this.unblock = this.props.history.block(beforeUnload);
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
+      // @ts-ignore
       window.onbeforeunload = beforeUnload;
       const datasetId: APIDatasetId = {
         name: formValues.name,
@@ -370,8 +369,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload.on("filesAdded", () => {
         resumableUpload.upload();
       });
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
-      resumableUpload.on("fileError", (file, message) => {
+      resumableUpload.on("fileError", (_file: FileWithPath, message: string) => {
         Toast.error(message);
         this.setState({
           isUploading: false,
@@ -476,8 +474,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     );
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'files' implicitly has an 'any' type.
-  validateFiles = (files) => {
+  validateFiles = (files: FileWithPath[]) => {
     if (files.length === 0) {
       return;
     }
@@ -541,8 +538,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     this.handleNeedsConversionInfo(needsConversion);
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'needsConversion' implicitly has an 'any... Remove this comment to see the full error message
-  handleNeedsConversionInfo = (needsConversion) => {
+  handleNeedsConversionInfo = (needsConversion: boolean) => {
     const form = this.formRef.current;
 
     if (!form) {
@@ -580,8 +576,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'files' implicitly has an 'any' type.
-  maybeSetUploadName = (files) => {
+  maybeSetUploadName = (files: FileWithPath[]) => {
     const form = this.formRef.current;
 
     if (!form) {
@@ -716,6 +711,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   name="scale"
                   label="Voxel Size"
                   info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                  // @ts-ignore
                   disabled={this.state.needsConversion}
                   help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
                   rules={[
@@ -759,17 +755,15 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
                 {
                   validator: syncValidator(
-                    (files) =>
-                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
-                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, "zip"))
+                    (files: FileWithPath[]) =>
+                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path || "", "zip"))
                         .length <= 1,
                     "You cannot upload more than one archive.",
                   ),
                 },
                 {
                   validator: syncValidator(
-                    (files) =>
-                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
+                    (files: FileWithPath[]) =>
                       files.filter((file) =>
                         Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]),
                       ).length === 0,
@@ -777,8 +771,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   ),
                 },
                 {
-                  validator: syncValidator((files) => {
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
+                  validator: syncValidator((files: FileWithPath[]) => {
                     const archives = files.filter((file) =>
                       Utils.isFileExtensionEqualTo(file.path, "zip"),
                     );
@@ -787,12 +780,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   }, "Archives cannot be mixed with other files."),
                 },
                 {
-                  validator: syncValidator((files) => {
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
+                  validator: syncValidator((files: FileWithPath[]) => {
                     const wkwFiles = files.filter((file) =>
                       Utils.isFileExtensionEqualTo(file.path, "wkw"),
                     );
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
                     const imageFiles = files.filter((file) =>
                       Utils.isFileExtensionEqualTo(file.path, [
                         "tif",
@@ -814,8 +805,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               valuePropName="fileList"
             >
               <FileUploadArea
-                // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'files' implicitly has an 'any' type.
-                onChange={(files) => {
+                onChange={(files: FileWithPath[]) => {
                   this.maybeSetUploadName(files);
                   this.validateFiles(files);
                 }}
@@ -847,16 +837,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   }
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'fileList' implicitly has an 'any'... Remove this comment to see the full error message
-function FileUploadArea({ fileList, onChange }: {fileList: File[]}) {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'acceptedFiles' implicitly has an 'any' ... Remove this comment to see the full error message
-  const onDropAccepted = (acceptedFiles) => {
+function FileUploadArea(
+  { fileList, onChange }: {
+    fileList: FileWithPath[],
+    onChange: (files: FileWithPath[]) => void
+  }
+) {
+  const onDropAccepted = (acceptedFiles: FileWithPath[]) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
-    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     onChange(_.uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
   };
 
-  const removeFile = (file: File) => {
+  const removeFile = (file: FileWithPath) => {
     onChange(_.without(fileList, file));
   };
 
@@ -864,14 +856,14 @@ function FileUploadArea({ fileList, onChange }: {fileList: File[]}) {
     onDropAccepted,
   });
   const acceptedFiles = fileList;
-  const files: React.ReactNode[] = acceptedFiles.map((file: File) => <li key={file.path}>{file.path}</li>);
+  const files: React.ReactNode[] = acceptedFiles.map((file: FileWithPath) => <li key={file.path}>{file.path}</li>);
   const showSmallFileList = files.length > 10;
   const list = (
     <List
       itemLayout="horizontal"
       dataSource={acceptedFiles}
       size={showSmallFileList ? "small" : "default"}
-      renderItem={(item: File) => (
+      renderItem={(item: FileWithPath) => (
         <List.Item
           actions={[
             <a key="list-loadmore-edit" onClick={() => removeFile(item)}>
@@ -894,8 +886,7 @@ function FileUploadArea({ fileList, onChange }: {fileList: File[]}) {
                   style={{
                     color: "darkgrey",
                   }}
-                >{`${item.path.split("/").slice(0, -1).join("/")}/`}</span>
-                // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+                >{`${item.path?.split("/").slice(0, -1).join("/")}/`}</span>
                 {item.name}
               </span>
             }

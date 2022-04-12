@@ -434,11 +434,13 @@ export function sleep(timeout: number): Promise<void> {
   });
 }
 export function isFileExtensionEqualTo(
-  fileName: string,
+  fileName: string | null | undefined,
   extensionOrExtensions: string | Array<string>,
 ) {
-  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-  const passedExtension = _.last(fileName.split(".")).toLowerCase();
+  if (fileName == null) {
+    return false;
+  }
+  const passedExtension = (_.last(fileName.split(".")) || "").toLowerCase();
 
   if (Array.isArray(extensionOrExtensions)) {
     return extensionOrExtensions.includes(passedExtension);

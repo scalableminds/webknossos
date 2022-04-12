@@ -2,6 +2,7 @@ import type { RouteComponentProps } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
 import { AsyncButton } from "components/async_clickables";
 import { connect } from "react-redux";
+import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
@@ -141,8 +142,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   modelFetchDone() {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newLocation' implicitly has an 'any' ty... Remove this comment to see the full error message
-    const beforeUnload = (newLocation, action) => {
+    const beforeUnload = (newLocation: HistoryLocation<unknown>, action: HistoryAction): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
@@ -150,7 +150,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         const stateSaved = Model.stateSaved();
 
         if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'onbeforeunload' does not exist on type '... Remove this comment to see the full error message
+          // @ts-ignore
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
           // @ts-expect-error ts-migrate(2339) FIXME: Property 'setTimeout' does not exist on type '(Win... Remove this comment to see the full error message
@@ -161,18 +161,18 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
             Store.dispatch(saveNowAction());
             // restore the event handler in case a user chose to stay on the page
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'onbeforeunload' does not exist on type '... Remove this comment to see the full error message
+            // @ts-ignore
             window.onbeforeunload = beforeUnload;
           }, 500);
           return messages["save.leave_page_unfinished"];
         }
       }
 
-      return null;
+      return;
     };
 
     this.props.history.block(beforeUnload);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'onbeforeunload' does not exist on type '... Remove this comment to see the full error message
+    // @ts-ignore
     window.onbeforeunload = beforeUnload;
     UrlManager.startUrlUpdater();
     initializeSceneController();

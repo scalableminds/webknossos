@@ -1,21 +1,21 @@
 {
   "extends": [
-    // "airbnb",
+    "airbnb",
+    "airbnb-typescript",
     "plugin:@typescript-eslint/eslint-recommended",
     "plugin:eslint-comments/recommended",
     "plugin:react/recommended",
-    "prettier",
-    "prettier/flowtype",
-    "prettier/react"
+    "prettier"
   ],
-  "plugins": ["@typescript-eslint","react", "react-hooks", "import", "flowtype", "flow-header"],
+  "plugins": ["@typescript-eslint","react", "react-hooks", "import"],
+  "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaVersion": 8
+    "ecmaVersion": 8,
+    "project": "./tsconfig.json"
   },
   "env": {
     "browser": true
   },
-  "parser": "@typescript-eslint/parser",
   "settings": {
     "import/resolver": "webpack",
     "import/ignore": ["$three.*"],
@@ -68,8 +68,9 @@
     "no-restricted-syntax": ["error", "ForInStatement"],
     "no-restricted-globals": "warn",
     "no-underscore-dangle": "off",
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "ignoreRestSiblings": true }],
-    "no-use-before-define": ["error", { "functions": false, "classes": false }],
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "ignoreRestSiblings": true }],
+    "@typescript-eslint/no-use-before-define": ["error", { "functions": false, "classes": false }],
+    "@typescript-eslint/lines-between-class-members": "off",
     "one-var": ["error", "never"],
     "operator-assignment": "warn",
     "prefer-destructuring": "off",

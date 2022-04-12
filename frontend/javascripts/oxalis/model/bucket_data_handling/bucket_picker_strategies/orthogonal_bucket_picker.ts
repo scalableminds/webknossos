@@ -22,39 +22,41 @@ export const getAnchorPositionToCenterDistance = (
   // - bucketPerDim is 16 (because the actual plane is 15 buckets wide...)
   // --> the bucket distance between anchorPoint and center bucket is 8
   Math.ceil((bucketPerDim - 1) / 2);
-export default function determineBucketsForOrthogonal(
-  resolutions: Array<Vector3>,
-  enqueueFunction: EnqueueFunction,
-  loadingStrategy: LoadingStrategy,
-  logZoomStep: number,
-  anchorPoint: Vector4,
-  areas: OrthoViewMap<Area>,
-  subBucketLocality: Vector3,
-  abortLimit?: number | null | undefined,
-  // @ts-expect-error ts-migrate(1016) FIXME: A required parameter cannot follow an optional par... Remove this comment to see the full error message
-  gpuFactor: number,
-) {
-  let zoomStepDiff = 0;
 
-  while (
-    logZoomStep + zoomStepDiff < resolutions.length &&
-    zoomStepDiff <= getMaxZoomStepDiff(loadingStrategy)
+  export default function determineBucketsForOrthogonal(
+    resolutions: Array<Vector3>,
+    enqueueFunction: EnqueueFunction,
+    loadingStrategy: LoadingStrategy,
+    logZoomStep: number,
+    anchorPoint: Vector4,
+    areas: OrthoViewMap<Area>,
+    subBucketLocality: Vector3,
+    //eslint-disable-next-line @typescript-eslint/default-param-last
+    abortLimit?: number | null | undefined,
+    // @ts-expect-error ts-migrate(1016) FIXME: A required parameter cannot follow an optional par... Remove this comment to see the full error message
+    gpuFactor: number,
   ) {
-    addNecessaryBucketsToPriorityQueueOrthogonal(
-      resolutions,
-      enqueueFunction,
-      loadingStrategy,
-      logZoomStep,
-      zoomStepDiff,
-      anchorPoint,
-      areas,
-      subBucketLocality,
-      abortLimit,
-      gpuFactor,
-    );
-    zoomStepDiff++;
+    let zoomStepDiff = 0;
+
+    while (
+      logZoomStep + zoomStepDiff < resolutions.length &&
+      zoomStepDiff <= getMaxZoomStepDiff(loadingStrategy)
+    ) {
+      addNecessaryBucketsToPriorityQueueOrthogonal(
+        resolutions,
+        enqueueFunction,
+        loadingStrategy,
+        logZoomStep,
+        zoomStepDiff,
+        anchorPoint,
+        areas,
+        subBucketLocality,
+        abortLimit,
+        gpuFactor,
+      );
+      zoomStepDiff++;
+    }
   }
-}
 
 function addNecessaryBucketsToPriorityQueueOrthogonal(
   resolutions: Array<Vector3>,
@@ -121,7 +123,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       zoomStepDiff,
     );
     // Build up priority queue
-    // eslint-disable-next-line no-loop-func
+    // eslint-disable-next-line @typescript-eslint/no-loop-func
     wSliceOffsets.forEach((wSliceOffset) => {
       const extraYBucketStart = scaledTopLeftVector[v] - extraBucketPerEdge;
       const extraYBucketEnd = scaledBottomRightVector[v] + extraBucketPerEdge;

@@ -12,8 +12,9 @@ import NodeShader, {
 } from "oxalis/geometries/materials/node_shader";
 import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
+
 const MAX_CAPACITY = 1000;
-// eslint-disable-next-line no-use-before-define
+
 type BufferHelper = typeof NodeBufferHelperType | typeof EdgeBufferHelperType;
 type Buffer = {
   capacity: number;

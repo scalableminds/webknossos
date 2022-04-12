@@ -3,6 +3,7 @@ import { Link, withRouter } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
+import { Key } from "antd/lib/table/interface";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -35,7 +36,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
-import { Key } from "antd/lib/table/interface";
+
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APIUser[] = [];

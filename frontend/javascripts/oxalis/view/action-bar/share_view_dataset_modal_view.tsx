@@ -1,14 +1,17 @@
+import { CopyOutlined } from "@ant-design/icons";
 import { Modal, Input, Button, Row, Col } from "antd";
 import { useSelector } from "react-redux";
 import React from "react";
 import messages from "messages";
-import { CopyOutlined } from "@ant-design/icons";
-import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_modal_view";
 import { OxalisState } from "oxalis/store";
+import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_modal_view";
+
 const sharingActiveNode = false;
+
 type Props = {
   onOk: () => any;
 };
+
 export default function ShareViewDatasetModalView(props: Props) {
   const { onOk } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);

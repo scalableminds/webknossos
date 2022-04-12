@@ -301,7 +301,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
               className="centered-table-item"
               render={(record: TableEntry) => {
                 const isSharedByAll = record.sharedByCount === this.props.selectedUsers.length;
-                const badge = (
+                return (
                   <Tooltip
                     title={
                       isSharedByAll
@@ -324,7 +324,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                     />
                   </Tooltip>
                 );
-                return <React.Fragment>{badge}</React.Fragment>;
               }}
             />
           ) : null}

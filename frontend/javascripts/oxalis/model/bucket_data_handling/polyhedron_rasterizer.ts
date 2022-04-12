@@ -385,7 +385,7 @@ class PolyhedronRasterizer {
     // edges of that polygon is then drawn into the buffer.
     // After that, we know all line segments that belong to
     // the polyhedron.
-    // eslint-disable-next-line no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { deltaX, deltaY, deltaZ, shiftZ, buffer, pointsBuffer } = this;
 
     // build and rasterize convex hull of all xy-planes

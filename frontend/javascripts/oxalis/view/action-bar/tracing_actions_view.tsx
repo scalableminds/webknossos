@@ -244,9 +244,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     isReopenAllowed: false,
   };
 
-  modalWrapper: HTMLDivElement | null | undefined = null;
   reopenTimeout: ReturnType<typeof setTimeout> | null | undefined;
-  componentDidUpdate = () => {
+  
+  componentDidUpdate() {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
 
     if (this.props.task && localStorageEntry) {
@@ -255,7 +255,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       const reopenAllowedTime = features().taskReopenAllowedInSeconds * 1000;
 
       if (timeSinceFinish < reopenAllowedTime) {
-        // eslint-disable-next-line react/no-did-update-set-state
         this.setState({
           isReopenAllowed: true,
         });

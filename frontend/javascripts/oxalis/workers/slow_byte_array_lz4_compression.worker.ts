@@ -3,7 +3,6 @@
 // allows to introduce an artificial delay for compression/decompression.
 import { __compressLz4BlockHelper } from "oxalis/workers/byte_array_lz4_compression.worker";
 import { sleep } from "libs/utils";
-import { expose } from "./comlink_wrapper";
 let isSleepEnabled = false;
 export function setSlowCompression(isEnabled: boolean) {
   isSleepEnabled = isEnabled;

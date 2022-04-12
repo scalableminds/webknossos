@@ -137,12 +137,6 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     });
   };
 
-  handleBeforeUploadNML = () => {
-    this.setState({
-      isUploading: true,
-    });
-  };
-
   handleMergeProject = async (event: React.SyntheticEvent, isLocalMerge: boolean) => {
     event.preventDefault();
     const { selectedProject } = this.state;

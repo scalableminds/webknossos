@@ -798,6 +798,7 @@ class UtilsApi {
    * await api.utils.sleep(5000);
    */
   sleep(milliseconds: number): Promise<void> {
+    // eslint-disable-next-line no-promise-executor-return
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
   }
 

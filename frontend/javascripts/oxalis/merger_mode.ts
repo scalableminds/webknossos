@@ -303,6 +303,7 @@ function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
 }
 
 async function mergeSegmentsOfAlreadyExistingTrees(
+  // eslint-disable-next-line @typescript-eslint/default-param-last
   index = 0,
   mergerModeState: MergerModeState,
   onProgressUpdate: (arg0: number) => void,

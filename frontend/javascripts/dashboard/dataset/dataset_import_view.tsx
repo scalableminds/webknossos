@@ -6,6 +6,7 @@ import moment from "moment";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
+import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
 import type {
   APIDataSource,
   APIDataset,
@@ -43,7 +44,7 @@ import ImportGeneralComponent from "./import_general_component";
 import ImportSharingComponent from "./import_sharing_component";
 import ImportDeleteComponent from "./import_delete_component";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
-import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
+
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
@@ -60,7 +61,7 @@ type Props = OwnProps & StateProps;
 type PropsWithFormAndRouter = Props & {
   history: RouteComponentProps["history"];
 };
-type TabKey = "data" | "general" | "defaultConfig"| "sharing" | "deleteDataset";
+type TabKey = "data" | "general" | "defaultConfig"| "sharing" | "deleteDataset";
 enum AppliedSuggestionsEnum {
   Yes= "Yes",
   No= "No",
@@ -187,7 +188,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
           return messages["dataset.leave_with_unsaved_changes"];
         }
       }
-
+      // eslint-disable-next-line consistent-return, no-useless-return
       return;
     };
 
@@ -719,7 +720,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     const restMessages = this.state.messages.map(
       (
         message,
-        i, // eslint-disable-next-line react/no-array-index-key
+        i, 
       ) => (
         <Alert
           key={i}
@@ -739,19 +740,6 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       >
         {messageElements}
       </div>
-    );
-  }
-
-  hasNoAllowedTeams(): boolean {
-    const form = this.formRef.current;
-
-    if (!form) {
-      return false;
-    }
-
-    return (
-      form.getFieldValue(["dataset", "allowedTeams"]) == null ||
-      form.getFieldValue(["dataset", "allowedTeams"]).length === 0
     );
   }
 

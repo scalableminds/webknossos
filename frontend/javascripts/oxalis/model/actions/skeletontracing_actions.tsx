@@ -476,7 +476,7 @@ export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number): Me
   targetNodeId,
 });
 export const setTreeNameAction = (
-  name: string | null | undefined = null,
+  name: string | undefined | null = null,
   treeId?: number | null | undefined,
 ): SetTreeNameAction => ({
   type: "SET_TREE_NAME",

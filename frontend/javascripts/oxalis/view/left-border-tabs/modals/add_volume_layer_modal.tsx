@@ -2,7 +2,7 @@ import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import _ from "lodash";
-import type { AnnotationLayerDescriptor, APIAnnotationType, APIDataset } from "types/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import type { Tracing } from "oxalis/store";

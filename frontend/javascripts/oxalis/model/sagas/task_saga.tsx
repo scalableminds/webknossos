@@ -22,7 +22,7 @@ import {
 import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
-import Store, { DatasetConfiguration, RecommendedConfiguration, UserConfiguration } from "oxalis/store";
+import Store, {  RecommendedConfiguration } from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";

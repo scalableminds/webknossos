@@ -2,7 +2,7 @@
 import { OxalisState } from "oxalis/store";
 import type { Action } from "oxalis/model/actions/actions";
 import {select as _select, take as _take} from "typed-redux-saga";
-import type { Saga as _Saga, Task as _Task, Channel } from "redux-saga";
+import type { Channel } from "redux-saga";
 import { ActionPattern } from "redux-saga/effects";
 
 export function* select<T>(fn: (state: OxalisState) => T) {

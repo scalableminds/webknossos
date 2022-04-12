@@ -44,7 +44,6 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
 
   componentDidUpdate(prevProps: EditableTextLabelProp) {
     if (prevProps.value !== this.props.value) {
-      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         value: this.props.value,
       });

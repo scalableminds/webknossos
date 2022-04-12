@@ -1,7 +1,6 @@
 import { Select } from "antd";
 import { connect } from "react-redux";
 import React from "react";
-import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import debounceRender from "react-debounce-render";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";

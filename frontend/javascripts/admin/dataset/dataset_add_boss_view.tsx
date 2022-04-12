@@ -1,7 +1,6 @@
 import { Form, Input, Button, Col, Row } from "antd";
 import { connect } from "react-redux";
 import React from "react";
-import _ from "lodash";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { addWkConnectDataset } from "admin/admin_rest_api";

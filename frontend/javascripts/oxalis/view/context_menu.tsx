@@ -813,7 +813,6 @@ function ContextMenuContainer(props: Props) {
   }, [inputRef.current]);
   const { contextMenuPosition, hideContextMenu } = props;
   return (
-    <>
       <React.Fragment>
         <div
           className="node-context-menu-overlay"
@@ -855,7 +854,6 @@ function ContextMenuContainer(props: Props) {
           <ContextMenuInner {...props} inputRef={inputRef} />
         </div>
       </React.Fragment>
-    </>
   );
 }
 
@@ -989,11 +987,11 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
             ...props,
           });
   }
-
+  if (inputRef == null)
+    return null;
+  
   return (
     <React.Fragment>
-      {inputRef != null ? (
-        <>
           <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
           <Dropdown
             overlay={overlay}
@@ -1005,8 +1003,6 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
           >
             <div />
           </Dropdown>
-        </>
-      ) : null}
     </React.Fragment>
   );
 }

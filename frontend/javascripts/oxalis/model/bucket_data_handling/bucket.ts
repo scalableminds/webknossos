@@ -107,7 +107,6 @@ export const NULL_BUCKET = new NullBucket(false);
 export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
 // The type is used within the DataBucket class which is why
 // we have to define it here.
-// eslint-disable-next-line no-use-before-define
 export type Bucket = DataBucket | NullBucket;
 // This set saves whether a bucket is already added to the current undo volume batch
 // and gets cleared when a volume transaction is ended (marked by the action
@@ -305,7 +304,6 @@ export class DataBucket {
     return dataClone;
   }
 
-  // eslint-disable-next-line camelcase
   async label_DEPRECATED(labelFunc: (arg0: BucketDataArray) => void): Promise<void> {
     /*
      * It's not recommended to use this method (repeatedly), as it can be

@@ -99,8 +99,6 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       <div className="container">
         <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
         <div className="pull-right">
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'string
-          | nu... Remove this comment to see the full error message
           {this.state.updatedAt != null ? (
             <FormattedDate timestamp={this.state.updatedAt} />
           ) : null}{" "}

@@ -1,7 +1,8 @@
+import * as React from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
 import { Spin, Table, Tag } from "antd";
-import * as React from "react";
+import { EyeOutlined } from "@ant-design/icons";
 import type { APIAnnotationCompact } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import { getSharedAnnotations } from "admin/admin_rest_api";
@@ -9,24 +10,22 @@ import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import TextWithDescription from "components/text_with_description";
-import { EyeOutlined } from "@ant-design/icons";
+
 const { Column } = Table;
+
 const typeHint: APIAnnotationCompact[] = [];
-type Props = {
-  history: RouteComponentProps["history"];
-};
 type State = {
   annotations: Array<APIAnnotationCompact>;
   isLoading: boolean;
 };
 
-class SharedAnnotationsView extends React.PureComponent<Props, State> {
-  state = {
+class SharedAnnotationsView extends React.PureComponent<any, State> {
+  state: State = {
     annotations: [],
     isLoading: false,
   };
 
-  componentDidMount = () => {
+  componentDidMount() {
     this.fetchData();
   };
 
@@ -164,8 +163,8 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
     );
   };
 
-  render = () => (
-    <div className="TestExplorativeAnnotationsView">
+  render() { 
+    return (<div className="TestExplorativeAnnotationsView">
       <div
         className="clearfix"
         style={{
@@ -175,9 +174,9 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
       <Spin spinning={this.state.isLoading} size="large">
         {this.renderTable()}
       </Spin>
-    </div>
-  );
+    </div>);
+  }
 }
 
 
-export default withRouter<RouteComponentProps & Props, any>(SharedAnnotationsView);
+export default withRouter<RouteComponentProps, any>(SharedAnnotationsView);

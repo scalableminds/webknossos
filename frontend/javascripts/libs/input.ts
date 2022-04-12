@@ -257,12 +257,11 @@ export class InputKeyboard {
       KeyboardJS.unbind(...binding);
     }
   }
-} // The mouse module.
-// Events: over, out, leftClick, rightClick, leftDownMove
+} 
 
+// The mouse module.
+// Events: over, out, leftClick, rightClick, leftDownMove
 class InputMouseButton {
-  // Remove once https://github.com/babel/babel-eslint/pull/584 is merged
-  // eslint-disable-next-line no-use-before-define
   mouse: InputMouse;
   name: MouseButtonString;
   which: MouseButtonWhich;
@@ -285,7 +284,7 @@ class InputMouseButton {
 
   handleMouseDown(event: MouseEvent): void {
     // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
-    // $FlowIgnore[prop-missing] Safari doesn't support evt.buttons, but only evt.which is non-standardized
+    // Safari doesn't support evt.buttons, but only evt.which is non-standardized
     const eventWhich = event.which !== 0 ? event.which : 1;
 
     if (eventWhich === this.which) {
@@ -299,7 +298,7 @@ class InputMouseButton {
 
   handleMouseUp(event: MouseEvent, triggeredByTouch: boolean): void {
     // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
-    // $FlowIgnore[prop-missing] Safari doesn't support evt.buttons, but only evt.which is non-standardized
+    // Safari doesn't support evt.buttons, but only evt.which is non-standardized
     const eventWhich = event.which !== 0 ? event.which : 1;
 
     if (eventWhich === this.which && this.down) {

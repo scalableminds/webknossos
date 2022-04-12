@@ -98,7 +98,7 @@ function assertResponseLimit(collection) {
 }
 
 // ### Do with userToken
-let tokenRequestPromise: Promise<string> | null;
+let tokenRequestPromise: Promise<string> | null;
 
 function requestUserToken(): Promise<string> {
   if (tokenRequestPromise) {

@@ -43,6 +43,8 @@ function NewAnnotationLink({
   onShowCreateExplorativeModal: () => void,
   onCloseCreateExplorativeModal: () => void,
 }) {
+  if (isReloading) return null;
+  
   const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
   const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
     ? "true"
@@ -51,9 +53,8 @@ function NewAnnotationLink({
     firstSegmentationLayer != null && supportsFallback
       ? `?fallbackLayerName=${firstSegmentationLayer.name}`
       : "";
+
   return (
-    <React.Fragment>
-      {isReloading ? null : (
         <div>
           <LinkWithDisabled
             to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid${fallbackLayerGetParameter}`}
@@ -90,8 +91,6 @@ function NewAnnotationLink({
             <CreateExplorativeModal datasetId={dataset} onClose={onCloseCreateExplorativeModal} />
           ) : null}
         </div>
-      )}
-    </React.Fragment>
   );
 }
 

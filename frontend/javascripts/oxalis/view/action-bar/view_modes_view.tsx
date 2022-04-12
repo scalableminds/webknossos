@@ -22,10 +22,6 @@ type DispatchProps = {
 type Props = StateProps & DispatchProps;
 
 class ViewModesView extends PureComponent<Props, {}> {
-  blurElement = (event: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
-    event.target.blur();
-  };
 
   handleChange = (mode: ViewMode) => {
     // If we switch back from any arbitrary mode we stop recording.

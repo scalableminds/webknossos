@@ -240,6 +240,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           }
         }
 
+        // eslint-disable-next-line no-useless-return, consistent-return
         return;
       };
 
@@ -706,7 +707,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               hidden={hasOnlyOneDatastoreOrNone}
             />
             {features().jobsEnabled && needsConversion ? (
-              <React.Fragment>
                 <FormItemWithInfo
                   name="scale"
                   label="Voxel Size"
@@ -741,7 +741,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     }}
                   />
                 </FormItemWithInfo>
-              </React.Fragment>
             ) : null}
 
             <FormItem

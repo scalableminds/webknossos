@@ -14,9 +14,7 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import {
-  createMeshFromBufferAction,
   deleteMeshAction,
-  importIsosurfaceFromStlAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
@@ -31,16 +29,12 @@ import {
   getMappingInfo,
   ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import {
   maybeFetchMeshFiles,
   getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { readFileAsArrayBuffer } from "libs/read_file";
-import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import {
   updateDatasetSettingAction,
   updateTemporarySettingAction,
@@ -64,15 +58,18 @@ import type {
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import features from "features";
+
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
 const refreshInterval = 5000;
+
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111],
   // ASCII codes for ISO
   cellIdIndex: 3, // Write cell index after the isosurfaceMarker
 };
 const segmentsTabId = "segment-list";
+
 type StateProps = {
   isosurfaces: Record<number, IsosurfaceInformation>;
   dataset: APIDataset;

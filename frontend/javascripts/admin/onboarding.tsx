@@ -662,7 +662,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     }
   }
 
-  render = () => {
+  render() {
     const availableSteps = this.getAvailableSteps();
     const currentStepContent = availableSteps[this.state.currentStep].component();
     return (

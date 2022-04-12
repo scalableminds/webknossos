@@ -78,7 +78,6 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
 
         const userPermission = getPermissionGroupOfUser(singleUserMaybe);
-        // eslint-disable-next-line react/no-did-update-set-state
         this.setState({
           selectedTeams: newSelectedTeams,
           selectedPermission: userPermission,

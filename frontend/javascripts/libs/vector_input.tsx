@@ -36,7 +36,6 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
 
   componentDidUpdate(prevProps: BaseProps<T>) {
     if (!this.state.isEditing && prevProps.value !== this.props.value) {
-      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         isValid: true,
         text: this.getText(this.props.value),

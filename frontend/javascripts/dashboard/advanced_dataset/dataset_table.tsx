@@ -1,7 +1,7 @@
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Table, Tag, Tooltip } from "antd";
-import type { SorterResult, SortOrder } from "antd/lib/table/interface"
+import type { SorterResult } from "antd/lib/table/interface"
 import * as React from "react";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'dice... Remove this comment to see the full error message
@@ -24,9 +24,11 @@ import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
+
 const { Column } = Table;
 const typeHint: APIMaybeUnimportedDataset[] = [];
 const useLruRank = true;
+
 type Props = {
   datasets: Array<APIMaybeUnimportedDataset>;
   searchQuery: string;

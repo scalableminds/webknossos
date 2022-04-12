@@ -334,7 +334,6 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
 
   componentDidUpdate(prevProps: UserBoundingBoxInputProps) {
     if (!this.state.isEditing && prevProps.value !== this.props.value) {
-      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         isValid: true,
         text: this.computeText(this.props.value),
@@ -342,7 +341,6 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     }
 
     if (prevProps.name !== this.props.name) {
-      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         name: this.props.name,
       });

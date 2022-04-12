@@ -45,7 +45,6 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   onChangeDataset: Record<keyof DatasetConfiguration, (...args: Array<any>) => any>;
 
   // This cannot be changed to componentDidMount, because this.onChangeUser is accessed in render
-  // eslint-disable-next-line camelcase
   UNSAFE_componentWillMount() {
     // cache onChange handler
     this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName: keyof UserConfiguration) =>

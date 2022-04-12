@@ -264,7 +264,6 @@ function* getAgglomerateSkeletonTracing(
       );
 
       if (agglomerateTooLargeMessages.length > 0) {
-        // eslint-disable-next-line no-throw-literal
         throw {
           ...e,
           messages: [

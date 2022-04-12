@@ -101,7 +101,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       prevProps.data !== this.props.data
     ) {
       const { min, max } = getMinAndMax(this.props);
-      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         currentMin: min,
         currentMax: max,

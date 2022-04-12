@@ -13,7 +13,7 @@ export function PublicationViewWithHeader() {
     context.fetchDatasets();
   }, []);
 
-  function handleSearch(event: React.SyntheticEvent) {
+  function handleSearch(event: React.SyntheticEvent<HTMLInputElement>) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     setSearchQuery(event.target.value);
   }
@@ -87,7 +87,6 @@ function PublicationView(props: Props) {
     );
 
   return (
-    <>
       <List
         // @ts-expect-error ts-migrate(2740) FIXME: Type 'CollectionChain<any[]>' is missing the follo... Remove this comment to see the full error message
         dataSource={datasetsByPublication}
@@ -102,7 +101,6 @@ function PublicationView(props: Props) {
           </List.Item>
         )}
       />
-    </>
   );
 }
 

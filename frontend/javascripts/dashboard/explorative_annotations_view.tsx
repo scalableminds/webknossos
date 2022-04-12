@@ -1,5 +1,4 @@
-import { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { RouteComponentProps, Link, withRouter } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Spin, Input, Table, Button, Modal, Tooltip } from "antd";
@@ -67,7 +66,7 @@ type State = {
   tags: Array<string>;
   isLoading: boolean;
 };
-type PartialState = Pick<State, 'searchQuery' | 'shouldShowArchivedTracings'>;
+type PartialState = Pick<State, "searchQuery" | "shouldShowArchivedTracings">;
 const persistence = new Persistence<PartialState>(
   {
     searchQuery: PropTypes.string,

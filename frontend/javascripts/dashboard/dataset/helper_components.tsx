@@ -1,5 +1,5 @@
 import { Alert, Form, Tooltip, Modal } from "antd";
-import type { FieldError } from 'rc-field-form/es/interface';
+import type { FieldError } from "rc-field-form/es/interface";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -72,7 +72,6 @@ export class RetryingErrorBoundary extends React.Component<
 
   // This cannot be changed to componentDidUpdate, because we cannot distinguish whether the parent
   // component actually changed
-  // eslint-disable-next-line camelcase
   UNSAFE_componentWillReceiveProps() {
     this.setState({
       error: null,

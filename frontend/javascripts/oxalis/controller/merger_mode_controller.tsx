@@ -1,6 +1,5 @@
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
-import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
 import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 import MergerModeModalView from "oxalis/view/merger_mode_modal_view";
@@ -69,9 +68,10 @@ class MergerModeController extends PureComponent<MergerModeControllerProps, Stat
 
   render() {
     const { isMergerModeModalVisible, isMergerModeModalClosable } = this.state;
+
+    if (!isMergerModeModalVisible) return null
+    
     return (
-      <React.Fragment>
-        {isMergerModeModalVisible ? (
           <MergerModeModalView
             isCloseable={isMergerModeModalClosable}
             onClose={() =>
@@ -81,8 +81,6 @@ class MergerModeController extends PureComponent<MergerModeControllerProps, Stat
             }
             progress={this.state.mergerModeProgress}
           />
-        ) : null}
-      </React.Fragment>
     );
   }
 }

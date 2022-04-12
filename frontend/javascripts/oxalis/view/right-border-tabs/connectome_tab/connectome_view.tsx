@@ -309,13 +309,6 @@ class ConnectomeView extends React.Component<Props, State> {
     }
   }
 
-  resetSkeleton() {
-    const { segmentationLayer } = this.props;
-    if (segmentationLayer == null) return;
-    Store.dispatch(removeConnectomeTracingAction(segmentationLayer.name));
-    Store.dispatch(initializeConnectomeTracingAction(segmentationLayer.name));
-  }
-
   maybeUpdateSkeleton(prevSegmentationLayer?: APISegmentationLayer | null | undefined) {
     const { segmentationLayer } = this.props;
 
@@ -424,13 +417,11 @@ class ConnectomeView extends React.Component<Props, State> {
       ),
     );
     // Auto-load the skeletons of the active agglomerates and check all occurences of the same agglomerate
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'topLevelTreeNode' implicitly has an 'an... Remove this comment to see the full error message
     const topLevelCheckedKeys = treeData.map((topLevelTreeNode) => topLevelTreeNode.key);
     const checkedKeys = Array.from(
       mapAndFilterTreeData(
         treeData,
         (node) => node.key,
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'topLevelKey' implicitly has an 'any' ty... Remove this comment to see the full error message
         (node) => topLevelCheckedKeys.some((topLevelKey) => node.key.startsWith(topLevelKey)),
       ),
     );

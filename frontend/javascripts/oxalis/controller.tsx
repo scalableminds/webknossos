@@ -56,6 +56,7 @@ type State = {
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'keyboardNoLoop' has no initializer and i... Remove this comment to see the full error message
+  // eslint-disable-next-line react/no-unused-class-component-methods
   keyboardNoLoop: InputKeyboardNoLoop;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isMounted' has no initializer and is not... Remove this comment to see the full error message
   isMounted: boolean;
@@ -142,7 +143,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   modelFetchDone() {
-    const beforeUnload = (newLocation: HistoryLocation<unknown>, action: HistoryAction): string | false | void => {
+    const beforeUnload = (
+      newLocation: HistoryLocation<unknown>,
+      action: HistoryAction,
+    ): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
@@ -168,6 +172,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         }
       }
 
+      // eslint-disable-next-line no-useless-return, consistent-return
       return;
     };
 
@@ -317,6 +322,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       },
     });
 
+    // eslint-disable-next-line react/no-unused-class-component-methods
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
   }
 
@@ -377,8 +383,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       return (
         <div className="cover-whole-screen">
           <Row
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-            type="flex"
             justify="center"
             style={{
               padding: 50,

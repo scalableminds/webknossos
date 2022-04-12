@@ -242,7 +242,6 @@ export default function VersionEntry({
   );
   const { description, icon } = getDescriptionForBatch(actions);
   return (
-    <React.Fragment>
       <List.Item
         style={{
           cursor: "pointer",
@@ -271,6 +270,5 @@ export default function VersionEntry({
           }
         />
       </List.Item>
-    </React.Fragment>
   );
 }

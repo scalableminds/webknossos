@@ -3,15 +3,17 @@ import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
+import { APIDataLayer } from "types/api_flow_types";
+import { BoundingBoxObject } from "oxalis/store";
 import {
   Hideable,
   FormItemWithInfo,
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "./helper_components";
-import { APIDataLayer } from "types/api_flow_types";
-import { BoundingBoxObject } from "oxalis/store";
+
 const FormItem = Form.Item;
+
 export default function SimpleAdvancedDataForm({
   isReadOnlyDataset,
   form,
@@ -103,7 +105,7 @@ export default function SimpleAdvancedDataForm({
   );
 }
 
-function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }: { isReadOnlyDataset : boolean, form:Record<string, any>, dataSource:Record<string, any>}) {
+function SimpleDatasetForm({ isReadOnlyDataset, dataSource }: { isReadOnlyDataset : boolean, dataSource:Record<string, any>}) {
   return (
     <div>
       <List

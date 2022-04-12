@@ -31,7 +31,6 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
 
   componentDidUpdate(prevProps: Props) {
     if (prevProps.value !== this.props.value) {
-      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         selectedTeams: this.props.value ? _.flatten([this.props.value]) : [],
       });

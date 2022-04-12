@@ -158,6 +158,139 @@ function getSegmentTooltip(segment: Segment) {
   )}`;
 }
 
+function _MeshInfoItem(props: {
+  segment: Segment;
+  isSelectedInList: boolean;
+  isHovered: boolean;
+  isosurface: IsosurfaceInformation | null | undefined;
+  handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
+  visibleSegmentationLayer: APISegmentationLayer | null | undefined;
+  setPosition: (arg0: Vector3) => void;
+}) {
+  const dispatch = useDispatch();
+
+  const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
+    dispatch(updateIsosurfaceVisibilityAction(layerName, id, isVisible));
+  };
+
+  const { segment, isSelectedInList, isHovered, isosurface } = props;
+  const deemphasizedStyle = {
+    fontStyle: "italic",
+    color: "#989898",
+  };
+
+  if (!isosurface) {
+    if (isSelectedInList) {
+      return (
+        <div
+          style={{ ...deemphasizedStyle, marginLeft: 8 }}
+          onContextMenu={(evt) => {
+            evt.preventDefault();
+            props.handleSegmentDropdownMenuVisibility(segment.id, true);
+          }}
+        >
+          No mesh loaded. Use right-click to add one.
+        </div>
+      );
+    }
+
+    return null;
+  }
+
+  const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
+  const textStyle = isVisible ? {} : deemphasizedStyle;
+  const downloadButton = (
+    <Tooltip title="Download Mesh">
+      <VerticalAlignBottomOutlined
+        key="download-button"
+        onClick={() =>
+          Store.dispatch(
+            triggerIsosurfaceDownloadAction(segment.name ? segment.name : "mesh", segment.id),
+          )
+        }
+      />
+    </Tooltip>
+  );
+  const deleteButton = (
+    <Tooltip title="Remove Mesh">
+      <DeleteOutlined
+        key="delete-button"
+        onClick={() => {
+          if (!props.visibleSegmentationLayer) {
+            return;
+          }
+
+          Store.dispatch(removeIsosurfaceAction(props.visibleSegmentationLayer.name, segment.id));
+        }}
+      />
+    </Tooltip>
+  );
+  const toggleVisibilityCheckbox = (
+    <Tooltip title="Change visibility">
+      <Checkbox
+        checked={isVisible}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.SyntheticEvent) => void' is no... Remove this comment to see the full error message
+        onChange={(event: React.SyntheticEvent) => {
+          if (!props.visibleSegmentationLayer) {
+            return;
+          }
+
+          onChangeMeshVisibility(
+            props.visibleSegmentationLayer.name,
+            segment.id,
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
+            event.target.checked,
+          );
+        }}
+      />
+    </Tooltip>
+  );
+  const actionVisibility = isLoading || isHovered ? "visible" : "hidden";
+  return (
+    <div
+      style={{
+        padding: 0,
+        cursor: "pointer",
+      }}
+      key={segment.id}
+    >
+      <div
+        style={{
+          display: "flex",
+        }}
+      >
+        <div
+          className={classnames("segment-list-item", {
+            "is-selected-cell": isSelectedInList,
+          })}
+        >
+          {toggleVisibilityCheckbox}
+          <span
+            onClick={() => {
+              props.setPosition(seedPosition);
+            }}
+            style={{ ...textStyle, marginLeft: 8 }}
+          >
+            {isPrecomputed ? "Mesh (precomputed)" : "Mesh (ad-hoc computed)"}
+          </span>
+        </div>
+        <div
+          style={{
+            visibility: actionVisibility,
+            marginLeft: 6,
+          }}
+        >
+          {getRefreshButton(segment, isPrecomputed, isLoading, props.visibleSegmentationLayer)}
+          {downloadButton}
+          {deleteButton}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const MeshInfoItem = React.memo(_MeshInfoItem);
+
 function _SegmentListItem({
   segment,
   mapId,
@@ -327,138 +460,7 @@ function _SegmentListItem({
 
 const SegmentListItem = React.memo<Props>(_SegmentListItem);
 
-function _MeshInfoItem(props: {
-  segment: Segment;
-  isSelectedInList: boolean;
-  isHovered: boolean;
-  isosurface: IsosurfaceInformation | null | undefined;
-  handleSegmentDropdownMenuVisibility: (arg0: number, arg1: boolean) => void;
-  visibleSegmentationLayer: APISegmentationLayer | null | undefined;
-  setPosition: (arg0: Vector3) => void;
-}) {
-  const dispatch = useDispatch();
 
-  const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
-    dispatch(updateIsosurfaceVisibilityAction(layerName, id, isVisible));
-  };
-
-  const { segment, isSelectedInList, isHovered, isosurface } = props;
-  const deemphasizedStyle = {
-    fontStyle: "italic",
-    color: "#989898",
-  };
-
-  if (!isosurface) {
-    if (isSelectedInList) {
-      return (
-        <div
-          style={{ ...deemphasizedStyle, marginLeft: 8 }}
-          onContextMenu={(evt) => {
-            evt.preventDefault();
-            props.handleSegmentDropdownMenuVisibility(segment.id, true);
-          }}
-        >
-          No mesh loaded. Use right-click to add one.
-        </div>
-      );
-    }
-
-    return null;
-  }
-
-  const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
-  const textStyle = isVisible ? {} : deemphasizedStyle;
-  const downloadButton = (
-    <Tooltip title="Download Mesh">
-      <VerticalAlignBottomOutlined
-        key="download-button"
-        onClick={() =>
-          Store.dispatch(
-            triggerIsosurfaceDownloadAction(segment.name ? segment.name : "mesh", segment.id),
-          )
-        }
-      />
-    </Tooltip>
-  );
-  const deleteButton = (
-    <Tooltip title="Remove Mesh">
-      <DeleteOutlined
-        key="delete-button"
-        onClick={() => {
-          if (!props.visibleSegmentationLayer) {
-            return;
-          }
-
-          Store.dispatch(removeIsosurfaceAction(props.visibleSegmentationLayer.name, segment.id));
-        }}
-      />
-    </Tooltip>
-  );
-  const toggleVisibilityCheckbox = (
-    <Tooltip title="Change visibility">
-      <Checkbox
-        checked={isVisible}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.SyntheticEvent) => void' is no... Remove this comment to see the full error message
-        onChange={(event: React.SyntheticEvent) => {
-          if (!props.visibleSegmentationLayer) {
-            return;
-          }
-
-          onChangeMeshVisibility(
-            props.visibleSegmentationLayer.name,
-            segment.id,
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
-            event.target.checked,
-          );
-        }}
-      />
-    </Tooltip>
-  );
-  const actionVisibility = isLoading || isHovered ? "visible" : "hidden";
-  return (
-    <div
-      style={{
-        padding: 0,
-        cursor: "pointer",
-      }}
-      key={segment.id}
-    >
-      <div
-        style={{
-          display: "flex",
-        }}
-      >
-        <div
-          className={classnames("segment-list-item", {
-            "is-selected-cell": isSelectedInList,
-          })}
-        >
-          {toggleVisibilityCheckbox}
-          <span
-            onClick={() => {
-              props.setPosition(seedPosition);
-            }}
-            style={{ ...textStyle, marginLeft: 8 }}
-          >
-            {isPrecomputed ? "Mesh (precomputed)" : "Mesh (ad-hoc computed)"}
-          </span>
-        </div>
-        <div
-          style={{
-            visibility: actionVisibility,
-            marginLeft: 6,
-          }}
-        >
-          {getRefreshButton(segment, isPrecomputed, isLoading, props.visibleSegmentationLayer)}
-          {downloadButton}
-          {deleteButton}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const MeshInfoItem = React.memo(_MeshInfoItem);
 
 function getRefreshButton(
   segment: Segment,

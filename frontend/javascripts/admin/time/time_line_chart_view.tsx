@@ -17,7 +17,6 @@ type Props = {
   dateRange: DateRange;
 };
 export default class TimeTrackingChart extends React.PureComponent<Props> {
-  additionalCSS: HTMLStyleElement | null | undefined = null;
   chartScrollElement: HTMLElement | null | undefined = null;
 
   componentWillUnmount() {

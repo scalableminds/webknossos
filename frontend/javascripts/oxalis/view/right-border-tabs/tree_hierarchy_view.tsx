@@ -54,7 +54,6 @@ type OwnProps = {
   activeTreeId: number | null | undefined;
   activeGroupId: number | null | undefined;
   treeGroups: Array<TreeGroup>;
-  // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string;
   trees: TreeMap;
   selectedTrees: Array<number>;
@@ -139,11 +138,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       prevProps.activeGroupId !== this.props.activeGroupId;
 
     if (didTreeDataChange(prevProps, this.props) && didSearchTermChange) {
-      // eslint-disable-next-line react/no-did-update-set-state
       await this.setState({
         searchFocusOffset: 1,
       });
-      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         searchFocusOffset: 0,
       });

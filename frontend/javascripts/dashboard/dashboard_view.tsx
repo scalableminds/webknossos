@@ -83,7 +83,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
   componentDidUpdate(prevProps: PropsWithRouter) {
     if (this.props.initialTabKey != null && prevProps.initialTabKey !== this.props.initialTabKey) {
-      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         activeTabKey: this.props.initialTabKey,
       });

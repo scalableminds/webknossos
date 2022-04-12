@@ -36,7 +36,6 @@ class TextWithDescription extends React.PureComponent<Props> {
       </div>
     );
     return (
-      <React.Fragment>
         <span
           // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
           className={hasDescription ? "flex-container" : null}
@@ -92,7 +91,6 @@ class TextWithDescription extends React.PureComponent<Props> {
             )}
           </span>
         </span>
-      </React.Fragment>
     );
   }
 }

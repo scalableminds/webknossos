@@ -7,7 +7,7 @@
 
 import type { OxalisState } from "oxalis/store";
 import { updateKey, updateKey2, updateKey3, updateKey4 } from "oxalis/model/helpers/deep_update";
-import _ from "lodash";
+
 export function test1(state: OxalisState) {
   // @ts-expect-error
   updateKey(state, "notExisting", {

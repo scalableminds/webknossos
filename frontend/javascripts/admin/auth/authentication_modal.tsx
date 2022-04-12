@@ -80,7 +80,7 @@ type AuthenticationProps<R> = R & {
 export function withAuthentication<P, C extends ComponentType<P>>(
   WrappedComponent: C,
 ): ComponentType<AuthenticationProps<P>> {
-  return (props: AuthenticationProps<P>) => {
+  return function Wrapper(props: AuthenticationProps<P>) {
     const [isAuthenticationModalVisible, setIsAuthenticationModalVisible] = useState(false);
     const { activeUser, authenticationMessage, onClick: originalOnClick, ...rest } = props;
 

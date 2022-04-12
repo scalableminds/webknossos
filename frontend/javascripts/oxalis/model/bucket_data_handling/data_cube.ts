@@ -363,7 +363,6 @@ class DataCube {
     }
   }
 
-  // eslint-disable-next-line camelcase
   async _labelVoxelInAllResolutions_DEPRECATED(
     voxel: Vector3,
     label: number,
@@ -384,7 +383,6 @@ class DataCube {
     this.triggerPushQueue();
   }
 
-  // eslint-disable-next-line camelcase
   async _labelVoxelInResolution_DEPRECATED(
     voxel: Vector3,
     label: number,

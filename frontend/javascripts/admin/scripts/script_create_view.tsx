@@ -12,7 +12,7 @@ import {
   createScript,
   getScript,
 } from "admin/admin_rest_api";
-import { PropertySafetyFilled } from "@ant-design/icons";
+
 const FormItem = Form.Item;
 type OwnProps = {
   scriptId?: string | null | undefined;
@@ -26,7 +26,7 @@ type PropsWithRouter = Props & {
 };
 
 function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
-  const [users, setUsers] = useState<Array<APIUser>>([]);
+  const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
   useEffect(() => {

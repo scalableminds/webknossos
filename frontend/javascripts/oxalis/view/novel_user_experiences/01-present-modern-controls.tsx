@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
 import { OxalisState } from "oxalis/store";
+
 export default function PresentModernControls() {
   const dispatch = useDispatch();
   const activeUser = useSelector((state: OxalisState) => state.activeUser);

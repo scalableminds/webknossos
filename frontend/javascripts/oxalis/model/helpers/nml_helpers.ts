@@ -28,14 +28,14 @@ import * as Utils from "libs/utils";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 // NML Defaults
-const DEFAULT_COLOR = [1, 0, 0];
-const TASK_BOUNDING_BOX_COLOR = [0, 1, 0];
+const DEFAULT_COLOR: Vector3 = [1, 0, 0];
+const TASK_BOUNDING_BOX_COLOR: Vector3 = [0, 1, 0];
 const DEFAULT_VIEWPORT = 0;
 const DEFAULT_RESOLUTION = 0;
 const DEFAULT_BITDEPTH = 0;
 const DEFAULT_INTERPOLATION = false;
 const DEFAULT_TIMESTAMP = 0;
-const DEFAULT_ROTATION = [0, 0, 0];
+const DEFAULT_ROTATION: Vector3 = [0, 0, 0];
 const DEFAULT_GROUP_ID = null;
 const DEFAULT_USER_BOUNDING_BOX_VISIBILITY = true;
 
@@ -348,9 +348,9 @@ function serializeComments(trees: Array<Tree>): Array<string> {
 }
 
 function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): Array<string> {
-  // @ts-expect-error ts-migrate(7024) FIXME: Function implicitly has return type 'any' because ... Remove this comment to see the full error message
-  const deepFindTree = (group) =>
-    trees.find((tree) => tree.groupId === group.groupId) || _.some(group.children, deepFindTree);
+
+  const deepFindTree = (group: TreeGroup): boolean =>
+    (trees.find((tree) => tree.groupId === group.groupId) != null) || _.some(group.children, deepFindTree);
 
   // Only serialize treeGroups that contain at least one tree at some level in their child hierarchy
   const nonEmptyTreeGroups = treeGroups.filter(deepFindTree);
@@ -585,8 +585,7 @@ function getUnusedUserBoundingBoxId(
   return maxId + 1;
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'attr' implicitly has an 'any' type.
-function parseBoundingBoxObject(attr): BoundingBoxObject {
+function parseBoundingBoxObject(attr: Record<any, any>): BoundingBoxObject {
   const boundingBoxObject = {
     topLeft: [
       _parseInt(attr, "topLeftX"),
@@ -617,14 +616,11 @@ export function parseNml(nmlString: string): Promise<{
     let currentTree: MutableTree | null | undefined = null;
     let currentGroup: TreeGroup | null | undefined = null;
     const groupIdToParent: Record<number, TreeGroup | null | undefined> = {};
-    const nodeIdToTreeId = {};
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'userBoundingBoxes' implicitly has type '... Remove this comment to see the full error message
-    const userBoundingBoxes = [];
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'datasetName' implicitly has type 'any' i... Remove this comment to see the full error message
-    let datasetName = null;
+    const nodeIdToTreeId: Record<number, number> = {};
+    const userBoundingBoxes: UserBoundingBox[] = [];
+    let datasetName: string | null = null;
     parser
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
-      .on("tagopen", (node) => {
+      .on("tagopen", (node: Record<string, string>) => {
         const attr = Saxophone.parseAttrs(node.attrs);
 
         switch (node.name) {
@@ -638,7 +634,6 @@ export function parseNml(nmlString: string): Promise<{
 
             currentTree = {
               treeId: _parseInt(attr, "id"),
-              // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
               color: _parseColor(attr, DEFAULT_COLOR),
               // In Knossos NMLs, there is usually a tree comment instead of a name
               name: _parseEntities(attr, "name", "") || _parseEntities(attr, "comment", ""),
@@ -661,12 +656,12 @@ export function parseNml(nmlString: string): Promise<{
 
             const currentNode = {
               id: nodeId,
-              position: [_parseFloat(attr, "x"), _parseFloat(attr, "y"), _parseFloat(attr, "z")],
+              position: [_parseFloat(attr, "x"), _parseFloat(attr, "y"), _parseFloat(attr, "z")] as Vector3,
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
                 _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),
                 _parseFloat(attr, "rotZ", DEFAULT_ROTATION[2]),
-              ],
+              ] as Vector3,
               interpolation: _parseBool(attr, "interpolation", DEFAULT_INTERPOLATION),
               bitDepth: _parseInt(attr, "bitDepth", DEFAULT_BITDEPTH),
               viewport: _parseInt(attr, "inVp", DEFAULT_VIEWPORT),
@@ -678,9 +673,7 @@ export function parseNml(nmlString: string): Promise<{
               throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
             if (existingNodeIds.has(currentNode.id))
               throw new NmlParseError(`${messages["nml.duplicate_node_id"]} ${currentNode.id}`);
-            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             nodeIdToTreeId[nodeId] = currentTree.treeId;
-            // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ id: number; position: number[]... Remove this comment to see the full error message
             currentTree.nodes.mutableSet(currentNode.id, currentNode);
             existingNodeIds.add(currentNode.id);
             break;
@@ -723,7 +716,6 @@ export function parseNml(nmlString: string): Promise<{
               nodeId: _parseInt(attr, "node"),
               content: _parseEntities(attr, "content"),
             };
-            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             const tree = trees[nodeIdToTreeId[currentComment.nodeId]];
             if (tree == null)
               throw new NmlParseError(
@@ -738,7 +730,6 @@ export function parseNml(nmlString: string): Promise<{
               nodeId: _parseInt(attr, "id"),
               timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
             };
-            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             const tree = trees[nodeIdToTreeId[currentBranchpoint.nodeId]];
             if (tree == null)
               throw new NmlParseError(
@@ -778,14 +769,12 @@ export function parseNml(nmlString: string): Promise<{
             const parsedUserBoundingBoxId = _parseInt(attr, "id", 0);
 
             const userBoundingBoxId = getUnusedUserBoundingBoxId(
-              // @ts-expect-error ts-migrate(7005) FIXME: Variable 'userBoundingBoxes' implicitly has an 'an... Remove this comment to see the full error message
               userBoundingBoxes,
               parsedUserBoundingBoxId,
             );
             const boundingBoxObject = parseBoundingBoxObject(attr);
             const userBoundingBox = {
               boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
-              // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
               color: _parseColor(attr, DEFAULT_COLOR),
               id: userBoundingBoxId,
               isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
@@ -796,7 +785,6 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "taskBoundingBox": {
-            // @ts-expect-error ts-migrate(7005) FIXME: Variable 'userBoundingBoxes' implicitly has an 'an... Remove this comment to see the full error message
             const userBoundingBoxId = getUnusedUserBoundingBoxId(userBoundingBoxes);
             const boundingBoxObject = parseBoundingBoxObject(attr);
             const userBoundingBox = {
@@ -814,8 +802,7 @@ export function parseNml(nmlString: string): Promise<{
             break;
         }
       })
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
-      .on("tagclose", (node) => {
+      .on("tagclose", (node: Record<string, string>) => {
         switch (node.name) {
           case "thing": {
             if (currentTree != null) {
@@ -879,9 +866,7 @@ export function parseNml(nmlString: string): Promise<{
         resolve({
           trees,
           treeGroups,
-          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'datasetName' implicitly has an 'any' typ... Remove this comment to see the full error message
           datasetName,
-          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'userBoundingBoxes' implicitly has an 'an... Remove this comment to see the full error message
           userBoundingBoxes,
         });
       })

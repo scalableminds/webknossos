@@ -12,6 +12,7 @@ import {
   List,
   Spin,
 } from "antd";
+import { Location as HistoryLocation, Action as HistoryAction } from "history";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -155,7 +156,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
-  blockTimeoutId: ReturnType<typeof setTimeout> | null | undefined;
+  blockTimeoutId: number | null = null;
   formRef = React.createRef<FormInstance>();
 
   componentDidMount() {
@@ -221,8 +222,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         isUploading: true,
       });
 
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newLocation' implicitly has an 'any' ty... Remove this comment to see the full error message
-      const beforeUnload = (newLocation, action) => {
+      const beforeUnload = (newLocation: HistoryLocation<unknown>, action: HistoryAction): string | false | void => {
         // Only show the prompt if this is a proper beforeUnload event from the browser
         // or the pathname changed
         // This check has to be done because history.block triggers this function even if only the url hash changed
@@ -234,18 +234,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
             this.blockTimeoutId = window.setTimeout(() => {
               // restore the event handler in case a user chose to stay on the page
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
+              // @ts-ignore
               window.onbeforeunload = beforeUnload;
             }, 500);
             return messages["dataset.leave_during_upload"];
           }
         }
 
-        return null;
+        return;
       };
 
       this.unblock = this.props.history.block(beforeUnload);
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
+      // @ts-ignore
       window.onbeforeunload = beforeUnload;
       const datasetId: APIDatasetId = {
         name: formValues.name,
@@ -370,8 +370,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload.on("filesAdded", () => {
         resumableUpload.upload();
       });
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
-      resumableUpload.on("fileError", (file, message) => {
+      resumableUpload.on("fileError", (file: File, message: string) => {
         Toast.error(message);
         this.setState({
           isUploading: false,
@@ -476,8 +475,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     );
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'files' implicitly has an 'any' type.
-  validateFiles = (files) => {
+  validateFiles = (files: File[]) => {
     if (files.length === 0) {
       return;
     }
@@ -541,8 +539,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     this.handleNeedsConversionInfo(needsConversion);
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'needsConversion' implicitly has an 'any... Remove this comment to see the full error message
-  handleNeedsConversionInfo = (needsConversion) => {
+  handleNeedsConversionInfo = (needsConversion: boolean) => {
     const form = this.formRef.current;
 
     if (!form) {
@@ -580,8 +577,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'files' implicitly has an 'any' type.
-  maybeSetUploadName = (files) => {
+  maybeSetUploadName = (files: File[]) => {
     const form = this.formRef.current;
 
     if (!form) {
@@ -759,17 +755,15 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
                 {
                   validator: syncValidator(
-                    (files) =>
-                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
-                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, "zip"))
+                    (files: File[]) =>
+                      files.filter((file: File) => Utils.isFileExtensionEqualTo(file.path, "zip"))
                         .length <= 1,
                     "You cannot upload more than one archive.",
                   ),
                 },
                 {
                   validator: syncValidator(
-                    (files) =>
-                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
+                    (files: File[]) =>
                       files.filter((file) =>
                         Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]),
                       ).length === 0,
@@ -777,8 +771,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   ),
                 },
                 {
-                  validator: syncValidator((files) => {
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
+                  validator: syncValidator((files: File[]) => {
                     const archives = files.filter((file) =>
                       Utils.isFileExtensionEqualTo(file.path, "zip"),
                     );
@@ -787,12 +780,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   }, "Archives cannot be mixed with other files."),
                 },
                 {
-                  validator: syncValidator((files) => {
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
+                  validator: syncValidator((files: File[]) => {
                     const wkwFiles = files.filter((file) =>
                       Utils.isFileExtensionEqualTo(file.path, "wkw"),
                     );
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
                     const imageFiles = files.filter((file) =>
                       Utils.isFileExtensionEqualTo(file.path, [
                         "tif",
@@ -815,7 +806,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             >
               <FileUploadArea
                 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'files' implicitly has an 'any' type.
-                onChange={(files) => {
+                onChange={(files: File[]) => {
                   this.maybeSetUploadName(files);
                   this.validateFiles(files);
                 }}

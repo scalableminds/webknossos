@@ -181,7 +181,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
           this.blockTimeoutId = window.setTimeout(() => {
             // restore the event handler in case a user chose to stay on the page
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
+            // @ts-ignore
             window.onbeforeunload = beforeUnload;
           }, 500);
           return messages["dataset.leave_with_unsaved_changes"];
@@ -192,7 +192,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     };
 
     this.unblock = this.props.history.block(beforeUnload);
-    // @ts-expect-error ts-migrate(2322) FIXME: Type '(newLocation: any, action: any) => string | ... Remove this comment to see the full error message
+    // @ts-ignore
     window.onbeforeunload = beforeUnload;
   }
 

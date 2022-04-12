@@ -8,7 +8,6 @@ import { getSharedAnnotations } from "admin/admin_rest_api";
 import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
-import Persistence from "libs/persistence";
 import TextWithDescription from "components/text_with_description";
 import { EyeOutlined } from "@ant-design/icons";
 const { Column } = Table;
@@ -20,7 +19,6 @@ type State = {
   annotations: Array<APIAnnotationCompact>;
   isLoading: boolean;
 };
-const persistence: Persistence<State> = new Persistence({}, "sharedList");
 
 class SharedAnnotationsView extends React.PureComponent<Props, State> {
   state = {
@@ -29,13 +27,8 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount = () => {
-    this.setState(persistence.load(this.props.history));
     this.fetchData();
   };
-
-  componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
-  }
 
   fetchData = async () => {
     try {

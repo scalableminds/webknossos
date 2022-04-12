@@ -153,9 +153,9 @@ jobs:
             done
             (exit $s)
       - run:
-          name: Validate frontend types with flow
+          name: Validate frontend types
           command: |
-            .circleci/not-on-master.sh docker-compose run base yarn flow
+            .circleci/not-on-master.sh docker-compose run base yarn typecheck
       - run:
           name: Start webknossos
           background: true

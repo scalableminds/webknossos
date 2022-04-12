@@ -68,6 +68,7 @@ export class OxalisModel {
         );
 
         if (maybeOrganizationToSwitchTo != null) {
+          // @ts-ignore
           error.organizationToSwitchTo = maybeOrganizationToSwitchTo;
         }
       } catch (accessibleBySwitchingError) {

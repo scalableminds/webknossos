@@ -9,10 +9,10 @@ import {
   ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { Link, RouteComponentProps, withRouter } from "react-router-dom";
+import { Link, LinkProps, RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
 import { Unicode } from "oxalis/constants";
-import type { APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
+import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
 import {
   getFirstSegmentationLayer,
@@ -21,27 +21,27 @@ import {
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-const disabledStyle = {
+const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
   color: "var(--ant-disabled)",
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isReloading' implicitly has an 'any' ty... Remove this comment to see the full error message
-function getDisabledWhenReloadingStyle(isReloading) {
-  return isReloading ? disabledStyle : null;
+function getDisabledWhenReloadingStyle(isReloading: boolean) {
+  return isReloading ? disabledStyle : undefined;
 }
 
 function NewAnnotationLink({
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'dataset' implicitly has an 'any' ... Remove this comment to see the full error message
   dataset,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isReloading' implicitly has an 'a... Remove this comment to see the full error message
   isReloading,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'isCreateExplorativeModalVisible' ... Remove this comment to see the full error message
   isCreateExplorativeModalVisible,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'onShowCreateExplorativeModal' imp... Remove this comment to see the full error message
   onShowCreateExplorativeModal,
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'onCloseCreateExplorativeModal' im... Remove this comment to see the full error message
   onCloseCreateExplorativeModal,
+}: {
+  dataset: APIDataset,
+  isReloading: boolean,
+  isCreateExplorativeModalVisible: boolean,
+  onShowCreateExplorativeModal: () => void,
+  onCloseCreateExplorativeModal: () => void,
 }) {
   const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
   const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
@@ -59,7 +59,7 @@ function NewAnnotationLink({
             to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid${fallbackLayerGetParameter}`}
             style={{
               display: "inline-block",
-            }}
+            } as React.CSSProperties}
             title="New Annotation (Skeleton + Volume)"
             disabled={isReloading}
           >
@@ -78,7 +78,7 @@ function NewAnnotationLink({
           <a
             title="New Annotation With Custom Properties"
             className="ant-dropdown-link"
-            onClick={onShowCreateExplorativeModal}
+            onClick={() => onShowCreateExplorativeModal}
           >
             <EllipsisOutlined
               style={{
@@ -111,9 +111,10 @@ function LinkWithDisabled({
 }: {
   disabled?: boolean;
   onClick?: () => void;
-  style?: Record<string, any>;
+  style?: React.CSSProperties;
   to: string;
-}) {
+  children: React.ReactNode,
+} & LinkProps) {
   const maybeDisabledStyle = disabled ? disabledStyle : null;
   const adaptedStyle =
     rest.style != null ? { ...rest.style, ...maybeDisabledStyle } : maybeDisabledStyle;
@@ -125,7 +126,7 @@ function LinkWithDisabled({
   return (
     <Link
       {...rest}
-      style={adaptedStyle}
+      style={adaptedStyle || undefined}
       onClick={(e) => (disabled ? e.preventDefault() : onClick)}
     />
   );

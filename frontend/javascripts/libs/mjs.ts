@@ -3,10 +3,13 @@
 //   https://github.com/imbcmdth/mjs/blob/master/index.js
 // for all functions in M4x4, V2 and V3.
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector2, Vector3 } from "oxalis/constants";
 import { chunk3 } from "oxalis/model/helpers/chunk";
 
 const { M4x4, V2, V3 } = require("mjs")(Float32Array);
+
+type Vector3Like = Vector3 | Float32Array;
+type Vector2Like = Vector2 | Float32Array;
 
 export type Matrix4x4 =
   | [
@@ -187,17 +190,13 @@ V3.round = function round(
   return r;
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
-V3.floor = (vec) => [Math.floor(vec[0]), Math.floor(vec[1]), Math.floor(vec[2])];
+V3.floor = (vec: ArrayLike<number>) => [Math.floor(vec[0]), Math.floor(vec[1]), Math.floor(vec[2])];
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
-V3.ceil = (vec) => [Math.ceil(vec[0]), Math.ceil(vec[1]), Math.ceil(vec[2])];
+V3.ceil = (vec: ArrayLike<number>) => [Math.ceil(vec[0]), Math.ceil(vec[1]), Math.ceil(vec[2])];
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'v' implicitly has an 'any' type.
-V3.toString = (v) => v.join(", ");
+V3.toString = (v: Array<number>) => v.join(", ");
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
-V3.scale3 = function scale3(a, k, r) {
+V3.scale3 = function scale3(a: Vector3Like, k: Vector3Like, r?: Vector3Like) {
   if (r == null) r = new Float32Array(3);
   r[0] = a[0] * k[0];
   r[1] = a[1] * k[1];
@@ -205,8 +204,7 @@ V3.scale3 = function scale3(a, k, r) {
   return r;
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
-V3.divide3 = function divide3(a, k, r) {
+V3.divide3 = function divide3(a: Vector3Like, k: Vector3Like, r?: Vector3Like) {
   if (r == null) r = new Float32Array(3);
   r[0] = a[0] / k[0];
   r[1] = a[1] / k[1];
@@ -214,16 +212,13 @@ V3.divide3 = function divide3(a, k, r) {
   return r;
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
-V3.fromMag1ToMag = (vec, targetMag) => V3.floor(V3.divide3(vec, targetMag));
+V3.fromMag1ToMag = (vec: Vector3Like, targetMag: Vector3Like) => V3.floor(V3.divide3(vec, targetMag));
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
-V3.fromMagToMag1 = (vec, sourceMag) => V3.floor(V3.scale3(vec, sourceMag));
+V3.fromMagToMag1 = (vec: Vector3Like, sourceMag: Vector3Like) => V3.floor(V3.scale3(vec, sourceMag));
 
 const _tmpVec = [0, 0, 0];
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
-V3.scaledSquaredDist = function squaredDist(a, b, scale) {
+V3.scaledSquaredDist = function squaredDist(a: Vector3Like, b: Vector3Like, scale: number) {
   // Computes the distance between two vectors while respecting a 3 dimensional scale
   // Use _tmpVec as result variable (third parameter) to avoid allocations
   V3.sub(a, b, _tmpVec);
@@ -231,19 +226,16 @@ V3.scaledSquaredDist = function squaredDist(a, b, scale) {
   return V3.lengthSquared(_tmpVec);
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
-V3.scaledDist = function scaledDist(a, b, scale) {
+V3.scaledDist = function scaledDist(a: Vector3Like, b: Vector3Like, scale: number) {
   const squaredDist = V3.scaledSquaredDist(a, b, scale);
   return Math.sqrt(squaredDist);
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
-V3.toArray = function (vec) {
+V3.toArray = function (vec: ArrayLike<number>) {
   return [vec[0], vec[1], vec[2]];
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
-V2.scale2 = function scale2(a, k, r) {
+V2.scale2 = function scale2(a: Vector2, k: Vector2, r?: Vector2Like) {
   if (r == null) r = new Float32Array(2);
   r[0] = a[0] * k[0];
   r[1] = a[1] * k[1];
@@ -251,22 +243,19 @@ V2.scale2 = function scale2(a, k, r) {
 };
 
 // Component-wise minimum of two vectors.
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec1' implicitly has an 'any' type.
-V3.min = (vec1, vec2) => [
+V3.min = (vec1: Vector3Like, vec2: Vector3Like) => [
   Math.min(vec1[0], vec2[0]),
   Math.min(vec1[1], vec2[1]),
   Math.min(vec1[2], vec2[2]),
 ];
 
 // Component-wise maximum of two vectors.
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec1' implicitly has an 'any' type.
-V3.max = (vec1, vec2) => [
+V3.max = (vec1: Vector3Like, vec2: Vector3Like) => [
   Math.max(vec1[0], vec2[0]),
   Math.max(vec1[1], vec2[1]),
   Math.max(vec1[2], vec2[2]),
 ];
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec1' implicitly has an 'any' type.
-V3.equals = (vec1, vec2) => vec1[0] === vec2[0] && vec1[1] === vec2[1] && vec1[2] === vec2[2];
+V3.equals = (vec1: Vector3Like, vec2: Vector3Like) => vec1[0] === vec2[0] && vec1[1] === vec2[1] && vec1[2] === vec2[2];
 
 export { M4x4, V2, V3 };

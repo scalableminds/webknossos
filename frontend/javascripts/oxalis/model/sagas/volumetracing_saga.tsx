@@ -1027,7 +1027,6 @@ function* getGlobalMousePosition(): Saga<Vector3 | null | undefined> {
 
     if (mousePosition) {
       const [x, y] = mousePosition;
-      // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
       return calculateMaybeGlobalPos(state, {
         x,
         y,

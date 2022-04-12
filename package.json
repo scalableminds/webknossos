@@ -126,7 +126,9 @@
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "postcheckout": "echo 'Deleting auto-generated flow files...' && rm -f frontend/javascripts/test/snapshots/flow-check/*.js",
     "apply-evolutions": "tools/postgres/apply_evolutions.sh",
-    "postinstall": "cd tools/proxy && yarn install"
+    "postinstall": "cd tools/proxy && yarn install",
+    "typecheck": "yarn tsc",
+    "ts": "yarn tsc"
   },
   "lint-staged": {
     "*.ts": [
@@ -216,7 +218,7 @@
       "./binaryData/**/*.*"
     ],
     "require": [
-      "./frontend/javascripts/test/_ava_polyfill_provider.js"
+      "./frontend/javascripts/test/_ava_polyfill_provider.ts"
     ],
     "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8

@@ -15,6 +15,8 @@ export function* take(pattern: ActionPattern | Channel<Action>): Generator<any, 
   return yield _take(pattern);
 }
 
+export { call } from "typed-redux-saga";
+
 // Prefer to use these functions in combination with `yield*`
 // as they provide better typing safety with flow.
 // export function* select(...args) {

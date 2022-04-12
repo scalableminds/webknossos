@@ -601,7 +601,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const trailingNavItems = [];
 
   if (_isAuthenticated) {
-    // $FlowIssue[incompatible-type] Flow doesn't check that the activeUser cannot be empty here
     const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 

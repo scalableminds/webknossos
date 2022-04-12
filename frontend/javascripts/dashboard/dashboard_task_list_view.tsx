@@ -42,8 +42,10 @@ import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
+
 const typeHint: APITaskWithAnnotation[] = [];
 const pageLength: number = 1000;
+
 export type TaskModeState = {
   tasks: Array<APITaskWithAnnotation>;
   loadedAllTasks: boolean;
@@ -135,17 +137,14 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
   getCurrentModeState = () =>
     this.state.showFinishedTasks ? this.state.finishedModeState : this.state.unfinishedModeState;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'modeShape' implicitly has an 'any' type... Remove this comment to see the full error message
-  setCurrentModeState = (modeShape) => {
+  setCurrentModeState = (modeShape: Partial<TaskModeState>) => {
     const { showFinishedTasks } = this.state;
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(prevState: Readonly<State>) => ... Remove this comment to see the full error message
     this.setState((prevState) => {
       const newSubState = {
-        // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
         ...prevState[showFinishedTasks ? "finishedModeState" : "unfinishedModeState"],
         ...modeShape,
       };
-      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return {
         [showFinishedTasks ? "finishedModeState" : "unfinishedModeState"]: newSubState,
       };
@@ -330,7 +329,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
 
   async confirmGetNewTask(): Promise<void> {
     if (this.state.unfinishedModeState.tasks.length === 0) {
-      return this.getNewTask();
+      this.getNewTask();
     } else {
       let modalContent = messages["task.request_new"];
       const likelyNextTask = await peekNextTasks();
@@ -341,8 +340,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         })}`;
       }
 
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ destroy: () => void; update: (configUpdate... Remove this comment to see the full error message
-      return Modal.confirm({
+      Modal.confirm({
         content: modalContent,
         onOk: () => this.getNewTask(),
       });
@@ -378,9 +376,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       isTransferModalVisible: false,
     });
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tasks' implicitly has an 'any' type.
-    const removeTransferredTask = (tasks, currentAnnotationId) =>
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 't' implicitly has an 'any' type.
+    const removeTransferredTask = (tasks: APITaskWithAnnotation[], currentAnnotationId: string|null|undefined) =>
       tasks.filter((t) => t.annotation.id !== currentAnnotationId);
 
     this.setCurrentModeState({
@@ -434,7 +430,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       short: this.state.showFinishedTasks || this.props.isAdminView,
     });
 
-    const TaskCardTitle = ({ task }: {task: APITaskWithAnnotation}) => (
+    const TaskCardTitle = ({ task }: { task: APITaskWithAnnotation }) => (
       <React.Fragment>
         <span
           style={{
@@ -580,8 +576,6 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
             })
           }
           onChange={() => this.handleTransferredTask()}
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-          userId={this.props.userId}
         />
       </div>
     );

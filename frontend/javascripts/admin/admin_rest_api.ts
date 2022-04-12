@@ -775,7 +775,6 @@ export async function getTracingForAnnotationType(
   // Additionally, we assign the typ property (skeleton vs volume).
   // Flow complains since we don't doublecheck that we assign the correct type depending
   // on the tracing's structure.
-  // $FlowIgnore[incompatible-type]
   tracing.typ = typ;
   return tracing;
 }
@@ -823,7 +822,7 @@ export async function downloadNml(
   showVolumeFallbackDownloadWarning: boolean = false,
   versions: Versions = {},
 ) {
-  const possibleVersionString = Object.entries(versions) // $FlowIssue[incompatible-type] Flow returns val as mixed here due to the use of Object.entries
+  const possibleVersionString = Object.entries(versions)
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
 
@@ -888,8 +887,8 @@ export async function getDatasets(
   assertResponseLimit(datasets);
   return datasets;
 }
-export async function getJobs(): Promise<Array<APIJob>> {
-  const jobs = await Request.receiveJSON("/api/jobs");
+export async function getJobs(): Promise<APIJob[]> {
+  const jobs = (await Request.receiveJSON("/api/jobs"));
   assertResponseLimit(jobs);
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'job' implicitly has an 'any' type.
   return jobs.map((job) => ({
@@ -1528,7 +1527,7 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
   return openTasksData;
 }
 // ### Organizations
-export async function getDefaultOrganization(): Promise<APIOrganization | null | undefined> {
+export async function getDefaultOrganization(): Promise<APIOrganization | null> {
   // Only returns an organization if the webKnossos instance only has one organization
   return Request.receiveJSON("/api/organizations/default");
 }

@@ -477,7 +477,7 @@ export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number): Me
 });
 export const setTreeNameAction = (
   name: string | null | undefined = null,
-  treeId: number | null | undefined,
+  treeId?: number | null | undefined,
 ): SetTreeNameAction => ({
   type: "SET_TREE_NAME",
   name,
@@ -558,7 +558,7 @@ export const deleteActiveNodeAsUserAction = (
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   return (
     getActiveNode(skeletonTracing)
-      .map((activeNode) => {
+      .map((activeNode): DeleteNodeAction | NoAction | DeleteTreeAction => {
         const nodeId = activeNode.id;
 
         if (state.task != null && nodeId === 1) {

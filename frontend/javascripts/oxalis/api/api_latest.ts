@@ -772,20 +772,16 @@ class TracingApi {
 
     const datasetScale = Store.getState().dataset.dataSource.scale;
     // We use the Dijkstra algorithm to get the shortest path between the nodes.
-    const distanceMap = {};
+    const distanceMap: Record<number, number> = {};
     // The distance map is also maintained in voxel space. This information is only
     // used when returning the final distance. The actual path finding is only done in
     // the physical space (nm-based).
-    const distanceMapVx = {};
+    const distanceMapVx: Record<number, number> = {};
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodeId' implicitly has an 'any' type.
-    const getDistance = (nodeId) =>
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+    const getDistance = (nodeId: number) =>
       distanceMap[nodeId] != null ? distanceMap[nodeId] : Number.POSITIVE_INFINITY;
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     distanceMap[sourceNode.id] = 0;
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     distanceMapVx[sourceNode.id] = 0;
     // The priority queue saves node id and distance tuples.
     const priorityQueue = new PriorityQueue<[number, number]>({
@@ -806,17 +802,14 @@ class TracingApi {
           distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
 
         if (neighbourDistance < getDistance(neighbourNodeId)) {
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           distanceMap[neighbourNodeId] = neighbourDistance;
           const neighbourDistanceVx = V3.length(V3.sub(nextNodePosition, neighbourPosition));
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           distanceMapVx[neighbourNodeId] = neighbourDistanceVx;
           priorityQueue.queue([neighbourNodeId, neighbourDistance]);
         }
       }
     }
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return [distanceMap[targetNodeId], distanceMapVx[targetNodeId]];
   }
 
@@ -843,8 +836,16 @@ class TracingApi {
     const curPosition = getPosition(Store.getState().flycam);
     const curRotation = getRotation(Store.getState().flycam);
     if (!Array.isArray(rotation)) rotation = curRotation;
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3 | undefined' is not assi... Remove this comment to see the full error message
     rotation = this.getShortestRotation(curRotation, rotation);
+
+    type Tweener = {
+      positionX: number,
+      positionY: number,
+      positionZ: number,
+      rotationX: number,
+      rotationY: number,
+      rotationZ: number,
+    }
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
       positionY: curPosition[1],
@@ -865,13 +866,11 @@ class TracingApi {
         },
         200,
       )
-      .onUpdate(function () {
+      .onUpdate(function (this: Tweener) {
         // needs to be a normal (non-bound) function
         Store.dispatch(
-          // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
           setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
         );
-        // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
         Store.dispatch(setRotationAction([this.rotationX, this.rotationY, this.rotationZ]));
       })
       .start();
@@ -1375,11 +1374,9 @@ class DataApi {
     const bottomRight = bbox.max;
     const minBucket = globalPositionToBucketPosition(bbox.min, resolutions, zoomStep);
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucketAddress' implicitly has an 'any' ... Remove this comment to see the full error message
-    const topLeft = (bucketAddress) => bucketPositionToGlobalAddress(bucketAddress, resolutions);
+    const topLeft = (bucketAddress: Vector4) => bucketPositionToGlobalAddress(bucketAddress, resolutions);
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucket' implicitly has an 'any' type.
-    const nextBucketInDim = (bucket, dim) => {
+    const nextBucketInDim = (bucket: Vector4, dim: 0 | 1 | 2) => {
       const copy = bucket.slice();
       copy[dim]++;
       return copy as any as Vector4;
@@ -1388,10 +1385,10 @@ class DataApi {
     let bucket = minBucket;
 
     while (topLeft(bucket)[0] < bottomRight[0]) {
-      const prevX = bucket.slice();
+      const prevX = bucket.slice() as Vector4;
 
       while (topLeft(bucket)[1] < bottomRight[1]) {
-        const prevY = bucket.slice();
+        const prevY = bucket.slice() as Vector4;
 
         while (topLeft(bucket)[2] < bottomRight[2]) {
           buckets.push(bucket);

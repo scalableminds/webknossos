@@ -181,7 +181,7 @@ export enum AnnotationToolEnum {
   PICK_CELL= "PICK_CELL",
   BOUNDING_BOX= "BOUNDING_BOX",
 };
-export const VolumeTools = [
+export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.ERASE_BRUSH,
   AnnotationToolEnum.TRACE,
@@ -189,7 +189,7 @@ export const VolumeTools = [
   AnnotationToolEnum.FILL_CELL,
   AnnotationToolEnum.PICK_CELL,
 ];
-export const ToolsWithOverwriteCapabilities = [
+export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.ERASE_TRACE,

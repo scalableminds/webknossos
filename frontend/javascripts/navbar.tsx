@@ -273,7 +273,7 @@ function getTimeTrackingMenu({ collapse }: {collapse: boolean}) {
 
 function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }: {
   isAdminOrTeamManager: boolean,
-  version: string,
+  version: string | null,
   collapse: boolean,
 } & SubMenuProps) {
   return (

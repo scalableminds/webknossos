@@ -21,7 +21,8 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import features from "features";
 import { APIActiveUser } from "types/api_flow_types";
-import { OxalisState } from "oxalis/store";
+import { OxalisState, UserBoundingBox } from "oxalis/store";
+
 // NOTE: The regexp and getBBoxNameForPartialFloodfill need to stay in sync.
 // That way, bboxes created by the floodfill can be detected as such and
 // a job for globalizing floodfills can be started.
@@ -43,7 +44,7 @@ function StartGlobalizeFloodfillsModal({
   activeUser,
   initialName,
 }: {
-  onStartGlobalization: () => void;
+  onStartGlobalization: (name: string) => void;
   handleClose: () => void;
   activeUser: APIActiveUser;
   initialName: string;
@@ -108,7 +109,7 @@ function StartGlobalizeFloodfillsModal({
 }
 
 export default function BoundingBoxTab() {
-  const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
+  const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState<UserBoundingBox|null>(null);
   const [isGlobalizeFloodfillsModalVisible, setIsGlobalizeFloodfillsModalVisible] = useState(false);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
@@ -163,12 +164,11 @@ export default function BoundingBoxTab() {
     }
 
     const { min, max } = boundingBoxEntry.boundingBox;
-    const center = [
+    const center: Vector3 = [
       min[0] + (max[0] - min[0]) / 2,
       min[1] + (max[1] - min[1]) / 2,
       min[2] + (max[2] - min[2]) / 2,
     ];
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
     setPosition(center);
   }
 
@@ -178,8 +178,7 @@ export default function BoundingBoxTab() {
     activeSegmentationTracingLayer != null &&
     userBoundingBoxes.some((bbox) => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'newName' implicitly has an 'any' type.
-  const onGlobalizeFloodfills = (newName) => {
+  const onGlobalizeFloodfills = (newName: string) => {
     if (activeSegmentationTracingLayer == null) {
       return;
     }
@@ -235,9 +234,7 @@ export default function BoundingBoxTab() {
             isVisible={bb.isVisible}
             onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
             onDelete={_.partial(deleteBoundingBox, bb.id)}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'Function1<SetStateAction<null>, void>' is no... Remove this comment to see the full error message
             onExport={
-              // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'UserBoundingBox' is not assignab... Remove this comment to see the full error message
               dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
             }
             onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
@@ -270,7 +267,6 @@ export default function BoundingBoxTab() {
         <ExportBoundingBoxModal
           dataset={dataset}
           tracing={tracing}
-          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           boundingBox={selectedBoundingBoxForExport.boundingBox}
           handleClose={() => setSelectedBoundingBoxForExport(null)}
         />

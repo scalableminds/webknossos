@@ -2,7 +2,7 @@ import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import _ from "lodash";
-import type { APIDataset } from "types/api_flow_types";
+import type { AnnotationLayerDescriptor, APIAnnotationType, APIDataset } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import type { Tracing } from "oxalis/store";
@@ -20,11 +20,12 @@ export default function AddVolumeLayerModal({
   onCancel: () => void;
   tracing: Tracing;
 }) {
-  const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState(null);
+  const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState<
+    number | null | undefined
+  >(null);
   const [newLayerName, setNewLayerName] = useState("Volume");
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
-  const handleSetNewLayerName = (evt) => setNewLayerName(evt.target.value);
+  const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>) => setNewLayerName(evt.target.value);
 
   const segmentationLayers = getSegmentationLayers(dataset);
   const volumeTracingLayers = getVolumeTracingLayers(dataset);
@@ -37,7 +38,6 @@ export default function AddVolumeLayerModal({
     if (selectedSegmentationLayerIndex == null) {
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ typ: "Volume"; name: string; f... Remove this comment to see the full error message
         name: newLayerName,
         fallbackLayerName: undefined,
         resolutionRestrictions: undefined,

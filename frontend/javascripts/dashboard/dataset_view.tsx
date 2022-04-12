@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, ChangeEvent } from "react";
 import { Link, useHistory } from "react-router-dom";
 import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin, Tooltip, Alert } from "antd";
 import {
@@ -65,12 +65,13 @@ function DatasetView(props: Props) {
   const history = useHistory();
   const context = useContext(DatasetCacheContext);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchTags, setSearchTags] = useState<Array<string>>([]);
+  const [searchTags, setSearchTags] = useState<string[]>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
-  const [jobs, setJobs] = useState<Array<APIJob>>([]);
+  const [jobs, setJobs] = useState<APIJob[]>([]);
+  
   useEffect(() => {
-    const state = persistence.load(history);
+    const state = persistence.load(history) as PersistenceState;
 
     if (state.searchQuery != null) {
       setSearchQuery(state.searchQuery);
@@ -121,8 +122,9 @@ function DatasetView(props: Props) {
     }
   }
 
-  function handleSearch(event: React.SyntheticEvent) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  function handleSearch(
+    event: React.SyntheticEvent<HTMLInputElement>,
+  ) {
     setSearchQuery(event.target.value);
   }
 

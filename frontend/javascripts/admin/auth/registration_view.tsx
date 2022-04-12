@@ -7,10 +7,11 @@ import { getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
 import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
 import RegistrationForm from "admin/auth/registration_form";
+import { APIOrganization } from "types/api_flow_types";
 
 function RegistrationViewNotDemo() {
   const history = useHistory();
-  const [organization, setOrganization] = useState(null);
+  const [organization, setOrganization] = useState<APIOrganization|null>(null);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     (async () => {
@@ -18,7 +19,6 @@ function RegistrationViewNotDemo() {
 
       try {
         const defaultOrg = await getDefaultOrganization();
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'APIOrganization | null | undefin... Remove this comment to see the full error message
         setOrganization(defaultOrg);
       } finally {
         setIsLoading(false);
@@ -80,8 +80,6 @@ function RegistrationViewNotDemo() {
   return (
     <Spin spinning={isLoading}>
       <Row
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-        type="flex"
         justify="center"
         style={{
           padding: 50,
@@ -102,8 +100,6 @@ function RegistrationViewDemo() {
   const history = useHistory();
   return (
     <Row
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-      type="flex"
       justify="center"
       style={{
         padding: 50,

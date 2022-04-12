@@ -21,8 +21,8 @@ type Props = OwnProps & StateProps;
 type PropsWithRouter = Props;
 
 function ProjectCreateView({ projectId }: PropsWithRouter) {
-  const [teams, setTeams] = useState<Array<APITeam>>([]);
-  const [users, setUsers] = useState<Array<APIUser>>([]);
+  const [teams, setTeams] = useState<APITeam[]>([]);
+  const [users, setUsers] = useState<APIUser[]>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
   const history = useHistory();

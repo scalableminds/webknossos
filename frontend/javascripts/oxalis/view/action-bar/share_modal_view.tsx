@@ -3,7 +3,7 @@ import { CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { useSelector } from "react-redux";
 import React, { useState, useEffect } from "react";
-import type { APIDataset, APIAnnotationVisibility, APIAnnotationType } from "types/api_flow_types";
+import type { APIDataset, APIAnnotationVisibility, APIAnnotationType, APITeam } from "types/api_flow_types";
 import {
   getDatasetSharingToken,
   getTeamsForSharedAnnotation,
@@ -124,7 +124,7 @@ export default function ShareModalView(props: Props) {
   const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
   const restrictions = useSelector((state: OxalisState) => state.tracing.restrictions);
   const [visibility, setVisibility] = useState(annotationVisibility);
-  const [sharedTeams, setSharedTeams] = useState([]);
+  const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
   const hasUpdatePermissions = restrictions.allowUpdate && restrictions.allowSave;
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
@@ -133,7 +133,6 @@ export default function ShareModalView(props: Props) {
     const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId, {
       showErrorToast: false,
     });
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'APITeam[]' is not assignable to ... Remove this comment to see the full error message
     setSharedTeams(fetchedSharedTeams);
   };
 
@@ -155,7 +154,6 @@ export default function ShareModalView(props: Props) {
       await updateTeamsForSharedAnnotation(
         annotationType,
         annotationId,
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'never'.
         sharedTeams.map((team) => team.id),
       );
       Toast.success(messages["annotation.shared_teams_edited"]);
@@ -329,7 +327,6 @@ export default function ShareModalView(props: Props) {
             mode="multiple"
             allowNonEditableTeams
             value={sharedTeams}
-            // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'APITeam[]' is not assignable to ... Remove this comment to see the full error message
             onChange={(value) => setSharedTeams(_.flatten([value]))}
             disabled={!hasUpdatePermissions || visibility === "Private"}
           />

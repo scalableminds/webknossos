@@ -20,9 +20,10 @@
         "components/*": ["./components/*"],
         "admin/*": ["./admin/*"],
         "types/*": ["./types/*"],
+        "test/*": ["./test/*"],
         "features": ["./features.ts"],
     }
   },
   "include": ["frontend/javascripts/**/*.ts", "frontend/javascripts/**/*.d.ts", "frontend/javascripts/**/*.tsx"],
-  "exclude": ["node_modules/**/*", "frontend/**/*.spec.ts"]
+  "exclude": ["node_modules/**/*"]
 }

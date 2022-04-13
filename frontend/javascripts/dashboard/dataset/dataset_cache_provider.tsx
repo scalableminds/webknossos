@@ -1,4 +1,4 @@
-import React, { createContext, useState } from "react";
+import React, { createContext, useMemo, useState } from "react";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
 import {
@@ -210,9 +210,8 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
     }
   }
 
-  return (
-    <DatasetCacheContext.Provider
-      value={{
+  const value = useMemo(() => (
+    {
         datasets,
         isLoading,
         isChecking,
@@ -220,7 +219,18 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
         fetchDatasets,
         reloadDataset,
         updateCachedDataset,
-      }}
+      }
+      ), [datasets,
+        isLoading,
+        isChecking,
+        checkDatasets,
+        fetchDatasets,
+        reloadDataset,
+        updateCachedDataset])
+
+  return (
+    <DatasetCacheContext.Provider
+      value={value}
     >
       {children}
     </DatasetCacheContext.Provider>

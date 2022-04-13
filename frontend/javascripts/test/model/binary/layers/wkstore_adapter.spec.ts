@@ -105,8 +105,9 @@ test.serial(
     const { batch, responseBuffer, bucketData1, bucketData2 } = prepare();
     RequestMock.sendJSONReceiveArraybufferWithHeaders = sinon.stub();
     RequestMock.sendJSONReceiveArraybufferWithHeaders
-      .onFirstCall() // eslint-disable-next-line prefer-promise-reject-errors
+      .onFirstCall()
       .returns(
+        // eslint-disable-next-line prefer-promise-reject-errors
         Promise.reject({
           status: 403,
         }),

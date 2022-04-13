@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { ExecutionContext } from "ava";
 import BackboneEvents from "backbone-events-standalone";
 import Maybe from "data.maybe";
 import _ from "lodash";
@@ -21,7 +22,6 @@ import {
   annotation as VOLUME_ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
-import { ExecutionContext } from "ava";
 const Request = {
   receiveJSON: sinon.stub(),
   sendJSONReceiveJSON: sinon.stub(),

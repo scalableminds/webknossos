@@ -2,7 +2,6 @@ import * as THREE from "three";
 import mock from "mock-require";
 import test, { ExecutionContext } from "ava";
 import { Vector4 } from "oxalis/constants";
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 
 const formatToChannelCount = new Map([
   [THREE.LuminanceFormat, 1],

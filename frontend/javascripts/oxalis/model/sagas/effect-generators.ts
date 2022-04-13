@@ -10,9 +10,9 @@ export function* select<T>(fn: (state: OxalisState) => T) {
   return res;
 }
 
-export function* take(pattern: ActionPattern | Channel<Action>): Generator<any, Action, any> {
-  // @ts-ignore
-  return yield _take(pattern);
+export function* take(pattern: ActionPattern<Action> | Channel<Action>): Generator<any, Action, any> {
+  // @ts-ignore TS does not know that _take also accepts Channel<Action>
+  return yield* _take(pattern);
 }
 
 export { call } from "typed-redux-saga";

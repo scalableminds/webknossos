@@ -46,8 +46,6 @@ function getSomeValue<T>(set: Set<T>): T {
   return value;
 }
 
-console.log("UpdatableTexture", UpdatableTexture);
-
 
 export default class TextureBucketManager {
   dataTextures: Array<typeof UpdatableTexture>;

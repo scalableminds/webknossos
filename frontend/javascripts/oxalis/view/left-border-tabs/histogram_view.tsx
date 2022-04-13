@@ -81,13 +81,12 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     }
 
     const ctx = this.canvasRef.getContext("2d");
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
+    if (ctx == null) {
+      return;
+    }
     ctx.translate(0, canvasHeight);
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     ctx.scale(1, -1);
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     ctx.lineWidth = 1;
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     ctx.lineJoin = "round";
     this.updateCanvas();
   }
@@ -114,7 +113,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     }
 
     const ctx = this.canvasRef.getContext("2d");
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
+    if (ctx == null) {
+      return;
+    }
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     const { min, max } = getMinAndMax(this.props);
     const { data } = this.props;
@@ -326,8 +327,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerName' implicitly has an 'any' type... Remove this comment to see the full error message
-  onChangeLayer(layerName, propertyName, value) {
+  onChangeLayer(layerName: string, propertyName: keyof DatasetLayerConfiguration, value: any) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
   },
 });

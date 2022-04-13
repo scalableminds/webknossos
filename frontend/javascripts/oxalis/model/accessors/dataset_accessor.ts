@@ -70,8 +70,8 @@ export class ResolutionInfo {
     // This function creates a map which maps from powerOfTwo (2**index) to resolution.
     const { resolutions } = this;
 
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
-    if (resolutions.length !== _.uniqBy(resolutions.map(maxValue)).length) {
+
+    if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
       throw new Error("Max dimension in resolutions is not unique.");
     }
 
@@ -279,8 +279,8 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
   // Therefore, the largest dim for each resolution has to be unique across all resolutions.
   // This function returns an array of resolutions, for which each index will
   // hold a resolution with highest_dim === 2**index and where resolutions are monotonously increasing.
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 2 arguments, but got 1.
-  if (resolutions.length !== _.uniqBy(resolutions.map(maxValue)).length) {
+
+  if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
     throw new Error("Max dimension in resolutions is not unique.");
   }
 

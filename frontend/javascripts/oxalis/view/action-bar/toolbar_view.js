@@ -548,7 +548,9 @@ export default function ToolbarView() {
                 alt="Erase Trace Tool Icon"
                 style={{
                   marginTop: -4,
-                  opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled ? 0.5 : 1,
+                  opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled
+                    ? 0.5
+                    : 1,
                 }}
               />
               {adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE

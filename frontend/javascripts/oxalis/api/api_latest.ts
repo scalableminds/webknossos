@@ -208,11 +208,9 @@ class TracingApi {
    */
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return (
-      getActiveNode(tracing)
-        .map((node) => node.id)
-        .getOrElse(null)
-    );
+    return getActiveNode(tracing)
+      .map((node) => node.id)
+      .getOrElse(null);
   }
 
   /**
@@ -220,11 +218,9 @@ class TracingApi {
    */
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return (
-      getActiveTree(tracing)
-        .map((tree) => tree.treeId)
-        .getOrElse(null)
-    );
+    return getActiveTree(tracing)
+      .map((tree) => tree.treeId)
+      .getOrElse(null);
   }
 
   /**
@@ -232,11 +228,9 @@ class TracingApi {
    */
   getActiveGroupId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return (
-      getActiveGroup(tracing)
-        .map((group) => group.groupId)
-        .getOrElse(null)
-    );
+    return getActiveGroup(tracing)
+      .map((group) => group.groupId)
+      .getOrElse(null);
   }
 
   /**
@@ -495,11 +489,9 @@ class TracingApi {
    */
   getTreeName(treeId?: number) {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return (
-      getTree(tracing, treeId)
-        .map((activeTree) => activeTree.name)
-        .get()
-    );
+    return getTree(tracing, treeId)
+      .map((activeTree) => activeTree.name)
+      .get();
   }
 
   /**
@@ -839,13 +831,13 @@ class TracingApi {
     rotation = this.getShortestRotation(curRotation, rotation);
 
     type Tweener = {
-      positionX: number,
-      positionY: number,
-      positionZ: number,
-      rotationX: number,
-      rotationY: number,
-      rotationZ: number,
-    }
+      positionX: number;
+      positionY: number;
+      positionZ: number;
+      rotationX: number;
+      rotationY: number;
+      rotationZ: number;
+    };
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
       positionY: curPosition[1],
@@ -1374,7 +1366,8 @@ class DataApi {
     const bottomRight = bbox.max;
     const minBucket = globalPositionToBucketPosition(bbox.min, resolutions, zoomStep);
 
-    const topLeft = (bucketAddress: Vector4) => bucketPositionToGlobalAddress(bucketAddress, resolutions);
+    const topLeft = (bucketAddress: Vector4) =>
+      bucketPositionToGlobalAddress(bucketAddress, resolutions);
 
     const nextBucketInDim = (bucket: Vector4, dim: 0 | 1 | 2) => {
       const copy = bucket.slice();
@@ -1572,7 +1565,6 @@ class DataApi {
       }
 
       default: {
-        
         return Store.getState().datasetConfiguration[key];
       }
     }
@@ -1585,10 +1577,7 @@ class DataApi {
    * @example
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
-  setConfiguration(
-    key: keyof DatasetConfiguration | OutdatedDatasetConfigurationKeys,
-    value: any,
-  ) {
+  setConfiguration(key: keyof DatasetConfiguration | OutdatedDatasetConfigurationKeys, value: any) {
     const printDeprecationWarning = () =>
       console.warn(`The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration.
       Instead, they are part of the segmentation layer configuration and can be set as follows:
@@ -1943,8 +1932,9 @@ class UtilsApi {
    * await api.utils.sleep(5000);
    */
   sleep(milliseconds: number): Promise<void> {
-    // eslint-disable-next-line no-promise-executor-return
-    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+    return new Promise((resolve) => {
+      setTimeout(resolve, milliseconds);
+    });
   }
 
   /**

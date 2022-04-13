@@ -232,17 +232,16 @@ async function screenshotTracingView(page: Page): Promise<Screenshot> {
 
   // Concatenate all screenshots
   const img = await mergeImg(screenshots);
-  return new Promise((resolve) =>
+  return new Promise((resolve) => {
     // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_' implicitly has an 'any' type.
-    //eslint-disable-next-line no-promise-executor-return
     img.getBuffer("image/png", (_, buffer) =>
       resolve({
         screenshot: buffer,
         width: img.bitmap.width,
         height: img.bitmap.height,
       }),
-    ),
-  );
+    );
+  });
 }
 
 export default {};

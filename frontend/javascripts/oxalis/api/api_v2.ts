@@ -94,11 +94,9 @@ class TracingApi {
    */
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return (
-      getActiveNode(tracing)
-        .map((node) => node.id)
-        .getOrElse(null)
-    );
+    return getActiveNode(tracing)
+      .map((node) => node.id)
+      .getOrElse(null);
   }
 
   /**
@@ -106,11 +104,9 @@ class TracingApi {
    */
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return (
-      getActiveTree(tracing)
-        .map((tree) => tree.treeId)
-        .getOrElse(null)
-    );
+    return getActiveTree(tracing)
+      .map((tree) => tree.treeId)
+      .getOrElse(null);
   }
 
   /**
@@ -223,11 +219,9 @@ class TracingApi {
    */
   getTreeName(treeId?: number) {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return (
-      getTree(tracing, treeId)
-        .map((activeTree) => activeTree.name)
-        .get()
-    );
+    return getTree(tracing, treeId)
+      .map((activeTree) => activeTree.name)
+      .get();
   }
 
   /**
@@ -799,7 +793,9 @@ class UtilsApi {
    */
   sleep(milliseconds: number): Promise<void> {
     // eslint-disable-next-line no-promise-executor-return
-    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+    return new Promise((resolve) => {
+      setTimeout(resolve, milliseconds);
+    });
   }
 
   /**

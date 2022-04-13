@@ -1,8 +1,6 @@
-import "oxalis/model/actions/settings_actions";
 import _ from "lodash";
 import { COMPRESSING_BATCH_SIZE } from "oxalis/model/bucket_data_handling/pushqueue";
 import type { Vector3 } from "oxalis/constants";
-import "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";

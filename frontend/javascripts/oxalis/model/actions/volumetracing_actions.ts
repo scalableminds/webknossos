@@ -5,7 +5,6 @@ import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import type { Segment, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import type { Dispatch } from "redux";
-import "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 export type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING";

@@ -5,7 +5,6 @@ import _ from "lodash";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import type { ElementClass } from "types/api_flow_types";
-import "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
 import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";

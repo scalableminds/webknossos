@@ -6,7 +6,6 @@ import _ from "lodash";
 import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import type { OxalisState } from "oxalis/store";
-import "oxalis/store";
 import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";

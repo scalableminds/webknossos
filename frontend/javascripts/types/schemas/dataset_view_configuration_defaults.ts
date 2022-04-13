@@ -4,7 +4,6 @@ import {
   defaultDatasetViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import type { APIDataset, APIMaybeUnimportedDataset, APIDataLayer } from "types/api_flow_types";
-import "types/api_flow_types";
 import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
 import { validateObjectWithType } from "types/validation";
 

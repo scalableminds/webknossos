@@ -1,6 +1,6 @@
 import { Model, Actions, TabSetNode } from "flexlayout-react";
 import type { BorderOpenStatus } from "oxalis/store";
-import "oxalis/store";
+
 export function getMaximizedItemId(model: typeof Model): string | null | undefined {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'getMaximizedTabset' does not exist on ty... Remove this comment to see the full error message
   const maximizedTabset = model.getMaximizedTabset();

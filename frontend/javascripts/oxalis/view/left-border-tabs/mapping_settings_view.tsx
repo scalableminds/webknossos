@@ -7,7 +7,6 @@ import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import type { OrthoView, Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType } from "oxalis/store";
-import "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {

@@ -3,7 +3,6 @@ import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import { Input, Button, Col, Row, Spin, Form } from "antd";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
 import type { OxalisState } from "oxalis/store";
-import "oxalis/store";
 import Toast from "libs/toast";
 import { useSelector } from "react-redux";
 const FormItem = Form.Item;

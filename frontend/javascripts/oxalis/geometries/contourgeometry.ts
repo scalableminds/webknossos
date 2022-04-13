@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import type { Vector3 } from "oxalis/constants";
-import "oxalis/constants";
 import ResizableBuffer from "libs/resizable_buffer";
 import app from "app";
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);

@@ -9,7 +9,6 @@ import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_f
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
-import "oxalis/store";
 type OwnProps = {
   data: APIHistogramData;
   layerName: string;

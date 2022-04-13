@@ -1,5 +1,4 @@
 import type { MutableTreeMap } from "oxalis/store";
-import "oxalis/store";
 import type { APIConnectomeFile } from "types/api_flow_types";
 import "types/api_flow_types";
 export type InitializeConnectomeTracingAction = {

@@ -1,7 +1,6 @@
 import memoizeOne from "memoize-one";
 import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
-import "oxalis/store";
 import type {
   OrthoViewExtents,
   Rect,
@@ -24,6 +23,7 @@ import {
   getPlaneExtentInVoxelFromStore,
 } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
+
 export function getTDViewportSize(state: OxalisState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;
   return [camera.right - camera.left, camera.top - camera.bottom];

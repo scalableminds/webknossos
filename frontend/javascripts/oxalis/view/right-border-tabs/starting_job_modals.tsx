@@ -8,7 +8,6 @@ import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
-import "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import { capitalizeWords, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";

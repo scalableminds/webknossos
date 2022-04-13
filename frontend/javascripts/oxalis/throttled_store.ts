@@ -1,7 +1,6 @@
 /* eslint no-await-in-loop: 0 */
 import type { Action } from "oxalis/model/actions/actions";
 import type { Dispatch, Store as StoreType } from "redux";
-import "redux";
 import Deferred from "libs/deferred";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";

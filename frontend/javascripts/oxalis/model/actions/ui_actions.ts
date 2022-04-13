@@ -1,6 +1,5 @@
 import type { AnnotationTool } from "oxalis/constants";
 import type { BorderOpenStatus, Theme } from "oxalis/store";
-import "oxalis/store";
 export type SetToolAction = {
   type: "SET_TOOL";
   tool: AnnotationTool;

@@ -9,20 +9,16 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
+
 const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
-const isZoomStepTooHighFor = (state, tool) => isVolumeAnnotationDisallowedForZoom(tool, state);
+const isZoomStepTooHighFor = (state: OxalisState, tool: AnnotationTool) => isVolumeAnnotationDisallowedForZoom(tool, state);
 
 const getExplanationForDisabledVolume = (
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isSegmentationTracingVisible' implicitl... Remove this comment to see the full error message
-  isSegmentationTracingVisible,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isInMergerMode' implicitly has an 'any'... Remove this comment to see the full error message
-  isInMergerMode,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isSegmentationTracingVisibleForMag' imp... Remove this comment to see the full error message
-  isSegmentationTracingVisibleForMag,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'isZoomInvalidForTracing' implicitly has... Remove this comment to see the full error message
-  isZoomInvalidForTracing,
+  isSegmentationTracingVisible: boolean,
+  isInMergerMode: boolean,
+  isSegmentationTracingVisibleForMag: boolean,
+  isZoomInvalidForTracing: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
     return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable it in the left settings sidebar.";

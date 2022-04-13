@@ -521,10 +521,9 @@ export default function ToolbarView() {
               value={AnnotationToolEnum.TRACE}
             >
               <img
-                src="/assets/images/pen-solid.svg"
+                src="/assets/images/lasso.svg"
                 alt="Trace Tool Icon"
                 style={{
-                  marginTop: -4,
                   opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
                 }}
               />
@@ -543,11 +542,9 @@ export default function ToolbarView() {
               }}
               value={AnnotationToolEnum.ERASE_TRACE}
             >
-              <img
-                src="/assets/images/cut-solid.svg"
-                alt="Erase Trace Tool Icon"
+              <i
+                className="fas fa-eraser"
                 style={{
-                  marginTop: -4,
                   opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled
                     ? 0.5
                     : 1,

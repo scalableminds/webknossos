@@ -1,0 +1,15 @@
+name: Auto Assign Issues to Project
+
+on:
+  issues:
+    types: [opened]
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  assign_issue_to_project:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: srggrs/assign-one-project-github-action@1.2.1
+      with:
+        project: 'https://github.com/orgs/scalableminds/projects/6'

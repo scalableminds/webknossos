@@ -71,7 +71,7 @@ import {
   put,
   race,
 } from "typed-redux-saga";
-import {select} from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import {
   compressTypedArray,
   decompressToTypedArray,
@@ -249,7 +249,7 @@ export function* collectUndoStates(): Saga<void> {
       yield* delay(0);
     }
 
-    const currentAction = yield * take(channel);
+    const currentAction = yield* take(channel);
     const {
       skeletonUserAction,
       addBucketToUndoAction,
@@ -685,7 +685,10 @@ function* applyAndGetRevertingVolumeBatch(
     let newPendingOperations = volumeUndoBucket.pendingOperations;
 
     if (compressedBackendDataPromise != null) {
-      const compressedBackendData = (yield* call(unpackPromise, compressedBackendDataPromise)) as Uint8Array;
+      const compressedBackendData = (yield* call(
+        unpackPromise,
+        compressedBackendDataPromise,
+      )) as Uint8Array;
       let decompressedBackendData;
       [decompressedBucketData, decompressedBackendData] = yield* all([
         call(decompressToTypedArray, bucket, compressedBucketData),
@@ -887,7 +890,7 @@ export function* sendRequestToServer(
 
       // Log the error to airbrake. Also compactedSaveQueue needs to be within an object
       // as otherwise the entries would be spread by the notify function.
-      yield* call({context: ErrorHandling, fn: ErrorHandling.notify}, error, {
+      yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, error, {
         compactedSaveQueue,
         retryCount,
       });

@@ -111,7 +111,7 @@ function requestUserToken(): Promise<string> {
     tokenRequestPromise = null;
     return tokenObj.token as string;
   });
-  
+
   return tokenRequestPromise;
 }
 
@@ -304,7 +304,7 @@ export function getTaskType(taskTypeId: string): Promise<APITaskType> {
   return Request.receiveJSON(`/api/taskTypes/${taskTypeId}`);
 }
 export function createTaskType(
-  taskType: Omit<APITaskType,"id" | "teamName" >,
+  taskType: Omit<APITaskType, "id" | "teamName">,
 ): Promise<APITaskType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
     data: taskType,
@@ -888,7 +888,7 @@ export async function getDatasets(
   return datasets;
 }
 export async function getJobs(): Promise<APIJob[]> {
-  const jobs = (await Request.receiveJSON("/api/jobs"));
+  const jobs = await Request.receiveJSON("/api/jobs");
   assertResponseLimit(jobs);
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'job' implicitly has an 'any' type.
   return jobs.map((job) => ({
@@ -1638,7 +1638,7 @@ export function setMaintenance(bool: boolean): Promise<void> {
 window.setMaintenance = setMaintenance;
 
 // ### Meshes
-type MeshMetaDataForCreation = Omit<MeshMetaData,"id">;
+type MeshMetaDataForCreation = Omit<MeshMetaData, "id">;
 export async function createMesh(
   metadata: MeshMetaDataForCreation,
   data: ArrayBuffer,

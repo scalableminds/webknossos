@@ -27,7 +27,7 @@ class SharedAnnotationsView extends React.PureComponent<any, State> {
 
   componentDidMount() {
     this.fetchData();
-  };
+  }
 
   fetchData = async () => {
     try {
@@ -163,20 +163,21 @@ class SharedAnnotationsView extends React.PureComponent<any, State> {
     );
   };
 
-  render() { 
-    return (<div className="TestExplorativeAnnotationsView">
-      <div
-        className="clearfix"
-        style={{
-          margin: "20px 0px",
-        }}
-      />
-      <Spin spinning={this.state.isLoading} size="large">
-        {this.renderTable()}
-      </Spin>
-    </div>);
+  render() {
+    return (
+      <div className="TestExplorativeAnnotationsView">
+        <div
+          className="clearfix"
+          style={{
+            margin: "20px 0px",
+          }}
+        />
+        <Spin spinning={this.state.isLoading} size="large">
+          {this.renderTable()}
+        </Spin>
+      </div>
+    );
   }
 }
-
 
 export default withRouter<RouteComponentProps, any>(SharedAnnotationsView);

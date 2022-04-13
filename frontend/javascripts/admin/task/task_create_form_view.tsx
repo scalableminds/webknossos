@@ -59,10 +59,10 @@ type Props = {
   history: RouteComponentProps["history"];
 };
 export enum SpecificationEnum {
-  Manual= "Manual",
-  Nml= "Nml",
-  BaseAnnotation= "BaseAnnotation",
-};
+  Manual = "Manual",
+  Nml = "Nml",
+  BaseAnnotation = "BaseAnnotation",
+}
 type Specification = keyof typeof SpecificationEnum;
 type State = {
   datasets: Array<APIDataset>;

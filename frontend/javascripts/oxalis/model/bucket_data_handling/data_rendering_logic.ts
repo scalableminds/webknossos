@@ -12,35 +12,36 @@ const lookupTextureCountPerLayer = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
   // @ts-ignore
   const canvas = document.createElement("canvas");
-  const contextProvider = "getContext" in canvas
-    ? (x: any) => canvas.getContext(x)
-    : (ctxName: string) => ({
-        MAX_TEXTURE_SIZE: 0,
-        MAX_TEXTURE_IMAGE_UNITS: 1,
+  const contextProvider =
+    "getContext" in canvas
+      ? (x: any) => canvas.getContext(x)
+      : (ctxName: string) => ({
+          MAX_TEXTURE_SIZE: 0,
+          MAX_TEXTURE_IMAGE_UNITS: 1,
 
-        getParameter(param: string) {
-          if (ctxName === "webgl") {
-            const dummyValues: Record<string, any> = {
-              "0": 4096,
-              "1": 16,
-              "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
-            };
-            return dummyValues[param];
-          }
+          getParameter(param: string) {
+            if (ctxName === "webgl") {
+              const dummyValues: Record<string, any> = {
+                "0": 4096,
+                "1": 16,
+                "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
+              };
+              return dummyValues[param];
+            }
 
-          throw new Error(`Unknown call to getParameter: ${param}`);
-        },
+            throw new Error(`Unknown call to getParameter: ${param}`);
+          },
 
-        getExtension(param: string) {
-          if (param === "WEBGL_debug_renderer_info") {
-            return {
-              UNMASKED_RENDERER_WEBGL: 4,
-            };
-          }
+          getExtension(param: string) {
+            if (param === "WEBGL_debug_renderer_info") {
+              return {
+                UNMASKED_RENDERER_WEBGL: 4,
+              };
+            }
 
-          throw new Error(`Unknown call to getExtension: ${param}`);
-        },
-      });
+            throw new Error(`Unknown call to getExtension: ${param}`);
+          },
+        });
   const gl = contextProvider("webgl");
 
   if (!gl) {
@@ -228,23 +229,26 @@ function deriveSupportedFeatures<Layer>(
   };
 }
 
-function getSmallestCommonBucketCapacity<Layer extends {
-  elementClass: ElementClass;
-}>(textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>): number {
-  const capacities = Array.from(textureInformationPerLayer.values()).map(
-    (sizeAndCount) =>
-      getBucketCapacity(
-        sizeAndCount.textureCount,
-        sizeAndCount.textureSize,
-        sizeAndCount.packingDegree,
-      ),
+function getSmallestCommonBucketCapacity<
+  Layer extends {
+    elementClass: ElementClass;
+  },
+>(textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>): number {
+  const capacities = Array.from(textureInformationPerLayer.values()).map((sizeAndCount) =>
+    getBucketCapacity(
+      sizeAndCount.textureCount,
+      sizeAndCount.textureSize,
+      sizeAndCount.packingDegree,
+    ),
   );
   return _.min(capacities) || 0;
 }
 
-function getRenderSupportedLayerCount<Layer extends {
-  elementClass: ElementClass;
-}>(specs: GpuSpecs, textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>) {
+function getRenderSupportedLayerCount<
+  Layer extends {
+    elementClass: ElementClass;
+  },
+>(specs: GpuSpecs, textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>) {
   // Find out which layer needs the most textures. We assume that value is equal for all layers
   // so that we can tell the user that X layers can be rendered simultaneously. We could be more precise
   // here (because some layers might need fewer textures), but this would be harder to communicate to

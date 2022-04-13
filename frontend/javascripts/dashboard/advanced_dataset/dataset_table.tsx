@@ -1,7 +1,7 @@
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Table, Tag, Tooltip } from "antd";
-import type { SorterResult } from "antd/lib/table/interface"
+import type { SorterResult } from "antd/lib/table/interface";
 import * as React from "react";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'dice... Remove this comment to see the full error message
@@ -220,8 +220,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
     const accessPermissionFilters = _.uniqBy(
       [
         { text: "public", value: "public" },
-        ...sortedDataSource.flatMap(dataset =>
-          dataset.allowedTeams.map(team => ({ text: team.name, value: team.name })),
+        ...sortedDataSource.flatMap((dataset) =>
+          dataset.allowedTeams.map((team) => ({ text: team.name, value: team.name })),
         ),
       ],
       "text",
@@ -230,9 +230,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
     // antd table filter entries for data layer names
     const dataLayersFilter = _.uniqBy(
       _.compact(
-        sortedDataSource.flatMap(dataset => {
+        sortedDataSource.flatMap((dataset) => {
           if ("dataLayers" in dataset.dataSource) {
-            return dataset.dataSource.dataLayers.map(layer => ({
+            return dataset.dataSource.dataLayers.map((layer) => ({
               text: layer.name,
               value: layer.name,
             }));
@@ -290,7 +290,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
             dataset.isActive ? (
               <div style={{ maxWidth: 280 }}>
-                {tags.map(tag => (
+                {tags.map((tag) => (
                   <CategorizationLabel
                     tag={tag}
                     key={tag}
@@ -343,14 +343,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="allowedTeams"
           key="allowedTeams"
           filters={accessPermissionFilters}
-          onFilter={(value, dataset) => dataset.allowedTeams.some(team => team.name === value)}
+          onFilter={(value, dataset) => dataset.allowedTeams.some((team) => team.name === value)}
           render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
             const permittedTeams = [...teams];
             if (dataset.isPublic) {
               permittedTeams.push({ name: "public", id: "", organization: "" });
             }
 
-            return permittedTeams.map(team => (
+            return permittedTeams.map((team) => (
               <div key={`allowed_teams_${dataset.name}_${team.name}`}>
                 <Tag
                   style={{
@@ -373,13 +373,13 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="dataSource.dataLayers"
           filters={dataLayersFilter}
           onFilter={(value, dataset: APIMaybeUnimportedDataset) =>
-            "dataLayers" in dataset.dataSource ?
-              dataset.dataSource.dataLayers.some(layer => layer.name === value)
+            "dataLayers" in dataset.dataSource
+              ? dataset.dataSource.dataLayers.some((layer) => layer.name === value)
               : false
           }
           render={(__, dataset: APIMaybeUnimportedDataset) => (
             <div style={{ maxWidth: 250 }}>
-              {(dataset.isActive ? dataset.dataSource.dataLayers : []).map(layer => (
+              {(dataset.isActive ? dataset.dataSource.dataLayers : []).map((layer) => (
                 <Tag
                   key={layer.name}
                   style={{

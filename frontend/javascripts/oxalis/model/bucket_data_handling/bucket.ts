@@ -20,12 +20,12 @@ import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import window from "libs/window";
 export const enum BucketStateEnum {
-  UNREQUESTED= "UNREQUESTED",
-  REQUESTED= "REQUESTED",
-  MISSING= "MISSING",
+  UNREQUESTED = "UNREQUESTED",
+  REQUESTED = "REQUESTED",
+  MISSING = "MISSING",
   // Missing means that the bucket couldn't be found on the data store
-  LOADED= "LOADED",
-};
+  LOADED = "LOADED",
+}
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
 export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
 export const bucketDebuggingFlags = {

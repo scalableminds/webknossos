@@ -36,61 +36,61 @@ class TextWithDescription extends React.PureComponent<Props> {
       </div>
     );
     return (
+      <span
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
+        className={hasDescription ? "flex-container" : null}
+        style={{
+          alignItems: "center",
+        }}
+      >
         <span
           // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
-          className={hasDescription ? "flex-container" : null}
+          className={hasDescription ? "flex-item" : null}
           style={{
-            alignItems: "center",
+            flexGrow: 0,
           }}
         >
-          <span
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
-            className={hasDescription ? "flex-item" : null}
-            style={{
-              flexGrow: 0,
-            }}
-          >
-            {hasDescription ? (
-              <Tooltip title="Show description" placement="bottom">
-                <Popover title="Description" trigger="click" content={markdownDescription}>
-                  <i
-                    className="fas fa-align-justify"
-                    style={{
-                      cursor: "pointer",
-                    }}
-                  />
-                </Popover>
-              </Tooltip>
-            ) : null}
-          </span>
-          <span className={hasDescription ? "flex-item" : null}>
-            {isEditable ? ( // $FlowIssue[incompatible-type]
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-              <EditableTextLabel {...editableProps} />
-            ) : (
-              <span
-                style={{
-                  margin: "0 10px",
-                  display: "inline-block",
-                }}
-              >
-                {this.props.markdown ? (
-                  <Markdown
-                    source={this.props.value}
-                    options={{
-                      html: false,
-                      breaks: true,
-                      linkify: true,
-                    }}
-                    container="span"
-                  />
-                ) : (
-                  this.props.value
-                )}
-              </span>
-            )}
-          </span>
+          {hasDescription ? (
+            <Tooltip title="Show description" placement="bottom">
+              <Popover title="Description" trigger="click" content={markdownDescription}>
+                <i
+                  className="fas fa-align-justify"
+                  style={{
+                    cursor: "pointer",
+                  }}
+                />
+              </Popover>
+            </Tooltip>
+          ) : null}
         </span>
+        <span className={hasDescription ? "flex-item" : null}>
+          {isEditable ? ( // $FlowIssue[incompatible-type]
+            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
+            <EditableTextLabel {...editableProps} />
+          ) : (
+            <span
+              style={{
+                margin: "0 10px",
+                display: "inline-block",
+              }}
+            >
+              {this.props.markdown ? (
+                <Markdown
+                  source={this.props.value}
+                  options={{
+                    html: false,
+                    breaks: true,
+                    linkify: true,
+                  }}
+                  container="span"
+                />
+              ) : (
+                this.props.value
+              )}
+            </span>
+          )}
+        </span>
+      </span>
     );
   }
 }

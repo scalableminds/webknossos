@@ -1,4 +1,3 @@
-
 import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { Vector3 } from "oxalis/constants";
 import type {
@@ -200,13 +199,13 @@ type CreateTracingUpdateAction = {
   name: "createTracing";
   value: {};
 };
-type AddServerValuesFn<T extends {value: any}> = (arg0: T) => T & {
+type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   value: T["value"] & {
     actionTimestamp: number;
   };
 };
 
-type AsServerAction<A extends {value: any}> = ReturnType<AddServerValuesFn<A>>;
+type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
 // Since flow does not provide ways to perform type transformations on the
 // single parts of a union, we need to write this out manually.
 export type ServerUpdateAction =

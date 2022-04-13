@@ -11,7 +11,7 @@ import { APIOrganization } from "types/api_flow_types";
 
 function RegistrationViewNotDemo() {
   const history = useHistory();
-  const [organization, setOrganization] = useState<APIOrganization|null>(null);
+  const [organization, setOrganization] = useState<APIOrganization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     (async () => {

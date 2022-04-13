@@ -70,11 +70,9 @@ export class ResolutionInfo {
     // This function creates a map which maps from powerOfTwo (2**index) to resolution.
     const { resolutions } = this;
 
-
     if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
       throw new Error("Max dimension in resolutions is not unique.");
     }
-
 
     for (const resolution of resolutions) {
       this.resolutionMap.set(maxValue(resolution), resolution);
@@ -247,12 +245,11 @@ export function getResolutionUnion(
   dataset: APIDataset,
   shouldThrow: boolean = false,
 ): Array<Vector3> {
-  const resolutionUnionDict: {[key: number]: Vector3} = {};
+  const resolutionUnionDict: { [key: number]: Vector3 } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
     for (const resolution of layer.resolutions) {
       const key = maxValue(resolution);
-
 
       if (resolutionUnionDict[key] == null) {
         resolutionUnionDict[key] = resolution;

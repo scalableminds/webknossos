@@ -51,7 +51,7 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  camera = ((camera || scene.getObjectByName(plane)) as THREE.OrthographicCamera);
+  camera = (camera || scene.getObjectByName(plane)) as THREE.OrthographicCamera;
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.

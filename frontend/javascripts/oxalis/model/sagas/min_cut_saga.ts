@@ -57,7 +57,10 @@ const VOXEL_THRESHOLD = 2000000;
 // optimization (unless it's the only existent mag).
 const ALWAYS_IGNORE_FIRST_MAG_INITIALLY = true;
 
-function selectAppropriateResolutions(boundingBoxMag1: BoundingBox, resolutionInfo: ResolutionInfo): Array<[number, Vector3]> {
+function selectAppropriateResolutions(
+  boundingBoxMag1: BoundingBox,
+  resolutionInfo: ResolutionInfo,
+): Array<[number, Vector3]> {
   const resolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
   const appropriateResolutions: Array<[number, Vector3]> = [];
 
@@ -119,7 +122,7 @@ function getNeighborIdx(neighbor: Vector3): number {
 const invertNeighborIdx = (neighborIdx: number) =>
   (neighborIdx + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
 
-function _getNeighborsFromBitMask(bitMask: number): {ingoing: Vector3[], outgoing: Vector3[]} {
+function _getNeighborsFromBitMask(bitMask: number): { ingoing: Vector3[]; outgoing: Vector3[] } {
   // Note: Use the memoized version of this: getNeighborsFromBitMask.
   // Ingoing and outgoing edges are stored as a bitmask. The first half
   // (higher significance) of the bitmask holds the ingoing edges as bits.
@@ -339,7 +342,7 @@ function* performMinCut(action: Action): Saga<void> {
             );
             yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
             yield* call(
-             {context: null, fn: progressCallback},
+              { context: null, fn: progressCallback },
               true,
               "Min-cut calculation finished. However, the refinement timed out. There still might be small voxel connections between the seeds.",
               {},
@@ -520,8 +523,15 @@ function isPositionOutside(position: Vector3, size: Vector3) {
   );
 }
 
-
-function buildGraph(inputData: TypedArray, segmentId: number, size: Vector3, length: number, l: L, ll: LL, timeoutThreshold: number) {
+function buildGraph(
+  inputData: TypedArray,
+  segmentId: number,
+  size: Vector3,
+  length: number,
+  l: L,
+  ll: LL,
+  timeoutThreshold: number,
+) {
   const edgeBuffer = new Uint16Array(length);
 
   for (let z = 0; z < size[2]; z++) {

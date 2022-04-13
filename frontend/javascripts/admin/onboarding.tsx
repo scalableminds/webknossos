@@ -34,7 +34,7 @@ const FormItem = Form.Item;
 type StateProps = {
   activeUser: APIUser | null | undefined;
 };
-type Props = StateProps & RouteComponentProps
+type Props = StateProps & RouteComponentProps;
 type State = {
   currentStep: number;
   datastores: Array<APIDataStore>;
@@ -215,8 +215,8 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
 }
 
 type InviteUsersModalState = {
-    inviteesString: string;
-  }
+  inviteesString: string;
+};
 
 export class InviteUsersModal extends React.Component<
   {
@@ -713,7 +713,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <CreditsFooter />
       </>
     );
-  };
+  }
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

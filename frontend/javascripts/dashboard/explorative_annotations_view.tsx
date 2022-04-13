@@ -94,9 +94,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    this.setState(
-      persistence.load(this.props.history) as PartialState,
-      () => this.fetchNextPage(0)
+    this.setState(persistence.load(this.props.history) as PartialState, () =>
+      this.fetchNextPage(0),
     );
   }
 
@@ -490,10 +489,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Stats"
           width={150}
-          render={(
-            __,
-            annotation: APIAnnotationCompact,
-          ) =>
+          render={(__, annotation: APIAnnotationCompact) =>
             "treeCount" in annotation.stats &&
             "nodeCount" in annotation.stats &&
             "edgeCount" in annotation.stats ? (

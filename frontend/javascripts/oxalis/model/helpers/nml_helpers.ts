@@ -348,9 +348,9 @@ function serializeComments(trees: Array<Tree>): Array<string> {
 }
 
 function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): Array<string> {
-
   const deepFindTree = (group: TreeGroup): boolean =>
-    (trees.find((tree) => tree.groupId === group.groupId) != null) || _.some(group.children, deepFindTree);
+    trees.find((tree) => tree.groupId === group.groupId) != null ||
+    _.some(group.children, deepFindTree);
 
   // Only serialize treeGroups that contain at least one tree at some level in their child hierarchy
   const nonEmptyTreeGroups = treeGroups.filter(deepFindTree);
@@ -656,7 +656,11 @@ export function parseNml(nmlString: string): Promise<{
 
             const currentNode = {
               id: nodeId,
-              position: [_parseFloat(attr, "x"), _parseFloat(attr, "y"), _parseFloat(attr, "z")] as Vector3,
+              position: [
+                _parseFloat(attr, "x"),
+                _parseFloat(attr, "y"),
+                _parseFloat(attr, "z"),
+              ] as Vector3,
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
                 _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),

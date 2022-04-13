@@ -1,4 +1,4 @@
-import type {TypedArray} from "oxalis/constants"
+import type { TypedArray } from "oxalis/constants";
 
 const GROW_MULTIPLIER = 1.3;
 type Class<T> = new (...args: any[]) => T;

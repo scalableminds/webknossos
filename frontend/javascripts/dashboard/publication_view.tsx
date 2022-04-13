@@ -87,20 +87,20 @@ function PublicationView(props: Props) {
     );
 
   return (
-      <List
-        // @ts-expect-error ts-migrate(2740) FIXME: Type 'CollectionChain<any[]>' is missing the follo... Remove this comment to see the full error message
-        dataSource={datasetsByPublication}
-        locale={{
-          emptyText: "No featured publications.",
-        }}
-        className="antd-no-border-list"
-        renderItem={(datasets) => (
-          // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-          <List.Item key={datasets[0].publication.id}>
-            <PublicationCard className="dataset-panel" datasets={datasets} showDetailedLink />
-          </List.Item>
-        )}
-      />
+    <List
+      // @ts-expect-error ts-migrate(2740) FIXME: Type 'CollectionChain<any[]>' is missing the follo... Remove this comment to see the full error message
+      dataSource={datasetsByPublication}
+      locale={{
+        emptyText: "No featured publications.",
+      }}
+      className="antd-no-border-list"
+      renderItem={(datasets) => (
+        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+        <List.Item key={datasets[0].publication.id}>
+          <PublicationCard className="dataset-panel" datasets={datasets} showDetailedLink />
+        </List.Item>
+      )}
+    />
   );
 }
 

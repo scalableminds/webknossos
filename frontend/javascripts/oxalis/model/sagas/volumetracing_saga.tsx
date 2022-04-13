@@ -9,15 +9,8 @@ import {
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import {
-  takeEvery,
-  takeLatest,
-  call,
-  fork,
-  put,
-  actionChannel,
-} from "typed-redux-saga";
-import {select, take} from "oxalis/model/sagas/effect-generators";
+import { takeEvery, takeLatest, call, fork, put, actionChannel } from "typed-redux-saga";
+import { select, take } from "oxalis/model/sagas/effect-generators";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import {
   updateVolumeTracing,
@@ -204,7 +197,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       createVolumeLayer,
       volumeTracing,
       startEditingAction.planeId,
-      labeledResolution
+      labeledResolution,
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
@@ -537,7 +530,7 @@ function* copySegmentationLayer(action: Action): Saga<void> {
   );
 
   if (useDynamicSpaceDirection) {
-    const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
+    const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
     direction = spaceDirectionOrtho[thirdDim];
   }
 
@@ -644,7 +637,7 @@ export function* floodFill(): Saga<void> {
       wasBoundingBoxExceeded,
       coveredBoundingBox,
     } = yield* call(
-      {context: cube, fn: cube.floodFill},
+      { context: cube, fn: cube.floodFill },
       seedPosition,
       activeCellId,
       dimensionIndices,
@@ -692,7 +685,8 @@ export function* floodFill(): Saga<void> {
     console.timeEnd("applyLabeledVoxelMapToAllMissingResolutions");
 
     if (wasBoundingBoxExceeded) {
-      yield* call(progressCallback,
+      yield* call(
+        progressCallback,
         true,
         <>
           Floodfill is done, but terminated since the labeled volume got too large. A bounding box
@@ -947,10 +941,8 @@ function* ensureSegmentExists(
     | UpdateTemporarySettingAction
     | ClickSegmentAction,
 ): Saga<void> {
-  const layer = yield* select(
-    (
-      store,
-    ) => getRequestedOrVisibleSegmentationLayer(store, "layerName" in action ? action.layerName : null),
+  const layer = yield* select((store) =>
+    getRequestedOrVisibleSegmentationLayer(store, "layerName" in action ? action.layerName : null),
   );
 
   if (!layer) {
@@ -1044,7 +1036,10 @@ function* updateHoveredSegmentId(): Saga<void> {
   }
 
   const globalMousePosition = yield* call(getGlobalMousePosition);
-  const hoveredCellInfo = yield* call({context: Model, fn: Model.getHoveredCellId}, globalMousePosition);
+  const hoveredCellInfo = yield* call(
+    { context: Model, fn: Model.getHoveredCellId },
+    globalMousePosition,
+  );
   const id = hoveredCellInfo != null ? hoveredCellInfo.id : 0;
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,

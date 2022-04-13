@@ -1,5 +1,5 @@
 import { Col, Row } from "antd";
-import type { RouteComponentProps,  } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import React from "react";
 import * as Utils from "libs/utils";

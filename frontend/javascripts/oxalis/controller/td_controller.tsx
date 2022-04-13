@@ -32,7 +32,7 @@ import { SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
 
-  const objToArr = ({x, y, z}: { x: number, y: number, z: number }): Vector3 => [x, y, z];
+  const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
 
   return {
     left,

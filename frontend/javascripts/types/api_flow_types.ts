@@ -50,7 +50,7 @@ export type APISegmentationLayer = APIDataLayerBase & {
   readonly tracingId?: string;
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
-export type APIHistogramData = HistogramDatum[]
+export type APIHistogramData = HistogramDatum[];
 export type HistogramDatum = {
   numberOfElements: number;
   elementCounts: Array<number>;
@@ -226,15 +226,15 @@ export enum APIAnnotationTypeEnum {
   View = "View",
   CompoundTask = "CompoundTask",
   CompoundProject = "CompoundProject",
-  CompoundTaskType = "CompoundTaskType"
-};
+  CompoundTaskType = "CompoundTaskType",
+}
 export type APIAnnotationType = keyof typeof APIAnnotationTypeEnum;
 export type APIAnnotationVisibility = "Private" | "Internal" | "Public";
 export enum TracingTypeEnum {
   skeleton = "skeleton",
   volume = "volume",
   hybrid = "hybrid",
-};
+}
 export type TracingType = keyof typeof TracingTypeEnum;
 export type APITaskType = {
   readonly id: string;

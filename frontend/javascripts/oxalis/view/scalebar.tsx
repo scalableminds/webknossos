@@ -119,4 +119,4 @@ const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => 
 };
 
 const connector = connect(mapStateToProps);
-export default  connector(Scalebar);
+export default connector(Scalebar);

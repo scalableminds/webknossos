@@ -91,7 +91,7 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
         isCodeChanged: false,
       });
     } catch (error) {
-       handleGenericError(error as Error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,

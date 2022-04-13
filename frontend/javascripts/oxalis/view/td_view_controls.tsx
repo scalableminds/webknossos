@@ -18,7 +18,7 @@ type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
-  onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler
+  onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
 };
 
 function TDViewControls({

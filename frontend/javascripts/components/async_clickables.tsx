@@ -8,7 +8,9 @@ export type AsyncButtonProps = Omit<ButtonProps, "onClick"> & {
   onClick: (event: React.MouseEvent) => Promise<any>;
 };
 
-function useLoadingClickHandler(originalOnClick: (event: React.MouseEvent) => Promise<any>): [boolean, React.MouseEventHandler] {
+function useLoadingClickHandler(
+  originalOnClick: (event: React.MouseEvent) => Promise<any>,
+): [boolean, React.MouseEventHandler] {
   const [isLoading, setIsLoading] = useState(false);
   const wasUnmounted = useRef(false);
   useEffect(
@@ -53,9 +55,7 @@ export function AsyncIconButton(
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   return React.cloneElement(isLoading ? <LoadingOutlined /> : props.icon, { ...props, onClick });
 }
-export function AsyncLink(
-  props: AsyncButtonProps 
-) {
+export function AsyncLink(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   const icon = isLoading ? <LoadingOutlined key="loading-icon" /> : props.icon;
   return (

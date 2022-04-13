@@ -20,10 +20,7 @@ export function getBorderOpenStatus(model: Model): BorderOpenStatus {
   });
   return openStatus;
 }
-export function adjustModelToBorderOpenStatus(
-  model: Model,
-  borderOpenStatus: BorderOpenStatus,
-) {
+export function adjustModelToBorderOpenStatus(model: Model, borderOpenStatus: BorderOpenStatus) {
   const borders = model.getBorderSet().getBorders();
   borders.forEach((border) => {
     const selectedNode = border.getSelectedNode();

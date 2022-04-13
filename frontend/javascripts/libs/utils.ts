@@ -467,9 +467,11 @@ export function busyWaitDevHelper(time: number) {
   }
 }
 export function animationFrame(maxTimeout?: number): Promise<void> {
-  const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise((resolve) => {
-    window.requestAnimationFrame(resolve);
-  });
+  const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise(
+    (resolve) => {
+      window.requestAnimationFrame(resolve);
+    },
+  );
 
   if (maxTimeout == null) {
     return rafPromise;

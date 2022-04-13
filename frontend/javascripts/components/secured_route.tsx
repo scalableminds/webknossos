@@ -70,5 +70,4 @@ class SecuredRoute extends React.PureComponent<Props, State> {
   }
 }
 
-
 export default withRouter<Props, any>(SecuredRoute);

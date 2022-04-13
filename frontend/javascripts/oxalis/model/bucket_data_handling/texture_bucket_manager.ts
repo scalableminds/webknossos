@@ -46,7 +46,6 @@ function getSomeValue<T>(set: Set<T>): T {
   return value;
 }
 
-
 export default class TextureBucketManager {
   dataTextures: Array<typeof UpdatableTexture>;
   lookUpBuffer: Float32Array;

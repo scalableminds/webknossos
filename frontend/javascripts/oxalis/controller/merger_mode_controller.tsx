@@ -69,18 +69,18 @@ class MergerModeController extends PureComponent<MergerModeControllerProps, Stat
   render() {
     const { isMergerModeModalVisible, isMergerModeModalClosable } = this.state;
 
-    if (!isMergerModeModalVisible) return null
-    
+    if (!isMergerModeModalVisible) return null;
+
     return (
-          <MergerModeModalView
-            isCloseable={isMergerModeModalClosable}
-            onClose={() =>
-              this.setState({
-                isMergerModeModalVisible: false,
-              })
-            }
-            progress={this.state.mergerModeProgress}
-          />
+      <MergerModeModalView
+        isCloseable={isMergerModeModalClosable}
+        onClose={() =>
+          this.setState({
+            isMergerModeModalVisible: false,
+          })
+        }
+        progress={this.state.mergerModeProgress}
+      />
     );
   }
 }
@@ -90,4 +90,4 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(  MergerModeController);
+export default connector(MergerModeController);

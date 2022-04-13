@@ -12,14 +12,14 @@ const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
 enum ROLES {
-  teammanager= "teammanager",
-  user= "user",
-};
+  teammanager = "teammanager",
+  user = "user",
+}
 enum PERMISSIONS {
-  admin= "admin",
-  datasetManager= "datasetManager",
-  member= "member",
-};
+  admin = "admin",
+  datasetManager = "datasetManager",
+  member = "member",
+}
 type TeamRoleModalProp = {
   onChange: (...args: Array<any>) => any;
   onCancel: (...args: Array<any>) => any;
@@ -55,7 +55,6 @@ function getSingleUserMaybe(props: TeamRoleModalProp) {
 }
 
 class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp, State> {
-
   state: State = {
     selectedTeams: {},
     teams: [],

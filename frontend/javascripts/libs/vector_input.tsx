@@ -171,7 +171,7 @@ export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps>
 
   render() {
     const { value, onChange, ...props } = this.props;
-    const vector6Value = boundingBoxToVector6(value || emptyBoundingBox)
+    const vector6Value = boundingBoxToVector6(value || emptyBoundingBox);
     return (
       <Vector6Input
         {...props}

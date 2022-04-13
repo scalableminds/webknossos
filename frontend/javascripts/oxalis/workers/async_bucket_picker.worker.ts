@@ -10,15 +10,13 @@ import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/buc
 import { expose } from "./comlink_wrapper";
 
 type PriorityItem = {
-    bucketAddress: Vector4;
-    priority: number;
-  }
+  bucketAddress: Vector4;
+  priority: number;
+};
 
 const comparator = (b: PriorityItem, a: PriorityItem) => b.priority - a.priority;
 
-function dequeueToArrayBuffer(
-  bucketQueue: PriorityQueue<PriorityItem>,
-): ArrayBuffer {
+function dequeueToArrayBuffer(bucketQueue: PriorityQueue<PriorityItem>): ArrayBuffer {
   const itemCount = bucketQueue.length;
   const intsPerItem = 5; // [x, y, z, zoomStep, priority]
 

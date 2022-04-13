@@ -1,4 +1,15 @@
-import { Alert, List, Input, Form, InputNumber, Col, Row, Switch, Tooltip, FormInstance } from "antd";
+import {
+  Alert,
+  List,
+  Input,
+  Form,
+  InputNumber,
+  Col,
+  Row,
+  Switch,
+  Tooltip,
+  FormInstance,
+} from "antd";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
@@ -105,7 +116,13 @@ export default function SimpleAdvancedDataForm({
   );
 }
 
-function SimpleDatasetForm({ isReadOnlyDataset, dataSource }: { isReadOnlyDataset : boolean, dataSource:Record<string, any>}) {
+function SimpleDatasetForm({
+  isReadOnlyDataset,
+  dataSource,
+}: {
+  isReadOnlyDataset: boolean;
+  dataSource: Record<string, any>;
+}) {
   return (
     <div>
       <List
@@ -161,21 +178,25 @@ function SimpleDatasetForm({ isReadOnlyDataset, dataSource }: { isReadOnlyDatase
           </div>
         }
       >
-        {(dataSource ||{dataLayers: []}).dataLayers.map((layer: APIDataLayer, idx: number) => (
-            <List.Item key={`layer-${layer.name}`}>
-              <SimpleLayerForm
-                isReadOnlyDataset={isReadOnlyDataset}
-                layer={layer}
-                index={idx}
-              />
-            </List.Item>
-          ))}
+        {(dataSource || { dataLayers: [] }).dataLayers.map((layer: APIDataLayer, idx: number) => (
+          <List.Item key={`layer-${layer.name}`}>
+            <SimpleLayerForm isReadOnlyDataset={isReadOnlyDataset} layer={layer} index={idx} />
+          </List.Item>
+        ))}
       </List>
     </div>
   );
 }
 
-function SimpleLayerForm({ isReadOnlyDataset, layer, index }: { isReadOnlyDataset: boolean; layer: APIDataLayer; index: number }) {
+function SimpleLayerForm({
+  isReadOnlyDataset,
+  layer,
+  index,
+}: {
+  isReadOnlyDataset: boolean;
+  layer: APIDataLayer;
+  index: number;
+}) {
   const isSegmentation = layer.category === "segmentation";
   const bitDepth = getBitDepth(layer);
   const boundingBoxValue =
@@ -216,7 +237,8 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }: { isReadOnlyDatase
             },
             {
               validator: syncValidator(
-                (value: BoundingBoxObject) => value.width !== 0 && value.height !== 0 && value.depth !== 0,
+                (value: BoundingBoxObject) =>
+                  value.width !== 0 && value.height !== 0 && value.depth !== 0,
                 "Width, height and depth must not be zero",
               ),
             },

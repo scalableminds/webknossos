@@ -212,9 +212,11 @@ V3.divide3 = function divide3(a: Vector3Like, k: Vector3Like, r?: Vector3Like) {
   return r;
 };
 
-V3.fromMag1ToMag = (vec: Vector3Like, targetMag: Vector3Like) => V3.floor(V3.divide3(vec, targetMag));
+V3.fromMag1ToMag = (vec: Vector3Like, targetMag: Vector3Like) =>
+  V3.floor(V3.divide3(vec, targetMag));
 
-V3.fromMagToMag1 = (vec: Vector3Like, sourceMag: Vector3Like) => V3.floor(V3.scale3(vec, sourceMag));
+V3.fromMagToMag1 = (vec: Vector3Like, sourceMag: Vector3Like) =>
+  V3.floor(V3.scale3(vec, sourceMag));
 
 const _tmpVec = [0, 0, 0];
 
@@ -256,6 +258,7 @@ V3.max = (vec1: Vector3Like, vec2: Vector3Like) => [
   Math.max(vec1[2], vec2[2]),
 ];
 
-V3.equals = (vec1: Vector3Like, vec2: Vector3Like) => vec1[0] === vec2[0] && vec1[1] === vec2[1] && vec1[2] === vec2[2];
+V3.equals = (vec1: Vector3Like, vec2: Vector3Like) =>
+  vec1[0] === vec2[0] && vec1[1] === vec2[1] && vec1[2] === vec2[2];
 
 export { M4x4, V2, V3 };

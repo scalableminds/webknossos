@@ -135,7 +135,9 @@ function RightClickShortcut({ actionInfos }) {
 
 function ShortcutsInfo() {
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const useLegacyBindings = useSelector((state: OxalisState) => state.userConfiguration.useLegacyBindings);
+  const useLegacyBindings = useSelector(
+    (state: OxalisState) => state.userConfiguration.useLegacyBindings,
+  );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
@@ -267,7 +269,9 @@ function maybeLabelWithSegmentationWarning(hasUint64Segmentation: boolean, label
 
 function Infos() {
   const activeResolution = useSelector((state: OxalisState) => getCurrentResolution(state));
-  const mousePosition = useSelector((state: OxalisState) => state.temporaryConfiguration.mousePosition);
+  const mousePosition = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.mousePosition,
+  );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const isVolumeAnnotation = useSelector((state: OxalisState) => state.tracing.volume != null);
@@ -291,7 +295,9 @@ function Infos() {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
   const onChangeActiveTreeId = (id) => dispatch(setActiveTreeAction(id));
 
-  const hasVisibleSegmentation = useSelector((state: OxalisState) => getVisibleSegmentationLayer(state) != null);
+  const hasVisibleSegmentation = useSelector(
+    (state: OxalisState) => getVisibleSegmentationLayer(state) != null,
+  );
   const hasUint64Segmentation = useSelector((state: OxalisState) => {
     const segmentationLayer = getVisibleSegmentationLayer(state);
     return segmentationLayer ? segmentationLayer.originalElementClass === "uint64" : false;

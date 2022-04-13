@@ -211,7 +211,7 @@ export function* watchAgglomerateLoading(): Saga<void> {
   const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
-  yield * takeEvery(channel, loadAgglomerateSkeletonWithId);
+  yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
   yield* takeEvery("REMOVE_AGGLOMERATE_SKELETON", removeAgglomerateSkeletonWithId);
 }
 export function* watchConnectomeAgglomerateLoading(): Saga<void> {
@@ -219,7 +219,7 @@ export function* watchConnectomeAgglomerateLoading(): Saga<void> {
   const channel = yield* actionChannel("LOAD_CONNECTOME_AGGLOMERATE_SKELETON");
   // The order of these two actions is not guaranteed, but they both need to be dispatched
   yield* all([take("INITIALIZE_CONNECTOME_TRACING"), take("WK_READY")]);
-  yield * takeEvery(channel, loadConnectomeAgglomerateSkeletonWithId);
+  yield* takeEvery(channel, loadConnectomeAgglomerateSkeletonWithId);
   yield* takeEvery(
     "REMOVE_CONNECTOME_AGGLOMERATE_SKELETON",
     removeConnectomeAgglomerateSkeletonWithId,

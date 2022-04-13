@@ -3,9 +3,10 @@ import * as React from "react";
 import _ from "lodash";
 import TextArea, { TextAreaProps } from "antd/lib/input/TextArea";
 
-export type InputComponentProps = InputProps & TextAreaProps & {
-  isTextArea?: boolean;
-};
+export type InputComponentProps = InputProps &
+  TextAreaProps & {
+    isTextArea?: boolean;
+  };
 
 type InputComponentState = {
   isFocused: boolean;
@@ -44,7 +45,7 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
         currentValue: this.props.value,
       });
     }
-  };
+  }
 
   handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     this.setState({
@@ -56,18 +57,18 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
       this.props.onChange(e);
     }
   };
-  
+
   handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     this.setState({
       isFocused: true,
     });
-    
+
     if (this.props.onFocus) {
       // @ts-expect-error HTMLInputElement and HTMLTextAreaElement have same event types
       this.props.onFocus(e);
     }
   };
-  
+
   handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     this.setState(
       {

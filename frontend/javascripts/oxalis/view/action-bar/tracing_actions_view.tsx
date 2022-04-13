@@ -67,7 +67,9 @@ import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 
-const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(AsyncButton);
+const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
+  AsyncButton,
+);
 
 type OwnProps = {
   layoutMenu: React.ReactNode;
@@ -245,7 +247,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   reopenTimeout: ReturnType<typeof setTimeout> | null | undefined;
-  
+
   componentDidUpdate() {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
 
@@ -273,7 +275,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         }, reopenAllowedTime - timeSinceFinish);
       }
     }
-  };
+  }
 
   componentWillUnmount() {
     if (this.reopenTimeout != null) {
@@ -657,4 +659,4 @@ function mapStateToProps(state: OxalisState): StateProps {
 }
 
 const connector = connect(mapStateToProps);
-export default  connector(TracingActionsView);
+export default connector(TracingActionsView);

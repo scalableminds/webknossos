@@ -25,7 +25,8 @@ export default function AddVolumeLayerModal({
   >(null);
   const [newLayerName, setNewLayerName] = useState("Volume");
 
-  const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>) => setNewLayerName(evt.target.value);
+  const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setNewLayerName(evt.target.value);
 
   const segmentationLayers = getSegmentationLayers(dataset);
   const volumeTracingLayers = getVolumeTracingLayers(dataset);

@@ -47,8 +47,8 @@ type UseCreateWorkerToUseMe<T> = {
   readonly _wrapped: T;
 };
 export function createWorker<T extends (...args: any) => any>(
-  WorkerClass: UseCreateWorkerToUseMe<T>
-): ((...params: Parameters<T>) => Promise<ReturnType<T>>) {
+  WorkerClass: UseCreateWorkerToUseMe<T>,
+): (...params: Parameters<T>) => Promise<ReturnType<T>> {
   if (wrap == null) {
     // In a node context (e.g., when executing tests), we don't create web workers which is why
     // we can simply return the input function here.

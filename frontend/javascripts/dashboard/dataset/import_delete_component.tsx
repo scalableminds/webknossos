@@ -66,5 +66,4 @@ const ImportDeleteComponent = ({ datasetId, history }: Props) => {
   );
 };
 
-
 export default withRouter<RouteComponentProps & Props, any>(ImportDeleteComponent);

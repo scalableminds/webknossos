@@ -6,7 +6,7 @@ export const document =
     ? {
         getElementById: () => null,
         body: null,
-        activeElement: typeof HTMLElement === "undefined" ? undefined : HTMLElement
+        activeElement: typeof HTMLElement === "undefined" ? undefined : HTMLElement,
       }
     : window.document;
 // See https://github.com/facebook/flow/blob/master/lib/bom.js#L294-L311

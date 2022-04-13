@@ -813,47 +813,47 @@ function ContextMenuContainer(props: Props) {
   }, [inputRef.current]);
   const { contextMenuPosition, hideContextMenu } = props;
   return (
-      <React.Fragment>
-        <div
-          className="node-context-menu-overlay"
-          onClick={hideContextMenu}
-          onContextMenu={(evt) => {
-            evt.preventDefault();
-            hideContextMenu();
-          }}
-          style={{
-            display: contextMenuPosition == null ? "none" : "inherit",
-          }}
-        />
-        {/*
+    <React.Fragment>
+      <div
+        className="node-context-menu-overlay"
+        onClick={hideContextMenu}
+        onContextMenu={(evt) => {
+          evt.preventDefault();
+          hideContextMenu();
+        }}
+        style={{
+          display: contextMenuPosition == null ? "none" : "inherit",
+        }}
+      />
+      {/*
          This div serves as a "prison" for the sticky context menu. The above div
          cannot be used since the context menu would then be closed on every click.
          Since both divs are absolutely positioned and cover the whole page,
          avoid blocking click events by temporarily disabling them for this "prison"
          div.
         */}
+      <div
+        className="node-context-menu-overlay"
+        style={{
+          pointerEvents: "none",
+          display: contextMenuPosition == null ? "none" : "inherit",
+        }}
+      >
         <div
-          className="node-context-menu-overlay"
           style={{
-            pointerEvents: "none",
-            display: contextMenuPosition == null ? "none" : "inherit",
+            position: "sticky",
+            left: contextMenuPosition != null ? contextMenuPosition[0] : 0,
+            top: contextMenuPosition != null ? contextMenuPosition[1] : 0,
+            width: "fit-content",
+            pointerEvents: "all",
           }}
-        >
-          <div
-            style={{
-              position: "sticky",
-              left: contextMenuPosition != null ? contextMenuPosition[0] : 0,
-              top: contextMenuPosition != null ? contextMenuPosition[1] : 0,
-              width: "fit-content",
-              pointerEvents: "all",
-            }}
-            className="node-context-menu"
-            tabIndex={-1}
-            ref={inputRef}
-          />
-          <ContextMenuInner {...props} inputRef={inputRef} />
-        </div>
-      </React.Fragment>
+          className="node-context-menu"
+          tabIndex={-1}
+          ref={inputRef}
+        />
+        <ContextMenuInner {...props} inputRef={inputRef} />
+      </div>
+    </React.Fragment>
   );
 }
 
@@ -874,7 +874,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
   if (contextMenuPosition != null && maybeViewport != null) {
     const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
     const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
-    
+
     let nodeContextMenuTree: Tree | null = null;
     let nodeContextMenuNode: MutableNode | null = null;
 
@@ -900,7 +900,8 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
             formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
           ]
         : null;
-    const nodePositionAsString = nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
+    const nodePositionAsString =
+      nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
     const segmentIdAtPosition = getSegmentIdForPosition(globalPosition);
     const infoRows = [];
 
@@ -987,22 +988,21 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
             ...props,
           });
   }
-  if (inputRef == null)
-    return null;
-  
+  if (inputRef == null) return null;
+
   return (
     <React.Fragment>
-          <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
-          <Dropdown
-            overlay={overlay}
-            overlayClassName="dropdown-overlay-container-for-context-menu"
-            visible={contextMenuPosition != null}
-            getPopupContainer={() => inputRef.current}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: Element; overl... Remove this comment to see the full error message
-            destroyPopupOnHide
-          >
-            <div />
-          </Dropdown>
+      <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
+      <Dropdown
+        overlay={overlay}
+        overlayClassName="dropdown-overlay-container-for-context-menu"
+        visible={contextMenuPosition != null}
+        getPopupContainer={() => inputRef.current}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: Element; overl... Remove this comment to see the full error message
+        destroyPopupOnHide
+      >
+        <div />
+      </Dropdown>
     </React.Fragment>
   );
 }

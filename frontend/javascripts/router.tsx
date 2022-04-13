@@ -369,9 +369,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/taskTypes"
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
-                ) => (
-                  <TaskTypeListView initialSearchValue={location.hash.slice(1)} />
-                )}
+                ) => <TaskTypeListView initialSearchValue={location.hash.slice(1)} />}
                 exact
               />
               <SecuredRoute
@@ -472,9 +470,7 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/auth/register" render={() => <Redirect to="/auth/signup" />} />
               <Route
                 path="/auth/login"
-                render={() =>
-                  isAuthenticated ? <Redirect to="/" /> : <LoginView />
-                }
+                render={() => (isAuthenticated ? <Redirect to="/" /> : <LoginView />)}
               />
               <Route
                 path="/auth/signup"
@@ -530,8 +526,7 @@ class ReactRouter extends React.Component<Props> {
                         name: match.params.dataSetName,
                       };
                       const type =
-                        coalesce(TracingTypeEnum, match.params.type) ||
-                        TracingTypeEnum.skeleton;
+                        coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
                       const { fallbackLayerName } = getParams;
                       const resolutionRestrictions = {};
@@ -599,5 +594,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
-const connector = connect(mapStateToProps)
+const connector = connect(mapStateToProps);
 export default connector(ReactRouter);

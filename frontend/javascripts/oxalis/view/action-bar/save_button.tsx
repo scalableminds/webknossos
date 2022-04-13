@@ -197,4 +197,4 @@ function mapStateToProps(state: OxalisState): StateProps {
 }
 
 const connector = connect(mapStateToProps);
-export default  connector(SaveButton);
+export default connector(SaveButton);

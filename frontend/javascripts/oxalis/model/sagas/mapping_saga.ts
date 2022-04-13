@@ -1,16 +1,7 @@
 import _ from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import {
-  all,
-  call,
-  takeEvery,
-  takeLatest,
-  take,
-  put,
-  fork,
-  actionChannel,
-} from "typed-redux-saga";
-import {select} from "oxalis/model/sagas/effect-generators";
+import { all, call, takeEvery, takeLatest, take, put, fork, actionChannel } from "typed-redux-saga";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
   SetMappingAction,

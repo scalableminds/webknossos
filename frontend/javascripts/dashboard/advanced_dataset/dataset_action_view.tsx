@@ -37,14 +37,14 @@ function NewAnnotationLink({
   onShowCreateExplorativeModal,
   onCloseCreateExplorativeModal,
 }: {
-  dataset: APIDataset,
-  isReloading: boolean,
-  isCreateExplorativeModalVisible: boolean,
-  onShowCreateExplorativeModal: () => void,
-  onCloseCreateExplorativeModal: () => void,
+  dataset: APIDataset;
+  isReloading: boolean;
+  isCreateExplorativeModalVisible: boolean;
+  onShowCreateExplorativeModal: () => void;
+  onCloseCreateExplorativeModal: () => void;
 }) {
   if (isReloading) return null;
-  
+
   const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
   const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
     ? "true"
@@ -55,42 +55,44 @@ function NewAnnotationLink({
       : "";
 
   return (
-        <div>
-          <LinkWithDisabled
-            to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid${fallbackLayerGetParameter}`}
-            style={{
-              display: "inline-block",
-            } as React.CSSProperties}
-            title="New Annotation (Skeleton + Volume)"
-            disabled={isReloading}
-          >
-            <PlusOutlined />
-            New Annotation
-          </LinkWithDisabled>
-          <span
-            style={{
-              marginLeft: 8,
-              marginRight: 8,
-              color: "var(--ant-border-base)",
-            }}
-          >
-            |
-          </span>
-          <a
-            title="New Annotation With Custom Properties"
-            className="ant-dropdown-link"
-            onClick={() => onShowCreateExplorativeModal}
-          >
-            <EllipsisOutlined
-              style={{
-                color: "var(--ant-link)",
-              }}
-            />
-          </a>
-          {isCreateExplorativeModalVisible ? (
-            <CreateExplorativeModal datasetId={dataset} onClose={onCloseCreateExplorativeModal} />
-          ) : null}
-        </div>
+    <div>
+      <LinkWithDisabled
+        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid${fallbackLayerGetParameter}`}
+        style={
+          {
+            display: "inline-block",
+          } as React.CSSProperties
+        }
+        title="New Annotation (Skeleton + Volume)"
+        disabled={isReloading}
+      >
+        <PlusOutlined />
+        New Annotation
+      </LinkWithDisabled>
+      <span
+        style={{
+          marginLeft: 8,
+          marginRight: 8,
+          color: "var(--ant-border-base)",
+        }}
+      >
+        |
+      </span>
+      <a
+        title="New Annotation With Custom Properties"
+        className="ant-dropdown-link"
+        onClick={() => onShowCreateExplorativeModal}
+      >
+        <EllipsisOutlined
+          style={{
+            color: "var(--ant-link)",
+          }}
+        />
+      </a>
+      {isCreateExplorativeModalVisible ? (
+        <CreateExplorativeModal datasetId={dataset} onClose={onCloseCreateExplorativeModal} />
+      ) : null}
+    </div>
   );
 }
 
@@ -112,7 +114,7 @@ function LinkWithDisabled({
   onClick?: () => void;
   style?: React.CSSProperties;
   to: string;
-  children: React.ReactNode,
+  children: React.ReactNode;
 } & LinkProps) {
   const maybeDisabledStyle = disabled ? disabledStyle : null;
   const adaptedStyle =

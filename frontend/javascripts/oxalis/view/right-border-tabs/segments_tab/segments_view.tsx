@@ -1,4 +1,3 @@
-
 import { Button, ConfigProvider, List, Tooltip, Select, Popover, Empty } from "antd";
 import type { Dispatch } from "redux";
 import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
@@ -446,11 +445,13 @@ class SegmentsView extends React.Component<Props, State> {
           )}
           onChange={this.handleQualityChangeForAdHocGeneration}
         >
-          {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag]: [number, Vector3], index: number) => (
-            <Option value={log2Index} key={log2Index}>
-              {formatMagWithLabel(mag, index)}
-            </Option>
-          ))}
+          {datasetResolutionInfo
+            .getResolutionsWithIndices()
+            .map(([log2Index, mag]: [number, Vector3], index: number) => (
+              <Option value={log2Index} key={log2Index}>
+                {formatMagWithLabel(mag, index)}
+              </Option>
+            ))}
         </Select>
       </div>
     );
@@ -493,11 +494,13 @@ class SegmentsView extends React.Component<Props, State> {
             )}
             onChange={this.handleQualityChangeForPrecomputation}
           >
-            {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag]: [number, Vector3], index: number) => (
-              <Option value={log2Index} key={log2Index}>
-                {formatMagWithLabel(mag, index)}
-              </Option>
-            ))}
+            {datasetResolutionInfo
+              .getResolutionsWithIndices()
+              .map(([log2Index, mag]: [number, Vector3], index: number) => (
+                <Option value={log2Index} key={log2Index}>
+                  {formatMagWithLabel(mag, index)}
+                </Option>
+              ))}
           </Select>
         </div>
 

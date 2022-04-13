@@ -188,4 +188,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default  connector(ActionBarView);
+export default connector(ActionBarView);

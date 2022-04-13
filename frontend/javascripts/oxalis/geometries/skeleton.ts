@@ -44,10 +44,7 @@ const NodeBufferHelperType = {
     geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
   },
 
-  buildMesh(
-    geometry: THREE.BufferGeometry,
-    material: THREE.Material,
-  ): THREE.Object3D {
+  buildMesh(geometry: THREE.BufferGeometry, material: THREE.Material): THREE.Object3D {
     return new THREE.Points(geometry, material);
   },
 
@@ -59,10 +56,7 @@ const EdgeBufferHelperType = {
     geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
   },
 
-  buildMesh(
-    geometry: THREE.BufferGeometry,
-    material: THREE.Material,
-  ): THREE.Object3D {
+  buildMesh(geometry: THREE.BufferGeometry, material: THREE.Material): THREE.Object3D {
     return new THREE.LineSegments(geometry, material);
   },
 
@@ -190,11 +184,7 @@ class Skeleton {
     };
   }
 
-  initializeBuffer(
-    capacity: number,
-    material: THREE.Material,
-    helper: BufferHelper,
-  ): Buffer {
+  initializeBuffer(capacity: number, material: THREE.Material, helper: BufferHelper): Buffer {
     const geometry = new THREE.BufferGeometry();
     helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
@@ -490,23 +480,27 @@ class Skeleton {
    */
   createNode(treeId: number, node: Node) {
     const id = this.combineIds(node.id, treeId);
-    this.create(id, this.nodes, ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
-      const { attributes } = buffer.geometry;
-      // @ts-expect-error
-      attributes.position.set(node.position, index * 3);
-      // @ts-expect-error
-      attributes.radius.array[index] = node.radius;
-      // @ts-expect-error
-      attributes.type.array[index] = NodeTypes.NORMAL;
-      // @ts-expect-error
-      attributes.isCommented.array[index] = false;
-      // @ts-expect-error
-      attributes.nodeId.array[index] = node.id;
-      // @ts-expect-error
-      attributes.treeId.array[index] = treeId;
-      // @ts-expect-error
-      return _.values(attributes);
-    });
+    this.create(
+      id,
+      this.nodes,
+      ({ buffer, index }: BufferPosition): Array<THREE.BufferAttribute> => {
+        const { attributes } = buffer.geometry;
+        // @ts-expect-error
+        attributes.position.set(node.position, index * 3);
+        // @ts-expect-error
+        attributes.radius.array[index] = node.radius;
+        // @ts-expect-error
+        attributes.type.array[index] = NodeTypes.NORMAL;
+        // @ts-expect-error
+        attributes.isCommented.array[index] = false;
+        // @ts-expect-error
+        attributes.nodeId.array[index] = node.id;
+        // @ts-expect-error
+        attributes.treeId.array[index] = treeId;
+        // @ts-expect-error
+        return _.values(attributes);
+      },
+    );
   }
 
   /**

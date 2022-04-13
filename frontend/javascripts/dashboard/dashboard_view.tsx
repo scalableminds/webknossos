@@ -246,5 +246,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-const connector = connect(mapStateToProps, mapDispatchToProps)
+const connector = connect(mapStateToProps, mapDispatchToProps);
 export default connector(withRouter<RouteComponentProps & Props, any>(DashboardView));

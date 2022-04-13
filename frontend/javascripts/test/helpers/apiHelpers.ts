@@ -140,7 +140,11 @@ let counter = 0;
 // important mocks. The leading underscores are there to make the import
 // appear at the top when sorting the imports with importjs.
 
-export function __setupOxalis(t: ExecutionContext<any>, mode: keyof typeof modelData, apiVersion?: number) {
+export function __setupOxalis(
+  t: ExecutionContext<any>,
+  mode: keyof typeof modelData,
+  apiVersion?: number,
+) {
   UrlManager.initialState = {
     position: [1, 2, 3],
   };

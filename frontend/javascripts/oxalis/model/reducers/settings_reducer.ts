@@ -1,4 +1,3 @@
-
 import type { Action } from "oxalis/model/actions/actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, ActiveMappingInfo } from "oxalis/store";

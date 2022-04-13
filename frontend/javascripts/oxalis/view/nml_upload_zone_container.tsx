@@ -1,4 +1,3 @@
-
 import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
 import { FileOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -30,7 +29,7 @@ type StateProps = {
 };
 type Props = StateProps & OwnProps;
 
-function OverlayDropZone({ children }: {children: React.ReactNode}) {
+function OverlayDropZone({ children }: { children: React.ReactNode }) {
   return (
     <div className="nml-upload-zone-overlay">
       <div className="nml-upload-zone-modal">{children}</div>

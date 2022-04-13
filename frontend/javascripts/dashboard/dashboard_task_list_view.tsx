@@ -377,8 +377,10 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       isTransferModalVisible: false,
     });
 
-    const removeTransferredTask = (tasks: APITaskWithAnnotation[], currentAnnotationId: string|null|undefined) =>
-      tasks.filter((t) => t.annotation.id !== currentAnnotationId);
+    const removeTransferredTask = (
+      tasks: APITaskWithAnnotation[],
+      currentAnnotationId: string | null | undefined,
+    ) => tasks.filter((t) => t.annotation.id !== currentAnnotationId);
 
     this.setCurrentModeState({
       tasks: removeTransferredTask(this.getCurrentTasks(), this.state.currentAnnotationId),
@@ -587,5 +589,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-const connector = connect(mapStateToProps)
+const connector = connect(mapStateToProps);
 export default connector(withRouter<RouteComponentProps & Props, any>(DashboardTaskListView));

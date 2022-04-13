@@ -99,9 +99,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       <div className="container">
         <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
         <div className="pull-right">
-          {this.state.updatedAt != null ? (
-            <FormattedDate timestamp={this.state.updatedAt} />
-          ) : null}{" "}
+          {this.state.updatedAt != null ? <FormattedDate timestamp={this.state.updatedAt} /> : null}{" "}
           <SettingOutlined onClick={this.handleOpenSettings} />
           <ReloadOutlined onClick={this.handleReload} />
         </div>

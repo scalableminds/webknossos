@@ -2,7 +2,11 @@ import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SaveState, SaveQueueEntry } from "oxalis/store";
-import type { PushSaveQueueTransaction, SetVersionNumberAction, ShiftSaveQueueAction } from "oxalis/model/actions/save_actions";
+import type {
+  PushSaveQueueTransaction,
+  SetVersionNumberAction,
+  ShiftSaveQueueAction,
+} from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
@@ -12,7 +16,11 @@ import { updateVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer
 import Date from "libs/date";
 import * as Utils from "libs/utils";
 
-function updateQueueObj(action: PushSaveQueueTransaction | ShiftSaveQueueAction, oldQueueObj: SaveState["queue"], newQueue: any): SaveState["queue"] {
+function updateQueueObj(
+  action: PushSaveQueueTransaction | ShiftSaveQueueAction,
+  oldQueueObj: SaveState["queue"],
+  newQueue: any,
+): SaveState["queue"] {
   if (action.tracingType === "skeleton") {
     return { ...oldQueueObj, skeleton: newQueue };
   }
@@ -23,11 +31,7 @@ function updateQueueObj(action: PushSaveQueueTransaction | ShiftSaveQueueAction,
 export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
   return (
     queueObj.skeleton.length +
-    _.sum(
-      Utils.values(queueObj.volumes).map(
-        (volumeQueue: SaveQueueEntry[]) => volumeQueue.length,
-      ),
-    )
+    _.sum(Utils.values(queueObj.volumes).map((volumeQueue: SaveQueueEntry[]) => volumeQueue.length))
   );
 }
 

@@ -55,8 +55,7 @@ const persistence = new Persistence<PersistenceState>(
 
 function filterDatasetsForUsersOrganization(datasets: APIMaybeUnimportedDataset[], user: APIUser) {
   return features().isDemoInstance
-    ? 
-      datasets.filter((d) => d.owningOrganization === user.organization)
+    ? datasets.filter((d) => d.owningOrganization === user.organization)
     : datasets;
 }
 
@@ -69,7 +68,7 @@ function DatasetView(props: Props) {
   const [datasetFilteringMode, setDatasetFilteringMode] =
     useState<DatasetFilteringMode>("onlyShowReported");
   const [jobs, setJobs] = useState<APIJob[]>([]);
-  
+
   useEffect(() => {
     const state = persistence.load(history) as PersistenceState;
 
@@ -122,9 +121,7 @@ function DatasetView(props: Props) {
     }
   }
 
-  function handleSearch(
-    event: React.SyntheticEvent<HTMLInputElement>,
-  ) {
+  function handleSearch(event: React.SyntheticEvent<HTMLInputElement>) {
     setSearchQuery(event.target.value);
   }
 

@@ -20,8 +20,8 @@ import window from "libs/window";
 import { clearCanvas, setupRenderArea, renderToTexture } from "oxalis/view/rendering_utils";
 
 type GeometryLike = {
-  addToScene: ((obj: THREE.Object3D) => void)
-}
+  addToScene: (obj: THREE.Object3D) => void;
+};
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)

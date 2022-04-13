@@ -1,4 +1,3 @@
-
 import {
   DeleteOutlined,
   LoadingOutlined,
@@ -459,8 +458,6 @@ function _SegmentListItem({
 }
 
 const SegmentListItem = React.memo<Props>(_SegmentListItem);
-
-
 
 function getRefreshButton(
   segment: Segment,

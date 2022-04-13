@@ -3,7 +3,12 @@ import { CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { useSelector } from "react-redux";
 import React, { useState, useEffect } from "react";
-import type { APIDataset, APIAnnotationVisibility, APIAnnotationType, APITeam } from "types/api_flow_types";
+import type {
+  APIDataset,
+  APIAnnotationVisibility,
+  APIAnnotationType,
+  APITeam,
+} from "types/api_flow_types";
 import {
   getDatasetSharingToken,
   getTeamsForSharedAnnotation,
@@ -30,7 +35,7 @@ type Props = {
   annotationId: string;
 };
 
-function Hint({ children, style } : {children: React.ReactNode, style: React.CSSProperties}) {
+function Hint({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
   return (
     <div style={{ ...style, marginBottom: 12, fontSize: 12, color: "var(--ant-text-secondary)" }}>
       {children}

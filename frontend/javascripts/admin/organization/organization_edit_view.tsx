@@ -9,11 +9,11 @@ import { coalesce } from "libs/utils";
 
 const FormItem = Form.Item;
 export enum PricingPlanEnum {
-  Basic= "Basic",
-  Premium= "Premium",
-  Pilot= "Pilot",
-  Custom= "Custom",
-};
+  Basic = "Basic",
+  Premium = "Premium",
+  Pilot = "Pilot",
+  Custom = "Custom",
+}
 export type PricingPlan = keyof typeof PricingPlanEnum;
 type Props = {
   organizationName: string;

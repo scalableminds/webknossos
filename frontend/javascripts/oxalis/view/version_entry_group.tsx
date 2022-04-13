@@ -19,7 +19,7 @@ type State = {
 };
 
 export default class VersionEntryGroup extends React.Component<Props, State> {
-  state : State = {
+  state: State = {
     expanded: false,
   };
 

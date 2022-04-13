@@ -168,20 +168,20 @@ export function getNodeAndTreeOrNull(
   tree: Tree | null;
   node: Node | null;
 } {
-  return (
-    getNodeAndTree(skeletonTracing, nodeId, treeId)
-      .map(([maybeTree, maybeNode]): {
+  return getNodeAndTree(skeletonTracing, nodeId, treeId)
+    .map(
+      ([maybeTree, maybeNode]): {
         tree: Tree | null;
         node: Node | null;
       } => ({
         tree: maybeTree,
         node: maybeNode,
-      }))
-      .getOrElse({
-        tree: null,
-        node: null,
-      })
-  );
+      }),
+    )
+    .getOrElse({
+      tree: null,
+      node: null,
+    });
 }
 export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
   const maxNodeId = _.reduce(
@@ -208,16 +208,14 @@ export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
   );
 }
 export function getStats(tracing: Tracing): Maybe<SkeletonTracingStats> {
-  return (
-    getSkeletonTracing(tracing)
-      .chain((skeletonTracing) => Maybe.fromNullable(skeletonTracing.trees))
-      .map((trees) => ({
-        treeCount: _.size(trees),
-        nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
-        edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
-        branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
-      }))
-  );
+  return getSkeletonTracing(tracing)
+    .chain((skeletonTracing) => Maybe.fromNullable(skeletonTracing.trees))
+    .map((trees) => ({
+      treeCount: _.size(trees),
+      nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
+      edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
+      branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
+    }));
 }
 export function getFlatTreeGroups(skeletonTracing: SkeletonTracing): Array<TreeGroupTypeFlat> {
   return Array.from(

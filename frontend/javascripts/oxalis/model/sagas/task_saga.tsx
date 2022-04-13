@@ -3,7 +3,7 @@ import _ from "lodash";
 import { Button } from "antd";
 import type { APITaskType } from "types/api_flow_types";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import {  select } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { call, put, delay, take } from "typed-redux-saga";
 import { clamp } from "libs/utils";
 import {
@@ -22,7 +22,7 @@ import {
 import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
-import Store, {  RecommendedConfiguration } from "oxalis/store";
+import Store, { RecommendedConfiguration } from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
@@ -55,7 +55,7 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
 
   const configurationDifference = _.find(recommendedConfiguration, (value, _key) => {
-    const key = _key as (keyof RecommendedConfiguration);
+    const key = _key as keyof RecommendedConfiguration;
     if (key === "zoom" && zoomStep !== value) {
       return true;
     } else if (key === "segmentationOpacity") {
@@ -70,10 +70,10 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
       } else {
         return false;
       }
-    // @ts-ignore
+      // @ts-ignore
     } else if (key in userConfiguration && userConfiguration[key] !== value) {
       return true;
-    // @ts-ignore
+      // @ts-ignore
     } else if (key in datasetConfiguration && datasetConfiguration[key] !== value) {
       return true;
     }

@@ -47,10 +47,12 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   // This cannot be changed to componentDidMount, because this.onChangeUser is accessed in render
   UNSAFE_componentWillMount() {
     // cache onChange handler
-    this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName: keyof UserConfiguration) =>
-      _.partial(this.props.onChangeUser, propertyName),
+    this.onChangeUser = _.mapValues(
+      this.props.userConfiguration,
+      (__, propertyName: keyof UserConfiguration) =>
+        _.partial(this.props.onChangeUser, propertyName),
     );
-    this.onChangeDataset = _.mapValues(this.props.datasetConfiguration, (__, propertyName ) =>
+    this.onChangeDataset = _.mapValues(this.props.datasetConfiguration, (__, propertyName) =>
       _.partial(this.props.onChangeDataset, propertyName),
     );
   }

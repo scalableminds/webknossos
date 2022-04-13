@@ -332,6 +332,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-
 const connector = connect(null, mapDispatchToProps);
 export default connector(Histogram);

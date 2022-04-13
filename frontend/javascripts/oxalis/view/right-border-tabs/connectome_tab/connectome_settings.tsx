@@ -183,4 +183,4 @@ class ConnectomeFilters extends React.Component<Props> {
 }
 
 const connector = connect(mapStateToProps);
-export default  connector(ConnectomeFilters);
+export default connector(ConnectomeFilters);

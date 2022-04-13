@@ -242,33 +242,33 @@ export default function VersionEntry({
   );
   const { description, icon } = getDescriptionForBatch(actions);
   return (
-      <List.Item
-        style={{
-          cursor: "pointer",
-        }}
-        className={liClassName}
-        actions={isActive && !isNewest ? [restoreButton] : []}
-      >
-        <List.Item.Meta
-          title={
-            <React.Fragment>
-              Version {version} (<FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
-            </React.Fragment>
-          }
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ title: Element; onClick: () => Promise<voi... Remove this comment to see the full error message
-          onClick={() => onPreviewVersion(version)}
-          avatar={<Avatar size="small" icon={icon} />}
-          description={
-            <React.Fragment>
-              {isNewest ? (
-                <React.Fragment>
-                  <i>Newest version</i> <br />
-                </React.Fragment>
-              ) : null}
-              {description}
-            </React.Fragment>
-          }
-        />
-      </List.Item>
+    <List.Item
+      style={{
+        cursor: "pointer",
+      }}
+      className={liClassName}
+      actions={isActive && !isNewest ? [restoreButton] : []}
+    >
+      <List.Item.Meta
+        title={
+          <React.Fragment>
+            Version {version} (<FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
+          </React.Fragment>
+        }
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ title: Element; onClick: () => Promise<voi... Remove this comment to see the full error message
+        onClick={() => onPreviewVersion(version)}
+        avatar={<Avatar size="small" icon={icon} />}
+        description={
+          <React.Fragment>
+            {isNewest ? (
+              <React.Fragment>
+                <i>Newest version</i> <br />
+              </React.Fragment>
+            ) : null}
+            {description}
+          </React.Fragment>
+        }
+      />
+    </List.Item>
   );
 }

@@ -109,7 +109,8 @@ function StartGlobalizeFloodfillsModal({
 }
 
 export default function BoundingBoxTab() {
-  const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState<UserBoundingBox|null>(null);
+  const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
+    useState<UserBoundingBox | null>(null);
   const [isGlobalizeFloodfillsModalVisible, setIsGlobalizeFloodfillsModalVisible] = useState(false);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);

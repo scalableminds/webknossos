@@ -52,8 +52,8 @@ const imgStyleForSpaceyIcons = {
 function getSkeletonToolHint(
   activeTool: AnnotationTool,
   isShiftPressed: boolean,
-  isControlPressed:  boolean,
-  isAltPressed:  boolean,
+  isControlPressed: boolean,
+  isAltPressed: boolean,
 ): string | null | undefined {
   if (activeTool !== AnnotationToolEnum.SKELETON) {
     return null;
@@ -94,8 +94,8 @@ const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
 };
 
-const handleSetTool = (event: RadioChangeEvent ) => {
-  const value = event.target.value as AnnotationTool
+const handleSetTool = (event: RadioChangeEvent) => {
+  const value = event.target.value as AnnotationTool;
   Store.dispatch(setToolAction(value));
 };
 
@@ -133,7 +133,15 @@ const RadioButtonWithTooltip = ({
   </Tooltip>
 );
 
-function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }: {isControlPressed: boolean, isShiftPressed: boolean, visible: boolean}) {
+function OverwriteModeSwitch({
+  isControlPressed,
+  isShiftPressed,
+  visible,
+}: {
+  isControlPressed: boolean;
+  isShiftPressed: boolean;
+  visible: boolean;
+}) {
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
   const overwriteMode = useSelector((state: OxalisState) => state.userConfiguration.overwriteMode);
@@ -201,7 +209,9 @@ function AdditionalSkeletonModesButtons() {
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
-  const isNewNodeNewTreeModeOn = useSelector((state: OxalisState) => state.userConfiguration.newNodeNewTree);
+  const isNewNodeNewTreeModeOn = useSelector(
+    (state: OxalisState) => state.userConfiguration.newNodeNewTree,
+  );
 
   const toggleNewNodeNewTreeMode = () =>
     dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
@@ -313,14 +323,16 @@ function CreateNewBoundingBoxButton() {
 function CreateTreeButton() {
   const dispatch = useDispatch();
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
-  const activeTree = useSelector((state: OxalisState) => toNullable(getActiveTree(state.tracing.skeleton)));
+  const activeTree = useSelector((state: OxalisState) =>
+    toNullable(getActiveTree(state.tracing.skeleton)),
+  );
   const rgbColorString =
     activeTree != null
-      ?  `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
+      ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
       : "transparent";
   const activeTreeHint =
     activeTree != null
-      ?  `The active tree id is ${activeTree.treeId}.`
+      ? `The active tree id is ${activeTree.treeId}.`
       : "No tree is currently selected";
 
   const handleCreateTree = () => dispatch(createTreeAction());
@@ -426,7 +438,9 @@ export default function ToolbarView() {
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const viewMode = useSelector((state: OxalisState) => state.temporaryConfiguration.viewMode);
   const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
-  const useLegacyBindings = useSelector((state: OxalisState) => state.userConfiguration.useLegacyBindings);
+  const useLegacyBindings = useSelector(
+    (state: OxalisState) => state.userConfiguration.useLegacyBindings,
+  );
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
   const maybeResolutionWithZoomStep = useSelector(
     getRenderableResolutionForActiveSegmentationTracing,
@@ -685,11 +699,11 @@ function ToolSpecificSettings({
   isControlPressed,
   isShiftPressed,
 }: {
-  hasSkeleton: boolean,
-  adaptedActiveTool: AnnotationTool,
-  isVolumeSupported: boolean,
-  isControlPressed: boolean,
-  isShiftPressed: boolean
+  hasSkeleton: boolean;
+  adaptedActiveTool: AnnotationTool;
+  isVolumeSupported: boolean;
+  isControlPressed: boolean;
+  isShiftPressed: boolean;
 }) {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationToolEnum.BOUNDING_BOX;

@@ -607,7 +607,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const { activeTreeId, activeGroupId } = this.props;
     return (
       <AutoSizer>
-        {({ height, width }: { height: number, width: number }) => (
+        {({ height, width }: { height: number; width: number }) => (
           <div
             style={{
               height,
@@ -694,5 +694,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-const connector = connect(null, mapDispatchToProps)
+const connector = connect(null, mapDispatchToProps);
 export default connector(TreeHierarchyView);

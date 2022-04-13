@@ -1,4 +1,16 @@
-import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, Modal, Input, FormInstance, AlertProps } from "antd";
+import {
+  Button,
+  Spin,
+  Alert,
+  Form,
+  Card,
+  Tabs,
+  Tooltip,
+  Modal,
+  Input,
+  FormInstance,
+  AlertProps,
+} from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -61,17 +73,17 @@ type Props = OwnProps & StateProps;
 type PropsWithFormAndRouter = Props & {
   history: RouteComponentProps["history"];
 };
-type TabKey = "data" | "general" | "defaultConfig"| "sharing" | "deleteDataset";
+type TabKey = "data" | "general" | "defaultConfig" | "sharing" | "deleteDataset";
 enum AppliedSuggestionsEnum {
-  Yes= "Yes",
-  No= "No",
-  NoAvailableSuggestions= "NoAvailableSuggestions",
-};
+  Yes = "Yes",
+  No = "No",
+  NoAvailableSuggestions = "NoAvailableSuggestions",
+}
 enum IsJSONFormatValidEnum {
-  Yes= "Yes",
-  No= "No",
-  BrokenJson= "BrokenJson",
-};
+  Yes = "Yes",
+  No = "No",
+  BrokenJson = "BrokenJson",
+}
 type DataSourceSettingsStatus = {
   appliedSuggestions: keyof typeof AppliedSuggestionsEnum;
   isJSONFormatValid: keyof typeof IsJSONFormatValidEnum;
@@ -170,7 +182,10 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
     });
 
-    const beforeUnload = (newLocation: HistoryLocation<unknown>, action: HistoryAction): string | false | void => {
+    const beforeUnload = (
+      newLocation: HistoryLocation<unknown>,
+      action: HistoryAction,
+    ): string | false | void => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
@@ -327,7 +342,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
         hasNoAllowedTeams: (dataset.allowedTeams || []).length === 0,
       });
     } catch (error) {
-        handleGenericError(error as Error);
+      handleGenericError(error as Error);
     } finally {
       this.setState({
         isLoading: false,
@@ -717,20 +732,15 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       );
     }
 
-    const restMessages = this.state.messages.map(
-      (
-        message,
-        i, 
-      ) => (
-        <Alert
-          key={i}
-          message={Object.values(message)[0]}
-          /* @ts-expect-error */
-          type={Object.keys(message)[0]}
-          showIcon
-        />
-      ),
-    );
+    const restMessages = this.state.messages.map((message, i) => (
+      <Alert
+        key={i}
+        message={Object.values(message)[0]}
+        /* @ts-expect-error */
+        type={Object.keys(message)[0]}
+        showIcon
+      />
+    ));
     messageElements.push(...restMessages);
     return (
       <div
@@ -946,5 +956,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   isUserAdmin: state.activeUser != null && state.activeUser.isAdmin,
 });
 
-const connector = connect(mapStateToProps)
+const connector = connect(mapStateToProps);
 export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetImportView));

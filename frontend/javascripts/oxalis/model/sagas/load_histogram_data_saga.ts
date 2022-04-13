@@ -1,6 +1,6 @@
 import type { HistogramDataForAllLayers } from "oxalis/store";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select} from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { call, take, put } from "typed-redux-saga";
 import {
   setHistogramDataAction,

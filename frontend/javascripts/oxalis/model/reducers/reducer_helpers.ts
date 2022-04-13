@@ -36,11 +36,9 @@ export function convertServerBoundingBoxToBoundingBox(
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ServerBoundingBox | null | undefined,
 ): BoundingBoxType | null | undefined {
-  return (
-    Maybe.fromNullable(boundingBox)
-      .map((bb) => convertServerBoundingBoxToBoundingBox(bb))
-      .getOrElse(null)
-  );
+  return Maybe.fromNullable(boundingBox)
+    .map((bb) => convertServerBoundingBoxToBoundingBox(bb))
+    .getOrElse(null);
 }
 export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxFromServer>,

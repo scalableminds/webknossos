@@ -15,7 +15,12 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 
-const createDirLight = (position: Vector3, target: Vector3, intensity: number, parent: THREE.OrthographicCamera) => {
+const createDirLight = (
+  position: Vector3,
+  target: Vector3,
+  intensity: number,
+  parent: THREE.OrthographicCamera,
+) => {
   const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
   dirLight.color.setHSL(0.1, 1, 0.95);
   dirLight.position.set(...position);
@@ -36,9 +41,7 @@ class PlaneView {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
   listenTo: (...args: Array<any>) => any;
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
-  throttledPerformIsosurfaceHitTest: (
-    arg0: [number, number],
-  ) => THREE.Vector3 | null | undefined;
+  throttledPerformIsosurfaceHitTest: (arg0: [number, number]) => THREE.Vector3 | null | undefined;
 
   running: boolean;
   needsRerender: boolean;
@@ -140,9 +143,7 @@ class PlaneView {
     }
   }
 
-  performIsosurfaceHitTest(
-    mousePosition: [number, number],
-  ): THREE.Vector3 | null | undefined {
+  performIsosurfaceHitTest(mousePosition: [number, number]): THREE.Vector3 | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { isosurfacesRootGroup } = SceneController;

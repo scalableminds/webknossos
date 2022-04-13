@@ -259,7 +259,10 @@ class SceneController {
     this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId);
   }
 
-  addIsosurfaceFromGeometry(geometry: THREE.Geometry | THREE.BufferGeometry, segmentationId: number): void {
+  addIsosurfaceFromGeometry(
+    geometry: THREE.Geometry | THREE.BufferGeometry,
+    segmentationId: number,
+  ): void {
     const mesh = this.constructSceneMesh(segmentationId, geometry);
 
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {

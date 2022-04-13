@@ -24,7 +24,10 @@ class Persistence<T extends Record<string, any>> {
         locationState[this.name],
       );
 
-      const persistedState = _.pick(locationState[this.name], Object.keys(this.stateProperties)) as T;
+      const persistedState = _.pick(
+        locationState[this.name],
+        Object.keys(this.stateProperties),
+      ) as T;
 
       try {
         // Check whether the type of the persisted state conforms to that of the component to avoid messing up

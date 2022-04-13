@@ -210,29 +210,26 @@ export default function DatasetCacheProvider({ children }: { children: React.Rea
     }
   }
 
-  const value = useMemo(() => (
-    {
-        datasets,
-        isLoading,
-        isChecking,
-        checkDatasets,
-        fetchDatasets,
-        reloadDataset,
-        updateCachedDataset,
-      }
-      ), [datasets,
-        isLoading,
-        isChecking,
-        checkDatasets,
-        fetchDatasets,
-        reloadDataset,
-        updateCachedDataset])
-
-  return (
-    <DatasetCacheContext.Provider
-      value={value}
-    >
-      {children}
-    </DatasetCacheContext.Provider>
+  const value = useMemo(
+    () => ({
+      datasets,
+      isLoading,
+      isChecking,
+      checkDatasets,
+      fetchDatasets,
+      reloadDataset,
+      updateCachedDataset,
+    }),
+    [
+      datasets,
+      isLoading,
+      isChecking,
+      checkDatasets,
+      fetchDatasets,
+      reloadDataset,
+      updateCachedDataset,
+    ],
   );
+
+  return <DatasetCacheContext.Provider value={value}>{children}</DatasetCacheContext.Provider>;
 }

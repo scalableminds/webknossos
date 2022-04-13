@@ -42,10 +42,10 @@ const treeTypeHint = [] as Array<Tree>;
 const commentTypeHint = [] as Array<CommentType>;
 const commentTabId = "commentTabId";
 const enum SortByEnum {
-  NAME= "NAME",
-  ID= "ID",
-  NATURAL= "NATURAL",
-};
+  NAME = "NAME",
+  ID = "ID",
+  NATURAL = "NATURAL",
+}
 type SortByEnumType = keyof typeof SortByEnum;
 type SortOptions = {
   sortBy: SortByEnumType;
@@ -315,8 +315,8 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
     const onOk = () => this.setMarkdownModalVisibility(false);
 
-    return toNullable(activeCommentMaybe
-      .map((comment) => (
+    return toNullable(
+      activeCommentMaybe.map((comment) => (
         <MarkdownModal
           key={comment.nodeId}
           source={comment.content}
@@ -325,7 +325,8 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
           onOk={onOk}
           label="Comment"
         />
-      )));
+      )),
+    );
   }
 
   renderSortIcon() {
@@ -355,7 +356,15 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return memoizedDeriveData(this.props.skeletonTracing.trees, this.state);
   }
 
-  renderRow = ({ index, key, style }: { index: number; key: string; style: React.CSSProperties }) => {
+  renderRow = ({
+    index,
+    key,
+    style,
+  }: {
+    index: number;
+    key: string;
+    style: React.CSSProperties;
+  }) => {
     const element = this.getData()[index];
     if ("treeId" in element) {
       const tree = element;
@@ -478,7 +487,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   }}
                 >
                   <AutoSizer>
-                    {({ height, width }: { height: number, width: number }) => (
+                    {({ height, width }: { height: number; width: number }) => (
                       <div
                         style={{
                           height,
@@ -532,8 +541,5 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-const connector = connect(
-  mapStateToProps,
-  mapDispatchToProps,
-)
+const connector = connect(mapStateToProps, mapDispatchToProps);
 export default connector(makeSkeletonTracingGuard(CommentTabView));

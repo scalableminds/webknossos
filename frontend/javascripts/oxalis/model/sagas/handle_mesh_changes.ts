@@ -57,7 +57,7 @@ function* handleVisibilityChange(meshMetaData: MeshMetaData, isVisible: boolean)
 
     if (meshBuffer != null) {
       const geometry = yield* call(parseStlBuffer, meshBuffer);
-      yield* call({context: SceneController, fn: SceneController.addSTL}, meshMetaData, geometry);
+      yield* call({ context: SceneController, fn: SceneController.addSTL }, meshMetaData, geometry);
       yield* put(
         updateLocalMeshMetaDataAction(id, {
           isLoaded: true,
@@ -136,12 +136,12 @@ function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
     ),
   ]);
 
-  const geometry = STLOperationResults[0] as BufferGeometry
+  const geometry = STLOperationResults[0] as BufferGeometry;
   const meshMetaData = STLOperationResults[1] as MeshMetaData;
 
   const SceneController = yield* call(getSceneController);
-  yield* call({context: SceneController, fn: SceneController.addSTL}, meshMetaData, geometry);
-  yield * put(addMeshMetaDataAction(meshMetaData as MeshMetaData));
+  yield* call({ context: SceneController, fn: SceneController.addSTL }, meshMetaData, geometry);
+  yield* put(addMeshMetaDataAction(meshMetaData as MeshMetaData));
   yield* put(
     updateLocalMeshMetaDataAction(meshMetaData.id, {
       isLoaded: true,

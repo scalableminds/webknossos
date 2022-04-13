@@ -80,4 +80,4 @@ function mapStateToProps(state: OxalisState) {
 }
 
 const connector = connect(mapStateToProps);
-export default  connector(BorderToggleButton);
+export default connector(BorderToggleButton);

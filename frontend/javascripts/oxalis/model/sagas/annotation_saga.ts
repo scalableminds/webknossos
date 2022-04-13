@@ -153,7 +153,8 @@ export function* watchAnnotationAsync(): Saga<void> {
   yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
   yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
   yield* takeLatest(
-    (action: Action) => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
+    (action: Action) =>
+      action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
     pushAnnotationUpdateAsync,
   );
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);

@@ -102,73 +102,67 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "ADD_CONNECTOME_TREES": {
       const { trees, layerName } = action;
-      return (
-        getSkeletonTracingForConnectome(state, layerName)
-          .map((skeletonTracing) =>
-            addTreesAndGroups(skeletonTracing, trees, [])
-              .map(([updatedTrees, _treeGroups, newMaxNodeId]) =>
-                update(state, {
-                  localSegmentationData: {
-                    [layerName]: {
-                      connectomeData: {
-                        skeleton: {
-                          trees: {
-                            $merge: updatedTrees,
-                          },
-                          cachedMaxNodeId: {
-                            $set: newMaxNodeId,
-                          },
+      return getSkeletonTracingForConnectome(state, layerName)
+        .map((skeletonTracing) =>
+          addTreesAndGroups(skeletonTracing, trees, [])
+            .map(([updatedTrees, _treeGroups, newMaxNodeId]) =>
+              update(state, {
+                localSegmentationData: {
+                  [layerName]: {
+                    connectomeData: {
+                      skeleton: {
+                        trees: {
+                          $merge: updatedTrees,
+                        },
+                        cachedMaxNodeId: {
+                          $set: newMaxNodeId,
                         },
                       },
                     },
                   },
-                }),
-              )
-              .getOrElse(state),
-          )
-          .getOrElse(state)
-      );
+                },
+              }),
+            )
+            .getOrElse(state),
+        )
+        .getOrElse(state);
     }
 
     case "DELETE_CONNECTOME_TREES": {
       const { treeIds, layerName } = action;
-      return (
-        getSkeletonTracingForConnectome(state, layerName)
-          .map((skeletonTracing) =>
-            deleteConnectomeTrees(skeletonTracing, treeIds)
-              .map(([trees, newMaxNodeId]) =>
-                update(state, {
-                  localSegmentationData: {
-                    [layerName]: {
-                      connectomeData: {
-                        skeleton: {
-                          trees: {
-                            $set: trees,
-                          },
-                          cachedMaxNodeId: {
-                            $set: newMaxNodeId,
-                          },
+      return getSkeletonTracingForConnectome(state, layerName)
+        .map((skeletonTracing) =>
+          deleteConnectomeTrees(skeletonTracing, treeIds)
+            .map(([trees, newMaxNodeId]) =>
+              update(state, {
+                localSegmentationData: {
+                  [layerName]: {
+                    connectomeData: {
+                      skeleton: {
+                        trees: {
+                          $set: trees,
+                        },
+                        cachedMaxNodeId: {
+                          $set: newMaxNodeId,
                         },
                       },
                     },
                   },
-                }),
-              )
-              .getOrElse(state),
-          )
-          .getOrElse(state)
-      );
+                },
+              }),
+            )
+            .getOrElse(state),
+        )
+        .getOrElse(state);
     }
 
     case "SET_CONNECTOME_TREES_VISIBILITY": {
       const { treeIds, isVisible, layerName } = action;
-      return (
-        getSkeletonTracingForConnectome(state, layerName)
-          .map((_skeletonTracing) =>
-            setConnectomeTreesVisibilityReducer(state, layerName, treeIds, isVisible),
-          )
-          .getOrElse(state)
-      );
+      return getSkeletonTracingForConnectome(state, layerName)
+        .map((_skeletonTracing) =>
+          setConnectomeTreesVisibilityReducer(state, layerName, treeIds, isVisible),
+        )
+        .getOrElse(state);
     }
 
     case "UPDATE_CONNECTOME_FILE_LIST": {

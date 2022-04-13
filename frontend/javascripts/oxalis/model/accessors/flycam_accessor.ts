@@ -363,8 +363,8 @@ export function getRotationOrtho(planeId: OrthoView): Vector3 {
     case OrthoViews.PLANE_XZ:
       return [90, 0, 0];
 
-      case OrthoViews.PLANE_XY:
-      default:
+    case OrthoViews.PLANE_XY:
+    default:
       return [0, 0, 0];
   }
 }

@@ -3,15 +3,8 @@ import {
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import {
-  all,
-  takeEvery,
-  throttle,
-  call,
-  retry,
-  take,
-} from "typed-redux-saga";
-import {select } from "oxalis/model/sagas/effect-generators";
+import { all, takeEvery, throttle, call, retry, take } from "typed-redux-saga";
+import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
@@ -55,7 +48,7 @@ function* pushDatasetSettingsAsync(): Saga<void> {
     } else {
       // Still log the error to airbrake in view mode.
       // @ts-ignore
-      yield* call({context: ErrorHandling, fn: ErrorHandling.notify}, error);
+      yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, error);
     }
   }
 }

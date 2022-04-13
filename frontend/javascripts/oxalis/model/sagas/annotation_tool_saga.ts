@@ -1,6 +1,6 @@
 /* eslint-disable import/prefer-default-export */
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select,  } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { take } from "typed-redux-saga";
 import type { SetToolAction, CycleToolAction } from "oxalis/model/actions/ui_actions";
 import { getNextTool } from "oxalis/model/reducers/reducer_helpers";

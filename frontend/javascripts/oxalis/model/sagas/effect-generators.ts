@@ -1,7 +1,7 @@
 // The typings are defined in effect-generators.js.flow.
 import { OxalisState } from "oxalis/store";
 import type { Action } from "oxalis/model/actions/actions";
-import {select as _select, take as _take} from "typed-redux-saga";
+import { select as _select, take as _take } from "typed-redux-saga";
 import type { Channel } from "redux-saga";
 import { ActionPattern } from "redux-saga/effects";
 
@@ -10,7 +10,9 @@ export function* select<T>(fn: (state: OxalisState) => T) {
   return res;
 }
 
-export function* take(pattern: ActionPattern<Action> | Channel<Action>): Generator<any, Action, any> {
+export function* take(
+  pattern: ActionPattern<Action> | Channel<Action>,
+): Generator<any, Action, any> {
   // @ts-ignore TS does not know that _take also accepts Channel<Action>
   return yield* _take(pattern);
 }

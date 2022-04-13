@@ -136,5 +136,4 @@ function FinishResetPasswordView(props: Props) {
   );
 }
 
-
 export default withRouter<RouteComponentProps & Props, any>(FinishResetPasswordView);

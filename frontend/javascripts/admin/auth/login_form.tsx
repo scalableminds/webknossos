@@ -42,7 +42,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
       message={
         <span>
           Authentication within an iFrame probably does not work due to third-party cookies being
-          forbidden in most browsers. Please 
+          forbidden in most browsers. Please
           <a href={window.location} target="_blank" rel="noopener noreferrer">
             open webKnossos
           </a>{" "}

@@ -48,13 +48,13 @@ export enum OrthoViews {
   PLANE_YZ = "PLANE_YZ",
   PLANE_XZ = "PLANE_XZ",
   TDView = "TDView",
-};
+}
 export const enum OrthoViewsToName {
   PLANE_XY = "XY",
   PLANE_YZ = "YZ",
   PLANE_XZ = "XZ",
   TDView = "3D",
-};
+}
 export type OrthoView = keyof typeof OrthoViews;
 export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, OrthoViews.TDView>;
 
@@ -165,22 +165,22 @@ export const BorderTabs: Record<string, BorderTabType> = {
 };
 export const OrthoViewGrayCrosshairColor = 0x222222;
 export enum ControlModeEnum {
-  TRACE= "TRACE",
-  SANDBOX= "SANDBOX",
-  VIEW= "VIEW",
-};
+  TRACE = "TRACE",
+  SANDBOX = "SANDBOX",
+  VIEW = "VIEW",
+}
 export type ControlMode = keyof typeof ControlModeEnum;
 export enum AnnotationToolEnum {
-  MOVE= "MOVE",
-  SKELETON= "SKELETON",
-  BRUSH= "BRUSH",
-  ERASE_BRUSH= "ERASE_BRUSH",
-  TRACE= "TRACE",
-  ERASE_TRACE= "ERASE_TRACE",
-  FILL_CELL= "FILL_CELL",
-  PICK_CELL= "PICK_CELL",
-  BOUNDING_BOX= "BOUNDING_BOX",
-};
+  MOVE = "MOVE",
+  SKELETON = "SKELETON",
+  BRUSH = "BRUSH",
+  ERASE_BRUSH = "ERASE_BRUSH",
+  TRACE = "TRACE",
+  ERASE_TRACE = "ERASE_TRACE",
+  FILL_CELL = "FILL_CELL",
+  PICK_CELL = "PICK_CELL",
+  BOUNDING_BOX = "BOUNDING_BOX",
+}
 export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.ERASE_BRUSH,
@@ -198,32 +198,32 @@ export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEn
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export const enum ContourModeEnum {
   DRAW = "DRAW",
-  DELETE=  "DELETE",
-};
+  DELETE = "DELETE",
+}
 export type ContourMode = keyof typeof ContourModeEnum;
 export enum OverwriteModeEnum {
-  OVERWRITE_ALL= "OVERWRITE_ALL",
-  OVERWRITE_EMPTY= "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
-};
+  OVERWRITE_ALL = "OVERWRITE_ALL",
+  OVERWRITE_EMPTY = "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
+}
 export type OverwriteMode = keyof typeof OverwriteModeEnum;
 export enum FillModeEnum {
   // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.
   _2D = "_2D",
   _3D = "_3D",
-};
+}
 export type FillMode = keyof typeof FillModeEnum;
-export enum TDViewDisplayModeEnum  {
-  NONE= "NONE",
-  WIREFRAME= "WIREFRAME",
-  DATA= "DATA",
-};
+export enum TDViewDisplayModeEnum {
+  NONE = "NONE",
+  WIREFRAME = "WIREFRAME",
+  DATA = "DATA",
+}
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
-export const enum MappingStatusEnum  {
+export const enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",
   ENABLED = "ENABLED",
-};
+}
 export type MappingStatus = keyof typeof MappingStatusEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;

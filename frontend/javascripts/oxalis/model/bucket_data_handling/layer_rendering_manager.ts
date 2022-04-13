@@ -30,10 +30,11 @@ import constants from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import window from "libs/window";
 
-const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker)
+const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'oldArgs' implicitly has an 'any' type.
-const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
-  _.isEqual(oldArgs, newArgs),
+const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
+  asyncBucketPickRaw,
+  (oldArgs, newArgs) => _.isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
@@ -218,19 +219,21 @@ export default class LayerRenderingManager {
       if (isVisible) {
         const { initializedGpuFactor } = state.temporaryConfiguration.gpuSetup;
 
-        pickingPromise = this.latestTaskExecutor.schedule(() => asyncBucketPick(
-          viewMode,
-          resolutions,
-          position,
-          sphericalCapRadius,
-          matrix,
-          logZoomStep,
-          datasetConfiguration.loadingStrategy,
-          this.cachedAnchorPoint,
-          areas,
-          subBucketLocality,
-          initializedGpuFactor,
-        ));
+        pickingPromise = this.latestTaskExecutor.schedule(() =>
+          asyncBucketPick(
+            viewMode,
+            resolutions,
+            position,
+            sphericalCapRadius,
+            matrix,
+            logZoomStep,
+            datasetConfiguration.loadingStrategy,
+            this.cachedAnchorPoint,
+            areas,
+            subBucketLocality,
+            initializedGpuFactor,
+          ),
+        );
       }
 
       this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);

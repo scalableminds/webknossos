@@ -129,7 +129,13 @@ function NavbarMenuItem({ children, ...props }) {
   );
 }
 
-function UserInitials({ activeUser, isMultiMember }: {activeUser: APIUser, isMultiMember: boolean}) {
+function UserInitials({
+  activeUser,
+  isMultiMember,
+}: {
+  activeUser: APIUser;
+  isMultiMember: boolean;
+}) {
   const { firstName, lastName } = activeUser;
 
   const initialOf = (str: string) => str.slice(0, 1).toUpperCase();
@@ -171,7 +177,15 @@ function UserInitials({ activeUser, isMultiMember }: {activeUser: APIUser, isMul
   );
 }
 
-function CollapsibleMenuTitle({ title, collapse, icon }: {title: string, collapse: boolean, icon: any}) {
+function CollapsibleMenuTitle({
+  title,
+  collapse,
+  icon,
+}: {
+  title: string;
+  collapse: boolean;
+  icon: any;
+}) {
   if (collapse) {
     return <span title={title}>{icon}</span>;
   } else {
@@ -184,7 +198,12 @@ function CollapsibleMenuTitle({ title, collapse, icon }: {title: string, collaps
   }
 }
 
-function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }: {collapse: boolean, isAdmin: boolean, organization: string} & SubMenuProps) {
+function AdministrationSubMenu({
+  collapse,
+  isAdmin,
+  organization,
+  ...menuProps
+}: { collapse: boolean; isAdmin: boolean; organization: string } & SubMenuProps) {
   return (
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
@@ -226,7 +245,7 @@ function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }
   );
 }
 
-function StatisticsSubMenu({ collapse, ...menuProps }: {collapse: boolean} & SubMenuProps) {
+function StatisticsSubMenu({ collapse, ...menuProps }: { collapse: boolean } & SubMenuProps) {
   return (
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
@@ -252,7 +271,7 @@ function StatisticsSubMenu({ collapse, ...menuProps }: {collapse: boolean} & Sub
   );
 }
 
-function getTimeTrackingMenu({ collapse }: {collapse: boolean}) {
+function getTimeTrackingMenu({ collapse }: { collapse: boolean }) {
   return (
     <Menu.Item key="timeStatisticMenu">
       <Link
@@ -271,10 +290,15 @@ function getTimeTrackingMenu({ collapse }: {collapse: boolean}) {
   );
 }
 
-function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }: {
-  isAdminOrTeamManager: boolean,
-  version: string | null,
-  collapse: boolean,
+function HelpSubMenu({
+  isAdminOrTeamManager,
+  version,
+  collapse,
+  ...other
+}: {
+  isAdminOrTeamManager: boolean;
+  version: string | null;
+  collapse: boolean;
 } & SubMenuProps) {
   return (
     <SubMenu
@@ -332,7 +356,7 @@ function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }: {
   );
 }
 
-function DashboardSubMenu({ collapse, ...other }: {collapse: boolean} & SubMenuProps) {
+function DashboardSubMenu({ collapse, ...other }: { collapse: boolean } & SubMenuProps) {
   return (
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
@@ -356,7 +380,7 @@ function DashboardSubMenu({ collapse, ...other }: {collapse: boolean} & SubMenuP
   );
 }
 
-function NotificationIcon({ activeUser }: {activeUser: APIUser}) {
+function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   if (!features().isDemoInstance) {
@@ -398,7 +422,11 @@ function NotificationIcon({ activeUser }: {activeUser: APIUser}) {
   );
 }
 
-function LoggedInAvatar({ activeUser, handleLogout, ...other }: {activeUser: APIUser, handleLogout: (event: React.SyntheticEvent) => void} & SubMenuProps) {
+function LoggedInAvatar({
+  activeUser,
+  handleLogout,
+  ...other
+}: { activeUser: APIUser; handleLogout: (event: React.SyntheticEvent) => void } & SubMenuProps) {
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.name === organizationName);

@@ -48,7 +48,7 @@ type StateProps = {
   user: APIUser | null | undefined;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & RouteComponentProps
+type PropsWithRouter = Props & RouteComponentProps;
 type State = {
   gotUnhandledError: boolean;
   organizationToSwitchTo: APIOrganization | null | undefined;
@@ -437,5 +437,5 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-const connector = connect(mapStateToProps)
+const connector = connect(mapStateToProps);
 export default connector(withRouter<PropsWithRouter, any>(Controller));

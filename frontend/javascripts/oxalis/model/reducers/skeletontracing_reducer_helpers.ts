@@ -175,7 +175,8 @@ export function deleteNode(
         $apply: (nodes) => nodes.delete(node.id),
       },
       comments: {
-        $apply: (comments: CommentType[]) => comments.filter((comment) => comment.nodeId !== node.id),
+        $apply: (comments: CommentType[]) =>
+          comments.filter((comment) => comment.nodeId !== node.id),
       },
       branchPoints: {
         $apply: (branchPoints: BranchPoint[]) =>
@@ -294,7 +295,7 @@ function splitTreeByNodes(
     while (nodeQueue.length !== 0) {
       const nodeId = nodeQueue.shift();
       if (nodeId == null) {
-        throw new Error("Satisfy typescript")
+        throw new Error("Satisfy typescript");
       }
       // ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
       const edges = activeTree.edges.getEdgesForNode(nodeId);
@@ -444,9 +445,11 @@ export function deleteBranchPoint(
   // Find most recent branchpoint across all trees
   const treesWithBranchPoints = _.values(trees).filter((tree) => !_.isEmpty(tree.branchPoints));
 
-  const treeWithLastBranchpoint = _.maxBy(treesWithBranchPoints, (tree) =>
-    // @ts-ignore
-    _.last(tree.branchPoints).timestamp
+  const treeWithLastBranchpoint = _.maxBy(
+    treesWithBranchPoints,
+    (tree) =>
+      // @ts-ignore
+      _.last(tree.branchPoints).timestamp,
   );
   if (treeWithLastBranchpoint == null) {
     return Maybe.Nothing();
@@ -755,7 +758,10 @@ export function toggleTreeGroupReducer(
     targetVisibility != null
       ? targetVisibility
       : _.values(skeletonTracing.trees).some(
-          (tree) => typeof tree.groupId == "number" && affectedGroupIds.has(tree.groupId) && !tree.isVisible,
+          (tree) =>
+            typeof tree.groupId == "number" &&
+            affectedGroupIds.has(tree.groupId) &&
+            !tree.isVisible,
         );
   const isVisibleUpdater = {
     isVisible: {

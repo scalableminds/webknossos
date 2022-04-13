@@ -28,7 +28,8 @@ type State = {
 
 class VersionView extends React.Component<Props, State> {
   state: State = {
-    activeTracingType: this.props.tracing.skeleton != null ? TracingTypeEnum.skeleton : TracingTypeEnum.volume,
+    activeTracingType:
+      this.props.tracing.skeleton != null ? TracingTypeEnum.skeleton : TracingTypeEnum.volume,
     // Remember whether the tracing could originally be updated
     initialAllowUpdate: this.props.allowUpdate,
   };
@@ -143,4 +144,4 @@ function mapStateToProps(state: OxalisState): StateProps {
 }
 
 const connector = connect(mapStateToProps);
-export default  connector(VersionView);
+export default connector(VersionView);

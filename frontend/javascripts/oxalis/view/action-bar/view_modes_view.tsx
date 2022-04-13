@@ -22,7 +22,6 @@ type DispatchProps = {
 type Props = StateProps & DispatchProps;
 
 class ViewModesView extends PureComponent<Props, {}> {
-
   handleChange = (mode: ViewMode) => {
     // If we switch back from any arbitrary mode we stop recording.
     // This prevents that when the user switches back to any arbitrary mode,

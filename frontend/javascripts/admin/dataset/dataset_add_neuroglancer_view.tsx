@@ -220,5 +220,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-const connector = connect(mapStateToProps)
+const connector = connect(mapStateToProps);
 export default connector(DatasetAddNeuroglancerView);

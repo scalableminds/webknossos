@@ -1,4 +1,3 @@
-
 import update from "immutability-helper";
 import type { ContourMode, Vector3 } from "oxalis/constants";
 import type { OxalisState, VolumeTracing } from "oxalis/store";

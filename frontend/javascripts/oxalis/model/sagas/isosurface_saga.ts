@@ -34,15 +34,8 @@ import {
   startedLoadingIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import  { select } from "oxalis/model/sagas/effect-generators";
-import {
-  actionChannel,
-  takeEvery,
-  call,
-  take,
-  race,
-  put,
-} from "typed-redux-saga";
+import { select } from "oxalis/model/sagas/effect-generators";
+import { actionChannel, takeEvery, call, take, race, put } from "typed-redux-saga";
 import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
 import {
   computeIsosurface,
@@ -298,7 +291,8 @@ function* loadIsosurfaceWithNeighbors(
       throw new Error("Satisfy typescript");
     }
 
-    const neighbors = yield* call(maybeLoadIsosurface,
+    const neighbors = yield* call(
+      maybeLoadIsosurface,
       layer,
       segmentId,
       currentPosition,
@@ -385,9 +379,11 @@ function* maybeLoadIsosurface(
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
-      const { buffer: responseBuffer, neighbors } = yield* call({
-        context: null, 
-        fn:computeIsosurface},
+      const { buffer: responseBuffer, neighbors } = yield* call(
+        {
+          context: null,
+          fn: computeIsosurface,
+        },
         useDataStore ? dataStoreUrl : tracingStoreUrl,
         {
           position: clippedPosition,
@@ -584,7 +580,11 @@ function* loadPrecomputedMeshForSegmentId(
         );
         const geometry = yield* call(parseStlBuffer, stlData);
         const sceneController = yield* call(getSceneController);
-        yield* call({context: sceneController, fn: sceneController.addIsosurfaceFromGeometry}, geometry, id);
+        yield* call(
+          { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
+          geometry,
+          id,
+        );
       },
   );
 

@@ -1,4 +1,3 @@
-
 import type { Dispatch } from "redux";
 import { Tooltip, Button, Dropdown, Menu } from "antd";
 import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
@@ -37,10 +36,10 @@ import {
   NeuronInferralModal,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 
-const enum StartableJobsEnum  {
-  NUCLEI_INFERRAL= "nuclei inferral",
-  NEURON_INFERRAL= "neuron inferral",
-};
+const enum StartableJobsEnum {
+  NUCLEI_INFERRAL = "nuclei inferral",
+  NEURON_INFERRAL = "neuron inferral",
+}
 
 type StateProps = {
   tracing: Tracing;
@@ -164,7 +163,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         <p>Number of Nodes: {statsMaybe.map((stats) => stats.nodeCount).getOrElse(null)}</p>
         <p>Number of Edges: {statsMaybe.map((stats) => stats.edgeCount).getOrElse(null)}</p>
         <p>
-          Number of Branch Points: {statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}
+          Number of Branch Points:{" "}
+          {statsMaybe.map((stats) => stats.branchPointCount).getOrElse(null)}
         </p>
       </div>
     ) : null;

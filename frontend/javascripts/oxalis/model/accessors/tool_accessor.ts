@@ -12,7 +12,8 @@ import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor
 
 const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 
-const isZoomStepTooHighFor = (state: OxalisState, tool: AnnotationTool) => isVolumeAnnotationDisallowedForZoom(tool, state);
+const isZoomStepTooHighFor = (state: OxalisState, tool: AnnotationTool) =>
+  isVolumeAnnotationDisallowedForZoom(tool, state);
 
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,

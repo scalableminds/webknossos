@@ -556,28 +556,26 @@ export const deleteActiveNodeAsUserAction = (
   state: OxalisState,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
-  return (
-    getActiveNode(skeletonTracing)
-      .map((activeNode): DeleteNodeAction | NoAction | DeleteTreeAction => {
-        const nodeId = activeNode.id;
+  return getActiveNode(skeletonTracing)
+    .map((activeNode): DeleteNodeAction | NoAction | DeleteTreeAction => {
+      const nodeId = activeNode.id;
 
-        if (state.task != null && nodeId === 1) {
-          // Let the user confirm the deletion of the initial node (node with id 1) of a task
-          Modal.confirm({
-            title: messages["tracing.delete_initial_node"],
-            onOk: () => {
-              Store.dispatch(deleteNodeAction(nodeId));
-            },
-          });
-          // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
-          // if the user confirms
-          return noAction();
-        }
+      if (state.task != null && nodeId === 1) {
+        // Let the user confirm the deletion of the initial node (node with id 1) of a task
+        Modal.confirm({
+          title: messages["tracing.delete_initial_node"],
+          onOk: () => {
+            Store.dispatch(deleteNodeAction(nodeId));
+          },
+        });
+        // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+        // if the user confirms
+        return noAction();
+      }
 
-        return deleteNodeAction(nodeId);
-      }) // If the tree is empty, it will be deleted
-      .getOrElse(deleteTreeAction())
-  );
+      return deleteNodeAction(nodeId);
+    }) // If the tree is empty, it will be deleted
+    .getOrElse(deleteTreeAction());
 };
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task

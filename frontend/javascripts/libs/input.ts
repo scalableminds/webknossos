@@ -257,7 +257,7 @@ export class InputKeyboard {
       KeyboardJS.unbind(...binding);
     }
   }
-} 
+}
 
 // The mouse module.
 // Events: over, out, leftClick, rightClick, leftDownMove

@@ -221,7 +221,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         isUploading: true,
       });
 
-      const beforeUnload = (newLocation: HistoryLocation<unknown>, action: HistoryAction): string | false | void => {
+      const beforeUnload = (
+        newLocation: HistoryLocation<unknown>,
+        action: HistoryAction,
+      ): string | false | void => {
         // Only show the prompt if this is a proper beforeUnload event from the browser
         // or the pathname changed
         // This check has to be done because history.block triggers this function even if only the url hash changed
@@ -707,40 +710,40 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               hidden={hasOnlyOneDatastoreOrNone}
             />
             {features().jobsEnabled && needsConversion ? (
-                <FormItemWithInfo
-                  name="scale"
-                  label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
-                  // @ts-ignore
-                  disabled={this.state.needsConversion}
-                  help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
-                  rules={[
-                    {
-                      required: this.state.needsConversion,
-                      message: "Please provide a scale for the dataset.",
-                    },
-                    {
-                      validator: syncValidator(
-                        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                        (value) => value && value.every((el) => el > 0),
-                        "Each component of the scale must be larger than 0.",
-                      ),
-                    },
-                  ]}
-                >
-                  <Vector3Input
-                    style={{
-                      width: 400,
-                    }}
-                    allowDecimals
-                    onChange={(scale) => {
-                      if (this.formRef.current == null) return;
-                      this.formRef.current.setFieldsValue({
-                        scale,
-                      });
-                    }}
-                  />
-                </FormItemWithInfo>
+              <FormItemWithInfo
+                name="scale"
+                label="Voxel Size"
+                info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                // @ts-ignore
+                disabled={this.state.needsConversion}
+                help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
+                rules={[
+                  {
+                    required: this.state.needsConversion,
+                    message: "Please provide a scale for the dataset.",
+                  },
+                  {
+                    validator: syncValidator(
+                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+                      (value) => value && value.every((el) => el > 0),
+                      "Each component of the scale must be larger than 0.",
+                    ),
+                  },
+                ]}
+              >
+                <Vector3Input
+                  style={{
+                    width: 400,
+                  }}
+                  allowDecimals
+                  onChange={(scale) => {
+                    if (this.formRef.current == null) return;
+                    this.formRef.current.setFieldsValue({
+                      scale,
+                    });
+                  }}
+                />
+              </FormItemWithInfo>
             ) : null}
 
             <FormItem
@@ -836,12 +839,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   }
 }
 
-function FileUploadArea(
-  { fileList, onChange }: {
-    fileList: FileWithPath[],
-    onChange: (files: FileWithPath[]) => void
-  }
-) {
+function FileUploadArea({
+  fileList,
+  onChange,
+}: {
+  fileList: FileWithPath[];
+  onChange: (files: FileWithPath[]) => void;
+}) {
   const onDropAccepted = (acceptedFiles: FileWithPath[]) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
     onChange(_.uniqBy(fileList.concat(acceptedFiles), (file) => file.path));
@@ -855,7 +859,9 @@ function FileUploadArea(
     onDropAccepted,
   });
   const acceptedFiles = fileList;
-  const files: React.ReactNode[] = acceptedFiles.map((file: FileWithPath) => <li key={file.path}>{file.path}</li>);
+  const files: React.ReactNode[] = acceptedFiles.map((file: FileWithPath) => (
+    <li key={file.path}>{file.path}</li>
+  ));
   const showSmallFileList = files.length > 10;
   const list = (
     <List
@@ -1006,5 +1012,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-const connector = connect(mapStateToProps)
+const connector = connect(mapStateToProps);
 export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetUploadView));

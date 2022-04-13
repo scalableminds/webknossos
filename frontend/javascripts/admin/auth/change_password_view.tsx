@@ -14,7 +14,6 @@ type Props = {
   history: RouteComponentProps["history"];
 };
 
-
 function ChangePasswordView({ history }: Props) {
   const [form] = Form.useForm();
 

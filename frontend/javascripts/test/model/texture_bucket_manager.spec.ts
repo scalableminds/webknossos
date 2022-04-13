@@ -70,7 +70,11 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
   return bucket;
 };
 
-const setActiveBucketsAndWait = (tbm: typeof TextureBucketManager, activeBuckets: DataBucket[], anchorPoint: Vector4) => {
+const setActiveBucketsAndWait = (
+  tbm: typeof TextureBucketManager,
+  activeBuckets: DataBucket[],
+  anchorPoint: Vector4,
+) => {
   tbm.setActiveBuckets(activeBuckets, anchorPoint);
   // Depending on timing, processWriterQueue has to be called n times in the slowest case
   activeBuckets.forEach(() => tbm.processWriterQueue());
@@ -78,7 +82,12 @@ const setActiveBucketsAndWait = (tbm: typeof TextureBucketManager, activeBuckets
   tbm._refreshLookUpBuffer();
 };
 
-const expectBucket = (t: ExecutionContext<unknown>, tbm: typeof TextureBucketManager, bucket: typeof DataBucket, expectedFirstByte: number) => {
+const expectBucket = (
+  t: ExecutionContext<unknown>,
+  tbm: typeof TextureBucketManager,
+  bucket: typeof DataBucket,
+  expectedFirstByte: number,
+) => {
   const bucketIdx = tbm._getBucketIndex(bucket.zoomedAddress);
 
   const bucketLocation =
@@ -117,4 +126,3 @@ test("TextureBucketManager: changing active buckets", (t) => {
   expectBucket(t, tbm, activeBuckets[4], 201);
   expectBucket(t, tbm, activeBuckets[5], 202);
 });
-

@@ -290,7 +290,7 @@ class SynapseTree extends React.Component<Props, State> {
         {/* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
          This has a major performance impact. */}
         <AutoSizer defaultHeight={500}>
-          {({ height, width}: { height: number, width: number }) => (
+          {({ height, width }: { height: number; width: number }) => (
             <div
               style={{
                 height,

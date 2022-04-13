@@ -134,7 +134,12 @@ type State = {
 };
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
-    const wrappedAddTreesAndGroupsAction = (trees: MutableTreeMap, treeGroups: TreeGroup[], groupName: string, userBoundingBoxes?: UserBoundingBox[]) => {
+    const wrappedAddTreesAndGroupsAction = (
+      trees: MutableTreeMap,
+      treeGroups: TreeGroup[],
+      groupName: string,
+      userBoundingBoxes?: UserBoundingBox[],
+    ) => {
       const actions =
         userBoundingBoxes && userBoundingBoxes.length > 0
           ? [addUserBoundingBoxesAction(userBoundingBoxes)]
@@ -311,7 +316,8 @@ function checkAndConfirmDeletingInitialNode(treeIds: number[]) {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
 
-  const hasNodeWithIdOne = (id: number) => getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
+  const hasNodeWithIdOne = (id: number) =>
+    getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
 
   const needsCheck = state.task != null && treeIds.find(hasNodeWithIdOne) != null;
   return new Promise<void>((resolve, reject) => {

@@ -521,9 +521,10 @@ export default function ToolbarView() {
               value={AnnotationToolEnum.TRACE}
             >
               <img
-                src="/assets/images/lasso.svg"
+                src="/assets/images/pen-solid.svg"
                 alt="Trace Tool Icon"
                 style={{
+                  marginTop: -4,
                   opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
                 }}
               />
@@ -542,12 +543,12 @@ export default function ToolbarView() {
               }}
               value={AnnotationToolEnum.ERASE_TRACE}
             >
-              <i
-                className="fas fa-eraser"
+              <img
+                src="/assets/images/cut-solid.svg"
+                alt="Erase Trace Tool Icon"
                 style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled
-                    ? 0.5
-                    : 1,
+                  marginTop: -4,
+                  opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled ? 0.5 : 1,
                 }}
               />
               {adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE
@@ -566,6 +567,7 @@ export default function ToolbarView() {
                 className="fas fa-fill-drip"
                 style={{
                   opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
+                  transform: "scaleX(-1)",
                 }}
               />
               {adaptedActiveTool === AnnotationToolEnum.FILL_CELL

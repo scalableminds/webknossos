@@ -102,10 +102,10 @@ class InputCatcher extends React.PureComponent<Props, {}> {
       SKELETON: "crosshair",
       BRUSH: "url(/assets/images/paint-brush-solid-border.svg) 0 10,auto",
       ERASE_BRUSH: "url(/assets/images/eraser-solid-border.svg) 0 8,auto",
-      TRACE: "url(/assets/images/crosshairs-solid-border.svg) 6 7,auto",
-      ERASE_TRACE: "url(/assets/images/eraser-solid-border.svg) 0 8,auto",
-      FILL_CELL: "url(/assets/images/fill-drip-solid-border.svg) 2 2,auto",
-      PICK_CELL: "url(/assets/images/eye-dropper-solid-border.svg) 1 11,auto",
+      TRACE: "url(/assets/images/pen-solid-border.svg) 0 14,auto",
+      ERASE_TRACE: "url(/assets/images/cut-solid-border.svg) 0 14,auto",
+      FILL_CELL: "url(/assets/images/fill-drip-solid-border.svg) 0 14,auto",
+      PICK_CELL: "url(/assets/images/eye-dropper-solid-border.svg) 0 12,auto",
       BOUNDING_BOX: "move",
     };
 

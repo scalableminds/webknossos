@@ -949,9 +949,8 @@ function* ensureSegmentExists(
 ): Saga<void> {
   const layer = yield* select(
     (
-      store, // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'layerName' does not exist on type 'SetAc... Remove this comment to see the full error message
-    ) => getRequestedOrVisibleSegmentationLayer(store, action.layerName),
+      store,
+    ) => getRequestedOrVisibleSegmentationLayer(store, "layerName" in action ? action.layerName : null),
   );
 
   if (!layer) {

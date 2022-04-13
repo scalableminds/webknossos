@@ -6,9 +6,7 @@ import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Tracing, VolumeTracing } from "oxalis/store";
 import { sleep } from "libs/utils";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'mock... Remove this comment to see the full error message
 import mockRequire from "mock-require";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'sino... Remove this comment to see the full error message
 import sinon from "sinon";
 import window from "libs/window";
 import {
@@ -24,6 +22,7 @@ import {
   annotation as VOLUME_ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
+import { ExecutionContext } from "ava";
 const Request = {
   receiveJSON: sinon.stub(),
   sendJSONReceiveJSON: sinon.stub(),
@@ -47,6 +46,8 @@ export function createBucketResponseFunction(TypedArrayClass, fillValue, delay =
     };
   };
 }
+
+// @ts-ignore
 Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(Uint8Array, 0);
 const ErrorHandling = {
   assertExtendContext: _.noop,
@@ -139,8 +140,8 @@ let counter = 0;
 // This function should always be imported at the very top since it setups
 // important mocks. The leading underscores are there to make the import
 // appear at the top when sorting the imports with importjs.
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 't' implicitly has an 'any' type.
-export function __setupOxalis(t, mode, apiVersion) {
+
+export function __setupOxalis(t: ExecutionContext<any>, mode: keyof typeof modelData, apiVersion?: number) {
   UrlManager.initialState = {
     position: [1, 2, 3],
   };
@@ -151,13 +152,11 @@ export function __setupOxalis(t, mode, apiVersion) {
   t.context.setSlowCompression = setSlowCompression;
   const webknossos = new OxalisApi(Model);
   const organizationName = "Connectomics Department";
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
     .withArgs(
       sinon.match(
         (
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'arg' implicitly has an 'any' type.
           arg, // Match against the URL while ignoring further GET parameters (such as timestamps)
         ) =>
           typeof arg === "string" &&
@@ -180,7 +179,6 @@ export function __setupOxalis(t, mode, apiVersion) {
     // each __setupOxalis call would overwrite the current stub to receiveJSON.
     .onCall(counter++)
     .returns(Promise.resolve(datasetClone));
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));
   Request.receiveJSON
     .withArgs("/api/userToken/generate", {

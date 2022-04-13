@@ -7,6 +7,7 @@ import type { Tracing, VolumeTracing } from "oxalis/store";
 import { sleep } from "libs/utils";
 import mockRequire from "mock-require";
 import sinon from "sinon";
+import { ExecutionContext } from "ava";
 import window from "libs/window";
 import {
   tracing as SKELETON_TRACING,
@@ -21,7 +22,8 @@ import {
   annotation as VOLUME_ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
-import { ExecutionContext } from "ava";
+
+
 const Request = {
   receiveJSON: sinon.stub(),
   sendJSONReceiveJSON: sinon.stub(),

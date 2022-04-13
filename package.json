@@ -119,7 +119,7 @@
     "lint-no-cache": "node_modules/.bin/eslint --quiet --ext .ts,.tsx frontend/javascripts/",
     "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.ts\" \"frontend/javascripts/**/*.tsx\" \"tools/**/*.js\"",
     "pretty-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
-    "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",
+    "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"frontend/javascripts/**/*.ts\" \"frontend/javascripts/**/*.tsx\" \"tools/**/*.js\"",
     "lint-fix": "node_modules/.bin/eslint --cache --fix --quiet --ext .ts,.tsx frontend/javascripts/ tools/",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.js frontend/javascripts/oxalis/api/api_latest.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/refresh_schema.sh && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",

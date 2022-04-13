@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import test from "ava";
 import mockRequire from "mock-require";
 import {

@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import configureMockStore from "redux-mock-store";
 import overwriteActionMiddleware, {
   overwriteAction,

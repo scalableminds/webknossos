@@ -1,5 +1,4 @@
-// @noflow
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
+// @ts-nocheck
 import BackboneEvents from "backbone-events-standalone";
 import Maybe from "data.maybe";
 import _ from "lodash";

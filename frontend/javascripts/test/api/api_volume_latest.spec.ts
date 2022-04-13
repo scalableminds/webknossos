@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import { AnnotationToolEnum } from "oxalis/constants";
 import { __setupOxalis } from "test/helpers/apiHelpers";
 import test from "ava";

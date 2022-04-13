@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import AsyncTaskQueue from "libs/async_task_queue";
 import Deferred from "libs/deferred";
 import * as Utils from "libs/utils";

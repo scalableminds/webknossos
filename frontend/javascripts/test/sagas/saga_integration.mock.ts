@@ -1,5 +1,3 @@
-// @noflow
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'mock... Remove this comment to see the full error message
 import mockRequire from "mock-require";
 import * as antd from "antd";
 import _ from "lodash";

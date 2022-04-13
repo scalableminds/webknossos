@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import _ from "lodash";
 import test from "ava";
 import { validateObjectWithType } from "types/validation";

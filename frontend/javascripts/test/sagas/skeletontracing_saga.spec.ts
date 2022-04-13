@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import "test/sagas/skeletontracing_saga.mock.js";
 import type { SaveQueueEntry, SkeletonTracing } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";

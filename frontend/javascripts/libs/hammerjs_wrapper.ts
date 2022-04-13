@@ -1,4 +1,3 @@
-// @noflow
 // In test environments, we don't want HammerJS to fail immediately, only
 // because it can't find window. So, let's emulate it here.
 const oldDocument = typeof document === "undefined" ? undefined : document;

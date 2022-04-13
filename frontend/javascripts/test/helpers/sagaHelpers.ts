@@ -1,5 +1,4 @@
-// @noflow
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 't' implicitly has an 'any' type.
+// @ts-nocheck
 export function expectValueDeepEqual(t, block, expected) {
   t.false(block.done);
   return t.deepEqual(block.value, expected);

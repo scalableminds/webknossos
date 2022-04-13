@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import _ from "lodash";
 import "test/model/binary/layers/wkstore_adapter.mock.js";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";

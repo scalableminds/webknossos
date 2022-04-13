@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import window, { document } from "libs/window";
 export default {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'textureBucketManager' implicitly has an... Remove this comment to see the full error message

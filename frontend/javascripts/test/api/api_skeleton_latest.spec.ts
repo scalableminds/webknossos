@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";

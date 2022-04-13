@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import _ from "lodash";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";

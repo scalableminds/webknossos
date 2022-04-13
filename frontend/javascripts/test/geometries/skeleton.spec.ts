@@ -1,4 +1,3 @@
-// @noflow
 // Integration tests for skeleton.js
 import _ from "lodash";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";

@@ -1,4 +1,3 @@
-// @noflow
 export default {
   name: "ROI2017_wkw",
   dataSource: {

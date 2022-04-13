@@ -1,4 +1,4 @@
-// @noflow
+// @ts-nocheck
 import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";

@@ -4,7 +4,6 @@ import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import type { Vector4 } from "oxalis/constants";
-import "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DataStoreInfo } from "oxalis/store";
 import Store from "oxalis/store";

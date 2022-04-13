@@ -2,7 +2,6 @@ import { createNanoEvents } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
 import type { ElementClass } from "types/api_flow_types";
-import "types/api_flow_types";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";

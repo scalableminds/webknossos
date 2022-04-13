@@ -7,7 +7,6 @@ import memoizeOne from "memoize-one";
 import { stringToAntdColorPreset } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 import type { Vector3 } from "oxalis/constants";
-import "oxalis/constants";
 import type { APIConnectomeFile } from "types/api_flow_types";
 import Store from "oxalis/store";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";

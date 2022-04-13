@@ -11,7 +11,6 @@ import {
   switchToOrganization,
 } from "admin/admin_rest_api";
 import type { APIUser } from "types/api_flow_types";
-import "types/api_flow_types";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 const { Content } = Layout;

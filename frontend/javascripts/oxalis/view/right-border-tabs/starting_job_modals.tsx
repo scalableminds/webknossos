@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import type { APIDataset, APIJob } from "types/api_flow_types";
-import "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
 import { startNucleiInferralJob, startNeuronInferralJob } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";

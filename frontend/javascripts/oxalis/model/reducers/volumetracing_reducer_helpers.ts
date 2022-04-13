@@ -1,7 +1,6 @@
 
 import update from "immutability-helper";
 import type { ContourMode, Vector3 } from "oxalis/constants";
-import "oxalis/constants";
 import type { OxalisState, VolumeTracing } from "oxalis/store";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";

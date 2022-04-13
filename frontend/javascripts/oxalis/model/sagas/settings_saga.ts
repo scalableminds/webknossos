@@ -13,7 +13,6 @@ import {
 } from "typed-redux-saga";
 import {select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import "oxalis/model/actions/settings_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
 import ErrorHandling from "libs/error_handling";

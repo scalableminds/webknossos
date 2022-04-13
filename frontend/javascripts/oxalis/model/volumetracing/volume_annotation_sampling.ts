@@ -4,7 +4,6 @@ import constants from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
-import "oxalis/model/bucket_data_handling/bucket";
 import messages from "messages";
 import type { DimensionMap } from "oxalis/model/dimensions";
 

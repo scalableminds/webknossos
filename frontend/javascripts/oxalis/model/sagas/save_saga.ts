@@ -20,7 +20,6 @@ import {
   setUserBoundingBoxesAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import "oxalis/model/bucket_data_handling/bucket";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   PUSH_THROTTLE_TIME,

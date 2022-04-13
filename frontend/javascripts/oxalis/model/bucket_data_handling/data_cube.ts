@@ -9,9 +9,7 @@ import {
   NullBucket,
 } from "oxalis/model/bucket_data_handling/bucket";
 import type { ElementClass } from "types/api_flow_types";
-import "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
-import "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
 import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";

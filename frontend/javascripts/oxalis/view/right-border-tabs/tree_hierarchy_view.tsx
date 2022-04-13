@@ -10,7 +10,6 @@ import { SortableTreeWithoutDndContext as SortableTree } from "react-sortable-tr
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
-import "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import type { TreeNode } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";

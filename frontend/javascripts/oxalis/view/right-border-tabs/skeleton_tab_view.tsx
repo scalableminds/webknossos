@@ -26,7 +26,6 @@ import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { Action } from "oxalis/model/actions/actions";
-import "oxalis/model/actions/actions";
 import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import {
   createGroupToTreesMap,

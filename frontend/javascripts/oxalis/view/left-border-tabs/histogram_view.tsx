@@ -4,7 +4,6 @@ import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
 import type { Vector2, Vector3 } from "oxalis/constants";
-import "oxalis/constants";
 import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_flow_types";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";

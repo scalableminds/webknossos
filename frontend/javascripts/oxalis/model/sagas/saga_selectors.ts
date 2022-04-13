@@ -3,7 +3,6 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V2 } from "libs/mjs";
 import type { Vector2, OrthoView } from "oxalis/constants";
-import "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneExtentInVoxelFromStore } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";

@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'file... Remove this comment to see the full error message
 import { saveAs } from "file-saver";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
@@ -18,7 +17,6 @@ import type {
   IsosurfaceMappingInfo,
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
-import "oxalis/model/actions/segmentation_actions";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import type {

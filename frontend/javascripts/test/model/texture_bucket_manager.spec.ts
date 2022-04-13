@@ -58,7 +58,6 @@ const mockedCube = {
 const { default: TextureBucketManager, channelCountForLookupBuffer } = mock.reRequire(
   "oxalis/model/bucket_data_handling/texture_bucket_manager",
 );
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 const { DataBucket, NULL_BUCKET } = mock.reRequire("oxalis/model/bucket_data_handling/bucket");
 
 const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {

@@ -8,7 +8,6 @@ import type { Tracing, VolumeTracing } from "oxalis/store";
 import { sleep } from "libs/utils";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-import { ExecutionContext } from "ava";
 import window from "libs/window";
 import {
   tracing as SKELETON_TRACING,

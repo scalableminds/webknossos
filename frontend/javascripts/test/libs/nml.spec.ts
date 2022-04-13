@@ -1,3 +1,4 @@
+// @ts-nocheck
 import _ from "lodash";
 import update from "immutability-helper";
 import sinon from "sinon";

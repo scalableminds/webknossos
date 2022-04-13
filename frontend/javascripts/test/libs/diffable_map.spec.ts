@@ -2,15 +2,15 @@ import _ from "lodash";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import test from "ava";
 
-function sort(arr) {
+function sort(arr: Array<number>) {
   return arr.sort((a, b) => a - b);
 }
 
 test("DiffableMap should be empty", (t) => {
-  const emptyMap = new DiffableMap();
+  const emptyMap = new DiffableMap<number, number>();
   t.is(emptyMap.size(), 0);
   t.false(emptyMap.has(1));
-  t.throws((): void => emptyMap.get(1));
+  t.throws(() => emptyMap.get(1));
 });
 test("DiffableMap should behave immutable on set/delete operations", (t) => {
   const emptyMap = new DiffableMap();
@@ -100,7 +100,7 @@ test("diffDiffableMaps should diff DiffableMaps which are based on each other", 
   const peter = {};
   const bob = {};
   const andrew = {};
-  const map1 = new DiffableMap([
+  const map1 = new DiffableMap<number, any>([
     [1, peter],
     [2, bob],
   ]);
@@ -119,7 +119,7 @@ test("diffDiffableMaps should diff large DiffableMaps which are based on each ot
   }
 
   // Load the first 100 objects into map1
-  const map1 = new DiffableMap(
+  const map1 = new DiffableMap<number, any>(
     objects.slice(0, 100).map((obj, index) => [index, obj]),
     10,
   );
@@ -156,15 +156,17 @@ test("diffDiffableMaps should diff large DiffableMaps which are not based on eac
   }
 
   // Load the first, uneven 100 objects into map1 and add a 111th key
-  const map1 = new DiffableMap(
+  const map1 = new DiffableMap<number, any>(
+    // @ts-ignore
     objects
       .slice(0, 100)
       .map((obj, index) => [index, obj])
+      // @ts-ignore
       .filter(([idx]) => idx % 2 === 1),
     10,
   ).set(110, {});
   // Load the first 105 objects into map2 and overwrite the 52th key
-  const map2 = new DiffableMap(
+  const map2 = new DiffableMap<number, any>(
     objects.slice(0, 105).map((obj, index) => [index, obj]),
     10,
   ).set(51, null);

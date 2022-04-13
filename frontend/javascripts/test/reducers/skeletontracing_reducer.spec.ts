@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-disable no-useless-computed-key */
 import _ from "lodash";
 import update from "immutability-helper";

@@ -8,7 +8,7 @@ import test from "ava";
 type Tasks = Array<() => Saga<void>>;
 test.serial("processTaskWithPool should run a simple task", async (t) => {
   t.plan(1);
-  const protocol = [];
+  const protocol: number[] = [];
   const tasks: Tasks = [
     function* () {
       yield* call(Utils.sleep, 100);
@@ -28,7 +28,7 @@ test.serial(
   "processTaskWithPool should deal with a failing task while the other tasks are still executed",
   async (t) => {
     t.plan(1);
-    const protocol = [];
+    const protocol: number[] = [];
     const tasks: Tasks = [
       function* () {
         yield* call(Utils.sleep, 10);
@@ -50,7 +50,7 @@ test.serial(
 );
 test.serial("processTaskWithPool should run tasks sequentially", async (t) => {
   t.plan(1);
-  const protocol = [];
+  const protocol: number[] = [];
   const tasks: Tasks = [
     function* () {
       yield* call(Utils.sleep, 300);
@@ -70,7 +70,7 @@ test.serial("processTaskWithPool should run tasks sequentially", async (t) => {
 });
 test.serial("processTaskWithPool should run tasks in a sliding window manner", async (t) => {
   t.plan(1);
-  const protocol = [];
+  const protocol: number[] = [];
   const tasks: Tasks = [
     function* () {
       yield* call(Utils.sleep, 10);
@@ -91,7 +91,7 @@ test.serial("processTaskWithPool should run tasks in a sliding window manner", a
 });
 test.serial("processTaskWithPool should cope with too large pool size", async (t) => {
   t.plan(1);
-  const protocol = [];
+  const protocol: number[] = [];
   const tasks: Tasks = [
     function* () {
       yield* call(Utils.sleep, 10);

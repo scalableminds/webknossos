@@ -616,6 +616,7 @@ class TracingApi {
       newAnnotationType,
       {
         annotationId: newAnnotationId,
+        // @ts-ignore
         type: newControlMode,
       },
       false,

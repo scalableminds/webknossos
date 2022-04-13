@@ -1,3 +1,4 @@
+// @ts-nocheck
 import _ from "lodash";
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";

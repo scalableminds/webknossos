@@ -54,6 +54,7 @@ function* pushDatasetSettingsAsync(): Saga<void> {
       throw error;
     } else {
       // Still log the error to airbrake in view mode.
+      // @ts-ignore
       yield* call({context: ErrorHandling, fn: ErrorHandling.notify}, error);
     }
   }

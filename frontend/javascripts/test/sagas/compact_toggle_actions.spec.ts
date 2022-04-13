@@ -1,3 +1,4 @@
+// @ts-nocheck
 import _ from "lodash";
 import type { Flycam, OxalisState, Tree, TreeMap } from "oxalis/store";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";

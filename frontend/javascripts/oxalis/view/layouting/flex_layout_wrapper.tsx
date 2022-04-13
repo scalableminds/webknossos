@@ -43,8 +43,8 @@ import {
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
 const { Footer } = Layout;
-type Model = typeof FlexLayout.Model;
-type Action = typeof FlexLayout.Action;
+type Model = InstanceType<typeof FlexLayout.Model>;
+type Action = InstanceType<typeof FlexLayout.Action>;
 type StateProps = {
   displayScalebars: boolean;
   isUpdateTracingAllowed: boolean;
@@ -81,13 +81,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const model = this.loadCurrentModel();
     this.unbindListeners = [];
     this.addListeners();
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Model' is not assignable to para... Remove this comment to see the full error message
     this.borderOpenStatusWhenNotMaximized = getBorderOpenStatus(model);
     props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatusWhenNotMaximized));
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Model' is not assignable to para... Remove this comment to see the full error message
     this.updateToModelStateAndAdjustIt(model);
     this.state = {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Model' is not assignable to type 'typeof Mod... Remove this comment to see the full error message
       model,
     };
   }
@@ -190,7 +187,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   updateToModelStateAndAdjustIt(model: Model) {
     this.maximizedItemId = getMaximizedItemId(model);
     adjustModelToBorderOpenStatus(model, this.borderOpenStatusWhenNotMaximized);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setOnAllowDrop' does not exist on type '... Remove this comment to see the full error message
     model.setOnAllowDrop(this.allowDrop);
     setTimeout(() => {
       this.adaptModelToConditionalTabs(model);
@@ -200,10 +196,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   rebuildLayout() {
     const model = this.loadCurrentModel();
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Model' is not assignable to para... Remove this comment to see the full error message
     this.updateToModelStateAndAdjustIt(model);
     this.setState({
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Model' is not assignable to type 'typeof Mod... Remove this comment to see the full error message
       model,
     });
     setTimeout(this.onLayoutChange, 1);
@@ -218,7 +212,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   attachKeyboardShortcuts() {
     const toggleMaximize = () => {
       const { model } = this.state;
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'getActiveTabset' does not exist on type ... Remove this comment to see the full error message
       const activeNode = model.getActiveTabset();
 
       if (activeNode == null) {
@@ -226,9 +219,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
 
       const toggleMaximiseAction = FlexLayout.Actions.maximizeToggle(activeNode.getId());
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'doAction' does not exist on type 'typeof... Remove this comment to see the full error message
       model.doAction(toggleMaximiseAction);
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Action' is not assignable to par... Remove this comment to see the full error message
       this.onAction(toggleMaximiseAction);
     };
 
@@ -348,6 +339,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return (
           <InputCatcher
             busyBlockingInfo={busyBlockingInfo}
+            // @ts-expect-error
             viewportID={ArbitraryViews.arbitraryViewport}
           >
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
@@ -382,7 +374,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         onModelChange={() => {
           // Update / inform parent layout about the changes.
           // This will trigger the parents onModelChange and this will then save the model changes.
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'doAction' does not exist on type 'typeof... Remove this comment to see the full error message
           this.state.model.doAction(
             FlexLayout.Actions.updateNodeAttributes(node.getId(), {
               config: {
@@ -419,7 +410,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onLayoutChange = () => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'toJson' does not exist on type 'typeof M... Remove this comment to see the full error message
     const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
 
     // Workaround so that onLayoutChange is called after the update of flexlayout.
@@ -441,7 +431,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   };
 
   onAction = (action: Action) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'type' does not exist on type 'typeof Act... Remove this comment to see the full error message
     const { type, data } = action;
 
     if (type === "FlexLayout_MaximizeToggle") {
@@ -458,7 +447,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         document.activeElement.blur();
       }
 
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'getNodeById' does not exist on type 'typ... Remove this comment to see the full error message
       const toggledViewportId = this.state.model.getNodeById(data.node).getChildren()[0].getId();
 
       // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
@@ -492,13 +480,12 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       this.borderOpenStatusWhenNotMaximized[side] = !this.borderOpenStatusWhenNotMaximized[side];
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'doAction' does not exist on type 'typeof... Remove this comment to see the full error message
     this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
     this.onLayoutChange();
   }
 
   onRenderTabSet = (
-    tabSetNode: typeof TabSetNode,
+    tabSetNode: TabSetNode,
     renderValues: {
       buttons: Array<React.ReactNode>;
       headerContent: React.ReactNode;
@@ -517,19 +504,18 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     }
   };
 
-  onRenderTab = (tabNode: typeof TabNode, renderValues: Record<string, any>) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'getParent' does not exist on type 'typeo... Remove this comment to see the full error message
+  onRenderTab = (tabNode: TabNode, renderValues: Record<string, any>) => {
     const parent = tabNode.getParent();
 
-    if (parent.getType() !== "tabset") {
+    if (parent?.getType() !== "tabset") {
       // Do not consider borders, only tabsets in the center layout.
       return;
     }
 
     const parentTabSetNode = parent;
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'getId' does not exist on type 'typeof Ta... Remove this comment to see the full error message
     if (parentTabSetNode.getChildren()[0].getId() === tabNode.getId()) {
+      // @ts-expect-error
       const { isTopMost, isLeftMost } = getPositionStatusOf(parentTabSetNode);
 
       if (isTopMost && isLeftMost) {
@@ -557,15 +543,12 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       <React.Fragment>
         <div className="flex-layout-container">
           <FlexLayout.Layout
-            // @ts-expect-error ts-migrate(2740) FIXME: Type 'typeof Model' is missing the following prope... Remove this comment to see the full error message
             model={model}
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(action: Action) => typeof Action' is not as... Remove this comment to see the full error message
             onAction={this.onAction}
             // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabSetNode: typeof TabSetNode, renderValues... Remove this comment to see the full error message
             onRenderTabSet={this.onRenderTabSet}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabNode: typeof TabNode, renderValues: Reco... Remove this comment to see the full error message
             onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}
           />

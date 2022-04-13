@@ -1,3 +1,4 @@
+// @ts-nocheck
 import update from "immutability-helper";
 import { getFirstVolumeTracingOrFail } from "test/helpers/apiHelpers";
 import { AnnotationToolEnum } from "oxalis/constants";

@@ -76,7 +76,16 @@ function ChangePasswordView({ history }: Props) {
               },
             ]}
           >
-            <Password placeholder="Old Password" />
+            <Password
+              prefix={
+                <LockOutlined
+                  style={{
+                    fontSize: 13,
+                  }}
+                />
+              }
+              placeholder="Old Password"
+            />
           </FormItem>
           <FormItem
             hasFeedback

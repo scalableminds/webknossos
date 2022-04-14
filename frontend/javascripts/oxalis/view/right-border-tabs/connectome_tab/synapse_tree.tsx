@@ -91,9 +91,7 @@ const noneData = {
   id: 0,
 };
 
-const _convertConnectomeToTreeData = (
-  connectomeData: ConnectomeData | null | undefined,
-): TreeData | null | undefined => {
+function _convertConnectomeToTreeData(connectomeData: ConnectomeData | null | undefined): TreeData | null | undefined {
   if (connectomeData == null) return null;
   const { agglomerates, synapses } = connectomeData;
 
@@ -147,7 +145,7 @@ const _convertConnectomeToTreeData = (
       selectable: false,
     })),
   }));
-};
+}
 
 export const convertConnectomeToTreeData = memoizeOne(_convertConnectomeToTreeData);
 type State = {
@@ -315,6 +313,7 @@ class SynapseTree extends React.Component<Props, State> {
                 expandedKeys={expandedKeys}
                 // @ts-expect-error ts-migrate(2322) FIXME: Type '(node: TreeNode) => string | JSX.Element' is... Remove this comment to see the full error message
                 titleRender={this.renderNode}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'TreeData | null | undefined' is not assignab... Remove this comment to see the full error message
                 treeData={convertConnectomeToTreeData(connectomeData)}
               />
             </div>

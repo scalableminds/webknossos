@@ -75,7 +75,7 @@ test.beforeEach(async (t) => {
   global.fetch = fetch;
   global.Request = Request;
   global.Response = Response;
-  // @ts-expect-error ts-migrate(2551) FIXME: Property 'FetchError' does not exist on type 'Glob... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(7017) FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
   global.FetchError = FetchError;
 });
 // These are the datasets that are available on our dev instance
@@ -104,6 +104,7 @@ const viewOverrides: Record<string, string> = {
 const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
   ROI2017_wkw_fallback: {
     layers: {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ alpha: number; intensityRange: [number, nu... Remove this comment to see the full error message
       color: {
         alpha: 100,
         intensityRange: [0, 255],
@@ -116,9 +117,11 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
   },
   connectome_file_test_dataset: {
     layers: {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isDisabled: true; }' is not assignable to ... Remove this comment to see the full error message
       another_segmentation: {
         isDisabled: true,
       },
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isDisabled: false; }' is not assignable to... Remove this comment to see the full error message
       segmentation: {
         isDisabled: false,
       },

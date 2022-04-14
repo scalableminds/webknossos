@@ -122,10 +122,12 @@ class Plane {
     fallbackAnchorPoint?: Vector4 | null | undefined,
   ): void {
     if (anchorPoint) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
       this.plane.material.setAnchorPoint(anchorPoint);
     }
 
     if (fallbackAnchorPoint) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setFallbackAnchorPoint' does not exist o... Remove this comment to see the full error message
       this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
     }
   }
@@ -166,8 +168,10 @@ class Plane {
     this.plane.position.set(x, y, z);
 
     if (originalPosition == null) {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(x, y, z);
     } else {
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(
         originalPosition[0],
         originalPosition[1],
@@ -185,6 +189,7 @@ class Plane {
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
   setLinearInterpolationEnabled = (enabled: boolean) => {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
     this.plane.material.setUseBilinearFiltering(enabled);
   };
 }

@@ -28,6 +28,7 @@ export default class AdvancedSearchPopover<
     searchQuery: "",
     currentPosition: null,
   };
+
   getAvailableOptions = memoizeOne(
     (data: Array<S>, searchQuery: string, searchKey: keyof S): Array<S> =>
       searchQuery !== ""
@@ -36,6 +37,7 @@ export default class AdvancedSearchPopover<
           )
         : [],
   );
+
   selectNextOptionWithOffset = (offset: number) => {
     const { data, searchKey } = this.props;
     const { searchQuery } = this.state;
@@ -50,6 +52,7 @@ export default class AdvancedSearchPopover<
     if (currentPosition == null) {
       // If there was no previous currentPosition for the current search query,
       // set currentPosition to an initial value.
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
       currentPosition = offset >= 0 ? -1 : numberOfAvailableOptions;
     }
 
@@ -63,19 +66,24 @@ export default class AdvancedSearchPopover<
     this.setState({
       currentPosition,
     });
+    // @ts-expect-error ts-migrate(2538) FIXME: Type 'null' cannot be used as an index type.
     this.props.onSelect(availableOptions[currentPosition]);
   };
+
   selectNextOption = () => {
     this.selectNextOptionWithOffset(1);
   };
+
   selectPreviousOption = () => {
     this.selectNextOptionWithOffset(-1);
   };
+
   openSearchPopover = () => {
     this.setState({
       isVisible: true,
     });
   };
+
   closeSearchPopover = () => {
     this.setState({
       isVisible: false,
@@ -91,6 +99,7 @@ export default class AdvancedSearchPopover<
     // Ensure that currentPosition to not higher than numberOfAvailableOptions.
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
     currentPosition =
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
     const hasMultipleResults = numberOfAvailableOptions > 1;

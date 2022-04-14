@@ -26,15 +26,15 @@ class ContourGeometry {
         linewidth: 2,
       }),
     );
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'ty... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
     this.edge.vertexBuffer = new ResizableBuffer(3, Float32Array);
     this.reset();
   }
 
   reset() {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'color' does not exist on type 'Material ... Remove this comment to see the full error message
     this.edge.material.color = this.color;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'ty... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
     this.edge.vertexBuffer.clear();
     this.finalizeMesh(this.edge);
   }
@@ -44,27 +44,27 @@ class ContourGeometry {
   }
 
   addEdgePoint(pos: Vector3) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'ty... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
     this.edge.vertexBuffer.push(pos);
     this.finalizeMesh(this.edge);
     app.vent.trigger("rerender");
   }
 
   finalizeMesh(mesh: THREE.Line) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'Buff... Remove this comment to see the full error message
     if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {
       // Need to rebuild Geometry
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'ty... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
       const positionAttribute = new THREE.BufferAttribute(mesh.vertexBuffer.getBuffer(), 3);
       positionAttribute.setUsage(THREE.DynamicDrawUsage);
       mesh.geometry.dispose();
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'Bu... Remove this comment to see the full error message
       mesh.geometry.setAttribute("position", positionAttribute);
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'Buff... Remove this comment to see the full error message
     mesh.geometry.attributes.position.needsUpdate = true;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setDrawRange' does not exist on type 'Bu... Remove this comment to see the full error message
     mesh.geometry.setDrawRange(0, mesh.vertexBuffer.getLength());
     mesh.geometry.computeBoundingSphere();
   }

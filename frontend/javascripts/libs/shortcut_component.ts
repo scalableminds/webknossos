@@ -14,7 +14,6 @@ export default class Shortcut extends React.Component<Props> {
 
   componentDidMount() {
     this.keyboardNoLoop = new (this.props.supportLoop ? InputKeyboard : InputKeyboardNoLoop)(
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ [x: string]: () => any; }' is ... Remove this comment to see the full error message
       {
         [this.props.keys]: this.props.onTrigger,
       },

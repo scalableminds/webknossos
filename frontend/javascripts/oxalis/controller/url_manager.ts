@@ -81,6 +81,7 @@ export type PartialUrlManagerState = Partial<UrlManagerState>;
 class UrlManager {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'baseUrl' has no initializer and is not d... Remove this comment to see the full error message
   baseUrl: string;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'initialState' has no initializer and is ... Remove this comment to see the full error message
   initialState: PartialUrlManagerState;
 
   initialize() {
@@ -170,9 +171,11 @@ class UrlManager {
         const modeString = ViewModeValues[validStateArray[3]];
 
         if (modeString) {
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'ViewMode ... Remove this comment to see the full error message
           state.mode = modeString;
         } else {
           // Let's default to MODE_PLANE_TRACING
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'ViewMode ... Remove this comment to see the full error message
           state.mode = constants.MODE_PLANE_TRACING;
         }
 

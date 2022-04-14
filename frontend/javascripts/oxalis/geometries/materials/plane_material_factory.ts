@@ -303,7 +303,7 @@ class PlaneMaterialFactory {
         fragmentShader: this.getFragmentShader(),
       }),
     );
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'extensions' does not exist on type 'type... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2739) FIXME: Type '{ derivatives: true; }' is missing the follo... Remove this comment to see the full error message
     this.material.extensions = {
       // Necessary for anti-aliasing via fwidth in shader
       derivatives: true,

@@ -48,7 +48,9 @@ test("Save should add more update actions to the queue", (t) => {
   t.deepEqual(newState.save.queue.skeleton, saveQueue);
 });
 test("Save should add zero update actions to the queue", (t) => {
+  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'items' implicitly has type 'any[]' in so... Remove this comment to see the full error message
   const items = [];
+  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'items' implicitly has an 'any[]' type.
   const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const newState = SaveReducer(initialState, pushAction);
   t.deepEqual(newState.save.queue.skeleton, []);

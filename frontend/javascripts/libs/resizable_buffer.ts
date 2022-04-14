@@ -47,6 +47,7 @@ class ResizableBuffer<T extends TypedArray> {
   }
 
   getAllElements(): T {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Int8Array | Uint8Array | Uint8ClampedArray |... Remove this comment to see the full error message
     return this.buffer.subarray(0, this.length);
   }
 

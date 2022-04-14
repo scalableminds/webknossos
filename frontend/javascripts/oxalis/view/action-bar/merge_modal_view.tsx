@@ -250,7 +250,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
           >
             <Form.Item label="Project">
               <Select
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'never[]' is not assignable to type 'string'.
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | never[]' is not assignable to type ... Remove this comment to see the full error message
                 value={this.state.selectedProject || []}
                 style={{
                   width: 200,

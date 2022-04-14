@@ -137,6 +137,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       delay: Store.getState().userConfiguration.keyboardDelay,
     },
   );
+
   state: CommentTabState = {
     isSortedAscending: true,
     sortBy: SortByEnum.NAME,
@@ -188,7 +189,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     ) {
       // Force the virtualized list to update if a comment was changed
       // as it only rerenders if the rowCount changed otherwise
-      // @ts-expect-error
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'forceUpdateGrid' does not exist on type ... Remove this comment to see the full error message
       this.listRef.forceUpdateGrid();
     }
   }
@@ -236,9 +237,11 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       }
     });
   };
+
   previousComment = () => {
     this.nextComment(false);
   };
+
   handleChangeInput = (evt: React.SyntheticEvent, insertLineBreaks: boolean = false) => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const commentText = evt.target.value;
@@ -249,17 +252,20 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       this.props.deleteComment();
     }
   };
+
   // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'key' implicitly has an 'any' type... Remove this comment to see the full error message
   handleChangeSorting = ({ key }) => {
     this.setState({
       sortBy: key,
     });
   };
+
   toggleSortingDirection = () => {
     this.setState((prevState) => ({
       isSortedAscending: !prevState.isSortedAscending,
     }));
   };
+
   toggleExpandForAllTrees = () => {
     this.setState((prevState) => {
       const shouldBeCollapsed = !_.values(prevState.collapsedTreeIds).some((bool) => bool);
@@ -271,6 +277,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       };
     });
   };
+
   toggleExpand = (treeId: number) => {
     this.setState((prevState) => ({
       collapsedTreeIds: update(prevState.collapsedTreeIds, {
@@ -446,9 +453,10 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   <InputComponent
                     value={activeCommentContent}
                     disabled={activeNodeMaybe.isNothing}
+                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
                     onChange={(evt) => this.handleChangeInput(evt, true)}
+                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
                     onPressEnter={(evt) =>
-                      // @ts-expect-error
                       evt.target.blur()
                     }
                     placeholder="Add comment"

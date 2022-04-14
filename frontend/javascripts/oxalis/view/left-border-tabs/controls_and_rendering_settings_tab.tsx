@@ -47,12 +47,15 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   // This cannot be changed to componentDidMount, because this.onChangeUser is accessed in render
   UNSAFE_componentWillMount() {
     // cache onChange handler
+    // @ts-expect-error ts-migrate(2740) FIXME: Type 'Dictionary<boolean>' is missing the followin... Remove this comment to see the full error message
     this.onChangeUser = _.mapValues(
       this.props.userConfiguration,
       (__, propertyName: keyof UserConfiguration) =>
         _.partial(this.props.onChangeUser, propertyName),
     );
+    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ readonly fourBit: Function1<keyof DatasetC... Remove this comment to see the full error message
     this.onChangeDataset = _.mapValues(this.props.datasetConfiguration, (__, propertyName) =>
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
       _.partial(this.props.onChangeDataset, propertyName),
     );
   }

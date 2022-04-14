@@ -44,6 +44,7 @@ test("createTaskType and deleteTaskType", async (t) => {
     recommendedConfiguration: null,
     tracingType: "skeleton",
   };
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ id: null; summary: string; des... Remove this comment to see the full error message
   const createdTaskType = await api.createTaskType(newTaskType);
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting

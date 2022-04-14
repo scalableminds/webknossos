@@ -15,7 +15,7 @@ type Props = {
   datasetId: APIDatasetId;
   onClose: () => void;
 };
-export const NewVolumeLayerSelection = ({
+export function NewVolumeLayerSelection({
   segmentationLayers,
   dataset,
   selectedSegmentationLayerIndex,
@@ -25,8 +25,8 @@ export const NewVolumeLayerSelection = ({
   dataset: APIDataset;
   selectedSegmentationLayerIndex: number | null | undefined;
   setSelectedSegmentationLayerIndex: (arg0: number | null | undefined) => void;
-}) => (
-  <div
+}) {
+  return <div
     style={{
       marginBottom: 16,
     }}
@@ -59,9 +59,9 @@ export const NewVolumeLayerSelection = ({
       ))}
     </Radio.Group>
   </div>
-);
+}
 
-const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
+function CreateExplorativeModal({ datasetId, onClose }: Props) {
   const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
   const [annotationType, setAnnotationType] = useState("hybrid");
   const [userDefinedResolutionIndices, setUserDefinedResolutionIndices] = useState([0, 10000]);
@@ -74,6 +74,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
       annotationType !== "skeleton" &&
       segmentationLayers.length > 0 &&
       selectedSegmentationLayerIndex != null
+        // @ts-expect-error ts-migrate(2538) FIXME: Type 'null' cannot be used as an index type.
         ? segmentationLayers[selectedSegmentationLayerIndex]
         : null;
     const fallbackLayerGetParameter =
@@ -209,6 +210,6 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
       {modalContent}
     </Modal>
   );
-};
+}
 
 export default CreateExplorativeModal;

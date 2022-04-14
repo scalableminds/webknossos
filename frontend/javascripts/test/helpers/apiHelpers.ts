@@ -31,9 +31,7 @@ const Request = {
   sendJSONReceiveArraybufferWithHeaders: sinon.stub(),
   always: () => Promise.resolve(),
 };
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'TypedArrayClass' implicitly has an 'any... Remove this comment to see the full error message
 export function createBucketResponseFunction(TypedArrayClass, fillValue, delay = 0) {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'url' implicitly has an 'any' type.
   return async function getBucketData(url, payload) {
     const bucketCount = payload.data.length;
     await sleep(delay);
@@ -47,7 +45,6 @@ export function createBucketResponseFunction(TypedArrayClass, fillValue, delay =
   };
 }
 
-// @ts-ignore
 Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(Uint8Array, 0);
 const ErrorHandling = {
   assertExtendContext: _.noop,
@@ -207,12 +204,10 @@ export function __setupOxalis(
       .then(() => {
         // Trigger the event ourselves, as the OxalisController is not instantiated
         app.vent.trigger("webknossos:ready");
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'apiObject' implicitly has an 'any' type... Remove this comment to see the full error message
         webknossos.apiReady(apiVersion).then((apiObject) => {
           t.context.api = apiObject;
         });
       })
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'error' implicitly has an 'any' type.
       .catch((error) => {
         console.error("model.fetch() failed", error);
         t.fail(error.message);

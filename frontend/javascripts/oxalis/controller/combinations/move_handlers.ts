@@ -70,6 +70,7 @@ export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, 
 export const zoom = (value: number, zoomToMouse: boolean) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
 
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '"PLANE_XY" | "PLANE_YZ" | "PLANE... Remove this comment to see the full error message
   if (OrthoViewValuesWithoutTDView.includes(activeViewport)) {
     zoomPlanes(value, zoomToMouse);
   } else {

@@ -55,6 +55,7 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
       let newState = state;
 
       for (const viewport of Object.keys(viewportRects)) {
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
         newState = setInputCatcherRect(newState, viewport, viewportRects[viewport]);
       }
 
@@ -152,9 +153,7 @@ function zoomTDView(
   let offsetY = 0;
 
   if (targetPosition != null) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'x' does not exist on type 'typeof Vector... Remove this comment to see the full error message
     offsetX = ((targetPosition.x / curWidth) * 2 - 1) * -baseDiffX;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'y' does not exist on type 'typeof Vector... Remove this comment to see the full error message
     offsetY = ((targetPosition.y / curHeight) * 2 - 1) * +baseDiffY;
   }
 

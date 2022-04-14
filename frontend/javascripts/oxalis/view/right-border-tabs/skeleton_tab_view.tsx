@@ -174,7 +174,6 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           throw error;
         }
 
-        // @ts-ignore
         console.error(`Tried parsing file "${file.name}" as NML but failed. ${error.message}`);
         return undefined;
       }
@@ -194,14 +193,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         return {
           importActions: wrappedAddTreesAndGroupsAction(
             createMutableTreeMapFromTreeArray(parsedTracing.trees),
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeGroups' does not exist on type 'Serv... Remove this comment to see the full error message
+            // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'TreeGroup[] | null | undefined' ... Remove this comment to see the full error message
             parsedTracing.treeGroups,
             file.name,
           ),
           datasetName: parsedTracing.dataSetName,
         };
       } catch (error) {
-        // @ts-ignore
         console.error(`Tried parsing file "${file.name}" as protobuf but failed. ${error.message}`);
         return undefined;
       }

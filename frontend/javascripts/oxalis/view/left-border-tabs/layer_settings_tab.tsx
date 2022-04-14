@@ -131,6 +131,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   UNSAFE_componentWillMount() {
     // cache onChange handler
     this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName) =>
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
       _.partial(this.props.onChangeUser, propertyName),
     );
   }
@@ -166,6 +167,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </Tooltip>
     );
   };
+
   getReloadDataButton = (layerName: string) => {
     const tooltipText =
       "Reload the data from the server. Use this when the data on the server changed.";
@@ -181,6 +183,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </Tooltip>
     );
   };
+
   getDeleteButton = (volumeTracing: VolumeTracing) => (
     <Tooltip title="Unlink dataset's original segmentation layer">
       <StopOutlined
@@ -193,6 +196,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       />
     </Tooltip>
   );
+
   removeFallbackLayer = (volumeTracing: VolumeTracing) => {
     Modal.confirm({
       title: messages["tracing.confirm_remove_fallback_layer.title"],
@@ -210,6 +214,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       width: 600,
     });
   };
+
   getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
     const tooltipText = isInEditMode
       ? "Stop editing the possible range of the histogram."
@@ -227,6 +232,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </Tooltip>
     );
   };
+
   getClipButton = (layerName: string, isInEditMode: boolean) => {
     const editModeAddendum = isInEditMode
       ? "In Edit Mode, the histogram's range will be adjusted, too."
@@ -245,12 +251,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </Tooltip>
     );
   };
+
   setVisibilityForAllLayers = (isVisible: boolean) => {
     const { layers } = this.props.datasetConfiguration;
     Object.keys(layers).forEach((otherLayerName) =>
       this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
     );
   };
+
   isLayerExclusivelyVisible = (layerName: string): boolean => {
     const { layers } = this.props.datasetConfiguration;
     const isOnlyGivenLayerVisible = Object.keys(layers).every((otherLayerName) => {
@@ -259,6 +267,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     });
     return isOnlyGivenLayerVisible;
   };
+
   getEnableDisableLayerSwitch = (
     isDisabled: boolean,
     onChange: (arg0: boolean, arg1: MouseEvent) => void,
@@ -275,6 +284,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </div>
     </Tooltip>
   );
+
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange, min, max, isInEditMode } = layer;
     const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
@@ -306,6 +316,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       />
     );
   };
+
   getLayerSettingsHeader = (
     isDisabled: boolean,
     isColorLayer: boolean,
@@ -357,8 +368,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const readableName =
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
       layer.tracingId != null
-        ? // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
-          getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
+        ?          getReadableNameByVolumeTracingId(tracing, layer.tracingId)
         : layerName;
     return (
       <div className="flex-container">
@@ -541,6 +552,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </div>
     );
   };
+
   getColorLayerSpecificSettings = (
     layerConfiguration: DatasetLayerConfiguration,
     layerName: string,
@@ -599,6 +611,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </Col>
     </Row>
   );
+
   getSegmentationSpecificSettings = (layerName: string) => {
     const segmentationOpacitySetting = (
       <NumberSliderSetting
@@ -617,6 +630,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </div>
     );
   };
+
   getLayerSettings = (
     layerName: string,
     layerConfiguration: DatasetLayerConfiguration | null | undefined,
@@ -664,6 +678,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </div>
     );
   };
+
   handleFindData = async (
     layerName: string,
     isDataLayer: boolean,
@@ -752,6 +767,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return magsToDownsample;
   };
+
   getOptionalDownsampleVolumeIcon = (volumeTracing: VolumeTracing | null | undefined) => {
     if (!volumeTracing) {
       return null;
@@ -783,6 +799,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </Tooltip>
     );
   };
+
   getSkeletonLayer = () => {
     const { controlMode, tracing, onChangeRadius, userConfiguration, onChangeShowSkeletons } =
       this.props;
@@ -893,21 +910,25 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </React.Fragment>
     );
   };
+
   showDownsampleVolumeModal = (volumeTracing: VolumeTracing) => {
     this.setState({
       volumeTracingToDownsample: volumeTracing,
     });
   };
+
   hideDownsampleVolumeModal = () => {
     this.setState({
       volumeTracingToDownsample: null,
     });
   };
+
   showAddVolumeLayerModal = () => {
     this.setState({
       isAddVolumeLayerModalVisible: true,
     });
   };
+
   hideAddVolumeLayerModal = () => {
     this.setState({
       isAddVolumeLayerModalVisible: false,

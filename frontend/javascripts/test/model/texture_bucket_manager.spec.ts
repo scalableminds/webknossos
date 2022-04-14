@@ -72,6 +72,7 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
 
 const setActiveBucketsAndWait = (
   tbm: typeof TextureBucketManager,
+  // @ts-expect-error ts-migrate(2749) FIXME: 'DataBucket' refers to a value, but is being used ... Remove this comment to see the full error message
   activeBuckets: DataBucket[],
   anchorPoint: Vector4,
 ) => {

@@ -1,6 +1,7 @@
 import test from "ava";
 import EdgeCollection, { diffEdgeCollections } from "../../oxalis/model/edge_collection";
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'edgeA' implicitly has an 'any' type.
 const edgeSort = (edgeA, edgeB) => {
   if (edgeA.source !== edgeB.source) return edgeA.source - edgeB.source;
   return edgeA.target - edgeB.target;

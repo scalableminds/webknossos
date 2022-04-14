@@ -173,6 +173,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
           >
             <Upload.Dragger
               name="files"
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'FileList' is not assignable to type 'UploadF... Remove this comment to see the full error message
               fileList={fileList}
               onChange={handleChange}
               beforeUpload={() => false}

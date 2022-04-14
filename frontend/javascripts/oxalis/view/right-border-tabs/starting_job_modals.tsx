@@ -97,8 +97,8 @@ function StartingJobModal(props: StartingJobModalProps) {
     }
   };
 
-  const ColorLayerSelection = (): React.ReactNode =>
-    colorLayerNames.length > 1 ? (
+  function ColorLayerSelection(): React.ReactNode {
+  return colorLayerNames.length > 1 ? (
       <React.Fragment>
         <p>Please select the layer that should be used for the inferral.</p>
         <div
@@ -131,7 +131,8 @@ function StartingJobModal(props: StartingJobModalProps) {
         </div>
         <br />
       </React.Fragment>
-    ) : null;
+    ) : null
+}
 
   const renderUserBoundingBox = (bbox: UserBoundingBox | null | undefined) => {
     if (!bbox) {
@@ -155,8 +156,8 @@ function StartingJobModal(props: StartingJobModalProps) {
     );
   };
 
-  const BoundingBoxSelection = (): React.ReactNode =>
-    isBoundingBoxConfigurable ? (
+  function BoundingBoxSelection(): React.ReactNode {
+  return isBoundingBoxConfigurable ? (
       <React.Fragment>
         <p>
           Please select the bounding box for which the inferral should be computed. Note that large
@@ -193,7 +194,8 @@ function StartingJobModal(props: StartingJobModalProps) {
         </div>
         <br />
       </React.Fragment>
-    ) : null;
+    ) : null
+}
 
   const hasUnselectedOptions =
     selectedColorLayerName == null || (isBoundingBoxConfigurable && selectedBoundingBox == null);
@@ -224,7 +226,9 @@ function StartingJobModal(props: StartingJobModalProps) {
         />
       </div>
       <br />
+      // @ts-expect-error ts-migrate(2786) FIXME: 'ColorLayerSelection' cannot be used as a JSX comp... Remove this comment to see the full error message
       <ColorLayerSelection />
+      // @ts-expect-error ts-migrate(2786) FIXME: 'BoundingBoxSelection' cannot be used as a JSX com... Remove this comment to see the full error message
       <BoundingBoxSelection />
       <div
         style={{

@@ -429,6 +429,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/organizations/:organizationName/edit"
                 render={({ match }) => (
+                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'organizationName' does not exist on type... Remove this comment to see the full error message
                   <OrganizationEditView organizationName={match.params.organizationName || ""} />
                 )}
               />
@@ -492,6 +493,7 @@ class ReactRouter extends React.Component<Props> {
               <Route
                 path="/datasets/:id/view"
                 render={({ match, location }: ContextRouter) => (
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ redirectTo: () => Promise<string>; }' is n... Remove this comment to see the full error message
                   <AsyncRedirect
                     redirectTo={async () => {
                       const datasetName = match.params.id || "";

@@ -448,7 +448,7 @@ export function deleteBranchPoint(
   const treeWithLastBranchpoint = _.maxBy(
     treesWithBranchPoints,
     (tree) =>
-      // @ts-ignore
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
       _.last(tree.branchPoints).timestamp,
   );
   if (treeWithLastBranchpoint == null) {
@@ -620,7 +620,7 @@ export function deleteTree(
   if (_.size(newTrees) > 0) {
     // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
     newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
-    // @ts-ignore
+    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
   }
 
@@ -759,7 +759,7 @@ export function toggleTreeGroupReducer(
       ? targetVisibility
       : _.values(skeletonTracing.trees).some(
           (tree) =>
-            typeof tree.groupId == "number" &&
+            typeof tree.groupId === "number" &&
             affectedGroupIds.has(tree.groupId) &&
             !tree.isVisible,
         );
@@ -771,7 +771,7 @@ export function toggleTreeGroupReducer(
   const updateTreeObject: Record<string, typeof isVisibleUpdater> = {};
 
   _.values(skeletonTracing.trees).forEach((tree) => {
-    if (typeof tree.groupId == "number" && affectedGroupIds.has(tree.groupId)) {
+    if (typeof tree.groupId === "number" && affectedGroupIds.has(tree.groupId)) {
       updateTreeObject[tree.treeId] = isVisibleUpdater;
     }
   });
@@ -846,7 +846,7 @@ export function removeMissingGroupsFromTrees(
     const tree = skeletonTracing.trees[Number(treeId)];
 
     if (tree.groupId != null && !groupIds.includes(tree.groupId)) {
-      // @ts-ignore
+      // @ts-expect-error ts-migrate(7015) FIXME: Element implicitly has an 'any' type because index... Remove this comment to see the full error message
       changedTrees[treeId] = { ...tree, groupId: null };
     }
   });

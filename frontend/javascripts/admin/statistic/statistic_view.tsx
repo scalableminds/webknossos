@@ -223,7 +223,7 @@ class StatisticView extends React.PureComponent<{}, State> {
               <Spin spinning={this.state.isTimeEntriesLoading} size="large">
                 <Table
                   dataSource={this.state.timeEntries}
-                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'user' does not exist on type 'never'.
+                  // @ts-expect-error ts-migrate(2339) FIXME: Property 'user' does not exist on type 'TimeEntry'... Remove this comment to see the full error message
                   rowKey={(entry) => entry.user.id}
                   style={{
                     marginTop: 30,

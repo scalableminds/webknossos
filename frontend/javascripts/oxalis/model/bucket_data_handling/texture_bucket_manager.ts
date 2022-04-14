@@ -98,7 +98,7 @@ export default class TextureBucketManager {
 
   async startRAFLoops() {
     await waitForCondition(
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'isInitialized' does not exist on type 't... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'isInitialized' does not exist on type 'D... Remove this comment to see the full error message
       () => this.lookUpTexture.isInitialized() && this.dataTextures[0].isInitialized(),
     );
     this.keepLookUpBufferUpToDate();

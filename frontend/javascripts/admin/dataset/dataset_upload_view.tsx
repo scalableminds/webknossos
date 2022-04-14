@@ -39,7 +39,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
-// @ts-expect-error ts-migrate(2306)
+// @ts-expect-error ts-migrate(2306) FIXME: File ... Remove this comment to see the full error message
 import { createReader, BlobReader } from "zip-js-webpack";
 import {
   CardContainer,
@@ -704,7 +704,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               </Col>
             </Row>
             <DatastoreFormItem
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: any; datastores: APIDataStore[]; hid... Remove this comment to see the full error message
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: FormInstance<any> | null; datastores... Remove this comment to see the full error message
               form={form}
               datastores={uploadableDatastores}
               hidden={hasOnlyOneDatastoreOrNone}
@@ -724,7 +724,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   },
                   {
                     validator: syncValidator(
-                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
                       (value) => value && value.every((el) => el > 0),
                       "Each component of the scale must be larger than 0.",
                     ),
@@ -736,6 +736,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     width: 400,
                   }}
                   allowDecimals
+                  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'scale' implicitly has an 'any' type.
                   onChange={(scale) => {
                     if (this.formRef.current == null) return;
                     this.formRef.current.setFieldsValue({

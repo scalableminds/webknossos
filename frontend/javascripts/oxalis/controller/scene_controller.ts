@@ -56,7 +56,7 @@ class SceneController {
   taskBoundingBox: Cube | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'planes' has no initializer and is not de... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
   planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
   rootNode: THREE.Object3D;
@@ -283,7 +283,7 @@ class SceneController {
 
     const group = this.isosurfacesGroupsPerSegmentationId[segmentationId];
     this.isosurfacesRootGroup.remove(group);
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'typeof Grou... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Group'.
     this.isosurfacesGroupsPerSegmentationId[segmentationId] = null;
   }
 
@@ -357,6 +357,7 @@ class SceneController {
     this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {
+      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mesh' implicitly has an 'any' type.
       plane.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
     }
 
@@ -478,9 +479,11 @@ class SceneController {
         const isVisible = scaleX > 0 && scaleY > 0;
 
         if (isVisible) {
+          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           this.isPlaneVisible[currentPlane.planeID] = true;
           currentPlane.setScale(scaleX, scaleY);
         } else {
+          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           this.isPlaneVisible[currentPlane.planeID] = false;
           // Set the scale to non-zero values, since threejs will otherwise
           // complain about non-invertible matrices.

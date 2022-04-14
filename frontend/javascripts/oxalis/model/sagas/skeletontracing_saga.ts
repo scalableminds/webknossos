@@ -371,7 +371,7 @@ function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction)
   const { mappingName, agglomerateId } = action;
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
   const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'tree' implicitly has an 'any' type.
+  // @ts-expect-error ts-migrate(2552) FIXME: Cannot find name '_all'. Did you mean 'all'?
   yield _all(findTreeByName(trees, treeName).map((tree) => put(deleteTreeAction(tree.treeId))));
 }
 

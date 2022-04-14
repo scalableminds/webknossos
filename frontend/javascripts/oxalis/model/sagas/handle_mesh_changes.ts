@@ -57,6 +57,7 @@ function* handleVisibilityChange(meshMetaData: MeshMetaData, isVisible: boolean)
 
     if (meshBuffer != null) {
       const geometry = yield* call(parseStlBuffer, meshBuffer);
+      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       yield* call({ context: SceneController, fn: SceneController.addSTL }, meshMetaData, geometry);
       yield* put(
         updateLocalMeshMetaDataAction(id, {
@@ -140,6 +141,7 @@ function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
   const meshMetaData = STLOperationResults[1] as MeshMetaData;
 
   const SceneController = yield* call(getSceneController);
+  // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
   yield* call({ context: SceneController, fn: SceneController.addSTL }, meshMetaData, geometry);
   yield* put(addMeshMetaDataAction(meshMetaData as MeshMetaData));
   yield* put(

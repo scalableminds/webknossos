@@ -115,6 +115,7 @@ class SaveButton extends React.PureComponent<Props, State> {
       this.state.saveInfo.waitingForCompressionBucketCount +
       this.state.saveInfo.compressingBucketCount;
     return (
+      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       <ButtonComponent
         key="save-button"
         type="primary"

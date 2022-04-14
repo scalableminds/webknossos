@@ -274,8 +274,10 @@ function Infos() {
   );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  // @ts-expect-error ts-migrate(2551) FIXME: Property 'volume' does not exist on type 'HybridTr... Remove this comment to see the full error message
   const isVolumeAnnotation = useSelector((state: OxalisState) => state.tracing.volume != null);
   const activeCellId = useSelector((state: OxalisState) =>
+    // @ts-expect-error ts-migrate(2551) FIXME: Property 'volume' does not exist on type 'HybridTr... Remove this comment to see the full error message
     state.tracing.volume ? state.tracing.volume.activeCellId : null,
   );
   const activeNodeId = useSelector((state: OxalisState) =>

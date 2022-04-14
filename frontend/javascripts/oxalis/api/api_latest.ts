@@ -668,6 +668,7 @@ class TracingApi {
   centerTDView = (): void => {
     Store.dispatch(centerTDViewAction());
   };
+
   rotate3DViewToXY = (): void => rotate3DViewTo(OrthoViews.PLANE_XY);
   rotate3DViewToYZ = (): void => rotate3DViewTo(OrthoViews.PLANE_YZ);
   rotate3DViewToXZ = (): void => rotate3DViewTo(OrthoViews.PLANE_XZ);
@@ -1403,7 +1404,7 @@ class DataApi {
     elementClass: ElementClass,
     resolutions: Array<Vector3>,
     zoomStep: number,
-    // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
   ): $TypedArray {
     const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
@@ -1447,8 +1448,8 @@ class DataApi {
           // could also be MISSING.
           const data = bucket.hasData()
             ? bucket.getData()
-            : // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
-              new TypedArrayClass(Constants.BUCKET_SIZE);
+            // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
+            :              new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;

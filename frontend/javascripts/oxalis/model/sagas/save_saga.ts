@@ -167,7 +167,7 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
     };
   } else if (action.type === "IMPORT_VOLUMETRACING") {
     return {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ importTracingAction: any; }' is not assign... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ importTracingAction: ImportVolumeTracingAc... Remove this comment to see the full error message
       importTracingAction: action,
     };
   } else if (action.type === "UNDO") {
@@ -204,7 +204,7 @@ export function* collectUndoStates(): Saga<void> {
   let previousAction: any | null | undefined = null;
   let prevSkeletonTracingOrNull: SkeletonTracing | null | undefined = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
-  // @ts-expect-error ts-migrate(2315) FIXME: Type 'Task' is not generic.
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'Task'.
   let pendingCompressions: Array<Task<void>> = [];
   const volumeInfoById: Record<
     string,
@@ -557,7 +557,7 @@ function* applyStateOfStack(
     const newTracing = stateToRestore.data;
     yield* put(setTracingAction(newTracing));
     yield* put(centerActiveNodeAction());
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "volume") {
     const isMergerModeEnabled = yield* select(
       (state) => state.temporaryConfiguration.isMergerModeEnabled,
@@ -583,7 +583,7 @@ function* applyStateOfStack(
     const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "bounding_box") {
     if (prevUserBoundingBoxes != null) {
       stackToPushTo.push({
@@ -595,7 +595,7 @@ function* applyStateOfStack(
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const newBoundingBoxes = stateToRestore.data;
     yield* put(setUserBoundingBoxesAction(newBoundingBoxes));
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "warning") {
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     Toast.info(stateToRestore.reason);

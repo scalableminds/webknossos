@@ -1,3 +1,4 @@
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'glsl... Remove this comment to see the full error message
 import glslParser from "glsl-parser";
 import { getLookupBufferSize } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import constants from "oxalis/constants";
@@ -15,6 +16,7 @@ test("Shader syntax: Ortho Mode", (t) => {
     segmentationLayerNames: [],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
@@ -35,6 +37,7 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t) => {
     segmentationLayerNames: ["segmentationLayer"],
     isMappingSupported: false,
     dataTextureCountPerLayer: 3,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
@@ -55,6 +58,7 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t) => {
     segmentationLayerNames: ["segmentationLayer"],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
@@ -74,6 +78,7 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t) => {
     segmentationLayerNames: [],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
@@ -94,6 +99,7 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t) => {
     segmentationLayerNames: ["segmentationLayer"],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
@@ -113,6 +119,7 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t) => {
     segmentationLayerNames: [],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,

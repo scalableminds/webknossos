@@ -18,6 +18,7 @@ export default function PresentModernControls() {
 
   const closeModal = () => {
     setIsModalVisible(false);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'APIUser | null | undefined' is n... Remove this comment to see the full error message
     updateNovelUserExperienceInfos(activeUser, {
       shouldSeeModernControlsModal: false,
     });

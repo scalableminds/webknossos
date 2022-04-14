@@ -74,7 +74,7 @@ export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   // versions both return promises.
   // $FlowExpectedError[not-a-function]
   // $FlowExpectedError[prop-missing]
-  // @ts-expect-error ts-migrate(2741) FIXME: Property '_wrapped' is missing in type '(...args: ... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'T' is not assignable to type 'UseCreateWorke... Remove this comment to see the full error message
   return fn;
 }
 

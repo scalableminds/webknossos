@@ -6,6 +6,7 @@ import anyTest from "ava";
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
+// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
 mockRequire("libs/request", null);
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
 const TemporalBucketManager = mockRequire.reRequire(
@@ -40,6 +41,7 @@ test.beforeEach((t) => {
   t.context.manager = manager;
 });
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucket' implicitly has an 'any' type.
 function fakeLabel(bucket) {
   // To simulate some labeling on the bucket's data,
   // we simply use the start and end mutation methods
@@ -80,6 +82,7 @@ test("Add / Remove should be removed once it is loaded", (t) => {
   t.is(manager.getCount(), 0);
 });
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'manager' implicitly has an 'any' type.
 function prepareBuckets(manager, cube) {
   // Insert two buckets into manager
   const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);

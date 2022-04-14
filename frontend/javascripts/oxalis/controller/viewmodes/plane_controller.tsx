@@ -242,6 +242,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   componentDidMount() {
     this.input = {
+      // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
       mouseControllers: {},
     };
     this.isStarted = false;
@@ -516,6 +517,7 @@ class PlaneController extends React.PureComponent<Props> {
       mouse.destroy();
     }
 
+    // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
     this.input.mouseControllers = {};
 
     this.input.keyboard?.destroy();

@@ -53,7 +53,7 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
     });
 
     if (this.props.onChange) {
-      // @ts-expect-error HTMLInputElement and HTMLTextAreaElement have same event types
+      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       this.props.onChange(e);
     }
   };
@@ -64,7 +64,7 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
     });
 
     if (this.props.onFocus) {
-      // @ts-expect-error HTMLInputElement and HTMLTextAreaElement have same event types
+      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       this.props.onFocus(e);
     }
   };
@@ -76,7 +76,7 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
       },
       () => {
         if (this.props.onBlur) {
-          // @ts-expect-error HTMLInputElement and HTMLTextAreaElement have same event types
+          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           this.props.onBlur(e);
         }
       },

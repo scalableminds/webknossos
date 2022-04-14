@@ -412,6 +412,7 @@ function getAreas(
   zoomStep: number,
   datasetScale: Vector3,
 ): OrthoViewMap<Area> {
+  // @ts-expect-error ts-migrate(2741) FIXME: Property 'TDView' is missing in type '{ PLANE_XY: ... Remove this comment to see the full error message
   return {
     [OrthoViews.PLANE_XY]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_XY),
     [OrthoViews.PLANE_XZ]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_XZ),

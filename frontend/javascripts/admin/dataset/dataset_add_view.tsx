@@ -48,7 +48,7 @@ const fetchCategorizedDatastores = async (): Promise<{
   };
 };
 
-const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
+function DatasetAddView({ history, activeUser }: PropsWithRouter) {
   const datastores = useFetch(
     fetchCategorizedDatastores,
     {
@@ -159,6 +159,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
               >
                 <DatasetAddNeuroglancerView
                   datastores={datastores.wkConnect}
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(datasetOrganization: string, uploadedDatase... Remove this comment to see the full error message
                   onAdded={handleDatasetAdded}
                 />
               </TabPane>
@@ -175,6 +176,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
               >
                 <DatasetAddBossView
                   datastores={datastores.wkConnect}
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(datasetOrganization: string, uploadedDatase... Remove this comment to see the full error message
                   onAdded={handleDatasetAdded}
                 />
               </TabPane>
@@ -232,7 +234,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
       </Modal>
     </React.Fragment>
   );
-};
+}
 
 const segmentationBanner = (
   <div

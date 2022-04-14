@@ -101,6 +101,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
         <span>
           {this.props.rows === 1 ? (
             <React.Fragment>
+              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ onBlur: () => void; value: string; onChang... Remove this comment to see the full error message
               <Input {...inputComponentProps} onBlur={this.handleOnChange} />
               <Tooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
                 <CheckOutlined
@@ -125,12 +126,14 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       );
     } else {
       return (
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
         <span className={this.props.markdown ? "flex-container" : null}>
           <span
             style={{
               margin,
               display: "inline-block",
             }}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
             className={this.props.onClick != null ? "clickable-text" : null}
             onClick={this.props.onClick}
             onContextMenu={this.props.onContextMenu}

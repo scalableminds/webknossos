@@ -405,6 +405,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 rows={rows}
                 timeAxisFormat={timeAxisFormat}
                 dateRange={dateRange}
+                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                 timeTrackingData={timeTrackingData}
               />
             </div>

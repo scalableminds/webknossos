@@ -43,7 +43,7 @@ export function threeCameraToCameraData(camera: THREE.OrthographicCamera): Camer
     far,
     position: objToArr(position),
     up: objToArr(up),
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'Vector3'.
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(vector: number | Vector3, y?: n... Remove this comment to see the full error message
     lookAt: objToArr(lookAt),
   };
 }
@@ -82,7 +82,7 @@ function maybeGetActiveNodeFromProps(props: Props) {
 }
 
 class TDController extends React.PureComponent<Props> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'TrackballControls' has no initializer and ... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'controls' has no initializer and is not ... Remove this comment to see the full error message
   controls: typeof TrackballControls;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'mouseController' has no initializer and ... Remove this comment to see the full error message
   mouseController: InputMouse;
@@ -209,7 +209,6 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'toArray' does not exist on type 'typeof ... Remove this comment to see the full error message
         const unscaledPosition = V3.divide3(hitPosition.toArray(), this.props.scale);
 
         if (event.shiftKey) {

@@ -26,7 +26,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
   const history = useHistory();
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeUser' does not exist on type 'Defa... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OxalisState'.
   const activeUser = useSelector((state: OxalisState) => enforceActiveUser(state.activeUser));
   useEffect(() => {
     fetchData();

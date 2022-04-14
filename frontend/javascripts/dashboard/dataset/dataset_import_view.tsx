@@ -258,10 +258,12 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
         if (didParsingTheSavedDataSourceJSONSucceed) {
           dataSource = savedDataSourceOnServer;
 
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Readonly<MutableAPIDataSource> |... Remove this comment to see the full error message
           if (isDatasourceJSONValid(savedDataSourceOnServer)) {
             dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.Yes;
           }
 
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Readonly<MutableAPIDataSource> |... Remove this comment to see the full error message
           const diff = diffObjects(inferredDataSource || {}, savedDataSourceOnServer);
           const areObjectsEqual = _.size(diff) === 0;
 
@@ -392,7 +394,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       }
 
       form.setFieldsValue({
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
+        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Readonly<MutableAPIDataSource> |... Remove this comment to see the full error message
         dataSourceJson: jsonStringify(inferredDataSource),
         dataSource: inferredDataSource,
       });
@@ -571,14 +573,14 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
     if (problematicTab) {
       this.setState({
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | number | (() => string) | (() => st... Remove this comment to see the full error message
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | number | (<U>(callbackfn: (value: s... Remove this comment to see the full error message
         activeTabKey: problematicTab,
       });
     }
   }
 
   didDatasourceChange(dataSource: Record<string, any>) {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Readonly<MutableAPIDataSource> |... Remove this comment to see the full error message
     return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer)) > 0;
   }
 
@@ -616,6 +618,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       this.submit(values);
     }
   };
+
   handleSubmit = () => {
     // Ensure that all form fields are in sync
     this.syncDataSourceFields();
@@ -637,6 +640,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
     // the simple tab renders, but this is not the case when the user directly submits the changes.
     this.forceUpdate(afterForceUpdateCallback);
   };
+
   submit = async (formValues: FormData) => {
     const { dataset, datasetDefaultConfiguration } = this.state;
     const datasetChangeValues = { ...formValues.dataset };
@@ -778,6 +782,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       });
     }
   };
+
   onValuesChange = (changedValues: FormData, allValues: FormData) => {
     const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
     this.setState({
@@ -785,6 +790,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       hasUnsavedChanges: true,
     });
   };
+
   onCancel = () => {
     this.unblockHistory();
     this.props.onCancel();

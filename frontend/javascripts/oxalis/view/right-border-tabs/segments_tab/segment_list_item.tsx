@@ -62,10 +62,11 @@ const getLoadPrecomputedMeshMenuItem = (
     <MenuItemWithMappingActivationConfirmation
       onClick={() =>
         andCloseContextMenu(
+          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
           loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
         )
       }
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; onClick: () => any; dis... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; onClick: () => void; di... Remove this comment to see the full error message
       disabled={!currentMeshFile}
       mappingName={mappingName}
       descriptor="mesh file"

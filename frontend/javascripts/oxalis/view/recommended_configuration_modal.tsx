@@ -66,6 +66,7 @@ export default class RecommendedConfigurationModal extends React.Component<Props
           dataSource={_.map(this.props.config, (value, key) => ({
             // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             name: settings[key],
+            // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
             value: value.toString(),
             // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             comment: settingComments[key] || "",

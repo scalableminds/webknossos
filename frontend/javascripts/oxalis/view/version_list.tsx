@@ -94,6 +94,7 @@ class VersionList extends React.Component<Props, State> {
       // Insert version 0
       updateActionLog.push({
         version: 0,
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ name: string; value: { actionTimestamp: nu... Remove this comment to see the full error message
         value: [serverCreateTracing(this.props.tracing.createdTimestamp)],
       });
       this.setState({

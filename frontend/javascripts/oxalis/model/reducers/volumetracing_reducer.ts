@@ -128,6 +128,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     somePosition,
     id: segmentId,
   };
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ somePosition: Vector3; id: num... Remove this comment to see the full error message
   const newSegmentMap = segments.set(segmentId, newSegment);
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {

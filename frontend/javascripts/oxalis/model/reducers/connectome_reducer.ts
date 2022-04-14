@@ -15,6 +15,7 @@ function getSkeletonTracingForConnectome(
   layerName: string,
 ): Maybe<SkeletonTracing> {
   if (state.localSegmentationData[layerName].connectomeData.skeleton != null) {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'IMaybe<SkeletonTracing | null | undefined>' ... Remove this comment to see the full error message
     return Maybe.Just(state.localSegmentationData[layerName].connectomeData.skeleton);
   }
 
@@ -34,6 +35,7 @@ function setConnectomeTreesVisibilityReducer(
     },
   };
   treeIds.forEach((treeId) => {
+    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     updateTreesObject[treeId] = isVisibleUpdater;
   });
   return update(state, {

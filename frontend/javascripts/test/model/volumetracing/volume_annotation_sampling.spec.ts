@@ -49,6 +49,7 @@ test.beforeEach((t) => {
       [32, 32, 32],
     ],
   };
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[][]' is not assignable to... Remove this comment to see the full error message
   const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
   const cube = new Cube([1024, 1024, 1024], resolutionInfo, "uint32", false);
   const pullQueue = {

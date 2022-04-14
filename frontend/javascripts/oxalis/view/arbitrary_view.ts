@@ -37,9 +37,9 @@ class ArbitraryView {
   isRunning: boolean = false;
   animationRequestId: number | null | undefined = null;
   camDistance: number;
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'typeof Pers... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Perspective... Remove this comment to see the full error message
   camera: THREE.PerspectiveCamera = null;
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'typeof Orth... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Orthographi... Remove this comment to see the full error message
   tdCamera: THREE.OrthographicCamera = null;
   geometries: Array<GeometryLike> = [];
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
@@ -142,9 +142,9 @@ class ArbitraryView {
       const { renderer, scene } = getSceneController();
 
       for (const geometry of geometries) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof G... Remove this comment to see the full error message
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'Geometry... Remove this comment to see the full error message
         if (geometry.update != null) {
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof G... Remove this comment to see the full error message
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'Geometry... Remove this comment to see the full error message
           geometry.update();
         }
       }
@@ -169,7 +169,7 @@ class ArbitraryView {
         m[15],
       );
       camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'matrix' does not exist on type 'typeof P... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
       camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
       camera.matrixWorldNeedsUpdate = true;
       clearCanvas(renderer);

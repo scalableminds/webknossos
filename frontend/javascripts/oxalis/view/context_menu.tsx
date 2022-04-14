@@ -886,6 +886,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     }
 
     const positionToMeasureDistanceTo =
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
       nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
     const activeNode =
       activeNodeId != null && skeletonTracing != null
@@ -901,6 +902,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
           ]
         : null;
     const nodePositionAsString =
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
       nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
     const segmentIdAtPosition = getSegmentIdForPosition(globalPosition);
     const infoRows = [];
@@ -908,6 +910,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
       infoRows.push(
         <div key="nodeInfo" className="node-context-menu-item">
+          // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeId' does not exist on type 'never'.
           Node with Id {maybeClickedNodeId} in Tree {nodeContextMenuTree.treeId}
         </div>,
       );

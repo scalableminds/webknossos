@@ -103,7 +103,9 @@ function* maybeFetchMapping(oldActiveMappingByLayer, action: SetMappingAction): 
     layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerInfo.name,
   ];
   const [jsonMappings, hdf5Mappings] = yield* all([
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getMappingsForDatasetLayer, ...params),
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getAgglomeratesForDatasetLayer, ...params),
   ]);
   const mappingsWithCorrectType = mappingType === "JSON" ? jsonMappings : hdf5Mappings;

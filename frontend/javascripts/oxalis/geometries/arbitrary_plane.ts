@@ -47,13 +47,13 @@ class ArbitraryPlane {
 
   updateAnchorPoints(anchorPoint: Vector4 | null | undefined): void {
     if (anchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
       this.meshes.mainPlane.material.setAnchorPoint(anchorPoint);
     }
   }
 
   setPosition = (x: number, y: number, z: number) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'material' does not exist on type 'typeof... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
     this.meshes.mainPlane.material.setGlobalPosition(x, y, z);
   };
 

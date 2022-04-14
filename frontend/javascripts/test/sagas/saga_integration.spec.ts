@@ -52,6 +52,7 @@ test.serial(
         ],
       ],
       TIMESTAMP,
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'SkeletonTracingStats | null | un... Remove this comment to see the full error message
       Utils.toNullable(getStats(state.tracing)),
     );
     // Reset the info field which is just for debugging purposes

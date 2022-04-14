@@ -157,11 +157,11 @@ test("diffDiffableMaps should diff large DiffableMaps which are not based on eac
 
   // Load the first, uneven 100 objects into map1 and add a 111th key
   const map1 = new DiffableMap<number, any>(
-    // @ts-ignore
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{}[][]' is not assignable to par... Remove this comment to see the full error message
     objects
       .slice(0, 100)
       .map((obj, index) => [index, obj])
-      // @ts-ignore
+      // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
       .filter(([idx]) => idx % 2 === 1),
     10,
   ).set(110, {});

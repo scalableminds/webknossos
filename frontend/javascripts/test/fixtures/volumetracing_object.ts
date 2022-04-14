@@ -1,7 +1,6 @@
 /* eslint-disable import/prefer-default-export */
 import update from "immutability-helper";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'mock... Remove this comment to see the full error message
 import mockRequire from "mock-require";
 import defaultState from "oxalis/default_state";
 mockRequire("app", {
@@ -68,6 +67,7 @@ export const initialState = update(defaultState, {
             category: "segmentation",
             name: "tracingId",
             tracingId: "tracingId",
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ resolutions: [number, number, number][]; c... Remove this comment to see the full error message
             isDisabled: false,
             alpha: 100,
           },

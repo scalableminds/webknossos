@@ -81,6 +81,7 @@ export function recalculateInputCatcherSizes() {
     viewportRects[viewportID] = rect;
   }
 
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
   Store.dispatch(setInputCatcherRects(viewportRects));
 }
 

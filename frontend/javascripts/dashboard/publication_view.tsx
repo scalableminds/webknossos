@@ -79,8 +79,10 @@ function PublicationView(props: Props) {
     .values()
     .sort(
       // Sort publication groups by publication creation date
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Comparator<APIDataset>' is not a... Remove this comment to see the full error message
       Utils.compareBy(
         [] as Array<APIDataset>,
+        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         (datasets) => datasets[0].publication.publicationDate,
         false,
       ),
@@ -88,7 +90,7 @@ function PublicationView(props: Props) {
 
   return (
     <List
-      // @ts-expect-error ts-migrate(2740) FIXME: Type 'CollectionChain<any[]>' is missing the follo... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2740) FIXME: Type 'CollectionChain<APIDataset[]>' is missing th... Remove this comment to see the full error message
       dataSource={datasetsByPublication}
       locale={{
         emptyText: "No featured publications.",
@@ -97,6 +99,7 @@ function PublicationView(props: Props) {
       renderItem={(datasets) => (
         // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
         <List.Item key={datasets[0].publication.id}>
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'APIDatas... Remove this comment to see the full error message
           <PublicationCard className="dataset-panel" datasets={datasets} showDetailedLink />
         </List.Item>
       )}

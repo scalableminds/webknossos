@@ -62,6 +62,7 @@ export function getViewportRects(state: OxalisState) {
 }
 export function getViewportExtents(state: OxalisState): OrthoViewExtents {
   const rects = state.viewModeData.plane.inputCatcherRects;
+  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ PLANE_XY: any[]; PLANE_YZ: any[]; PLANE_XZ... Remove this comment to see the full error message
   return _getViewportExtents(rects);
 }
 export function getInputCatcherAspectRatio(state: OxalisState, viewport: Viewport): number {
@@ -142,7 +143,7 @@ function _calculateMaybeGlobalPos(
       return null;
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'Vector3'.
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return position;
 }
 

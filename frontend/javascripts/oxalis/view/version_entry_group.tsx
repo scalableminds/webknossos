@@ -52,7 +52,9 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
         <List.Item.Meta
           title={
             <React.Fragment>
+              // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
               {_.last(batches).version} to {batches[0].version} (
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
               <FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
             </React.Fragment>
           }

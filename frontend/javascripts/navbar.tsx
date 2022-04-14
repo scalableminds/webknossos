@@ -394,9 +394,9 @@ function NotificationIcon({ activeUser }: { activeUser: APIUser }) {
     Store.dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
-    // @ts-ignore
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
     if (window.Olvy) {
-      // @ts-ignore
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'Olvy' does not exist on type '(Window & ... Remove this comment to see the full error message
       window.Olvy.show();
     }
   };
@@ -621,6 +621,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const trailingNavItems = [];
 
   if (_isAuthenticated) {
+    // @ts-expect-error ts-migrate(2322) FIXME: Type 'APIUser | null | undefined' is not assignabl... Remove this comment to see the full error message
     const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 

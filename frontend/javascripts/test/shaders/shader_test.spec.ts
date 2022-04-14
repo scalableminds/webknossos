@@ -1,6 +1,7 @@
 import { hsvToRgb } from "oxalis/shaders/utils.glsl";
 import { renderShader } from "test/shaders/shader_test_utils";
 import test from "ava";
+// @ts-expect-error ts-migrate(2322) FIXME: Type '{ addEventListener: () => void; }' is not as... Remove this comment to see the full error message
 global.window = {
   addEventListener: () => {},
 };

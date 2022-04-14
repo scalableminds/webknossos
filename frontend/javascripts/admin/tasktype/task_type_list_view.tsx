@@ -129,6 +129,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
             style={{
               width: 200,
             }}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.ChangeEvent<HTMLInputElement>)... Remove this comment to see the full error message
             onPressEnter={this.handleSearch}
             onChange={this.handleSearch}
             value={this.state.searchQuery}

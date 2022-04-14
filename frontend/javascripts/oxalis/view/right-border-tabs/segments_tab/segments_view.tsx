@@ -636,7 +636,7 @@ class SegmentsView extends React.Component<Props, State> {
                     }}
                   >
                     {allSegments.map((segment) => (
-                      // @ts-expect-error ts-migrate(2740) FIXME: Type '{ children?: ReactNode; key: any; mapId: any... Remove this comment to see the full error message
+                      // @ts-expect-error ts-migrate(2740) FIXME: Type '{ children?: ReactNode; key: number; mapId: ... Remove this comment to see the full error message
                       <SegmentListItem
                         key={segment.id}
                         mapId={mapId}

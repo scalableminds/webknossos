@@ -102,7 +102,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
   };
 
   renderStartTracingButton(): React.ReactNode {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: Props) => Element' is no... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: AsyncButtonProps) => Ele... Remove this comment to see the full error message
     const ButtonWithAuthentication = withAuthentication(AsyncButton);
     return (
       <ButtonWithAuthentication

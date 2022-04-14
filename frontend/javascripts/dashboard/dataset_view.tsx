@@ -122,6 +122,7 @@ function DatasetView(props: Props) {
   }
 
   function handleSearch(event: React.SyntheticEvent<HTMLInputElement>) {
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     setSearchQuery(event.target.value);
   }
 

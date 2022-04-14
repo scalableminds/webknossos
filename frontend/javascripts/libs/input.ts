@@ -3,7 +3,7 @@ import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
-// @ts-expect-error
+// @ts-expect-error ts-migrate(2306) FIXME: ... Remove this comment to see the full error message
 import KeyboardJS from "libs/keyboard";
 import * as Utils from "libs/utils";
 import type { Point2 } from "oxalis/constants";
@@ -288,7 +288,7 @@ class InputMouseButton {
     const eventWhich = event.which !== 0 ? event.which : 1;
 
     if (eventWhich === this.which) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'activeElement' does not exist on type 'D... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
       document.activeElement.blur();
       this.down = true;
       this.moveDelta = 0;
@@ -342,6 +342,7 @@ export class InputMouse {
   delegatedEvents: {
     string?: (...args: Array<any>) => any;
   };
+
   ignoreScrollingWhileDragging: boolean;
   // Copied from backbone events (TODO: handle this better)
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'on' has no initializer and is not defini... Remove this comment to see the full error message
@@ -469,6 +470,7 @@ export class InputMouse {
     this.middleMouseButton.handleMouseDown(event);
     this.rightMouseButton.handleMouseDown(event);
   };
+
   mouseUp = (event: MouseEvent): void => {
     isDragging = false;
     this.leftMouseButton.handleMouseUp(event, this.triggeredByTouch);
@@ -486,6 +488,7 @@ export class InputMouse {
       this.mouseOver();
     }
   };
+
   touchEnd = (): void => {
     // The order of events during a click on a touch enabled device is:
     // touch events -> mouse events -> click
@@ -493,6 +496,7 @@ export class InputMouse {
     // and forward it during the mouseup event handling
     this.triggeredByTouch = true;
   };
+
   mouseMove = (event: MouseEvent): void => {
     let delta = null;
     this.position = this.getRelativeMousePosition(event);
@@ -516,12 +520,14 @@ export class InputMouse {
 
     this.lastPosition = this.position;
   };
+
   mouseOver = (evt?: MouseEvent): void => {
     if (evt == null || !this.isButtonPressed(evt)) {
       this.isMouseOver = true;
       this.trigger("over");
     }
   };
+
   mouseOut = (evt?: MouseEvent): void => {
     if (evt == null || !this.isButtonPressed(evt)) {
       this.isMouseOver = false;
@@ -548,6 +554,7 @@ export class InputMouse {
       pageY: (evt.pointers[0].pageY + evt.pointers[1].pageY) / 2,
     });
   };
+
   pinch = (evt: HammerJsEvent): void => {
     // Abort pinch gesture if another finger is added to the gesture
     if (evt.pointers.length > 2) this.pinchEnd();
@@ -558,9 +565,11 @@ export class InputMouse {
       this.trigger("pinch", 10 * delta);
     }
   };
+
   pinchEnd = () => {
     this.lastScale = null;
   };
+
   mouseWheel = (event: WheelEvent): void => {
     event.preventDefault();
 
@@ -582,6 +591,7 @@ export class InputMouse {
 
     this.trigger("scroll", delta, modifier);
   };
+
   getRelativeMousePosition = (pagePosition: {
     pageX: number;
     pageY: number;

@@ -113,16 +113,20 @@ const borderTabs: Record<keyof typeof BorderTabs, TabNode> = {};
 Utils.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
   borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });
+// @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
 const OrthoViewports: Record<keyof typeof OrthoViews, Record<string, any>> = {};
 Object.keys(OrthoViews).forEach((viewportId) => {
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2476) FIXME: A const enum member can only be accessed using a s... Remove this comment to see the full error message
   const name = OrthoViewsToName[viewportId];
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
+// @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
 const ArbitraryViewports: Record<keyof typeof ArbitraryViews, Record<string, any>> = {};
 Object.keys(ArbitraryViews).forEach((viewportId) => {
   // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   const name = ArbitraryViewsToName[viewportId];
+  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 const globalLayoutSettings: GlobalConfig = {

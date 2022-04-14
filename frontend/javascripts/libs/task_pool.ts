@@ -32,6 +32,7 @@ export default function* processTaskWithPool(
         isFinalResolveScheduled = true;
         // All tasks were kicked off, which is why all tasks can be
         // awaited now together.
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         yield* join(startedTasks);
         // @ts-expect-error ts-migrate(7005) FIXME: Variable 'error' implicitly has an 'any' type.
         if (error != null) throw error;
@@ -42,6 +43,7 @@ export default function* processTaskWithPool(
 
     const task = tasks.shift();
     const newTask = yield* fork(forkSafely, task);
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'FixedTask<void>' is not assignab... Remove this comment to see the full error message
     startedTasks.push(newTask);
     // If that task is done, process a new one (that way,
     // the pool size stays constant until the queue is almost empty.)

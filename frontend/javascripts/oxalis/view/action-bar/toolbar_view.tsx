@@ -115,7 +115,7 @@ const handleSetOverwriteMode = (event: {
   Store.dispatch(updateUserSettingAction("overwriteMode", event.target.value));
 };
 
-const RadioButtonWithTooltip = ({
+function RadioButtonWithTooltip({
   title,
   disabledTitle,
   disabled,
@@ -127,11 +127,11 @@ const RadioButtonWithTooltip = ({
   children: React.ReactNode;
   style: React.CSSProperties;
   value: string;
-}) => (
-  <Tooltip title={disabled ? disabledTitle : title}>
+}) {
+  return <Tooltip title={disabled ? disabledTitle : title}>
     <Radio.Button disabled={disabled} {...props} />
   </Tooltip>
-);
+}
 
 function OverwriteModeSwitch({
   isControlPressed,
@@ -323,6 +323,7 @@ function CreateNewBoundingBoxButton() {
 function CreateTreeButton() {
   const dispatch = useDispatch();
   const activeTree = useSelector((state: OxalisState) =>
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'SkeletonTracing | null | undefin... Remove this comment to see the full error message
     toNullable(getActiveTree(state.tracing.skeleton)),
   );
   const rgbColorString =

@@ -252,6 +252,7 @@ export default function VersionEntry({
       <List.Item.Meta
         title={
           <React.Fragment>
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
             Version {version} (<FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
           </React.Fragment>
         }

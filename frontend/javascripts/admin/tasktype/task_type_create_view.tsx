@@ -109,9 +109,11 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     if (!hasRecommendedConfiguration) {
       // A recommended configuration of null overrides the default configuration when using _.merge
       // If the task type has no recommended configuration, suggest the default one
+      // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'recommendedConfiguration' becaus... Remove this comment to see the full error message
       formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
     }
 
+    // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'recommendedConfiguration' becaus... Remove this comment to see the full error message
     formValues.recommendedConfiguration = jsonStringify(formValues.recommendedConfiguration);
     // The format of settings.resolutionRestrictions does not match the form precisely.
     // It is replaced here by resolutionRestrictionsForm, wich has a shouldRestrict boolean
@@ -460,6 +462,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
             <FormItem>
               <RecommendedConfigurationView
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'FormInstance<any> | null' is not assignable ... Remove this comment to see the full error message
                 form={form}
                 enabled={this.state.useRecommendedConfiguration}
                 onChangeEnabled={this.onChangeUseRecommendedConfiguration}

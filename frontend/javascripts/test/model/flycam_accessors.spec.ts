@@ -23,6 +23,7 @@ const initialState: OxalisState = {
       dataLayers: [
         {
           name: "layer1",
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
           boundingBox,
           elementClass: "uint8",
           resolutions: [
@@ -36,6 +37,7 @@ const initialState: OxalisState = {
         },
         {
           name: "layer2",
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
           boundingBox,
           elementClass: "uint8",
           resolutions: [
@@ -70,6 +72,7 @@ test("Flycam Accessors should calculate the request log zoom step (2/2)", (t) =>
   const state = _.cloneDeep(initialState);
 
   // $FlowFixMe[cannot-write]
+  // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'zoomStep' because it is a read-o... Remove this comment to see the full error message
   state.flycam.zoomStep = 8;
   t.is(accessors.getRequestLogZoomStep(state), 3);
 });
@@ -104,6 +107,7 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
   };
 
   const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
     constants.MODE_PLANE_TRACING,
     "BEST_QUALITY_FIRST",
     scale,

@@ -14,8 +14,8 @@ type State = {
   datasets: Array<APIMaybeUnimportedDataset>;
   isLoading: boolean;
 };
-export const SimpleHeader = () => (
-  <div id="oxalis-header">
+export function SimpleHeader() {
+  return <div id="oxalis-header">
     <img
       src="/assets/images/oxalis.svg"
       alt="webKnossos Logo"
@@ -25,7 +25,7 @@ export const SimpleHeader = () => (
     />
     webKnossos
   </div>
-);
+}
 
 class PublicationDetailView extends React.PureComponent<Props, State> {
   state: State = {
@@ -88,7 +88,7 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
                   </Tooltip>
                 </Link>
                 <PublicationCard
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ className: string; datasets: any[]; showDe... Remove this comment to see the full error message
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ className: string; datasets: APIDataset[];... Remove this comment to see the full error message
                   className="dataset-panel"
                   datasets={datasetsOfPublication}
                   showDetailedLink={false}

@@ -28,7 +28,7 @@ class SecuredRoute extends React.PureComponent<Props, State> {
   async fetchData() {
     if (!this.props.isAuthenticated && this.props.serverAuthenticationCallback != null) {
       const isAdditionallyAuthenticated = await this.props.serverAuthenticationCallback({
-        // @ts-expect-error computedMatch is a private property of ReactRouter and not exposed through their types
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'computedMatch' does not exist on type 'R... Remove this comment to see the full error message
         match: this.props.computedMatch,
         location: this.props.location,
       });

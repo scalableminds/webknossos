@@ -146,7 +146,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
      * tabs, too.
      */
     const rightBorderId = "right-border-tab-container";
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'getNodeById' does not exist on type 'typ... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'getExtraData' does not exist on type 'No... Remove this comment to see the full error message
     const rightBorderModel = model.getNodeById(rightBorderId).getExtraData().model;
 
     if (rightBorderModel == null) {
@@ -339,7 +339,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return (
           <InputCatcher
             busyBlockingInfo={busyBlockingInfo}
-            // @ts-expect-error
+            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             viewportID={ArbitraryViews.arbitraryViewport}
           >
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
@@ -515,7 +515,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const parentTabSetNode = parent;
 
     if (parentTabSetNode.getChildren()[0].getId() === tabNode.getId()) {
-      // @ts-expect-error
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Node' is not assignable to param... Remove this comment to see the full error message
       const { isTopMost, isLeftMost } = getPositionStatusOf(parentTabSetNode);
 
       if (isTopMost && isLeftMost) {
@@ -547,7 +547,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabSetNode: typeof TabSetNode, renderValues... Remove this comment to see the full error message
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabSetNode: TabSetNode, renderValues: {    ... Remove this comment to see the full error message
             onRenderTabSet={this.onRenderTabSet}
             onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}

@@ -42,6 +42,7 @@ class Cube {
     this.visible = true;
     this.isHighlighted = properties.isHighlighted;
     this.cube = new THREE.Line(new THREE.Geometry(), this.getLineMaterial());
+    // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
     this.crossSections = {};
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
@@ -80,7 +81,7 @@ class Cube {
     // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
     const vec = (x, y, z) => new THREE.Vector3(x, y, z);
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
     this.cube.geometry.vertices = [
       vec(min[0], min[1], min[2]),
       vec(min[0], max[1], min[2]),
@@ -99,7 +100,7 @@ class Cube {
       vec(min[0], max[1], max[2]),
       vec(min[0], max[1], min[2]),
     ];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
     this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [
       vec(min[0], min[1], 0),
       vec(min[0], max[1], 0),
@@ -107,7 +108,7 @@ class Cube {
       vec(max[0], min[1], 0),
       vec(min[0], min[1], 0),
     ];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
     this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = [
       vec(0, min[1], min[2]),
       vec(0, min[1], max[2]),
@@ -115,7 +116,7 @@ class Cube {
       vec(0, max[1], min[2]),
       vec(0, min[1], min[2]),
     ];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
     this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = [
       vec(min[0], 0, min[2]),
       vec(min[0], 0, max[2]),
@@ -126,7 +127,7 @@ class Cube {
 
     for (const mesh of _.values(this.crossSections).concat([this.cube])) {
       mesh.geometry.computeBoundingSphere();
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'geometry' does not exist on type 'typeof... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'verticesNeedUpdate' does not exist on ty... Remove this comment to see the full error message
       mesh.geometry.verticesNeedUpdate = true;
     }
 
@@ -144,6 +145,7 @@ class Cube {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
       const { geometry } = this.crossSections[planeId];
 
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
       for (const vertex of geometry.vertices) {
         const array = vertex.toArray();
         array[thirdDim] = position[thirdDim];
@@ -151,6 +153,7 @@ class Cube {
       }
 
       geometry.computeBoundingSphere();
+      // @ts-expect-error ts-migrate(2339) FIXME: Property 'verticesNeedUpdate' does not exist on ty... Remove this comment to see the full error message
       geometry.verticesNeedUpdate = true;
     }
   }

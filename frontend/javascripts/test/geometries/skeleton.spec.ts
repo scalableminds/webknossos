@@ -54,6 +54,7 @@ test.before((t) => {
   });
 });
 
+// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
 const skeletonCreator = () => new Skeleton((state) => getSkeletonTracing(state.tracing), true);
 
 test.serial("Skeleton should initialize correctly using the store's state", (t) => {
@@ -64,11 +65,13 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
     t.is(skeleton.edges.buffers.length, 1);
     const nodeCapacity = 2000;
     const edgeCapacity = 1980;
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'nodePositions' implicitly has type 'any[... Remove this comment to see the full error message
     let nodePositions = [];
     const nodeTypes = [];
     const nodeRadii = [];
     const nodeIds = [];
     const nodeTreeIds = [];
+    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'edgePositions' implicitly has type 'any[... Remove this comment to see the full error message
     let edgePositions = [];
     const edgeTreeIds = [];
     let treeColors = [0, 0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
@@ -77,6 +80,7 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
       treeColors = treeColors.concat(skeleton.getTreeRGBA(tree.color, tree.isVisible));
 
       for (const node of Array.from(tree.nodes.values())) {
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'nodePositions' implicitly has an 'any[]'... Remove this comment to see the full error message
         nodePositions = nodePositions.concat(node.position);
         nodeTreeIds.push(tree.treeId);
         nodeRadii.push(node.radius);
@@ -87,6 +91,7 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
       for (const edge of tree.edges.all()) {
         const sourcePosition = tree.nodes.get(edge.source).position;
         const targetPosition = tree.nodes.get(edge.target).position;
+        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'edgePositions' implicitly has an 'any[]'... Remove this comment to see the full error message
         edgePositions = edgePositions.concat(sourcePosition).concat(targetPosition);
         edgeTreeIds.push(tree.treeId, tree.treeId);
       }
@@ -175,6 +180,7 @@ test.serial.cb("Skeleton should update tree colors upon tree creation", (t) => {
   Store.dispatch(createTreeAction());
   getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
     const { activeTreeId, trees } = skeletonTracing;
+    // @ts-expect-error ts-migrate(2538) FIXME: Type 'null' cannot be used as an index type.
     const activeTree = trees[activeTreeId];
 
     if (activeTreeId != null) {

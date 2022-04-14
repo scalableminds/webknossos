@@ -136,7 +136,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
 
     for (const [i, histogram] of data.entries()) {
       const color = this.props.data.length > 1 ? uint24Colors[i] : uint24Colors[2];
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'CanvasRenderingContext2D | null'... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       this.drawHistogram(ctx, histogram, maxValue, color, min, max);
     }
   }

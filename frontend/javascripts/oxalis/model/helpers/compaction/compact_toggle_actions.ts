@@ -192,7 +192,7 @@ export default function compactToggleActions(
   const compactedToggleActions = [
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | boolean | Tree[]' is no... Remove this comment to see the full error message
     updateTreeGroupVisibility(commonAncestor, commonVisibility),
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'map' does not exist on type 'number | bo... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'map' does not exist on type 'number | bo... Remove this comment to see the full error message
   ].concat(exceptions.map((tree) => updateTreeVisibility(tree)));
   const finalToggleActions = shouldUseToggleGroup ? compactedToggleActions : toggleActions;
   return remainingActions.concat(finalToggleActions);

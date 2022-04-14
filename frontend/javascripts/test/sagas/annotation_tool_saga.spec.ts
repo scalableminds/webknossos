@@ -77,6 +77,7 @@ test.serial("Selecting another tool should trigger a deselection of the previous
   saga.next(wkReadyAction());
   saga.next(newState.uiInformation.activeTool);
 
+  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nextTool' implicitly has an 'any' type.
   const cycleTool = (nextTool) => {
     const action = setToolAction(nextTool);
     newState = UiReducer(newState, action);

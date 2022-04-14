@@ -73,7 +73,7 @@ global.fetch = function fetchWrapper(url, options) {
 global.Headers = Headers;
 global.Request = Request;
 global.Response = Response;
-// @ts-expect-error ts-migrate(2551) FIXME: Property 'FetchError' does not exist on type 'Glob... Remove this comment to see the full error message
+// @ts-expect-error ts-migrate(7017) FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
 global.FetchError = FetchError;
 
 const { JSDOM } = require("jsdom");

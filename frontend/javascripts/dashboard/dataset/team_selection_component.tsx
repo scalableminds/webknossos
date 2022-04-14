@@ -79,6 +79,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     return (
       <Select
         showSearch
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '"default" | "multiple"' is not assignable to... Remove this comment to see the full error message
         mode={this.props.mode ? this.props.mode : "default"}
         style={{
           width: "100%",

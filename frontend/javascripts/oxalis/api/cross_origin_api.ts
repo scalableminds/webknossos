@@ -139,7 +139,7 @@ const onMessage = async (event) => {
   );
 };
 
-const CrossOriginApi = () => {
+function CrossOriginApi() {
   useEffect(() => {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -157,9 +157,9 @@ const CrossOriginApi = () => {
         );
       });
     }
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
   }, [window.webknossos]);
   return null;
-};
+}
 
 export default CrossOriginApi;

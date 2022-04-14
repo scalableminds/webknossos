@@ -61,14 +61,14 @@ test.serial("updateTask()", async (t) => {
 
   // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
   const newTask = { ...task, openInstances: task.openInstances + 10 };
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | APIScript | st... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | string[] | API... Remove this comment to see the full error message
   const updatedTask = await api.updateTask(task.id, newTask);
   t.deepEqual(updatedTask.status.open, newTask.openInstances);
   t.snapshot(updatedTask, {
     id: "tasks-updatedTask",
   });
   // Reset task to original state
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | APIScript | st... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | string[] | API... Remove this comment to see the full error message
   const revertedTask = await api.updateTask(task.id, task);
   // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
   t.is(revertedTask.status.open, task.status.open);

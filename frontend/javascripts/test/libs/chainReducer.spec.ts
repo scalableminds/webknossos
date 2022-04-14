@@ -27,8 +27,11 @@ test("ChainReducer should be called the correct number of timer", (t) => {
 test("ChainReducer should call the reducer with the correct action", (t) => {
   const state = 1;
   const newState = ChainReducer(state)
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(state: number, action: number) ... Remove this comment to see the full error message
     .apply(SumReducer, 2)
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(state: number, action: number) ... Remove this comment to see the full error message
     .apply(SumReducer, 3)
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(state: number, action: number) ... Remove this comment to see the full error message
     .apply(SumReducer, 4)
     .unpack();
   t.is(newState, 10);

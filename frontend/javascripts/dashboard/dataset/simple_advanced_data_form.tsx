@@ -88,6 +88,7 @@ export default function SimpleAdvancedDataForm({
         <RetryingErrorBoundary>
           <SimpleDatasetForm
             isReadOnlyDataset={isReadOnlyDataset}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isReadOnlyDataset: boolean; form: FormInst... Remove this comment to see the full error message
             form={form}
             dataSource={dataSource}
           />
@@ -149,7 +150,7 @@ function SimpleDatasetForm({
               },
               {
                 validator: syncValidator(
-                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
+                  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
                   (value) => value && value.every((el) => el > 0),
                   "Each component of the scale must be larger than 0",
                 ),
@@ -200,6 +201,7 @@ function SimpleLayerForm({
   const isSegmentation = layer.category === "segmentation";
   const bitDepth = getBitDepth(layer);
   const boundingBoxValue =
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataFormat' does not exist on type 'APID... Remove this comment to see the full error message
     layer.dataFormat === "knossos" ? layer.sections[0].boundingBox : layer.boundingBox;
   return (
     <Row
@@ -220,6 +222,7 @@ function SimpleLayerForm({
       <Col span={17}>
         <FormItemWithInfo
           name={
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataFormat' does not exist on type 'APID... Remove this comment to see the full error message
             layer.dataFormat === "knossos"
               ? ["dataSource", "dataLayers", index, "sections", 0, "boundingBox"]
               : ["dataSource", "dataLayers", index, "boundingBox"]
@@ -257,6 +260,7 @@ function SimpleLayerForm({
             name={["dataSource", "dataLayers", index, "largestSegmentId"]}
             label="Largest segment ID"
             info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'largestSegmentId' does not exist on type... Remove this comment to see the full error message
             initialValue={`${layer.largestSegmentId}`}
             rules={[
               {

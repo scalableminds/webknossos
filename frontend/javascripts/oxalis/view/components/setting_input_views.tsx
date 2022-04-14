@@ -27,11 +27,13 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     step: 1,
     disabled: false,
   };
+
   _onChange = (_value: number) => {
     if (this.isValueValid(_value)) {
       this.props.onChange(_value);
     }
   };
+
   isValueValid = (_value: number) =>
     _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
 
@@ -91,6 +93,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     roundTo: 3,
     spans: [9, 9, 6],
   };
+
   onChangeInput = (value: number) => {
     if (this.props.min <= value && value <= this.props.max) {
       this.props.onChange(value);
@@ -99,6 +102,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
       this.props.onChange(this.props.value);
     }
   };
+
   onChangeSlider = (value: number) => {
     this.props.onChange(this.calculateValue(value));
   };
@@ -117,6 +121,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
       ? calculatedValue.toExponential()
       : Utils.roundTo(calculatedValue, this.props.roundTo);
   };
+
   getSliderValue = () => {
     const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
     const b =
@@ -137,6 +142,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string | number' is not a... Remove this comment to see the full error message
             tipFormatter={this.formatTooltip}
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
@@ -358,6 +364,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       text: this.computeText(this.props.value),
     });
   };
+
   handleFocus = () => {
     this.setState({
       isEditing: true,
@@ -365,6 +372,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isValid: true,
     });
   };
+
   handleChange = (evt: React.SyntheticEvent) => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const text = evt.target.value;
@@ -383,10 +391,12 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isValid,
     });
   };
+
   handleColorChange = (color: Vector3) => {
     color = color.map((colorPart) => colorPart / 255) as any as Vector3;
     this.props.onColorChange(color);
   };
+
   handleNameChanged = (evt: React.SyntheticEvent) => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     const currentEnteredName = evt.target.value;
@@ -529,6 +539,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
   static defaultProps = {
     disabled: false,
   };
+
   onColorChange = (evt: React.SyntheticEvent) => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
     this.props.onChange(Utils.hexToRgb(evt.target.value));
@@ -581,10 +592,13 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
         <Col span={15}>
           <Select
             onChange={onChange}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
             value={value.toString()}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
             defaultValue={value.toString()}
             size="small"
             dropdownMatchSelectWidth={false}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>[]' is not assignable to ... Remove this comment to see the full error message
             options={this.props.options}
           />
         </Col>

@@ -96,6 +96,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
       isValid: true,
     });
   };
+
   handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const text = evt.target.value;
     // only numbers, commas and whitespace is allowed
@@ -126,6 +127,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
 
     return (
       <InputComponent
+        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
@@ -177,6 +179,7 @@ export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps>
         {...props}
         value={vector6Value}
         changeOnlyOnBlur
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '([x, y, z, width, height, depth]: [any, any,... Remove this comment to see the full error message
         onChange={([x, y, z, width, height, depth]) =>
           onChange({
             topLeft: [x, y, z],

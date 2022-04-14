@@ -256,6 +256,7 @@ function* getAgglomerateSkeletonTracing(
 
     return parsedTracing;
   } catch (e) {
+    // @ts-ignore
     if (e.messages != null) {
       // Enhance the error message for agglomerates that are too large
       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'message' implicitly has an 'any' type.
@@ -265,6 +266,7 @@ function* getAgglomerateSkeletonTracing(
 
       if (agglomerateTooLargeMessages.length > 0) {
         throw {
+          // @ts-ignore
           ...e,
           messages: [
             {
@@ -333,6 +335,7 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
   } catch (e) {
     // Hide the progress notification and handle the error
     hideFn();
+    // @ts-ignore
     handleAgglomerateLoadingError(e);
     return;
   }
@@ -361,6 +364,7 @@ function* loadConnectomeAgglomerateSkeletonWithId(
       addConnectomeTreesAction(createMutableTreeMapFromTreeArray(parsedTracing.trees), layerName),
     );
   } catch (e) {
+    // @ts-ignore
     handleAgglomerateLoadingError(e);
   }
 }

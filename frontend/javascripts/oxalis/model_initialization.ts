@@ -641,8 +641,10 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
     } catch (e) {
       console.error(e);
       Toast.error(
+        // @ts-ignore
         `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
       );
+      // @ts-ignore
       ErrorHandling.notify(e, {
         urlLayerState: stateByLayer,
       });

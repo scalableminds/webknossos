@@ -260,7 +260,6 @@ function SimpleLayerForm({
             name={["dataSource", "dataLayers", index, "largestSegmentId"]}
             label="Largest segment ID"
             info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'largestSegmentId' does not exist on type... Remove this comment to see the full error message
             initialValue={`${layer.largestSegmentId}`}
             rules={[
               {

@@ -453,12 +453,9 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   <InputComponent
                     value={activeCommentContent}
                     disabled={activeNodeMaybe.isNothing}
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
                     onChange={(evt) => this.handleChangeInput(evt, true)}
-                    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type.
-                    onPressEnter={(evt) =>
-                      evt.target.blur()
-                    }
+                    /* @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type. */
+                    onPressEnter={(evt) => evt.target.blur()}
                     placeholder="Add comment"
                     style={{
                       width: "50%",

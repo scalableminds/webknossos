@@ -621,7 +621,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const trailingNavItems = [];
 
   if (_isAuthenticated) {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'APIUser | null | undefined' is not assignabl... Remove this comment to see the full error message
     const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 

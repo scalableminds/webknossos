@@ -99,7 +99,6 @@ export default class AdvancedSearchPopover<
     // Ensure that currentPosition to not higher than numberOfAvailableOptions.
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'number' is not assignable to type 'null'.
     currentPosition =
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
     const hasMultipleResults = numberOfAvailableOptions > 1;

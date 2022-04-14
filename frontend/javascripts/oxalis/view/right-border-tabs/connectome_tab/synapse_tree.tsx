@@ -91,7 +91,9 @@ const noneData = {
   id: 0,
 };
 
-function _convertConnectomeToTreeData(connectomeData: ConnectomeData | null | undefined): TreeData | null | undefined {
+function _convertConnectomeToTreeData(
+  connectomeData: ConnectomeData | null | undefined,
+): TreeData | null | undefined {
   if (connectomeData == null) return null;
   const { agglomerates, synapses } = connectomeData;
 

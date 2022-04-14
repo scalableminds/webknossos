@@ -134,7 +134,7 @@ export function withMappingActivationConfirmation<P, C extends ComponentType<P>>
         }}
         onCancel={() => setConfirmVisible(false)}
       >
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<MappingActivationConfirmationProps<P>, ... Remove this comment to see the full error message
+        {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<MappingActivationConfirmationProps<P>, ... Remove this comment to see the full error message */}
         <WrappedComponent {...rest} onClick={checkWhetherConfirmIsNeeded} />
       </Popconfirm>
     );

@@ -199,7 +199,7 @@ The format should be: \`{
 
 class ConnectomeView extends React.Component<Props, State> {
   skeletonId: number | null | undefined;
-  state = {
+  state: State = {
     connectomeData: null,
     filteredConnectomeData: null,
     availableSynapseTypes: [],
@@ -230,7 +230,6 @@ class ConnectomeView extends React.Component<Props, State> {
       const connectomeFileChanged =
         prevState.filteredConnectomeData != null &&
         filteredConnectomeData != null &&
-        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         prevState.filteredConnectomeData.connectomeFile !== filteredConnectomeData.connectomeFile;
       this.updateSynapseTrees(prevState.filteredConnectomeData, connectomeFileChanged);
     }
@@ -244,7 +243,6 @@ class ConnectomeView extends React.Component<Props, State> {
         prevState.connectomeData != null &&
         connectomeData != null &&
         prevState.connectomeData.connectomeFile.mappingName !==
-          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
           connectomeData.connectomeFile.mappingName;
       this.updateAgglomerateTrees(
         prevState.connectomeData,
@@ -346,8 +344,8 @@ class ConnectomeView extends React.Component<Props, State> {
       currentConnectomeFile.connectomeFileName,
     ];
     const synapsesOfAgglomerates = await getSynapsesOfAgglomerates(
-      ...fetchProperties,
       // @ts-expect-error ts-migrate(2556) FIXME: Expected 5 arguments, but got 1 or more.
+      ...fetchProperties,
       activeAgglomerateIds,
     );
 
@@ -449,7 +447,6 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     if (filteredConnectomeData != null) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
       filteredSynapseIds = getSynapseIdsFromConnectomeData(filteredConnectomeData);
     }
 
@@ -496,7 +493,6 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     if (addedSynapseIds.length > 0 && filteredConnectomeData != null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'synapses' does not exist on type 'null'.
       const { synapses } = filteredConnectomeData;
       const newTrees: MutableTreeMap = {};
 
@@ -529,7 +525,6 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     if (filteredConnectomeData != null) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
       filteredAgglomerateIds = getAgglomerateIdsFromConnectomeData(filteredConnectomeData);
     }
 
@@ -538,7 +533,6 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     if (connectomeData != null) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
       unfilteredAgglomerateIds = getAgglomerateIdsFromConnectomeData(connectomeData);
     }
 

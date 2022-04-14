@@ -1404,7 +1404,7 @@ class DataApi {
     elementClass: ElementClass,
     resolutions: Array<Vector3>,
     zoomStep: number,
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
+    // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
   ): $TypedArray {
     const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
@@ -1448,8 +1448,8 @@ class DataApi {
           // could also be MISSING.
           const data = bucket.hasData()
             ? bucket.getData()
-            // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
-            :              new TypedArrayClass(Constants.BUCKET_SIZE);
+            : // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
+              new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;

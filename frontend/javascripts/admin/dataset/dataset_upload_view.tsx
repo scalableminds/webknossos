@@ -736,7 +736,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     width: 400,
                   }}
                   allowDecimals
-                  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'scale' implicitly has an 'any' type.
                   onChange={(scale) => {
                     if (this.formRef.current == null) return;
                     this.formRef.current.setFieldsValue({

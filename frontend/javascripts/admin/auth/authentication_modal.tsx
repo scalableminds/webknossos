@@ -90,7 +90,7 @@ export function withAuthentication<P, C extends ComponentType<P>>(
     } else {
       return (
         <>
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<AuthenticationProps<P>, "activeUser" | ... Remove this comment to see the full error message
+          {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<AuthenticationProps<P>, "activeUser" | ... Remove this comment to see the full error message */}
           <WrappedComponent {...rest} onClick={() => setIsAuthenticationModalVisible(true)} />
           <AuthenticationModal
             alertMessage={authenticationMessage}

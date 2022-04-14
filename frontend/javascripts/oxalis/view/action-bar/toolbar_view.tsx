@@ -128,9 +128,11 @@ function RadioButtonWithTooltip({
   style: React.CSSProperties;
   value: string;
 }) {
-  return <Tooltip title={disabled ? disabledTitle : title}>
-    <Radio.Button disabled={disabled} {...props} />
-  </Tooltip>
+  return (
+    <Tooltip title={disabled ? disabledTitle : title}>
+      <Radio.Button disabled={disabled} {...props} />
+    </Tooltip>
+  );
 }
 
 function OverwriteModeSwitch({

@@ -36,7 +36,7 @@ export function useKeyPress(targetKey: string) {
       if (event.key === targetKey) {
         pressKey();
       }
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     } else if (modifierState[targetKey]) {
       // Use the modifierState as this seems to be more robust. See
       // the other comment below which describes some edge cases
@@ -66,7 +66,7 @@ export function useKeyPress(targetKey: string) {
       if (event.key === targetKey) {
         releaseKey();
       }
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     } else if (!modifierState[targetKey]) {
       // The targetKey is a modifier. Use the modifierState as this
       // is more robust against pressing multiple modifiers. For example,

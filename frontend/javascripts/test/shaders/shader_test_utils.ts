@@ -59,7 +59,6 @@ export function renderShader(fragColorExpr: string, shaderModule: ShaderModule) 
   };
   const renderer = new THREE.WebGLRenderer({
     antialias: false,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ addEventListener: () => void; }' is not as... Remove this comment to see the full error message
     canvas,
     context: gl,
   });

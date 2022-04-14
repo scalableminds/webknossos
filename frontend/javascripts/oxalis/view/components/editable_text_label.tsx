@@ -1,4 +1,4 @@
-import { Input, Tooltip } from "antd";
+import { Input, InputProps, Tooltip } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
@@ -83,7 +83,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       cursor: "pointer",
     };
     const margin = this.props.margin != null ? this.props.margin : "0 10px";
-    const inputComponentProps = {
+    const inputComponentProps: InputProps = {
       value: this.state.value,
       onChange: this.handleInputChange,
       onPressEnter: this.handleOnChange,
@@ -93,6 +93,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       },
       size: "small",
       autoFocus: true,
+      // @ts-ignore
       rows: this.props.rows,
     };
 
@@ -101,8 +102,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
         <span>
           {this.props.rows === 1 ? (
             <React.Fragment>
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ onBlur: () => void; value: string; onChang... Remove this comment to see the full error message
-              <Input {...inputComponentProps} onBlur={this.handleOnChange} />
+              <Input {...inputComponentProps} onBlur={() => this.handleOnChange} />
               <Tooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
                 <CheckOutlined
                   style={iconStyle}
@@ -126,14 +126,14 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       );
     } else {
       return (
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
+        /* @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message */
         <span className={this.props.markdown ? "flex-container" : null}>
           <span
             style={{
               margin,
               display: "inline-block",
             }}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
+            /* @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message */
             className={this.props.onClick != null ? "clickable-text" : null}
             onClick={this.props.onClick}
             onContextMenu={this.props.onContextMenu}
@@ -155,10 +155,10 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
             {this.props.disableEditing ? null : (
               <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
                 <EditOutlined
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
+                  /* @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message */
                   className={this.props.markdown ? "flex-item" : null}
                   style={{
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ iconStyle: { cursor: string; }; marginLeft... Remove this comment to see the full error message
+                    /* @ts-expect-error ts-migrate(2322) FIXME: Type '{ iconStyle: { cursor: string; }; marginLeft... Remove this comment to see the full error message */
                     iconStyle,
                     marginLeft: 5,
                     display: "inline",

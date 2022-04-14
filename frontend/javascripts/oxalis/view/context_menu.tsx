@@ -910,7 +910,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
       infoRows.push(
         <div key="nodeInfo" className="node-context-menu-item">
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'treeId' does not exist on type 'never'.
+          {/* @ts-expect-error ts-migrate(2339) FIXME: Property 'treeId' does not exist on type 'never'.*/}
           Node with Id {maybeClickedNodeId} in Tree {nodeContextMenuTree.treeId}
         </div>,
       );

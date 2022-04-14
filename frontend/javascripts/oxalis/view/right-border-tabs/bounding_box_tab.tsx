@@ -90,9 +90,8 @@ function StartGlobalizeFloodfillsModal({
       </p>
 
       <Form onFinish={handleSubmit} layout="vertical">
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'APIActiveUser' is not assignable to type 'AP... Remove this comment to see the full error message
+        {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'APIActiveUser' is not assignable to type 'AP... Remove this comment to see the full error message */}
         <DatasetNameFormItem activeUser={activeUser} initialName={initialName} />
-
         <div
           style={{
             display: "flex",

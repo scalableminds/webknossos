@@ -174,6 +174,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           throw error;
         }
 
+        // @ts-ignore
         console.error(`Tried parsing file "${file.name}" as NML but failed. ${error.message}`);
         return undefined;
       }
@@ -200,6 +201,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           datasetName: parsedTracing.dataSetName,
         };
       } catch (error) {
+        // @ts-ignore
         console.error(`Tried parsing file "${file.name}" as protobuf but failed. ${error.message}`);
         return undefined;
       }

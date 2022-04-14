@@ -192,25 +192,23 @@ export function __setupOxalis(
     );
   Request.receiveJSON.returns(Promise.resolve({}));
   Request.sendJSONReceiveJSON.returns(Promise.resolve({}));
-  return (
-    Model.fetch(
-      ANNOTATION_TYPE,
-      {
-        annotationId: ANNOTATION_ID,
-        type: ControlModeEnum.TRACE,
-      },
-      true,
-    )
-      .then(() => {
-        // Trigger the event ourselves, as the OxalisController is not instantiated
-        app.vent.trigger("webknossos:ready");
-        webknossos.apiReady(apiVersion).then((apiObject) => {
-          t.context.api = apiObject;
-        });
-      })
-      .catch((error) => {
-        console.error("model.fetch() failed", error);
-        t.fail(error.message);
-      })
-  );
+  return Model.fetch(
+    ANNOTATION_TYPE,
+    {
+      annotationId: ANNOTATION_ID,
+      type: ControlModeEnum.TRACE,
+    },
+    true,
+  )
+    .then(() => {
+      // Trigger the event ourselves, as the OxalisController is not instantiated
+      app.vent.trigger("webknossos:ready");
+      webknossos.apiReady(apiVersion).then((apiObject) => {
+        t.context.api = apiObject;
+      });
+    })
+    .catch((error) => {
+      console.error("model.fetch() failed", error);
+      t.fail(error.message);
+    });
 }

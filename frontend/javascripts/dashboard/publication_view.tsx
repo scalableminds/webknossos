@@ -99,7 +99,7 @@ function PublicationView(props: Props) {
       renderItem={(datasets) => (
         // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
         <List.Item key={datasets[0].publication.id}>
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'APIDatas... Remove this comment to see the full error message
+          {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'APIDatas... Remove this comment to see the full error message */}
           <PublicationCard className="dataset-panel" datasets={datasets} showDetailedLink />
         </List.Item>
       )}

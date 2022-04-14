@@ -15,16 +15,18 @@ type State = {
   isLoading: boolean;
 };
 export function SimpleHeader() {
-  return <div id="oxalis-header">
-    <img
-      src="/assets/images/oxalis.svg"
-      alt="webKnossos Logo"
-      style={{
-        verticalAlign: "middle",
-      }}
-    />
-    webKnossos
-  </div>
+  return (
+    <div id="oxalis-header">
+      <img
+        src="/assets/images/oxalis.svg"
+        alt="webKnossos Logo"
+        style={{
+          verticalAlign: "middle",
+        }}
+      />
+      webKnossos
+    </div>
+  );
 }
 
 class PublicationDetailView extends React.PureComponent<Props, State> {

@@ -557,7 +557,7 @@ function* applyStateOfStack(
     const newTracing = stateToRestore.data;
     yield* put(setTracingAction(newTracing));
     yield* put(centerActiveNodeAction());
-  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "volume") {
     const isMergerModeEnabled = yield* select(
       (state) => state.temporaryConfiguration.isMergerModeEnabled,
@@ -583,7 +583,7 @@ function* applyStateOfStack(
     const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
-  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "bounding_box") {
     if (prevUserBoundingBoxes != null) {
       stackToPushTo.push({
@@ -595,7 +595,7 @@ function* applyStateOfStack(
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const newBoundingBoxes = stateToRestore.data;
     yield* put(setUserBoundingBoxesAction(newBoundingBoxes));
-  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "warning") {
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     Toast.info(stateToRestore.reason);
@@ -890,11 +890,13 @@ export function* sendRequestToServer(
 
       // Log the error to airbrake. Also compactedSaveQueue needs to be within an object
       // as otherwise the entries would be spread by the notify function.
+      // @ts-ignore
       yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, error, {
         compactedSaveQueue,
         retryCount,
       });
 
+      // @ts-ignore
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'onbeforeunload' does not exist on type '... Remove this comment to see the full error message

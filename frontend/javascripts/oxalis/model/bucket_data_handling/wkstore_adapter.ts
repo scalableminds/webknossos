@@ -188,9 +188,12 @@ export async function requestFromStore(
   } catch (errorResponse) {
     const errorMessage = `Requesting data from layer "${layerInfo.name}" failed. Some rendered areas might remain empty. Retrying...`;
     const detailedError =
+      // @ts-ignore
       errorResponse.status != null
-        ? `Status code ${errorResponse.status} - "${errorResponse.statusText}" - URL: ${errorResponse.url}.`
-        : errorResponse.message;
+        ? // @ts-ignore
+          `Status code ${errorResponse.status} - "${errorResponse.statusText}" - URL: ${errorResponse.url}.`
+        : // @ts-ignore
+          errorResponse.message;
     console.error(`${errorMessage} ${detailedError}`);
     console.error(errorResponse);
     ErrorHandling.notify(new Error(errorMessage), {

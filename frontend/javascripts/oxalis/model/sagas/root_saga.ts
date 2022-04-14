@@ -53,6 +53,7 @@ function* restartableSaga(): Saga<void> {
     console.error("The sagas crashed because of the following error:", err);
 
     if (process.env.BABEL_ENV !== "test") {
+      // @ts-ignore
       ErrorHandling.notify(err, {});
       // Hide potentially old error highlighting which mentions a retry mechanism.
       toggleErrorHighlighting(false);
@@ -62,7 +63,10 @@ function* restartableSaga(): Saga<void> {
 Internal error.
 Please reload the page to avoid losing data.
 
-${JSON.stringify(err)} ${err.stack || ""}`);
+${
+  JSON.stringify(err)
+  // @ts-ignore
+} ${err.stack || ""}`);
     }
   }
 }

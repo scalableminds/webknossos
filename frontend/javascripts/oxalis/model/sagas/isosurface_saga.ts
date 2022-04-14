@@ -407,6 +407,7 @@ function* maybeLoadIsosurface(
       );
     } catch (exception) {
       retryCount++;
+      // @ts-ignore
       ErrorHandling.notify(exception);
       console.warn("Retrying mesh generation...");
       yield* call(sleep, RETRY_WAIT_TIME * 2 ** retryCount);

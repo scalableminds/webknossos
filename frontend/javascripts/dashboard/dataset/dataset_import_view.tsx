@@ -258,12 +258,10 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
         if (didParsingTheSavedDataSourceJSONSucceed) {
           dataSource = savedDataSourceOnServer;
 
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Readonly<MutableAPIDataSource> |... Remove this comment to see the full error message
           if (isDatasourceJSONValid(savedDataSourceOnServer)) {
             dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.Yes;
           }
 
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Readonly<MutableAPIDataSource> |... Remove this comment to see the full error message
           const diff = diffObjects(inferredDataSource || {}, savedDataSourceOnServer);
           const areObjectsEqual = _.size(diff) === 0;
 
@@ -736,7 +734,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       );
     }
 
-    const restMessages = this.state.messages.map((message, i) => (
+    const restMessages = this.state.messages.map((message) => (
       <Alert
         key={Object.values(message)[0]}
         message={Object.values(message)[0]}

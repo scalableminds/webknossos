@@ -26,39 +26,41 @@ export function NewVolumeLayerSelection({
   selectedSegmentationLayerIndex: number | null | undefined;
   setSelectedSegmentationLayerIndex: (arg0: number | null | undefined) => void;
 }) {
-  return <div
-    style={{
-      marginBottom: 16,
-    }}
-  >
-    Base Volume Annotation On{" "}
-    <Tooltip
-      title="Base your volume annotation on an existing segmentation layer of this dataset or create a new (empty) layer for the annotation."
-      placement="right"
-    >
-      <InfoCircleOutlined />
-    </Tooltip>
-    <Radio.Group
-      onChange={(e) => {
-        const index = parseInt(e.target.value);
-        setSelectedSegmentationLayerIndex(index !== -1 ? index : null);
+  return (
+    <div
+      style={{
+        marginBottom: 16,
       }}
-      value={selectedSegmentationLayerIndex != null ? selectedSegmentationLayerIndex : -1}
     >
-      <Radio key={-1} value={-1}>
-        Create empty layer
-      </Radio>
-      {segmentationLayers.map((segmentationLayer, index) => (
-        <Radio
-          key={segmentationLayer.name}
-          value={index}
-          disabled={!doesSupportVolumeWithFallback(dataset, segmentationLayer)}
-        >
-          {segmentationLayer.name}
+      Base Volume Annotation On{" "}
+      <Tooltip
+        title="Base your volume annotation on an existing segmentation layer of this dataset or create a new (empty) layer for the annotation."
+        placement="right"
+      >
+        <InfoCircleOutlined />
+      </Tooltip>
+      <Radio.Group
+        onChange={(e) => {
+          const index = parseInt(e.target.value);
+          setSelectedSegmentationLayerIndex(index !== -1 ? index : null);
+        }}
+        value={selectedSegmentationLayerIndex != null ? selectedSegmentationLayerIndex : -1}
+      >
+        <Radio key={-1} value={-1}>
+          Create empty layer
         </Radio>
-      ))}
-    </Radio.Group>
-  </div>
+        {segmentationLayers.map((segmentationLayer, index) => (
+          <Radio
+            key={segmentationLayer.name}
+            value={index}
+            disabled={!doesSupportVolumeWithFallback(dataset, segmentationLayer)}
+          >
+            {segmentationLayer.name}
+          </Radio>
+        ))}
+      </Radio.Group>
+    </div>
+  );
 }
 
 function CreateExplorativeModal({ datasetId, onClose }: Props) {
@@ -74,7 +76,6 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
       annotationType !== "skeleton" &&
       segmentationLayers.length > 0 &&
       selectedSegmentationLayerIndex != null
-        // @ts-expect-error ts-migrate(2538) FIXME: Type 'null' cannot be used as an index type.
         ? segmentationLayers[selectedSegmentationLayerIndex]
         : null;
     const fallbackLayerGetParameter =

@@ -14,7 +14,6 @@ function getRenderer() {
   renderer =
     renderCanvasElement != null
       ? new THREE.WebGLRenderer({
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'HTMLElement' is not assignable to type 'HTML... Remove this comment to see the full error message
           canvas: renderCanvasElement,
           // This prevents flickering when rendering to a buffer instead of the canvas
           preserveDrawingBuffer: true,

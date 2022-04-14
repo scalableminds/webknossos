@@ -75,6 +75,8 @@ function NmlDropArea({
 }
 
 class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
+  _isMounted: boolean = false;
+
   state: State = {
     files: [],
     dropzoneActive: false,
@@ -82,6 +84,15 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     createGroupForEachFile: true,
     createGroupForSingleFile: false,
   };
+
+  componentDidMount() {
+    this._isMounted = true;
+  }
+
+  componentWillUnmount() {
+    this._isMounted = false;
+  }
+
   onDragEnter = (evt: React.DragEvent) => {
     const dt = evt.dataTransfer;
 
@@ -160,10 +171,12 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           : this.state.createGroupForSingleFile,
       );
     } finally {
-      this.setState({
-        isImporting: false,
-        files: [],
-      });
+      if (this._isMounted) {
+        this.setState({
+          isImporting: false,
+          files: [],
+        });
+      }
     }
   };
 
@@ -294,7 +307,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): Partial<StateProps> => ({
+const mapStateToProps = (state: OxalisState) => ({
   showDropzoneModal: state.uiInformation.showDropzoneModal,
 });
 

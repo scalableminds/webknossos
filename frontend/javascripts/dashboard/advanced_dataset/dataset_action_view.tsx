@@ -81,7 +81,7 @@ function NewAnnotationLink({
       <a
         title="New Annotation With Custom Properties"
         className="ant-dropdown-link"
-        onClick={() => onShowCreateExplorativeModal}
+        onClick={() => onShowCreateExplorativeModal()}
       >
         <EllipsisOutlined
           style={{

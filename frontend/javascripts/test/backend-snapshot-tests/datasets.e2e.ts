@@ -4,7 +4,7 @@ import {
   tokenUserA,
   setCurrToken,
   resetDatabase,
-  writeFlowCheckingFile,
+  writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
@@ -32,7 +32,7 @@ test.serial("getDatasets", async (t) => {
   }
 
   datasets = _.sortBy(datasets, (d) => d.name);
-  writeFlowCheckingFile(datasets, "dataset", "APIMaybeUnimportedDataset", {
+  writeTypeCheckingFile(datasets, "dataset", "APIMaybeUnimportedDataset", {
     isArray: true,
   });
   t.snapshot(datasets, {

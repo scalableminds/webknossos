@@ -2,7 +2,7 @@ import {
   tokenUserA,
   setCurrToken,
   resetDatabase,
-  writeFlowCheckingFile,
+  writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
@@ -12,7 +12,7 @@ test.before("Reset database and change token", async () => {
 });
 test("getUsers()", async (t) => {
   const users = await api.getUsers();
-  writeFlowCheckingFile(users, "user", "APIUser", {
+  writeTypeCheckingFile(users, "user", "APIUser", {
     isArray: true,
   });
   t.snapshot(users, {
@@ -55,7 +55,7 @@ test("updateUser()", async (t) => {
 test("getLoggedTimes()", async (t) => {
   const activeUser = await api.getActiveUser();
   const loggedTimes = await api.getLoggedTimes(activeUser.id);
-  writeFlowCheckingFile(loggedTimes, "logged-times", "APITimeInterval", {
+  writeTypeCheckingFile(loggedTimes, "logged-times", "APITimeInterval", {
     isArray: true,
   });
   t.snapshot(loggedTimes, {

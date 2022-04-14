@@ -2,7 +2,7 @@ import {
   tokenUserA,
   setCurrToken,
   resetDatabase,
-  writeFlowCheckingFile,
+  writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
@@ -12,7 +12,7 @@ test.before("Reset database and change token", async () => {
 });
 test("datastores()", async (t) => {
   const datastores = await api.getDatastores();
-  writeFlowCheckingFile(datastores, "datastore", "APIDataStore", {
+  writeTypeCheckingFile(datastores, "datastore", "APIDataStore", {
     isArray: true,
   });
   t.snapshot(datastores, {
@@ -21,14 +21,14 @@ test("datastores()", async (t) => {
 });
 test("activeUser()", async (t) => {
   const activeUser = await api.getActiveUser();
-  writeFlowCheckingFile(activeUser, "user", "APIUser");
+  writeTypeCheckingFile(activeUser, "user", "APIUser");
   t.snapshot(activeUser, {
     id: "misc-activeUser",
   });
 });
 test("getFeatureToggles()", async (t) => {
   const features = await api.getFeatureToggles();
-  writeFlowCheckingFile(features, "feature-toggles", "APIFeatureToggles");
+  writeTypeCheckingFile(features, "feature-toggles", "APIFeatureToggles");
   t.snapshot(features, {
     id: "misc-getFeatureToggles",
   });

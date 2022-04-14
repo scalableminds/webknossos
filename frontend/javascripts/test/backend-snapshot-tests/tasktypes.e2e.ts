@@ -2,7 +2,7 @@ import {
   tokenUserA,
   setCurrToken,
   resetDatabase,
-  writeFlowCheckingFile,
+  writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
@@ -12,7 +12,7 @@ test.before("Change token", async () => {
 });
 test("getTaskTypes()", async (t) => {
   const taskTypes = await api.getTaskTypes();
-  writeFlowCheckingFile(taskTypes, "task-type", "APITaskType", {
+  writeTypeCheckingFile(taskTypes, "task-type", "APITaskType", {
     isArray: true,
   });
   t.snapshot(taskTypes, {

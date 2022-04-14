@@ -5,7 +5,7 @@ import {
   tokenUserD,
   setCurrToken,
   resetDatabase,
-  writeFlowCheckingFile,
+  writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
@@ -18,7 +18,7 @@ test.beforeEach("Change token", async () => {
 test.serial("getProjects()", async (t) => {
   const projects = _.sortBy(await api.getProjects(), (p) => p.name);
 
-  writeFlowCheckingFile(projects, "project", "APIProject", {
+  writeTypeCheckingFile(projects, "project", "APIProject", {
     isArray: true,
   });
   t.snapshot(projects, {

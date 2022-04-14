@@ -2,7 +2,7 @@ import {
   tokenUserA,
   setCurrToken,
   resetDatabase,
-  writeFlowCheckingFile,
+  writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
@@ -18,11 +18,11 @@ test("getScripts()", async (t) => {
     id: "scripts-getScripts",
   });
 });
-test("getScript()", async (t) => {
+test.only("getScript()", async (t) => {
   const scripts = await api.getScripts();
   const firstScript = scripts[0];
   const script = await api.getScript(firstScript.id);
-  writeFlowCheckingFile(script, "script", "APIScript");
+  writeTypeCheckingFile(script, "script", "APIScript");
   t.snapshot(script, {
     id: "scripts-getScript",
   });

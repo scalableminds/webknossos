@@ -12,7 +12,7 @@ import {
   replaceVolatileValues,
   setCurrToken,
   tokenUserA,
-  writeFlowCheckingFile,
+  writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
@@ -38,7 +38,7 @@ test("getAnnotationInformation()", async (t) => {
     APIAnnotationTypeEnum.Explorational,
   );
   t.is(annotation.id, annotationId);
-  writeFlowCheckingFile(annotation, "annotation", "APIAnnotation");
+  writeTypeCheckingFile(annotation, "annotation", "APIAnnotation");
   t.snapshot(annotation, {
     id: "annotations-getAnnotationInformation",
   });
@@ -155,7 +155,7 @@ test.serial("getTracingsForAnnotation()", async (t) => {
   // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
-  writeFlowCheckingFile(tracings[0], "tracing", "ServerSkeletonTracing");
+  writeTypeCheckingFile(tracings[0], "tracing", "ServerSkeletonTracing");
   t.snapshot(replaceVolatileValues(tracings[0]), {
     id: "annotations-tracing",
   });
@@ -164,7 +164,7 @@ test.serial("getTracingsForAnnotation() for volume", async (t) => {
   // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
   const createdExplorational = await api.createExplorational(dataSetId, "volume", null);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
-  writeFlowCheckingFile(tracings[0], "tracing-volume", "ServerVolumeTracing");
+  writeTypeCheckingFile(tracings[0], "tracing-volume", "ServerVolumeTracing");
   t.snapshot(replaceVolatileValues(tracings[0]), {
     id: "annotations-tracing-volume",
   });
@@ -173,7 +173,7 @@ test.serial("getTracingsForAnnotation() for hybrid", async (t) => {
   // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
   const createdExplorational = await api.createExplorational(dataSetId, "hybrid", null);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
-  writeFlowCheckingFile(tracings, "tracing-hybrid", "ServerTracing", {
+  writeTypeCheckingFile(tracings, "tracing-hybrid", "ServerTracing", {
     isArray: true,
   });
   // The volatileValues list includes "skeleton" and "volume", because of other requests, so we need to do it like this

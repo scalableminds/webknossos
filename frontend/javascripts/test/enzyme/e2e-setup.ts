@@ -109,20 +109,20 @@ global.navigator = {
   userAgent: "node.js",
 };
 copyProps(window, global);
-export async function writeFlowCheckingFile(
+export async function writeTypeCheckingFile(
   object: Array<any> | Record<string, any>,
   name: string,
-  flowTypeString: string,
+  typeString: string,
   options: {
     isArray?: boolean;
   } = {},
 ) {
-  const fullFlowType = options.isArray ? `Array<${flowTypeString}>` : flowTypeString;
+  const fullTypeAnnotation = options.isArray ? `Array<${typeString}>` : typeString;
   fs.writeFileSync(
-    `frontend/javascripts/test/snapshots/flow-check/test-flow-checking-${name}.js`,
+    `frontend/javascripts/test/snapshots/type-check/test-type-checking-${name}.ts`,
     ` 
-import type { ${flowTypeString} } from "types/api_flow_types";
-const a: ${fullFlowType} = ${JSON.stringify(object)}`,
+import type { ${typeString} } from "types/api_flow_types";
+const a: ${fullTypeAnnotation} = ${JSON.stringify(object)}`,
   );
 }
 

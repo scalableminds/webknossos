@@ -4,7 +4,7 @@ import {
   tokenUserA,
   setCurrToken,
   resetDatabase,
-  writeFlowCheckingFile,
+  writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
@@ -28,7 +28,7 @@ test("getTimeTrackingForUserByMonth", async (t) => {
     moment("20160401", "YYYYMMDD"),
   );
   t.true(timeTrackingForUserByMonth.length > 0);
-  writeFlowCheckingFile(timeTrackingForUserByMonth, "time-tracking", "APITimeTracking", {
+  writeTypeCheckingFile(timeTrackingForUserByMonth, "time-tracking", "APITimeTracking", {
     isArray: true,
   });
   t.snapshot(timeTrackingForUserByMonth, {
@@ -62,7 +62,7 @@ test("getTimeTrackingForUser for a user other than the active user", async (t) =
 test("getProjectProgressReport", async (t) => {
   // @ts-expect-error ts-migrate(7005) FIXME: Variable 'firstTeam' implicitly has an 'any' type.
   const projectProgressReport = await api.getProjectProgressReport(firstTeam.id);
-  writeFlowCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReport", {
+  writeTypeCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReport", {
     isArray: true,
   });
   t.snapshot(projectProgressReport, {
@@ -72,7 +72,7 @@ test("getProjectProgressReport", async (t) => {
 test("getOpenTasksReport", async (t) => {
   // @ts-expect-error ts-migrate(7005) FIXME: Variable 'firstTeam' implicitly has an 'any' type.
   const openTasksReport = await api.getOpenTasksReport(firstTeam.id);
-  writeFlowCheckingFile(openTasksReport, "open-tasks", "APIOpenTasksReport", {
+  writeTypeCheckingFile(openTasksReport, "open-tasks", "APIOpenTasksReport", {
     isArray: true,
   });
   t.snapshot(openTasksReport, {

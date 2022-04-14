@@ -734,9 +734,9 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
     const restMessages = this.state.messages.map((message, i) => (
       <Alert
-        key={i}
+        key={Object.values(message)[0]}
         message={Object.values(message)[0]}
-        /* @ts-expect-error */
+        /* @ts-ignore */
         type={Object.keys(message)[0]}
         showIcon
       />

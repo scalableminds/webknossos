@@ -78,7 +78,7 @@ import Toast from "libs/toast";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import constants, { ControlModeEnum, AnnotationToolEnum } from "oxalis/constants";
+import constants, { ControlModeEnum, AnnotationToolEnum, Vector3 } from "oxalis/constants";
 import messages from "messages";
 import window from "libs/window";
 import {
@@ -502,10 +502,10 @@ function setupLayerForVolumeTracing(
     // since they were created before WK started to maintain multiple resolution
     // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
     // that case.
-    const tracingResolutions = tracingHasResolutionList
+    const tracingResolutions: Vector3[] = tracingHasResolutionList
       ? resolutions.map(({ x, y, z }) => [x, y, z])
       : [[1, 1, 1]];
-    const tracingLayer = {
+    const tracingLayer: APIDataLayer = {
       name: tracing.id,
       tracingId: tracing.id,
       elementClass: tracing.elementClass,
@@ -513,8 +513,7 @@ function setupLayerForVolumeTracing(
       largestSegmentId: tracing.largestSegmentId,
       boundingBox: convertBoundariesToBoundingBox(boundaries),
       resolutions: tracingResolutions,
-      mappings:
-        fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
+      mappings: fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : [],
       // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,

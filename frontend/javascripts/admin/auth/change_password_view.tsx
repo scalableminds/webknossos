@@ -14,6 +14,8 @@ type Props = {
   history: RouteComponentProps["history"];
 };
 
+const MIN_PASSWORD_LENGTH = 8;
+
 function ChangePasswordView({ history }: Props) {
   const [form] = Form.useForm();
 
@@ -85,7 +87,7 @@ function ChangePasswordView({ history }: Props) {
                 message: messages["auth.reset_new_password"],
               },
               {
-                min: 8,
+                min: MIN_PASSWORD_LENGTH,
                 message: messages["auth.registration_password_length"],
               },
               {
@@ -114,7 +116,7 @@ function ChangePasswordView({ history }: Props) {
                 message: messages["auth.reset_new_password2"],
               },
               {
-                min: 8,
+                min: MIN_PASSWORD_LENGTH,
                 message: messages["auth.registration_password_length"],
               },
               {

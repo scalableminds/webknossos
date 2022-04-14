@@ -1,6 +1,5 @@
 import * as React from "react";
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Spin, Table, Tag } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import type { APIAnnotationCompact } from "types/api_flow_types";
@@ -180,4 +179,4 @@ class SharedAnnotationsView extends React.PureComponent<any, State> {
   }
 }
 
-export default withRouter<RouteComponentProps, any>(SharedAnnotationsView);
+export default SharedAnnotationsView;

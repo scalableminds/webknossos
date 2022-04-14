@@ -58,7 +58,7 @@ type State = {
   searchQuery: string;
   domainToEdit: string | null | undefined;
 };
-const persistence: Persistence<Pick<State, "searchQuery">> = new Persistence(
+const persistence = new Persistence<Pick<State, "searchQuery" | "activationFilter">>(
   {
     searchQuery: PropTypes.string,
     activationFilter: PropTypes.arrayOf(PropTypes.string),
@@ -81,6 +81,7 @@ class UserListView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
+    // @ts-ignore
     this.setState(persistence.load(this.props.history));
     this.fetchData();
 
@@ -269,8 +270,7 @@ class UserListView extends React.PureComponent<Props, State> {
     } else return [];
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'userId' implicitly has an 'any' type.
-  onSelectUserRow = (userId) => {
+  onSelectUserRow = (userId: string) => {
     this.setState((prevState) => {
       const selectedUserIds = [...prevState.selectedUserIds];
       const indexOfUser = selectedUserIds.indexOf(userId);
@@ -281,9 +281,9 @@ class UserListView extends React.PureComponent<Props, State> {
         selectedUserIds.push(userId);
       }
 
-      this.setState({
+      return {
         selectedUserIds,
-      });
+      };
     });
   };
 
@@ -404,8 +404,6 @@ class UserListView extends React.PureComponent<Props, State> {
             }}
             style={{
               marginTop: 30,
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
-              marginBotton: 30,
             }}
             onChange={(pagination, filters) =>
               this.setState({
@@ -493,7 +491,8 @@ class UserListView extends React.PureComponent<Props, State> {
                       style={{
                         margin: "0 0 0 5px",
                       }}
-                      onClick={async () => {
+                      onClick={async (evt) => {
+                        evt.stopPropagation();
                         await navigator.clipboard.writeText(domain);
                         Toast.success(`"${domain}" copied to clipboard`);
                       }}

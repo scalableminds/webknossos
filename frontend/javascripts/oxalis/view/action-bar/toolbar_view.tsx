@@ -322,7 +322,6 @@ function CreateNewBoundingBoxButton() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracing' does not exist on type 'Default... Remove this comment to see the full error message
   const activeTree = useSelector((state: OxalisState) =>
     toNullable(getActiveTree(state.tracing.skeleton)),
   );

@@ -285,6 +285,9 @@ jobs:
       - store_artifacts:
           path: frontend/javascripts/test/screenshots
 
+      - store_artifacts:
+          path: frontend/javascripts/test/snapshots/type-check
+
 workflows:
   version: 2
   circleci_build:

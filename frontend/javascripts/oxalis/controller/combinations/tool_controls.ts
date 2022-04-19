@@ -34,11 +34,11 @@ import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
 
 export type ActionDescriptor = {
-  leftClick?: string,
-  rightClick: string
-  leftDrag?: string, 
-  rightDrag?: string, 
-}
+  leftClick?: string;
+  rightClick: string;
+  leftDrag?: string;
+  rightDrag?: string;
+};
 
 /*
   This module contains classes for the different tools, such as MoveTool, SkeletonTool, DrawTool etc.
@@ -195,7 +195,7 @@ export class SkeletonTool {
       }
     };
 
-    let draggingNodeId: number |null|undefined = null;
+    let draggingNodeId: number | null | undefined = null;
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;

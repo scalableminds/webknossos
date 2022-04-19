@@ -5,7 +5,7 @@ import {
   triggerSampleDatasetDownload,
   getDatastores,
 } from "admin/admin_rest_api";
-import  {ValueOf} from "types/globals";
+import { ValueOf } from "types/globals";
 import { useInterval, useFetch } from "libs/react_helpers";
 import { handleGenericError } from "libs/error_handling";
 import type { APISampleDataset } from "types/api_flow_types";
@@ -49,7 +49,10 @@ function useSampleDatasets(
 
   const fetchSampleDatasets = async () => {
     if (datastore == null) return;
-    const sampleDatasets: APISampleDataset[] = await getSampleDatasets(datastore.url, organizationName);
+    const sampleDatasets: APISampleDataset[] = await getSampleDatasets(
+      datastore.url,
+      organizationName,
+    );
     setDatasets(sampleDatasets);
     updateFailedDatasets(sampleDatasets);
     updatePendingDatasets(sampleDatasets);
@@ -87,7 +90,13 @@ const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
     destroy();
   };
 
-  const getAction = ({ status , name }:{status: ValueOf<APISampleDataset["status"]>, name: string}) => {
+  const getAction = ({
+    status,
+    name,
+  }: {
+    status: ValueOf<APISampleDataset["status"]>;
+    name: string;
+  }) => {
     if (failedDatasets.includes(name)) status = "failed";
 
     switch (status) {

@@ -438,7 +438,7 @@ class PlaneController extends React.PureComponent<Props> {
         : emptyDefaultHandler;
     const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
-    
+
     return {
       ...baseControls,
       ...skeletonControls,

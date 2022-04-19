@@ -156,9 +156,9 @@ class SceneController {
       return cube;
     };
 
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'renderedLines' implicitly has type 'any[... Remove this comment to see the full error message
-    let renderedLines = [];
+    let renderedLines: THREE.Line[] = [];
 
+    // Utility function for visual debugging
     // @ts-ignore
     window.addLine = (a: Vector3, b: Vector3) => {
       const material = new THREE.LineBasicMaterial({
@@ -173,9 +173,9 @@ class SceneController {
       renderedLines.push(line);
     };
 
+    // Utility function for visual debugging
     // @ts-ignore
     window.removeLines = () => {
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'renderedLines' implicitly has an 'any[]'... Remove this comment to see the full error message
       for (const line of renderedLines) {
         this.rootNode.remove(line);
       }
@@ -187,8 +187,7 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getIsosurfaceGeometry(cellId: number): THREE.Geometry {
-    // @ts-expect-error ts-migrate(2419) FIXME: Types of construct signatures are incompatible.
+  getIsosurfaceGeometry(cellId: number): THREE.Group {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
@@ -247,7 +246,7 @@ class SceneController {
     // convert to normal (unbuffered) geometry to merge vertices
     const geometry = new THREE.Geometry().fromBufferGeometry(bufferGeometry);
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceMergeVertices' does not exis... Remove this comment to see the full error message
+    // @ts-ignore
     if (window.__isosurfaceMergeVertices) {
       geometry.mergeVertices();
     }
@@ -357,8 +356,7 @@ class SceneController {
     this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mesh' implicitly has an 'any' type.
-      plane.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+      plane.getMeshes().forEach((mesh: THREE.Object3D) => this.rootNode.add(mesh));
     }
 
     // Hide all objects at first, they will be made visible later if needed
@@ -473,17 +471,15 @@ class SceneController {
     if (optArbitraryPlane) {
       optArbitraryPlane.updateAnchorPoints(anchorPoint);
     } else {
-      for (const currentPlane of _.values(this.planes)) {
+      for (const currentPlane of _.values<Plane>(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
 
         if (isVisible) {
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           this.isPlaneVisible[currentPlane.planeID] = true;
           currentPlane.setScale(scaleX, scaleY);
         } else {
-          // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           this.isPlaneVisible[currentPlane.planeID] = false;
           // Set the scale to non-zero values, since threejs will otherwise
           // complain about non-invertible matrices.
@@ -524,11 +520,10 @@ class SceneController {
     const newUserBoundingBoxGroup = new THREE.Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
-      const bbColor = [color[0] * 255, color[1] * 255, color[2] * 255];
+      const bbColor: Vector3 = [color[0] * 255, color[1] * 255, color[2] * 255];
       const bbCube = new Cube({
         min,
         max,
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
         color: Utils.rgbToInt(bbColor),
         showCrossSections: true,
         id,
@@ -568,7 +563,6 @@ class SceneController {
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {
-    // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
     Object.values(this.skeletons).forEach((skeleton: Skeleton) => {
       skeleton.getRootGroup().visible = isVisible;
     });

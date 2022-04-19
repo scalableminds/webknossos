@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (containerElement) {
     ReactDOM.render(
+      // @ts-ignore
       <Provider store={Store}>
         {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
         certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.

@@ -138,6 +138,7 @@ function _convertConnectomeToTreeData(
         // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         agglomerates[+partnerId1][direction],
         partnerId1,
+        // @ts-expect-error direction
         direction,
       ),
       checkable: false,

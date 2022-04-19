@@ -14,7 +14,7 @@ import {
   setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import message from "messages";
-import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
+import { ActionDescriptor, getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
 import {
   calculateGlobalPos,
   isPlaneMode as getIsPlaneMode,
@@ -69,28 +69,27 @@ function ZoomShortcut() {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'actionInfos' implicitly has an 'a... Remove this comment to see the full error message
-function LeftClickShortcut({ actionInfos }) {
+function LeftClickShortcut({ actionDescriptor }: {actionDescriptor: ActionDescriptor}) {
   const leftClick =
-    actionInfos.leftClick != null ? (
+    actionDescriptor.leftClick != null ? (
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-left.svg"
           alt="Mouse Left Click"
         />
-        {actionInfos.leftClick}
+        {actionDescriptor.leftClick}
       </span>
     ) : null;
   const leftDrag =
-    actionInfos.leftDrag != null ? (
+    actionDescriptor.leftDrag != null ? (
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-left-drag.svg"
           alt="Mouse Left Drag"
         />
-        {actionInfos.leftDrag}
+        {actionDescriptor.leftDrag}
       </span>
     ) : null;
   return (
@@ -101,28 +100,27 @@ function LeftClickShortcut({ actionInfos }) {
   );
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'actionInfos' implicitly has an 'a... Remove this comment to see the full error message
-function RightClickShortcut({ actionInfos }) {
+function RightClickShortcut({ actionDescriptor}: {actionDescriptor: ActionDescriptor}) {
   const rightClick =
-    actionInfos.rightClick != null ? (
+    actionDescriptor.rightClick != null ? (
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-right.svg"
           alt="Mouse Right Click"
         />
-        {actionInfos.rightClick}
+        {actionDescriptor.rightClick}
       </span>
     ) : null;
   const rightDrag =
-    actionInfos.rightDrag != null ? (
+    actionDescriptor.rightClick != null ? (
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-right-drag.svg"
           alt="Mouse Right Drag"
         />
-        {actionInfos.rightDrag}
+        {actionDescriptor.rightDrag}
       </span>
     ) : null;
   return (
@@ -148,7 +146,7 @@ function ShortcutsInfo() {
     isControlPressed,
     isAltPressed,
   );
-  const actionInfos = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
+  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
     adaptedTool,
     useLegacyBindings,
     isShiftPressed,
@@ -212,8 +210,8 @@ function ShortcutsInfo() {
 
   return (
     <React.Fragment>
-      <LeftClickShortcut actionInfos={actionInfos} />
-      <RightClickShortcut actionInfos={actionInfos} />
+      <LeftClickShortcut actionDescriptor={actionDescriptor} />
+      <RightClickShortcut actionDescriptor={actionDescriptor} />
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
@@ -274,11 +272,10 @@ function Infos() {
   );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
-  // @ts-expect-error ts-migrate(2551) FIXME: Property 'volume' does not exist on type 'HybridTr... Remove this comment to see the full error message
-  const isVolumeAnnotation = useSelector((state: OxalisState) => state.tracing.volume != null);
+  const isVolumeAnnotation = useSelector((state: OxalisState) => "volume" in state.tracing);
   const activeCellId = useSelector((state: OxalisState) =>
     // @ts-expect-error ts-migrate(2551) FIXME: Property 'volume' does not exist on type 'HybridTr... Remove this comment to see the full error message
-    state.tracing.volume ? state.tracing.volume.activeCellId : null,
+    "volume" in state.tracing ? state.tracing.volume.activeCellId : null,
   );
   const activeNodeId = useSelector((state: OxalisState) =>
     state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
@@ -288,14 +285,11 @@ function Infos() {
   );
   const dispatch = useDispatch();
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
-  const onChangeActiveCellId = (id) => dispatch(setActiveCellAction(id));
+  const onChangeActiveCellId = (id: number) => dispatch(setActiveCellAction(id));
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
-  const onChangeActiveNodeId = (id) => dispatch(setActiveNodeAction(id));
+  const onChangeActiveNodeId = (id: number) => dispatch(setActiveNodeAction(id));
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
-  const onChangeActiveTreeId = (id) => dispatch(setActiveTreeAction(id));
+  const onChangeActiveTreeId = (id: number) => dispatch(setActiveTreeAction(id));
 
   const hasVisibleSegmentation = useSelector(
     (state: OxalisState) => getVisibleSegmentationLayer(state) != null,

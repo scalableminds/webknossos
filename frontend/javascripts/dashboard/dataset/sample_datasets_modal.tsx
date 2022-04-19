@@ -5,6 +5,7 @@ import {
   triggerSampleDatasetDownload,
   getDatastores,
 } from "admin/admin_rest_api";
+import  {ValueOf} from "types/globals";
 import { useInterval, useFetch } from "libs/react_helpers";
 import { handleGenericError } from "libs/error_handling";
 import type { APISampleDataset } from "types/api_flow_types";
@@ -15,25 +16,22 @@ type Props = {
 };
 
 function useSampleDatasets(
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'organizationName' implicitly has an 'an... Remove this comment to see the full error message
-  organizationName,
+  organizationName: string,
 ): [Array<APISampleDataset>, Array<string>, (arg0: string) => Promise<void>] {
-  const [datasets, setDatasets] = useState([]);
-  const [failedDatasets, setFailedDatasets] = useState([]);
-  const [pendingDatasets, setPendingDatasets] = useState([]);
+  const [datasets, setDatasets] = useState<APISampleDataset[]>([]);
+  const [failedDatasets, setFailedDatasets] = useState<string[]>([]);
+  const [pendingDatasets, setPendingDatasets] = useState<string[]>([]);
   // Pick any non-wk-connect datastore - This feature will almost always be used if there is only one datastore anyways
   const datastore = useFetch(getDatastores, [], []).find(
     (ds) => !ds.isConnector && ds.allowsUpload,
   );
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'sampleDatasets' implicitly has an 'any'... Remove this comment to see the full error message
-  const updateFailedDatasets = (sampleDatasets) => {
+  const updateFailedDatasets = (sampleDatasets: APISampleDataset[]) => {
     // Datasets that were pending, but are now available again, failed to download
     setFailedDatasets(
       failedDatasets.concat(
         pendingDatasets.filter((pendingDataset) =>
           sampleDatasets.find(
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
             (dataset) => dataset.name === pendingDataset && dataset.status === "available",
           ),
         ),
@@ -41,21 +39,17 @@ function useSampleDatasets(
     );
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'sampleDatasets' implicitly has an 'any'... Remove this comment to see the full error message
-  const updatePendingDatasets = (sampleDatasets) => {
+  const updatePendingDatasets = (sampleDatasets: APISampleDataset[]) => {
     setPendingDatasets(
       sampleDatasets
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
         .filter((dataset) => dataset.status === "downloading")
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
         .map((dataset) => dataset.name),
     );
   };
 
   const fetchSampleDatasets = async () => {
     if (datastore == null) return;
-    const sampleDatasets = await getSampleDatasets(datastore.url, organizationName);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'APISampleDataset[]' is not assig... Remove this comment to see the full error message
+    const sampleDatasets: APISampleDataset[] = await getSampleDatasets(datastore.url, organizationName);
     setDatasets(sampleDatasets);
     updateFailedDatasets(sampleDatasets);
     updatePendingDatasets(sampleDatasets);
@@ -66,7 +60,6 @@ function useSampleDatasets(
 
     try {
       await triggerSampleDatasetDownload(datastore.url, organizationName, name);
-      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       setPendingDatasets(pendingDatasets.concat(name));
     } catch (error) {
       handleGenericError(error as Error);
@@ -94,8 +87,7 @@ const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
     destroy();
   };
 
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'status' implicitly has an 'any' t... Remove this comment to see the full error message
-  const getAction = ({ status, name }) => {
+  const getAction = ({ status , name }:{status: ValueOf<APISampleDataset["status"]>, name: string}) => {
     if (failedDatasets.includes(name)) status = "failed";
 
     switch (status) {

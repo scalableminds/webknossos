@@ -8,28 +8,24 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import { mod } from "libs/utils";
+import { map3, map4, mod } from "libs/utils";
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'aggregateFn' implicitly has an 'any' ty... Remove this comment to see the full error message
-const aggregatePerDimension = (aggregateFn, buckets): Vector3 =>
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'Vector3'.
-  [0, 1, 2].map((dim) => aggregateFn(...buckets.map((pos) => pos[dim]))); // $FlowIssue[invalid-tuple-arity]
+const aggregatePerDimension = (
+  aggregateFn: (...args: number[]) => number,
+  buckets: Vector4[],
+): Vector3 => map3((dim) => aggregateFn(...buckets.map((pos) => pos[dim])), [0, 1, 2]);
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'buckets' implicitly has an 'any' type.
-const getBBox = (buckets) => ({
+const getBBox = (buckets: Vector4[]) => ({
   cornerMin: aggregatePerDimension(Math.min, buckets),
   cornerMax: aggregatePerDimension(Math.max, buckets),
 });
 
 function createDistinctBucketAdder(bucketsWithPriorities: Array<[Vector4, number]>) {
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'bucketLookUp' implicitly has type 'any[]... Remove this comment to see the full error message
-  const bucketLookUp = [];
+  const bucketLookUp: boolean[][][] = [];
 
   const maybeAddBucket = (bucketPos: Vector4, priority: number) => {
     const [x, y, z] = bucketPos;
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'bucketLookUp' implicitly has an 'any[]' ... Remove this comment to see the full error message
     bucketLookUp[x] = bucketLookUp[x] || [];
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'bucketLookUp' implicitly has an 'any[]' ... Remove this comment to see the full error message
     const lookupX = bucketLookUp[x];
     lookupX[y] = lookupX[y] || [];
     const lookupY = lookupX[y];
@@ -59,21 +55,17 @@ export default function determineBucketsForFlight(
   const fallbackZoomStep = logZoomStep + 1;
   const isFallbackAvailable = fallbackZoomStep < resolutions.length;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_vec' implicitly has an 'any' type.
-  const transformToSphereCap = (_vec) => {
+  const transformToSphereCap = (_vec: Vector3) => {
     const vec = V3.sub(_vec, cameraVertex);
     V3.scale(vec, sphericalCapRadius / V3.length(vec), vec);
     V3.add(vec, cameraVertex, vec);
     return vec;
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vec' implicitly has an 'any' type.
-  const transformAndApplyMatrix = (vec) =>
+  const transformAndApplyMatrix = (vec: Vector3) =>
     M4x4.transformPointsAffine(queryMatrix, transformToSphereCap(vec));
 
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'traversedBucketsWithPriorities' implicit... Remove this comment to see the full error message
-  let traversedBucketsWithPriorities = [];
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'traversedBucketsWithPriorities' implicit... Remove this comment to see the full error message
+  let traversedBucketsWithPriorities: Array<[Vector4, number]> = [];
   const maybeAddBucket = createDistinctBucketAdder(traversedBucketsWithPriorities);
   const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
   const cameraDirection = V3.sub(centerPosition, cameraPosition);
@@ -91,18 +83,13 @@ export default function determineBucketsForFlight(
         resolutions,
         logZoomStep,
       );
-      // $FlowIssue[invalid-tuple-arity]
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector4... Remove this comment to see the full error message
-      const flooredBucketPos: Vector4 = bucketPos.map(Math.floor);
+
+      const flooredBucketPos: Vector4 = map4(Math.floor, bucketPos);
       const priority = Math.abs(x) + Math.abs(y);
       maybeAddBucket(flooredBucketPos, priority);
       const neighbourThreshold = 3;
-      // $FlowIssue[incompatible-call] bucketPos is a Vector4, so idx can only be 0 to 3
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(pos: number, idx: 0 | 3 | 2 | 1... Remove this comment to see the full error message
-      bucketPos.forEach((pos, idx: 0 | 1 | 2 | 3) => {
-        // $FlowIssue[invalid-tuple-arity]
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector4... Remove this comment to see the full error message
-        const newNeighbour: Vector4 = flooredBucketPos.slice();
+      bucketPos.forEach((pos: number, idx: number) => {
+        const newNeighbour = flooredBucketPos.slice() as Vector4;
         const rest = (pos % 1) * constants.BUCKET_WIDTH;
 
         if (rest < neighbourThreshold) {
@@ -119,30 +106,31 @@ export default function determineBucketsForFlight(
   }
 
   // This array holds the four corners and the center point of the rendered plane
-  const planePointsGlobal = [
+  const planePoints: Vector3[] = [
     [-halfWidth, -halfWidth, 0], // 0 bottom left
     [halfWidth, -halfWidth, 0], // 1 bottom right
     [0, 0, 0],
     [-halfWidth, halfWidth, 0], // 3 top left
     [halfWidth, halfWidth, 0], // 4 top right
-  ].map(transformAndApplyMatrix);
+  ];
+  const planePointsGlobal = planePoints.map((vec) => transformAndApplyMatrix(vec));
   const planeBuckets = planePointsGlobal.map((position: Vector3) =>
     globalPositionToBucketPosition(position, resolutions, logZoomStep),
   );
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'boundingBoxBuckets' implicitly has an '... Remove this comment to see the full error message
-  const traverseFallbackBBox = (boundingBoxBuckets) => {
+  const traverseFallbackBBox = (boundingBoxBuckets: {
+    cornerMin: Vector3;
+    cornerMax: Vector3;
+  }): Vector4[] => {
     const tolerance = 1;
-    const fallbackBuckets = [];
+    const fallbackBuckets: Vector4[] = [];
     // use all fallback buckets in bbox
     const min = zoomedAddressToAnotherZoomStep(
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '[...any[], number]' is not assig... Remove this comment to see the full error message
       [...boundingBoxBuckets.cornerMin, logZoomStep],
       resolutions,
       fallbackZoomStep,
     );
     const max = zoomedAddressToAnotherZoomStep(
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '[...any[], number]' is not assig... Remove this comment to see the full error message
       [...boundingBoxBuckets.cornerMax, logZoomStep],
       resolutions,
       fallbackZoomStep,
@@ -162,9 +150,9 @@ export default function determineBucketsForFlight(
   const fallbackBuckets = isFallbackAvailable ? traverseFallbackBBox(getBBox(planeBuckets)) : [];
   // Use a constant priority for the fallback buckets which is higher than the highest non-fallback priority
   const fallbackPriority = 2 * halfWidth + iterStep;
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'traversedBucketsWithPriorities' implicit... Remove this comment to see the full error message
+
   traversedBucketsWithPriorities = traversedBucketsWithPriorities.concat(
-    fallbackBuckets.map((bucket) => [bucket, fallbackPriority]),
+    fallbackBuckets.map((bucket: Vector4) => [bucket, fallbackPriority]),
   );
   let currentCount = 0;
 

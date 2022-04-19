@@ -8,10 +8,11 @@ import {
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'activeUser' implicitly has type 'any' in... Remove this comment to see the full error message
-let activeUser;
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'firstTeam' implicitly has type 'any' in ... Remove this comment to see the full error message
-let firstTeam;
+import { APITeam, APIUser } from "types/api_flow_types";
+
+let activeUser: APIUser;
+let firstTeam: APITeam;
+
 test.before("Reset database and initialize values", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);
@@ -21,9 +22,9 @@ test.before("Reset database and initialize values", async () => {
 
   firstTeam = teams[0];
 });
+
 test("getTimeTrackingForUserByMonth", async (t) => {
   const timeTrackingForUserByMonth = await api.getTimeTrackingForUserByMonth(
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'activeUser' implicitly has an 'any' type... Remove this comment to see the full error message
     activeUser.email,
     moment("20160401", "YYYYMMDD"),
   );
@@ -35,9 +36,9 @@ test("getTimeTrackingForUserByMonth", async (t) => {
     id: "timetracking-timeTrackingForUserByMonth",
   });
 });
+
 test("getTimeTrackingForUser", async (t) => {
   const timeTrackingForUser = await api.getTimeTrackingForUser(
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'activeUser' implicitly has an 'any' type... Remove this comment to see the full error message
     activeUser.id,
     moment("20180101", "YYYYMMDD"),
     moment("20181001", "YYYYMMDD"),
@@ -47,6 +48,7 @@ test("getTimeTrackingForUser", async (t) => {
     id: "timetracking-timeTrackingForUser",
   });
 });
+
 test("getTimeTrackingForUser for a user other than the active user", async (t) => {
   const idUserC = "770b9f4d2a7c0e4d008da6ef";
   const timeTrackingForUser = await api.getTimeTrackingForUser(
@@ -59,8 +61,8 @@ test("getTimeTrackingForUser for a user other than the active user", async (t) =
     id: "timetracking-timeTrackingForUser-C",
   });
 });
+
 test("getProjectProgressReport", async (t) => {
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'firstTeam' implicitly has an 'any' type.
   const projectProgressReport = await api.getProjectProgressReport(firstTeam.id);
   writeTypeCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReport", {
     isArray: true,
@@ -69,8 +71,8 @@ test("getProjectProgressReport", async (t) => {
     id: "timetracking-projectProgressReport",
   });
 });
+
 test("getOpenTasksReport", async (t) => {
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'firstTeam' implicitly has an 'any' type.
   const openTasksReport = await api.getOpenTasksReport(firstTeam.id);
   writeTypeCheckingFile(openTasksReport, "open-tasks", "APIOpenTasksReport", {
     isArray: true,

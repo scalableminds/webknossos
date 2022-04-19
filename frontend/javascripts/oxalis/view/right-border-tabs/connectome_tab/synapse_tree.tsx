@@ -26,11 +26,9 @@ type SrcAndDstSynapse = BaseSynapse & {
   src: number;
   dst: number;
 };
+type DirectionCaptionsKeys = keyof typeof directionCaptions;
 export type Synapse = SrcSynapse | DstSynapse | SrcAndDstSynapse;
-export type Agglomerate = {
-  in?: Array<number>;
-  out?: Array<number>;
-};
+export type Agglomerate = Record<DirectionCaptionsKeys, Array<number>>;
 export type ConnectomeData = {
   agglomerates: Record<number, Agglomerate>;
   synapses: Record<number, Synapse>;
@@ -85,7 +83,7 @@ const synapseData = (synapseId: number, position: Vector3, type: string): Synaps
   synapseType: type,
 });
 
-const noneData = {
+const noneData: NoneData = {
   type: "none",
   id: 0,
 };
@@ -96,7 +94,11 @@ function _convertConnectomeToTreeData(
   if (connectomeData == null) return null;
   const { agglomerates, synapses } = connectomeData;
 
-  const convertSynapsesForPartner = (synapseIds: null | number[], partnerId1: string, direction: keyof typeof directionCaptions): Array<TreeNode> => {
+  const convertSynapsesForPartner = (
+    synapseIds: null | number[],
+    partnerId1: string,
+    direction: DirectionCaptionsKeys,
+  ): Array<TreeNode> => {
     if (synapseIds == null) return [];
     const partnerSynapses = synapseIds
       .map((synapseId) => synapses[synapseId]) // Some synapses might be filtered out
@@ -123,27 +125,26 @@ function _convertConnectomeToTreeData(
   // Second level is the distinction between Incoming and Outgoing synapses.
   // Third level are the respective partner agglomerates.
   // Fourth level are the respective synapses.
-  
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ key: string; title: string; data: SegmentD... Remove this comment to see the full error message
-  return Object.keys(agglomerates).map((partnerId1) => ({
+
+  return Object.keys(agglomerates).map((partnerId1: string) => ({
     key: `segment;${partnerId1};`,
     title: `Segment ${partnerId1}`,
     data: segmentData(+partnerId1, 0),
-    children: Object.keys(agglomerates[+partnerId1]).map((direction) => ({
-      key: `${direction};segment;${partnerId1};`,
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      title: `${directionCaptions[direction]} Synapses`,
-      data: noneData,
-      children: convertSynapsesForPartner(
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-        agglomerates[+partnerId1][direction],
-        partnerId1,
-        // @ts-expect-error direction
-        direction,
-      ),
-      checkable: false,
-      selectable: false,
-    })),
+    children: Object.keys(agglomerates[+partnerId1]).map(
+      // @ts-ignore TypeScript doesn't correctly infer the type of Object.keys, but assumes string instead
+      (direction: DirectionCaptionsKeys) => ({
+        key: `${direction};segment;${partnerId1};`,
+        title: `${directionCaptions[direction]} Synapses`,
+        data: noneData,
+        children: convertSynapsesForPartner(
+          agglomerates[+partnerId1][direction],
+          partnerId1,
+          direction,
+        ),
+        checkable: false,
+        selectable: false,
+      }),
+    ),
   }));
 }
 
@@ -174,7 +175,7 @@ class SynapseTree extends React.Component<Props, State> {
   };
 
   handleSelect = (
-    selectedKeys: Array<string>,
+    _selectedKeys: Array<string>,
     evt: {
       selected: boolean;
       selectedNodes: Array<TreeNode>;

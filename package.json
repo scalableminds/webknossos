@@ -29,6 +29,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@types/react-virtualized": "^9.21.21",
     "@types/sinon": "^10.0.11",
+    "@types/url-join": "^4.0.0",
     "@typescript-eslint/eslint-plugin": "^5.18.0",
     "@typescript-eslint/parser": "^5.18.0",
     "abort-controller": "^3.0.0",

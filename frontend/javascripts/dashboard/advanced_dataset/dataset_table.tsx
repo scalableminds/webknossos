@@ -1,11 +1,15 @@
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Table, Tag, Tooltip } from "antd";
-import type { SorterResult } from "antd/lib/table/interface";
+import type {
+  FilterValue,
+  SorterResult,
+  TableCurrentDataSource,
+  TablePaginationConfig,
+} from "antd/lib/table/interface";
 import * as React from "react";
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'dice... Remove this comment to see the full error message
-import dice from "dice-coefficient";
+import { diceCoefficient as dice } from "dice-coefficient";
 import update from "immutability-helper";
 import type {
   APITeam,
@@ -72,12 +76,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
     };
   }
 
-  handleChange = (
-    pagination: Record<string, any>,
-    filters: Record<string, any>,
-    sorter: SorterResult<string>,
+  handleChange = <RecordType extends object = any>(
+    _pagination: TablePaginationConfig,
+    _filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<RecordType> | SorterResult<RecordType>[],
+    _extra: TableCurrentDataSource<RecordType>,
   ) => {
     this.setState({
+      // @ts-ignore
       sortedInfo: sorter,
     });
   };
@@ -86,44 +92,36 @@ class DatasetTable extends React.PureComponent<Props, State> {
     this.props.reloadDataset(datasetId, this.props.datasets);
 
   getFilteredDatasets() {
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
-    const filterByMode = (datasets) => {
+    const filterByMode = (datasets: APIMaybeUnimportedDataset[]) => {
       const { datasetFilteringMode } = this.props;
 
       if (datasetFilteringMode === "onlyShowReported") {
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
         return datasets.filter((el) => !el.isUnreported);
       } else if (datasetFilteringMode === "onlyShowUnreported") {
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
         return datasets.filter((el) => el.isUnreported);
       } else {
         return datasets;
       }
     };
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
-    const filteredByTags = (datasets) =>
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
+    const filteredByTags = (datasets: APIMaybeUnimportedDataset[]) =>
       datasets.filter((dataset) => {
         const notIncludedTags = _.difference(this.props.searchTags, dataset.tags);
 
         return notIncludedTags.length === 0;
       });
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
-    const filterByQuery = (datasets) =>
+    const filterByQuery = (datasets: APIMaybeUnimportedDataset[]) =>
       Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description" | "tags">(
         datasets,
         ["name", "description", "tags"],
         this.props.searchQuery,
       );
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'datasets' implicitly has an 'any' type.
-    const filterByHasLayers = (datasets) =>
+    const filterByHasLayers = (datasets: APIMaybeUnimportedDataset[]) =>
       this.props.isUserAdmin || this.props.isUserDatasetManager
         ? datasets
         : datasets.filter(
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dataset' implicitly has an 'any' type.
             (dataset) => dataset.isActive && dataset.dataSource.dataLayers.length > 0,
           );
 
@@ -250,13 +248,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
         pagination={{
           defaultPageSize: 50,
         }}
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
+        onChange={this.handleChange}
         expandedRowRender={
           isUserAdmin || isUserTeamManager
             ? (dataset) => <DatasetAccessListView dataset={dataset} />
-            : null
+            : undefined
         }
-        onChange={this.handleChange}
         locale={{
           emptyText: this.renderEmptyText(),
         }}

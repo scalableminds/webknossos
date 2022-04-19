@@ -3,10 +3,12 @@ webKnossos is built for working collaboratively and sharing your work with colle
 Anything in webKnossos can be shared: the raw datasets, any skeleton or volume annotations, or complex segmentations.
 
 When speaking about collaboration and sharing, we imagine two scenarios supported by webKnossos:
+
 1. Sharing data with outsiders - anyone who is not a member of your webKnossos organization, e.g., colleagues from other institutes, reviewers, publishers, a paper publication, and the research community as a whole.
 2. Share data within your organization to collaborate with other members/co-workers
 
 Since webKnossos is a web platform, most resources can be shared as a web link/URL. This makes it super easy to integrate webKnossos in your existing communication workflows, e.g.:
+
 - send collaborators an *email* containing a link to specific, interesting data location or annotations
 - include a link in a *publication* so readers can have direct access to the data to see for themselves
 - share a link through *Slack*, *MS Teams*, or any other messenger service
@@ -27,6 +29,7 @@ webKnossos sharing is tightly integrated with user permissions and access rights
  The the sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.
 
  Sharing a dataset is useful for multiple scenarios: 
+ 
  - You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@webknossos.org)) to create these shortlinks.
  - You created an interesting, highly-accurate segmentation layer for an existing dataset and want to share it for your publication.
  - You have worked and published several datasets over the years and want to have a single gallery for all your public datasets.
@@ -46,17 +49,19 @@ To share a dataset privately, follow these steps:
 2. Select the dataset that you want to share and click on `Settings`.
 3. Under the `Sharing & Permissions` tab, scroll down to the `Sharing Link` and copy it. 
 
-![Configure the Dataset Sharing](images/dataset_general.png)
+![Configure the Dataset Sharing](images/dataset_general.jpeg)
 
 To revoke a sharing link in the future, click the `Revoke` button to the right-hand side of the link.
 
-!!! warning
-    Do not enable the `Make dataset publicly accessible` checkbox or otherwise anyone with a link can access this dataset without needing to log in/authenticate.
-    Public access rights are not required for private sharing.
+
+  **Do not enable the `Make dataset publicly accessible` checkbox or otherwise anyone with a link can access this dataset without needing to log in/authenticate.
+  Public access rights are not required for private sharing.**
 
 ### Public Sharing
 Public sharing provides access to your dataset to the general public.
 Anyone can access the shared dataset and view it on your webKnossos instance without the need for an account.
+
+![The Featured Publications tab provides a public showcase of selected published, community datasets. ](images/getting_started-datasets.jpeg)
 
 Public datasets provide an easy and convenient way of sharing your data with outside users after you have successfully published them.
 Outside users can explore your data from the comfort of their browser without needing to sign up for an account.
@@ -69,15 +74,15 @@ To share a dataset publicly, follow these steps:
 4. Copy the sharing link and distribute it to your colleagues through email, social media, messengers, etc.
 5. (Recommended. From the `Metadata` tab, add/edit the dataset's description and give it a more appropriate title (`Display name`)).
 
+![The Metadata tab overvview](images/metadata_tab.jpeg)
 
-!!! info
-    We recommend giving your datasets a meaningful display name and description.
-    Both are featured next to the data viewport in the `Info` tab in the main webKnossos UI.
+  **We recommend giving your datasets a meaningful display name and description. Both are featured next to the data viewport in the `Info` tab in the main webKnossos UI.**
 
 
 ## Annotation Sharing
 Besides sharing just a dataset for viewing, webKnossos can also share complete annotations, e.g., a large-scale skeleton reconstruction.
 Sharing works for both skeletons and volume annotations.
+
 
 ### Annotation Permissions
 There are three options to control who can see an annotation if they know the annotation URL:
@@ -91,9 +96,10 @@ To change the visibility of an annotation, follow these steps:
 
 1. Open your annotation from the dashboard
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
-3. Select the desired permission level from the three available options.
+3. At the right side of the screen press 'share dialog' if you want to configure the visibility of your annotation.
+4. Select the desired permission level from the three available options.
 
-![Configure the Annotation Permissions](images/sharing_modal_visibility.png)
+![Configure the Annotation Permissions](images/sharing_modal_visibility.jpeg)
 
 ### Link Sharing
 Annotations can be shared via a link. People, who obtain the link, must have access to the annotation according to the permissions above to view the annotation.
@@ -122,7 +128,7 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Copy the sharing URL.
 
-![Get the Annotation Sharing Link](images/sharing_modal_link.png)
+![Get the Annotation Sharing Link](images/sharing_modal_link.jpeg)
 
 #### Sharing Link Format
 
@@ -134,6 +140,7 @@ The information is JSON-encoded in the URL fragment and has the following format
 
 <details>
   <summary>URL Fragment Format</summary>
+  
   ```javascript
   type MappingType = "JSON" | "HDF5";
   type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
@@ -173,7 +180,7 @@ The information is JSON-encoded in the URL fragment and has the following format
       }
     },
   };
-
+  
   type UrlManagerState = {|
     position?: Vector3,
     mode?: ViewMode,
@@ -186,6 +193,7 @@ The information is JSON-encoded in the URL fragment and has the following format
   ```
 </details>
 
+
 To avoid having to create annotations in advance when programmatically crafting links, a sandbox annotation can be used. A sandbox annotation is always accessible through the same URL and offers all available annotation features, however, changes are not saved. At any point, users can decide to copy the current state to their account. The sandbox can be accessed at `<webknossos_host>/datasets/<organization>/<dataset>/sandbox/skeleton`.
 
 ### Team Sharing
@@ -193,16 +201,16 @@ In addition to sharing your annotation via a link, you can also share your annot
 This is the simplest way to share an annotation with a whole team.
 
 To share an annotation with a certain team, follow these steps:
+
 1. Open your annotation
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Under *Team Sharing*, select the teams from the dropdown menu.
 
 If members of these teams open their [Shared Annotations Dashboard Tab](./dashboard.md#shared-annotations), they will see your annotation.
 
-![Enable Team Sharing for your annotation](images/sharing_modal_team.png)
+![Enable Team Sharing for your annotation](images/sharing_modal_team.jpeg)
 
-!!! info
-    Next to the integrated Annotation Sharing features, you can also download annotations and send them via email to collaborators.
+**Next to the integrated Annotation Sharing features, you can also download annotations and send them via email to collaborators.**
 
 ![Video: Connect Publications to Your Dataset](https://www.youtube.com/watch?v=hcm8Jx22DG8)
 

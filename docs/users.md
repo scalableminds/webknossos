@@ -22,7 +22,7 @@ All new organization members are assigned to that team by default.
 
 An organization can contain as many teams as you like. Users can be assigned to multiple teams.
 
-![All users, annotations, and datasets belong to an organization. All users are assigned to a default team. Further teams can be created for fine-grained access permissions.](images/teams.png)
+![All users, annotations, and datasets belong to an organization. All users are assigned to a default team. Further teams can be created for fine-grained access permissions.](images/teams.jpeg)
 
 
 ## Access Rights / Roles
@@ -80,7 +80,7 @@ On webKnossos.org, users can either sign up for a webKnossos account by themselv
 !!!info
     As an admin or team manager, you can invite users to join your webKnossos organization by clicking the `Invite Users` button at the top of the `Users` list available from the `Admin` menu in the navbar. This will open a popup where you can enter a list of email addresses, which will receive a custom invitation link. Users that click on this link are automatically assigned to your organization, and will not need manual activation.
 
-    ![Send an invite link to new users](./images/users_invite.png)
+    ![Send an invite link to new users](./images/users_invite.jpeg)
 
 ## Switching Organizations
 A webKnossos user account can be part of more than one organization, .e.g., when your are invited to collaborate on projects of another institute, working as a different webKnossos organization.
@@ -99,11 +99,12 @@ After that time or by default for any other inactive users, the `Users` list onl
 
 
 When activating new users, a popup opens for
+
   - team assignment
   - access role assignment
 
-![Activate new users](./images/users_activate1.png)
-![Assign roles to new users](./images/users_activate2.png)
+![Activate new users](./images/users_activate1.jpeg)
+![Assign roles to new users](./images/users_activate2.jpeg)
 
 ## Password Reset / Change Email Address
 

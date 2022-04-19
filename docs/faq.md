@@ -10,8 +10,8 @@ We also provide intro calls to answer your questions or walk you through the pla
 
 ## I have a very large dataset and need help annotating it
 There are two options to help you with data annotation:
-1. Invite collaborators to your webKnossos organization, set up a project to work on, and assign them sub-volumes of your data for annotation. See the [page on tasks and projects for more info](./tasks.md). 
 
+1. Invite collaborators to your webKnossos organization, set up a project to work on, and assign them sub-volumes of your data for annotation. See the [page on tasks and projects for more info](./tasks.md). 
 2. We also offer professional services to help with annotation. We can do both [manual annotations](https://webknossos.org/services/annotations) for your data or apply [automated segmentations](https://webknossos.org/services/automated-segmentation) on large-scale datasets.
 
 ## Where can I ask questions or report issues on webKnossos?
@@ -38,6 +38,7 @@ Smaller datasets (up to multiple GB) can be uploaded directly through the web in
 ## Can I host the webKnossos data in my own compute cluster (on-premise installation)?
 
 webKnossos consists of two components that allow for versatile deployment options:
+
 1. The webKnossos main component handles user and task management.
 2. The datastore component serves data requests and stores skeleton and volume annotations.
 

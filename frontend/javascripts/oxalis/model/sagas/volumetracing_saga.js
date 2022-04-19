@@ -15,7 +15,6 @@ import {
   type Saga,
   _takeEvery,
   _takeLatest,
-  _takeLeading,
   call,
   fork,
   put,
@@ -103,9 +102,7 @@ import * as Utils from "libs/utils";
 import VolumeLayer, { getFast3DCoordinateHelper } from "oxalis/model/volumetracing/volumelayer";
 import createProgressCallback from "libs/progress_callback";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import inferSegmentInViewport, {
-  getHalfViewportExtents,
-} from "oxalis/model/sagas/automatic_brush_saga";
+import { getHalfViewportExtents } from "oxalis/model/sagas/saga_selectors";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
@@ -118,7 +115,6 @@ export function* watchVolumeTracingAsync(): Saga<void> {
     copySegmentationLayer,
     "Copying from neighbor slice",
   );
-  yield _takeLeading("INFER_SEGMENT_IN_VIEWPORT", inferSegmentInViewport);
   yield* fork(warnOfTooLowOpacity);
 }
 
@@ -486,7 +482,7 @@ function* copySegmentationLayer(action: Action): Saga<void> {
     if (templateLabelValue === activeCellId) {
       const currentLabelValue = cube.getDataValue(voxelTargetAddress, null, labeledZoomStep);
 
-      // Do not overwrite already labelled voxels
+      // Do not overwrite already labeled voxels
       if (currentLabelValue === 0) {
         const bucket = cube.getOrCreateBucket(
           cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
@@ -508,6 +504,8 @@ function* copySegmentationLayer(action: Action): Saga<void> {
     }
   }
 
+  const thirdDim = dimensionIndices[2];
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
   let direction = 1;
   const useDynamicSpaceDirection = yield* select(
@@ -515,26 +513,38 @@ function* copySegmentationLayer(action: Action): Saga<void> {
   );
   if (useDynamicSpaceDirection) {
     const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
-    direction = spaceDirectionOrtho[dimensionIndices[2]];
+    direction = spaceDirectionOrtho[thirdDim];
   }
 
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;
+  // When using this tool in more coarse resolutions, the distance to the previous/next slice might be larger than 1
+  const previousZ = z + direction * directionInverter * labeledResolution[thirdDim];
   for (let x = tx - halfViewportExtentX; x < tx + halfViewportExtentX; x++) {
     for (let y = ty - halfViewportExtentY; y < ty + halfViewportExtentY; y++) {
       copyVoxelLabel(
-        Dimensions.transDim([x, y, tz + direction * directionInverter], activeViewport),
+        Dimensions.transDim([x, y, previousZ], activeViewport),
         Dimensions.transDim([x, y, z], activeViewport),
       );
     }
   }
 
-  const thirdDim = dimensionIndices[2];
+  if (labeledVoxelMapOfCopiedVoxel.size === 0) {
+    const dimensionLabels = ["x", "y", "z"];
+    Toast.warning(
+      `Did not copy any voxels from slice ${dimensionLabels[thirdDim]}=${previousZ}.` +
+        ` Either no voxels with cell id ${activeCellId} were found or all of the respective voxels were already labeled in the current slice.`,
+    );
+  }
+
+  // applyVoxelMap assumes get3DAddress to be local to the corresponding bucket (so in the labeled resolution as well)
+  const zInLabeledResolution =
+    Math.floor(tz / labeledResolution[thirdDim]) % Constants.BUCKET_WIDTH;
   applyVoxelMap(
     labeledVoxelMapOfCopiedVoxel,
     cube,
     activeCellId,
-    getFast3DCoordinateHelper(activeViewport, z),
+    getFast3DCoordinateHelper(activeViewport, zInLabeledResolution),
     1,
     thirdDim,
     false,

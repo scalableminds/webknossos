@@ -8,7 +8,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 4. The right-hand side panel is occupied by several tabs providing more information on your current dataset, skeleton/volume annotations, and other lists. Depending on your editing mode these tabs might adapt.
 5. The bottom of the screen is covered by a status bar showing context-sensitive hints for mouse controls as well as additional information on mouse hover.
 
-![An overview of the webKnossos annotation UI highlighting the 4 main sections of the interface](images/tracing_ui_overview.png)
+![An overview of the webKnossos annotation UI highlighting the 4 main sections of the interface](images/tracing_ui_overview.jpeg)
 
 [Read More About Skeleton Annotation](./skeleton_annotation.md)
 [Read More About Volume Annotation](./volume_annotation.md)
@@ -17,6 +17,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 The toolbar contains frequently used commands, such as saving and sharing, your current position within the dataset, and the ability to switch between various modes for viewing. Further, it provides access to all the tools for annotation, navigation, and more.
 
 The most common buttons are:
+
 - `Settings`: Toggles the visibility of the left-hand side panel with all data and segmentation layers and their respective settings.
 - `Undo` / `Redo`: Undoes the last operation or redoes it if no new changes have been made in the meantime. Undo can only revert changes made in this session (since the moment the annotation view was opened). To revert to older versions use the "Restore Older Version" functionality described later in this list.
 - `Save`: Saves your annotation work. webKnossos automatically saves every 30 seconds.
@@ -30,9 +31,9 @@ A user can directly jump to any position within their datasets by entering them 
 The same is true for the camera rotation in flight/oblique modes.
 Clicking on the position or rotation labels copies the values to the clipboard.
 
-![The webKnossos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.png)
+![The webKnossos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.jpeg)
 
-The toolbar further features aöl available navigation and annotation tools for quick access:
+The toolbar further features all available navigation and annotation tools for quick access:
 
 - `Move`: Navigate around the dataset.
 - `Skeleton`: Create skeleton annotations and place nodes. [Read more about skeleton annotations](./skeleton_annotation.md#tools).
@@ -45,7 +46,7 @@ The toolbar further features aöl available navigation and annotation tools for 
 
 Please see the detailed documentation on [skeleton](./skeleton_annotation.md#tools) and [volume annotation](./volume_annotation.md#tools) tools for a for explaination of all context-sensitve modifiers that are available to some tools.
 
-// todo add image of toolbar
+![The webKnossos navigation and annotation tools](images/tracing_ui_toolbar2.jpeg)
 
 ## Layers and Settings
 The left-hand side panel features both a list of all available data and annotation layers as well as settings menu to fine-tune some parameters of webKnossos.
@@ -56,18 +57,18 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 
 #### Histogram & General Layer Properties
 - `Histogram`: The Histogram displays sampled color values of the dataset on a logarithmic scale. The slider below the Histogram can be used to adjust the dynamic range of the displayed values. In order to increase the contrast of data, reduce the dynamic range. To decrease the contrast, widen the range. In order to increase the brightness, move the range to the left. To decrease the brightness, move the range to the right.
+Above the the histogram, there are icon buttons to further adjust the histogram or otherwise interact with the layer:
 
-    Above the the histogram, there are icon buttons to further adjust the histogram or otherwise interact with the layer:
-        - `pencil`: Manipulate the min/max value of the histogram range. Clips values above/below these limits. 
-        - `vertical line`: Automatically adjust the histogram for best contrast. Contrast estimation is based on the data currently available in your viewport.
-        - `circle arrow`: Reload the data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
-        - `scanner`: Navigates the webKnossos camera to a position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually. 
+    - `pencil`: Manipulate the min/max value of the histogram range. Clips values above/below these limits. 
+    - `vertical line`: Automatically adjust the histogram for best contrast. Contrast estimation is based on the data currently available in your viewport.
+    - `circle arrow`: Reload the data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
+    - `scanner`: Navigates the webKnossos camera to a position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually. 
 
 - `Opacity`: Increase / Decrease the opacity of the data layer. 0% opacity makes a layer invisible. 100% opacity makes it totally opaque. Useful for overlaying several layers above one another.
 - `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggeling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview. 
 Disabling the visibility, unloads/frees these resources from your GPU hardware and can make viewing larger datasets more performant. Also, depending on your GPU hardware, there is a physical upper limit for how many layers - typically 16 or more - can be displayed at any time (WebGL limitation). Toggle layers as needed to mitigate this.
 
-//TODO add imaeg of histogram
+![The Histogram overview](images/histogram.jpeg)
 
 #### Color and Segmentation Layers
 In addition to the general layer properties mentioned above, `color` and `segmentation` layers come with a number of other settings:

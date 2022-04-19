@@ -32,19 +32,19 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 
 ## Screenshots
 
-![Skeleton Annotations](./images/tracing_ui_skeleton.png)
-![Volume Annotations](./images/tracing_ui_volume.png)
-![Flight Mode](./images/tracing_ui_flight.png)
+![Skeleton Annotations](./images/tracing_ui_skeleton.jpeg)
+![Volume Annotations](./images/tracing_ui_volume.jpeg)
+![Flight Mode](./images/tracing_ui_flight.jpeg)
 
-![Managing Datasets](./images/dashboard_datasets.png)
-![Working on Tasks](./images/dashboard_tasks.png)
-![Showcasing Datasets](./images/spotlight.png)
+![Managing Datasets](./images/dashboard_datasets.jpeg)
+![Working on Tasks](./images/dashboard_tasks.jpeg)
+![Showcasing Datasets](./images/dashboard_featured_publications.jpeg)
 
 # Built for Science
 webKnossos is built for scientists with support by scientists. Our goal is to make image analysis and data exploration accessible and easy to use. 
 While originally designed for the annotation of electron microscopy of neural circuits, we have seen great projects using it to analyze MRI/CT scans, fluorescences microscopy images, and synchrotron datasets.
 
-webKnossos' impact on data annotation in neuroscience and Connectomics has been published in Nature, 2017 and many other [publications](./publications.md):
+webKnossos' impact on data annotation in neuroscience and Connectomics has been published in Nature Methods, 2017 and many other [publications](./publications.md):
 
 > Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter
 webKnossos: efficient online 3D data annotation for connectomics.

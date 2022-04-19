@@ -72,22 +72,23 @@ export type APIHistogramData = Array<{
   max: number,
 }>;
 
-type MutableAPIDataSourceBase = {
+type MutableAPIDataSourceBase = {|
   id: {
     name: string,
     team: string,
   },
   status?: string,
-};
+|};
 
 type APIDataSourceBase = $ReadOnly<MutableAPIDataSourceBase>;
 
 type APIUnimportedDatasource = APIDataSourceBase;
 
-export type MutableAPIDataSource = MutableAPIDataSourceBase & {
+export type MutableAPIDataSource = {|
+  ...MutableAPIDataSourceBase,
   dataLayers: Array<APIDataLayer>,
   scale: Vector3,
-};
+|};
 
 export type APIDataSource = $ReadOnly<MutableAPIDataSource>;
 
@@ -561,7 +562,6 @@ export type APIFeatureToggles = {
   +discussionBoardRequiresAdmin: boolean,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +autoBrushReadyDatasets: Array<string>,
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
   +allowDeleteDatasets: boolean,

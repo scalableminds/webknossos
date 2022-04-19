@@ -7,6 +7,7 @@ The webKnosso-wrap (WKW) container format is used for all internal voxel data re
 Any dataset uploaded to webKnossos.org, will automatically be converted to WKW on upload - given its source file format is supported by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html) or use a custom script based on the [webKnossos Python libray](https://docs.webknossos.org/webknossos-py/index.html).
 
 Additionally, webKnossos.org supports connecting and loading data from:
+
 - Neuroglancer Pre-Computed Dataset stored on Google Cloud
 - BossDB
 
@@ -78,7 +79,7 @@ WKW cubes are 1024^3 voxels in size by default and each cube is stored as one fi
 Each cube contains multiple *buckets* of 32^3 voxel size.
 This is the unit in which the data is streamed to the users' browser.
 
-![Datasets, Cubes, and Buckets](images/cubes-and-buckets.png)
+![Datasets, Cubes, and Buckets](images/cubes-and-buckets.jpeg)
 
 ### Layers
 
@@ -89,7 +90,7 @@ Additionally, there may be one or more `segmentation` layers that hold manually 
 
 A webKnossos dataset can contain several `color` and `segmentation` layers which can be rendered individually or overlayed on top of each other. The maximium number of visible layers depends on your GPU hardware - typically 16 layers.
 
-![Color and Segmentation Layers](images/datalayers.png)
+![Color and Segmentation Layers](images/datalayers.jpeg)
 
 ### Magnification Steps and Downsampling
 
@@ -100,7 +101,7 @@ Downsampling is done in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, …`
 
 webKnossos also supports non-uniform (anisotropic) downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimensions, but not in `z`.
 
-![Downsampling the data to improve zooming](images/downsampling.png)
+![Downsampling the data to improve zooming](images/downsampling.jpeg)
 
 
 ### Segmentation
@@ -321,6 +322,7 @@ Groups can be freely nested inside each other.
 webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerate" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
 
 webKnossos supports two formats for these agglomerates:
+
 - JSON -> `mappings` directory
 - HDF5 -> `agglomerates` directory
  (JSON-format) or `agglomerates` directory (HDF5-format) :

@@ -26,10 +26,12 @@ webKnossos uses the [WKW-format](./data_formats.md#wkw-datasets) internally to d
 If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
 
 If your data is not in WKW, you can either:
+
 - upload the data in a supported file format and webKnossos will automatically convert it to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset, the conversion will take some time. You can check the progress at the "Jobs" page or the "My Datasets" page in the dashboard (both will update automatically).
 - [Convert](#converting-datasets) your data manually to WKW.
 
 In particular, the following file formats are supported for uploading (and conversion):
+
 - [WKW dataset](#WKW-Datasets)
 - [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (tif, jpg, png, dm3, dm4)
   - as an extension, multiple folders with image sequences are interpreted as [separate layers](#Multi-Layer-Image-File-Sequence)
@@ -41,10 +43,12 @@ Once the data is uploaded (and potentially converted), you can further configure
 
 ### Working with Neuroglancer and BossDB dataset
 On webKnossos.org you can work directly with 
+
 - datasets in the Neuroglancer precomputed format stored in the Google Cloud
 - datasets provided by a BossDB server
 
 To import these datasets:
+
 1. From the *My dataset* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Neuroglancer Dataset* or *Add BossDB Dataset* tab
 3. Provide some metadata information:
@@ -66,7 +70,9 @@ We are working on integrating full Zarr support into webKnossos. If you have dat
 ### Uploading through the Python API
 For those wishing to automate dataset upload or to do it programmatically, check out the webKnossos [Python library](https://github.com/scalableminds/webknossos-libs). It allows you to create, manage and upload datasets as well. 
 
-### Uploading through the File System (Self-Hosted Instances Only)
+### Uploading through the File System
+-- (Self-Hosted Instances Only)-- 
+
 On self-hosted instances, large datasets can be efficiently imported by placing them directly in the file system:
 
 * Place the dataset at `<webKnossos directory>/binaryData/<Organization name>/<Dataset name>`. For example `/opt/webknossos/binaryData/Springfield_University/great_dataset`.
@@ -81,7 +87,8 @@ Typically webKnossos can infer all the required metadata for a dataset automatic
     If you uploaded the dataset along with a `datasource-properties.json` metadata file, the dataset will be imported automatically without any additional manual steps.
 
 
-#### Using Symbolic Links (Self-Hosted Instances Only)
+#### Using Symbolic Links
+-- Self-Hosted Instances Only --
 
 When you have direct file system access, you can also use symbolic links to import your data into webKnossos. This might be useful when you want to create new datasets based on potentially very large raw microscopy data and symlink it to one or several segmentation layers.
 
@@ -106,6 +113,7 @@ services:
 Any dataset uploaded through the web interface at [webknossos.org](https://webknossos.org) is automatically converted for compatibility.
 
 For manual conversion, we provide the following software tools and libraries:
+
 - The [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) is a CLI tool that can convert many formats to WKW. 
 - For other file formats, the [Python webKnossos libray](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
@@ -125,6 +133,7 @@ The *Data* tab contains the settings for correctly reading the dataset as the co
 - `Scale`: The physical size of a voxel in nanometers, e.g., `11, 11, 24`
 
 For each detected layer:
+
 - `Bounding Box`: The position and extents of the dataset layer in voxel coordinates. The format is `x, y, z, x_size,y_size, z_size` or respectively `min_x, min_y, min_z, (max_x - min_x), (max_y - min_y), (max_z - min_z)`.
 - `Largest Segment ID`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
 
@@ -132,7 +141,7 @@ The `Advanced` view lets you edit the underlying [JSON configuration](./data_for
 
 webKnossos automatically periodically checks and detects changes to a dataset's metadata (`datasource-properties.json`) on disk (only relevant for self-hosted instances). Before applying these suggestions, users can preview all the new settings (as JSON) and inspect just the detected difference (as JSON).
 
-![Dataset Editing: Data Tab](images/dataset_data.png)
+![Dataset Editing: Data Tab](images/dataset_data.jpeg)
 
 
 ### Sharing & Permissions Tab
@@ -141,28 +150,30 @@ webKnossos automatically periodically checks and detects changes to a dataset's 
 - `Sharing Link`: A web URL pointing to this dataset for easy sharing that allows any user to view your dataset. The URL contains an access token to allow people to view the dataset without a webKnossos account. The access token is random, and therefore the URL cannot be guessed by visitors. You may also revoke the access token to create a new one. Anyone with a URL containing a revoked token will no longer have access to this dataset. 
 Read more in [the Sharing guide](./sharing.md).
 
-// Todo add image
+![Dataset Editing: Sharing Tab](images/sharing_tab.jpeg)
 
 ### Metadata Tab
 - `Display Name`: A meaningful name for a dataset other than its (automatically assigned) technical name which is usually limited by naming rules of file systems. It is displayed in various parts of webKnossos. The display name may contain special characters and can also be changed without invalidating already created sharing URLs. It can also be useful when sharing datasets with outsiders while "hiding" any internal naming schemes or make it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
 - `Description`: A free-text field for providing more information about your datasets, e.g., authors, paper reference, descriptions, etc. Supports Markdown formatting. The description will be featured in the webKnossos UI when opening a dataset in view mode.
 
-// Todo add image
+![Dataset Editing: Metadata Tab](images/metadata_tab.jpeg)
 
 ### View Configuration Tab
 The *View configuration* tab lets you set defaults for viewing this dataset. Anytime a user opens a dataset or creates a new annotation based on this dataset, these default values will be applied. 
 
 Defaults include:
+
 - `Position`: Default position of the dataset in voxel coordinates. When opening the dataset, users will be located at this position.
 - `Zoom`: Default zoom.
 - `Interpolation`: Whether interpolation should be enabled by default.
 - `Layer Configuration`: Advanced feature to control the default settings on a per-layer basis. It needs to be configured in JSON format. E.g., layer visibility & opacity, color, contrast/brightness/intensity range ("histogram sliders"), and many more.
 
-![Dataset Editing: View Configuration Tab](images/dataset_view_config.png)
+![Dataset Editing: View Configuration Tab](images/dataset_view_config.jpeg)
 
 Of course, the defaults can all be overwritten and adjusted once a user opens the dataset in the main webKnossos interface and makes changes to any of these settings in his viewports. 
 
 For self-hosted webKnossos instances, there are two ways to set default *View Configuration* settings:
+
 - in the web UI as described above
 - inside the `datasource_properties.json` on disk
 
@@ -170,14 +181,11 @@ The *View Configuration* from the web UI takes precedence over the `datasource_p
 You don't have to set complete *View Configurations* in either option, as webKnossos will fill missing attributes with sensible defaults.
 
 
-// Todo add image
-
 ### Delete Tab
 
-Offers an option to delete a dataset and completely removes it from webKnossos. Careful, this can not be undone.
+Offers an option to delete a dataset and completely removes it from webKnossos. Careful, this can not be undone!
 
-// Todo add image
-
+![Dataset Editing: Delete Tab](images/delete_tab.jpeg)
 
 
 ## Dataset Sharing
@@ -197,20 +205,23 @@ scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
 
 For convenience and testing, we provide a list of sample datasets for webKnossos:
 
-- Sample_e2006_wkw: https://static.webknossos.org/data/e2006_wkw.zip
-Raw SBEM data and segmentation (sample cutout, 120MB).
-Connectomic reconstruction of the inner plexiform layer in the mouse retina.
-M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.
-Nature. 08 August 2013. https://doi.org/10.1038/nature12346
+- **Sample_e2006_wkw**  
+  [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)  
+  Raw SBEM data and segmentation (sample cutout, 120MB).  
+  Connectomic reconstruction of the inner plexiform layer in the mouse retina.  
+  M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.  
+  Nature. 08 August 2013. [https://doi.org/10.1038/nature12346](https://doi.org/10.1038/nature12346)
 
-- Sample_FD0144_wkw: https://static.webknossos.org/data/FD0144_wkw.zip
-Raw SBEM data and segmentation (sample cutout, 316 MB).
-FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.
-F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.
-eLife. 14 August 2018. https://doi.org/10.7554/eLife.38976
+- **Sample_FD0144_wkw**  
+  Raw SBEM data and segmentation (sample cutout, 316 MB).  
+  [https://static.webknossos.org/data/FD0144_wkw.zip](https://static.webknossos.org/data/FD0144_wkw.zip)  
+  FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.  
+  F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.  
+  eLife. 14 August 2018. [https://doi.org/10.7554/eLife.38976](https://doi.org/10.7554/eLife.38976)
 
-- Sample_MPRAGE_250um: https://static.webknossos.org/data/MPRAGE_250um.zip
-MRI data (250 MB).
-T1-weighted in vivo human whole brain MRI dataset with an ultrahigh isotropic resolution of 250 μm.
-F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.
-Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32
+* **Sample_MPRAGE_250um**  
+  MRI data (250 MB).  
+  [https://static.webknossos.org/data/MPRAGE_250um.zip](https://static.webknossos.org/data/MPRAGE_250um.zip)  
+  T1-weighted in vivo human whole brain MRI dataset with an ultrahigh isotropic resolution of 250 μm.
+  F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.  
+  Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32

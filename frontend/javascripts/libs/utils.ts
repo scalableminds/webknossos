@@ -36,6 +36,13 @@ export function map3<A, B>(fn: (arg0: A, arg1: 0 | 1 | 2) => B, tuple: [A, A, A]
   const [x, y, z] = tuple;
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
 }
+export function map4<A, B>(
+  fn: (arg0: A, arg1: 0 | 1 | 2 | 3) => B,
+  tuple: [A, A, A, A],
+): [B, B, B, B] {
+  const [x, y, z, q] = tuple;
+  return [fn(x, 0), fn(y, 1), fn(z, 2), fn(q, 3)];
+}
 export function floor3(tuple: Vector3): Vector3 {
   const [x, y, z] = tuple;
   return [Math.floor(x), Math.floor(y), Math.floor(z)];

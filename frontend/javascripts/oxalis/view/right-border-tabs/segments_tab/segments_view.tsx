@@ -8,16 +8,12 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
-import { ValueOf } from "types/globals";
 import { MappingStatusEnum } from "oxalis/constants";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
-import {
-  deleteMeshAction,
-  updateCurrentMeshFileAction,
-} from "oxalis/model/actions/annotation_actions";
+import { updateCurrentMeshFileAction } from "oxalis/model/actions/annotation_actions";
 import {
   getActiveSegmentationTracing,
   getVisibleSegments,
@@ -36,10 +32,7 @@ import {
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
-import {
-  updateDatasetSettingAction,
-  updateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   updateSegmentAction,
   setActiveCellAction,
@@ -55,7 +48,6 @@ import type {
   OxalisState,
   Segment,
   SegmentMap,
-  DatasetConfiguration,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -137,17 +129,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 };
 
 const mapDispatchToProps = (dispatch: Dispatch<any>): any => ({
-  onChangeDatasetSettings(
-    propertyName: keyof DatasetConfiguration,
-    value: ValueOf<DatasetConfiguration>,
-  ) {
-    dispatch(updateDatasetSettingAction(propertyName, value));
-  },
-
-  deleteMesh(id: string) {
-    dispatch(deleteMeshAction(id));
-  },
-
   setHoveredSegmentId(segmentId: number | null | undefined) {
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
   },
@@ -556,7 +537,7 @@ class SegmentsView extends React.Component<Props, State> {
                 </Option>
               ))
             ) : (
-              <Option value={""} disabled>
+              <Option value="" disabled>
                 No files available.
               </Option>
             )}

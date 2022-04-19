@@ -27,6 +27,7 @@
     "@types/react-dom": "^17.0.14",
     "@types/react-redux": "^7.1.23",
     "@types/react-router-dom": "^5.3.3",
+    "@types/react-virtualized": "^9.21.21",
     "@types/sinon": "^10.0.11",
     "@typescript-eslint/eslint-plugin": "^5.18.0",
     "@typescript-eslint/parser": "^5.18.0",

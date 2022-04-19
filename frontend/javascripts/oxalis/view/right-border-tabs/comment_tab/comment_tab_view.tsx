@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
 import { Input, Menu, Dropdown, Tooltip } from "antd";
@@ -492,7 +491,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   }}
                 >
                   <AutoSizer>
-                    {({ height, width }: { height: number; width: number }) => (
+                    {({ height, width }) => (
                       <div
                         style={{
                           height,

@@ -216,8 +216,7 @@ class StatisticView extends React.PureComponent<{}, State> {
               )} - ${this.state.endDate.format("DD.MM.YYYY")}`}
               style={{
                 marginTop: 30,
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
-                marginBotton: 30,
+                marginBottom: 30,
               }}
             >
               <Spin spinning={this.state.isTimeEntriesLoading} size="large">
@@ -227,8 +226,7 @@ class StatisticView extends React.PureComponent<{}, State> {
                   rowKey={(entry) => entry.user.id}
                   style={{
                     marginTop: 30,
-                    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
-                    marginBotton: 30,
+                    marginBottom: 30,
                   }}
                   pagination={false}
                 >

@@ -1,10 +1,9 @@
 import { Select } from "antd";
 import { connect } from "react-redux";
 import React from "react";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import debounceRender from "react-debounce-render";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { OrthoView, Vector3 } from "oxalis/constants";
+import type { OrthoView, Vector3, Vector4 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
@@ -25,6 +24,7 @@ import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 const { Option, OptGroup } = Select;
+
 type OwnProps = {
   layerName: string;
 };
@@ -63,26 +63,24 @@ type State = {
   didRefreshMappingList: boolean;
 };
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'h' implicitly has an 'any' type.
-const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
+const convertHSLAToCSSString = ([h, s, l, a]: Vector4) =>
+  `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 
 export const convertCellIdToCSS = (
   id: number,
   customColors: Array<number> | null | undefined,
   alpha?: number,
 ) =>
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
   id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
 const hasSegmentation = () => Model.getVisibleSegmentationLayer() != null;
 
 const needle = "##";
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'mappingName' implicitly has an 'any' ty... Remove this comment to see the full error message
-const packMappingNameAndCategory = (mappingName, category) => `${category}${needle}${mappingName}`;
+const packMappingNameAndCategory = (mappingName: string, category: MappingType) =>
+  `${category}${needle}${mappingName}`;
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'packedString' implicitly has an 'any' t... Remove this comment to see the full error message
-const unpackMappingNameAndCategory = (packedString) => {
+const unpackMappingNameAndCategory = (packedString: string) => {
   const needlePos = packedString.indexOf(needle);
   const categoryName = packedString.slice(0, needlePos);
   const mappingName = packedString.slice(needlePos + needle.length);
@@ -102,8 +100,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     }
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'prevProps' implicitly has an 'any' type... Remove this comment to see the full error message
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps: Props) {
     if (this.props.isMappingEnabled !== prevProps.isMappingEnabled) {
       this.refreshLayerMappings();
     }
@@ -122,7 +119,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     this.props.setMapping(this.props.layerName, mappingName, mappingType, {
       showLoadingIndicator: true,
     });
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
+    // @ts-ignore
     if (document.activeElement) document.activeElement.blur();
   };
 
@@ -140,7 +137,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     this.setState({
       isRefreshingMappingList: true,
     });
-    const params = [
+    const params: [string, APIDataset, string] = [
       this.props.dataset.dataStore.url,
       this.props.dataset, // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
       segmentationLayer.fallbackLayer != null
@@ -148,9 +145,7 @@ class MappingSettingsView extends React.Component<Props, State> {
         : segmentationLayer.name,
     ];
     const [mappings, agglomerates] = await Promise.all([
-      // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
       getMappingsForDatasetLayer(...params),
-      // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
       getAgglomeratesForDatasetLayer(...params),
     ]);
     this.props.setAvailableMappingsForLayer(segmentationLayer.name, mappings, agglomerates);
@@ -196,13 +191,11 @@ class MappingSettingsView extends React.Component<Props, State> {
           }
         : {};
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'optionStrings' implicitly has an 'any' ... Remove this comment to see the full error message
-    const renderCategoryOptions = (optionStrings, category) => {
+    const renderCategoryOptions = (optionStrings: string[], category: MappingType) => {
       const useGroups = availableMappings.length > 0 && availableAgglomerates.length > 0;
       const elements = optionStrings
         .slice()
         .sort(Utils.localeCompareBy([] as Array<string>, (optionString) => optionString))
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'optionString' implicitly has an 'any' t... Remove this comment to see the full error message
         .map((optionString) => (
           <Option
             key={packMappingNameAndCategory(optionString, category)}

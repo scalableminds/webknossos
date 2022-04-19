@@ -25,7 +25,6 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
     api.data.getViewportData(OrthoViews.PLANE_XZ, layerName),
     api.data.getViewportData(OrthoViews.PLANE_YZ, layerName),
   ]);
-  // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
   const dataForAllViewPorts = new TypedArrayClass(
     cuboidXY.length + cuboidXZ.length + cuboidYZ.length,
   );

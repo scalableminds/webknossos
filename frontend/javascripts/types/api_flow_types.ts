@@ -268,11 +268,11 @@ export type APIScriptCreator = APIScriptTypeBase & {
 };
 type APIProjectTypeBase = {
   readonly name: string;
-  readonly team: string; // id
-  readonly teamName: string;
+  readonly team: string;
   readonly priority: number;
   readonly paused: boolean;
-  readonly expectedTime: number; // Also known as "time limit"
+  readonly expectedTime: number;
+  // Also known as "time limit"
   readonly isBlacklistedFromReport: boolean;
 };
 export type APIProject = APIProjectTypeBase & {
@@ -305,7 +305,6 @@ export type APITask = {
     readonly value: number;
   };
   readonly projectName: string;
-  readonly projectId: string;
   readonly script: APIScript | null | undefined;
   readonly status: TaskStatus;
   readonly team: string;

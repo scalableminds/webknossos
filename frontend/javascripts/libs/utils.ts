@@ -274,7 +274,7 @@ export function areBoundingBoxesOverlappingOrTouching(
   return areOverlapping;
 }
 export function compareBy<T>(
-  collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
+  _collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
   selector: (arg0: T) => number,
   isSortedAscending: boolean = true,
 ): Comparator<T> {

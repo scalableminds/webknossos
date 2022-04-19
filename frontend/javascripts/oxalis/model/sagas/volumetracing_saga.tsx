@@ -77,6 +77,7 @@ import type {
   AnnotationTool,
   Vector3,
   LabeledVoxelsMap,
+  Vector2,
 } from "oxalis/constants";
 import Constants, {
   OrthoViews,
@@ -93,7 +94,10 @@ import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import VolumeLayer, { getFast3DCoordinateHelper } from "oxalis/model/volumetracing/volumelayer";
+import VolumeLayer, {
+  getFast3DCoordinateHelper,
+  VoxelBuffer2D,
+} from "oxalis/model/volumetracing/volumelayer";
 import createProgressCallback from "libs/progress_callback";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getHalfViewportExtents } from "oxalis/model/sagas/saga_selectors";
@@ -335,10 +339,8 @@ function* createVolumeLayer(
 }
 
 function* labelWithVoxelBuffer2D(
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'voxelBuffer' implicitly has an 'any' ty... Remove this comment to see the full error message
-  voxelBuffer,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'contourTracingMode' implicitly has an '... Remove this comment to see the full error message
-  contourTracingMode,
+  voxelBuffer: VoxelBuffer2D,
+  contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ): Saga<void> {
@@ -357,8 +359,7 @@ function* labelWithVoxelBuffer2D(
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'x' implicitly has an 'any' type.
-  const get3DCoordinateFromLocal2D = ([x, y]) =>
+  const get3DCoordinateFromLocal2D = ([x, y]: Vector2) =>
     voxelBuffer.get3DCoordinate([x + voxelBuffer.minCoord2d[0], y + voxelBuffer.minCoord2d[1]]);
 
   const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
@@ -489,8 +490,7 @@ function* copySegmentationLayer(action: Action): Saga<void> {
   const activeCellId = volumeTracing.activeCellId;
   const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'voxelTemplateAddress' implicitly has an... Remove this comment to see the full error message
-  function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
+  function copyVoxelLabel(voxelTemplateAddress: Vector3, voxelTargetAddress: Vector3) {
     const templateLabelValue = cube.getDataValue(voxelTemplateAddress, null, labeledZoomStep);
 
     // Only copy voxels from the previous layer which belong to the current cell
@@ -771,16 +771,16 @@ function applyLabeledVoxelMapToAllMissingResolutions(
 
   // Given a sequence of resolutions, the inputLabeledVoxelMap is applied
   // over all these resolutions.
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'samplingSequence' implicitly has an 'an... Remove this comment to see the full error message
-  function processSamplingSequence(samplingSequence, getNumberOfSlices) {
+  function processSamplingSequence(
+    samplingSequence: Array<[number, Vector3]>,
+    getNumberOfSlices: (arg0: Vector3) => number,
+  ) {
     // On each sampling step, a new LabeledVoxelMap is acquired
     // which is used as the input for the next down-/upsampling
     let currentLabeledVoxelMap: LabeledVoxelsMap = inputLabeledVoxelMap;
 
     for (const [source, target] of pairwise(samplingSequence)) {
-      // @ts-expect-error ts-migrate(2488) FIXME: Type 'unknown' must have a '[Symbol.iterator]()' m... Remove this comment to see the full error message
       const [sourceZoomStep, sourceResolution] = source;
-      // @ts-expect-error ts-migrate(2488) FIXME: Type 'unknown' must have a '[Symbol.iterator]()' m... Remove this comment to see the full error message
       const [targetZoomStep, targetResolution] = target;
       currentLabeledVoxelMap = sampleVoxelMapToResolution(
         currentLabeledVoxelMap,
@@ -808,13 +808,11 @@ function applyLabeledVoxelMapToAllMissingResolutions(
 
   // First upsample the voxel map and apply it to all better resolutions.
   // sourceZoomStep will be higher than targetZoomStep
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'targetResolution' implicitly has an 'an... Remove this comment to see the full error message
   processSamplingSequence(upsampleSequence, (targetResolution) =>
     Math.ceil(labeledResolution[thirdDim] / targetResolution[thirdDim]),
   );
   // Next we downsample the annotation and apply it.
   // sourceZoomStep will be lower than targetZoomStep
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_targetResolution' implicitly has an 'a... Remove this comment to see the full error message
   processSamplingSequence(downsampleSequence, (_targetResolution) => 1);
 }
 

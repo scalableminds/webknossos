@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { AutoSizer } from "react-virtualized";
 import { Checkbox, Dropdown, Menu, Modal, notification } from "antd";
 import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
@@ -607,7 +606,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const { activeTreeId, activeGroupId } = this.props;
     return (
       <AutoSizer>
-        {({ height, width }: { height: number; width: number }) => (
+        {({ height, width }) => (
           <div
             style={{
               height,

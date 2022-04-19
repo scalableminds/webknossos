@@ -1,4 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { AutoSizer } from "react-virtualized";
 import { Dropdown, Menu, Tag, Tree } from "antd";
 import React from "react";
@@ -97,13 +96,10 @@ function _convertConnectomeToTreeData(
   if (connectomeData == null) return null;
   const { agglomerates, synapses } = connectomeData;
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'synapseIds' implicitly has an 'any' typ... Remove this comment to see the full error message
-  const convertSynapsesForPartner = (synapseIds, partnerId1, direction): Array<TreeNode> => {
+  const convertSynapsesForPartner = (synapseIds: null | number[], partnerId1: string, direction: keyof typeof directionCaptions): Array<TreeNode> => {
     if (synapseIds == null) return [];
     const partnerSynapses = synapseIds
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'synapseId' implicitly has an 'any' type... Remove this comment to see the full error message
       .map((synapseId) => synapses[synapseId]) // Some synapses might be filtered out
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'synapse' implicitly has an 'any' type.
       .filter((synapse) => synapse != null);
 
     const synapsesByPartner = _.groupBy(partnerSynapses, direction === "in" ? "src" : "dst");
@@ -127,6 +123,7 @@ function _convertConnectomeToTreeData(
   // Second level is the distinction between Incoming and Outgoing synapses.
   // Third level are the respective partner agglomerates.
   // Fourth level are the respective synapses.
+  
   // @ts-expect-error ts-migrate(2322) FIXME: Type '{ key: string; title: string; data: SegmentD... Remove this comment to see the full error message
   return Object.keys(agglomerates).map((partnerId1) => ({
     key: `segment;${partnerId1};`,
@@ -290,7 +287,7 @@ class SynapseTree extends React.Component<Props, State> {
         {/* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
          This has a major performance impact. */}
         <AutoSizer defaultHeight={500}>
-          {({ height, width }: { height: number; width: number }) => (
+          {({ height, width }) => (
             <div
               style={{
                 height,

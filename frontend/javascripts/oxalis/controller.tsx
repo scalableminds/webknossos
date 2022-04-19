@@ -220,7 +220,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     return (
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'WebGLRenderingContext' does not exist on... Remove this comment to see the full error message
       window.WebGLRenderingContext &&
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
       document.createElement("canvas").getContext("experimental-webgl")
     );
   }

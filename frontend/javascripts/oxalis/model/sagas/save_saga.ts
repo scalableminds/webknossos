@@ -1,5 +1,4 @@
-// import type { Saga, Task } from "redux-saga";
-// import type { SagaGenerator as Saga } from "typed-redux-saga";
+import { Task } from "redux-saga";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
@@ -104,7 +103,6 @@ import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
-import { Task } from "redux-saga";
 
 // This function is needed so that Flow is satisfied
 // with how a mere promise is awaited within a saga.

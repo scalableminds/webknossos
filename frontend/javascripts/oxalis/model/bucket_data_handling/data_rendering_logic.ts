@@ -14,12 +14,12 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   const canvas = document.createElement("canvas");
   const contextProvider =
     "getContext" in canvas
-      ? (x: any) => canvas.getContext(x)
+      ? (ctxName: "webgl") => canvas.getContext(ctxName)
       : (ctxName: string) => ({
           MAX_TEXTURE_SIZE: 0,
           MAX_TEXTURE_IMAGE_UNITS: 1,
 
-          getParameter(param: string) {
+          getParameter(param: number) {
             if (ctxName === "webgl") {
               const dummyValues: Record<string, any> = {
                 "0": 4096,

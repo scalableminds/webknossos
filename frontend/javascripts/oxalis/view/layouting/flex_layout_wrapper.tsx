@@ -64,6 +64,7 @@ type State = {
   model: Model;
 };
 const ignoredLayoutChangesByAnalytics = ["FlexLayout_SetActiveTabset", "FlexLayout_SelectTab"];
+type BorderOpenStatusKeys = keyof BorderOpenStatus;
 
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
@@ -421,13 +422,18 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const currentBorderOpenStatus = Store.getState().uiInformation.borderOpenStatus;
     const isMaximizing = this.maximizedItemId != null;
     // If a tab is maximized, this.borderOpenStatusWhenNotMaximized will not change and therefore save the BorderOpenStatus before maximizing.
-    Object.entries(this.borderOpenStatusWhenNotMaximized).forEach(([side, isOpen]) => {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      if ((isOpen && isMaximizing) || (!isMaximizing && currentBorderOpenStatus[side] !== isOpen)) {
-        // Close all border if a tab is maximized and restore border status before maximizing.
-        this.toggleBorder(side, false);
-      }
-    });
+    Object.entries(this.borderOpenStatusWhenNotMaximized).forEach(
+      // @ts-ignore Typescript doesn't infer the type of side to "left" | "right" but only string, instead
+      ([side, isOpen]: [BorderOpenStatusKeys, boolean]) => {
+        if (
+          (isOpen && isMaximizing) ||
+          (!isMaximizing && currentBorderOpenStatus[side] !== isOpen)
+        ) {
+          // Close all border if a tab is maximized and restore border status before maximizing.
+          this.toggleBorder(side, false);
+        }
+      },
+    );
   };
 
   onAction = (action: Action) => {
@@ -449,9 +455,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
       const toggledViewportId = this.state.model.getNodeById(data.node).getChildren()[0].getId();
 
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      if (OrthoViews[toggledViewportId] != null) {
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+      if (toggledViewportId in OrthoViews) {
+        // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
         this.props.setActiveViewport(OrthoViews[toggledViewportId]);
       }
     }
@@ -465,18 +470,16 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     return action;
   };
 
-  toggleBorder(side: string, toggleInternalState: boolean = true) {
+  toggleBorder(side: BorderOpenStatusKeys, toggleInternalState: boolean = true) {
     // The most recent version of borderOpenStatus is needed as two border toggles might be executed directly after another.
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
     const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
     this.props.setBorderOpenStatus(borderOpenStatusCopy);
 
     if (toggleInternalState && this.maximizedItemId == null) {
       // Only adjust the internal state if the toggle is not automated and no tab is maximized.
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       this.borderOpenStatusWhenNotMaximized[side] = !this.borderOpenStatusWhenNotMaximized[side];
     }
 

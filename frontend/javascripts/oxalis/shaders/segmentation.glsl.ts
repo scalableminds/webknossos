@@ -1,6 +1,3 @@
-import type { ShaderModule } from "./shader_module_system";
-import { binarySearchIndex } from "./mappings.glsl";
-import { getRgbaAtIndex } from "./texture_access.glsl";
 import {
   hsvToRgb,
   jsRgb2hsv,
@@ -11,6 +8,9 @@ import {
   jsColormapJet,
 } from "oxalis/shaders/utils.glsl";
 import { Vector4 } from "oxalis/constants";
+import type { ShaderModule } from "./shader_module_system";
+import { binarySearchIndex } from "./mappings.glsl";
+import { getRgbaAtIndex } from "./texture_access.glsl";
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex, getElementOfPermutation, aaStep, colormapJet],
   code: `

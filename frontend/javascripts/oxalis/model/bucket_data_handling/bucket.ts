@@ -12,7 +12,7 @@ import {
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { mod } from "libs/utils";
-import type { BoundingBoxType, TypedArray, Vector3, Vector4 } from "oxalis/constants";
+import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
@@ -80,7 +80,7 @@ export class NullBucket {
 export const getConstructorForElementClass = (
   type: ElementClass,
 ): [
-  Uint8ArrayConstructor | Uint16ArrayConstructor | Uint32ArrayConstructor|Float32ArrayConstructor,
+  Uint8ArrayConstructor | Uint16ArrayConstructor | Uint32ArrayConstructor | Float32ArrayConstructor,
   number,
 ] => {
   switch (type) {
@@ -381,14 +381,12 @@ export class DataBucket {
   uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
     return arrayBuffer != null
-      ? 
-        new TypedArrayClass(
+      ? new TypedArrayClass(
           arrayBuffer.buffer,
           arrayBuffer.byteOffset,
           arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
         )
-      : 
-        new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
+      : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
   }
 
   markAsNeeded(): void {

@@ -4,9 +4,9 @@ import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_acces
 import * as Utils from "libs/utils";
 import mockRequire from "mock-require";
 import test from "ava";
-import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
-import { OxalisState } from "oxalis/store";
 import { Vector3 } from "oxalis/constants";
+import { OxalisState } from "oxalis/store";
+import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 mockRequire.stopAll();
 mockRequire("app", {
   currentUser: {
@@ -56,7 +56,8 @@ test.before((t) => {
   });
 });
 
-const skeletonCreator = () => new Skeleton((state: OxalisState) => getSkeletonTracing(state.tracing), true);
+const skeletonCreator = () =>
+  new Skeleton((state: OxalisState) => getSkeletonTracing(state.tracing), true);
 
 test.serial("Skeleton should initialize correctly using the store's state", (t) => {
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
@@ -100,7 +101,10 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
     t.is(nodeBufferGeometryAttributes.type.array.length, nodeCapacity);
     t.is(nodeBufferGeometryAttributes.nodeId.array.length, nodeCapacity);
     t.is(nodeBufferGeometryAttributes.treeId.array.length, nodeCapacity);
-    t.deepEqual(nodeBufferGeometryAttributes.position.array, new Float32Array(nodePositions as any as number[]));
+    t.deepEqual(
+      nodeBufferGeometryAttributes.position.array,
+      new Float32Array(nodePositions as any as number[]),
+    );
     t.deepEqual(nodeBufferGeometryAttributes.radius.array, new Float32Array(nodeRadii));
     t.deepEqual(nodeBufferGeometryAttributes.type.array, new Float32Array(nodeTypes));
     t.deepEqual(nodeBufferGeometryAttributes.nodeId.array, new Float32Array(nodeIds));
@@ -180,7 +184,7 @@ test.serial.cb("Skeleton should update tree colors upon tree creation", (t) => {
   Store.dispatch(createTreeAction());
   getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
     const { activeTreeId, trees } = skeletonTracing;
-  
+
     if (activeTreeId != null) {
       const activeTree = trees[activeTreeId];
 

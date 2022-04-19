@@ -104,6 +104,7 @@ import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
+import { Task } from "redux-saga";
 
 // This function is needed so that Flow is satisfied
 // with how a mere promise is awaited within a saga.
@@ -167,8 +168,7 @@ function unpackRelevantActionForUndo(action: Action): RelevantActionsForUndoRedo
     };
   } else if (action.type === "IMPORT_VOLUMETRACING") {
     return {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ importTracingAction: ImportVolumeTracingAc... Remove this comment to see the full error message
-      importTracingAction: action,
+      importVolumeTracingAction: action,
     };
   } else if (action.type === "UNDO") {
     return {
@@ -204,8 +204,7 @@ export function* collectUndoStates(): Saga<void> {
   let previousAction: any | null | undefined = null;
   let prevSkeletonTracingOrNull: SkeletonTracing | null | undefined = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'Task'.
-  let pendingCompressions: Array<Task<void>> = [];
+  let pendingCompressions: Array<Task> = [];
   const volumeInfoById: Record<
     string,
     {
@@ -440,16 +439,12 @@ function getBoundingBoxToUndoState(
 ): BoundingBoxUndoState | null | undefined {
   const isSameActionOnSameBoundingBox =
     previousAction != null &&
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'UserBounding... Remove this comment to see the full error message
-    userBoundingBoxAction.id != null &&
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'Action'.
-    previousAction.id != null &&
+    "id" in userBoundingBoxAction &&
+    "id" in previousAction &&
     userBoundingBoxAction.type === previousAction.type &&
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'id' does not exist on type 'UserBounding... Remove this comment to see the full error message
     userBoundingBoxAction.id === previousAction.id;
   // Used to distinguish between different resizing actions of the same bounding box.
   const isFinishedResizingAction =
-    // @ts-expect-error ts-migrate(2367) FIXME: This condition will always return 'false' since th... Remove this comment to see the full error message
     userBoundingBoxAction.type === "FINISHED_RESIZING_USER_BOUNDING_BOX";
 
   if (!isSameActionOnSameBoundingBox && !isFinishedResizingAction) {
@@ -543,8 +538,11 @@ function* applyStateOfStack(
 
   yield* put(setBusyBlockingInfoAction(true, `${direction} is being performed.`));
   const stateToRestore = sourceStack.pop();
+  if (stateToRestore == null) {
+    // Emptiness of stack was already checked above. Satisfy typescript.
+    return;
+  }
 
-  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   if (stateToRestore.type === "skeleton") {
     if (prevSkeletonTracingOrNull != null) {
       stackToPushTo.push({
@@ -553,11 +551,9 @@ function* applyStateOfStack(
       });
     }
 
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const newTracing = stateToRestore.data;
     yield* put(setTracingAction(newTracing));
     yield* put(centerActiveNodeAction());
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "volume") {
     const isMergerModeEnabled = yield* select(
       (state) => state.temporaryConfiguration.isMergerModeEnabled,
@@ -565,7 +561,6 @@ function* applyStateOfStack(
 
     if (isMergerModeEnabled) {
       Toast.info(messages["tracing.edit_volume_in_merger_mode"]);
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'UndoState | undefined' is not as... Remove this comment to see the full error message
       sourceStack.push(stateToRestore);
       return;
     }
@@ -578,12 +573,10 @@ function* applyStateOfStack(
       successMessageDelay: 2000,
     });
     yield* call(progressCallback, false, `Performing ${direction}...`);
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const volumeBatchToApply = stateToRestore.data;
     const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "bounding_box") {
     if (prevUserBoundingBoxes != null) {
       stackToPushTo.push({
@@ -592,12 +585,9 @@ function* applyStateOfStack(
       });
     }
 
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const newBoundingBoxes = stateToRestore.data;
     yield* put(setUserBoundingBoxesAction(newBoundingBoxes));
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
   } else if (stateToRestore.type === "warning") {
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     Toast.info(stateToRestore.reason);
   }
 }
@@ -899,7 +889,7 @@ export function* sendRequestToServer(
       // @ts-ignore
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'onbeforeunload' does not exist on type '... Remove this comment to see the full error message
+        // @ts-ignore
         window.onbeforeunload = null;
         yield* call(
           [ErrorHandling, ErrorHandling.notify],
@@ -979,11 +969,9 @@ export function performDiffTracing(
   prevTdCamera: CameraData,
   tdCamera: CameraData,
 ): Array<UpdateAction> {
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'actions' implicitly has type 'any[]' in ... Remove this comment to see the full error message
-  let actions = [];
+  let actions: Array<UpdateAction> = [];
 
   if (prevTracing.type === "skeleton" && tracing.type === "skeleton") {
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'actions' implicitly has an 'any[]' type.
     actions = actions.concat(
       Array.from(diffSkeletonTracing(prevTracing, tracing, prevFlycam, flycam)),
     );

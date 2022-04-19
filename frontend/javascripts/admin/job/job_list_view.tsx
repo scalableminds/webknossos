@@ -290,8 +290,7 @@ class JobListView extends React.PureComponent<Props, State> {
               }}
               style={{
                 marginTop: 30,
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTop: number; marginBotton: number; }... Remove this comment to see the full error message
-                marginBotton: 30,
+                marginBottom: 30,
               }}
             >
               <Column

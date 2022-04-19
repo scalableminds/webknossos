@@ -819,9 +819,11 @@ export function convertBufferToImage(
   return new Promise((resolve) => {
     width = Math.round(width);
     height = Math.round(height);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
+    if (ctx == null) {
+      throw new Error("Could not create canvas 2d context.");
+    }
     canvas.width = width;
     canvas.height = height;
     const imageData = ctx.createImageData(width, height);

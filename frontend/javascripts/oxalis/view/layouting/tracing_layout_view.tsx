@@ -127,7 +127,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     document.body.removeChild(document.getElementById("main-container"));
     window.removeEventListener("resize", this.debouncedOnLayoutChange);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
     const refreshMessage = document.createElement("p");
     refreshMessage.innerHTML = "Reloading webKnossos...";
     refreshMessage.style.position = "absolute";

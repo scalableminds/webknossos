@@ -173,12 +173,6 @@ type APIUnimportedDataset = APIDatasetBase & {
 
 export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
 
-export type APISampleDataset = {
-  +name: string,
-  +description: string,
-  +status: "available" | "downloading" | "present",
-};
-
 export type APIDataSourceWithMessages = {
   +dataSource?: APIDataSource,
   +previousDataSource?: APIDataSource,

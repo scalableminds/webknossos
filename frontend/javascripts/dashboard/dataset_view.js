@@ -18,12 +18,10 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
-import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
 import { CategorizationSearch } from "oxalis/view/components/categorization_label";
 import features, { getDemoDatasetUrl } from "features";
-import renderIndependently from "libs/render_independently";
 import Persistence from "libs/persistence";
 import { getJobs } from "admin/admin_rest_api";
 import moment from "moment";
@@ -129,31 +127,9 @@ function DatasetView(props: Props) {
     setSearchQuery(event.target.value);
   }
 
-  function renderSampleDatasetsModal() {
-    renderIndependently(destroy => (
-      <SampleDatasetsModal
-        onOk={context.checkDatasets}
-        organizationName={user.organization}
-        destroy={destroy}
-      />
-    ));
-  }
-
   function renderPlaceholder() {
     const noDatasetsPlaceholder =
       "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
-
-    const addSampleDatasetCard = (
-      <OptionCard
-        header="Add Sample Dataset"
-        icon={<RocketOutlined />}
-        action={<Button onClick={renderSampleDatasetsModal}>Add Sample Dataset</Button>}
-        height={350}
-      >
-        This is the easiest way to try out webKnossos. Add one of our sample datasets and start
-        exploring in less than a minute.
-      </OptionCard>
-    );
 
     const openPublicDatasetCard = (
       <OptionCard
@@ -173,7 +149,7 @@ function DatasetView(props: Props) {
     const uploadPlaceholder = (
       <React.Fragment>
         <Row type="flex" gutter={16} justify="center" align="bottom">
-          {features().isDemoInstance ? openPublicDatasetCard : addSampleDatasetCard}
+          {features().isDemoInstance ? openPublicDatasetCard : null}
           <OptionCard
             header="Upload Dataset"
             icon={<CloudUploadOutlined />}

@@ -27,7 +27,6 @@ class DataSourceController @Inject()(
     dataSourceService: DataSourceService,
     remoteWebKnossosClient: DSRemoteWebKnossosClient,
     accessTokenService: DataStoreAccessTokenService,
-    sampleDatasetService: SampleDataSourceService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     meshFileService: MeshFileService,
     connectomeFileService: ConnectomeFileService,
@@ -241,24 +240,6 @@ Expects:
         }
       }
     }
-
-  @ApiOperation(hidden = true, value = "")
-  def fetchSampleDataSource(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
-        for {
-          _ <- sampleDatasetService.initDownload(organizationName, dataSetName, token)
-        } yield JsonOk(Json.obj("messages" -> "downloadInitiated"))
-      }
-    }
-
-  @ApiOperation(hidden = true, value = "")
-  def listSampleDataSources(token: Option[String], organizationName: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources, token) {
-        Ok(Json.toJson(sampleDatasetService.listWithStatus(organizationName)))
-      }
-  }
 
   @ApiOperation(hidden = true, value = "")
   def explore(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {

@@ -6,40 +6,25 @@ import React, { useState } from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
 
-import type { APIUser, APIDataStore } from "types/api_flow_types";
+import type { APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view";
 import DatasetAddNeuroglancerView from "admin/dataset/dataset_add_neuroglancer_view";
 import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
-import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
-import LinkButton from "components/link_button";
 import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
-import renderIndependently from "libs/render_independently";
 import { useFetch } from "libs/react_helpers";
 
 const { TabPane } = Tabs;
 const { Content, Sider } = Layout;
 
-type Props = {|
-  activeUser: APIUser,
-|};
+type Props = {||};
 type PropsWithRouter = {|
   ...Props,
   history: RouterHistory,
 |};
-
-const renderSampleDatasetsModal = (user: APIUser, history: RouterHistory) => {
-  renderIndependently(destroy => (
-    <SampleDatasetsModal
-      organizationName={user.organization}
-      destroy={destroy}
-      onOk={() => history.push("/dashboard/datasets")}
-    />
-  ));
-};
 
 const fetchCategorizedDatastores = async (): Promise<{
   own: Array<APIDataStore>,
@@ -52,7 +37,7 @@ const fetchCategorizedDatastores = async (): Promise<{
   };
 };
 
-const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
+const DatasetAddView = ({ history }: PropsWithRouter) => {
   const datastores = useFetch(fetchCategorizedDatastores, { own: [], wkConnect: [] }, []);
   const [datasetName, setDatasetName] = useState("");
   const [organization, setOrganization] = useState("");
@@ -172,14 +157,6 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
               </TabPane>
             )}
           </Tabs>
-          <div style={{ textAlign: "center" }}>
-            <p>or</p>
-            <p>
-              <LinkButton onClick={() => renderSampleDatasetsModal(activeUser, history)}>
-                Add a Sample Dataset
-              </LinkButton>
-            </p>
-          </div>
         </Content>
         <VoxelyticsBanner />
       </Layout>

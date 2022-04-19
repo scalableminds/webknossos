@@ -4,7 +4,7 @@
 // appropriate.
 // See compactToggleActions for the high-level logic of the compaction.
 import _ from "lodash";
-import type { SkeletonTracing, Tree, VolumeTracing } from "oxalis/store";
+import type { SkeletonTracing, Tree, TreeGroup, TreeMap, VolumeTracing } from "oxalis/store";
 import type {
   UpdateAction,
   UpdateTreeVisibilityUpdateAction,
@@ -13,6 +13,7 @@ import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sa
 import {
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
+  MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 type GroupNode = {
   children: Array<GroupNode>;
@@ -20,20 +21,15 @@ type GroupNode = {
   parent: GroupNode | null | undefined;
 };
 
-// Returns a 2-tuple with
-// - a tree structure for the groups for which each node has parent pointers
-// - an Object which maps from group id to group node
-function buildTreeGroupTree(
-  skeletonTracing: SkeletonTracing,
-): [GroupNode, Record<number, GroupNode>] {
+// Returns an object which maps from group id to group node
+function buildTreeGroupHashMap(skeletonTracing: SkeletonTracing): Record<number, GroupNode> {
   const root: GroupNode = {
     children: [],
     groupId: null,
     parent: null,
   };
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'subTreeRoot' implicitly has an 'any' ty... Remove this comment to see the full error message
-  function createSubTree(subTreeRoot, children) {
+  function createSubTree(subTreeRoot: GroupNode, children: Array<TreeGroup>) {
     for (const child of children) {
       const childNode = {
         children: [],
@@ -47,9 +43,8 @@ function buildTreeGroupTree(
 
   createSubTree(root, skeletonTracing.treeGroups);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'subTreeRoot' implicitly has an 'any' ty... Remove this comment to see the full error message
-  function buildHashMap(subTreeRoot, hashMap) {
-    const groupId = subTreeRoot.groupId != null ? subTreeRoot.groupId : -1;
+  function buildHashMap(subTreeRoot: GroupNode, hashMap: Record<number, GroupNode>) {
+    const groupId = subTreeRoot.groupId != null ? subTreeRoot.groupId : MISSING_GROUP_ID;
     hashMap[groupId] = subTreeRoot;
 
     for (const child of subTreeRoot.children) {
@@ -60,37 +55,33 @@ function buildTreeGroupTree(
   }
 
   const hashMap = buildHashMap(root, {});
-  return [root, hashMap];
+  return hashMap;
 }
 
 // Finds the id of the common group for the used trees in the toggleActions
 function findCommonAncestor(
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeGroupTree' implicitly has an 'any' ... Remove this comment to see the full error message
-  treeGroupTree,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'treeIdMap' implicitly has an 'any' type... Remove this comment to see the full error message
-  treeIdMap,
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupIdMap' implicitly has an 'any' typ... Remove this comment to see the full error message
-  groupIdMap,
+  treeIdMap: TreeMap,
+  groupIdMap: Record<number, GroupNode>,
   toggleActions: Array<UpdateTreeVisibilityUpdateAction>,
 ): number {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'groupId' implicitly has an 'any' type.
-  function getAncestorPath(groupId): Array<number> {
+  function getAncestorPath(groupId: number | null | undefined): Array<number> {
     const path = [];
-    let currentGroupNode = groupIdMap[groupId == null ? -1 : groupId];
+    let currentGroupNode: GroupNode | null | undefined =
+      groupIdMap[groupId == null ? MISSING_GROUP_ID : groupId];
 
     while (currentGroupNode != null) {
       if (currentGroupNode.parent == null && currentGroupNode.groupId == null) {
         break;
       }
 
-      path.unshift(currentGroupNode.groupId != null ? currentGroupNode.groupId : -1);
+      path.unshift(currentGroupNode.groupId != null ? currentGroupNode.groupId : MISSING_GROUP_ID);
       currentGroupNode = currentGroupNode.parent;
     }
 
     return path;
   }
 
-  let commonPath = null;
+  let commonPath: number[] | null = null;
 
   for (const toggleAction of toggleActions) {
     const ancestorPath = getAncestorPath(treeIdMap[toggleAction.value.treeId].groupId);
@@ -101,8 +92,7 @@ function findCommonAncestor(
       const newPath = [];
 
       for (let i = 0; i < commonPath.length; i++) {
-        // @ts-expect-error ts-migrate(7022) FIXME: 'groupId' implicitly has type 'any' because it doe... Remove this comment to see the full error message
-        const groupId = commonPath[i];
+        const groupId: number = commonPath[i];
 
         if (i < ancestorPath.length && ancestorPath[i] === groupId) {
           newPath.push(groupId);
@@ -115,10 +105,14 @@ function findCommonAncestor(
     }
   }
 
-  return _.last(commonPath);
+  // @ts-ignore _.last will not return undefined if commonPath.length > 0
+  return commonPath.length > 0 ? _.last(commonPath) : MISSING_GROUP_ID;
 }
 
-function isCommonAncestorToggler(skeletonTracing: SkeletonTracing, commonAncestor: number) {
+function isCommonAncestorToggler(
+  skeletonTracing: SkeletonTracing,
+  commonAncestor: number,
+): [boolean, Tree[], number] {
   const groupToTreesMap = createGroupToTreesMap(skeletonTracing.trees);
   const groupWithSubgroups = getGroupByIdWithSubgroups(skeletonTracing.treeGroups, commonAncestor);
   const allTreesOfAncestor: Array<Tree> =
@@ -171,14 +165,9 @@ export default function compactToggleActions(
   }
 
   // Build up some helper data structures
-  const [treeGroupTree, hashMap] = buildTreeGroupTree(skeletonTracing);
+  const hashMap = buildTreeGroupHashMap(skeletonTracing);
   // Find the group id of the common ancestor of all toggled trees
-  const commonAncestor = findCommonAncestor(
-    treeGroupTree,
-    skeletonTracing.trees,
-    hashMap,
-    toggleActions,
-  );
+  const commonAncestor = findCommonAncestor(skeletonTracing.trees, hashMap, toggleActions);
   // commonVisibility is the new visibility which should by applied to all ascendants
   // of the common ancestor. The exceptions array lists all trees which differ from
   // that common visibility. These will receive separate updateActions.
@@ -187,13 +176,11 @@ export default function compactToggleActions(
     commonAncestor,
   );
   // If less than 50% of the toggled trees are exceptions, we should use the compaction
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'length' does not exist on type 'number |... Remove this comment to see the full error message
   const shouldUseToggleGroup = exceptions.length < 0.5 * affectedTreeCount;
   const compactedToggleActions = [
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | boolean | Tree[]' is no... Remove this comment to see the full error message
     updateTreeGroupVisibility(commonAncestor, commonVisibility),
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'map' does not exist on type 'number | bo... Remove this comment to see the full error message
-  ].concat(exceptions.map((tree) => updateTreeVisibility(tree)));
+    ...exceptions.map((tree) => updateTreeVisibility(tree)),
+  ];
   const finalToggleActions = shouldUseToggleGroup ? compactedToggleActions : toggleActions;
   return remainingActions.concat(finalToggleActions);
 }

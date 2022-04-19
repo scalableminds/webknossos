@@ -35,6 +35,7 @@ import type { ShowContextMenuFunction, ViewMode } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
 import window, { document, location } from "libs/window";
+import DataLayer from "./model/data_layer";
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
   initialAnnotationType: AnnotationType;
@@ -157,8 +158,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           // @ts-ignore
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'setTimeout' does not exist on type '(Win... Remove this comment to see the full error message
-          window.setTimeout(() => {
+          setTimeout(() => {
             if (!this.isMounted) {
               return;
             }
@@ -253,29 +253,25 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-        "super + s": (event) => {
+        "super + s": (event: KeyboardEvent) => {
           event.preventDefault();
           event.stopPropagation();
           Model.forceSave();
         },
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-        "ctrl + s": (event) => {
+        "ctrl + s": (event: KeyboardEvent) => {
           event.preventDefault();
           event.stopPropagation();
           Model.forceSave();
         },
         // Undo
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-        "super + z": (event) => {
+        "super + z": (event: KeyboardEvent) => {
           event.preventDefault();
           event.stopPropagation();
           Store.dispatch(undoAction());
         },
         "ctrl + z": () => Store.dispatch(undoAction()),
         // Redo
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-        "super + y": (event) => {
+        "super + y": (event: KeyboardEvent) => {
           event.preventDefault();
           event.stopPropagation();
           Store.dispatch(redoAction());
@@ -284,8 +280,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       });
     }
 
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'leastRecentlyUsedSegmentationLayer' impl... Remove this comment to see the full error message
-    let leastRecentlyUsedSegmentationLayer = null;
+    let leastRecentlyUsedSegmentationLayer: DataLayer | null = null;
 
     _.extend(keyboardControls, {
       // In the long run this should probably live in a user script
@@ -295,12 +290,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         if (segmentationLayer != null) {
           // If there is a visible segmentation layer, disable and remember it.
           leastRecentlyUsedSegmentationLayer = segmentationLayer;
-          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'leastRecentlyUsedSegmentationLayer' impl... Remove this comment to see the full error message
         } else if (leastRecentlyUsedSegmentationLayer != null) {
           // If no segmentation layer is visible, use the least recently toggled
           // layer (note that toggling the layer via the switch-button won't update
           // the local variable here).
-          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'leastRecentlyUsedSegmentationLayer' impl... Remove this comment to see the full error message
           segmentationLayer = leastRecentlyUsedSegmentationLayer;
         } else {
           // As a fallback, simply use some segmentation layer

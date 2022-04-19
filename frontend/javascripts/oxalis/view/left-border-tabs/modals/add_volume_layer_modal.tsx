@@ -39,7 +39,6 @@ export default function AddVolumeLayerModal({
     if (selectedSegmentationLayerIndex == null) {
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ typ: "Volume"; name: string; f... Remove this comment to see the full error message
         name: newLayerName,
         fallbackLayerName: undefined,
         resolutionRestrictions: undefined,
@@ -48,7 +47,6 @@ export default function AddVolumeLayerModal({
       const fallbackLayerName = availableSegmentationLayers[selectedSegmentationLayerIndex].name;
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ typ: "Volume"; name: string; f... Remove this comment to see the full error message
         name: newLayerName,
         fallbackLayerName,
         resolutionRestrictions: undefined,

@@ -3,7 +3,12 @@ import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
 import _ from "lodash";
-import type { APISegmentationLayer, APIDataset, APIConnectomeFile } from "types/api_flow_types";
+import type {
+  APISegmentationLayer,
+  APIDataset,
+  APIConnectomeFile,
+  APIDatasetId,
+} from "types/api_flow_types";
 import { diffArrays, unique, map3 } from "libs/utils";
 import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -122,8 +127,14 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
   const partnerAgglomerateIds = filteredSynapseIds.map((synapseId): number => {
     const synapse = synapses[synapseId];
     // $FlowIssue[incompatible-return] Flow doesn't understand that if src == null -> dst != null
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | void' is not assignable to type 'nu... Remove this comment to see the full error message
-    return synapse.src != null ? synapse.src : synapse.dst;
+    if (synapse.src != null) {
+      return synapse.src;
+    } else if (synapse.dst) {
+      return synapse.dst;
+    } else {
+      // Satisfy typescript
+      throw new Error(`Synapse has neither source nor destination. Synapse: ${synapse}`);
+    }
   });
   return unique(topLevelAgglomerateIds.concat(partnerAgglomerateIds));
 };
@@ -174,8 +185,10 @@ function* mapAndFilterTreeData<R>(
   }
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'synapseTypesAndNames' implicitly has an... Remove this comment to see the full error message
-function ensureTypeToString(synapseTypesAndNames) {
+function ensureTypeToString(synapseTypesAndNames: {
+  synapseTypes: number[];
+  typeToString: string[];
+}) {
   const { synapseTypes, typeToString } = synapseTypesAndNames;
 
   if (typeToString.length === 0) {
@@ -337,14 +350,13 @@ class ConnectomeView extends React.Component<Props, State> {
       activeAgglomerateIds.length === 0
     )
       return;
-    const fetchProperties = [
+    const fetchProperties: [string, APIDatasetId, string, string] = [
       dataset.dataStore.url,
       dataset,
       getBaseSegmentationName(segmentationLayer),
       currentConnectomeFile.connectomeFileName,
     ];
     const synapsesOfAgglomerates = await getSynapsesOfAgglomerates(
-      // @ts-expect-error ts-migrate(2556) FIXME: Expected 5 arguments, but got 1 or more.
       ...fetchProperties,
       activeAgglomerateIds,
     );
@@ -365,9 +377,7 @@ class ConnectomeView extends React.Component<Props, State> {
       await Promise.all([
         getSynapseSources(...fetchProperties, allInSynapseIds),
         getSynapseDestinations(...fetchProperties, allOutSynapseIds),
-        // @ts-expect-error ts-migrate(2556) FIXME: Expected 5 arguments, but got 1 or more.
         getSynapsePositions(...fetchProperties, allSynapseIds),
-        // @ts-expect-error ts-migrate(2556) FIXME: Expected 5 arguments, but got 1 or more.
         getSynapseTypes(...fetchProperties, allSynapseIds),
       ]);
     // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file.
@@ -388,13 +398,11 @@ class ConnectomeView extends React.Component<Props, State> {
 
     const synapseIdToType = _.zipObject(allSynapseIds, synapseTypes);
 
-    // $FlowIssue[speculation-ambiguous] Flow cannot decide between SrcSynapse | DstSynapse | SrcAndDstSynapse but it doesn't matter
     const synapseObjects = allSynapseIds.map((synapseId) => ({
       id: synapseId,
       src: synapseIdToSource[synapseId],
       dst: synapseIdToDestination[synapseId],
       position: synapseIdToPosition[synapseId],
-      // @ts-expect-error ts-migrate(2538) FIXME: Type 'unknown' cannot be used as an index type.
       type: typeToString[synapseIdToType[synapseId]],
     }));
 
@@ -473,8 +481,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const { trees } = skeleton;
 
     if (deletedSynapseIds.length > 0) {
-      // @ts-expect-error ts-migrate(7034) FIXME: Variable 'treeIdsToDelete' implicitly has type 'an... Remove this comment to see the full error message
-      const treeIdsToDelete = [];
+      const treeIdsToDelete: number[] = [];
 
       const treeNameToTree = _.keyBy(trees, "name");
 
@@ -487,7 +494,6 @@ class ConnectomeView extends React.Component<Props, State> {
       });
 
       if (treeIdsToDelete.length) {
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'treeIdsToDelete' implicitly has an 'any[... Remove this comment to see the full error message
         Store.dispatch(deleteConnectomeTreesAction(treeIdsToDelete, layerName));
       }
     }
@@ -541,8 +547,7 @@ class ConnectomeView extends React.Component<Props, State> {
       filteredAgglomerateIds.includes(agglomerateId),
     );
     let deletedAgglomerateIds;
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'hiddenAgglomerateIds' implicitly has typ... Remove this comment to see the full error message
-    let hiddenAgglomerateIds;
+    let hiddenAgglomerateIds: number[];
     let addedAgglomerateIds;
 
     if (connectomeFileMappingChanged) {
@@ -602,7 +607,6 @@ class ConnectomeView extends React.Component<Props, State> {
     if (hiddenAgglomerateIds.length) {
       const mappingName = getMappingNameFromConnectomeDataEnforced(prevConnectomeData);
 
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'hiddenAgglomerateIds' implicitly has an ... Remove this comment to see the full error message
       for (const agglomerateId of hiddenAgglomerateIds) {
         // Hide agglomerates that are no longer visible
         const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
@@ -641,15 +645,13 @@ class ConnectomeView extends React.Component<Props, State> {
   };
 
   handleChangeActiveSegment = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+    // @ts-ignore
     const agglomerateIds = evt.target.value
       .split(",")
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'part' implicitly has an 'any' type.
-      .map((part) => parseInt(part, 10))
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
-      .filter((id) => !Number.isNaN(id));
+      .map((part: string) => parseInt(part, 10))
+      .filter((id: number) => !Number.isNaN(id));
     this.setActiveConnectomeAgglomerateIds(agglomerateIds);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
+    // @ts-ignore
     evt.target.blur();
   };
 

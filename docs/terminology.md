@@ -3,32 +3,38 @@
 ## Dataset
 
 A **dataset**, can consist of multiple **layer**s, which may be
+
 * **segmentation layer**s or
 * **color layer**s.
 
 Layers contain image data in one or multiple **magnification**s or short **mag**s (see [mipmap](https://en.wikipedia.org/wiki/Mipmap) or [image pyramids](https://en.wikipedia.org/wiki/Pyramid_(image_processing)) for similar concepts.)
-The factors of a magnification can be described as 4 or 4-4-4 for a downsampling factor of 4 in each dimension, or 4-4-2 for anisotropic downsampling.
+The magnification `4` or `4-4-4` describe a downsampling factor of 4 in each dimension, `4-4-2` specifies anisotropic downsampling.
 The image data in full resolution is referred to as the **finest** mag, downsampled variants are more **coarse**.
 
-The **voxel size** describes the size of a voxel in mag 1, the default unit is nm if not specified otherwise.
+The **voxel size** describes the size of a voxel in mag `1`, the default unit is *nm* if not specified otherwise.
 
 The underlying file formats zarr and wkw use **chunks** as a compressible unit and **shards** as a storage unit. A wkw block corresponds to a chunk, and a file to a shard.
+
 
 ## Annotation
 
 An **annotation** can consist of one or multiple **annotation layers**, which can either be a
-* **volume annotation layer**, or **volume layer** short ([main documentation](./volume_annotation.md)), or
-* **skeleton annotation layer**, or **skeleton layer** and **skeleton** short, ([main documentation](./skeleton_annotation.md)).
+
+* **volume annotation layer**, or **volume layer** short ([main guide](./volume_annotation.md)), or
+* **skeleton annotation layer**, or **skeleton layer** and **skeleton** short, ([main guide](./skeleton_annotation.md)).
 
 **Volume-only** and **skeleton-only** annotations are restricted to the specific annotation layer type.
 
 A **skeleton** consists of **trees** with nodes and edges, which may be organized in **groups**.
-A **tree** is supposed to be a single connected component. Despite the name, it may contain cycles.
+A tree is supposed to be a single connected component. Despite the name, it may contain cycles.
 
 **Branchpoint**s are boolean markers on nodes, that can be jumped to easily in the frontend. They are not tied to any network-specific properties of the node.
 
-## Projects & Tasks
 
-**Project**s are a collection of tasks. A **task** specifies a desired annotation result. A **task instance** refers to the concrete annotation on a task, which can be done redundantly for a task. Task instances may also be abbreviated as tasks if the context is clear.
+## Tasks & Projects
 
-See also the [main documentation](./tasks.md).
+A **task** specifies a desired annotation result. A **task instance** refers to the concrete annotation on a task, which can be done redundantly for a task. Task instances may also be abbreviated as tasks if the context is clear.
+
+A **project** is a collection of tasks.
+
+See also the [task and projects guide](./tasks.md).

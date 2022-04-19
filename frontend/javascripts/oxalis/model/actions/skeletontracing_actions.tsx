@@ -17,7 +17,7 @@ export type InitializeSkeletonTracingAction = {
   type: "INITIALIZE_SKELETONTRACING";
   tracing: ServerSkeletonTracing;
 };
-type CreateNodeAction = {
+export type CreateNodeAction = {
   type: "CREATE_NODE";
   position: Vector3;
   rotation: Vector3;

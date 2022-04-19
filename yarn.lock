@@ -4874,12 +4874,12 @@ devtools-protocol@0.0.960912:
   resolved "https://registry.yarnpkg.com/devtools-protocol/-/devtools-protocol-0.0.960912.tgz#411c1fa355eddb72f06c4a8743f2808766db6245"
   integrity sha512-I3hWmV9rWHbdnUdmMKHF2NuYutIM2kXz2mdXW8ha7TbRlGTVs+PF+PsB5QWvpCek4Fy9B+msiispCfwlhG5Sqg==
 
-dice-coefficient@^1.0.2:
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/dice-coefficient/-/dice-coefficient-1.0.5.tgz#f99be235d27fe886fbadac107fd6fd874f6b7b5d"
-  integrity sha512-T5iCfFziG6w3RdIxdwcdNFghnspqkJcOyYA/lAujryGpEx6V/PqSp6dqIzYYQwapqNrW2pLgRk0tPJ+HEPDjFQ==
+dice-coefficient@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/dice-coefficient/-/dice-coefficient-2.1.0.tgz#ae30a257b0452afc810e3c245ccd014cd6e7746f"
+  integrity sha512-B/hUda7ROK/00SSZJ3WT629DT5C+X4K91LQcVrSLyC4kNn2rxmiqkEuyiGHwJS6czVZsanfpt5mh16pp6kNiIA==
   dependencies:
-    n-gram "^1.0.0"
+    n-gram "^2.0.0"
 
 diff@^4.0.1:
   version "4.0.2"
@@ -9453,10 +9453,10 @@ mute-stream@0.0.8:
   resolved "https://registry.yarnpkg.com/mute-stream/-/mute-stream-0.0.8.tgz#1630c42b2251ff81e2a283de96a5497ea92e5e0d"
   integrity sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==
 
-n-gram@^1.0.0:
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/n-gram/-/n-gram-1.1.2.tgz#69c609a5c83bb32f82774c9e297f8494c7326798"
-  integrity sha512-mBTpWKp0NHdujHmxrskPg2jc108mjyMmVxHN1rZGK/ogTLi9O0debDIXlQPqotNELdNmVGtL4jr7SCig+4OWvQ==
+n-gram@^2.0.0:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/n-gram/-/n-gram-2.0.1.tgz#055adb9d4e12e16205b95e6213b9b865e611bc81"
+  integrity sha512-ECtaRCOsPvqdTMI7SAFVaPaHv1ofhGqstphMFDWF3yrOaJcFsaCTpTREjYaPYpMC1nzJdewuiqvYXGM9W+Radw==
 
 nan@^2.12.1, nan@^2.14.0:
   version "2.14.2"

@@ -239,8 +239,10 @@ class Request {
 
     const headers = new Headers();
 
-    for (const name in options.headers) {
-      headers.set(name, options.headers[name]);
+    if (options.headers) {
+      for (const name of Object.keys(options.headers)) {
+        headers.set(name, options.headers[name]);
+      }
     }
 
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'Headers' is not assignable to type 'Record<s... Remove this comment to see the full error message

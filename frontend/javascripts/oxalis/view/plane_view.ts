@@ -233,7 +233,6 @@ class PlaneView {
       getSceneController().scene.remove(this.cameras[plane]);
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("resize", this.resizeThrottled);
   }
 
@@ -241,7 +240,6 @@ class PlaneView {
     this.running = true;
     this.resize();
     this.animate();
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     window.addEventListener("resize", this.resizeThrottled);
   }
 }

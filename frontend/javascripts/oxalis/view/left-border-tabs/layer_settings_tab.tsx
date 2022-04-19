@@ -16,7 +16,7 @@ import _ from "lodash";
 
 import classnames from "classnames";
 import type { APIDataset, EditableLayerProperties } from "types/api_flow_types";
-import  {ValueOf} from "types/globals";
+import { ValueOf } from "types/globals";
 import { AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
@@ -361,9 +361,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const volumeDescriptor =
       "tracingId" in layer && layer.tracingId != null
         ? getVolumeDescriptorById(tracing, layer.tracingId)
-
-
-        
         : null;
     const readableName =
       "tracingId" in layer && layer.tracingId != null
@@ -751,7 +748,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const volumeTracingResolutions = segmentationLayer.resolutions;
 
     const sourceMag = _.minBy(volumeTracingResolutions, getMaxDim);
-    if(sourceMag === undefined) {
+    if (sourceMag === undefined) {
       return [];
     }
 
@@ -1004,7 +1001,11 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(updateUserSettingAction(propertyName, value));
   },
 
-  onChangeLayer(layerName: string, propertyName: keyof DatasetLayerConfiguration, value: ValueOf<DatasetLayerConfiguration>) {
+  onChangeLayer(
+    layerName: string,
+    propertyName: keyof DatasetLayerConfiguration,
+    value: ValueOf<DatasetLayerConfiguration>,
+  ) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
   },
 

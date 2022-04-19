@@ -131,7 +131,8 @@
     "apply-evolutions": "tools/postgres/apply_evolutions.sh",
     "postinstall": "cd tools/proxy && yarn install",
     "typecheck": "yarn tsc",
-    "ts": "yarn tsc"
+    "ts": "yarn tsc",
+    "ts-watch": "yarn tsc --watch"
   },
   "lint-staged": {
     "*.ts": [

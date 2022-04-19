@@ -32,7 +32,7 @@ test.before("Reset database", async () => {
   setCurrToken(tokenUserA);
 });
 test("getAnnotationInformation()", async (t) => {
-  const annotationId = "570b9ff12a7c0e980056fe8f";
+  const annotationId = "570ba0092a7c0e980056fe9b";
   const annotation = await api.getAnnotationInformation(
     annotationId,
     APIAnnotationTypeEnum.Explorational,

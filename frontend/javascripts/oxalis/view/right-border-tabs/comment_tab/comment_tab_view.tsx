@@ -125,7 +125,7 @@ const memoizedDeriveData = memoizeOne(
 );
 
 class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState> {
-  listRef: React.RefObject<List> | null | undefined;
+  listRef: List | null | undefined;
   storePropertyUnsubscribers: Array<() => void> = [];
   keyboard = new InputKeyboard(
     {
@@ -188,7 +188,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     ) {
       // Force the virtualized list to update if a comment was changed
       // as it only rerenders if the rowCount changed otherwise
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'forceUpdateGrid' does not exist on type ... Remove this comment to see the full error message
       this.listRef.forceUpdateGrid();
     }
   }
@@ -242,7 +241,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
   };
 
   handleChangeInput = (evt: React.SyntheticEvent, insertLineBreaks: boolean = false) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+    // @ts-ignore
     const commentText = evt.target.value;
 
     if (commentText) {
@@ -252,10 +251,9 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     }
   };
 
-  // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'key' implicitly has an 'any' type... Remove this comment to see the full error message
-  handleChangeSorting = ({ key }) => {
+  handleChangeSorting = ({ key }: { key: any }) => {
     this.setState({
-      sortBy: key,
+      sortBy: key as SortByEnum,
     });
   };
 
@@ -401,15 +399,11 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     const isMultilineComment = activeCommentContent.indexOf("\\n") !== -1;
     const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'commentOrTree' implicitly has an 'any' ... Remove this comment to see the full error message
-    const findCommentIndexFn = (commentOrTree) =>
-      commentOrTree.nodeId != null &&
-      commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
+    const findCommentIndexFn = (commentOrTree: Tree | CommentType) =>
+      "nodeId" in commentOrTree && commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'commentOrTree' implicitly has an 'any' ... Remove this comment to see the full error message
-    const findTreeIndexFn = (commentOrTree) =>
-      commentOrTree.treeId != null &&
-      commentOrTree.treeId === this.props.skeletonTracing.activeTreeId;
+    const findTreeIndexFn = (commentOrTree: Tree | CommentType) =>
+      "treeId" in commentOrTree && commentOrTree.treeId === this.props.skeletonTracing.activeTreeId;
 
     return (
       <div
@@ -530,8 +524,7 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nodeId' implicitly has an 'any' type.
-  setActiveNode(nodeId) {
+  setActiveNode(nodeId: number) {
     dispatch(setActiveNodeAction(nodeId));
   },
 
@@ -539,8 +532,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(deleteCommentAction());
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'text' implicitly has an 'any' type.
-  createComment(text) {
+  createComment(text: string) {
     dispatch(createCommentAction(text));
   },
 });

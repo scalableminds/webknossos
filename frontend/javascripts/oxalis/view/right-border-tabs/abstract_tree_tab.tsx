@@ -25,7 +25,6 @@ class AbstractTreeTab extends Component<Props, State> {
   };
 
   componentDidMount() {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     window.addEventListener("resize", this.drawTree, false);
     this.drawTree();
   }
@@ -35,7 +34,6 @@ class AbstractTreeTab extends Component<Props, State> {
   }
 
   componentWillUnmount() {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("resize", this.drawTree, false);
   }
 

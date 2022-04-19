@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import window, { document } from "libs/window";
-import { OrthographicCamera } from "three";
 
 /**
  * The MIT License
@@ -139,9 +138,7 @@ const TrackballControls = function (
     const clientRect = this.domElement.getBoundingClientRect();
     const d = this.domElement.ownerDocument.documentElement;
     return {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'pageYOffset' does not exist on type '(Wi... Remove this comment to see the full error message
       top: clientRect.top + window.pageYOffset - d.clientTop,
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'pageXOffset' does not exist on type '(Wi... Remove this comment to see the full error message
       left: clientRect.left + window.pageXOffset - d.clientLeft,
       width: clientRect.width,
       height: clientRect.height,
@@ -170,8 +167,7 @@ const TrackballControls = function (
   this.getMouseProjectionOnBall = (() => {
     const objectUp = new THREE.Vector3();
     const mouseOnBall = new THREE.Vector3();
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pageX' implicitly has an 'any' type.
-    return (pageX, pageY, projection) => {
+    return (pageX: number, pageY: number, projection: THREE.Vector3) => {
       const screenBounds = _this.getScreenBounds();
 
       mouseOnBall.set(
@@ -346,10 +342,8 @@ const TrackballControls = function (
   };
 
   // listeners
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  function keydown(event) {
+  function keydown(event: KeyboardEvent) {
     if (_this.enabled === false || _this.keyboardEnabled === false) return;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("keydown", keydown);
     _prevState = _state;
 
@@ -364,16 +358,13 @@ const TrackballControls = function (
     }
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_' implicitly has an 'any' type.
-  function keyup(_) {
+  function keyup() {
     if (_this.enabled === false || _this.keyboardEnabled === false) return;
     _state = _prevState;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     window.addEventListener("keydown", keydown, false);
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  function mousedown(event) {
+  function mousedown(event: MouseEvent) {
     if (_this.enabled === false) return;
     event.preventDefault();
 
@@ -395,16 +386,13 @@ const TrackballControls = function (
       _panEnd.copy(_panStart);
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("mousemove", mousemove, false);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("mouseup", mouseup, false);
 
     _this.dispatchEvent(startEvent);
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  function mousemove(event) {
+  function mousemove(event: MouseEvent) {
     if (_this.enabled === false) return;
     event.preventDefault();
 
@@ -419,28 +407,24 @@ const TrackballControls = function (
     _this.update(false, true);
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  function mouseup(event) {
+  function mouseup(event: MouseEvent) {
     if (_this.enabled === false) return;
     event.preventDefault();
     _state = STATE.NONE;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("mousemove", mousemove);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("mouseup", mouseup);
 
     _this.dispatchEvent(endEvent);
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  function mousewheel(event) {
+  function mousewheel(event: WheelEvent) {
     if (_this.enabled === false) return;
     event.preventDefault();
     let delta = 0;
 
-    if (event.wheelDelta) {
+    if (event.deltaY) {
       // WebKit / Opera / Explorer 9
-      delta = event.wheelDelta / 40;
+      delta = -event.deltaY / 40;
     } else if (event.detail) {
       // Firefox
       delta = -event.detail / 3;
@@ -453,8 +437,7 @@ const TrackballControls = function (
     _this.dispatchEvent(endEvent);
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  function touchstart(event) {
+  function touchstart(event: TouchEvent) {
     if (_this.enabled === false) return;
 
     switch (event.touches.length) {
@@ -497,8 +480,7 @@ const TrackballControls = function (
     _this.dispatchEvent(startEvent);
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  function touchmove(event) {
+  function touchmove(event: TouchEvent) {
     if (_this.enabled === false) return;
     event.preventDefault();
 
@@ -538,8 +520,7 @@ const TrackballControls = function (
     _this.update(false, true);
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  function touchend(event) {
+  function touchend(event: TouchEvent) {
     if (_this.enabled === false) return;
 
     if (_state === STATE.TOUCH_ROTATE && !_this.noRotate) {
@@ -563,8 +544,7 @@ const TrackballControls = function (
   this.destroy = () => {
     this.domElement.removeEventListener(
       "contextmenu",
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-      (event) => {
+      (event: Event) => {
         event.preventDefault();
       },
       false,
@@ -576,16 +556,13 @@ const TrackballControls = function (
     this.domElement.removeEventListener("touchstart", touchstart, false);
     this.domElement.removeEventListener("touchend", touchend, false);
     this.domElement.removeEventListener("touchmove", touchmove, false);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("keydown", keydown, false);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("keyup", keyup, false);
   };
 
   this.domElement.addEventListener(
     "contextmenu",
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-    (event) => {
+    (event: Event) => {
       event.preventDefault();
     },
     false,
@@ -597,9 +574,7 @@ const TrackballControls = function (
   this.domElement.addEventListener("touchstart", touchstart, false);
   this.domElement.addEventListener("touchend", touchend, false);
   this.domElement.addEventListener("touchmove", touchmove, false);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
   window.addEventListener("keydown", keydown, false);
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
   window.addEventListener("keyup", keyup, false);
   this.update();
 } as any as ITrackballControls;

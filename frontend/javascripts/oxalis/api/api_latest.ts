@@ -1906,7 +1906,7 @@ class UserApi {
   }
 }
 
-type Handler = {
+export type UnregisterHandler = {
   unregister(): void;
 };
 /**
@@ -2006,7 +2006,7 @@ class UtilsApi {
   /**
    * Sets a custom handler function for a keyboard shortcut.
    */
-  registerKeyHandler(key: string, handler: () => void): Handler {
+  registerKeyHandler(key: string, handler: () => void): UnregisterHandler {
     const keyboard = new InputKeyboardNoLoop({
       [key]: handler,
     });

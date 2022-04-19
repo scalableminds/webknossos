@@ -11492,10 +11492,10 @@ rc@^1.2.7, rc@^1.2.8:
     minimist "^1.2.0"
     strip-json-comments "~2.0.1"
 
-react-debounce-render@^6.0.0:
-  version "6.1.0"
-  resolved "https://registry.yarnpkg.com/react-debounce-render/-/react-debounce-render-6.1.0.tgz#f3ac5e1ecac64faca4224f0fbe709c8e3a099610"
-  integrity sha512-Mh2OMIPkCC3Yox1F8virGjsWdT97vpwybgs32eB3ary7L45fYZhR1W/Kg7dVqsm8Kztf4qpTCbOxeaAwsEsGQw==
+react-debounce-render@^8.0.1:
+  version "8.0.2"
+  resolved "https://registry.yarnpkg.com/react-debounce-render/-/react-debounce-render-8.0.2.tgz#ce37864e9bd8d086dbd3e3e784d3270bac2cf2d3"
+  integrity sha512-tVdMjXJl38LK2JSr5KiCHdnHi8LlQA4jFXiMQfw0ZWDuMmAtDP63lK49RKeYnCXM9r0HKgKIFmNPZxQpeGjQmg==
   dependencies:
     hoist-non-react-statics "^3.3.2"
     lodash.debounce "^4.0.8"

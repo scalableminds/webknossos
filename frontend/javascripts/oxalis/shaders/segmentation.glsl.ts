@@ -9,7 +9,8 @@ import {
   aaStep,
   colormapJet,
   jsColormapJet,
-} from "./utils.glsl";
+} from "oxalis/shaders/utils.glsl";
+import { Vector4 } from "oxalis/constants";
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex, getElementOfPermutation, aaStep, colormapJet],
   code: `
@@ -126,7 +127,7 @@ export const jsConvertCellIdToHSLA = (
   id: number,
   customColors?: Array<number> | null | undefined,
   alpha: number = 1,
-): Array<number> => {
+): Vector4 => {
   if (id === 0) {
     // Return white
     return [1, 1, 1, 1];

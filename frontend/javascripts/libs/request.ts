@@ -32,9 +32,8 @@ export type RequestOptionsWithData<T> = RequestOptions & {
 };
 
 type ServerErrorMessage = {
-  error: string
-}
-
+  error: string;
+};
 
 class Request {
   // IN:  nothing
@@ -275,7 +274,7 @@ class Request {
     } else {
       return fetchPromise;
     }
-  }
+  };
 
   timeoutPromise = (timeout: number): Promise<string> =>
     new Promise((resolve) => {

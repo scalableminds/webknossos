@@ -19,7 +19,6 @@ import {
   ArbitraryViews,
   BorderTabs,
   type OrthoView,
-  type AnnotationTool,
 } from "oxalis/constants";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
@@ -62,7 +61,6 @@ type StateProps = {|
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
   busyBlockingInfo: BusyBlockingInfo,
-  activeTool: AnnotationTool,
 |};
 
 type OwnProps = {|
@@ -516,7 +514,6 @@ function mapStateToProps(state: OxalisState): StateProps {
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
-    activeTool: state.uiInformation.activeTool,
   };
 }
 function mapDispatchToProps(dispatch: Dispatch<*>) {

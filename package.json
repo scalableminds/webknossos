@@ -181,7 +181,7 @@
     "memoize-one": "^6.0.0",
     "mini-css-extract-plugin": "^2.5.2",
     "mjs": "^1.0.0",
-    "moment": "^2.21.0",
+    "moment": "^2.29.2",
     "nanoevents": "^5.1.8",
     "pako": "^0.2.8",
     "pretty-bytes": "^5.1.0",

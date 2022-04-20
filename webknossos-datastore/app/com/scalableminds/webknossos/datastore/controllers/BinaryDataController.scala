@@ -112,15 +112,16 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "Target-mag width of the bounding box", required = true) width: Int,
       @ApiParam(value = "Target-mag height of the bounding box", required = true) height: Int,
       @ApiParam(value = "Target-mag depth of the bounding box", required = true) depth: Int,
-      @ApiParam(value = "Exponent of the dataset mag (e.g. 4 for mag 16-16-8)", required = true) resolution: Int,
+      @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: String,
       @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
         (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox
         request = DataRequest(
-          new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
+          new VoxelPosition(x, y, z, magParsed),
           width,
           height,
           depth,
@@ -130,35 +131,6 @@ class BinaryDataController @Inject()(
       } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
     }
   }
-
-  /**
-    * Handles requests for raw binary data via HTTP GET for debugging.
-    */
-  @ApiOperation(hidden = true, value = "")
-  def requestViaAjaxDebug(
-      token: Option[String],
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String,
-      cubeSize: Int,
-      x: Int,
-      y: Int,
-      z: Int,
-      resolution: Int,
-      halfByte: Boolean
-  ): Action[AnyContent] =
-    requestRawCuboid(token,
-                     organizationName,
-                     dataSetName,
-                     dataLayerName,
-                     x,
-                     y,
-                     z,
-                     cubeSize,
-                     cubeSize,
-                     cubeSize,
-                     resolution,
-                     halfByte)
 
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.

@@ -430,9 +430,10 @@ Expects:
              layerName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
-        val count = binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
+        val (closedAgglomerateFileHandleCount, closedDataCubeHandleCount) =
+          binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
         logger.info(
-          s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}datasource $organizationName / $dataSetName: closed $count open file handles.")
+          s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$dataSetName: closed $closedDataCubeHandleCount data shard handles and $closedAgglomerateFileHandleCount agglomerate file handles.")
         val reloadedDataSource = dataSourceService.dataSourceFromFolder(
           dataSourceService.dataBaseDir.resolve(organizationName).resolve(dataSetName),
           organizationName)

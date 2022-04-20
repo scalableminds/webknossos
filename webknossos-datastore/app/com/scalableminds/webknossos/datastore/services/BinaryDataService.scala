@@ -174,17 +174,18 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     result
   }
 
-  def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]): Int = {
-    def matchingPredicate(cubeKey: CachedCube) =
+  def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]): (Int, Int) = {
+    def dataCubeMatchPredicate(cubeKey: CachedCube) =
       cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(
         _ == cubeKey.dataLayerName)
 
-    def matchingAgglomerate(agglomerateKey: AgglomerateFileKey) =
+    def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
       agglomerateKey.dataSourceName == dataSetName && agglomerateKey.organization == organizationName && layerName
         .forall(_ == agglomerateKey.dataLayerName)
 
-    agglomerateService.agglomerateFileCache.clear(matchingAgglomerate)
-    cache.clear(matchingPredicate)
+    val closedAgglomerateFileHandleCount = agglomerateService.agglomerateFileCache.clear(agglomerateFileMatchPredicate)
+    val closedDataCubeHandleCount = cache.clear(dataCubeMatchPredicate)
+    (closedAgglomerateFileHandleCount, closedDataCubeHandleCount)
   }
 
 }

@@ -1,5 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import java.io._
+import java.nio.file.Paths
+import java.util.zip.Deflater
+
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -10,7 +14,6 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSi
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services._
@@ -18,14 +21,11 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingTyp
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreRedisStore}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsValue, Json}
-import java.io._
-import java.nio.file.Paths
-import java.util.zip.Deflater
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -120,20 +120,16 @@ class VolumeTracingService @Inject()(
                            action: UpdateBucketVolumeAction,
                            updateGroupVersion: Long): Fox[VolumeTracing] =
     for {
-      resolution <- lookUpVolumeResolution(volumeTracing, action.zoomStep)
-      bucket = BucketPosition(action.position.x, action.position.y, action.position.z, resolution)
+      _ <- assertMagIsValid(volumeTracing, action.mag)
+      bucket = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
       _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucket, action.data, updateGroupVersion)
     } yield volumeTracing
 
-  private def lookUpVolumeResolution(tracing: VolumeTracing, zoomStep: Int): Fox[Vec3Int] =
+  private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.resolutions.nonEmpty) {
-      tracing.resolutions
-        .find(r => r.maxDim == math.pow(2, zoomStep))
-        .map(vec3IntFromProto)
-        .toFox ?~> s"Received bucket with zoomStep ($zoomStep), no matching resolution found in tracing (has ${tracing.resolutions})"
-    } else {
-      val isotropicResolution = math.pow(2, zoomStep).toInt
-      Fox.successful(Vec3Int(isotropicResolution, isotropicResolution, isotropicResolution))
+      bool2Fox(tracing.resolutions.exists(r => vec3IntFromProto(r) == mag))
+    } else { // old volume tracings do not have a mag list, no assert possible. Check compatibility by asserting isotropic mag
+      bool2Fox(mag.isIsotropic)
     }
 
   private def revertToVolumeVersion(tracingId: String,

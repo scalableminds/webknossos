@@ -16,7 +16,9 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def isIsotropic: Boolean =
     x == y && y == z
 
-  override def toString: String = "(%d, %d, %d)".format(x, y, z)
+  override def toString: String = s"($x, $y, $z)"
+
+  def toMagLiteral: String = s"$x-$y-$z"
 
   def toList = List(x, y, z)
 
@@ -47,18 +49,17 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 }
 
 object Vec3Int {
-  val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
-  def toForm(p: Vec3Int) = Some("%d, %d, %d".format(p.x, p.y, p.z))
+  private val magLiteralRegex = "([0-9]+)-\\s*([0-9]+)-\\s*([0-9]+)".r
 
   def apply(t: (Int, Int, Int)): Vec3Int =
     Vec3Int(t._1, t._2, t._3)
 
-  def fromForm(s: String) =
+  def fromMagLiteral(s: String): Option[Vec3Int] =
     s match {
-      case formRx(x, y, z) =>
-        Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
+      case magLiteralRegex(x, y, z) =>
+        Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
       case _ =>
-        null
+        None
     }
 
   def fromArray[T <% Int](array: Array[T]) =

@@ -36,18 +36,17 @@ async function loadHasOrganizations() {
   }
 }
 
-// @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
 document.addEventListener("DOMContentLoaded", async () => {
   ErrorHandling.initialize({
     throwAssertions: false,
   });
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
   document.addEventListener("click", googleAnalyticsLogClicks);
   await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);
   const containerElement = document.getElementById("main-container");
 
   if (containerElement) {
     ReactDOM.render(
+      // @ts-ignore
       <Provider store={Store}>
         {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
         certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.

@@ -187,7 +187,8 @@ export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
   | AddNewUserBoundingBox
   | DeleteUserBoundingBox
-  | AddUserBoundingBoxesAction;
+  | AddUserBoundingBoxesAction
+  | FinishedResizingUserBoundingBoxAction;
 export const AllUserBoundingBoxActions = [
   "SET_USER_BOUNDING_BOXES",
   "ADD_NEW_USER_BOUNDING_BOX",

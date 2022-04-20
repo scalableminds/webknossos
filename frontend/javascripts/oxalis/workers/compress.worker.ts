@@ -2,7 +2,7 @@
 import pako from "pako";
 import { expose } from "./comlink_wrapper";
 
-function compress(data: Uint8Array | string): Promise<Uint8Array> {
+function compress(data: ArrayBuffer | string): Promise<ArrayBuffer> {
   return pako.gzip(data);
 }
 

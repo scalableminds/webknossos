@@ -440,15 +440,11 @@ export class InputMouse {
   }
 
   destroy() {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("mousemove", this.mouseMove);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("mouseup", this.mouseUp);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     document.removeEventListener("touchend", this.touchEnd);
 
     for (const [eventName, eventHandler] of Object.entries(this.delegatedEvents)) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
       document.removeEventListener(eventName, eventHandler);
     }
 

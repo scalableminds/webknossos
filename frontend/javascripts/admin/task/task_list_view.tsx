@@ -283,7 +283,6 @@ class TaskListView extends React.PureComponent<Props, State> {
 
         <Spin spinning={isLoading} size="large">
           <FixedExpandableTable
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             dataSource={this.getFilteredTasks()}
             rowKey="id"
             pagination={{
@@ -291,7 +290,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             }}
             style={{
               marginTop: 30,
-              marginBotton: 30,
+              marginBottom: 30,
             }}
             expandedRowRender={(task) => <TaskAnnotationView task={task} />}
           >

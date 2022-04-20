@@ -4,6 +4,7 @@ import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/pre
 import {
   PrefetchStrategySkeleton,
   PrefetchStrategyVolume,
+  ContentTypes as PrefetchContentTypes,
 } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { throttle, call, take } from "typed-redux-saga";
@@ -91,9 +92,9 @@ function getTraceDirection(
 
 function getTracingTypes(state: OxalisState) {
   return {
-    skeleton: state.tracing.skeleton != null,
-    volume: state.tracing.volumes.length > 0,
-    readOnly: state.tracing.readOnly != null,
+    [PrefetchContentTypes.SKELETON]: state.tracing.skeleton != null,
+    [PrefetchContentTypes.VOLUME]: state.tracing.volumes.length > 0,
+    [PrefetchContentTypes.READ_ONLY]: state.tracing.readOnly != null,
   };
 }
 

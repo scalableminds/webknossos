@@ -40,7 +40,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 // @ts-expect-error ts-migrate(2306) FIXME: File ... Remove this comment to see the full error message
-import { createReader, BlobReader } from "zip-js-webpack";
+import { createReader, BlobReader, ZipReader, Entry } from "zip-js-webpack";
 import {
   CardContainer,
   DatasetNameFormItem,
@@ -51,6 +51,7 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
+import type { Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
@@ -269,8 +270,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         name: datasetId.name,
         totalFileCount: formValues.zipFile.length,
         layersToLink: [],
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'team' implicitly has an 'any' type.
-        initialTeams: formValues.initialTeams.map((team) => team.id),
+        initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
       };
       const datastoreUrl = formValues.datastoreUrl;
       await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
@@ -497,12 +497,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       if (fileExtension === "zip") {
         createReader(
           new BlobReader(file),
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'reader' implicitly has an 'any' type.
-          (reader) => {
-            // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'entries' implicitly has an 'any' type.
-            reader.getEntries((entries) => {
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'entry' implicitly has an 'any' type.
-              const wkwFile = entries.find((entry) =>
+          (reader: ZipReader) => {
+            reader.getEntries((entries: Array<Entry>) => {
+              const wkwFile = entries.find((entry: Entry) =>
                 Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
               );
               const hasArchiveWkwFile = wkwFile != null;
@@ -724,8 +721,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   },
                   {
                     validator: syncValidator(
-                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
-                      (value) => value && value.every((el) => el > 0),
+                      (value: Vector3) => value && value.every((el) => el > 0),
                       "Each component of the scale must be larger than 0.",
                     ),
                   },

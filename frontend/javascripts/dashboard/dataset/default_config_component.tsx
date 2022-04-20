@@ -6,6 +6,7 @@ import { Vector3Input } from "libs/vector_input";
 import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { layerViewConfigurations } from "messages";
+import type { DatasetLayerConfiguration } from "oxalis/store";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 const FormItem = Form.Item;
 export default function DefaultConfigComponent() {
@@ -27,10 +28,23 @@ export default function DefaultConfigComponent() {
       dataIndex: "comment",
     },
   ];
-  const comments = {
+  const comments: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
     alpha: "20 for segmentation layer",
-    loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",
   };
+  const layerViewConfigurationEntries = _.map(
+    getDefaultLayerViewConfiguration(),
+    (_value: any, key: string) => {
+      // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
+      const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;
+      const value = layerViewConfigurations[layerViewConfigurationKey];
+      return {
+        name: value,
+        key,
+        value: value == null ? "not set" : value.toString(),
+        comment: comments[layerViewConfigurationKey] || "",
+      };
+    },
+  );
   return (
     <div>
       <Alert
@@ -110,14 +124,7 @@ export default function DefaultConfigComponent() {
           <br />
           <Table
             columns={columns}
-            dataSource={_.map(getDefaultLayerViewConfiguration(), (value, key: string) => ({
-              // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-              name: layerViewConfigurations[key],
-              key,
-              value: value == null ? "not set" : value.toString(),
-              // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-              comment: comments[key] || "",
-            }))}
+            dataSource={layerViewConfigurationEntries}
             size="small"
             pagination={false}
             className="large-table"

@@ -4,6 +4,8 @@ import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_acces
 import * as Utils from "libs/utils";
 import mockRequire from "mock-require";
 import test from "ava";
+import { Vector3 } from "oxalis/constants";
+import { OxalisState } from "oxalis/store";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 mockRequire.stopAll();
 mockRequire("app", {
@@ -54,8 +56,8 @@ test.before((t) => {
   });
 });
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
-const skeletonCreator = () => new Skeleton((state) => getSkeletonTracing(state.tracing), true);
+const skeletonCreator = () =>
+  new Skeleton((state: OxalisState) => getSkeletonTracing(state.tracing), true);
 
 test.serial("Skeleton should initialize correctly using the store's state", (t) => {
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
@@ -65,22 +67,19 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
     t.is(skeleton.edges.buffers.length, 1);
     const nodeCapacity = 2000;
     const edgeCapacity = 1980;
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'nodePositions' implicitly has type 'any[... Remove this comment to see the full error message
-    let nodePositions = [];
+    let nodePositions: Vector3[] = [];
     const nodeTypes = [];
-    const nodeRadii = [];
-    const nodeIds = [];
-    const nodeTreeIds = [];
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'edgePositions' implicitly has type 'any[... Remove this comment to see the full error message
-    let edgePositions = [];
-    const edgeTreeIds = [];
+    const nodeRadii: number[] = [];
+    const nodeIds: number[] = [];
+    const nodeTreeIds: number[] = [];
+    let edgePositions: Vector3[] = [];
+    const edgeTreeIds: number[] = [];
     let treeColors = [0, 0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
 
     for (const tree of Utils.values(trees)) {
       treeColors = treeColors.concat(skeleton.getTreeRGBA(tree.color, tree.isVisible));
 
       for (const node of Array.from(tree.nodes.values())) {
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'nodePositions' implicitly has an 'any[]'... Remove this comment to see the full error message
         nodePositions = nodePositions.concat(node.position);
         nodeTreeIds.push(tree.treeId);
         nodeRadii.push(node.radius);
@@ -91,7 +90,6 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
       for (const edge of tree.edges.all()) {
         const sourcePosition = tree.nodes.get(edge.source).position;
         const targetPosition = tree.nodes.get(edge.target).position;
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'edgePositions' implicitly has an 'any[]'... Remove this comment to see the full error message
         edgePositions = edgePositions.concat(sourcePosition).concat(targetPosition);
         edgeTreeIds.push(tree.treeId, tree.treeId);
       }
@@ -103,7 +101,10 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
     t.is(nodeBufferGeometryAttributes.type.array.length, nodeCapacity);
     t.is(nodeBufferGeometryAttributes.nodeId.array.length, nodeCapacity);
     t.is(nodeBufferGeometryAttributes.treeId.array.length, nodeCapacity);
-    t.deepEqual(nodeBufferGeometryAttributes.position.array, new Float32Array(nodePositions));
+    t.deepEqual(
+      nodeBufferGeometryAttributes.position.array,
+      new Float32Array(nodePositions as any as number[]),
+    );
     t.deepEqual(nodeBufferGeometryAttributes.radius.array, new Float32Array(nodeRadii));
     t.deepEqual(nodeBufferGeometryAttributes.type.array, new Float32Array(nodeTypes));
     t.deepEqual(nodeBufferGeometryAttributes.nodeId.array, new Float32Array(nodeIds));
@@ -111,7 +112,10 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
     const edgeBufferGeometryAttributes = skeleton.edges.buffers[0].geometry.attributes;
     t.is(edgeBufferGeometryAttributes.position.array.length, 6 * edgeCapacity);
     t.is(edgeBufferGeometryAttributes.treeId.array.length, 2 * edgeCapacity);
-    t.deepEqual(edgeBufferGeometryAttributes.position.array, new Float32Array(edgePositions));
+    t.deepEqual(
+      edgeBufferGeometryAttributes.position.array,
+      new Float32Array(edgePositions as any as number[]),
+    );
     t.deepEqual(edgeBufferGeometryAttributes.treeId.array, new Float32Array(edgeTreeIds));
     const textureData = new Float32Array(
       NodeShader.COLOR_TEXTURE_WIDTH * NodeShader.COLOR_TEXTURE_WIDTH * 4,
@@ -180,10 +184,10 @@ test.serial.cb("Skeleton should update tree colors upon tree creation", (t) => {
   Store.dispatch(createTreeAction());
   getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
     const { activeTreeId, trees } = skeletonTracing;
-    // @ts-expect-error ts-migrate(2538) FIXME: Type 'null' cannot be used as an index type.
-    const activeTree = trees[activeTreeId];
 
     if (activeTreeId != null) {
+      const activeTree = trees[activeTreeId];
+
       await Utils.sleep(50);
       t.deepEqual(
         skeleton.treeColorTexture.image.data.subarray(activeTreeId * 4, (activeTreeId + 1) * 4),

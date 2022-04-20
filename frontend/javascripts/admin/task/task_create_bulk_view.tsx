@@ -130,8 +130,7 @@ function TaskCreateBulkView() {
     const projectName = words[17];
 
     // mapOptional takes care of treating empty strings as null
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'word' implicitly has an 'any' type.
-    function mapOptional<U>(word, fn: (arg0: string) => U): U | null | undefined {
+    function mapOptional<U>(word: string, fn: (arg0: string) => U): U | null | undefined {
       return word != null && word !== "" ? fn(word) : undefined;
     }
 
@@ -144,7 +143,7 @@ function TaskCreateBulkView() {
       width <= 0 || height <= 0 || depth <= 0
         ? null
         : {
-            topLeft: [boundingBoxX, boundingBoxY, boundingBoxZ],
+            topLeft: [boundingBoxX, boundingBoxY, boundingBoxZ] as Vector3,
             width,
             height,
             depth,
@@ -154,7 +153,6 @@ function TaskCreateBulkView() {
       taskTypeId,
       scriptId,
       openInstances,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ topLeft: number[]; width: number; height: ... Remove this comment to see the full error message
       boundingBox,
       projectName,
       neededExperience: {
@@ -171,8 +169,7 @@ function TaskCreateBulkView() {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
-      // $FlowIssue[incompatible-call] reader.result is wrongfully typed as ArrayBuffer
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | ArrayBuffer | null' is ... Remove this comment to see the full error message
+      // @ts-ignore reader.result is wrongfully typed as ArrayBuffer
       reader.onload = () => resolve(parseText(reader.result));
 
       reader.onerror = reject;
@@ -226,18 +223,14 @@ function TaskCreateBulkView() {
     setTasksProcessed(0);
 
     try {
-      // @ts-expect-error ts-migrate(7034) FIXME: Variable 'taskResponses' implicitly has type 'any[... Remove this comment to see the full error message
-      let taskResponses = [];
-      // @ts-expect-error ts-migrate(7034) FIXME: Variable 'warnings' implicitly has type 'any[]' in... Remove this comment to see the full error message
-      let warnings = [];
+      let taskResponses: TaskCreationResponse[] = [];
+      let warnings: string[] = [];
 
       for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
         const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
         // eslint-disable-next-line no-await-in-loop
         const response = await createTasks(subArray);
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'taskResponses' implicitly has an 'any[]'... Remove this comment to see the full error message
         taskResponses = taskResponses.concat(response.tasks);
-        // @ts-expect-error ts-migrate(7005) FIXME: Variable 'warnings' implicitly has an 'any[]' type... Remove this comment to see the full error message
         warnings = warnings.concat(response.warnings);
         setTasksProcessed(i + NUM_TASKS_PER_BATCH);
       }
@@ -281,7 +274,7 @@ function TaskCreateBulkView() {
               hasFeedback
               rules={[
                 ({ getFieldValue }) => ({
-                  validator: (rule, value) => {
+                  validator: (_rule, value) => {
                     // If a csv file has been uploaded it takes precedence and this form item doesn't need to validate
                     const csvFile = getFieldValue("csvFile");
 
@@ -344,12 +337,7 @@ function TaskCreateBulkView() {
             </FormItem>
             <FormItem>
               {isUploading ? (
-                <Progress
-                  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                  percent={parseInt((tasksProcessed / tasksCount) * 100)}
-                  showInfo
-                  status="active"
-                />
+                <Progress percent={(tasksProcessed / tasksCount) * 100} showInfo status="active" />
               ) : null}
 
               <Button type="primary" htmlType="submit">

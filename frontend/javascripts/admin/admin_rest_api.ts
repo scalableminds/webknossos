@@ -88,8 +88,7 @@ type NewTeam = {
   readonly name: string;
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'collection' implicitly has an 'any' typ... Remove this comment to see the full error message
-function assertResponseLimit(collection) {
+function assertResponseLimit(collection: unknown[]) {
   if (collection.length === MAX_SERVER_ITEMS_PER_RESPONSE) {
     Toast.warning(messages["request.max_item_count_alert"], {
       sticky: true,
@@ -126,6 +125,7 @@ export function getSharingToken(): string | null | undefined {
 
   return null;
 }
+
 let tokenPromise: Promise<string>;
 export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<any> {
   const sharingToken = getSharingToken();
@@ -149,6 +149,7 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
     throw error;
   });
 }
+
 export function sendAnalyticsEvent(eventType: string, eventProperties: {} = {}): void {
   // Note that the Promise from sendJSONReceiveJSON is not awaited or returned here,
   // since failing analytics events should not have an impact on the application logic.
@@ -171,6 +172,7 @@ export function sendFailedRequestAnalyticsEvent(
   };
   sendAnalyticsEvent("request_failed", eventProperties);
 }
+
 // ### Users
 export async function loginUser(formValues: {
   email: string;
@@ -181,35 +183,42 @@ export async function loginUser(formValues: {
   });
   return getActiveUser();
 }
+
 export async function getUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users");
   assertResponseLimit(users);
   return users;
 }
+
 export async function getTeamManagerOrAdminUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users?isTeamManagerOrAdmin=true");
   assertResponseLimit(users);
   return users;
 }
+
 export async function getAdminUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users?isAdmin=true");
   assertResponseLimit(users);
   return users;
 }
+
 export async function getEditableUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users?isEditable=true");
   assertResponseLimit(users);
   return users;
 }
+
 export function getUser(userId: string): Promise<APIUser> {
   return Request.receiveJSON(`/api/users/${userId}`);
 }
+
 export function updateUser(newUser: Partial<APIUser>): Promise<APIUser> {
   return Request.sendJSONReceiveJSON(`/api/users/${newUser.id}`, {
     method: "PATCH",
     data: newUser,
   });
 }
+
 export function updateNovelUserExperienceInfos(
   user: APIUser,
   novelUserExperienceShape: Record<string, any>,
@@ -228,6 +237,7 @@ export function updateNovelUserExperienceInfos(
   );
   return [newUserSync, newUserAsync];
 }
+
 export function updateLastTaskTypeIdOfUser(
   userId: string,
   lastTaskTypeId: string,
@@ -239,6 +249,7 @@ export function updateLastTaskTypeIdOfUser(
     },
   });
 }
+
 export function updateSelectedThemeOfUser(
   userId: string,
   selectedTheme: APIUserTheme,
@@ -248,15 +259,18 @@ export function updateSelectedThemeOfUser(
     data: JSON.stringify(selectedTheme),
   });
 }
+
 export async function getAuthToken(): Promise<string> {
   const { token } = await Request.receiveJSON("/api/auth/token");
   return token;
 }
+
 export async function revokeAuthToken(): Promise<void> {
   await Request.receiveJSON("/api/auth/token", {
     method: "DELETE",
   });
 }
+
 export async function getLoggedTimes(
   userID: string | null | undefined,
 ): Promise<Array<APITimeInterval>> {
@@ -264,25 +278,30 @@ export async function getLoggedTimes(
   const response: APIUserLoggedTime = await Request.receiveJSON(url);
   return response.loggedTime;
 }
+
 // ### Scripts
 export async function getScripts(): Promise<Array<APIScript>> {
   const scripts = await Request.receiveJSON("/api/scripts");
   assertResponseLimit(scripts);
   return scripts;
 }
+
 export function getScript(scriptId: string): Promise<APIScript> {
   return Request.receiveJSON(`/api/scripts/${scriptId}`);
 }
+
 export function deleteScript(scriptId: string): Promise<void> {
   return Request.receiveJSON(`/api/scripts/${scriptId}`, {
     method: "DELETE",
   });
 }
+
 export function createScript(script: APIScriptCreator): Promise<APIScript> {
   return Request.sendJSONReceiveJSON("/api/scripts", {
     data: script,
   });
 }
+
 export function updateScript(scriptId: string, script: APIScriptUpdater): Promise<APIScript> {
   return Request.sendJSONReceiveJSON(`/api/scripts/${scriptId}`, {
     method: "PUT",
@@ -310,28 +329,33 @@ export function createTaskType(
     data: taskType,
   });
 }
+
 export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/taskTypes/${taskTypeId}`, {
     method: "PUT",
     data: taskType,
   });
 }
+
 // ### Teams
 export async function getTeams(): Promise<Array<APITeam>> {
   const teams = await Request.receiveJSON("/api/teams");
   assertResponseLimit(teams);
   return teams;
 }
+
 export async function getEditableTeams(): Promise<Array<APITeam>> {
   const teams = await Request.receiveJSON("/api/teams?isEditable=true");
   assertResponseLimit(teams);
   return teams;
 }
+
 export function createTeam(newTeam: NewTeam): Promise<APITeam> {
   return Request.sendJSONReceiveJSON("/api/teams", {
     data: newTeam,
   });
 }
+
 export function deleteTeam(teamId: string): Promise<void> {
   return Request.receiveJSON(`/api/teams/${teamId}`, {
     method: "DELETE",
@@ -447,18 +471,17 @@ export async function getTasks(queryObject: QueryObject): Promise<Array<APITask>
   const responses = await Request.sendJSONReceiveJSON("/api/tasks/list", {
     data: queryObject,
   });
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'response' implicitly has an 'any' type.
-  const tasks = responses.map((response) => transformTask(response));
+  const tasks = responses.map((response: APITask) => transformTask(response));
   assertResponseLimit(tasks);
   return tasks;
 }
-// TODO fix return types
+
 export function createTasks(tasks: Array<NewTask>): Promise<TaskCreationResponseContainer> {
   return Request.sendJSONReceiveJSON("/api/tasks", {
     data: tasks,
   });
 }
-// TODO fix return types
+
 export function createTaskFromNML(task: NewTask): Promise<TaskCreationResponseContainer> {
   return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {
     data: {
@@ -467,10 +490,12 @@ export function createTaskFromNML(task: NewTask): Promise<TaskCreationResponseCo
     },
   });
 }
+
 export async function getTask(taskId: string, options: RequestOptions = {}): Promise<APITask> {
   const task = await Request.receiveJSON(`/api/tasks/${taskId}`, options);
   return transformTask(task);
 }
+
 export async function updateTask(taskId: string, task: NewTask): Promise<APITask> {
   const updatedTask = await Request.sendJSONReceiveJSON(`/api/tasks/${taskId}`, {
     method: "PUT",
@@ -478,9 +503,11 @@ export async function updateTask(taskId: string, task: NewTask): Promise<APITask
   });
   return transformTask(updatedTask);
 }
+
 export function finishTask(annotationId: string): Promise<APIAnnotation> {
   return finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);
 }
+
 export function transferTask(annotationId: string, userId: string): Promise<APIAnnotation> {
   return Request.sendJSONReceiveJSON(`/api/annotations/Task/${annotationId}/transfer`, {
     method: "PATCH",
@@ -489,6 +516,7 @@ export function transferTask(annotationId: string, userId: string): Promise<APIA
     },
   });
 }
+
 export async function transferActiveTasksOfProject(
   projectId: string,
   userId: string,
@@ -500,9 +528,11 @@ export async function transferActiveTasksOfProject(
     method: "POST",
   });
 }
+
 export async function getUsersWithActiveTasks(projectId: string): Promise<Array<APIActiveUser>> {
   return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
 }
+
 // ### Annotations
 export function getCompactAnnotations(
   isFinished: boolean,
@@ -512,6 +542,7 @@ export function getCompactAnnotations(
     `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
 }
+
 export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
@@ -521,9 +552,11 @@ export function getCompactAnnotationsForUser(
     `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
 }
+
 export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON("/api/annotations/shared");
 }
+
 export function getTeamsForSharedAnnotation(
   typ: string,
   id: string,
@@ -531,6 +564,7 @@ export function getTeamsForSharedAnnotation(
 ): Promise<Array<APITeam>> {
   return Request.receiveJSON(`/api/annotations/${typ}/${id}/sharedTeams`, options);
 }
+
 export function updateTeamsForSharedAnnotation(
   typ: string,
   id: string,
@@ -541,6 +575,7 @@ export function updateTeamsForSharedAnnotation(
     method: "PATCH",
   });
 }
+
 export function reOpenAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -549,6 +584,7 @@ export function reOpenAnnotation(
     method: "PATCH",
   });
 }
+
 export type EditableAnnotation = {
   name: string;
   description: string;
@@ -556,6 +592,7 @@ export type EditableAnnotation = {
   tags: Array<string>;
   viewConfiguration?: AnnotationViewConfiguration;
 };
+
 export function editAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -566,6 +603,7 @@ export function editAnnotation(
     method: "PATCH",
   });
 }
+
 export function updateAnnotationLayer(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -582,11 +620,14 @@ export function updateAnnotationLayer(
     },
   );
 }
+
 type AnnotationLayerCreateDescriptor = {
   typ: "Skeleton" | "Volume";
+  name: string;
   fallbackLayerName?: string | null | undefined;
   resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
 };
+
 export function addAnnotationLayer(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -600,6 +641,7 @@ export function addAnnotationLayer(
     },
   );
 }
+
 export function finishAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -611,6 +653,7 @@ export function finishAnnotation(
     },
   );
 }
+
 export function resetAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -619,6 +662,7 @@ export function resetAnnotation(
     method: "PUT",
   });
 }
+
 export function deleteAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -629,6 +673,7 @@ export function deleteAnnotation(
     method: "DELETE",
   });
 }
+
 export function finishAllAnnotations(selectedAnnotationIds: Array<string>): Promise<{
   messages: Array<Message>;
 }> {
@@ -642,6 +687,7 @@ export function finishAllAnnotations(selectedAnnotationIds: Array<string>): Prom
     },
   );
 }
+
 export function copyAnnotationToUserAccount(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -651,6 +697,7 @@ export function copyAnnotationToUserAccount(
     method: "POST",
   });
 }
+
 export function getAnnotationInformation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -659,6 +706,7 @@ export function getAnnotationInformation(
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
   return Request.receiveJSON(infoUrl, options);
 }
+
 export function getEmptySandboxAnnotationInformation(
   datasetId: APIDatasetId,
   tracingType: TracingType,
@@ -669,6 +717,7 @@ export function getEmptySandboxAnnotationInformation(
   const infoUrl = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/${tracingType}${sharingTokenSuffix}`;
   return Request.receiveJSON(infoUrl, options);
 }
+
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
@@ -683,7 +732,6 @@ export function createExplorational(
     layers = [
       {
         typ: "Skeleton",
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ typ: "Skeleton"; name: string; }' is not a... Remove this comment to see the full error message
         name: "Skeleton",
       },
     ];
@@ -691,7 +739,6 @@ export function createExplorational(
     layers = [
       {
         typ: "Volume",
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ typ: "Volume"; name: string; fallbackLayer... Remove this comment to see the full error message
         name: "Volume",
         fallbackLayerName,
         resolutionRestrictions,
@@ -701,12 +748,10 @@ export function createExplorational(
     layers = [
       {
         typ: "Skeleton",
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ typ: "Skeleton"; name: string; }' is not a... Remove this comment to see the full error message
         name: "Skeleton",
       },
       {
         typ: "Volume",
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ typ: "Volume"; name: string; fallbackLayer... Remove this comment to see the full error message
         name: "Volume",
         fallbackLayerName,
         resolutionRestrictions,
@@ -716,6 +761,7 @@ export function createExplorational(
 
   return Request.sendJSONReceiveJSON(url, { ...options, data: layers });
 }
+
 export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
   versions: Versions = {},
@@ -778,6 +824,7 @@ export async function getTracingForAnnotationType(
   tracing.typ = typ;
   return tracing;
 }
+
 export function getUpdateActionLog(
   tracingStoreUrl: string,
   tracingId: string,
@@ -789,6 +836,7 @@ export function getUpdateActionLog(
     ),
   );
 }
+
 export async function importVolumeTracing(
   tracing: Tracing,
   volumeTracing: VolumeTracing,
@@ -806,6 +854,7 @@ export async function importVolumeTracing(
     ),
   );
 }
+
 export function convertToHybridTracing(
   annotationId: string,
   fallbackLayerName: string | null | undefined,
@@ -816,6 +865,7 @@ export function convertToHybridTracing(
     fallbackLayerName,
   });
 }
+
 export async function downloadNml(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -851,6 +901,7 @@ export async function downloadNml(
   });
   saveAs(blob, filename);
 }
+
 export async function unlinkFallbackSegmentation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -863,6 +914,7 @@ export async function unlinkFallbackSegmentation(
     },
   );
 }
+
 // When the annotation is open, please use the corresponding method
 // in api_latest.js. It will take care of saving the annotation and
 // reloading it.
@@ -933,6 +985,7 @@ export async function cancelJob(jobId: string): Promise<Array<APIJob>> {
     method: "PATCH",
   });
 }
+
 export async function startConvertToWkwJob(
   datasetName: string,
   organizationName: string,
@@ -946,6 +999,7 @@ export async function startConvertToWkwJob(
     },
   );
 }
+
 export async function startExportTiffJob(
   datasetName: string,
   organizationName: string,
@@ -977,6 +1031,7 @@ export async function startExportTiffJob(
     },
   );
 }
+
 export function startComputeMeshFileJob(
   organizationName: string,
   datasetName: string,
@@ -993,6 +1048,7 @@ export function startComputeMeshFileJob(
     },
   );
 }
+
 export function startNucleiInferralJob(
   organizationName: string,
   datasetName: string,
@@ -1005,6 +1061,7 @@ export function startNucleiInferralJob(
     },
   );
 }
+
 export function startNeuronInferralJob(
   organizationName: string,
   datasetName: string,
@@ -1017,6 +1074,7 @@ export function startNeuronInferralJob(
     )}`,
   );
 }
+
 export function startGlobalizeFloodfillsJob(
   organizationName: string,
   datasetName: string,
@@ -1032,6 +1090,7 @@ export function startGlobalizeFloodfillsJob(
     },
   );
 }
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {
@@ -1041,6 +1100,7 @@ export function getDatasetDatasource(
     ),
   );
 }
+
 export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
   return doWithToken((token) =>
     Request.receiveJSON(
@@ -1048,6 +1108,7 @@ export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSourc
     ),
   );
 }
+
 export async function updateDatasetDatasource(
   datasetName: string,
   dataStoreUrl: string,
@@ -1062,11 +1123,13 @@ export async function updateDatasetDatasource(
     ),
   );
 }
+
 export async function getActiveDatasets(): Promise<Array<APIDataset>> {
   const datasets = await Request.receiveJSON("/api/datasets?isActive=true");
   assertResponseLimit(datasets);
   return datasets;
 }
+
 export function getDataset(
   datasetId: APIDatasetId,
   sharingToken?: string | null | undefined,
@@ -1076,6 +1139,7 @@ export function getDataset(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
   );
 }
+
 export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
@@ -1085,6 +1149,7 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
     },
   );
 }
+
 export async function getDatasetViewConfiguration(
   dataset: APIDataset,
   displayedVolumeTracings: Array<string>,
@@ -1101,6 +1166,7 @@ export async function getDatasetViewConfiguration(
   enforceValidatedDatasetViewConfiguration(settings, dataset);
   return settings;
 }
+
 export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
   datasetConfig: PartialDatasetConfiguration,
@@ -1111,6 +1177,7 @@ export function updateDatasetConfiguration(
     { ...options, method: "PUT", data: datasetConfig },
   );
 }
+
 export function getDatasetDefaultConfiguration(
   datasetId: APIDatasetId,
 ): Promise<DatasetConfiguration> {
@@ -1118,6 +1185,7 @@ export function getDatasetDefaultConfiguration(
     `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
   );
 }
+
 export function updateDatasetDefaultConfiguration(
   datasetId: APIDatasetId,
   datasetConfiguration: DatasetConfiguration,
@@ -1130,11 +1198,13 @@ export function updateDatasetDefaultConfiguration(
     },
   );
 }
+
 export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<APIUser>> {
   return Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/accessList`,
   );
 }
+
 export function createResumableUpload(datastoreUrl: string, uploadId: string): Promise<any> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const generateUniqueIdentifier = (file) => {
@@ -1172,6 +1242,7 @@ type ReserveUploadInformation = {
   totalFileCount: number;
   initialTeams: Array<string>;
 };
+
 export function reserveDatasetUpload(
   datastoreHost: string,
   reserveUploadInformation: ReserveUploadInformation,
@@ -1183,6 +1254,7 @@ export function reserveDatasetUpload(
     }),
   );
 }
+
 export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}): Promise<void> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
@@ -1191,6 +1263,7 @@ export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}
     }),
   );
 }
+
 export function cancelDatasetUpload(
   datastoreHost: string,
   cancelUploadInformation: {
@@ -1204,6 +1277,7 @@ export function cancelDatasetUpload(
     }),
   );
 }
+
 export function addWkConnectDataset(
   datastoreHost: string,
   datasetConfig: WkConnectDatasetConfig,
@@ -1216,6 +1290,7 @@ export function addWkConnectDataset(
     }),
   );
 }
+
 export async function addForeignDataSet(
   dataStoreName: string,
   url: string,
@@ -1251,6 +1326,7 @@ export async function isDatasetNameValid(
     return ex.messages.map((msg) => Object.values(msg)[0]).join(". ");
   }
 }
+
 export function updateDatasetTeams(
   datasetId: APIDatasetId,
   newTeams: Array<string>,
@@ -1263,6 +1339,7 @@ export function updateDatasetTeams(
     },
   );
 }
+
 export async function triggerDatasetCheck(datastoreHost: string): Promise<void> {
   await doWithToken((token) =>
     Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
@@ -1271,6 +1348,7 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
     }),
   );
 }
+
 export async function triggerDatasetClearCache(
   datastoreHost: string,
   datasetId: APIDatasetId,
@@ -1288,6 +1366,7 @@ export async function triggerDatasetClearCache(
     ),
   );
 }
+
 export async function deleteDatasetOnDisk(
   datastoreHost: string,
   datasetId: APIDatasetId,
@@ -1302,6 +1381,7 @@ export async function deleteDatasetOnDisk(
     ),
   );
 }
+
 export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId): Promise<void> {
   await Request.triggerRequest(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/clearThumbnailCache`,
@@ -1310,12 +1390,14 @@ export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId)
     },
   );
 }
+
 export async function clearCache(dataset: APIMaybeUnimportedDataset, layerName?: string) {
   return Promise.all([
     triggerDatasetClearCache(dataset.dataStore.url, dataset, layerName),
     triggerDatasetClearThumbnailCache(dataset),
   ]);
 }
+
 export async function getDatasetSharingToken(
   datasetId: APIDatasetId,
   options?: RequestOptions,
@@ -1326,6 +1408,7 @@ export async function getDatasetSharingToken(
   );
   return sharingToken;
 }
+
 export async function revokeDatasetSharingToken(datasetId: APIDatasetId): Promise<void> {
   await Request.triggerRequest(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
@@ -1334,12 +1417,14 @@ export async function revokeDatasetSharingToken(datasetId: APIDatasetId): Promis
     },
   );
 }
+
 export async function getOrganizationForDataset(datasetName: string): Promise<string> {
   const { organizationName } = await Request.receiveJSON(
     `/api/datasets/disambiguate/${datasetName}/toNew`,
   );
   return organizationName;
 }
+
 export async function findDataPositionForLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1358,6 +1443,7 @@ export async function findDataPositionForLayer(
     resolution,
   };
 }
+
 export async function findDataPositionForVolumeTracing(
   tracingstoreUrl: string,
   tracingId: string,
@@ -1373,6 +1459,7 @@ export async function findDataPositionForVolumeTracing(
     resolution,
   };
 }
+
 export async function getHistogramForLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1384,6 +1471,7 @@ export async function getHistogramForLayer(
     ),
   );
 }
+
 export async function getMappingsForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1395,6 +1483,7 @@ export async function getMappingsForDatasetLayer(
     ),
   );
 }
+
 export function fetchMapping(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1407,6 +1496,7 @@ export function fetchMapping(
     ),
   );
 }
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1418,6 +1508,7 @@ export async function getAgglomeratesForDatasetLayer(
     ),
   );
 }
+
 export function getSampleDatasets(
   datastoreUrl: string,
   organizationName: string,
@@ -1426,6 +1517,7 @@ export function getSampleDatasets(
     Request.receiveJSON(`${datastoreUrl}/data/datasets/sample/${organizationName}?token=${token}`),
   );
 }
+
 export async function triggerSampleDatasetDownload(
   datastoreUrl: string,
   organizationName: string,
@@ -1440,6 +1532,7 @@ export async function triggerSampleDatasetDownload(
     ),
   );
 }
+
 export async function getMeanAndStdDevFromDataset(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1454,24 +1547,31 @@ export async function getMeanAndStdDevFromDataset(
     ),
   );
 }
+
 // #### Datastores
 export async function getDatastores(): Promise<Array<APIDataStore>> {
   const datastores = await Request.receiveJSON("/api/datastores");
   assertResponseLimit(datastores);
   return datastores;
 }
+
 export const getDataStoresCached = _.memoize(getDatastores);
+
 export function getTracingstore(): Promise<APITracingStore> {
   return Request.receiveJSON("/api/tracingstore");
 }
+
 export const getTracingStoreCached = _.memoize(getTracingstore);
+
 // ### Active User
 export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
 }
+
 export function getUserConfiguration(): Record<string, any> {
   return Request.receiveJSON("/api/user/userConfiguration");
 }
+
 export function updateUserConfiguration(
   userConfiguration: Record<string, any>,
 ): Record<string, any> {
@@ -1480,6 +1580,7 @@ export function updateUserConfiguration(
     data: userConfiguration,
   });
 }
+
 // ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
@@ -1495,6 +1596,7 @@ export async function getTimeTrackingForUserByMonth(
   assertResponseLimit(timelogs);
   return timelogs;
 }
+
 export async function getTimeTrackingForUser(
   userId: string,
   // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
@@ -1511,6 +1613,7 @@ export async function getTimeTrackingForUser(
   assertResponseLimit(timelogs);
   return timelogs;
 }
+
 export async function getProjectProgressReport(
   teamId: string,
   showErrorToast: boolean = true,
@@ -1521,35 +1624,42 @@ export async function getProjectProgressReport(
   assertResponseLimit(progressData);
   return progressData;
 }
+
 export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenTasksReport>> {
   const openTasksData = await Request.receiveJSON(`/api/teams/${teamId}/openTasksOverview`);
   assertResponseLimit(openTasksData);
   return openTasksData;
 }
+
 // ### Organizations
 export async function getDefaultOrganization(): Promise<APIOrganization | null> {
   // Only returns an organization if the webKnossos instance only has one organization
   return Request.receiveJSON("/api/organizations/default");
 }
+
 export function joinOrganization(inviteToken: string): Promise<void> {
   return Request.triggerRequest(`/api/auth/joinOrganization/${inviteToken}`, {
     method: "POST",
   });
 }
+
 export async function switchToOrganization(organizationName: string): Promise<void> {
   await Request.triggerRequest(`/api/auth/switchOrganization/${organizationName}`, {
     method: "POST",
   });
   location.reload();
 }
+
 export function getUsersOrganizations(): Promise<Array<APIOrganization>> {
   return Request.receiveJSON("/api/organizations");
 }
+
 export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {
   return Request.receiveJSON(`/api/organizations/byInvite/${inviteToken}`, {
     showErrorToast: false,
   });
 }
+
 export function sendInvitesForOrganization(
   recipients: Array<string>,
   autoActivate: boolean,
@@ -1562,17 +1672,21 @@ export function sendInvitesForOrganization(
     },
   });
 }
+
 export function getOrganization(organizationName: string): Promise<APIOrganization> {
   return Request.receiveJSON(`/api/organizations/${organizationName}`);
 }
+
 export async function checkAnyOrganizationExists(): Promise<boolean> {
   return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
+
 export async function deleteOrganization(organizationName: string): Promise<void> {
   return Request.triggerRequest(`/api/organizations/${organizationName}`, {
     method: "DELETE",
   });
 }
+
 export async function updateOrganization(
   organizationName: string,
   displayName: string,
@@ -1586,6 +1700,7 @@ export async function updateOrganization(
     },
   });
 }
+
 export async function isDatasetAccessibleBySwitching(
   annotationType: AnnotationType,
   commandType: TraceOrViewCommand,
@@ -1600,45 +1715,53 @@ export async function isDatasetAccessibleBySwitching(
     );
   }
 }
+
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
   return Request.receiveJSON("/api/buildinfo", {
     doNotInvestigate: true,
   });
 }
+
 // ### BuildInfo datastore
 export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfo> {
   return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`, {
     doNotInvestigate: true,
   });
 }
+
 // ### Feature Selection
 export function getFeatureToggles(): Promise<APIFeatureToggles> {
   return Request.receiveJSON("/api/features");
 }
+
 export function getOperatorData(): Promise<string> {
   return Request.receiveJSON("/api/operatorData");
 }
+
 // ## Experience Domains
 export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
   return Request.receiveJSON("/api/tasks/experienceDomains");
 }
+
 export async function isInMaintenance(): Promise<boolean> {
   const info = await Request.receiveJSON("/api/maintenance", {
     doNotInvestigate: true,
   });
   return info.isMaintenance;
 }
+
 export function setMaintenance(bool: boolean): Promise<void> {
   return Request.triggerRequest("/api/maintenance", {
     method: bool ? "POST" : "DELETE",
   });
 }
-// @ts-expect-error ts-migrate(2339) FIXME: Property 'setMaintenance' does not exist on type '... Remove this comment to see the full error message
+// @ts-ignore
 window.setMaintenance = setMaintenance;
 
 // ### Meshes
 type MeshMetaDataForCreation = Omit<MeshMetaData, "id">;
+
 export async function createMesh(
   metadata: MeshMetaDataForCreation,
   data: ArrayBuffer,
@@ -1661,23 +1784,28 @@ export async function updateMeshMetaData(metadata: RemoteMeshMetaData): Promise<
     data: metadata,
   });
 }
+
 export async function updateMeshData(id: string, data: ArrayBuffer): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/meshes/${id}/data`, {
     method: "PUT",
     data,
   });
 }
+
 export function deleteMesh(id: string): Promise<void> {
   return Request.triggerRequest(`/api/meshes/${id}`, {
     method: "DELETE",
   });
 }
+
 export function getMeshMetaData(id: string): Promise<MeshMetaData> {
   return Request.receiveJSON(`/api/meshes/${id}`);
 }
+
 export function getMeshData(id: string): Promise<ArrayBuffer> {
   return Request.receiveArraybuffer(`/api/meshes/${id}/data`);
 }
+
 // These parameters are bundled into an object to avoid that the computeIsosurface function
 // receives too many parameters, since this doesn't play well with the saga typings.
 type IsosurfaceRequest = {
@@ -1690,6 +1818,7 @@ type IsosurfaceRequest = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
 };
+
 export function computeIsosurface(
   requestUrl: string,
   isosurfaceRequest: IsosurfaceRequest,
@@ -1736,6 +1865,7 @@ export function computeIsosurface(
     };
   });
 }
+
 export function getAgglomerateSkeleton(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
@@ -1754,6 +1884,7 @@ export function getAgglomerateSkeleton(
     ),
   );
 }
+
 export function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
@@ -1765,6 +1896,7 @@ export function getMeshfilesForDatasetLayer(
     ),
   );
 }
+
 export function getMeshfileChunksForSegment(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
@@ -1785,6 +1917,7 @@ export function getMeshfileChunksForSegment(
     ),
   );
 }
+
 export function getMeshfileChunkData(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
@@ -1808,6 +1941,7 @@ export function getMeshfileChunkData(
     return data;
   });
 }
+
 // ### Connectomes
 export function getConnectomeFilesForDatasetLayer(
   dataStoreUrl: string,
@@ -1820,6 +1954,7 @@ export function getConnectomeFilesForDatasetLayer(
     ),
   );
 }
+
 export function getSynapsesOfAgglomerates(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
@@ -1870,10 +2005,12 @@ export function getSynapseSources(...args: any): Promise<Array<number>> {
   // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "src");
 }
+
 export function getSynapseDestinations(...args: any): Promise<Array<number>> {
   // @ts-expect-error ts-migrate(2556) FIXME: Expected 6 arguments, but got 1 or more.
   return getSynapseSourcesOrDestinations(...args, "dst");
 }
+
 export function getSynapsePositions(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
@@ -1893,6 +2030,7 @@ export function getSynapsePositions(
     ),
   );
 }
+
 export function getSynapseTypes(
   dataStoreUrl: string,
   datasetId: APIDatasetId,

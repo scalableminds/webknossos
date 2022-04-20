@@ -1414,7 +1414,6 @@ class DataApi {
     const bottomRight = scaleGlobalPositionWithResolution(bbox.max, resolution, true);
     const extent: Vector3 = V3.sub(bottomRight, topLeft);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
-    // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
     const bucketWidth = Constants.BUCKET_WIDTH;
     buckets.reverse();
@@ -1448,8 +1447,7 @@ class DataApi {
           // could also be MISSING.
           const data = bucket.hasData()
             ? bucket.getData()
-            : // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
-              new TypedArrayClass(Constants.BUCKET_SIZE);
+            : new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;
@@ -1906,7 +1904,7 @@ class UserApi {
   }
 }
 
-type Handler = {
+export type UnregisterHandler = {
   unregister(): void;
 };
 /**
@@ -2006,7 +2004,7 @@ class UtilsApi {
   /**
    * Sets a custom handler function for a keyboard shortcut.
    */
-  registerKeyHandler(key: string, handler: () => void): Handler {
+  registerKeyHandler(key: string, handler: () => void): UnregisterHandler {
     const keyboard = new InputKeyboardNoLoop({
       [key]: handler,
     });

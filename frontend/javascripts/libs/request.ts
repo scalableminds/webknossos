@@ -1,5 +1,4 @@
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'url-... Remove this comment to see the full error message
 import urljoin from "url-join";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { pingMentionedDataStores } from "admin/datastore_health_check";
@@ -8,10 +7,13 @@ import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_heade
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
 import Toast from "libs/toast";
 import handleStatus from "libs/handle_http_status";
+
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
 const compress = createWorker(CompressWorker);
+
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
+
 export type RequestOptionsBase<T> = {
   compress?: boolean;
   doNotInvestigate?: boolean;
@@ -27,6 +29,10 @@ export type RequestOptionsBase<T> = {
 export type RequestOptions = RequestOptionsBase<Record<string, string>>;
 export type RequestOptionsWithData<T> = RequestOptions & {
   data: T;
+};
+
+type ServerErrorMessage = {
+  error: string;
 };
 
 class Request {
@@ -63,7 +69,6 @@ class Request {
         : JSON.stringify(options.data);
 
     if (options.compress) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | ArrayBuffer' is not ass... Remove this comment to see the full error message
       body = await compress(body);
 
       if (options.headers == null) {
@@ -197,12 +202,11 @@ class Request {
       extractHeaders: true,
     });
 
-  // TODO: babel doesn't support generic arrow-functions yet
-  triggerRequest<T>(
+  triggerRequest = <T>(
     url: string,
     options: RequestOptions | RequestOptionsWithData<T> = {},
     responseDataHandler: ((...args: Array<any>) => any) | null | undefined = null,
-  ): Promise<any> {
+  ): Promise<any> => {
     const defaultOptions = {
       method: "GET",
       host: "",
@@ -235,10 +239,10 @@ class Request {
 
     const headers = new Headers();
 
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-    for (const name of Object.keys(options.headers)) {
-      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-      headers.set(name, options.headers[name]);
+    if (options.headers) {
+      for (const name of Object.keys(options.headers)) {
+        headers.set(name, options.headers[name]);
+      }
     }
 
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'Headers' is not assignable to type 'Record<s... Remove this comment to see the full error message
@@ -272,7 +276,7 @@ class Request {
     } else {
       return fetchPromise;
     }
-  }
+  };
 
   timeoutPromise = (timeout: number): Promise<string> =>
     new Promise((resolve) => {
@@ -300,8 +304,7 @@ class Request {
                 json.status = error.status;
               }
 
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'message' implicitly has an 'any' type.
-              const messages = json.messages.map((message) => ({
+              const messages = json.messages.map((message: ServerErrorMessage[]) => ({
                 ...message,
                 key: json.status.toString(),
               }));

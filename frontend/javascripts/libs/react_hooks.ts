@@ -13,30 +13,29 @@ export function usePrevious<T>(value: T): T | null | undefined {
   return ref.current;
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-const extractModifierState = (event) => ({
+const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => ({
+  // @ts-ignore
   Shift: event.shiftKey,
+  // @ts-ignore
   Alt: event.altKey,
+  // @ts-ignore
   Control: event.ctrlKey,
 });
 
 // Adapted from: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
-export function useKeyPress(targetKey: string) {
+export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
   // State for keeping track of whether key is pressed
   const [keyPressed, setKeyPressed] = useState(false);
 
   // If pressed key is our target key then set to true
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  function downHandler(event) {
+  function downHandler<K extends keyof WindowEventMap>(this: Window, event: WindowEventMap[K]) {
     const modifierState = extractModifierState(event);
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     if (modifierState[targetKey] === undefined) {
       // The targetKey is not a modifier. Compare to the pressed key.
-      if (event.key === targetKey) {
+      if ("key" in event && event.key === targetKey) {
         pressKey();
       }
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     } else if (modifierState[targetKey]) {
       // Use the modifierState as this seems to be more robust. See
       // the other comment below which describes some edge cases
@@ -56,17 +55,14 @@ export function useKeyPress(targetKey: string) {
   }
 
   // If released key is our target key then set to false
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-  const upHandler = (event) => {
+  const upHandler = <K extends keyof WindowEventMap>(event: WindowEventMap[K]) => {
     const modifierState = extractModifierState(event);
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     if (modifierState[targetKey] === undefined) {
       // The targetKey is not a modifier. Compare to the pressed key.
-      if (event.key === targetKey) {
+      if ("key" in event && event.key === targetKey) {
         releaseKey();
       }
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     } else if (!modifierState[targetKey]) {
       // The targetKey is a modifier. Use the modifierState as this
       // is more robust against pressing multiple modifiers. For example,

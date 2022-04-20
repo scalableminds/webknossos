@@ -126,7 +126,6 @@ class ErrorHandling {
     // Remove airbrake's unhandledrejection handler
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
     window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     window.addEventListener("unhandledrejection", (event) => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
       const reasonAsString = event.reason instanceof Error ? event.reason.toString() : event.reason;

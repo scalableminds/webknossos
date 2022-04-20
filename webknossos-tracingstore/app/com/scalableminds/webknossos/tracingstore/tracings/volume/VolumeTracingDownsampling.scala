@@ -20,8 +20,8 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 object VolumeTracingDownsampling {
-  def resolutionsForVolumeTracingByLayerName(dataSource: DataSourceLike,
-                                             fallbackLayerName: Option[String]): List[Vec3Int] = {
+  def magsForVolumeTracingByLayerName(dataSource: DataSourceLike,
+                                      fallbackLayerName: Option[String]): List[Vec3Int] = {
     val fallbackLayer: Option[DataLayerLike] =
       fallbackLayerName.flatMap(name => dataSource.dataLayers.find(_.name == name))
     resolutionsForVolumeTracing(dataSource, fallbackLayer)
@@ -90,7 +90,7 @@ trait VolumeTracingDownsampling
     data.foreach { keyValuePair: VersionedKeyValuePair[Array[Byte]] =>
       val bucketPositionOpt = parseBucketKey(keyValuePair.key).map(_._2)
       bucketPositionOpt.foreach { bucketPosition =>
-        if (bucketPosition.resolution == sourceMag) {
+        if (bucketPosition.mag == sourceMag) {
           bucketDataMap(bucketPosition) = decompressIfNeeded(keyValuePair.value,
                                                              expectedUncompressedBucketSizeFor(dataLayer),
                                                              s"bucket $bucketPosition during downsampling")
@@ -211,7 +211,7 @@ trait VolumeTracingDownsampling
   protected def getRequiredMags(tracing: VolumeTracing): Fox[List[Vec3Int]] =
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSource(tracing.organizationName, tracing.dataSetName)
-      magsForTracing = VolumeTracingDownsampling.resolutionsForVolumeTracingByLayerName(dataSource,
+      magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource,
                                                                                         tracing.fallbackLayer)
     } yield magsForTracing.sortBy(_.maxDim)
 

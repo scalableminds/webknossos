@@ -52,9 +52,6 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 object Vec3Int {
   private val magLiteralRegex = """(\d+)-(\d+)-(\d+)""".r
 
-  def apply(t: (Int, Int, Int)): Vec3Int =
-    Vec3Int(t._1, t._2, t._3)
-
   def fromMagLiteral(s: String, allowScalar: Boolean = false): Option[Vec3Int] =
     s.toIntOpt match {
       case Some(scalar) if allowScalar => Some(Vec3Int.full(scalar))
@@ -78,7 +75,7 @@ object Vec3Int {
   def full(i: Int): Vec3Int = Vec3Int(i, i, i)
 
   implicit object Vec3IntReads extends Reads[Vec3Int] {
-    def reads(json: JsValue) = json match {
+    def reads(json: JsValue): JsResult[Vec3Int] = json match {
       case JsArray(ts) if ts.size == 3 =>
         val c = ts.map(fromJson[Int](_)).flatMap(_.asOpt)
         if (c.size != 3)
@@ -91,7 +88,7 @@ object Vec3Int {
   }
 
   implicit object Vec3IntWrites extends Writes[Vec3Int] {
-    def writes(v: Vec3Int) = {
+    def writes(v: Vec3Int): JsArray = {
       val l = List(v.x, v.y, v.z)
       JsArray(l.map(toJson(_)))
     }

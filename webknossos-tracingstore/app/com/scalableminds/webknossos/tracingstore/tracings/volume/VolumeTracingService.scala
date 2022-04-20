@@ -191,10 +191,10 @@ class VolumeTracingService @Inject()(
     val savedResolutions = new mutable.HashSet[Vec3Int]()
 
     val unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
-      if (resolutionRestrictions.isForbidden(bucketPosition.resolution)) {
+      if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
         Fox.successful(())
       } else {
-        savedResolutions.add(bucketPosition.resolution)
+        savedResolutions.add(bucketPosition.mag)
         saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
       }
     }
@@ -289,7 +289,7 @@ class VolumeTracingService @Inject()(
       destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       _ <- Fox.combined(buckets.map {
         case (bucketPosition, bucketData) =>
-          if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.resolution))) {
+          if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.mag))) {
             saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
           } else Fox.successful(())
       }.toList)
@@ -418,7 +418,7 @@ class VolumeTracingService @Inject()(
         val resolutionSet = new mutable.HashSet[Vec3Int]()
         bucketStreamFromSelector(selector, tracing).foreach {
           case (bucketPosition, _) =>
-            resolutionSet.add(bucketPosition.resolution)
+            resolutionSet.add(bucketPosition.mag)
         }
         if (resolutionSet.nonEmpty) { // empty tracings should have no impact in this check
           resolutionSets.add(resolutionSet.toSet)

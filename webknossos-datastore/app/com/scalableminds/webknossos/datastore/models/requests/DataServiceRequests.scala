@@ -29,7 +29,7 @@ case class DataReadInstruction(
     bucket: BucketPosition,
     version: Option[Long] = None
 ) {
-  val cube: CubePosition = bucket.toCube(dataLayer.lengthOfUnderlyingCubes(bucket.resolution))
+  val cube: CubePosition = bucket.toCube(dataLayer.lengthOfUnderlyingCubes(bucket.mag))
 }
 
 case class DataServiceMappingRequest(

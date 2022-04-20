@@ -29,7 +29,7 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCubeHandle] = {
     val zarrMagOpt: Option[ZarrMag] =
-      layer.mags.find(_.mag == readInstruction.bucket.resolution)
+      layer.mags.find(_.mag == readInstruction.bucket.mag)
 
     val magPathOpt: Option[Path] = zarrMagOpt.flatMap { zarrMag =>
       zarrMag.remoteSource match {

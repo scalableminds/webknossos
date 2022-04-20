@@ -705,7 +705,7 @@ export async function getAnnotationInformation(
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
   const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
-  const { messages, ...annotation } = annotationWithMessages;
+  const { messages: _messages, ...annotation } = annotationWithMessages;
   return annotation;
 }
 

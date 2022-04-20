@@ -26,10 +26,7 @@ import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 import { OxalisState } from "oxalis/store";
-import {
-  getActiveSegmentationTracing,
-  hasVolumeTracings,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,

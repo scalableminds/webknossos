@@ -698,13 +698,15 @@ export function copyAnnotationToUserAccount(
   });
 }
 
-export function getAnnotationInformation(
+export async function getAnnotationInformation(
   annotationId: string,
   annotationType: APIAnnotationType,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
-  return Request.receiveJSON(infoUrl, options);
+  const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+  const { messages, ...annotation } = annotationWithMessages;
+  return annotation;
 }
 
 export function getEmptySandboxAnnotationInformation(

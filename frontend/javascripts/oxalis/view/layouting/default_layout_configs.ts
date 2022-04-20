@@ -7,7 +7,7 @@
 import _ from "lodash";
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
-import type { BorderTabType, ControlMode, OrthoView, ViewMode } from "oxalis/constants";
+import type { BorderTabType, ControlMode, ViewMode } from "oxalis/constants";
 import Constants, {
   ArbitraryViews,
   ArbitraryViewsToName,

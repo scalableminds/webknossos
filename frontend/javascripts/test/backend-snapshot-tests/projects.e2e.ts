@@ -41,7 +41,7 @@ test.serial("getProject(projectId: string)", async (t) => {
   });
 });
 test.serial("createProject and deleteProject", async (t) => {
-  const team = _.sortBy(await api.getTeams(), (team) => team.name)[0];
+  const team = _.sortBy(await api.getTeams(), (aTeam) => aTeam.name)[0];
 
   const activeUser = await api.getActiveUser();
   const projectName = "test-new-project";

@@ -1,27 +1,27 @@
 # Terminology
 
-## Dataset
+## Datasets
 
 A **dataset**, can consist of multiple **layer**s, which may be
 
 * **segmentation layer**s or
 * **color layer**s.
 
-Layers contain image data in one or multiple **magnification**s or short **mag**s (see [mipmap](https://en.wikipedia.org/wiki/Mipmap) or [image pyramids](https://en.wikipedia.org/wiki/Pyramid_(image_processing)) for similar concepts.)
-The magnification `4` or `4-4-4` describe a downsampling factor of 4 in each dimension, `4-4-2` specifies anisotropic downsampling.
-The image data in full resolution is referred to as the **finest** mag, downsampled variants are more **coarse**.
+Layers contain image data in one or multiple **magnification**s or short **mag**s (see [mipmap](https://en.wikipedia.org/wiki/Mipmap) or [image pyramids](https://en.wikipedia.org/wiki/Pyramid_(image_processing)) for similar concepts).
+The magnification `4` or `4-4-4` describes a downsampling factor of 4 in each dimension, `4-4-2` specifies anisotropic downsampling.
+The image data in full resolution is referred to as the **finest** mag, e.g. `1-1-1`, downsampled variants are more **coarse**.
 
 The **voxel size** describes the size of a voxel in mag `1`, the default unit is *nm* if not specified otherwise.
 
 The underlying file formats zarr and wkw use **chunks** as a compressible unit and **shards** as a storage unit. A wkw block corresponds to a chunk, and a file to a shard.
 
 
-## Annotation
+## Annotations
 
 An **annotation** can consist of one or multiple **annotation layers**, which can either be a
 
-* **volume annotation layer**, or **volume layer** short ([main guide](./volume_annotation.md)), or
-* **skeleton annotation layer**, or **skeleton layer** and **skeleton** short, ([main guide](./skeleton_annotation.md)).
+* **volume annotation layer**, or **volume layer** in short ([main guide](./volume_annotation.md)), or
+* **skeleton annotation layer**, or **skeleton layer** and **skeleton** in short, ([main guide](./skeleton_annotation.md)).
 
 **Volume-only** and **skeleton-only** annotations are restricted to the specific annotation layer type.
 

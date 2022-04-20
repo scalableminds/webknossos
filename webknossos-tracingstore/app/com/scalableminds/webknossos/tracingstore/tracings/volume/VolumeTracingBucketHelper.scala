@@ -88,7 +88,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
 
     key match {
       case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
-        val resolutionOpt = parseResolution(resolutionStr)
+        val resolutionOpt = Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
         resolutionOpt match {
           case Some(resolution) =>
             val x = xStr.toInt

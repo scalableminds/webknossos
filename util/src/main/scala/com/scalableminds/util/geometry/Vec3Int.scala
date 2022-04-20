@@ -1,5 +1,6 @@
 package com.scalableminds.util.geometry
 
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
@@ -49,17 +50,20 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 }
 
 object Vec3Int {
-  private val magLiteralRegex = "([0-9]+)-\\s*([0-9]+)-\\s*([0-9]+)".r
+  private val magLiteralRegex = """(\d+)-(\d+)-(\d+)""".r
 
   def apply(t: (Int, Int, Int)): Vec3Int =
     Vec3Int(t._1, t._2, t._3)
 
-  def fromMagLiteral(s: String): Option[Vec3Int] =
-    s match {
-      case magLiteralRegex(x, y, z) =>
-        Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
-      case _ =>
-        None
+  def fromMagLiteral(s: String, allowScalar: Boolean = false): Option[Vec3Int] =
+    s.toIntOpt match {
+      case Some(scalar) if allowScalar => Some(Vec3Int.full(scalar))
+      case _ => s match {
+        case magLiteralRegex(x, y, z) =>
+          Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
+        case _ =>
+          None
+      }
     }
 
   def fromArray[T <% Int](array: Array[T]) =

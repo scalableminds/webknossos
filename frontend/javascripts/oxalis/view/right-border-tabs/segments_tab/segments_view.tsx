@@ -1,4 +1,5 @@
 import { Button, ConfigProvider, List, Tooltip, Select, Popover, Empty } from "antd";
+import { SelectValue } from "antd/lib/select";
 import type { Dispatch } from "redux";
 import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -12,10 +13,7 @@ import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
-import {
-  deleteMeshAction,
-  updateCurrentMeshFileAction,
-} from "oxalis/model/actions/annotation_actions";
+import { updateCurrentMeshFileAction } from "oxalis/model/actions/annotation_actions";
 import {
   getActiveSegmentationTracing,
   getVisibleSegments,
@@ -34,10 +32,7 @@ import {
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
-import {
-  updateDatasetSettingAction,
-  updateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   updateSegmentAction,
   setActiveCellAction,
@@ -134,15 +129,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 };
 
 const mapDispatchToProps = (dispatch: Dispatch<any>): any => ({
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
-  onChangeDatasetSettings(propertyName, value) {
-    dispatch(updateDatasetSettingAction(propertyName, value));
-  },
-
-  deleteMesh(id: string) {
-    dispatch(deleteMeshAction(id));
-  },
-
   setHoveredSegmentId(segmentId: number | null | undefined) {
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
   },
@@ -172,8 +158,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>): any => ({
   },
 });
 
-// @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'ExtractReturn'.
-type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
+type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
   selectedSegmentId: number | null | undefined;
@@ -201,8 +186,9 @@ const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null
 
 function _getMapIdFn(visibleSegmentationLayer: DataLayer | null | undefined) {
   const mapId =
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
-    visibleSegmentationLayer != null ? (id) => visibleSegmentationLayer.cube.mapId(id) : (id) => id;
+    visibleSegmentationLayer != null
+      ? (id: number) => visibleSegmentationLayer.cube.mapId(id)
+      : (id: number) => id;
   return mapId;
 }
 
@@ -409,7 +395,7 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  handleMeshFileSelected = async (meshFileName: string | null | undefined) => {
+  handleMeshFileSelected = async (meshFileName: SelectValue) => {
     if (this.props.visibleSegmentationLayer != null && meshFileName != null) {
       this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, meshFileName);
     }
@@ -540,21 +526,18 @@ class SegmentsView extends React.Component<Props, State> {
             value={
               this.props.currentMeshFile != null ? this.props.currentMeshFile.meshFileName : null
             }
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(meshFileName: string | null | undefined) =>... Remove this comment to see the full error message
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
           >
             {this.props.availableMeshFiles ? (
-              // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'meshFile' implicitly has an 'any' type.
-              this.props.availableMeshFiles.map((meshFile) => (
+              this.props.availableMeshFiles.map((meshFile: APIMeshFile) => (
                 <Option key={meshFile.meshFileName} value={meshFile.meshFileName}>
                   {formatMeshFile(meshFile)}
                 </Option>
               ))
             ) : (
-              // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Key'.
-              <Option value={null} disabled>
+              <Option value="" disabled>
                 No files available.
               </Option>
             )}
@@ -636,7 +619,6 @@ class SegmentsView extends React.Component<Props, State> {
                     }}
                   >
                     {allSegments.map((segment) => (
-                      // @ts-expect-error ts-migrate(2740) FIXME: Type '{ children?: ReactNode; key: number; mapId: ... Remove this comment to see the full error message
                       <SegmentListItem
                         key={segment.id}
                         mapId={mapId}
@@ -649,7 +631,19 @@ class SegmentsView extends React.Component<Props, State> {
                           this.handleSegmentDropdownMenuVisibility
                         }
                         isosurface={this.props.isosurfaces[segment.id]}
-                        {...this.props}
+                        isJSONMappingEnabled={this.props.isJSONMappingEnabled}
+                        mappingInfo={this.props.mappingInfo}
+                        hoveredSegmentId={this.props.hoveredSegmentId}
+                        activeCellId={this.props.activeCellId}
+                        setHoveredSegmentId={this.props.setHoveredSegmentId}
+                        allowUpdate={this.props.allowUpdate}
+                        updateSegment={this.props.updateSegment}
+                        visibleSegmentationLayer={this.props.visibleSegmentationLayer}
+                        loadAdHocMesh={this.props.loadAdHocMesh}
+                        loadPrecomputedMesh={this.props.loadPrecomputedMesh}
+                        setActiveCell={this.props.setActiveCell}
+                        setPosition={this.props.setPosition}
+                        currentMeshFile={this.props.currentMeshFile}
                       />
                     ))}
                   </List>

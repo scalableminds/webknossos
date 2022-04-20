@@ -1,9 +1,9 @@
-import { Table } from "antd";
+import { Table, TableProps } from "antd";
 import * as React from "react";
-type Props = {
+type Props<RecordType extends object = any> = TableProps<RecordType> & {
   children: Array<React.ReactElement<typeof Table.Column>>;
-  expandedRowRender: (...args: Array<any>) => any;
 };
+
 type State = {
   expandedColumns: Array<string>;
 };
@@ -25,10 +25,10 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
     // to the keys. However, the keys are needed when managing the sorters
     // of the table.
     const columnsWithAdjustedFixedProp = children.map((child) => {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'fixed' does not exist on type '<RecordTy... Remove this comment to see the full error message
-      const columnFixed = expandedColumns.length > 0 ? false : child.props.fixed;
+      // @ts-ignore
+      const columnFixed: boolean = expandedColumns.length > 0 ? false : child.props.fixed;
       return React.cloneElement(child, {
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
+        // @ts-ignore
         fixed: columnFixed,
       });
     });
@@ -40,10 +40,9 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
           x: "max-content",
         }}
         className="large-table"
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(selectedRows: Array<string>) => void' is no... Remove this comment to see the full error message
-        onExpandedRowsChange={(selectedRows: Array<string>) => {
+        onExpandedRowsChange={(selectedRows: Array<string | number>) => {
           this.setState({
-            expandedColumns: selectedRows,
+            expandedColumns: selectedRows as string[],
           });
         }}
       >

@@ -105,7 +105,6 @@ class ArbitraryView {
       // start the rendering loop
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
       window.addEventListener("resize", this.resizeThrottled);
     }
   }
@@ -121,7 +120,6 @@ class ArbitraryView {
       }
 
       getSceneController().rootGroup.remove(this.group);
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'removeEventListener' does not exist on t... Remove this comment to see the full error message
       window.removeEventListener("resize", this.resizeThrottled);
     }
   }

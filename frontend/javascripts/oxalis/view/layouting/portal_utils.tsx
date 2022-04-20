@@ -6,23 +6,17 @@ import { document } from "libs/window";
 // to which is rendered within GoldenLayoutAdapter.
 // The actual portal targets are reused to avoid that components
 // are re-mounted when the layout changes.
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
-const getPortalId = (id) => `portal-${id}`;
+const getPortalId = (id: string) => `portal-${id}`;
 
-const portalTargetNodes = {};
+const portalTargetNodes: Record<string, HTMLElement> = {};
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'id' implicitly has an 'any' type.
-function getOrCreatePortalTargetNode(id) {
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+function getOrCreatePortalTargetNode(id: string) {
   if (!portalTargetNodes[id]) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
     const newNode = document.createElement("div");
     newNode.id = getPortalId(id);
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     portalTargetNodes[id] = newNode;
   }
 
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   return portalTargetNodes[id];
 }
 
@@ -30,7 +24,9 @@ function getOrCreatePortalTargetNode(id) {
 export class PortalTarget extends React.Component<any, any> {
   componentWillUnmount() {
     const child = getOrCreatePortalTargetNode(this.props.portalId);
-    child.parentNode.removeChild(child);
+    if (child.parentNode != null) {
+      child.parentNode.removeChild(child);
+    }
   }
 
   render() {

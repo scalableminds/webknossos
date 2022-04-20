@@ -33,6 +33,13 @@ import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers"
 import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
 
+export type ActionDescriptor = {
+  leftClick?: string;
+  rightClick: string;
+  leftDrag?: string;
+  rightDrag?: string;
+};
+
 /*
   This module contains classes for the different tools, such as MoveTool, SkeletonTool, DrawTool etc.
   Each tool class defines getMouseControls which declares how mouse bindings are mapped (depending on
@@ -107,8 +114,7 @@ export class MoveTool {
 
         handleClickSegment(pos);
       },
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'delta' implicitly has an 'any' type.
-      pinch: (delta) => MoveHandlers.zoom(delta, true),
+      pinch: (delta: number) => MoveHandlers.zoom(delta, true),
       mouseMove: MoveHandlers.moveWhenAltIsPressed,
       out: () => {
         MoveHandlers.setMousePosition(null);
@@ -147,7 +153,7 @@ export class MoveTool {
     shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
-  ): Record<string, any> {
+  ): ActionDescriptor {
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag
     const leftClickInfo =
@@ -189,8 +195,7 @@ export class SkeletonTool {
       }
     };
 
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'draggingNodeId' implicitly has type 'any... Remove this comment to see the full error message
-    let draggingNodeId = null;
+    let draggingNodeId: number | null | undefined = null;
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
@@ -221,10 +226,8 @@ export class SkeletonTool {
 
         if (
           tracing.skeleton != null &&
-          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'draggingNodeId' implicitly has an 'any' ... Remove this comment to see the full error message
           (draggingNodeId != null || (useLegacyBindings && event.ctrlKey))
         ) {
-          // @ts-expect-error ts-migrate(7005) FIXME: Variable 'draggingNodeId' implicitly has an 'any' ... Remove this comment to see the full error message
           SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId);
         } else {
           MoveHandlers.handleMovePlane(delta);
@@ -305,7 +308,7 @@ export class SkeletonTool {
     shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
-  ): Record<string, any> {
+  ): ActionDescriptor {
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag
     const leftClickInfo = useLegacyBindings
@@ -422,7 +425,7 @@ export class DrawTool {
     _shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
-  ): Record<string, any> {
+  ): ActionDescriptor {
     let rightClick;
 
     if (!useLegacyBindings) {
@@ -477,7 +480,7 @@ export class EraseTool {
     _shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
-  ): Record<string, any> {
+  ): ActionDescriptor {
     return {
       leftDrag: `Erase (${activeTool === AnnotationToolEnum.ERASE_BRUSH ? "Brush" : "Trace"})`,
       rightClick: "Context Menu",
@@ -501,7 +504,7 @@ export class PickCellTool {
     _shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
-  ): Record<string, any> {
+  ): ActionDescriptor {
     return {
       leftClick: "Pick Segment",
       rightClick: "Context Menu",
@@ -531,7 +534,7 @@ export class FillCellTool {
     _shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
-  ): Record<string, any> {
+  ): ActionDescriptor {
     return {
       leftClick: "Fill Segment",
       rightClick: "Context Menu",
@@ -578,8 +581,7 @@ export class BoundingBoxTool {
         secondarySelectedEdge = null;
         getSceneController().highlightUserBoundingBox(null);
       },
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_id' implicitly has an 'any' type.
-      mouseMove: (delta: Point2, position: Point2, _id, event: MouseEvent) => {
+      mouseMove: (delta: Point2, position: Point2, _id: any, event: MouseEvent) => {
         if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
           MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
           highlightAndSetCursorOnHoveredBoundingBox(delta, position, planeId);
@@ -604,7 +606,7 @@ export class BoundingBoxTool {
     _shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
-  ): Record<string, any> {
+  ): ActionDescriptor {
     return {
       leftDrag: "Resize Bounding Boxes",
       rightClick: "Context Menu",

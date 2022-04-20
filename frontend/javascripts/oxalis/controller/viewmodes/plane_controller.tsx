@@ -147,8 +147,7 @@ class BoundingBoxKeybindings {
   }
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'timeFactor' implicitly has an 'any' typ... Remove this comment to see the full error message
-const getMoveValue = (timeFactor) => {
+const getMoveValue = (timeFactor: number) => {
   const state = Store.getState();
   return (
     (state.userConfiguration.moveValue * timeFactor) /
@@ -160,8 +159,7 @@ const getMoveValue = (timeFactor) => {
 function createDelayAwareMoveHandler(multiplier: number) {
   // The multiplier can be used for inverting the direction as well as for
   // speeding up the movement as it's done for shift+f, for example.
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'timeFactor' implicitly has an 'any' typ... Remove this comment to see the full error message
-  const fn = (timeFactor, first) =>
+  const fn = (timeFactor: number, first: boolean) =>
     MoveHandlers.moveW(getMoveValue(timeFactor) * multiplier, first);
 
   fn.customAdditionalDelayFn = () => {
@@ -215,16 +213,12 @@ class PlaneController extends React.PureComponent<Props> {
   input: {
     mouseControllers: OrthoViewMap<InputMouse>;
     keyboard?: InputKeyboard;
-    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'keyboardNoLoop'.
     keyboardNoLoop?: InputKeyboardNoLoop;
     keyboardLoopDelayed?: InputKeyboard;
-    // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'keyboardNoLoop'.
-    keyboardNoLoop?: InputKeyboardNoLoop;
   };
 
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
-  isStarted: boolean;
+  isStarted: boolean = false;
   // Copied from backbone events (TODO: handle this better)
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
   listenTo: (...args: Array<any>) => any;
@@ -318,10 +312,9 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(boundingBoxControls),
     );
 
-    const controls = {};
+    const controls: Record<string, any> = {};
 
     for (const controlKey of allControlKeys) {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       controls[controlKey] = this.createToolDependentMouseHandler({
         [AnnotationToolEnum.MOVE]: moveControls[controlKey],
         // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
@@ -341,7 +334,6 @@ class PlaneController extends React.PureComponent<Props> {
 
   initKeyboard(): void {
     // avoid scrolling while pressing space
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addEventListener' does not exist on type... Remove this comment to see the full error message
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
@@ -400,8 +392,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   getNotLoopedKeyboardControls(): Record<string, any> {
     const baseControls = {
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'event' implicitly has an 'any' type.
-      "ctrl + i": (event) => {
+      "ctrl + i": (event: React.KeyboardEvent) => {
         const segmentationLayer = Model.getVisibleSegmentationLayer();
 
         if (!segmentationLayer) {
@@ -447,10 +438,10 @@ class PlaneController extends React.PureComponent<Props> {
         : emptyDefaultHandler;
     const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
+
     return {
       ...baseControls,
       ...skeletonControls,
-      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...volumeControls,
       c: this.createToolDependentKeyboardHandler(
         skeletonCHandler,

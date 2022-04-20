@@ -95,16 +95,10 @@ type DispatchProps = {
   hideTree: (arg0: number) => void;
   createTree: () => void;
   hideBoundingBox: (arg0: number) => void;
-  // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'setActiveCell'.
-  setActiveCell: (arg0: number) => void;
-  // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'addNewBoundingBox'.
-  addNewBoundingBox: (arg0: Vector3) => void;
   setBoundingBoxColor: (arg0: number, arg1: Vector3) => void;
   setBoundingBoxName: (arg0: number, arg1: string) => void;
-  // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'addNewBoundingBox'.
   addNewBoundingBox: (arg0: Vector3) => void;
   deleteBoundingBox: (arg0: number) => void;
-  // @ts-expect-error ts-migrate(2300) FIXME: Duplicate identifier 'setActiveCell'.
   setActiveCell: (arg0: number, somePosition?: Vector3) => void;
   createBranchPoint: (arg0: number, arg1: number) => void;
   deleteBranchpointById: (arg0: number, arg1: number) => void;
@@ -124,8 +118,7 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps & DispatchProps;
 type PropsWithRef = Props & {
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'React$ElementRef'.
-  inputRef: React$ElementRef<any>;
+  inputRef: React.MutableRefObject<HTMLElement | null>;
 };
 type NodeContextMenuOptionsProps = Props & {
   viewport: OrthoView;
@@ -294,8 +287,12 @@ function shortcutBuilder(shortcuts: Array<string>): React.ReactNode {
   );
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'clickedTree' implicitly has an 'any' ty... Remove this comment to see the full error message
-function getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispatch) {
+function getMaybeMinCutItem(
+  clickedTree: Tree,
+  volumeTracing: VolumeTracing | null | undefined,
+  userBoundingBoxes: Array<UserBoundingBox>,
+  dispatch: Dispatch<any>,
+) {
   const seeds = Array.from(clickedTree.nodes.values());
 
   if (volumeTracing == null || seeds.length !== 2) {
@@ -323,9 +320,7 @@ function getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispa
         </Menu.Item>
 
         {userBoundingBoxes
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bbox' implicitly has an 'any' type.
           .filter((bbox) => isBoundingBoxUsableForMinCut(bbox.boundingBox, seeds))
-          // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bbox' implicitly has an 'any' type.
           .map((bbox) => (
             <Menu.Item
               key={bbox.id}
@@ -734,7 +729,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
             <Menu.Item
               key="select-cell"
               onClick={() => {
-                // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 2.
                 setActiveCell(segmentIdAtPosition, globalPosition);
               }}
             >
@@ -804,10 +798,9 @@ function ContextMenuContainer(props: Props) {
    * latest when sub menus are used, the styling issues become too complicated
    * to deal with.
    */
-  const inputRef = React.useRef(null);
+  const inputRef: React.MutableRefObject<HTMLElement | null> = React.useRef(null);
   React.useEffect(() => {
     if (inputRef.current != null) {
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       inputRef.current.focus();
     }
   }, [inputRef.current]);
@@ -849,6 +842,7 @@ function ContextMenuContainer(props: Props) {
           }}
           className="node-context-menu"
           tabIndex={-1}
+          // @ts-ignore
           ref={inputRef}
         />
         <ContextMenuInner {...props} inputRef={inputRef} />
@@ -991,7 +985,8 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
             ...props,
           });
   }
-  if (inputRef == null) return null;
+  if (inputRef == null || inputRef.current == null) return null;
+  const refContent = inputRef.current;
 
   return (
     <React.Fragment>
@@ -1000,8 +995,8 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
         overlay={overlay}
         overlayClassName="dropdown-overlay-container-for-context-menu"
         visible={contextMenuPosition != null}
-        getPopupContainer={() => inputRef.current}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: Element; overl... Remove this comment to see the full error message
+        getPopupContainer={() => refContent}
+        // @ts-ignore
         destroyPopupOnHide
       >
         <div />

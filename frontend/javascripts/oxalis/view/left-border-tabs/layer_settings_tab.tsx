@@ -16,6 +16,7 @@ import _ from "lodash";
 
 import classnames from "classnames";
 import type { APIDataset, EditableLayerProperties } from "types/api_flow_types";
+import { ValueOf } from "types/globals";
 import { AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
@@ -120,19 +121,16 @@ type State = {
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'onChangeUser' has no initializer and is ... Remove this comment to see the full error message
   onChangeUser: Record<keyof UserConfiguration, (...args: Array<any>) => any>;
   state: State = {
     volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,
   };
 
-  // This cannot be changed to componentDidMount, because this.onChangeUser is accessed in render
-  UNSAFE_componentWillMount() {
-    // cache onChange handler
+  constructor(props: DatasetSettingsProps) {
+    super(props);
     this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName) =>
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
-      _.partial(this.props.onChangeUser, propertyName),
+      _.partial(this.props.onChangeUser, propertyName as keyof UserConfiguration),
     );
   }
 
@@ -225,8 +223,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
           style={{
             cursor: "pointer",
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '"var(--ant-primary)" | null' is not assignab... Remove this comment to see the full error message
-            color: isInEditMode ? "var(--ant-primary)" : null,
+            color: isInEditMode ? "var(--ant-primary)" : undefined,
           }}
         />
       </Tooltip>
@@ -343,8 +340,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
-    const onChange = (value, event) => {
+    const onChange = (value: boolean, event: MouseEvent) => {
       if (!event.ctrlKey && !event.altKey && !event.shiftKey) {
         setSingleLayerVisibility(value);
         return;
@@ -363,13 +359,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const hasHistogram = this.props.histogramData[layerName] != null;
     const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
     const volumeDescriptor =
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
-      layer.tracingId != null ? getVolumeDescriptorById(tracing, layer.tracingId) : null;
+      "tracingId" in layer && layer.tracingId != null
+        ? getVolumeDescriptorById(tracing, layer.tracingId)
+        : null;
     const readableName =
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
-      layer.tracingId != null
-        ? // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
-          getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+      "tracingId" in layer && layer.tracingId != null
+        ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
         : layerName;
     return (
       <div className="flex-container">
@@ -570,8 +565,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         <ColorSetting
           value={Utils.rgbToHex(layerConfiguration.color)}
           onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-          className="ant-btn"
           style={{
             marginLeft: 6,
           }}
@@ -714,8 +707,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     if (!foundPosition || !foundResolution) {
       const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
-      const centerPosition = V3.add(lowerBoundary, upperBoundary).map((el) => el / 2);
+      const centerPosition = V3.add(lowerBoundary, upperBoundary).map((el: number) => el / 2);
       Toast.warning(
         `Couldn't find data within layer "${layerName}." Jumping to the center of the layer's bounding box.`,
       );
@@ -732,7 +724,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
     await api.data.reloadBuckets(layerName);
-    // @ts-ignore
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
@@ -752,12 +743,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? fallbackLayerInfo.resolutions
         : getResolutions(this.props.dataset);
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolution' implicitly has an 'any' typ... Remove this comment to see the full error message
-    const getMaxDim = (resolution) => Math.max(...resolution);
+    const getMaxDim = (resolution: Vector3) => Math.max(...resolution);
 
     const volumeTracingResolutions = segmentationLayer.resolutions;
 
     const sourceMag = _.minBy(volumeTracingResolutions, getMaxDim);
+    if (sourceMag === undefined) {
+      return [];
+    }
 
     const possibleMags = volumeTargetResolutions.filter(
       (resolution) => getMaxDim(resolution) >= getMaxDim(sourceMag),
@@ -849,7 +842,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
           >
             <LogSliderSetting
-              label={settings.nodeRadius}
+              label="Node Radius"
               min={userSettings.nodeRadius.minimum}
               max={userSettings.nodeRadius.maximum}
               roundTo={0}
@@ -866,8 +859,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               min={userSettings.particleSize.minimum}
               max={userSettings.particleSize.maximum}
               step={0.1}
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-              roundTo={1}
               value={userConfiguration.particleSize}
               onChange={this.onChangeUser.particleSize}
             />
@@ -1002,23 +993,23 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
-  onChange(propertyName, value) {
+  onChange(propertyName: keyof DatasetConfiguration, value: ValueOf<DatasetConfiguration>) {
     dispatch(updateDatasetSettingAction(propertyName, value));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
-  onChangeUser(propertyName, value) {
+  onChangeUser(propertyName: keyof UserConfiguration, value: ValueOf<UserConfiguration>) {
     dispatch(updateUserSettingAction(propertyName, value));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerName' implicitly has an 'any' type... Remove this comment to see the full error message
-  onChangeLayer(layerName, propertyName, value) {
+  onChangeLayer(
+    layerName: string,
+    propertyName: keyof DatasetLayerConfiguration,
+    value: ValueOf<DatasetLayerConfiguration>,
+  ) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layerName' implicitly has an 'any' type... Remove this comment to see the full error message
-  onClipHistogram(layerName, shouldAdjustClipRange) {
+  onClipHistogram(layerName: string, shouldAdjustClipRange: boolean) {
     return dispatchClipHistogramAsync(layerName, shouldAdjustClipRange, dispatch);
   },
 
@@ -1026,8 +1017,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setNodeRadiusAction(radius));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'position' implicitly has an 'any' type.
-  onSetPosition(position) {
+  onSetPosition(position: Vector3) {
     dispatch(setPositionAction(position));
   },
 
@@ -1035,8 +1025,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(setShowSkeletonsAction(showSkeletons));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolution' implicitly has an 'any' typ... Remove this comment to see the full error message
-  onZoomToResolution(resolution) {
+  onZoomToResolution(resolution: Vector3) {
     const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;

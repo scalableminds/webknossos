@@ -21,7 +21,7 @@ import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import messages, { settingsTooltips, settings as settingsLabels } from "messages";
 import { userSettings } from "types/schemas/user_settings.schema";
-import type { ViewMode } from "oxalis/constants";
+import type { ViewMode, Vector2 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
@@ -68,7 +68,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       return (
         <Panel header="Flight Options" key="2">
           <LogSliderSetting
-            label={<Tooltip title={settingsTooltips.zoomFlight}>{settingsLabels.zoom}</Tooltip>}
+            label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
             roundTo={3}
             min={this.props.validZoomRange[0]}
             max={this.props.validZoomRange[1]}
@@ -321,25 +321,19 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
 } // Reuse last range if it's equal to the current one to avoid unnecessary
 // render() executions
 
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'lastValidZoomRange' implicitly has type ... Remove this comment to see the full error message
-let lastValidZoomRange = null;
+let lastValidZoomRange: Vector2 | null = null;
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
-function _getValidZoomRangeForUser(state) {
+function _getValidZoomRangeForUser(state: OxalisState) {
   const newRange = getValidZoomRangeForUser(state);
 
   if (
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'lastValidZoomRange' implicitly has an 'a... Remove this comment to see the full error message
     !lastValidZoomRange ||
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'lastValidZoomRange' implicitly has an 'a... Remove this comment to see the full error message
     newRange[0] !== lastValidZoomRange[0] ||
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'lastValidZoomRange' implicitly has an 'a... Remove this comment to see the full error message
     newRange[1] !== lastValidZoomRange[1]
   ) {
     lastValidZoomRange = newRange;
   }
 
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'lastValidZoomRange' implicitly has an 'a... Remove this comment to see the full error message
   return lastValidZoomRange;
 }
 
@@ -353,13 +347,11 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
-  onChangeUser(propertyName, value) {
+  onChangeUser(propertyName: keyof UserConfiguration, value: any) {
     dispatch(updateUserSettingAction(propertyName, value));
   },
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'propertyName' implicitly has an 'any' t... Remove this comment to see the full error message
-  onChangeDataset(propertyName, value) {
+  onChangeDataset(propertyName: keyof DatasetConfiguration, value: any) {
     dispatch(updateDatasetSettingAction(propertyName, value));
   },
 

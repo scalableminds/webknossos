@@ -1972,12 +1972,29 @@
     "@types/history" "^4.7.11"
     "@types/react" "*"
 
+"@types/react-virtualized@^9.21.21":
+  version "9.21.21"
+  resolved "https://registry.yarnpkg.com/@types/react-virtualized/-/react-virtualized-9.21.21.tgz#65c96f25314f0fb3d40536929dc78112753b49e1"
+  integrity sha512-Exx6I7p4Qn+BBA1SRyj/UwQlZ0I0Pq7g7uhAp0QQ4JWzZunqEqNBGTmCmMmS/3N9wFgAGWuBD16ap7k8Y14VPA==
+  dependencies:
+    "@types/prop-types" "*"
+    "@types/react" "^17"
+
 "@types/react@*":
   version "17.0.0"
   resolved "https://registry.yarnpkg.com/@types/react/-/react-17.0.0.tgz#5af3eb7fad2807092f0046a1302b7823e27919b8"
   integrity sha512-aj/L7RIMsRlWML3YB6KZiXB3fV2t41+5RBGYF8z+tAKU43Px8C3cYUZsDvf1/+Bm4FK21QWBrDutu8ZJ/70qOw==
   dependencies:
     "@types/prop-types" "*"
+    csstype "^3.0.2"
+
+"@types/react@^17":
+  version "17.0.44"
+  resolved "https://registry.yarnpkg.com/@types/react/-/react-17.0.44.tgz#c3714bd34dd551ab20b8015d9d0dbec812a51ec7"
+  integrity sha512-Ye0nlw09GeMp2Suh8qoOv0odfgCoowfM/9MG6WeRD60Gq9wS90bdkdRtYbRkNhXOpG4H+YXGvj4wOWhAC0LJ1g==
+  dependencies:
+    "@types/prop-types" "*"
+    "@types/scheduler" "*"
     csstype "^3.0.2"
 
 "@types/react@^17.0.43":
@@ -2057,6 +2074,11 @@
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/@types/unist/-/unist-2.0.3.tgz#9c088679876f374eb5983f150d4787aa6fb32d7e"
   integrity sha512-FvUupuM3rlRsRtCN+fDudtmytGO6iHJuuRKS1Ss0pG5z8oX0diNEw94UEL7hgDbpN94rgaK5R7sWm6RrSkZuAQ==
+
+"@types/url-join@^4.0.0":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@types/url-join/-/url-join-4.0.1.tgz#4989c97f969464647a8586c7252d97b449cdc045"
+  integrity sha512-wDXw9LEEUHyV+7UWy7U315nrJGJ7p1BzaCxDpEoLr789Dk1WDVMMlf3iBfbG2F8NdWnYyFbtTxUn2ZNbm1Q4LQ==
 
 "@types/ws@^8.2.2":
   version "8.5.3"
@@ -4857,12 +4879,12 @@ devtools-protocol@0.0.960912:
   resolved "https://registry.yarnpkg.com/devtools-protocol/-/devtools-protocol-0.0.960912.tgz#411c1fa355eddb72f06c4a8743f2808766db6245"
   integrity sha512-I3hWmV9rWHbdnUdmMKHF2NuYutIM2kXz2mdXW8ha7TbRlGTVs+PF+PsB5QWvpCek4Fy9B+msiispCfwlhG5Sqg==
 
-dice-coefficient@^1.0.2:
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/dice-coefficient/-/dice-coefficient-1.0.5.tgz#f99be235d27fe886fbadac107fd6fd874f6b7b5d"
-  integrity sha512-T5iCfFziG6w3RdIxdwcdNFghnspqkJcOyYA/lAujryGpEx6V/PqSp6dqIzYYQwapqNrW2pLgRk0tPJ+HEPDjFQ==
+dice-coefficient@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/dice-coefficient/-/dice-coefficient-2.1.0.tgz#ae30a257b0452afc810e3c245ccd014cd6e7746f"
+  integrity sha512-B/hUda7ROK/00SSZJ3WT629DT5C+X4K91LQcVrSLyC4kNn2rxmiqkEuyiGHwJS6czVZsanfpt5mh16pp6kNiIA==
   dependencies:
-    n-gram "^1.0.0"
+    n-gram "^2.0.0"
 
 diff@^4.0.1:
   version "4.0.2"
@@ -9436,10 +9458,10 @@ mute-stream@0.0.8:
   resolved "https://registry.yarnpkg.com/mute-stream/-/mute-stream-0.0.8.tgz#1630c42b2251ff81e2a283de96a5497ea92e5e0d"
   integrity sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==
 
-n-gram@^1.0.0:
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/n-gram/-/n-gram-1.1.2.tgz#69c609a5c83bb32f82774c9e297f8494c7326798"
-  integrity sha512-mBTpWKp0NHdujHmxrskPg2jc108mjyMmVxHN1rZGK/ogTLi9O0debDIXlQPqotNELdNmVGtL4jr7SCig+4OWvQ==
+n-gram@^2.0.0:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/n-gram/-/n-gram-2.0.1.tgz#055adb9d4e12e16205b95e6213b9b865e611bc81"
+  integrity sha512-ECtaRCOsPvqdTMI7SAFVaPaHv1ofhGqstphMFDWF3yrOaJcFsaCTpTREjYaPYpMC1nzJdewuiqvYXGM9W+Radw==
 
 nan@^2.12.1, nan@^2.14.0:
   version "2.14.2"
@@ -11475,10 +11497,10 @@ rc@^1.2.7, rc@^1.2.8:
     minimist "^1.2.0"
     strip-json-comments "~2.0.1"
 
-react-debounce-render@^6.0.0:
-  version "6.1.0"
-  resolved "https://registry.yarnpkg.com/react-debounce-render/-/react-debounce-render-6.1.0.tgz#f3ac5e1ecac64faca4224f0fbe709c8e3a099610"
-  integrity sha512-Mh2OMIPkCC3Yox1F8virGjsWdT97vpwybgs32eB3ary7L45fYZhR1W/Kg7dVqsm8Kztf4qpTCbOxeaAwsEsGQw==
+react-debounce-render@^8.0.1:
+  version "8.0.2"
+  resolved "https://registry.yarnpkg.com/react-debounce-render/-/react-debounce-render-8.0.2.tgz#ce37864e9bd8d086dbd3e3e784d3270bac2cf2d3"
+  integrity sha512-tVdMjXJl38LK2JSr5KiCHdnHi8LlQA4jFXiMQfw0ZWDuMmAtDP63lK49RKeYnCXM9r0HKgKIFmNPZxQpeGjQmg==
   dependencies:
     hoist-non-react-statics "^3.3.2"
     lodash.debounce "^4.0.8"

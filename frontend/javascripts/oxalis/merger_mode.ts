@@ -1,7 +1,7 @@
 import { Modal } from "antd";
 import _ from "lodash";
 import type { NodeWithTreeId } from "oxalis/model/sagas/update_actions";
-import type { TreeMap, SkeletonTracing } from "oxalis/store";
+import type { TreeMap, SkeletonTracing, OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
@@ -9,6 +9,10 @@ import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_acces
 import Store from "oxalis/throttled_store";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
+import { UnregisterHandler } from "oxalis/api/api_latest";
+import { Action } from "oxalis/model/actions/actions";
+import { CreateNodeAction } from "./model/actions/skeletontracing_actions";
+
 type MergerModeState = {
   treeColors: Record<number, number | null | undefined>;
   colorMapping: Record<number, number>;
@@ -23,10 +27,8 @@ type MergerModeState = {
   nodeSegmentMap: Record<string, any>;
   prevTracing: SkeletonTracing;
 };
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'unregisterKeyHandlers' implicitly has ty... Remove this comment to see the full error message
-const unregisterKeyHandlers = [];
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'unsubscribeFunctions' implicitly has typ... Remove this comment to see the full error message
-const unsubscribeFunctions = [];
+const unregisterKeyHandlers: UnregisterHandler[] = [];
+const unsubscribeFunctions: Array<() => void> = [];
 let isCodeActive = false;
 
 function mapSegmentColorToTree(segId: number, treeId: number, mergerModeState: MergerModeState) {
@@ -79,8 +81,7 @@ function decreaseNodesOfSegment(segementId: number, mergerModeState: MergerModeS
 
 function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
   const trees: TreeMap = api.tracing.getAllTrees();
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'nodes' implicitly has type 'any[]' in so... Remove this comment to see the full error message
-  const nodes = [];
+  const nodes: Array<NodeWithTreeId> = [];
   // Create an array of all nodes, but with the additional treeId Property
   Object.keys(trees).forEach((treeId) => {
     const currentTreeId = parseInt(treeId);
@@ -93,13 +94,17 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
       nodes.push(nodeWithTreeId);
     }
   });
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'nodes' implicitly has an 'any[]' type.
+
   return nodes;
 }
 
 // Do not create nodes if they are set outside of segments.
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'store' implicitly has an 'any' type.
-async function createNodeOverwrite(store, call, action, mergerModeState: MergerModeState) {
+async function createNodeOverwrite(
+  _store: OxalisState,
+  call: (action: Action) => void,
+  action: CreateNodeAction,
+  mergerModeState: MergerModeState,
+) {
   const { segmentationLayerName } = mergerModeState;
 
   if (!segmentationLayerName) {
@@ -321,8 +326,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
 
   const [segMinVec, segMaxVec] = api.data.getBoundingBox(segmentationLayerName);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'node' implicitly has an 'any' type.
-  const setSegmentationOfNode = async (node) => {
+  const setSegmentationOfNode = async (node: NodeWithTreeId) => {
     const pos = node.position;
     const { treeId } = node;
 
@@ -366,8 +370,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
   api.data.setMapping(segmentationLayerName, colorMapping);
 }
 
-// @ts-expect-error ts-migrate(2740) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
-function resetState(mergerModeState: MergerModeState = {}) {
+function resetState(mergerModeState: Partial<MergerModeState> = {}) {
   const state = Store.getState();
   const visibleLayer = getVisibleSegmentationLayer(Store.getState());
   const segmentationLayerName = visibleLayer != null ? visibleLayer.name : null;
@@ -417,8 +420,8 @@ export async function enableMergerMode(
   );
   // Register for single CREATE_NODE actions to avoid setting nodes outside of segments
   unsubscribeFunctions.push(
-    api.utils.registerOverwrite("CREATE_NODE", (store, next, originalAction) =>
-      createNodeOverwrite(store, next, originalAction, mergerModeState),
+    api.utils.registerOverwrite<OxalisState, Action>("CREATE_NODE", (store, next, originalAction) =>
+      createNodeOverwrite(store, next, originalAction as CreateNodeAction, mergerModeState),
     ),
   );
   // Register the additional key handlers
@@ -442,9 +445,7 @@ export function disableMergerMode(segmentationLayerName: string | null | undefin
   }
 
   isCodeActive = false;
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'unsubscribeFunctions' implicitly has an ... Remove this comment to see the full error message
   unsubscribeFunctions.forEach((unsubscribeFunction) => unsubscribeFunction());
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'unregisterKeyHandlers' implicitly has an... Remove this comment to see the full error message
   unregisterKeyHandlers.forEach((unregisterObject) => unregisterObject.unregister());
 
   // Disable the custom merger mode mapping

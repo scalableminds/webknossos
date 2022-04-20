@@ -33,7 +33,7 @@ A tree is supposed to be a single connected component. Despite the name, it may 
 
 ## Tasks & Projects
 
-A **task** specifies a desired annotation result. A **task instance** refers to the concrete annotation on a task, which can be done redundantly for a task. Task instances may also be abbreviated as tasks if the context is clear.
+A **task** specifies a desired annotation result. A **task instance** refers to the concrete copy of a task assigned to a user for annotation work. A task may be handed out to several users for redundancy resulting in several task instances, each containing their respective annotation. Task instances may also be abbreviated as tasks if the context is clear.
 
 A **project** is a collection of tasks.
 

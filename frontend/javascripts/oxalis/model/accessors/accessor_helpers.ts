@@ -25,7 +25,6 @@ export function reuseInstanceOnEquality<R, F extends (...args: Array<any>) => R>
   equalityFunction: (arg0: R, arg1: R) => boolean = _.isEqual,
 ): F {
   let lastResult: R;
-  // $FlowFixMe[incompatible-return] This function has the same interface as F.
   // @ts-expect-error ts-migrate(2322) FIXME: Type '(...args: Array<any>) => R' is not assignabl... Remove this comment to see the full error message
   return (...args: Array<any>): R => {
     const result = fn(...args);

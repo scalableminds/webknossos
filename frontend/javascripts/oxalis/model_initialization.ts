@@ -271,7 +271,6 @@ function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<Ser
       };
     }
 
-    // $FlowIssue[prop-missing] For some reason flow thinks the task property is missing, but it is not
     Store.dispatch(initializeAnnotationAction(annotation));
     getServerVolumeTracings(serverTracings).map((volumeTracing) => {
       ErrorHandling.assert(

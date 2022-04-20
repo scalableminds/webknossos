@@ -65,7 +65,7 @@ class TextWithDescription extends React.PureComponent<Props> {
         </span>
         {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message */}
         <span className={hasDescription ? "flex-item" : null}>
-          {isEditable ? ( // $FlowIssue[incompatible-type]
+          {isEditable ? (
             // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             <EditableTextLabel {...editableProps} />
           ) : (

@@ -74,11 +74,7 @@ const rawRgbs = [
   9,
 ];
 // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
-export const rgbs: Array<Vector3> = chunk3(rawRgbs).map(
-  (
-    rgb, // $FlowIssue[invalid-tuple-arity] Flow has troubles with understanding that mapping a tuple, returns another tuple
-  ) => rgb.map((el) => el / 255),
-);
+export const rgbs: Array<Vector3> = chunk3(rawRgbs).map((rgb) => rgb.map((el) => el / 255));
 const ColorGenerator = {
   distinctColorForId(id: number): Vector3 {
     return rgbs[(id - 1 + rgbs.length) % rgbs.length];

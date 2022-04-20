@@ -36,13 +36,11 @@ class DiffableMap<K extends number, V> {
   }
 
   getId() {
-    // $FlowFixMe[prop-missing]
     // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return this[idSymbol];
   }
 
   setId(id: number) {
-    // $FlowFixMe[prop-missing]
     // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     this[idSymbol] = id;
   }

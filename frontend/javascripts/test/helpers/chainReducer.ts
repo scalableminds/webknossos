@@ -9,7 +9,6 @@ class ChainReducerClass<S, A> {
     reducer: (arg0: S, arg1: A) => S,
     actionGetter: A | ((arg0: S) => A),
   ): ChainReducerClass<S, A> {
-    // $FlowFixMe[incompatible-use] Cannot call actionGetter because the parameter types of an unknown function are unknown.
     // @ts-expect-error ts-migrate(2349) FIXME: This expression is not callable.
     const action = typeof actionGetter === "function" ? actionGetter(this.state) : actionGetter;
     return new ChainReducerClass(reducer(this.state, action));

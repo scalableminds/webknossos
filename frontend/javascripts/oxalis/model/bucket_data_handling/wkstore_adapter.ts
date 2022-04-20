@@ -53,7 +53,6 @@ const createRequestBucketInfo = (
 ): RequestBucketInfo => ({
   ...createSendBucketInfo(zoomedAddress, resolutions),
   fourBit,
-  // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
   ...(applyAgglomerate != null
     ? {
         applyAgglomerate,

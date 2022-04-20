@@ -37,8 +37,6 @@ export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
 
 function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
   if (action.tracingType === "skeleton" && state.tracing.skeleton != null) {
-    // Flow thinks that tracing.skeleton might be null and complains therefore.
-    // $FlowIgnore[prop-missing]
     return updateKey2(state, "tracing", "skeleton", {
       version: action.version,
     });
@@ -181,7 +179,6 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_SAVE_BUSY": {
       return update(state, {
-        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         save: {
           isBusyInfo: {
             [action.tracingType]: {

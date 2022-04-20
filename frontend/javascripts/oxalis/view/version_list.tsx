@@ -136,7 +136,6 @@ class VersionList extends React.Component<Props, State> {
       const { annotationType, annotationId, volumes } = Store.getState().tracing;
       const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
       downloadNml(annotationId, annotationType, includesVolumeFallbackData, {
-        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [this.props.tracingType]: version,
       });
     }

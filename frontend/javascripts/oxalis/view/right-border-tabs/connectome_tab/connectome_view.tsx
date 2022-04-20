@@ -108,7 +108,6 @@ const getSynapseIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<
   const { synapses, agglomerates } = connectomeData;
   return unique(
     Object.values(agglomerates).flatMap(
-      // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
       ({ in: inSynapses = [], out: outSynapses = [] }: Agglomerate) =>
         inSynapses.concat(outSynapses),
     ),
@@ -126,7 +125,6 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
   const filteredSynapseIds = getSynapseIdsFromConnectomeData(connectomeData);
   const partnerAgglomerateIds = filteredSynapseIds.map((synapseId): number => {
     const synapse = synapses[synapseId];
-    // $FlowIssue[incompatible-return] Flow doesn't understand that if src == null -> dst != null
     if (synapse.src != null) {
       return synapse.src;
     } else if (synapse.dst) {
@@ -386,16 +384,10 @@ class ConnectomeView extends React.Component<Props, State> {
     // Since it's easy to forget to create the json file, this code exists to act as a fail-safe.
     const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
 
-    // $FlowIgnore[incompatible-exact] Flow doesn't allow to use exact objects instead of inexact ones.
-    // $FlowIgnore[incompatible-call]
     const agglomerates = _.zipObject(activeAgglomerateIds, synapsesOfAgglomerates);
-
     const synapseIdToSource = _.zipObject(allInSynapseIds, synapseSources);
-
     const synapseIdToDestination = _.zipObject(allOutSynapseIds, synapseDestinations);
-
     const synapseIdToPosition = _.zipObject(allSynapseIds, synapsePositions);
-
     const synapseIdToType = _.zipObject(allSynapseIds, synapseTypes);
 
     const synapseObjects = allSynapseIds.map((synapseId) => ({

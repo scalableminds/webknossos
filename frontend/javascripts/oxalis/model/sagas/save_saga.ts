@@ -1033,7 +1033,6 @@ export function* saveTracingTypeAsync(
     const flycam = yield* select((state) => state.flycam);
     const tdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
     const items = compactUpdateActions(
-      // $FlowFixMe[incompatible-call] Should be resolved when we improve the typing of sagas in general
       Array.from(
         yield* call(
           performDiffTracing,

@@ -193,7 +193,6 @@ class TracingApi {
       assertExists(tree, `Couldn't find node ${nodeId}.`);
     }
 
-    // $FlowIssue[incompatible-use] remove once https://github.com/facebook/flow/issues/34 is closed
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const comment = tree.comments.find((__) => __.nodeId === nodeId);
     return comment != null ? comment.content : null;

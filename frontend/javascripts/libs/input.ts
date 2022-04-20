@@ -533,7 +533,7 @@ export class InputMouse {
 
   isButtonPressed(evt: MouseEvent): boolean {
     if (evt.buttons != null) {
-      return evt.buttons !== 0; // $FlowIgnore[prop-missing] Safari doesn't support evt.buttons, but only evt.which is non-standardized
+      return evt.buttons !== 0;
     } else if (evt.which) {
       return evt.which !== 0;
     }

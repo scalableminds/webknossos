@@ -157,7 +157,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onCheck = (evt: React.MouseEvent<any>) => {
-    // $FlowIssue[prop-missing] .node is unknown to flow
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'node' does not exist on type 'EventTarge... Remove this comment to see the full error message
     const { id, type } = evt.target.node;
 
@@ -171,7 +170,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectTree = (evt: React.MouseEvent<any>) => {
-    // $FlowIssue[prop-missing] .dataset is unknown to flow
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'EventTa... Remove this comment to see the full error message
     const treeId = parseInt(evt.target.dataset.id, 10);
 
@@ -189,7 +187,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectGroup = (evt: React.MouseEvent<any>) => {
-    // $FlowIssue[prop-missing] .dataset is unknown to flow
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataset' does not exist on type 'EventTa... Remove this comment to see the full error message
     const groupId = parseInt(evt.target.dataset.id, 10);
     const numberOfSelectedTrees = this.props.selectedTrees.length;

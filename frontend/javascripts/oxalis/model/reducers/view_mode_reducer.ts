@@ -83,7 +83,6 @@ function setInputCatcherRect(state: OxalisState, viewport: Viewport, rect: Rect)
       viewModeData: {
         plane: {
           inputCatcherRects: {
-            // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
             [viewport]: {
               $set: rect,
             },

@@ -89,9 +89,7 @@ function getRecursiveValuesUnflat(obj: {} | Array<any> | string): Array<any> {
 }
 
 function cheapSort<T extends string | number>(valueA: T, valueB: T): -1 | 0 | 1 {
-  // $FlowFixMe[invalid-compare] It is not possible to express that valueA and valueB have the very same type
   if (valueA < valueB) return -1;
-  // $FlowFixMe[invalid-compare] It is not possible to express that valueA and valueB have the very same type
   if (valueA > valueB) return 1;
   return 0;
 }

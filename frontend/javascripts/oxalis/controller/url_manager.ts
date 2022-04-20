@@ -263,14 +263,12 @@ class UrlManager {
             stateByLayer,
           }
         : {};
-    // $FlowIssue[incompatible-exact] See https://github.com/facebook/flow/issues/2977
     return {
       position,
       mode,
       zoomStep,
       ...rotationOptional,
       ...activeNodeOptional,
-      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...stateByLayerOptional,
     };
   }

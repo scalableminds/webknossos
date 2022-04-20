@@ -725,8 +725,6 @@ export function getSegmentationLayers(
     return [];
   }
 
-  // $FlowIssue[incompatible-type]
-  // $FlowIssue[prop-missing]
   const segmentationLayers = dataset.dataSource.dataLayers.filter((dataLayer) =>
     isSegmentationLayer(dataset, dataLayer.name),
   ) as APISegmentationLayer[];

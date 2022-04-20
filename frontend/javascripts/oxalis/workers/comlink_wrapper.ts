@@ -52,14 +52,12 @@ export function createWorker<T extends (...args: any) => any>(
   if (wrap == null) {
     // In a node context (e.g., when executing tests), we don't create web workers which is why
     // we can simply return the input function here.
-    // $FlowExpectedError[incompatible-return]
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'UseCreateWorkerToUseMe<T>' is not assignable... Remove this comment to see the full error message
+    // @ts-ignore
     return WorkerClass;
   }
 
   return wrap(
-    // $FlowExpectedError[not-a-function]
-    // @ts-expect-error ts-migrate(2351) FIXME: This expression is not constructable.
+    // @ts-ignore
     new WorkerClass(),
   );
 }
@@ -72,9 +70,7 @@ export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   // Therefore, we simply return the passed function with the only change that
   // we are wrapping the return value in a promise. That way, the worker and non-worker
   // versions both return promises.
-  // $FlowExpectedError[not-a-function]
-  // $FlowExpectedError[prop-missing]
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'T' is not assignable to type 'UseCreateWorke... Remove this comment to see the full error message
+  // @ts-ignore
   return fn;
 }
 

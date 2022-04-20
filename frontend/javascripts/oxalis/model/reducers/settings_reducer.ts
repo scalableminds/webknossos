@@ -102,7 +102,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         }
       }
 
-      // $FlowIssue[invalid-computed-prop] Flow doesn't check that only numbers will be clamped and https://github.com/facebook/flow/issues/8299
       return updateUserConfig(state, {
         [propertyName]: value,
       });
@@ -110,7 +109,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_DATASET_SETTING": {
       const { propertyName, value } = action;
-      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateDatasetConfig(state, {
         [propertyName]: value,
       });

@@ -41,7 +41,6 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
     : {};
   return update(state, {
     tracing: {
-      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...maybeSkeletonUpdater,
       ...maybeVolumeUpdater,
       ...maybeReadOnlyUpdater,

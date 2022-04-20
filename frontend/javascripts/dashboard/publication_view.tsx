@@ -59,7 +59,6 @@ type Props = {
 };
 
 function PublicationView(props: Props) {
-  // $FlowIssue[incompatible-type] flow doesn't check that after filtering there are only imported datasets left
   const activeDatasets: APIDataset[] = props.datasets.filter((ds) => ds.isActive) as APIDataset[];
   const filteredDatasets = Utils.filterWithSearchQueryAND(
     activeDatasets,

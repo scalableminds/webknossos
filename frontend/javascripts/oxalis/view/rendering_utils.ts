@@ -78,7 +78,6 @@ export function renderToTexture(
   const buffer = new Uint8Array(width * height * 4);
 
   if (plane !== ArbitraryViewport) {
-    // $FlowIssue[prop-missing] plane cannot be arbitraryViewport
     SceneController.updateSceneForCam(plane);
   }
 

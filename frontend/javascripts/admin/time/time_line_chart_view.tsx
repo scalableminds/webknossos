@@ -52,9 +52,9 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
 
     if (tooltip != null) {
       const { target } = event;
-      const isTargetNotATimeEntry = // $FlowIssue[prop-missing]
+      const isTargetNotATimeEntry =
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'tagName' does not exist on type 'EventTa... Remove this comment to see the full error message
-        (target != null && target.tagName != null && target.tagName !== "rect") || // $FlowIssue[prop-missing]
+        (target != null && target.tagName != null && target.tagName !== "rect") ||
         // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         target.getAttribute("stroke") !== "none";
 

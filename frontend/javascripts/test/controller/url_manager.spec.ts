@@ -96,7 +96,6 @@ test("UrlManager should parse url hash with comment links", (t) => {
   };
 
   for (const [key, value] of Object.entries(state)) {
-    // $FlowIssue[incompatible-type] See https://github.com/facebook/flow/issues/5838
     location.hash = `#${key}=${value}`;
     t.deepEqual(UrlManager.parseUrlHash(), {
       [key]: value,

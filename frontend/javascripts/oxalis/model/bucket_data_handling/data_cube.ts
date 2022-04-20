@@ -521,12 +521,10 @@ class DataCube {
 
           if (smallestDiffToMin < smallestDiffToMax) {
             // Decrease min
-            // $FlowIgnore[invalid-tuple-index]
             floodfillBoundingBox.min[Array.from(seedToMinDiff).indexOf(smallestDiffToMin)] -=
               constants.BUCKET_WIDTH;
           } else {
             // Increase max
-            // $FlowIgnore[invalid-tuple-index]
             floodfillBoundingBox.max[Array.from(seedToMaxDiff).indexOf(smallestDiffToMax)] +=
               constants.BUCKET_WIDTH;
           }

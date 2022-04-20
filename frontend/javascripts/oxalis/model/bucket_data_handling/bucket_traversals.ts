@@ -173,11 +173,9 @@ function initializeTMax(
     voxelSize[1] - mod(u[1], voxelSize[1]),
     voxelSize[2] - mod(u[2], voxelSize[2]),
   ];
-  // $FlowIssue[invalid-tuple-arity] Flow does not understand that mapping a tuple returns a tuple
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type '[number... Remove this comment to see the full error message
   return [
     Math.abs((step[0] > 0 ? negativeRest[0] : positiveRest[0]) / v[0]),
     Math.abs((step[1] > 0 ? negativeRest[1] : positiveRest[1]) / v[1]),
     Math.abs((step[2] > 0 ? negativeRest[2] : positiveRest[2]) / v[2]),
-  ].map((el) => (Number.isNaN(el) ? Infinity : el));
+  ].map((el) => (Number.isNaN(el) ? Infinity : el)) as Vector3;
 }

@@ -156,7 +156,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
   mergeProjectWithUpdated = (
     oldProject: APIProjectWithAssignments,
     updatedProject: APIProject,
-  ): APIProjectWithAssignments => ({ ...oldProject, ...updatedProject }); // $FlowIgnore[prop-missing] flow does not understand that merging with type that is superset should produce that type.
+  ): APIProjectWithAssignments => ({ ...oldProject, ...updatedProject });
 
   pauseResumeProject = async (
     project: APIProjectWithAssignments,

@@ -189,12 +189,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There is no mesh for the active segment id available to download.",
   "tracing.mesh_listing_failed":
     "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
-  "tracing.confirm_remove_fallback_layer.title":
-    "Are you sure you want to unlink the dataset's original segmentation layer?",
-  "tracing.confirm_remove_fallback_layer.explanation":
-    "This dataset already contains a segmentation layer provided by its author. If you do not wish to base your work on this original segmentation, you can unlink it by confirming this dialog.",
-  "tracing.confirm_remove_fallback_layer.notes":
-    "Note that this action also removes segments which were already annotated manually. This step cannot be undone.",
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
   "tracing.agglomerate_skeleton.no_cell":

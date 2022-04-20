@@ -251,15 +251,6 @@ class VolumeTracingService @Inject()(
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
-  def unlinkFallback(tracing: VolumeTracing, dataSource: DataSourceLike): VolumeTracing =
-    tracing.copy(
-      activeSegmentId = None,
-      largestSegmentId = 0L,
-      fallbackLayer = None,
-      version = 0L,
-      resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, None).map(vec3IntToProto)
-    )
-
   def duplicate(tracingId: String,
                 sourceTracing: VolumeTracing,
                 fromTask: Boolean,

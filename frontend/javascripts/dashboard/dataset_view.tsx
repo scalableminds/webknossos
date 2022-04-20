@@ -179,8 +179,8 @@ function DatasetView(props: Props) {
             height={350}
           >
             webKnossos supports a variety of{" "}
-            <a href="https://docs.webknossos.org/reference/data_formats">file formats</a> and is
-            also able to convert them when necessary.
+            <a href="https://docs.webknossos.org/webknossos/data_formats.html">file formats</a> and
+            is also able to convert them when necessary.
           </OptionCard>
         </Row>
         <div

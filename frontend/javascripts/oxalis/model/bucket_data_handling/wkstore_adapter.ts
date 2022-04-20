@@ -96,8 +96,9 @@ export async function requestWithFallback(
   const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   const maybeVolumeTracing =
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'tracingId' does not exist on type 'APIDa... Remove this comment to see the full error message
-    layerInfo.tracingId != null ? getVolumeTracingById(state.tracing, layerInfo.tracingId) : null;
+    "tracingId" in layerInfo && layerInfo.tracingId != null
+      ? getVolumeTracingById(state.tracing, layerInfo.tracingId)
+      : null;
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
   const shouldUseDataStore = maybeVolumeTracing == null;
   const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();

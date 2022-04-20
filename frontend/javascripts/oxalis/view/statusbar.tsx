@@ -26,6 +26,10 @@ import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 import { OxalisState } from "oxalis/store";
+import {
+  getActiveSegmentationTracing,
+  hasVolumeTracings,
+} from "oxalis/model/accessors/volumetracing_accessor";
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
@@ -275,11 +279,10 @@ function Infos() {
   );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
-  const isVolumeAnnotation = useSelector((state: OxalisState) => "volume" in state.tracing);
-  const activeCellId = useSelector((state: OxalisState) =>
-    // @ts-expect-error ts-migrate(2551) FIXME: Property 'volume' does not exist on type 'HybridTr... Remove this comment to see the full error message
-    "volume" in state.tracing ? state.tracing.volume.activeCellId : null,
+  const activeVolumeTracing = useSelector((state: OxalisState) =>
+    getActiveSegmentationTracing(state),
   );
+  const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useSelector((state: OxalisState) =>
     state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
   );
@@ -289,9 +292,7 @@ function Infos() {
   const dispatch = useDispatch();
 
   const onChangeActiveCellId = (id: number) => dispatch(setActiveCellAction(id));
-
   const onChangeActiveNodeId = (id: number) => dispatch(setActiveNodeAction(id));
-
   const onChangeActiveTreeId = (id: number) => dispatch(setActiveTreeAction(id));
 
   const hasVisibleSegmentation = useSelector(
@@ -331,7 +332,7 @@ function Infos() {
       ) : null}
       {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
 
-      {isVolumeAnnotation ? (
+      {activeVolumeTracing != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting
             value={activeCellId}

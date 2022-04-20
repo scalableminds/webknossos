@@ -63,7 +63,7 @@ function findCommonAncestor(
   treeIdMap: TreeMap,
   groupIdMap: Record<number, GroupNode>,
   toggleActions: Array<UpdateTreeVisibilityUpdateAction>,
-): number {
+): number | undefined {
   function getAncestorPath(groupId: number | null | undefined): Array<number> {
     const path = [];
     let currentGroupNode: GroupNode | null | undefined =
@@ -105,13 +105,12 @@ function findCommonAncestor(
     }
   }
 
-  // @ts-ignore _.last will not return undefined if commonPath.length > 0
-  return commonPath.length > 0 ? _.last(commonPath) : MISSING_GROUP_ID;
+  return _.last(commonPath);
 }
 
 function isCommonAncestorToggler(
   skeletonTracing: SkeletonTracing,
-  commonAncestor: number,
+  commonAncestor: number | undefined,
 ): [boolean, Tree[], number] {
   const groupToTreesMap = createGroupToTreesMap(skeletonTracing.trees);
   const groupWithSubgroups = getGroupByIdWithSubgroups(skeletonTracing.treeGroups, commonAncestor);

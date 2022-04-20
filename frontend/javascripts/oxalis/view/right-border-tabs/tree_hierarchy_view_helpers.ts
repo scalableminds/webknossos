@@ -133,7 +133,7 @@ export function callDeep(
 }
 export function callDeepWithChildren(
   groups: Array<TreeGroup>,
-  groupId: number,
+  groupId: number | undefined,
   callback: (
     arg0: TreeGroup,
     arg1: number,
@@ -205,13 +205,11 @@ export function createGroupToTreesMap(trees: TreeMap): Record<number, Array<Tree
 }
 export function getGroupByIdWithSubgroups(
   treeGroups: Array<TreeGroup>,
-  groupId: number,
+  groupId: number | undefined,
 ): Array<number> {
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'groupWithSubgroups' implicitly has type ... Remove this comment to see the full error message
-  const groupWithSubgroups = [];
+  const groupWithSubgroups: number[] = [];
   callDeepWithChildren(treeGroups, groupId, (treeGroup) => {
     groupWithSubgroups.push(treeGroup.groupId);
   });
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'groupWithSubgroups' implicitly has an 'a... Remove this comment to see the full error message
   return groupWithSubgroups;
 }

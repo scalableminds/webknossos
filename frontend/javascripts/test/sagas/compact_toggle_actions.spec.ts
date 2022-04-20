@@ -10,6 +10,7 @@ import EdgeCollection from "oxalis/model/edge_collection";
 import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
 import defaultState from "oxalis/default_state";
 import test from "ava";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 
 const createTree = (id, groupId, isVisible) => ({
   treeId: id,
@@ -160,7 +161,7 @@ test("compactUpdateActions should compact when toggling all trees", (t) => {
   );
   const [compactedActions] = getActions(allVisible, testState);
   // Root group should be toggled
-  t.deepEqual(compactedActions, [updateTreeGroupVisibility(undefined, false)]);
+  t.deepEqual(compactedActions, [updateTreeGroupVisibility(MISSING_GROUP_ID, false)]);
 });
 test("compactUpdateActions should compact when toggling a group", (t) => {
   // Let's toggle group 3 (which contains group 4)
@@ -193,7 +194,7 @@ test("compactUpdateActions should compact when toggling a group except for one t
   );
   const [compactedActions] = getActions(allVisible, testState);
   t.deepEqual(compactedActions, [
-    updateTreeGroupVisibility(undefined, false),
+    updateTreeGroupVisibility(MISSING_GROUP_ID, false),
     _updateTreeVisibility(3, true),
   ]);
 });

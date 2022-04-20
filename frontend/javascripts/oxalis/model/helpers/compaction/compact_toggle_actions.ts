@@ -105,8 +105,7 @@ function findCommonAncestor(
     }
   }
 
-  // @ts-ignore _.last will not return undefined if commonPath.length > 0
-  return commonPath.length > 0 ? _.last(commonPath) : MISSING_GROUP_ID;
+  return _.last(commonPath) ?? MISSING_GROUP_ID;
 }
 
 function isCommonAncestorToggler(

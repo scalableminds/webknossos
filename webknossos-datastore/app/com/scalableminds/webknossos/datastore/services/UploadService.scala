@@ -207,7 +207,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- cleanUpOnFailure(postProcessingResult,
                             dataSourceId,
                             datasetNeedsConversion,
-                            label = s"processing to dataset at $unpackToDir")
+                            label = s"processing dataset at $unpackToDir")
       dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team)
       _ <- dataSourceRepository.updateDataSource(dataSource)
       dataSetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
@@ -239,9 +239,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
         Fox.failure(s"Unknown error $label")
       case Failure(msg, e, _) =>
+        logger.warn(s"Error while $label: $msg, $e")
         deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
         dataSourceRepository.cleanUpDataSource(dataSourceId)
-        logger.warn(s"Error while $label: $msg, $e")
         for {
           _ <- result ?~> f"Error while $label"
         } yield ()
@@ -249,8 +249,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
-      fileCountString <- runningUploadMetadataStore.find(redisKeyForFileCount(uploadId))
-      fileCount <- tryo(fileCountString.getOrElse("").toLong).toFox
+      fileCountStringOpt <- runningUploadMetadataStore.find(redisKeyForFileCount(uploadId))
+      fileCountString <- fileCountStringOpt ?~> "dataSet.upload.noFiles"
+      fileCount <- tryo(fileCountString.toLong).toFox
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- bool2Fox(fileCount == fileNames.size)
       list <- Fox.serialCombined(fileNames.toList) { fileName =>
@@ -301,7 +302,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         dataSourceUsable <- dataSource.toUsable.toFox ?~> "Uploaded dataset has no valid properties file, cannot link layers"
         layers <- Fox.serialCombined(layersToLink)(layerFromIdentifier)
         dataSourceWithLinkedLayers = dataSourceUsable.copy(dataLayers = dataSourceUsable.dataLayers ::: layers)
-        _ <- dataSourceService.updateDataSource(dataSourceWithLinkedLayers)
+        _ <- dataSourceService.updateDataSource(dataSourceWithLinkedLayers) ?~> "Could not write combined properties file"
       } yield ()
     }
 

@@ -9,7 +9,12 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{
+  ZarrBucketProvider,
+  ZarrDataLayer,
+  ZarrMag,
+  ZarrSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -26,13 +31,18 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketProvider, WKWDataFormatHelper}
+import com.scalableminds.webknossos.wrap.WKWHeader
+import com.scalableminds.webknossos.wrap.BlockType
 import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
+import net.liftweb.common.{Box, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, ResponseHeader, Result}
 
+import java.nio.file.{Path, Paths}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
@@ -191,11 +201,6 @@ class BinaryDataController @Inject()(
     }
   }
 
-//  def redirectToDataset(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
-//    Action {
-//      Redirect(routes..requestDatasourceFolderContents(token, organizationName, dataSetName))
-//    }
-
   def requestDatasourceFolderContents(token: Option[String],
                                       organizationName: String,
                                       dataSetName: String): Action[AnyContent] =
@@ -244,16 +249,6 @@ class BinaryDataController @Inject()(
       }
     }
 
-  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] = {
-    val singleRx = "\\s*([0-9]+)\\s*".r
-    val longMag = mag match {
-      case singleRx(x) => "%s-%s-%s".format(x, x, x)
-      case _           => mag
-    }
-    val parsedMag = Vec3Int.fromForm(longMag)
-    Some(parsedMag).filter(layer.containsResolution)
-  }
-
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
@@ -266,12 +261,16 @@ class BinaryDataController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request => //    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
 //                                      token)
   {
-    logger.info("requesting .zarray")
     for {
-      (_, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+      (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
       parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
-      cubeLength = 512 //dataLayer.lengthOfUnderlyingCubes(parsedMag)
+      cubeLength = DataLayer.bucketLength
       (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
+      // assuming it is a wkw file
+      isCompressed <- isWkwCompressed(parsedMag, dataSource, dataLayer, dataLayerName) ?~> Messages(
+        "Couldn't get ressources") ~> 404
+      isLZ4Compressed <- isWkwLZ4Compressed(parsedMag, dataSource, dataLayer, dataLayerName)
+      compressor = if (isLZ4Compressed) Some(Json.obj("id" -> "lz4")) else None
     } yield
       Ok(
         Json.obj(
@@ -280,7 +279,7 @@ class BinaryDataController @Inject()(
           "zarr_format" -> 2,
           "order" -> "F",
           "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
-          "compressor" -> None, //Json.obj("id" -> "lz4"), // TODO außer es ist uncompressed, lz4 hat vllt noch andere parameter
+          "compressor" -> compressor,
           "filters" -> None,
           "shape" -> List(
             channels,
@@ -288,9 +287,19 @@ class BinaryDataController @Inject()(
             dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y,
             dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z
           ),
-          "dimension_seperator" -> "/",
+          "dimension_seperator" -> "/" // This doesn't seem to work effectively...
         ))
   }
+  }
+
+  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] = {
+    val singleRx = "\\s*([0-9]+)\\s*".r
+    val longMag = mag match {
+      case singleRx(x) => "%s-%s-%s".format(x, x, x)
+      case _           => mag
+    }
+    val parsedMag = Vec3Int.fromForm(longMag)
+    Some(parsedMag).filter(layer.containsResolution)
   }
 
   private def zarrDtypeFromElementClass(elementClass: ElementClass.Value): (Int, String) = elementClass match {
@@ -306,6 +315,37 @@ class BinaryDataController @Inject()(
     case ElementClass.int32  => (1, "<i4")
     case ElementClass.int64  => (1, "<i8")
   }
+
+  private def isWkwCompressed(mag: Vec3Int,
+                              dataSource: DataSource,
+                              dataLayer: DataLayer,
+                              dataLayerName: String): Fox[Boolean] = {
+    val result = dataLayer.bucketProvider match {
+      case provider: WKWBucketProvider =>
+        WKWHeader(
+          provider
+            .wkwHeaderFilePath(mag, Some(dataSource.id), Some(dataLayerName), binaryDataService.dataBaseDir)
+            .toFile)
+      case provider: ZarrBucketProvider => ???
+    }
+
+    logger.info(s"Is compressed ${result}")
+    logger.info(s"is block compressed ${result.map((h) => h.blockType).map(b => BlockType.isCompressed(b))}")
+    result.flatMap((h) => Full(h.isCompressed))
+  }
+
+  private def isWkwLZ4Compressed(mag: Vec3Int,
+                                 dataSource: DataSource,
+                                 dataLayer: DataLayer,
+                                 dataLayerName: String): Fox[Boolean] =
+    dataLayer.bucketProvider match {
+      case provider: WKWBucketProvider =>
+        WKWHeader(
+          provider
+            .wkwHeaderFilePath(mag, Some(dataSource.id), Some(dataLayerName), binaryDataService.dataBaseDir)
+            .toFile).flatMap((h) => Full(h.blockType == BlockType.LZ4))
+      case provider: ZarrBucketProvider => ???
+    }
 
   def requestRawZarrWithDot(
       token: Option[String],
@@ -354,7 +394,7 @@ class BinaryDataController @Inject()(
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
       parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
       _ <- bool2Fox(c == 0) ~> Messages("Channel must be 0") ~> 404
-      cubeSize = 512 //dataLayer.lengthOfUnderlyingCubes(parsedMag)
+      cubeSize = DataLayer.bucketLength
       _ = logger.info(
         "Requesting %d, %d, %d"
           .format(x * cubeSize * parsedMag.x, y * cubeSize * parsedMag.y, z * cubeSize * parsedMag.z))

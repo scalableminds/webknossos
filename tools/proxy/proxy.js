@@ -69,7 +69,7 @@ function spawnIfNotSpecified(keyword, command, args, options) {
 
 function shutdown() {
   console.log("", loggingPrefix, "Shutting down, terminating child processes...");
-  for (const proc of Object.values(processes).filter(x => x)) {
+  for (const proc of Object.values(processes).filter((x) => x)) {
     if (proc.connected) {
       proc.kill("SIGTERM");
     }
@@ -78,10 +78,10 @@ function shutdown() {
   process.exit(0);
 }
 
-for (const [key, proc] of Object.entries(processes).filter(x => x[1] !== null)) {
+for (const [key, proc] of Object.entries(processes).filter((x) => x[1] !== null)) {
   proc.stdout.pipe(prefixLines(`${key}: `)).pipe(process.stdout);
   proc.stderr.pipe(prefixLines(`${key}: `)).pipe(process.stderr);
-  proc.on("error", err => console.error(err, err.stack));
+  proc.on("error", (err) => console.error(err, err.stack));
   proc.on("exit", shutdown);
 }
 process.on("SIGTERM", shutdown);

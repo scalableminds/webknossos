@@ -198,13 +198,4 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
     } yield data
   }
 
-  def unlinkFallback(tracingId: String, dataSource: DataSourceLike): Fox[String] = {
-    logger.debug(s"Called to unlink fallback segmentation for tracing $tracingId." + baseInfo)
-    for {
-      newId: String <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/unlinkFallback")
-        .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-        .postJsonWithJsonResponse[DataSourceLike, String](dataSource)
-    } yield newId
-  }
-
 }

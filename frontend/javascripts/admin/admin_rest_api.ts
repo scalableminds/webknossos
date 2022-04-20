@@ -440,10 +440,14 @@ export async function resumeProject(projectId: string): Promise<APIProject> {
 export function peekNextTasks(): Promise<APITask | null | undefined> {
   return Request.receiveJSON("/api/user/tasks/peek");
 }
-export function requestTask(): Promise<APIAnnotationWithTask> {
-  return Request.receiveJSON("/api/user/tasks/request", {
+export async function requestTask(): Promise<APIAnnotationWithTask> {
+  const taskWithMessages = await Request.receiveJSON("/api/user/tasks/request", {
     method: "POST",
   });
+  // Extract the potential messages property before returning the task to avoid
+  // failing e2e tests in annotations.e2e.ts
+  const { messages: _messages, ...task } = taskWithMessages;
+  return task;
 }
 export function getAnnotationsForTask(taskId: string): Promise<Array<APIAnnotation>> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
@@ -705,6 +709,8 @@ export async function getAnnotationInformation(
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
   const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+  // Extract the potential messages property before returning the task to avoid
+  // failing e2e tests in annotations.e2e.ts
   const { messages: _messages, ...annotation } = annotationWithMessages;
   return annotation;
 }

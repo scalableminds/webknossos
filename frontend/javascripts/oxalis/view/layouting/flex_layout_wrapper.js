@@ -305,7 +305,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             busyBlockingInfo={busyBlockingInfo}
             viewportID={id}
             displayScalebars={displayScalebars}
-            activeTool={this.props.activeTool}
           />
         );
       }
@@ -315,7 +314,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             busyBlockingInfo={busyBlockingInfo}
             viewportID={id}
             displayScalebars={displayScalebars}
-            activeTool={this.props.activeTool}
           >
             <TDViewControls />
           </InputCatcher>
@@ -326,7 +324,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
           <InputCatcher
             busyBlockingInfo={busyBlockingInfo}
             viewportID={ArbitraryViews.arbitraryViewport}
-            activeTool={this.props.activeTool}
           >
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>

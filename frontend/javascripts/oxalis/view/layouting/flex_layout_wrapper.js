@@ -14,12 +14,7 @@ import {
   resetDefaultLayouts,
 } from "oxalis/view/layouting/default_layout_configs";
 import { InputKeyboardNoLoop } from "libs/input";
-import {
-  OrthoViews,
-  ArbitraryViews,
-  BorderTabs,
-  type OrthoView,
-} from "oxalis/constants";
+import { OrthoViews, ArbitraryViews, BorderTabs, type OrthoView } from "oxalis/constants";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";

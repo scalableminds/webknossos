@@ -283,9 +283,9 @@ class BinaryDataController @Inject()(
           "filters" -> None,
           "shape" -> List(
             channels,
-            dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x,
-            dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y,
-            dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z
+            (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / parsedMag.x,
+            (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / parsedMag.y,
+            (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / parsedMag.z
           ),
           "dimension_seperator" -> "/" // This doesn't seem to work effectively...
         ))

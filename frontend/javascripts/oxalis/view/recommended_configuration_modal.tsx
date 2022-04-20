@@ -44,6 +44,16 @@ export default class RecommendedConfigurationModal extends React.Component<Props
   };
 
   render() {
+    const configurationEntries = _.map(this.props.config, (_value: any, key: string) => {
+      // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
+      const settingsKey: keyof RecommendedConfiguration = key;
+      return {
+        name: settings[settingsKey],
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+        value: settings[settingsKey].toString(),
+        comment: settingComments[settingsKey] || "",
+      };
+    });
     return (
       <Modal
         maskClosable={false}
@@ -63,14 +73,7 @@ export default class RecommendedConfigurationModal extends React.Component<Props
             overflow: "auto",
           }}
           columns={columns}
-          dataSource={_.map(this.props.config, (value, key) => ({
-            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-            name: settings[key],
-            // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-            value: value.toString(),
-            // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-            comment: settingComments[key] || "",
-          }))}
+          dataSource={configurationEntries}
           size="small"
           pagination={false}
           scroll={{

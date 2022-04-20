@@ -14,7 +14,10 @@ import {
   setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import message from "messages";
-import { ActionDescriptor, getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
+import {
+  ActionDescriptor,
+  getToolClassForAnnotationTool,
+} from "oxalis/controller/combinations/tool_controls";
 import {
   calculateGlobalPos,
   isPlaneMode as getIsPlaneMode,
@@ -69,7 +72,7 @@ function ZoomShortcut() {
   );
 }
 
-function LeftClickShortcut({ actionDescriptor }: {actionDescriptor: ActionDescriptor}) {
+function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescriptor }) {
   const leftClick =
     actionDescriptor.leftClick != null ? (
       <span className="shortcut-info-element">
@@ -100,7 +103,7 @@ function LeftClickShortcut({ actionDescriptor }: {actionDescriptor: ActionDescri
   );
 }
 
-function RightClickShortcut({ actionDescriptor}: {actionDescriptor: ActionDescriptor}) {
+function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescriptor }) {
   const rightClick =
     actionDescriptor.rightClick != null ? (
       <span className="shortcut-info-element">

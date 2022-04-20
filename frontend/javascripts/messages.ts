@@ -1,24 +1,34 @@
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
-export const settings = {
+import type {
+  DatasetConfiguration,
+  UserConfiguration,
+  DatasetLayerConfiguration,
+} from "oxalis/store";
+
+export type RecommendedConfiguration = Partial<
+  UserConfiguration &
+    DatasetConfiguration & {
+      segmentationOpacity: number;
+    }
+>;
+
+export const settings: Partial<Record<keyof RecommendedConfiguration, string>> = {
   clippingDistance: "Clipping Distance",
   displayCrosshair: "Show Crosshairs",
   displayScalebars: "Show Scalebars",
   dynamicSpaceDirection: "d/f-Switching",
-  invertColor: "Invert Color",
   keyboardDelay: "Keyboard delay (ms)",
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   centerNewNode: "Auto-center Nodes",
   highlightCommentedNodes: "Highlight Commented Nodes",
-  nodeRadius: "Node Radius",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",
   tdViewDisplayPlanes: "Plane Display Mode in 3D View",
   tdViewDisplayDatasetBorders: "Display Dataset Borders in 3D View",
   fourBit: "4 Bit",
   interpolation: "Interpolation",
-  quality: "Quality",
   segmentationOpacity: "Segmentation Opacity",
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
@@ -29,14 +39,12 @@ export const settings = {
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
   segmentationPatternOpacity: "Pattern Opacity",
-  userBoundingBoxes: "Bounding Boxes",
   loadingStrategy: "Loading Strategy",
-  mergerMode: "Merger Mode",
   gpuMemoryFactor: "Hardware Utilization",
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
 };
-export const settingsTooltips = {
+export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
       (will take longer until you see data) or alternatively,
       improving the quality progressively (data will be loaded faster,
@@ -61,10 +69,9 @@ export const settingsTooltips = {
   rotateValue: "Rotation speed when using the arrow keys on the keyboard",
   mouseRotateValue: "Rotation speed when using the mouse to drag the rotation.",
   zoom: "Zoom in or out in the data viewports",
-  zoomFlight: "Zoom in or out in the data viewport",
   displayScalebars: "Show a scale in the lower-right corner of each viewport",
 };
-export const layerViewConfigurations = {
+export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
   alpha: "Layer opacity",
   intensityRange: "Intensity Range",

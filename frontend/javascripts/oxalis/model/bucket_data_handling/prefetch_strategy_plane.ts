@@ -1,3 +1,4 @@
+// eslint-disable-next-line max-classes-per-file
 import _ from "lodash";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -10,28 +11,30 @@ import type { OrthoView, OrthoViewMap, Vector3 } from "oxalis/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
+
+export enum ContentTypes {
+  SKELETON = "SKELETON",
+  VOLUME = "VOLUME",
+  READ_ONLY = "READ_ONLY",
+}
+
 export class AbstractPrefetchStrategy {
   velocityRangeStart: number = 0;
   velocityRangeEnd: number = 0;
   roundTripTimeRangeStart: number = 0;
   roundTripTimeRangeEnd: number = 0;
-  contentTypes: Array<string> = [];
+  contentTypes: Array<ContentTypes> = [];
   name: string = "ABSTRACT";
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'u' has no initializer and is not definit... Remove this comment to see the full error message
   u: DimensionIndices;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'v' has no initializer and is not definit... Remove this comment to see the full error message
   v: DimensionIndices;
 
-  forContentType(givenContentTypes: {
-    skeleton: boolean;
-    volume: boolean;
-    readOnly: boolean;
-  }): boolean {
+  forContentType(givenContentTypes: Record<ContentTypes, boolean>): boolean {
     if (this.contentTypes.length === 0) {
       return true;
     }
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     return this.contentTypes.some((contentType) => givenContentTypes[contentType]);
   }
 
@@ -61,7 +64,7 @@ export class AbstractPrefetchStrategy {
       }
     }
 
-    // $FlowIssue[invalid-tuple-arity] flow does not understand that slicing a Vector3 returns another Vector3
+    // Typescript does not understand that slicing a Vector3 returns another Vector3
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     return buckets;
   }
@@ -107,8 +110,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       resolutions,
       false,
     );
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'queueItemsForFallbackZoomStep' implicitl... Remove this comment to see the full error message
-    let queueItemsForFallbackZoomStep = [];
+    let queueItemsForFallbackZoomStep: Array<PullQueueItem> = [];
     const fallbackZoomStep = Math.min(maxZoomStep, currentZoomStep + 1);
 
     if (fallbackZoomStep > zoomStep) {
@@ -125,7 +127,6 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       );
     }
 
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'queueItemsForFallbackZoomStep' implicitl... Remove this comment to see the full error message
     return queueItemsForCurrentZoomStep.concat(queueItemsForFallbackZoomStep);
   }
 
@@ -140,11 +141,9 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     resolutions: Vector3[],
     isFallback: boolean,
   ): Array<PullQueueItem> {
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'pullQueue' implicitly has type 'any[]' i... Remove this comment to see the full error message
-    const pullQueue = [];
+    const pullQueue: Array<PullQueueItem> = [];
 
     if (zoomStepDiff > MAX_ZOOM_STEP_DIFF_PREFETCH) {
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'pullQueue' implicitly has an 'any[]' typ... Remove this comment to see the full error message
       return pullQueue;
     }
 
@@ -206,17 +205,16 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       }
     }
 
-    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ bucket: number[]; priority: number; }[]' i... Remove this comment to see the full error message
     return pullQueue;
   }
 }
 export class PrefetchStrategySkeleton extends PrefetchStrategy {
-  contentTypes = ["skeleton", "readOnly"];
+  contentTypes = [ContentTypes.SKELETON, ContentTypes.READ_ONLY];
   name = "SKELETON";
   preloadingSlides = 2;
 }
 export class PrefetchStrategyVolume extends PrefetchStrategy {
-  contentTypes = ["volume"];
+  contentTypes = [ContentTypes.VOLUME];
   name = "VOLUME";
   preloadingSlides = 1;
   preloadingPriorityOffset = 80;

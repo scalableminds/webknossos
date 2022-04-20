@@ -28,7 +28,7 @@ function setCurrToken(token: string) {
 // The values of these keys change if objects are newly created by the backend
 // They have to be omitted from some snapshots.
 // NOTE: When changing this array, the snapshots need to be recomputed.
-const volatileKeys = [
+const volatileKeys: Array<string | number | symbol> = [
   "id",
   "skeleton",
   "volume",
@@ -39,18 +39,21 @@ const volatileKeys = [
   "tracingTime",
   "tracingId",
 ];
-export function replaceVolatileValues(obj: Record<string, any> | null | undefined) {
+export function replaceVolatileValues(obj: Object | null | undefined) {
   if (obj == null) return obj;
 
   // Replace volatile properties with deterministic values
   const newObj = _.cloneDeep(obj);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
-  deepForEach(newObj, (value, key, arrOrObj) => {
-    if (volatileKeys.includes(key)) {
-      arrOrObj[key] = key;
-    }
-  });
+  deepForEach(
+    newObj,
+    <O extends Object | Array<any>, K extends keyof O>(_value: O[K], key: K, arrOrObj: O) => {
+      if (volatileKeys.includes(key)) {
+        // @ts-ignore Typescript complains that we might change the type of arrOrObj[key] (which we do deliberately)
+        arrOrObj[key] = key;
+      }
+    },
+  );
   return newObj;
 }
 
@@ -73,7 +76,7 @@ global.fetch = function fetchWrapper(url, options) {
 global.Headers = Headers;
 global.Request = Request;
 global.Response = Response;
-// @ts-expect-error ts-migrate(7017) FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
+// @ts-ignore FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
 global.FetchError = FetchError;
 
 const { JSDOM } = require("jsdom");
@@ -85,13 +88,11 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
 });
 const { window } = jsdom;
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'src' implicitly has an 'any' type.
-function copyProps(src, target) {
-  const props = {};
+function copyProps(src: any, target: any) {
+  const props: Record<string, any> = {};
   Object.getOwnPropertyNames(src)
-    .filter((prop) => typeof target[prop] === "undefined")
-    .forEach((prop) => {
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+    .filter((prop: string) => typeof target[prop] === "undefined")
+    .forEach((prop: string) => {
       props[prop] = Object.getOwnPropertyDescriptor(src, prop);
     });
   Object.defineProperties(target, props);

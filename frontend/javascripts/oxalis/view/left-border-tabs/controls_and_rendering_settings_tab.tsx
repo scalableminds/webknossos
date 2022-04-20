@@ -68,7 +68,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       return (
         <Panel header="Flight Options" key="2">
           <LogSliderSetting
-            label={<Tooltip title={settingsTooltips.zoomFlight}>{settingsLabels.zoom}</Tooltip>}
+            label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
             roundTo={3}
             min={this.props.validZoomRange[0]}
             max={this.props.validZoomRange[1]}

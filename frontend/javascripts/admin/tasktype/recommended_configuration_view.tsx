@@ -2,10 +2,9 @@ import { Checkbox, Col, Collapse, Form, Input, Row, Table, Button } from "antd";
 import { FormInstance } from "antd/lib/form";
 import * as React from "react";
 import _ from "lodash";
-import type { DatasetConfiguration, UserConfiguration } from "oxalis/store";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import { jsonStringify } from "libs/utils";
-import { settings } from "messages";
+import { settings, type RecommendedConfiguration } from "messages";
 import { validateUserSettingsJSON } from "types/validation";
 import { TDViewDisplayModeEnum } from "oxalis/constants";
 import features from "features";
@@ -54,12 +53,9 @@ function getRecommendedConfigByCategory() {
   };
 }
 
-export function getDefaultRecommendedConfiguration(): Partial<
-  UserConfiguration &
-    DatasetConfiguration & {
-      segmentationOpacity: number;
-    }
-> {
+type RecommendedConfigurationByCategory = ReturnType<typeof getRecommendedConfigByCategory>;
+
+export function getDefaultRecommendedConfiguration(): RecommendedConfiguration {
   const recommendedConfigByCategory = getRecommendedConfigByCategory();
   // @ts-expect-error ts-migrate(2322) FIXME: Type '{ brushSize: number; clippingDistanceArbitra... Remove this comment to see the full error message
   return {
@@ -70,7 +66,7 @@ export function getDefaultRecommendedConfiguration(): Partial<
     ...recommendedConfigByCategory.volume,
   };
 }
-export const settingComments = {
+export const settingComments: Partial<Record<keyof RecommendedConfiguration, string>> = {
   clippingDistance: "orthogonal mode",
   moveValue: "orthogonal mode",
   clippingDistanceArbitrary: "flight/oblique mode",
@@ -97,8 +93,10 @@ const columns = [
   },
 ];
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'form' implicitly has an 'any' type.
-const removeSettings = (form, settingsKey: string) => {
+const removeSettings = (
+  form: FormInstance,
+  settingsKey: keyof RecommendedConfigurationByCategory,
+) => {
   const settingsString = form.getFieldValue("recommendedConfiguration");
 
   try {
@@ -106,7 +104,6 @@ const removeSettings = (form, settingsKey: string) => {
 
     const newSettings = _.omit(
       settingsObject,
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
       Object.keys(getRecommendedConfigByCategory()[settingsKey]),
     );
 
@@ -127,6 +124,19 @@ export default function RecommendedConfigurationView({
   enabled: boolean;
   onChangeEnabled: (arg0: boolean) => void;
 }) {
+  const recommendedConfiguration = getDefaultRecommendedConfiguration();
+  const configurationEntries = _.map(recommendedConfiguration, (_value: any, key: string) => {
+    // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
+    const settingsKey: keyof RecommendedConfiguration = key;
+    return {
+      name: settings[settingsKey],
+      key,
+      // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+      value: recommendedConfiguration[settingsKey].toString(),
+      comment: settingComments[settingsKey] || "",
+    };
+  });
+
   return (
     <Collapse
       onChange={(openedPanels) => onChangeEnabled(openedPanels.length === 1)}
@@ -189,15 +199,7 @@ export default function RecommendedConfigurationView({
             <br />
             <Table
               columns={columns}
-              dataSource={_.map(getDefaultRecommendedConfiguration(), (value, key) => ({
-                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-                name: settings[key],
-                key,
-                // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-                value: value.toString(),
-                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-                comment: settingComments[key] || "",
-              }))}
+              dataSource={configurationEntries}
               size="small"
               pagination={false}
               className="large-table"

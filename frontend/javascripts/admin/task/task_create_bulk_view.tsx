@@ -337,11 +337,7 @@ function TaskCreateBulkView() {
             </FormItem>
             <FormItem>
               {isUploading ? (
-                <Progress
-                  percent={tasksProcessed / tasksCount * 100}
-                  showInfo
-                  status="active"
-                />
+                <Progress percent={(tasksProcessed / tasksCount) * 100} showInfo status="active" />
               ) : null}
 
               <Button type="primary" htmlType="submit">

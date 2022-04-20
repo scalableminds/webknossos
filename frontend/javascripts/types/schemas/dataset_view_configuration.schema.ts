@@ -1,10 +1,12 @@
-export function getDefaultLayerViewConfiguration(dynamicDefault: Record<string, any> = {}) {
-  const defaultLayerViewConfiguration = {
+import { type DatasetLayerConfiguration } from "oxalis/store";
+
+export function getDefaultLayerViewConfiguration(
+  dynamicDefault: Partial<DatasetLayerConfiguration> = {},
+): Partial<DatasetLayerConfiguration> {
+  const defaultLayerViewConfiguration: Partial<DatasetLayerConfiguration> = {
     color: [255, 255, 255],
     alpha: 100,
     intensityRange: [0, 255],
-    min: null,
-    max: null,
     isDisabled: false,
     isInverted: false,
     isInEditMode: false,

@@ -106,7 +106,9 @@ export async function downloadScreenshot() {
     const buffer = renderToTexture(planeId, null, null, false, clearColor);
     // eslint-disable-next-line no-await-in-loop
     const blob = await convertBufferToImage(buffer, width, height);
-    const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
-    saveAs(blob, `${baseName}__${planeDescriptor}.png`);
+    if (blob != null) {
+      const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
+      saveAs(blob, `${baseName}__${planeDescriptor}.png`);
+    }
   }
 }

@@ -20,6 +20,12 @@ export const document =
         activeElement: typeof HTMLElement === "undefined" ? undefined : HTMLElement,
         addEventListener,
         removeEventListener,
+        createElement: <K extends keyof HTMLElementTagNameMap>(
+          _tagName: K,
+          _options?: ElementCreationOptions,
+        ): HTMLElementTagNameMap[K] => {
+          throw new Error("Cannot createElement, because no HTML context exists.");
+        },
       }
     : window.document;
 // See https://github.com/facebook/flow/blob/master/lib/bom.js#L294-L311

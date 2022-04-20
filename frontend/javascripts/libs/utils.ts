@@ -298,7 +298,7 @@ export function compareBy<T>(
   };
 }
 export function localeCompareBy<T>(
-  collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
+  _collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
   selector: (arg0: T) => string,
   isSortedAscending: boolean = true,
   sortNatural: boolean = true,
@@ -725,8 +725,7 @@ export function waitForCondition(pred: () => boolean, interval: number = 0): Pro
   return new Promise(tryToResolve);
 }
 export function waitForElementWithId(elementId: string): Promise<any> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolve' implicitly has an 'any' type.
-  const tryToResolve = (resolve) => {
+  const tryToResolve = (resolve: (value: any) => void) => {
     const el = document.getElementById(elementId);
 
     if (el) {
@@ -739,8 +738,7 @@ export function waitForElementWithId(elementId: string): Promise<any> {
   return new Promise(tryToResolve);
 }
 export function convertDecToBase256(num: number): Vector4 {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'n' implicitly has an 'any' type.
-  const divMod = (n) => [Math.floor(n / 256), n % 256];
+  const divMod = (n: number) => [Math.floor(n / 256), n % 256];
 
   let tmp = num;
   // eslint-disable-next-line one-var
@@ -815,13 +813,15 @@ export function convertBufferToImage(
   width: number,
   height: number,
   flipHorizontally: boolean = true,
-): Promise<Blob> {
+): Promise<Blob | null> {
   return new Promise((resolve) => {
     width = Math.round(width);
     height = Math.round(height);
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'createElement' does not exist on type 'D... Remove this comment to see the full error message
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
+    if (ctx == null) {
+      throw new Error("Could not create canvas 2d context.");
+    }
     canvas.width = width;
     canvas.height = height;
     const imageData = ctx.createImageData(width, height);
@@ -833,8 +833,7 @@ export function convertBufferToImage(
       ctx.drawImage(canvas, 0, 0);
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'blob' implicitly has an 'any' type.
-    canvas.toBlob((blob) => resolve(blob));
+    canvas.toBlob((blob: Blob | null) => resolve(blob));
   });
 }
 export function getIsInIframe() {
@@ -899,8 +898,7 @@ export function diffObjects(
   object: Record<string, any>,
   base: Record<string, any>,
 ): Record<string, any> {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter '_object' implicitly has an 'any' type.
-  function changes(_object, _base) {
+  function changes(_object: Record<string, any>, _base: Record<string, any>) {
     let arrayIndexCounter = 0;
     return _.transform(_object, (result, value, key) => {
       if (!_.isEqual(value, _base[key])) {

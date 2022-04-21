@@ -1,4 +1,4 @@
-@(kind: String, name: String, wKUri: String, folderContents: Map[String, String])
+@(kind: String, name: String, folderContents: Map[String, String])
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -41,12 +41,11 @@
       <img src="https://static.webknossos.org/images/oxalis.svg" alt="" />
       <span>Go to webKnossos</span>
     </a>
-    <p id="hint">This is the webKnossos @(kind) “@(name)”.</p>
-    <p>The following are the values:</p>
+    <p id="hint">This is the webKnossos @(kind) “@(name)” folder.</p>
+    <p>The following are the contents of the folder:</p>
     <ul>
-      <li>ship</li>
       @folderContents.map { case (name, link) =>
-        <li><a href=@link>@name</a></li>
+        <li><a href=@link>@name</a>: @link</li>
       }
     </ul>
   </body>

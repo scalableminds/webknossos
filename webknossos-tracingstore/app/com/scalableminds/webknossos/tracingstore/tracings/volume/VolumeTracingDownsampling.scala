@@ -20,8 +20,7 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 object VolumeTracingDownsampling {
-  def magsForVolumeTracingByLayerName(dataSource: DataSourceLike,
-                                      fallbackLayerName: Option[String]): List[Vec3Int] = {
+  def magsForVolumeTracingByLayerName(dataSource: DataSourceLike, fallbackLayerName: Option[String]): List[Vec3Int] = {
     val fallbackLayer: Option[DataLayerLike] =
       fallbackLayerName.flatMap(name => dataSource.dataLayers.find(_.name == name))
     resolutionsForVolumeTracing(dataSource, fallbackLayer)
@@ -211,8 +210,7 @@ trait VolumeTracingDownsampling
   protected def getRequiredMags(tracing: VolumeTracing): Fox[List[Vec3Int]] =
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSource(tracing.organizationName, tracing.dataSetName)
-      magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource,
-                                                                                        tracing.fallbackLayer)
+      magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)
     } yield magsForTracing.sortBy(_.maxDim)
 
   protected def restrictMagList(tracing: VolumeTracing,

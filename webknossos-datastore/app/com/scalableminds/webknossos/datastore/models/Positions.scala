@@ -47,10 +47,10 @@ class VoxelPosition(
 }
 
 case class BucketPosition(
-                           globalX: Int,
-                           globalY: Int,
-                           globalZ: Int,
-                           mag: Vec3Int
+    globalX: Int,
+    globalY: Int,
+    globalZ: Int,
+    mag: Vec3Int
 ) extends GenericPosition {
 
   val bucketLength: Int = DataLayer.bucketLength

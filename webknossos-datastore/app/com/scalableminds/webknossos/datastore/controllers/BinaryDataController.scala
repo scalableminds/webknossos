@@ -86,10 +86,10 @@ class BinaryDataController @Inject()(
     }
   }
 
-  def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
+  private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
     List("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
 
-  def formatMissingBucketList(indices: List[Int]): String =
+  private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
   /**
@@ -112,14 +112,19 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "Target-mag width of the bounding box", required = true) width: Int,
       @ApiParam(value = "Target-mag height of the bounding box", required = true) height: Int,
       @ApiParam(value = "Target-mag depth of the bounding box", required = true) depth: Int,
-      @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: String,
+      @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: Option[String],
+      @ApiParam(value = "[DEPRECATED: use mag instead] exponent of largest dimension of mag.", required = true) zoomStep: Option[
+        Int],
       @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
         (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox
+        _ <- bool2Fox(!(zoomStep.isDefined && mag.isDefined)) ?~> "Can only interpret mag or zoomStep. Use only mag instead."
+        magFromZoomStep = zoomStep.map(dataLayer.magFromExponent(_, snapToClosest = true))
+        magParsedOpt <- Fox.runOptional(mag)(Vec3Int.fromMagLiteral(_).toFox)
+        magParsed <- magParsedOpt.orElse(magFromZoomStep).toFox ?~> "No mag supplied"
         request = DataRequest(
           new VoxelPosition(x, y, z, magParsed),
           width,
@@ -184,7 +189,7 @@ class BinaryDataController @Inject()(
                                       token) {
       for {
         (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
+        dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.magFromExponent(resolution)),
                                   cubeSize,
                                   cubeSize,
                                   cubeSize,
@@ -221,7 +226,7 @@ class BinaryDataController @Inject()(
                                       token) {
       for {
         (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
+        dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.magFromExponent(resolution)),
                                   width,
                                   height,
                                   1,

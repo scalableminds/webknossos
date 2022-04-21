@@ -55,12 +55,13 @@ object Vec3Int {
   def fromMagLiteral(s: String, allowScalar: Boolean = false): Option[Vec3Int] =
     s.toIntOpt match {
       case Some(scalar) if allowScalar => Some(Vec3Int.full(scalar))
-      case _ => s match {
-        case magLiteralRegex(x, y, z) =>
-          Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
-        case _ =>
-          None
-      }
+      case _ =>
+        s match {
+          case magLiteralRegex(x, y, z) =>
+            Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
+          case _ =>
+            None
+        }
     }
 
   def fromArray[T <% Int](array: Array[T]) =

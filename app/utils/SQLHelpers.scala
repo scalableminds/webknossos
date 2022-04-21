@@ -110,14 +110,11 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     if (trimmed.isEmpty) return List()
 
     val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
-    val unquoted = split.map { item =>
+    split.map { item =>
       if (item.startsWith("\"") && item.endsWith("\"")) {
         item.drop(1).dropRight(1)
       } else item
     }
-
-    logger.info(s"Parsing array literal: $literal, returning $unquoted")
-    unquoted
   }
 
   def sanitize(aString: String): String = aString.replaceAll("'", "")

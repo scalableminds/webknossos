@@ -136,6 +136,7 @@ dataSet.upload.validation.failed=Failed to validate Dataset information for uplo
 dataSet.upload.linkRestricted=Can only link layers of datasets that are either public or allowed to be administrated by your account
 dataSet.upload.invalidLinkedLayers=Could not link all requested layers
 dataSet.upload.cancel.failed=Could not cancel the upload.
+dataSet.upload.noFiles=Tried to finish upload with no files. May be a retry of a failed finish request, see previous errors.
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -256,9 +257,6 @@ annotation.timelogging.read.failed=Time
 annotation.write.failed=Could not convert annotation to json
 annotation.noSkeleton=No skeleton tracing found for this annotation
 annotation.needsEitherSkeletonOrVolume=Annotation needs at least one of skeleton or volume
-annotation.unlinkFallback.explorationalsOnly=Could not unlink fallback segmentation (only allowed for explorational annotations).
-annotation.unlinkFallback.noVolume=Could not unlink fallback segmentation (only allowed for annotations with volume layer).
-annotation.unlinkFallback.layerNotFound=Could not unlink fallback segmentation (annotation layer not found)
 annotation.downsample.layerNotFound=Could not downsample volume annotation (annotation layer not found)
 annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid annotation because it is only allowed for explorational annotations.
 annotation.makeHybrid.failed=Could not convert to hybrid.

@@ -58,13 +58,7 @@ async function connect() {
     const nodesPerHour = Math.round(entry.nodecount / duration.asHours());
 
     console.log(
-      `Effectively created nodes: ${entry.nodecount}, Nodes/Hour: ${nodesPerHour} - User: ${
-        entry.firstname
-      } ${entry.lastname}, TracingTime: ${tracingTimeInMinutes}m${tracingTimeSeconds}s, TaskId: ${
-        entry._task
-      }, AnnotationId: ${entry._id}, TracingId: ${entry.tracing_id}, ProjectId: ${
-        entry._project
-      }, ProjectName: ${entry.name}, Modified: ${entry.modified}`,
+      `Effectively created nodes: ${entry.nodecount}, Nodes/Hour: ${nodesPerHour} - User: ${entry.firstname} ${entry.lastname}, TracingTime: ${tracingTimeInMinutes}m${tracingTimeSeconds}s, TaskId: ${entry._task}, AnnotationId: ${entry._id}, TracingId: ${entry.tracing_id}, ProjectId: ${entry._project}, ProjectName: ${entry.name}, Modified: ${entry.modified}`,
     );
   }
 

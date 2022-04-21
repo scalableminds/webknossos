@@ -62,8 +62,8 @@ dev-db/
 docker-compose.override.yml
 frontend/javascripts/test/snapshots/debug-htmls/*
 !frontend/javascripts/test/snapshots/debug-htmls/.gitkeep
-frontend/javascripts/test/snapshots/flow-check/*
-!frontend/javascripts/test/snapshots/flow-check/.gitkeep
+frontend/javascripts/test/snapshots/type-check/*
+!frontend/javascripts/test/snapshots/type-check/.gitkeep
 .eslintcache
 *.sublime-project
 *.sublime-workspace

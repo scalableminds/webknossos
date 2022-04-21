@@ -879,13 +879,11 @@ export function* diffSegmentLists(
   } = diffDiffableMaps(prevSegments, newSegments);
 
   for (const segmentId of deletedSegmentIds) {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ name: string; value: { id: number; }; }' i... Remove this comment to see the full error message
     yield deleteSegmentVolumeAction(segmentId);
   }
 
   for (const segmentId of addedSegmentIds) {
     const segment = newSegments.get(segmentId);
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 4 arguments, but got 3.
     yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
   }
 
@@ -1107,8 +1105,8 @@ function* ensureValidBrushSize(): Saga<void> {
   yield* takeLatest(
     [
       "WK_READY",
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
-      (action) => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
+      (action: Action) =>
+        action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
     ],
     maybeClampBrushSize,
   );

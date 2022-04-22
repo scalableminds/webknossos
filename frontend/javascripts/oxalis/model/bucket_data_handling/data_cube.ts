@@ -447,21 +447,19 @@ class DataCube {
     const bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW = new Map();
     const seedBucketAddress = this.positionToZoomedAddress(globalSeedVoxel, zoomStep);
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
-    let coveredBBoxMin = [
+    let coveredBBoxMin: Vector3 = [
       Number.POSITIVE_INFINITY,
       Number.POSITIVE_INFINITY,
       Number.POSITIVE_INFINITY,
     ];
-    let coveredBBoxMax = [0, 0, 0];
+    let coveredBBoxMax: Vector3 = [0, 0, 0];
 
     if (seedBucket.type === "null") {
       return {
         bucketsWithLabeledVoxelsMap,
         wasBoundingBoxExceeded: false,
         coveredBoundingBox: {
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
           min: coveredBBoxMin,
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
           max: coveredBBoxMax,
         },
       };
@@ -481,9 +479,7 @@ class DataCube {
         bucketsWithLabeledVoxelsMap,
         wasBoundingBoxExceeded: false,
         coveredBoundingBox: {
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
           min: coveredBBoxMin,
-          // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
           max: coveredBBoxMax,
         },
       };
@@ -672,9 +668,7 @@ class DataCube {
       bucketsWithLabeledVoxelsMap,
       wasBoundingBoxExceeded,
       coveredBoundingBox: {
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
         min: coveredBBoxMin,
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
         max: coveredBBoxMax,
       },
     };

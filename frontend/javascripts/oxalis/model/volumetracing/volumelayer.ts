@@ -61,6 +61,10 @@ export class VoxelBuffer2D {
   linearizeIndex(x: number, y: number): number {
     return x * this.height + y;
   }
+
+  setValue(x: number, y: number, value: number) {
+    this.map[x * this.height + y] = value;
+  }
 }
 export class VoxelNeighborQueue3D {
   queue: Array<Vector3>;
@@ -399,10 +403,10 @@ class VolumeLayer {
       Math.ceil(Math.max(ya, yb, yc, yd)),
     ];
     const [width, height] = V2.sub(maxCoord2d, minCoord2d);
-    const map = this.createMap(width, height);
+    const voxelBuffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
 
     const setMap = (x: number, y: number) => {
-      map[x * height + y] = 1;
+      voxelBuffer2D.setValue(x, y, 1);
     };
 
     // translate the coordinates so the containing box originates in (0|0)
@@ -416,7 +420,13 @@ class VolumeLayer {
     xd -= diffX;
     yd -= diffY;
     Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
-    const voxelBuffer2D = new VoxelBuffer2D(
+    return voxelBuffer2D;
+  }
+
+  createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number) {
+    const map = this.createMap(width, height);
+
+    return new VoxelBuffer2D(
       map,
       width,
       height,
@@ -424,7 +434,12 @@ class VolumeLayer {
       this.get3DCoordinate.bind(this),
       this.getFast3DCoordinateFunction(),
     );
-    return voxelBuffer2D;
+  }
+
+  globalCoordToMag2D(position: Vector3): Vector2 {
+    return this.get2DCoordinate(
+      scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
+    );
   }
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
@@ -434,10 +449,9 @@ class VolumeLayer {
     const unzoomedRadius = Math.round(brushSize / 2);
     const width = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[0]]);
     const height = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[1]]);
+    // todo: use createVoxelBuffer2D here and in the other spots (replace createMap)
     const map = this.createMap(width, height);
-    const floatingCoord2d = this.get2DCoordinate(
-      scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
-    );
+    const floatingCoord2d = this.globalCoordToMag2D(position);
     const minCoord2d: Vector2 = [
       Math.floor(floatingCoord2d[0] - width / 2),
       Math.floor(floatingCoord2d[1] - height / 2),

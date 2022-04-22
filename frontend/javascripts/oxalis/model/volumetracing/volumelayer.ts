@@ -261,7 +261,7 @@ class VolumeLayer {
 
     const width = maxCoord2d[0] - minCoord2d[0] + 1;
     const height = maxCoord2d[1] - minCoord2d[1] + 1;
-    const map = this.createMap(width, height, 1);
+    const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height, 1);
 
     const setMap = (x: number, y: number, value: number = 1) => {
       x = Math.floor(x);
@@ -269,7 +269,7 @@ class VolumeLayer {
 
       // Leave a 1px border in order for fillOutsideArea to work
       if (x > minCoord2d[0] && x < maxCoord2d[0] && y > minCoord2d[1] && y < maxCoord2d[1]) {
-        map[(x - minCoord2d[0]) * height + (y - minCoord2d[1])] = value;
+        buffer2D.map[(x - minCoord2d[0]) * height + (y - minCoord2d[1])] = value;
       }
     };
 
@@ -285,16 +285,8 @@ class VolumeLayer {
     // Also, it will be very clear where to start the filling
     // algorithm.
     this.drawOutlineVoxels((x, y) => setMap(x, y, 0));
-    this.fillOutsideArea(map, width, height);
+    this.fillOutsideArea(buffer2D.map, width, height);
     this.drawOutlineVoxels(setMap);
-    const buffer2D = new VoxelBuffer2D(
-      map,
-      width,
-      height,
-      minCoord2d,
-      this.get3DCoordinate.bind(this),
-      this.getFast3DCoordinateFunction(),
-    );
     return buffer2D;
   }
 
@@ -332,7 +324,20 @@ class VolumeLayer {
     return Math.sqrt(distance);
   }
 
-  createMap(width: number, height: number, fillValue: number = 0): Uint8Array {
+  createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number, fillValue: number = 0) {
+    const map = this._createMap(width, height, fillValue);
+
+    return new VoxelBuffer2D(
+      map,
+      width,
+      height,
+      minCoord2d,
+      this.get3DCoordinate.bind(this),
+      this.getFast3DCoordinateFunction(),
+    );
+  }
+
+  _createMap(width: number, height: number, fillValue: number = 0): Uint8Array {
     const map = new Uint8Array(width * height);
 
     if (fillValue !== 0) {
@@ -423,19 +428,6 @@ class VolumeLayer {
     return voxelBuffer2D;
   }
 
-  createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number) {
-    const map = this.createMap(width, height);
-
-    return new VoxelBuffer2D(
-      map,
-      width,
-      height,
-      minCoord2d,
-      this.get3DCoordinate.bind(this),
-      this.getFast3DCoordinateFunction(),
-    );
-  }
-
   globalCoordToMag2D(position: Vector3): Vector2 {
     return this.get2DCoordinate(
       scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
@@ -449,20 +441,19 @@ class VolumeLayer {
     const unzoomedRadius = Math.round(brushSize / 2);
     const width = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[0]]);
     const height = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[1]]);
-    // todo: use createVoxelBuffer2D here and in the other spots (replace createMap)
-    const map = this.createMap(width, height);
     const floatingCoord2d = this.globalCoordToMag2D(position);
     const minCoord2d: Vector2 = [
       Math.floor(floatingCoord2d[0] - width / 2),
       Math.floor(floatingCoord2d[1] - height / 2),
     ];
+    const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] = this.get2DCoordinate(
       getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
 
     const setMap = (x: number, y: number) => {
-      map[x * height + y] = 1;
+      buffer2D.setValue(x, y, 1);
     };
 
     Drawing.fillCircle(
@@ -473,14 +464,6 @@ class VolumeLayer {
       scaleX / this.activeResolution[dimIndices[0]],
       scaleY / this.activeResolution[dimIndices[1]],
       setMap,
-    );
-    const buffer2D = new VoxelBuffer2D(
-      map,
-      width,
-      height,
-      minCoord2d,
-      this.get3DCoordinate.bind(this),
-      this.getFast3DCoordinateFunction(),
     );
     return buffer2D;
   }

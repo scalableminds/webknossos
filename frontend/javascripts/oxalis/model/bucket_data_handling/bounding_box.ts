@@ -147,6 +147,24 @@ class BoundingBox {
       max,
     });
   }
+
+  paddedWithMargins(marginsLeft: Vector3, marginsRight?: Vector3): BoundingBox {
+    if (marginsRight == null) {
+      marginsRight = marginsLeft;
+    }
+
+    return new BoundingBox({
+      min: V3.sub(this.min, marginsLeft),
+      max: V3.add(this.max, marginsRight),
+    });
+  }
+
+  rounded(): BoundingBox {
+    return new BoundingBox({
+      min: V3.floor(this.min),
+      max: V3.ceil(this.max),
+    });
+  }
 }
 
 export default BoundingBox;

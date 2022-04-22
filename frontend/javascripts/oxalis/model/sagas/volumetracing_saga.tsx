@@ -292,9 +292,9 @@ export function* editVolumeLayerAsync(): Saga<any> {
       ),
     );
 
-    const interpolateSegment = isBrushTool(activeTool);
+    const interpolateSegment = isBrushTool(activeTool) || isTraceTool(activeTool);
     if (interpolateSegment && isDrawing) {
-      yield* call(interpolateSegmentationLayer);
+      yield* call(interpolateSegmentationLayer, currentLayer);
     }
 
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
@@ -453,8 +453,7 @@ function* labelWithVoxelBuffer2D(
 function* getBoundingBoxForViewport(
   position: Vector3,
   currentViewport: OrthoView,
-): Saga<BoundingBoxType> {
-  const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+): Saga<BoundingBox> {
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
     getHalfViewportExtents,
     currentViewport,
@@ -466,21 +465,15 @@ function* getBoundingBoxForViewport(
   };
 
   const { lowerBoundary, upperBoundary } = yield* select((state) => getBoundaries(state.dataset));
-  const { min: clippedMin, max: clippedMax } = new BoundingBox(
-    currentViewportBounding,
-  ).intersectedWith(
+  return new BoundingBox(currentViewportBounding).intersectedWith(
     new BoundingBox({
       min: lowerBoundary,
       max: upperBoundary,
     }),
   );
-  return {
-    min: clippedMin,
-    max: clippedMax,
-  };
 }
 
-function* interpolateSegmentationLayer(action?: Action): Saga<void> {
+function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
   const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
@@ -514,10 +507,6 @@ function* interpolateSegmentationLayer(action?: Action): Saga<void> {
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
   const dimensionIndices = Dimensions.getIndices(activeViewport);
   const position = yield* select((state) => getFlooredPosition(state.flycam));
-  const [halfViewportExtentX, halfViewportExtentY] = yield* call(
-    getHalfViewportExtents,
-    activeViewport,
-  );
   const activeCellId = volumeTracing.activeCellId;
   const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
 
@@ -533,18 +522,6 @@ function* interpolateSegmentationLayer(action?: Action): Saga<void> {
     direction = spaceDirectionOrtho[thirdDim];
   }
 
-  // const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
-  // const z = tz;
-  // When using this tool in more coarse resolutions, the distance to the previous/next slice might be larger than 1
-  // const previousZ = z + direction * labeledResolution[thirdDim];
-  // for (let x = tx - halfViewportExtentX; x < tx + halfViewportExtentX; x++) {
-  //   for (let y = ty - halfViewportExtentY; y < ty + halfViewportExtentY; y++) {
-  //     copyVoxelLabel(
-  //       Dimensions.transDim([x, y, previousZ], activeViewport),
-  //       Dimensions.transDim([x, y, z], activeViewport),
-  //     );
-  //   }
-  // }
   const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
   if (volumeTracingLayer == null) {
     return;
@@ -552,17 +529,35 @@ function* interpolateSegmentationLayer(action?: Action): Saga<void> {
 
   // Annotate only every n-th slice while the remaining ones are interpolated automatically.
   const INTERPOLATION_DEPTH = 2;
-  const boundingBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
-  boundingBoxMag1.min[2] -= INTERPOLATION_DEPTH;
 
+  const drawnBoundingBox = layer.getLabeledBoundingBox();
+  if (drawnBoundingBox == null) {
+    return;
+  }
+  console.time("Interpolate segmentation");
+  const padding = V3.scale3(drawnBoundingBox.getSize(), [1, 1, 0]);
+  const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
+  const relevantBoxMag1 = drawnBoundingBox
+    // Increase the drawn region by a factor of 2 (use half the size as a padding on each size)
+    .paddedWithMargins(V3.scale(padding, 0.5))
+    // Intersect with the viewport
+    .intersectedWith(viewportBoxMag1)
+    // Also consider the n previous slices
+    .paddedWithMargins([0, 0, INTERPOLATION_DEPTH], [0, 0, 0])
+    .rounded();
+
+  console.time("Get Data");
   const inputData = yield* call(
     [api.data, api.data.getDataFor2DBoundingBox],
     volumeTracingLayer.name,
-    boundingBoxMag1,
+    relevantBoxMag1,
     requestedZoomStep,
   );
+  console.timeEnd("Get Data");
 
-  const size = V3.sub(boundingBoxMag1.max, boundingBoxMag1.min);
+  console.time("Iterate over data");
+
+  const size = V3.sub(relevantBoxMag1.max, relevantBoxMag1.min);
   const ll = ([x, y, z]: Vector3): number => z * size[1] * size[0] + y * size[0] + x;
   for (let x = 0; x < size[0]; x++) {
     for (let y = 0; y < size[1]; y++) {
@@ -573,8 +568,7 @@ function* interpolateSegmentationLayer(action?: Action): Saga<void> {
       // Only copy voxels from the previous layer which belong to the current cell
       // and do not overwrite already labeled voxels
       if (startValue === activeCellId && startValue === endValue && targetValue === 0) {
-        const voxelTargetAddress = V3.add(boundingBoxMag1.min, [x, y, 1]);
-        const currentLabelValue = cube.getDataValue(voxelTargetAddress, null, labeledZoomStep);
+        const voxelTargetAddress = V3.add(relevantBoxMag1.min, [x, y, 1]);
 
         const bucket = cube.getOrCreateBucket(
           cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
@@ -596,6 +590,7 @@ function* interpolateSegmentationLayer(action?: Action): Saga<void> {
       }
     }
   }
+  console.timeEnd("Iterate over data");
 
   if (labeledVoxelMapOfCopiedVoxel.size === 0) {
     const dimensionLabels = ["x", "y", "z"];
@@ -630,7 +625,8 @@ function* interpolateSegmentationLayer(action?: Action): Saga<void> {
     labeledW,
     false,
   );
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  console.timeEnd("Interpolate segmentation");
+  console.log("");
 }
 
 function* copySegmentationLayer(action: Action): Saga<void> {

@@ -15,6 +15,7 @@ import Drawing from "libs/drawing";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 /*
   A VoxelBuffer2D instance holds a two dimensional slice
@@ -134,8 +135,8 @@ class VolumeLayer {
   thirdDimensionValue: number;
 
   // Stored in global coordinates:
-  maxCoord: Vector3 | null | undefined;
   minCoord: Vector3 | null | undefined;
+  maxCoord: Vector3 | null | undefined;
 
   activeResolution: Vector3;
 
@@ -185,6 +186,13 @@ class VolumeLayer {
 
     const difference = V3.sub(maxCoord, minCoord);
     return difference[0] * difference[1] * difference[2];
+  }
+
+  getLabeledBoundingBox(): BoundingBox | null {
+    if (this.minCoord == null || this.maxCoord == null) {
+      return null;
+    }
+    return new BoundingBox({ min: this.minCoord, max: this.maxCoord });
   }
 
   getContourList(useGlobalCoords: boolean = false) {

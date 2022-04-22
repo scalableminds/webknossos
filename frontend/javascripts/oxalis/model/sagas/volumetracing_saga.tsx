@@ -38,6 +38,7 @@ import { diffDiffableMaps } from "libs/diffable_map";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
+  getActiveSegmentationTracingLayer,
   getMaximumBrushSize,
   getRenderableResolutionForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
@@ -290,6 +291,12 @@ export function* editVolumeLayerAsync(): Saga<any> {
         volumeTracing.tracingId,
       ),
     );
+
+    const interpolateSegment = isBrushTool(activeTool);
+    if (interpolateSegment && isDrawing) {
+      yield* call(interpolateSegmentationLayer);
+    }
+
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   }
 }
@@ -443,6 +450,189 @@ function* labelWithVoxelBuffer2D(
   );
 }
 
+function* getBoundingBoxForViewport(
+  position: Vector3,
+  currentViewport: OrthoView,
+): Saga<BoundingBoxType> {
+  const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+  const [halfViewportExtentX, halfViewportExtentY] = yield* call(
+    getHalfViewportExtents,
+    currentViewport,
+  );
+
+  const currentViewportBounding = {
+    min: V3.sub(position, [halfViewportExtentX, halfViewportExtentY, 0]),
+    max: V3.add(position, [halfViewportExtentX, halfViewportExtentY, 1]),
+  };
+
+  const { lowerBoundary, upperBoundary } = yield* select((state) => getBoundaries(state.dataset));
+  const { min: clippedMin, max: clippedMax } = new BoundingBox(
+    currentViewportBounding,
+  ).intersectedWith(
+    new BoundingBox({
+      min: lowerBoundary,
+      max: upperBoundary,
+    }),
+  );
+  return {
+    min: clippedMin,
+    max: clippedMax,
+  };
+}
+
+function* interpolateSegmentationLayer(action?: Action): Saga<void> {
+  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+  const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
+
+  if (activeViewport !== "PLANE_XY") {
+    // Interpolation is only done in XY
+    return;
+  }
+
+  // Disable copy-segmentation for the same zoom steps where the trace tool is forbidden, too,
+  // to avoid large performance lags.
+  const isResolutionTooLow = yield* select((state) =>
+    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
+  );
+
+  if (isResolutionTooLow) {
+    Toast.warning(
+      'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
+    );
+    return;
+  }
+
+  const volumeTracing = yield* select(enforceActiveVolumeTracing);
+  const segmentationLayer: DataLayer = yield* call(
+    [Model, Model.getSegmentationTracingLayer],
+    volumeTracing.tracingId,
+  );
+  const { cube } = segmentationLayer;
+  const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
+  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+  const dimensionIndices = Dimensions.getIndices(activeViewport);
+  const position = yield* select((state) => getFlooredPosition(state.flycam));
+  const [halfViewportExtentX, halfViewportExtentY] = yield* call(
+    getHalfViewportExtents,
+    activeViewport,
+  );
+  const activeCellId = volumeTracing.activeCellId;
+  const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
+
+  const thirdDim = dimensionIndices[2];
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  let direction = 1;
+  const useDynamicSpaceDirection = yield* select(
+    (state) => state.userConfiguration.dynamicSpaceDirection,
+  );
+
+  if (useDynamicSpaceDirection) {
+    const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
+    direction = spaceDirectionOrtho[thirdDim];
+  }
+
+  // const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
+  // const z = tz;
+  // When using this tool in more coarse resolutions, the distance to the previous/next slice might be larger than 1
+  // const previousZ = z + direction * labeledResolution[thirdDim];
+  // for (let x = tx - halfViewportExtentX; x < tx + halfViewportExtentX; x++) {
+  //   for (let y = ty - halfViewportExtentY; y < ty + halfViewportExtentY; y++) {
+  //     copyVoxelLabel(
+  //       Dimensions.transDim([x, y, previousZ], activeViewport),
+  //       Dimensions.transDim([x, y, z], activeViewport),
+  //     );
+  //   }
+  // }
+  const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
+  if (volumeTracingLayer == null) {
+    return;
+  }
+
+  // Annotate only every n-th slice while the remaining ones are interpolated automatically.
+  const INTERPOLATION_DEPTH = 2;
+  const boundingBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
+  boundingBoxMag1.min[2] -= INTERPOLATION_DEPTH;
+
+  const inputData = yield* call(
+    [api.data, api.data.getDataFor2DBoundingBox],
+    volumeTracingLayer.name,
+    boundingBoxMag1,
+    requestedZoomStep,
+  );
+
+  const size = V3.sub(boundingBoxMag1.max, boundingBoxMag1.min);
+  const ll = ([x, y, z]: Vector3): number => z * size[1] * size[0] + y * size[0] + x;
+  for (let x = 0; x < size[0]; x++) {
+    for (let y = 0; y < size[1]; y++) {
+      const startValue = inputData[ll([x, y, 0])];
+      const targetValue = inputData[ll([x, y, 1])];
+      const endValue = inputData[ll([x, y, 2])];
+
+      // Only copy voxels from the previous layer which belong to the current cell
+      // and do not overwrite already labeled voxels
+      if (startValue === activeCellId && startValue === endValue && targetValue === 0) {
+        const voxelTargetAddress = V3.add(boundingBoxMag1.min, [x, y, 1]);
+        const currentLabelValue = cube.getDataValue(voxelTargetAddress, null, labeledZoomStep);
+
+        const bucket = cube.getOrCreateBucket(
+          cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
+        );
+        if (bucket.type === "null") {
+          continue;
+        }
+
+        const labeledVoxelInBucket = cube.getVoxelOffset(voxelTargetAddress, labeledZoomStep);
+        const labelMapOfBucket =
+          labeledVoxelMapOfCopiedVoxel.get(bucket.zoomedAddress) ||
+          new Uint8Array(Constants.BUCKET_WIDTH ** 2).fill(0);
+        const labeledVoxel2D = [
+          labeledVoxelInBucket[dimensionIndices[0]],
+          labeledVoxelInBucket[dimensionIndices[1]],
+        ];
+        labelMapOfBucket[labeledVoxel2D[0] * Constants.BUCKET_WIDTH + labeledVoxel2D[1]] = 1;
+        labeledVoxelMapOfCopiedVoxel.set(bucket.zoomedAddress, labelMapOfBucket);
+      }
+    }
+  }
+
+  if (labeledVoxelMapOfCopiedVoxel.size === 0) {
+    const dimensionLabels = ["x", "y", "z"];
+    // todo
+    Toast.warning(
+      `Did not copy any voxels from slice ${dimensionLabels[thirdDim]}=....` +
+        ` Either no voxels with cell id ${activeCellId} were found or all of the respective voxels were already labeled in the current slice.`,
+    );
+  }
+
+  const labeledW = position[2] - 1;
+  // applyVoxelMap assumes get3DAddress to be local to the corresponding bucket (so in the labeled resolution as well)
+  const zInLabeledResolution =
+    Math.floor(labeledW / labeledResolution[thirdDim]) % Constants.BUCKET_WIDTH;
+  applyVoxelMap(
+    labeledVoxelMapOfCopiedVoxel,
+    cube,
+    activeCellId,
+    getFast3DCoordinateHelper(activeViewport, zInLabeledResolution),
+    1,
+    thirdDim,
+    false,
+    0,
+  );
+  applyLabeledVoxelMapToAllMissingResolutions(
+    labeledVoxelMapOfCopiedVoxel,
+    labeledZoomStep,
+    dimensionIndices,
+    resolutionInfo,
+    cube,
+    activeCellId,
+    labeledW,
+    false,
+  );
+  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+}
+
 function* copySegmentationLayer(action: Action): Saga<void> {
   if (action.type !== "COPY_SEGMENTATION_LAYER") {
     throw new Error("Satisfy flow");
@@ -459,8 +649,6 @@ function* copySegmentationLayer(action: Action): Saga<void> {
 
   // Disable copy-segmentation for the same zoom steps where the trace tool is forbidden, too,
   // to avoid large performance lags.
-  // This restriction should be soften'ed when https://github.com/scalableminds/webknossos/issues/4639
-  // is solved.
   const isResolutionTooLow = yield* select((state) =>
     isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
   );

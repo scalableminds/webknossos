@@ -132,8 +132,11 @@ class VolumeLayer {
   volumeTracingId: string;
   plane: OrthoView;
   thirdDimensionValue: number;
+
+  // Stored in global coordinates:
   maxCoord: Vector3 | null | undefined;
   minCoord: Vector3 | null | undefined;
+
   activeResolution: Vector3;
 
   constructor(

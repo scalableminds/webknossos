@@ -497,8 +497,12 @@ class DataCube {
 
     // Iterate over all buckets within the area and flood fill each of them.
     while (bucketsWithXyzSeedsToFill.length > 0) {
-      // @ts-expect-error ts-migrate(2488) FIXME: Type '[DataBucket, Vector3] | undefined' must have... Remove this comment to see the full error message
-      const [currentBucket, initialXyzVoxelInBucket] = bucketsWithXyzSeedsToFill.pop();
+      const poppedElement = bucketsWithXyzSeedsToFill.pop();
+      if (poppedElement == null) {
+        // Satisfy Typescript
+        throw new Error("Queue is empty.");
+      }
+      const [currentBucket, initialXyzVoxelInBucket] = poppedElement;
       const currentBucketBoundingBox = currentBucket.getBoundingBox();
       const currentGlobalBucketPosition = currentBucket.getGlobalPosition();
       // Check if the bucket overlaps the active viewport bounds.
@@ -559,8 +563,7 @@ class DataCube {
       const resolutions = getResolutions(Store.getState().dataset);
       const currentResolution = resolutions[currentBucket.zoomedAddress[3]];
 
-      // @ts-expect-error ts-migrate(7031) FIXME: Binding element 'firstCoord' implicitly has an 'an... Remove this comment to see the full error message
-      const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]) => {
+      const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]: Vector3) => {
         // Convert bucket local W coordinate to global W (both mag-dependent)
         const w = dimensionIndices[2];
         thirdCoord += currentBucket.getTopLeftInMag()[w];

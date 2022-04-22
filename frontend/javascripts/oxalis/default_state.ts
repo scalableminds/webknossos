@@ -39,11 +39,11 @@ const initialAnnotationInfo = {
   annotationType: "View",
   meshes: [],
 };
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'HTMLElement | null' is not assignable to typ... Remove this comment to see the full error message
-const primaryStylesheetElement: HTMLLinkElement | null | undefined =
-  document.getElementById("primary-stylesheet");
+
+const primaryStylesheetElement: HTMLLinkElement | null | undefined = document.getElementById(
+  "primary-stylesheet",
+) as HTMLLinkElement;
 const defaultState: OxalisState = {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ fourBit: boolean; interpolation: boolean; ... Remove this comment to see the full error message
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,

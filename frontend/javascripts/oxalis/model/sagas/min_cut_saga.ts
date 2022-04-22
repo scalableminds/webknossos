@@ -24,7 +24,7 @@ import { APISegmentationLayer } from "types/api_flow_types";
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
 // the min-cut is computed.
-const DEFAULT_PADDING = [50, 50, 50];
+const DEFAULT_PADDING: Vector3 = [50, 50, 50];
 // Voxels which are close to the seeds must not be relabeled.
 // Otherwise, trivial min-cuts are performed which cut right
 // around one seed.
@@ -89,7 +89,7 @@ function selectAppropriateResolutions(
 //
 // There are 6 neighbor in 3D space (manhattan-jumps).
 // The neighbors can be accessed via neighbor indices (e.g., idx=1 ==> neighbor [0, -1, 0])
-const NEIGHBOR_LOOKUP = [
+const NEIGHBOR_LOOKUP: Vector3[] = [
   [0, 0, -1],
   [0, -1, 0],
   [-1, 0, 0],
@@ -543,7 +543,7 @@ function buildGraph(
     for (let y = 0; y < size[1]; y++) {
       for (let x = 0; x < size[0]; x++) {
         // Traverse over all voxels
-        const pos = [x, y, z];
+        const pos: Vector3 = [x, y, z];
         const linIndex = l(x, y, z);
 
         // Ignore voxel if it does not belong to seed segment
@@ -781,7 +781,7 @@ function labelDeletedEdges(
 
         if (visitedField[idx] === 1) {
           const neighbors = getNeighborsFromBitMask(originalEdgeBuffer[idx]).outgoing;
-          const currentPos = [x, y, z];
+          const currentPos: Vector3 = [x, y, z];
 
           for (const neighbor of neighbors) {
             const neighborPos = V3.add(currentPos, neighbor);

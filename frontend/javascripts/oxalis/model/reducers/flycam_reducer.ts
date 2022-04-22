@@ -43,8 +43,8 @@ function rotateOnAxisWithDistance(
   angle: number,
   axis: Vector3,
 ): Matrix4x4 {
-  const distanceVecNegative = [0, 0, -zoomStep * distance];
-  const distanceVecPositive = [0, 0, zoomStep * distance];
+  const distanceVecNegative: Vector3 = [0, 0, -zoomStep * distance];
+  const distanceVecPositive: Vector3 = [0, 0, zoomStep * distance];
   let matrix = M4x4.translate(distanceVecNegative, currentMatrix, []);
   matrix = rotateOnAxis(matrix, angle, axis);
   return M4x4.translate(distanceVecPositive, matrix, []);

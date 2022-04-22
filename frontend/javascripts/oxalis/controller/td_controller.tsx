@@ -209,7 +209,7 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        const unscaledPosition = V3.divide3(hitPosition.toArray(), this.props.scale);
+        const unscaledPosition = V3.divide3(hitPosition.toArray() as Vector3, this.props.scale);
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));

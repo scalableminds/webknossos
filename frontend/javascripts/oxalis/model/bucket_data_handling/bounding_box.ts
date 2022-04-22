@@ -98,7 +98,7 @@ class BoundingBox {
   chunkIntoBuckets() {
     const size = this.getSize();
     const start = [...this.min];
-    const chunkSize = [32, 32, 32];
+    const chunkSize: Vector3 = [32, 32, 32];
     const chunkBorderAlignments = [32, 32, 32];
     // Move the start to be aligned correctly. This doesn't actually change
     // the start of the first chunk, because we'll intersect with `self`,
@@ -113,11 +113,10 @@ class BoundingBox {
     for (const x of _.range(start[0] - startAdjust[0], start[0] + size[0], chunkSize[0])) {
       for (const y of _.range(start[1] - startAdjust[1], start[1] + size[1], chunkSize[1])) {
         for (const z of _.range(start[2] - startAdjust[2], start[2] + size[2], chunkSize[2])) {
-          const newMin = [x, y, z];
+          const newMin: Vector3 = [x, y, z];
           boxes.push(
             this.intersectedWith(
               new BoundingBox({
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
                 min: newMin,
                 max: V3.add(newMin, chunkSize),
               }),

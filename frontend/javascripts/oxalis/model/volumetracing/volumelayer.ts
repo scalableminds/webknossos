@@ -347,7 +347,7 @@ class VolumeLayer {
   getRectangleVoxelBuffer2D(
     lastUnzoomedPosition: Vector3,
     unzoomedPosition: Vector3,
-  ): VoxelBuffer2D | null | undefined {
+  ): VoxelBuffer2D | null {
     const lastPosition = scaleGlobalPositionWithResolution(
       lastUnzoomedPosition,
       this.activeResolution,
@@ -387,7 +387,7 @@ class VolumeLayer {
       Math.ceil(Math.max(xa, xb, xc, xd)),
       Math.ceil(Math.max(ya, yb, yc, yd)),
     ];
-    const [width, height] = V3.sub(maxCoord2d, minCoord2d);
+    const [width, height] = V2.sub(maxCoord2d, minCoord2d);
     const map = this.createMap(width, height);
 
     const setMap = (x: number, y: number) => {

@@ -666,7 +666,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     if (!foundPosition || !foundResolution) {
       const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
-      const centerPosition = V3.add(lowerBoundary, upperBoundary).map((el: number) => el / 2);
+      const centerPosition = V3.add(lowerBoundary, upperBoundary).map(
+        (el: number) => el / 2,
+      ) as Vector3;
       Toast.warning(
         `Couldn't find data within layer "${layerName}." Jumping to the center of the layer's bounding box.`,
       );

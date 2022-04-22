@@ -3,6 +3,7 @@ import React from "react";
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
+import api from "oxalis/api/internal_api";
 import {
   ResolutionInfo,
   getBoundaries,
@@ -244,7 +245,6 @@ export function* editVolumeLayerAsync(): Saga<any> {
       }
 
       if (isBrushTool(activeTool)) {
-        // Disable continuous drawing for performance reasons
         const rectangleVoxelBuffer2D = currentLayer.getRectangleVoxelBuffer2D(
           lastPosition,
           addToLayerAction.position,

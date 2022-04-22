@@ -51,7 +51,6 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
-        logger.info(s"request, index case")
         for {
           data <- handleDataRequest(request)
           mappedData = convertIfNecessary(

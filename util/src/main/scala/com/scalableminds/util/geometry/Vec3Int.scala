@@ -17,6 +17,7 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
     x == y && y == z
 
   override def toString: String = "(%d, %d, %d)".format(x, y, z)
+  def toURLString: String = "%d-%d-%d".format(x, y, z)
 
   def toList = List(x, y, z)
 

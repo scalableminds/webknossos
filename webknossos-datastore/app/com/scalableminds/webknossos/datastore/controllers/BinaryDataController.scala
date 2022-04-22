@@ -31,18 +31,17 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketProvider, WKWDataFormatHelper}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketProvider}
 import com.scalableminds.webknossos.wrap.WKWHeader
 import com.scalableminds.webknossos.wrap.BlockType
 import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, Request, ResponseHeader, Result}
 
-import java.nio.file.{Path, Paths}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -239,7 +238,7 @@ class BinaryDataController @Inject()(
               "Datastore",
               "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
               Map("color" -> ".") ++ mags.map { mag =>
-                (mag.toString, mag.toString)
+                (mag.toURLString, mag.toURLString)
               }.toMap
             )).withHeaders()
       }
@@ -274,7 +273,6 @@ class BinaryDataController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       getTokenFromHeader(token, request)) {
-      logger.info(s"token ${getTokenFromHeader(token, request)}")
       for {
         (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
         parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
@@ -343,8 +341,6 @@ class BinaryDataController @Inject()(
       case provider: ZarrBucketProvider => ???
     }
 
-    logger.info(s"Is compressed ${result}")
-    logger.info(s"is block compressed ${result.map((h) => h.blockType).map(b => BlockType.isCompressed(b))}")
     result.flatMap((h) => Full(h.isCompressed))
   }
 
@@ -358,7 +354,7 @@ class BinaryDataController @Inject()(
           provider
             .wkwHeaderFilePath(mag, Some(dataSource.id), Some(dataLayerName), binaryDataService.dataBaseDir)
             .toFile).flatMap((h) => Full(h.blockType == BlockType.LZ4))
-      case provider: ZarrBucketProvider => ???
+      case _: ZarrBucketProvider => ???
     }
 
   def requestRawZarrWithDot(
@@ -388,7 +384,6 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for raw binary data via HTTP GET. Used by zarr streaming.
     */
-  @ApiOperation(hidden = true, value = "")
   def requestRawZarr(
       token: Option[String],
       organizationName: String,
@@ -402,16 +397,11 @@ class BinaryDataController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       getTokenFromHeader(token, request)) {
-      logger.info("Requesting %d, %d, %d".format(x, y, z))
-
       for {
         (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
         parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
         _ <- bool2Fox(c == 0) ~> Messages("Channel must be 0") ~> 404
         cubeSize = DataLayer.bucketLength
-        _ = logger.info(
-          "Requesting %d, %d, %d"
-            .format(x * cubeSize * parsedMag.x, y * cubeSize * parsedMag.y, z * cubeSize * parsedMag.z))
         request = DataRequest(
           new VoxelPosition(x * cubeSize * parsedMag.x,
                             y * cubeSize * parsedMag.y,
@@ -442,16 +432,6 @@ class BinaryDataController @Inject()(
           "dataSource.notFound") ~> 404
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.collect({
-//        case b: SegmentationLayer =>
-//          ZarrSegmentationLayer(
-//            b.name,
-//            b.boundingBox,
-//            b.elementClass,
-//            b.resolutions.map(x => ZarrMag(x, None, None)),
-//            b.largestSegmentId,
-//            b.mappings,
-//            numChannels = if (b.elementClass == ElementClass.uint24) 3 else 1
-//          )
           case a: DataLayer =>
             ZarrDataLayer(a.name,
                           a.category,
@@ -463,7 +443,6 @@ class BinaryDataController @Inject()(
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
     }
-
   }
 
   def requestZGroup(
@@ -474,12 +453,8 @@ class BinaryDataController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       getTokenFromHeader(token, request)) {
-      for {
-        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-          "dataSource.notFound") ~> 404
-      } yield Ok(Json.obj("zarr_format" -> 2))
+      Future(Ok(Json.obj("zarr_format" -> 2)))
     }
-
   }
 
   /**
@@ -764,7 +739,6 @@ class BinaryDataController @Inject()(
   ): Fox[(Array[Byte], List[Int])] = {
     val requests =
       dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, None, r.cuboid(dataLayer), r.settings))
-    logger.info(s"requests: $requests")
     binaryDataService.handleDataRequests(requests)
   }
 

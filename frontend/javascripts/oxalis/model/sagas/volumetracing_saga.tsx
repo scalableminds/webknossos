@@ -339,9 +339,10 @@ function* createVolumeLayer(
   volumeTracing: VolumeTracing,
   planeId: OrthoView,
   labeledResolution: Vector3,
+  thirdDimValue?: number,
 ): Saga<VolumeLayer> {
   const position = yield* select((state) => getFlooredPosition(state.flycam));
-  const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
+  thirdDimValue = thirdDimValue ?? position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledResolution);
 }
 
@@ -501,26 +502,23 @@ function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<void> {
     [Model, Model.getSegmentationTracingLayer],
     volumeTracing.tracingId,
   );
-  const { cube } = segmentationLayer;
   const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-  const dimensionIndices = Dimensions.getIndices(activeViewport);
+  // const dimensionIndices = Dimensions.getIndices(activeViewport);
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   const activeCellId = volumeTracing.activeCellId;
-  const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
 
-  const thirdDim = dimensionIndices[2];
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-  let direction = 1;
-  const useDynamicSpaceDirection = yield* select(
-    (state) => state.userConfiguration.dynamicSpaceDirection,
-  );
+  // let direction = 1;
+  // const useDynamicSpaceDirection = yield* select(
+  //   (state) => state.userConfiguration.dynamicSpaceDirection,
+  // );
 
-  if (useDynamicSpaceDirection) {
-    const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
-    direction = spaceDirectionOrtho[thirdDim];
-  }
+  // if (useDynamicSpaceDirection) {
+  //   const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
+  //   direction = spaceDirectionOrtho[thirdDim];
+  // }
 
   const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
   if (volumeTracingLayer == null) {
@@ -528,18 +526,18 @@ function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<void> {
   }
 
   // Annotate only every n-th slice while the remaining ones are interpolated automatically.
-  const INTERPOLATION_DEPTH = 2;
+  const INTERPOLATION_DEPTH = 3;
 
   const drawnBoundingBox = layer.getLabeledBoundingBox();
   if (drawnBoundingBox == null) {
     return;
   }
   console.time("Interpolate segmentation");
-  const padding = V3.scale3(drawnBoundingBox.getSize(), [1, 1, 0]);
+  const xyPadding = V3.scale3(drawnBoundingBox.getSize(), [1, 1, 0]);
   const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
   const relevantBoxMag1 = drawnBoundingBox
     // Increase the drawn region by a factor of 2 (use half the size as a padding on each size)
-    .paddedWithMargins(V3.scale(padding, 0.5))
+    .paddedWithMargins(V3.scale(xyPadding, 0.5))
     // Intersect with the viewport
     .intersectedWith(viewportBoxMag1)
     // Also consider the n previous slices
@@ -559,72 +557,53 @@ function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<void> {
 
   const size = V3.sub(relevantBoxMag1.max, relevantBoxMag1.min);
   const ll = ([x, y, z]: Vector3): number => z * size[1] * size[0] + y * size[0] + x;
+
+  const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
+  for (let targetOffsetZ = 1; targetOffsetZ < INTERPOLATION_DEPTH; targetOffsetZ++) {
+    const interpolationLayer = yield* call(
+      createVolumeLayer,
+      volumeTracing,
+      "PLANE_XY",
+      labeledResolution,
+      relevantBoxMag1.min[2] + targetOffsetZ,
+    );
+    interpolationVoxelBuffers[targetOffsetZ] = interpolationLayer.createVoxelBuffer2D(
+      interpolationLayer.globalCoordToMag2D(V3.add(relevantBoxMag1.min, [0, 0, targetOffsetZ])),
+      size[0],
+      size[1],
+    );
+  }
+
   for (let x = 0; x < size[0]; x++) {
     for (let y = 0; y < size[1]; y++) {
       const startValue = inputData[ll([x, y, 0])];
-      const targetValue = inputData[ll([x, y, 1])];
-      const endValue = inputData[ll([x, y, 2])];
+      const endValue = inputData[ll([x, y, INTERPOLATION_DEPTH])];
 
       // Only copy voxels from the previous layer which belong to the current cell
-      // and do not overwrite already labeled voxels
-      if (startValue === activeCellId && startValue === endValue && targetValue === 0) {
-        const voxelTargetAddress = V3.add(relevantBoxMag1.min, [x, y, 1]);
+      if (!(startValue === activeCellId && startValue === endValue)) {
+        continue;
+      }
 
-        const bucket = cube.getOrCreateBucket(
-          cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
-        );
-        if (bucket.type === "null") {
-          continue;
-        }
-
-        const labeledVoxelInBucket = cube.getVoxelOffset(voxelTargetAddress, labeledZoomStep);
-        const labelMapOfBucket =
-          labeledVoxelMapOfCopiedVoxel.get(bucket.zoomedAddress) ||
-          new Uint8Array(Constants.BUCKET_WIDTH ** 2).fill(0);
-        const labeledVoxel2D = [
-          labeledVoxelInBucket[dimensionIndices[0]],
-          labeledVoxelInBucket[dimensionIndices[1]],
-        ];
-        labelMapOfBucket[labeledVoxel2D[0] * Constants.BUCKET_WIDTH + labeledVoxel2D[1]] = 1;
-        labeledVoxelMapOfCopiedVoxel.set(bucket.zoomedAddress, labelMapOfBucket);
+      for (let targetOffsetZ = 1; targetOffsetZ < INTERPOLATION_DEPTH; targetOffsetZ++) {
+        const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetZ];
+        voxelBuffer2D.setValue(x, y, 1);
       }
     }
   }
   console.timeEnd("Iterate over data");
 
-  if (labeledVoxelMapOfCopiedVoxel.size === 0) {
-    const dimensionLabels = ["x", "y", "z"];
-    // todo
-    Toast.warning(
-      `Did not copy any voxels from slice ${dimensionLabels[thirdDim]}=....` +
-        ` Either no voxels with cell id ${activeCellId} were found or all of the respective voxels were already labeled in the current slice.`,
+  console.time("Apply VoxelBuffer2D");
+  for (const voxelBuffer of Object.values(interpolationVoxelBuffers)) {
+    yield* call(
+      labelWithVoxelBuffer2D,
+      voxelBuffer,
+      ContourModeEnum.DRAW,
+      OverwriteModeEnum.OVERWRITE_EMPTY,
+      labeledZoomStep,
     );
   }
+  console.timeEnd("Apply VoxelBuffer2D");
 
-  const labeledW = position[2] - 1;
-  // applyVoxelMap assumes get3DAddress to be local to the corresponding bucket (so in the labeled resolution as well)
-  const zInLabeledResolution =
-    Math.floor(labeledW / labeledResolution[thirdDim]) % Constants.BUCKET_WIDTH;
-  applyVoxelMap(
-    labeledVoxelMapOfCopiedVoxel,
-    cube,
-    activeCellId,
-    getFast3DCoordinateHelper(activeViewport, zInLabeledResolution),
-    1,
-    thirdDim,
-    false,
-    0,
-  );
-  applyLabeledVoxelMapToAllMissingResolutions(
-    labeledVoxelMapOfCopiedVoxel,
-    labeledZoomStep,
-    dimensionIndices,
-    resolutionInfo,
-    cube,
-    activeCellId,
-    labeledW,
-    false,
-  );
   console.timeEnd("Interpolate segmentation");
   console.log("");
 }
@@ -843,7 +822,7 @@ export function* floodFill(): Saga<void> {
     console.time("applyLabeledVoxelMapToAllMissingResolutions");
 
     for (const indexZ of indexSet) {
-      const labeledVoxelMapFromFloodFill = new Map();
+      const labeledVoxelMapFromFloodFill: LabeledVoxelsMap = new Map();
 
       for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
         const map = labelMaskByIndex.get(indexZ);

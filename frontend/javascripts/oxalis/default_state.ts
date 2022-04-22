@@ -53,7 +53,7 @@ const defaultState: OxalisState = {
     crosshairSize: 0.1,
     displayCrosshair: true,
     displayScalebars: true,
-    dynamicSpaceDirection: true,
+    dynamicSpaceDirection: false,
     hideTreeRemovalWarning: false,
     highlightCommentedNodes: false,
     keyboardDelay: 200,

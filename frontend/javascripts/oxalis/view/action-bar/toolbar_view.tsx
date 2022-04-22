@@ -642,6 +642,7 @@ export default function ToolbarView() {
                 className="fas fa-fill-drip"
                 style={{
                   opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
+                  transform: "scaleX(-1)",
                 }}
               />
               {adaptedActiveTool === AnnotationToolEnum.FILL_CELL

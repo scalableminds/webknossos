@@ -1,11 +1,6 @@
 import type { ModifierKeys } from "libs/input";
 import type { OrthoView, Point2, ShowContextMenuFunction, AnnotationTool } from "oxalis/constants";
-import {
-  OrthoViews,
-  ContourModeEnum,
-  AnnotationToolEnum,
-  OrthoViewValuesWithoutTDView,
-} from "oxalis/constants";
+import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import {
   enforceActiveVolumeTracing,
   getContourTracingMode,
@@ -619,15 +614,6 @@ export class BoundingBoxTool {
     if (body == null) {
       return;
     }
-
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      const inputCatcher = document.getElementById(`inputcatcher_${planeId}`);
-
-      if (inputCatcher) {
-        inputCatcher.style.cursor = "auto";
-      }
-    }
-
     getSceneController().highlightUserBoundingBox(null);
   }
 }

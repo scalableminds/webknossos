@@ -18,12 +18,12 @@ import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_lis
 type Props = {
   form: FormInstance | null;
   datasetId: APIDatasetId;
+  dataset: APIDataset | null | undefined;
   hasNoAllowedTeams: boolean;
 };
 
-export default function DatasetSettingsSharingTab({ form, datasetId, hasNoAllowedTeams }: Props) {
+export default function DatasetSettingsSharingTab({ form, datasetId, dataset, hasNoAllowedTeams }: Props) {
   const [sharingToken, setSharingToken] = useState("");
-  const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
 
   const allowedTeamsComponent = (
     <FormItemWithInfo
@@ -43,9 +43,7 @@ export default function DatasetSettingsSharingTab({ form, datasetId, hasNoAllowe
 
   async function fetch() {
     const newSharingToken = await getDatasetSharingToken(datasetId);
-    const newDataSet = await getDataset(datasetId);
     setSharingToken(newSharingToken);
-    setDataset(newDataSet);
   }
 
   useEffect(() => {

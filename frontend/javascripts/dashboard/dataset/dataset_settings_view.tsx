@@ -906,6 +906,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                     <DatasetSettingsSharingTab
                       form={form}
                       datasetId={this.props.datasetId}
+                      dataset={this.state.dataset}
                       hasNoAllowedTeams={hasNoAllowedTeams}
                     />
                   </Hideable>

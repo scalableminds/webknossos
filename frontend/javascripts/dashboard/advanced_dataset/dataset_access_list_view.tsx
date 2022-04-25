@@ -13,7 +13,6 @@ type State = {
   isLoading: boolean;
 };
 export default class DatasetAccessListView extends React.PureComponent<Props, State> {
-  
   state: State = {
     datasetUsers: [],
     isLoading: false,

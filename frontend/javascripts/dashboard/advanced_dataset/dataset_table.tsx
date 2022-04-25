@@ -37,7 +37,6 @@ type Props = {
   searchQuery: string;
   searchTags: Array<string>;
   isUserAdmin: boolean;
-  isUserTeamManager: boolean;
   isUserDatasetManager: boolean;
   datasetFilteringMode: DatasetFilteringMode;
   reloadDataset: (arg0: APIDatasetId, arg1: Array<APIMaybeUnimportedDataset>) => Promise<void>;
@@ -183,7 +182,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { isUserAdmin, isUserTeamManager } = this.props;
     const filteredDataSource = this.getFilteredDatasets();
     const { sortedInfo } = this.state;
     const dataSourceSortedByRank = useLruRank

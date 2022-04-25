@@ -1,28 +1,35 @@
-import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse, Spin } from "antd";
 import React, { useState, useEffect } from "react";
-import type { APIDataset, APIDatasetId } from "types/api_flow_types";
+import { RouteComponentProps, withRouter } from "react-router-dom";
+import { connect } from "react-redux";
+import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse } from "antd";
+import { CopyOutlined, RetweetOutlined } from "@ant-design/icons";
+import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
-import {
-  getDatasetSharingToken,
-  getDataset,
-  revokeDatasetSharingToken,
-} from "admin/admin_rest_api";
+import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import features from "features";
 import window from "libs/window";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-import { CopyOutlined, PropertySafetyFilled, RetweetOutlined } from "@ant-design/icons";
-import { FormItemWithInfo } from "./helper_components";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
+import { OxalisState } from "oxalis/store";
+import { isUserAdminOrTeamManager } from "libs/utils";
+import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: FormInstance | null;
   datasetId: APIDatasetId;
   dataset: APIDataset | null | undefined;
   hasNoAllowedTeams: boolean;
+  activeUser: APIUser | null | undefined;
 };
 
-export default function DatasetSettingsSharingTab({ form, datasetId, dataset, hasNoAllowedTeams }: Props) {
+function DatasetSettingsSharingTab({
+  form,
+  datasetId,
+  dataset,
+  hasNoAllowedTeams,
+  activeUser,
+}: Props) {
   const [sharingToken, setSharingToken] = useState("");
 
   const allowedTeamsComponent = (
@@ -93,6 +100,19 @@ export default function DatasetSettingsSharingTab({ form, datasetId, dataset, ha
       const dataStoreURL = dataset.dataStore.url;
       return `${dataStoreName}, ${dataStoreURL}, ${datasetId.name}`;
     } else return "";
+  }
+
+  function getUserAccessList() {
+    if (!activeUser || !dataset) return undefined;
+    if (!isUserAdminOrTeamManager(activeUser)) return undefined;
+
+    return (
+      <Collapse collapsible="header">
+        <Collapse.Panel header="All users with access rights to this dataset" key="1">
+          <DatasetAccessListView dataset={dataset} />
+        </Collapse.Panel>
+      </Collapse>
+    );
   }
 
   return form ? (
@@ -183,11 +203,14 @@ export default function DatasetSettingsSharingTab({ form, datasetId, dataset, ha
         </FormItemWithInfo>
       )}
 
-      <Collapse collapsible="header" >
-        <Collapse.Panel header="All users with access rights to this dataset" key="1">
-          {dataset ? <DatasetAccessListView dataset={dataset} /> : <Spin tip="Loading..." />}
-        </Collapse.Panel>
-      </Collapse>
+      {getUserAccessList()}
     </div>
   ) : null;
 }
+
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: state.activeUser,
+});
+
+const connector = connect(mapStateToProps);
+export default connector(withRouter<RouteComponentProps & Props, any>(DatasetSettingsSharingTab));

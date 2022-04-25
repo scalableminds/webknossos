@@ -107,6 +107,116 @@ import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
+
+import ndarray from "ndarray";
+import zeros from "zeros";
+import distanceTransform from "distance-transform";
+import cwise from "cwise";
+
+const isEqual = cwise({
+  args: ["array", "scalar"],
+  body: function (a: number, b: number) {
+    a = a === b ? 1 : 0;
+  },
+});
+
+const mul = cwise({
+  args: ["array", "scalar"],
+  body: function (a: number, b: number) {
+    a = a * b;
+  },
+});
+
+const avg = cwise({
+  args: ["array", "array"],
+  body: function (a: number, b: number) {
+    a = (a + b) / 2;
+  },
+});
+
+const absMax = cwise({
+  args: ["array", "array"],
+  body: function (a: number, b: number) {
+    a = Math.abs(a) > Math.abs(b) ? a : b;
+  },
+});
+
+const assign = cwise({
+  args: ["array", "array"],
+  body: function (a: number, b: number) {
+    a = b;
+  },
+});
+
+function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarray.NdArray {
+  const newArr = ndarray(new Constructor(arr.size), arr.shape, arr.stride);
+
+  assign(newArr, arr);
+
+  return newArr;
+}
+
+function signedDist(arr: ndarray.NdArray) {
+  // print("arr", arr, 0);
+  arr = copy(Float32Array, arr);
+  const negatedCopy = copy(Float32Array, arr);
+  // print("copy", negatedCopy, 0);
+
+  isEqual(negatedCopy, 0);
+  // print("negatedCopy", negatedCopy, 0);
+  distanceTransform(negatedCopy);
+  // print("negatedCopy transformed", negatedCopy, 0);
+  mul(negatedCopy, -1);
+  // print("negatedCopy * -1", negatedCopy, 0);
+
+  distanceTransform(arr);
+  // print("arr", arr, 0);
+
+  absMax(arr, negatedCopy);
+
+  // print("signed", arr, 0);
+  return arr;
+}
+
+// window.testNd = () => {
+//   const array = ndarray(new Uint8Array(25 * 2), [5, 5, 2], [1, 5, 25]);
+//   const array2 = ndarray(new Uint8Array(25 * 2), [5, 5, 2], [1, 5, 25]);
+//   // const subview = arr.lo(0, 1);
+//   const subview = array;
+
+//   let counter = 0;
+//   for (let z = 0; z < subview.shape[2]; ++z) {
+//     for (let y = 2; y < subview.shape[1]; ++y) {
+//       for (let x = 2; x < subview.shape[0]; ++x) {
+//         subview.set(x, y, z, 1);
+//       }
+//     }
+//   }
+
+//   console.log("array.get(4, 0, 0)", array.get(4, 0, 0));
+
+//   print("", subview, 0);
+//   const subviewDists = signedDist(subview);
+//   print("", subviewDists, 0);
+// };
+
+// function print(pref: string, arr: ndarray.NdArray, z: number) {
+//   console.log(pref);
+//   if (arr.data.length > 100) {
+//     return;
+//   }
+//   const lines = [];
+//   for (var y = 0; y < arr.shape[1]; ++y) {
+//     const chars = [];
+//     for (var x = 0; x < arr.shape[0]; ++x) {
+//       chars.push(arr.get(x, y, z));
+//     }
+//     lines.push(chars.join(" "));
+//   }
+//   console.log(lines.join("\n"));
+// }
+// testNd();
+
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
   yield* takeEveryUnlessBusy(
@@ -551,11 +661,14 @@ function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<void> {
     relevantBoxMag1,
     requestedZoomStep,
   );
+
   console.timeEnd("Get Data");
 
   console.time("Iterate over data");
 
   const size = V3.sub(relevantBoxMag1.max, relevantBoxMag1.min);
+  const stride = [1, size[0], size[0] * size[1]];
+  const inputNd = ndarray(inputData, size, stride);
   const ll = ([x, y, z]: Vector3): number => z * size[1] * size[0] + y * size[0] + x;
 
   const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
@@ -574,22 +687,31 @@ function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<void> {
     );
   }
 
+  const firstSlice = inputNd.pick(null, null, 0);
+  const lastSlice = inputNd.pick(null, null, INTERPOLATION_DEPTH);
+
+  isEqual(firstSlice, activeCellId);
+  isEqual(lastSlice, activeCellId);
+
+  const firstSliceDists = signedDist(firstSlice);
+  const lastSliceDists = signedDist(lastSlice);
+  avg(firstSliceDists, lastSliceDists);
+
+  const avgDistances = firstSliceDists;
+
+  let drawnVoxels = 0;
   for (let x = 0; x < size[0]; x++) {
     for (let y = 0; y < size[1]; y++) {
-      const startValue = inputData[ll([x, y, 0])];
-      const endValue = inputData[ll([x, y, INTERPOLATION_DEPTH])];
-
-      // Only copy voxels from the previous layer which belong to the current cell
-      if (!(startValue === activeCellId && startValue === endValue)) {
-        continue;
-      }
-
-      for (let targetOffsetZ = 1; targetOffsetZ < INTERPOLATION_DEPTH; targetOffsetZ++) {
-        const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetZ];
-        voxelBuffer2D.setValue(x, y, 1);
+      if (avgDistances.get(x, y) < 0) {
+        for (let targetOffsetZ = 1; targetOffsetZ < INTERPOLATION_DEPTH; targetOffsetZ++) {
+          const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetZ];
+          voxelBuffer2D.setValue(x, y, 1);
+          drawnVoxels++;
+        }
       }
     }
   }
+  console.log("drawnVoxels", drawnVoxels);
   console.timeEnd("Iterate over data");
 
   console.time("Apply VoxelBuffer2D");

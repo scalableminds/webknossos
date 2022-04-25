@@ -316,7 +316,7 @@ class TracingApi {
 
   /**
    * Returns the comment for a given node and tree (optional).
-   * @param tree - Supplying the tree will provide a performance boost for looking up a comment.
+   * @param treeId - Supplying the tree id will provide a performance boost for looking up a comment.
    *
    * @example
    * const comment = api.tracing.getCommentForNode(23);

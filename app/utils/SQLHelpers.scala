@@ -91,7 +91,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     )
 
   def writeArrayTuple(elements: List[String]): String = {
-    val commaSeparated = elements.mkString(",")
+    val commaSeparated = elements.map(sanitizeInArrayTuple).map(e => s""""$e"""").mkString(",")
     s"{$commaSeparated}"
   }
 
@@ -106,13 +106,25 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   }
 
   def parseArrayTuple(literal: String): List[String] = {
-    //TODO: error handling, escape handling. copy from js parser?
     val trimmed = literal.drop(1).dropRight(1)
-    if (trimmed.isEmpty) List()
-    else trimmed.split(",", -1).toList
+    if (trimmed.isEmpty) return List()
+
+    val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
+    split.map { item =>
+      if (item.startsWith("\"") && item.endsWith("\"")) {
+        item.drop(1).dropRight(1)
+      } else item
+    }
   }
 
   def sanitize(aString: String): String = aString.replaceAll("'", "")
+
+  // escape ' by doubling it, escape " with backslash, drop commas
+  def sanitizeInArrayTuple(aString: String): String =
+    aString.replaceAll("'", """''""").replaceAll(""""""", """\\"""").replaceAll(""",""", "")
+
+  def desanitizeFromArrayTuple(aString: String): String =
+    aString.replaceAll("""\\"""", """"""").replaceAll("""\\,""", ",")
 
   def optionLiteral(aStringOpt: Option[String]): String = aStringOpt match {
     case Some(aString) => "'" + aString + "'"

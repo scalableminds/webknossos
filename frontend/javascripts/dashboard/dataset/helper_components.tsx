@@ -1,0 +1,127 @@
+import { Alert, Form, Tooltip, Modal } from "antd";
+import type { FieldError } from "rc-field-form/es/interface";
+import { InfoCircleOutlined } from "@ant-design/icons";
+import * as React from "react";
+import _ from "lodash";
+import { FormItemProps } from "@ant-design/compatible/lib/form/FormItem";
+import { NamePath } from "antd/lib/form/interface";
+import { Rule } from "antd/lib/form";
+
+const FormItem = Form.Item;
+
+export const jsonEditStyle = {
+  fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+};
+
+export function Hideable({ children, hidden }: { children: React.ReactNode; hidden: boolean }) {
+  return (
+    <div
+      style={{
+        display: hidden ? "none" : "block",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export const FormItemWithInfo = ({
+  label,
+  info,
+  children,
+  ...props
+}: FormItemProps & {
+  info: React.ReactNode;
+  children: React.ReactNode;
+  name?: NamePath;
+  initialValue?: string;
+  rules?: Rule[];
+  valuePropName?: string;
+}) => (
+  <FormItem
+    {...props}
+    colon={false}
+    label={
+      <span>
+        {label}{" "}
+        <Tooltip title={info}>
+          <InfoCircleOutlined style={{ color: "gray" }} />
+        </Tooltip>
+      </span>
+    }
+  >
+    {children}
+  </FormItem>
+);
+
+export class RetryingErrorBoundary extends React.Component<
+  {
+    children: React.ReactNode;
+  },
+  {
+    error: Error | null | undefined;
+  }
+> {
+  constructor() {
+    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1-2 arguments, but got 0.
+    super();
+    this.state = {
+      error: null,
+    };
+  }
+
+  // This cannot be changed to componentDidUpdate, because we cannot distinguish whether the parent
+  // component actually changed
+  UNSAFE_componentWillReceiveProps() {
+    this.setState({
+      error: null,
+    });
+  }
+
+  componentDidCatch(error: Error) {
+    this.setState({
+      error,
+    });
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <Alert
+          type="error"
+          showIcon
+          message={
+            <span>
+              An error occurred while processing the configuration. Ensure that the JSON is valid.
+              {this.state.error.toString()}
+            </span>
+          }
+        />
+      );
+    }
+
+    return this.props.children;
+  }
+}
+export const confirmAsync = (opts: Record<string, any>): Promise<boolean> =>
+  new Promise((resolve) => {
+    Modal.confirm({
+      ...opts,
+
+      onOk() {
+        resolve(true);
+      },
+
+      onCancel() {
+        resolve(false);
+      },
+    });
+  });
+
+export const hasFormError = (formErrors: FieldError[], key: string): boolean => {
+  // Find the number of errors for form fields whose path starts with key
+  const errorsForKey = formErrors.map((errorObj) =>
+    errorObj.name[0] === key ? errorObj.errors.length : 0,
+  );
+  return _.sum(errorsForKey) > 0;
+};

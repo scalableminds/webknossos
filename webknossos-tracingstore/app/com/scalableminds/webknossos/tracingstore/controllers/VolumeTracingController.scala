@@ -163,21 +163,6 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def unlinkFallback(token: Option[String], tracingId: String): Action[DataSourceLike] =
-    Action.async(validateJson[DataSourceLike]) { implicit request =>
-      log() {
-        logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
-            for {
-              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              updatedTracing = tracingService.unlinkFallback(tracing, request.body)
-              newId <- tracingService.save(updatedTracing, None, 0L)
-            } yield Ok(Json.toJson(newId))
-          }
-        }
-      }
-    }
-
   def importVolumeData(token: Option[String], tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       log() {

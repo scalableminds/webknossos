@@ -23,35 +23,35 @@ import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } 
 
 const isEqual = cwise({
   args: ["array", "scalar"],
-  body: function (a: number, b: number) {
+  body: function body(a: number, b: number) {
     a = a === b ? 1 : 0;
   },
 });
 
 const mul = cwise({
   args: ["array", "scalar"],
-  body: function (a: number, b: number) {
+  body: function body(a: number, b: number) {
     a = a * b;
   },
 });
 
 const avg = cwise({
   args: ["array", "array"],
-  body: function (a: number, b: number) {
+  body: function body(a: number, b: number) {
     a = (a + b) / 2;
   },
 });
 
 const absMax = cwise({
   args: ["array", "array"],
-  body: function (a: number, b: number) {
+  body: function body(a: number, b: number) {
     a = Math.abs(a) > Math.abs(b) ? a : b;
   },
 });
 
 const assign = cwise({
   args: ["array", "array"],
-  body: function (a: number, b: number) {
+  body: function body(a: number, b: number) {
     a = b;
   },
 });
@@ -208,7 +208,6 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
   const size = V3.sub(relevantBoxMag1.max, relevantBoxMag1.min);
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride);
-  const ll = ([x, y, z]: Vector3): number => z * size[1] * size[0] + y * size[0] + x;
 
   const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
   for (let targetOffsetZ = 1; targetOffsetZ < INTERPOLATION_DEPTH; targetOffsetZ++) {

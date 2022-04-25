@@ -1,5 +1,5 @@
 import { V3 } from "libs/mjs";
-import {
+import Constants, {
   ContourMode,
   ContourModeEnum,
   LabeledVoxelsMap,
@@ -24,7 +24,6 @@ import sampleVoxelMapToResolution, {
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
 import Dimensions, { DimensionMap } from "oxalis/model/dimensions";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import Constants from "oxalis/constants";
 import Model from "oxalis/model";
 import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";

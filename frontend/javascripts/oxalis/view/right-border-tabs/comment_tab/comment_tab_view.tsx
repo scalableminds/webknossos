@@ -453,8 +453,8 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     disabled={isEditingDisabled}
                     title={
                       this.props.allowUpdate
-                      ? undefined
-                      : messages["tracing.read_only_mode_notification"]
+                        ? undefined
+                        : messages["tracing.read_only_mode_notification"]
                     }
                     onChange={(evt) => this.handleChangeInput(evt, true)}
                     onPressEnter={(evt) => (evt.target as HTMLElement).blur()}

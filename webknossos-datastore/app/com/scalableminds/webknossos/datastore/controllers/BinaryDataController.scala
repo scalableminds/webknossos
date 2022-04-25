@@ -1,10 +1,8 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import java.io.{ByteArrayOutputStream, OutputStream}
+import java.io.ByteArrayOutputStream
 import java.nio.{ByteBuffer, ByteOrder}
-import java.util.Base64
 
-import akka.stream.scaladsl.StreamConverters
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
@@ -26,15 +24,14 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
+import io.swagger.annotations._
 import net.liftweb.util.Helpers.tryo
-import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, ResponseHeader, Result}
+import play.api.mvc._
 
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 @Api(tags = Array("datastore"))
 class BinaryDataController @Inject()(
@@ -55,10 +52,6 @@ class BinaryDataController @Inject()(
   isosurfaceServiceHolder.dataStoreIsosurfaceConfig =
     (binaryDataService, mappingService, config.Datastore.Isosurface.timeout, config.Datastore.Isosurface.actorPoolSize)
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.dataStoreIsosurfaceService
-
-  /**
-    * Handles requests for raw binary data via HTTP POST from webKnossos.
-    */
   @ApiOperation(hidden = true, value = "")
   def requestViaWebKnossos(
       token: Option[String],
@@ -91,10 +84,6 @@ class BinaryDataController @Inject()(
 
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
-
-  /**
-    * Handles requests for raw binary data via HTTP GET.
-    */
   @ApiOperation(value = "Get raw binary data from a bounding box in a dataset layer", nickname = "datasetDownload")
   @ApiResponses(
     Array(
@@ -137,9 +126,6 @@ class BinaryDataController @Inject()(
     }
   }
 
-  /**
-    * Handles a request for raw binary data via a HTTP GET. Used by knossos.
-    */
   @ApiOperation(hidden = true, value = "")
   def requestViaKnossos(token: Option[String],
                         organizationName: String,
@@ -168,159 +154,46 @@ class BinaryDataController @Inject()(
     }
   }
 
-  /**
-    * Handles requests for data sprite sheets.
-    */
   @ApiOperation(hidden = true, value = "")
-  def requestSpriteSheet(
-      token: Option[String],
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String,
-      cubeSize: Int,
-      imagesPerRow: Int,
-      x: Int,
-      y: Int,
-      z: Int,
-      resolution: Int,
-      halfByte: Boolean
-  ): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+  def thumbnailJpeg(token: Option[String],
+                    organizationName: String,
+                    dataSetName: String,
+                    dataLayerName: String,
+                    width: Int,
+                    height: Int,
+                    centerX: Option[Int],
+                    centerY: Option[Int],
+                    centerZ: Option[Int],
+                    zoom: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
         (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.magFromExponent(resolution)),
-                                  cubeSize,
-                                  cubeSize,
-                                  cubeSize,
-                                  DataServiceRequestSettings(halfByte = halfByte))
-        imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, dataRequest, imagesPerRow, blackAndWhite = false)
-      } yield {
-        Result(
-          header = ResponseHeader(200),
-          body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream =>
-            imageProvider(outputStream)
-          }, None, Some(contentTypeJpeg))
+        position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
+        request = DataRequest(position, width, height, 1)
+        (data, _) <- requestData(dataSource, dataLayer, request)
+        params = ImageCreatorParameters(
+          dataLayer.bytesPerElement,
+          request.settings.halfByte,
+          request.cuboid(dataLayer).width,
+          request.cuboid(dataLayer).height,
+          imagesPerRow = 1,
+          blackAndWhite = false,
+          isSegmentation = dataLayer.category == Category.segmentation
         )
-      }
+        dataWithFallback = if (data.length == 0)
+          new Array[Byte](params.slideHeight * params.slideWidth * params.bytesPerElement)
+        else data
+        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> "image.create.failed"
+        firstSheet <- spriteSheet.pages.headOption ?~> "image.page.failed"
+        outputStream = new ByteArrayOutputStream()
+        _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
+      } yield Ok(outputStream.toByteArray).as("image/jpeg")
     }
   }
 
-  /**
-    * Handles requests for data images.
-    */
   @ApiOperation(hidden = true, value = "")
-  def requestImage(token: Option[String],
-                   organizationName: String,
-                   dataSetName: String,
-                   dataLayerName: String,
-                   width: Int,
-                   height: Int,
-                   x: Int,
-                   y: Int,
-                   z: Int,
-                   resolution: Int,
-                   halfByte: Boolean,
-                   blackAndWhite: Boolean): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
-      for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.magFromExponent(resolution)),
-                                  width,
-                                  height,
-                                  1,
-                                  DataServiceRequestSettings(halfByte = halfByte))
-        imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, dataRequest, 1, blackAndWhite)
-      } yield {
-        Result(
-          header = ResponseHeader(200),
-          body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream =>
-            imageProvider(outputStream)
-          }, None, Some(contentTypeJpeg))
-        )
-      }
-    }
-  }
-
-  /**
-    * Handles requests for dataset thumbnail images as JPEG.
-    */
-  @ApiOperation(hidden = true, value = "")
-  def requestImageThumbnailJpeg(token: Option[String],
-                                organizationName: String,
-                                dataSetName: String,
-                                dataLayerName: String,
-                                width: Int,
-                                height: Int,
-                                centerX: Option[Int],
-                                centerY: Option[Int],
-                                centerZ: Option[Int],
-                                zoom: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
-      for {
-        thumbnailProvider <- respondWithImageThumbnail(organizationName,
-                                                       dataSetName,
-                                                       dataLayerName,
-                                                       width,
-                                                       height,
-                                                       centerX,
-                                                       centerY,
-                                                       centerZ,
-                                                       zoom)
-      } yield {
-        Result(
-          header = ResponseHeader(200),
-          body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream =>
-            thumbnailProvider(outputStream)
-          }, None, Some(contentTypeJpeg))
-        )
-      }
-    }
-  }
-
-  /**
-    * Handles requests for dataset thumbnail images as base64-encoded JSON.
-    */
-  @ApiOperation(hidden = true, value = "")
-  def requestImageThumbnailJson(
-      token: Option[String],
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String,
-      width: Int,
-      height: Int,
-      centerX: Option[Int],
-      centerY: Option[Int],
-      centerZ: Option[Int],
-      zoom: Option[Double]
-  ): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
-      for {
-        thumbnailProvider <- respondWithImageThumbnail(organizationName,
-                                                       dataSetName,
-                                                       dataLayerName,
-                                                       width,
-                                                       height,
-                                                       centerX,
-                                                       centerY,
-                                                       centerZ,
-                                                       zoom)
-      } yield {
-        val os = new ByteArrayOutputStream()
-        thumbnailProvider(Base64.getEncoder.wrap(os))
-        Ok(Json.toJson(ImageThumbnail(contentTypeJpeg, os.toString)))
-      }
-    }
-  }
-
-  /**
-    * Handles mapping requests.
-    */
-  @ApiOperation(hidden = true, value = "")
-  def requestMapping(
+  def mappingJson(
       token: Option[String],
       organizationName: String,
       dataSetName: String,
@@ -338,9 +211,6 @@ class BinaryDataController @Inject()(
     }
   }
 
-  /**
-    * Handles isosurface requests.
-    */
   @ApiOperation(hidden = true, value = "")
   def requestIsosurface(token: Option[String],
                         organizationName: String,
@@ -418,10 +288,10 @@ class BinaryDataController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def createHistogram(token: Option[String],
-                      organizationName: String,
-                      dataSetName: String,
-                      dataLayerName: String): Action[AnyContent] =
+  def histogram(token: Option[String],
+                organizationName: String,
+                dataSetName: String,
+                dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
@@ -453,49 +323,4 @@ class BinaryDataController @Inject()(
     binaryDataService.handleDataRequests(requests)
   }
 
-  private def contentTypeJpeg = "image/jpeg"
-
-  private def respondWithSpriteSheet(
-      dataSource: DataSource,
-      dataLayer: DataLayer,
-      request: DataRequest,
-      imagesPerRow: Int,
-      blackAndWhite: Boolean
-  )(implicit m: MessagesProvider): Fox[OutputStream => Unit] = {
-    val params = ImageCreatorParameters(
-      dataLayer.bytesPerElement,
-      request.settings.halfByte,
-      request.cuboid(dataLayer).width,
-      request.cuboid(dataLayer).height,
-      imagesPerRow,
-      blackAndWhite = blackAndWhite,
-      isSegmentation = dataLayer.category == Category.segmentation
-    )
-    for {
-      (data, _) <- requestData(dataSource, dataLayer, request)
-      dataWithFallback = if (data.length == 0)
-        new Array[Byte](params.slideHeight * params.slideWidth * params.bytesPerElement)
-      else data
-      spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> Messages("image.create.failed")
-      firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
-    } yield new JPEGWriter().writeToOutputStream(firstSheet.image)(_)
-  }
-
-  private def respondWithImageThumbnail(
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String,
-      width: Int,
-      height: Int,
-      centerX: Option[Int],
-      centerY: Option[Int],
-      centerZ: Option[Int],
-      zoom: Option[Double]
-  )(implicit m: MessagesProvider): Fox[OutputStream => Unit] =
-    for {
-      (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-      position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
-      request = DataRequest(position, width, height, 1)
-      image <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite = false)
-    } yield image
 }

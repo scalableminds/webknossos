@@ -4,24 +4,23 @@ import { ArbitraryViewport } from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
-import type { BusyBlockingInfo } from "oxalis/store";
+import type { BusyBlockingInfo, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import { waitForCondition } from "libs/utils";
+import { useKeyPress } from "libs/react_hooks";
+import { useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
+import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
+
 const emptyViewportRect = {
   top: 0,
   left: 0,
   width: 0,
   height: 0,
 };
-type Props = {
-  viewportID: Viewport;
-  children?: React.ReactNode;
-  displayScalebars?: boolean;
-  busyBlockingInfo: BusyBlockingInfo;
-};
 
-function ignoreContextMenu(event: React.SyntheticEvent) {
+function ignoreContextMenu(event: React.MouseEvent) {
   // hide contextmenu, while rightclicking a canvas
   event.preventDefault();
 }
@@ -85,47 +84,77 @@ export function recalculateInputCatcherSizes() {
   Store.dispatch(setInputCatcherRects(viewportRects));
 }
 
-class InputCatcher extends React.PureComponent<Props, {}> {
-  domElement: HTMLElement | null | undefined;
+const cursorForTool = {
+  MOVE: "move",
+  SKELETON: "crosshair",
+  BRUSH: "url(/assets/images/paint-brush-solid-border.svg) 0 10,auto",
+  ERASE_BRUSH: "url(/assets/images/eraser-solid-border.svg) 0 8,auto",
+  TRACE: "url(/assets/images/lasso-pointed-solid-border.svg) 0 14,auto",
+  ERASE_TRACE: "url(/assets/images/eraser-pointed-solid-border.svg) 0 16,auto",
+  FILL_CELL: "url(/assets/images/fill-pointed-solid-border.svg) 0 16,auto",
+  PICK_CELL: "url(/assets/images/eye-dropper-solid-border.svg) 0 12,auto",
+  BOUNDING_BOX: "move",
+};
 
-  componentDidMount() {
-    if (this.domElement) {
-      renderedInputCatchers.set(this.props.viewportID, this.domElement);
+function InputCatcher({
+  viewportID,
+  children,
+  displayScalebars,
+  busyBlockingInfo,
+}: {
+  viewportID: Viewport;
+  children?: React.ReactNode;
+  displayScalebars?: boolean;
+  busyBlockingInfo: BusyBlockingInfo;
+}) {
+  const domElementRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (domElementRef.current) {
+      renderedInputCatchers.set(viewportID, domElementRef.current);
     }
-  }
+    return () => {
+      if (domElementRef.current) {
+        renderedInputCatchers.delete(viewportID);
+      }
+    };
+  }, []);
 
-  componentWillUnmount() {
-    if (this.domElement) {
-      renderedInputCatchers.delete(this.props.viewportID);
-    }
-  }
+  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
 
-  render() {
-    const { viewportID } = this.props;
-    return (
-      <div className="flexlayout-dont-overflow">
-        <div
-          id={`inputcatcher_${viewportID}`}
-          ref={(domElement) => {
-            this.domElement = domElement;
-          }}
-          onContextMenu={ignoreContextMenu}
-          data-value={viewportID}
-          className={`inputcatcher ${viewportID}`}
-          style={{
-            position: "relative",
-            cursor: this.props.busyBlockingInfo.isBusy ? "wait" : "auto",
-          }}
-        >
-          <ViewportStatusIndicator />
-          {this.props.displayScalebars && viewportID !== "arbitraryViewport" ? (
-            <Scalebar viewportID={viewportID} />
-          ) : null}
-          {this.props.children}
-        </div>
+  const isShiftPressed = useKeyPress("Shift");
+  const isControlPressed = useKeyPress("Control");
+  const isAltPressed = useKeyPress("Alt");
+
+  const adaptedTool = adaptActiveToolToShortcuts(
+    activeTool,
+    isShiftPressed,
+    isControlPressed,
+    isAltPressed,
+  );
+
+  return (
+    <div className="flexlayout-dont-overflow">
+      <div
+        id={`inputcatcher_${viewportID}`}
+        ref={(domElement) => {
+          domElementRef.current = domElement;
+        }}
+        onContextMenu={ignoreContextMenu}
+        data-value={viewportID}
+        className={`inputcatcher ${viewportID}`}
+        style={{
+          position: "relative",
+          cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool],
+        }}
+      >
+        <ViewportStatusIndicator />
+        {displayScalebars && viewportID !== "arbitraryViewport" ? (
+          <Scalebar viewportID={viewportID} />
+        ) : null}
+        {children}
       </div>
-    );
-  }
+    </div>
+  );
 }
 
 export default InputCatcher;

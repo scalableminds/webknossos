@@ -218,7 +218,7 @@ class BinaryDataController @Inject()(
               Map("datasource" -> ".") ++ layerNames.map { x =>
                 (x, x)
               }.toMap
-            )).withHeaders()
+            ))
       }
     }
 

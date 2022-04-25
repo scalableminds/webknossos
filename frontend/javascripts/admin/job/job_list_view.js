@@ -180,7 +180,7 @@ class JobListView extends React.PureComponent<Props, State> {
     ) {
       return (
         <span>
-          Applied merger mode to layer {job.layerName} of{" "}
+          Applying merger mode to layer {job.layerName} of{" "}
           <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
@@ -233,7 +233,11 @@ class JobListView extends React.PureComponent<Props, State> {
           )}
         </span>
       );
-    } else if (job.type === "infer_nuclei" || job.type === "infer_neurons") {
+    } else if (
+      job.type === "infer_nuclei" ||
+      job.type === "infer_neurons" ||
+      job.type === "apply_merger_mode"
+    ) {
       return (
         <span>
           {job.resultLink && (

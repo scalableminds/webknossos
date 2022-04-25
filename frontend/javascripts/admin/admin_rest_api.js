@@ -942,7 +942,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
     organizationName: job.commandArgs.organization_name,
-    layerName: job.commandArgs.layer_name,
+    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     boundingBox: job.commandArgs.bbox,
     exportFileName: job.commandArgs.export_file_name,
     tracingId: job.commandArgs.volume_tracing_id,

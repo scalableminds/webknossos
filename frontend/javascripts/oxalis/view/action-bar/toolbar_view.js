@@ -1,5 +1,6 @@
 // @flow
 import { Radio, Tooltip, Badge, Space, Popover } from "antd";
+import { ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useState } from "react";
 
@@ -239,8 +240,9 @@ function AdditionalSkeletonModesButtons() {
           <ButtonComponent
             style={narrowButtonStyle}
             onClick={() => setShowApplyMergerModeModal(true)}
-            faIcon="fa fa-cogs"
-          />
+          >
+            <ExportOutlined />
+          </ButtonComponent>
         </Tooltip>
       )}
       {features().jobsEnabled && showApplyMergerModeModal && (

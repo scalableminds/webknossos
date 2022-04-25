@@ -1,4 +1,4 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent } from "antd";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Switch } from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect } from "react";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
@@ -204,6 +204,18 @@ function OverwriteModeSwitch({
       </RadioButtonWithTooltip>
     </Radio.Group>
   );
+}
+
+function VolumeInterpolationButton() {
+  const isEnabled = useSelector(
+    (state: OxalisState) => state.userConfiguration.isVolumeInterpolationEnabled,
+  );
+
+  const onChange = (checked: boolean) => {
+    Store.dispatch(updateUserSettingAction("isVolumeInterpolationEnabled", checked));
+  };
+
+  return <Switch checked={isEnabled} onChange={onChange} />;
 }
 
 function AdditionalSkeletonModesButtons() {
@@ -759,6 +771,8 @@ function ToolSpecificSettings({
         isShiftPressed={isShiftPressed}
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
+
+      <VolumeInterpolationButton />
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
     </>

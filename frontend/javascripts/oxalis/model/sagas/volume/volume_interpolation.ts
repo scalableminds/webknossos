@@ -128,6 +128,14 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
   if (!allowUpdate) return;
   const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
+  const isVolumeInterpolationEnabled = yield* select(
+    (state) => state.userConfiguration.isVolumeInterpolationEnabled,
+  );
+
+  if (!isVolumeInterpolationEnabled) {
+    return;
+  }
+
   if (activeViewport !== "PLANE_XY") {
     // Interpolation is only done in XY
     return;
@@ -175,7 +183,7 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
   }
 
   // Annotate only every n-th slice while the remaining ones are interpolated automatically.
-  const INTERPOLATION_DEPTH = 3;
+  const INTERPOLATION_DEPTH = 2;
 
   const drawnBoundingBox = layer.getLabeledBoundingBox();
   if (drawnBoundingBox == null) {

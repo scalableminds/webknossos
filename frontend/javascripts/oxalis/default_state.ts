@@ -74,9 +74,10 @@ const defaultState: OxalisState = {
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
     useLegacyBindings: false,
+    isVolumeInterpolationEnabled: false,
+    volumeInterpolationDepth: 2,
   },
   temporaryConfiguration: {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'ViewMode'... Remove this comment to see the full error message
     viewMode: Constants.MODE_PLANE_TRACING,
     histogramData: {},
     flightmodeRecording: false,

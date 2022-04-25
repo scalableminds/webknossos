@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/22.04.0...HEAD)
 
 ### Added
+- Added a long-running job that applies the merging done via a merger mode tracing to a new output dataset. The job is accessible via a button next to the merger mode button once the merger mode is active. [#6086](https://github.com/scalableminds/webknossos/pull/6086)
 
 ### Changed
 - The mouse cursor now changes appearance to indicate the currently selected annotation tool  [#6132](https://github.com/scalableminds/webknossos/pull/6132)

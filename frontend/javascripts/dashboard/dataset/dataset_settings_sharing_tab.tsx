@@ -1,4 +1,4 @@
-import { Button, Input, Checkbox, Tooltip, FormInstance } from "antd";
+import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse, Spin } from "antd";
 import React, { useState, useEffect } from "react";
 import type { APIDataset, APIDatasetId } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -11,19 +11,20 @@ import Toast from "libs/toast";
 import features from "features";
 import window from "libs/window";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-import { CopyOutlined, RetweetOutlined } from "@ant-design/icons";
+import { CopyOutlined, PropertySafetyFilled, RetweetOutlined } from "@ant-design/icons";
 import { FormItemWithInfo } from "./helper_components";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
-
 
 type Props = {
   form: FormInstance | null;
   datasetId: APIDatasetId;
   hasNoAllowedTeams: boolean;
 };
+
 export default function DatasetSettingsSharingTab({ form, datasetId, hasNoAllowedTeams }: Props) {
   const [sharingToken, setSharingToken] = useState("");
-  const [dataSet, setDataSet] = useState<APIDataset | null | undefined>(null);
+  const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
+
   const allowedTeamsComponent = (
     <FormItemWithInfo
       name={["dataset", "allowedTeams"]}
@@ -44,7 +45,7 @@ export default function DatasetSettingsSharingTab({ form, datasetId, hasNoAllowe
     const newSharingToken = await getDatasetSharingToken(datasetId);
     const newDataSet = await getDataset(datasetId);
     setSharingToken(newSharingToken);
-    setDataSet(newDataSet);
+    setDataset(newDataSet);
   }
 
   useEffect(() => {
@@ -80,6 +81,7 @@ export default function DatasetSettingsSharingTab({ form, datasetId, hasNoAllowe
 
   function getSharingLink() {
     if (!form) return undefined;
+
     const doesNeedToken = !form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${sharingToken}`;
     return `${window.location.origin}/datasets/${datasetId.owningOrganization}/${
@@ -88,9 +90,9 @@ export default function DatasetSettingsSharingTab({ form, datasetId, hasNoAllowe
   }
 
   function getAllowUsageCode() {
-    if (dataSet != null) {
-      const dataStoreName = dataSet.dataStore.name;
-      const dataStoreURL = dataSet.dataStore.url;
+    if (dataset != null) {
+      const dataStoreName = dataset.dataStore.name;
+      const dataStoreURL = dataset.dataStore.url;
       return `${dataStoreName}, ${dataStoreURL}, ${datasetId.name}`;
     } else return "";
   }
@@ -182,6 +184,12 @@ export default function DatasetSettingsSharingTab({ form, datasetId, hasNoAllowe
           </Input.Group>
         </FormItemWithInfo>
       )}
+
+      <Collapse collapsible="header" >
+        <Collapse.Panel header="All users with access rights to this dataset" key="1">
+          {dataset ? <DatasetAccessListView dataset={dataset} /> : <Spin tip="Loading..." />}
+        </Collapse.Panel>
+      </Collapse>
     </div>
   ) : null;
 }

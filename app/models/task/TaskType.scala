@@ -138,7 +138,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                           settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
                        values(${t._id.id}, $organizationId, ${t._team.id}, ${t.summary}, ${t.description},
-                              '#${sanitize(writeArrayTuple(t.settings.allowedModes.map(_.toString)))}',
+                              '#${writeArrayTuple(t.settings.allowedModes.map(_.toString))}',
                               #${optionLiteral(t.settings.preferredMode.map(sanitize))},
                               ${t.settings.branchPointsAllowed},
                               ${t.settings.somaClickingAllowed},

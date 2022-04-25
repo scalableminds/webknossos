@@ -136,6 +136,7 @@ dataSet.upload.validation.failed=Failed to validate Dataset information for uplo
 dataSet.upload.linkRestricted=Can only link layers of datasets that are either public or allowed to be administrated by your account
 dataSet.upload.invalidLinkedLayers=Could not link all requested layers
 dataSet.upload.cancel.failed=Could not cancel the upload.
+dataSet.upload.noFiles=Tried to finish upload with no files. May be a retry of a failed finish request, see previous errors.
 
 dataSource.notFound=Datasource not found on datastore server
 

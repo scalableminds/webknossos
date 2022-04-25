@@ -85,7 +85,7 @@ function initTmpDB() {
 
 function loadDataIntoDB(parameter, dbHost, dbName) {
   const fileNames = glob.sync(parameter);
-  const concatenateFileNames = fileNames.map(name => "-f " + name).join(" ");
+  const concatenateFileNames = fileNames.map((name) => "-f " + name).join(" ");
   // prettier-ignore
   execSync(
     "psql -U postgres -h " + dbHost + " --dbname='" + dbName + "' -v ON_ERROR_STOP=ON -q " + concatenateFileNames,
@@ -94,9 +94,7 @@ function loadDataIntoDB(parameter, dbHost, dbName) {
 }
 
 function dumpToFolder(postgresUrl) {
-  const tmpDir = execSync("mktemp -d")
-    .toString()
-    .trim();
+  const tmpDir = execSync("mktemp -d").toString().trim();
   try {
     execSync(scriptdir + "/dump_schema.sh " + tmpDir, {
       env: getEnvWithPostgresUrl(postgresUrl),
@@ -119,7 +117,7 @@ function generateRandomName() {
 }
 
 function sortAndClean(dumpedDir) {
-  glob.sync(dumpedDir + "/**", { nodir: true }).forEach(function(fileName) {
+  glob.sync(dumpedDir + "/**", { nodir: true }).forEach(function (fileName) {
     replace({ files: fileName, replace: /,$/gm, with: "" });
     replace({ files: fileName, replace: /\\r/gm, with: "  " });
     sortFile(fileName);
@@ -141,7 +139,7 @@ function sortFile(fileName) {
 program
   .version("0.1.0", "-v, --version")
   .arguments("<parameter1> <parameter2>")
-  .action(function(parameter1, parameter2) {
+  .action(function (parameter1, parameter2) {
     p1 = parameter1;
     p2 = parameter2;
   });

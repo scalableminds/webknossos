@@ -10,6 +10,7 @@ object Dependencies {
   private val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   private val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
   private val akkaHttp = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
+  private val akkaCaching = "com.typesafe.akka" %% "akka-http-caching" % akkaHttpVersion
   private val commonsCodec = "commons-codec" % "commons-codec" % "1.10"
   private val commonsEmail = "org.apache.commons" % "commons-email" % "1.5"
   private val commonsIo = "commons-io" % "commons-io" % "2.9.0"
@@ -76,6 +77,7 @@ object Dependencies {
     grpcServices,
     scalapbRuntimeGrpc,
     akkaLogging,
+    akkaCaching,
     ehcache,
     gson,
     webknossosWrap,

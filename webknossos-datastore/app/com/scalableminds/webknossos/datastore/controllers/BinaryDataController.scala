@@ -214,7 +214,7 @@ class BinaryDataController @Inject()(
           Ok(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
-              "%s/%s".format(organizationName, dataSetName),
+              s"$organizationName/dataSetName",
               Map("datasource" -> ".") ++ layerNames.map { x =>
                 (x, x)
               }.toMap

@@ -22,12 +22,11 @@ import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accesso
 import { stringToColor, formatScale } from "libs/format_utils";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
-import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
-import FixedExpandableTable from "components/fixed_expandable_table";
 import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
+import FixedExpandableTable from "components/fixed_expandable_table";
 
 const { Column } = Table;
 const typeHint: APIMaybeUnimportedDataset[] = [];
@@ -249,11 +248,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           defaultPageSize: 50,
         }}
         onChange={this.handleChange}
-        expandedRowRender={
-          isUserAdmin || isUserTeamManager
-            ? (dataset) => <DatasetAccessListView dataset={dataset} />
-            : undefined
-        }
         locale={{
           emptyText: this.renderEmptyText(),
         }}

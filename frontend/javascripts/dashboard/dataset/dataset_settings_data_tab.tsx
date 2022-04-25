@@ -25,7 +25,7 @@ import {
 
 const FormItem = Form.Item;
 
-export default function SimpleAdvancedDataForm({
+export default function DatasetSettingsDataTab({
   isReadOnlyDataset,
   form,
   activeDataSourceEditMode,

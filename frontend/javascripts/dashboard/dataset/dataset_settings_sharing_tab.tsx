@@ -13,12 +13,15 @@ import window from "libs/window";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { CopyOutlined, RetweetOutlined } from "@ant-design/icons";
 import { FormItemWithInfo } from "./helper_components";
+import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
+
+
 type Props = {
   form: FormInstance | null;
   datasetId: APIDatasetId;
   hasNoAllowedTeams: boolean;
 };
-export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTeams }: Props) {
+export default function DatasetSettingsSharingTab({ form, datasetId, hasNoAllowedTeams }: Props) {
   const [sharingToken, setSharingToken] = useState("");
   const [dataSet, setDataSet] = useState<APIDataset | null | undefined>(null);
   const allowedTeamsComponent = (

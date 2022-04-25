@@ -732,7 +732,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   }
 
   getSelectedTreesAlert = () =>
-    this.state.selectedTrees.length > 0 && this.props.allowUpdate ? (
+    this.state.selectedTrees.length > 0 ? (
       <Alert
         type="info"
         message={
@@ -838,22 +838,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Toggle Visibility of All Trees (1)"
-                    }
+                    title="Toggle Visibility of All Trees (1)"
                     disabled={isEditingDisabled}
                   >
                     <i className="fas fa-toggle-on" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Toggle Visibility of Inactive Trees (2)"
-                    }
+                    title="Toggle Visibility of Inactive Trees (2)"
                     disabled={isEditingDisabled}
                   >
                     <i className="fas fa-toggle-off" />

@@ -1,221 +1,102 @@
 import { message } from "antd";
-import React from "react";
-import _ from "lodash";
-import type { Action } from "oxalis/model/actions/actions";
-import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
-import api from "oxalis/api/internal_api";
-import {
-  ResolutionInfo,
-  getBoundaries,
-  getResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { takeEvery, takeLatest, call, fork, put, actionChannel } from "typed-redux-saga";
-import { select, take } from "oxalis/model/sagas/effect-generators";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import {
-  updateVolumeTracing,
-  updateUserBoundingBoxes,
-  createSegmentVolumeAction,
-  updateSegmentVolumeAction,
-  deleteSegmentVolumeAction,
-  removeFallbackLayer,
-} from "oxalis/model/sagas/update_actions";
-import type { UpdateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import {
-  updateTemporarySettingAction,
-  updateUserSettingAction,
-} from "oxalis/model/actions/settings_actions";
-import { V3 } from "libs/mjs";
-import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
-import type {
-  AddAdHocIsosurfaceAction,
-  AddPrecomputedIsosurfaceAction,
-} from "oxalis/model/actions/annotation_actions";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
+import { V3 } from "libs/mjs";
+import createProgressCallback from "libs/progress_callback";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import type {
+  AnnotationTool,
+  BoundingBoxType,
+  ContourMode,
+  LabeledVoxelsMap,
+  OrthoView,
+  OverwriteMode,
+  Vector3,
+} from "oxalis/constants";
+import Constants, {
+  AnnotationToolEnum,
+  ContourModeEnum,
+  FillModeEnum,
+  OrthoViews,
+  Unicode,
+} from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
+import Model from "oxalis/model";
+import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getFlooredPosition,
+  getPosition,
+  getRequestLogZoomStep,
+  getRotation,
+} from "oxalis/model/accessors/flycam_accessor";
+import {
+  isBrushTool,
+  isTraceTool,
+  isVolumeDrawingTool,
+} from "oxalis/model/accessors/tool_accessor";
+import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
-  getActiveSegmentationTracingLayer,
   getMaximumBrushSize,
   getRenderableResolutionForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getBBoxNameForPartialFloodfill } from "oxalis/view/right-border-tabs/bounding_box_tab";
-import {
-  getPosition,
-  getFlooredPosition,
-  getRotation,
-  getRequestLogZoomStep,
-} from "oxalis/model/accessors/flycam_accessor";
-import {
-  isVolumeDrawingTool,
-  isBrushTool,
-  isTraceTool,
-} from "oxalis/model/accessors/tool_accessor";
-import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
-import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
-import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
+import type { Action } from "oxalis/model/actions/actions";
 import type {
-  SetActiveCellAction,
+  AddAdHocIsosurfaceAction,
+  AddPrecomputedIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
+import type { UpdateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import {
+  updateTemporarySettingAction,
+  updateUserSettingAction,
+} from "oxalis/model/actions/settings_actions";
+import { setBusyBlockingInfoAction, setToolAction } from "oxalis/model/actions/ui_actions";
+import type {
   ClickSegmentAction,
+  SetActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
+  finishAnnotationStrokeAction,
   updateDirectionAction,
   updateSegmentAction,
-  finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import type {
-  BoundingBoxType,
-  ContourMode,
-  OverwriteMode,
-  OrthoView,
-  AnnotationTool,
-  Vector3,
-  LabeledVoxelsMap,
-  Vector2,
-} from "oxalis/constants";
-import Constants, {
-  OrthoViews,
-  Unicode,
-  ContourModeEnum,
-  OverwriteModeEnum,
-  AnnotationToolEnum,
-  FillModeEnum,
-} from "oxalis/constants";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
 import DataLayer from "oxalis/model/data_layer";
-import type { DimensionMap } from "oxalis/model/dimensions";
 import Dimensions from "oxalis/model/dimensions";
-import Model from "oxalis/model";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import VolumeLayer, {
-  getFast3DCoordinateHelper,
-  VoxelBuffer2D,
-} from "oxalis/model/volumetracing/volumelayer";
-import createProgressCallback from "libs/progress_callback";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { getHalfViewportExtents } from "oxalis/model/sagas/saga_selectors";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
-import sampleVoxelMapToResolution, {
-  applyVoxelMap,
-} from "oxalis/model/volumetracing/volume_annotation_sampling";
-
-import ndarray from "ndarray";
-import zeros from "zeros";
-import distanceTransform from "distance-transform";
-import cwise from "cwise";
-
-const isEqual = cwise({
-  args: ["array", "scalar"],
-  body: function (a: number, b: number) {
-    a = a === b ? 1 : 0;
-  },
-});
-
-const mul = cwise({
-  args: ["array", "scalar"],
-  body: function (a: number, b: number) {
-    a = a * b;
-  },
-});
-
-const avg = cwise({
-  args: ["array", "array"],
-  body: function (a: number, b: number) {
-    a = (a + b) / 2;
-  },
-});
-
-const absMax = cwise({
-  args: ["array", "array"],
-  body: function (a: number, b: number) {
-    a = Math.abs(a) > Math.abs(b) ? a : b;
-  },
-});
-
-const assign = cwise({
-  args: ["array", "array"],
-  body: function (a: number, b: number) {
-    a = b;
-  },
-});
-
-function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarray.NdArray {
-  const newArr = ndarray(new Constructor(arr.size), arr.shape, arr.stride);
-
-  assign(newArr, arr);
-
-  return newArr;
-}
-
-function signedDist(arr: ndarray.NdArray) {
-  // print("arr", arr, 0);
-  arr = copy(Float32Array, arr);
-  const negatedCopy = copy(Float32Array, arr);
-  // print("copy", negatedCopy, 0);
-
-  isEqual(negatedCopy, 0);
-  // print("negatedCopy", negatedCopy, 0);
-  distanceTransform(negatedCopy);
-  // print("negatedCopy transformed", negatedCopy, 0);
-  mul(negatedCopy, -1);
-  // print("negatedCopy * -1", negatedCopy, 0);
-
-  distanceTransform(arr);
-  // print("arr", arr, 0);
-
-  absMax(arr, negatedCopy);
-
-  // print("signed", arr, 0);
-  return arr;
-}
-
-// window.testNd = () => {
-//   const array = ndarray(new Uint8Array(25 * 2), [5, 5, 2], [1, 5, 25]);
-//   const array2 = ndarray(new Uint8Array(25 * 2), [5, 5, 2], [1, 5, 25]);
-//   // const subview = arr.lo(0, 1);
-//   const subview = array;
-
-//   let counter = 0;
-//   for (let z = 0; z < subview.shape[2]; ++z) {
-//     for (let y = 2; y < subview.shape[1]; ++y) {
-//       for (let x = 2; x < subview.shape[0]; ++x) {
-//         subview.set(x, y, z, 1);
-//       }
-//     }
-//   }
-
-//   console.log("array.get(4, 0, 0)", array.get(4, 0, 0));
-
-//   print("", subview, 0);
-//   const subviewDists = signedDist(subview);
-//   print("", subviewDists, 0);
-// };
-
-// function print(pref: string, arr: ndarray.NdArray, z: number) {
-//   console.log(pref);
-//   if (arr.data.length > 100) {
-//     return;
-//   }
-//   const lines = [];
-//   for (var y = 0; y < arr.shape[1]; ++y) {
-//     const chars = [];
-//     for (var x = 0; x < arr.shape[0]; ++x) {
-//       chars.push(arr.get(x, y, z));
-//     }
-//     lines.push(chars.join(" "));
-//   }
-//   console.log(lines.join("\n"));
-// }
-// testNd();
+import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
+import { getHalfViewportExtents } from "oxalis/model/sagas/saga_selectors";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import {
+  createSegmentVolumeAction,
+  deleteSegmentVolumeAction,
+  removeFallbackLayer,
+  updateSegmentVolumeAction,
+  updateUserBoundingBoxes,
+  updateVolumeTracing,
+} from "oxalis/model/sagas/update_actions";
+import VolumeLayer, { getFast3DCoordinateHelper } from "oxalis/model/volumetracing/volumelayer";
+import { applyVoxelMap } from "oxalis/model/volumetracing/volume_annotation_sampling";
+import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
+import { getBBoxNameForPartialFloodfill } from "oxalis/view/right-border-tabs/bounding_box_tab";
+import React from "react";
+import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
+import {
+  applyLabeledVoxelMapToAllMissingResolutions,
+  createVolumeLayer,
+  labelWithVoxelBuffer2D,
+} from "./volume/helpers";
+import interpolateSegmentationLayer from "./volume/volume_interpolation";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -443,291 +324,6 @@ function* getBoundingBoxForFloodFill(
     min: clippedMin,
     max: clippedMax,
   };
-}
-
-function* createVolumeLayer(
-  volumeTracing: VolumeTracing,
-  planeId: OrthoView,
-  labeledResolution: Vector3,
-  thirdDimValue?: number,
-): Saga<VolumeLayer> {
-  const position = yield* select((state) => getFlooredPosition(state.flycam));
-  thirdDimValue = thirdDimValue ?? position[Dimensions.thirdDimensionForPlane(planeId)];
-  return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledResolution);
-}
-
-function* labelWithVoxelBuffer2D(
-  voxelBuffer: VoxelBuffer2D,
-  contourTracingMode: ContourMode,
-  overwriteMode: OverwriteMode,
-  labeledZoomStep: number,
-): Saga<void> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
-  const volumeTracing = yield* select(enforceActiveVolumeTracing);
-  const activeCellId = volumeTracing.activeCellId;
-  const segmentationLayer = yield* call(
-    [Model, Model.getSegmentationTracingLayer],
-    volumeTracing.tracingId,
-  );
-  const { cube } = segmentationLayer;
-  const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
-  const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
-  const dimensionIndices = Dimensions.getIndices(activeViewport);
-  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-
-  const get3DCoordinateFromLocal2D = ([x, y]: Vector2) =>
-    voxelBuffer.get3DCoordinate([x + voxelBuffer.minCoord2d[0], y + voxelBuffer.minCoord2d[1]]);
-
-  const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
-  const bottomRight3DCoord = get3DCoordinateFromLocal2D([voxelBuffer.width, voxelBuffer.height]);
-  // Since the bottomRight3DCoord is exclusive for the described bounding box,
-  // the third dimension has to be increased by one (otherwise, the volume of the bounding
-  // box would be empty)
-  bottomRight3DCoord[dimensionIndices[2]]++;
-  const outerBoundingBox = new BoundingBox({
-    min: topLeft3DCoord,
-    max: bottomRight3DCoord,
-  });
-  const bucketBoundingBoxes = outerBoundingBox.chunkIntoBuckets();
-
-  for (const boundingBoxChunk of bucketBoundingBoxes) {
-    const { min, max } = boundingBoxChunk;
-    const bucketZoomedAddress = zoomedPositionToZoomedAddress(min, labeledZoomStep);
-
-    if (currentLabeledVoxelMap.get(bucketZoomedAddress)) {
-      throw new Error("When iterating over the buckets, we shouldn't visit the same bucket twice");
-    }
-
-    const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
-    currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
-
-    // globalA (first dim) and globalB (second dim) are global coordinates
-    // which can be used to index into the 2D slice of the VoxelBuffer2D (when subtracting the minCoord2d)
-    // and the LabeledVoxelMap
-    for (let globalA = min[dimensionIndices[0]]; globalA < max[dimensionIndices[0]]; globalA++) {
-      for (let globalB = min[dimensionIndices[1]]; globalB < max[dimensionIndices[1]]; globalB++) {
-        if (
-          voxelBuffer.map[
-            voxelBuffer.linearizeIndex(
-              globalA - voxelBuffer.minCoord2d[0],
-              globalB - voxelBuffer.minCoord2d[1],
-            )
-          ]
-        ) {
-          labelMapOfBucket[
-            (globalA % Constants.BUCKET_WIDTH) * Constants.BUCKET_WIDTH +
-              (globalB % Constants.BUCKET_WIDTH)
-          ] = 1;
-        }
-      }
-    }
-  }
-
-  const shouldOverwrite = overwriteMode === OverwriteModeEnum.OVERWRITE_ALL;
-  // Since the LabeledVoxelMap is created in the current magnification,
-  // we only need to annotate one slice in this mag.
-  // `applyLabeledVoxelMapToAllMissingResolutions` will take care of
-  // annotating multiple slices
-  const numberOfSlices = 1;
-  const thirdDim = dimensionIndices[2];
-  const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
-  const newCellIdValue = isDeleting ? 0 : activeCellId;
-  const overwritableValue = isDeleting ? activeCellId : 0;
-  applyVoxelMap(
-    currentLabeledVoxelMap,
-    cube,
-    newCellIdValue,
-    voxelBuffer.getFast3DCoordinate,
-    numberOfSlices,
-    thirdDim,
-    shouldOverwrite,
-    overwritableValue,
-  );
-  // thirdDimensionOfSlice needs to be provided in global coordinates
-  const thirdDimensionOfSlice =
-    topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
-  applyLabeledVoxelMapToAllMissingResolutions(
-    currentLabeledVoxelMap,
-    labeledZoomStep,
-    dimensionIndices,
-    resolutionInfo,
-    cube,
-    newCellIdValue,
-    thirdDimensionOfSlice,
-    shouldOverwrite,
-    overwritableValue,
-  );
-}
-
-function* getBoundingBoxForViewport(
-  position: Vector3,
-  currentViewport: OrthoView,
-): Saga<BoundingBox> {
-  const [halfViewportExtentX, halfViewportExtentY] = yield* call(
-    getHalfViewportExtents,
-    currentViewport,
-  );
-
-  const currentViewportBounding = {
-    min: V3.sub(position, [halfViewportExtentX, halfViewportExtentY, 0]),
-    max: V3.add(position, [halfViewportExtentX, halfViewportExtentY, 1]),
-  };
-
-  const { lowerBoundary, upperBoundary } = yield* select((state) => getBoundaries(state.dataset));
-  return new BoundingBox(currentViewportBounding).intersectedWith(
-    new BoundingBox({
-      min: lowerBoundary,
-      max: upperBoundary,
-    }),
-  );
-}
-
-function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<void> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
-  const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
-
-  if (activeViewport !== "PLANE_XY") {
-    // Interpolation is only done in XY
-    return;
-  }
-
-  // Disable copy-segmentation for the same zoom steps where the trace tool is forbidden, too,
-  // to avoid large performance lags.
-  const isResolutionTooLow = yield* select((state) =>
-    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
-  );
-
-  if (isResolutionTooLow) {
-    Toast.warning(
-      'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
-    );
-    return;
-  }
-
-  const volumeTracing = yield* select(enforceActiveVolumeTracing);
-  const segmentationLayer: DataLayer = yield* call(
-    [Model, Model.getSegmentationTracingLayer],
-    volumeTracing.tracingId,
-  );
-  const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
-  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-  // const dimensionIndices = Dimensions.getIndices(activeViewport);
-  const position = yield* select((state) => getFlooredPosition(state.flycam));
-  const activeCellId = volumeTracing.activeCellId;
-
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-  // let direction = 1;
-  // const useDynamicSpaceDirection = yield* select(
-  //   (state) => state.userConfiguration.dynamicSpaceDirection,
-  // );
-
-  // if (useDynamicSpaceDirection) {
-  //   const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
-  //   direction = spaceDirectionOrtho[thirdDim];
-  // }
-
-  const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
-  if (volumeTracingLayer == null) {
-    return;
-  }
-
-  // Annotate only every n-th slice while the remaining ones are interpolated automatically.
-  const INTERPOLATION_DEPTH = 3;
-
-  const drawnBoundingBox = layer.getLabeledBoundingBox();
-  if (drawnBoundingBox == null) {
-    return;
-  }
-  console.time("Interpolate segmentation");
-  const xyPadding = V3.scale3(drawnBoundingBox.getSize(), [1, 1, 0]);
-  const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
-  const relevantBoxMag1 = drawnBoundingBox
-    // Increase the drawn region by a factor of 2 (use half the size as a padding on each size)
-    .paddedWithMargins(V3.scale(xyPadding, 0.5))
-    // Intersect with the viewport
-    .intersectedWith(viewportBoxMag1)
-    // Also consider the n previous slices
-    .paddedWithMargins([0, 0, INTERPOLATION_DEPTH], [0, 0, 0])
-    .rounded();
-
-  console.time("Get Data");
-  const inputData = yield* call(
-    [api.data, api.data.getDataFor2DBoundingBox],
-    volumeTracingLayer.name,
-    relevantBoxMag1,
-    requestedZoomStep,
-  );
-
-  console.timeEnd("Get Data");
-
-  console.time("Iterate over data");
-
-  const size = V3.sub(relevantBoxMag1.max, relevantBoxMag1.min);
-  const stride = [1, size[0], size[0] * size[1]];
-  const inputNd = ndarray(inputData, size, stride);
-  const ll = ([x, y, z]: Vector3): number => z * size[1] * size[0] + y * size[0] + x;
-
-  const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
-  for (let targetOffsetZ = 1; targetOffsetZ < INTERPOLATION_DEPTH; targetOffsetZ++) {
-    const interpolationLayer = yield* call(
-      createVolumeLayer,
-      volumeTracing,
-      "PLANE_XY",
-      labeledResolution,
-      relevantBoxMag1.min[2] + targetOffsetZ,
-    );
-    interpolationVoxelBuffers[targetOffsetZ] = interpolationLayer.createVoxelBuffer2D(
-      interpolationLayer.globalCoordToMag2D(V3.add(relevantBoxMag1.min, [0, 0, targetOffsetZ])),
-      size[0],
-      size[1],
-    );
-  }
-
-  const firstSlice = inputNd.pick(null, null, 0);
-  const lastSlice = inputNd.pick(null, null, INTERPOLATION_DEPTH);
-
-  isEqual(firstSlice, activeCellId);
-  isEqual(lastSlice, activeCellId);
-
-  const firstSliceDists = signedDist(firstSlice);
-  const lastSliceDists = signedDist(lastSlice);
-  avg(firstSliceDists, lastSliceDists);
-
-  const avgDistances = firstSliceDists;
-
-  let drawnVoxels = 0;
-  for (let x = 0; x < size[0]; x++) {
-    for (let y = 0; y < size[1]; y++) {
-      if (avgDistances.get(x, y) < 0) {
-        for (let targetOffsetZ = 1; targetOffsetZ < INTERPOLATION_DEPTH; targetOffsetZ++) {
-          const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetZ];
-          voxelBuffer2D.setValue(x, y, 1);
-          drawnVoxels++;
-        }
-      }
-    }
-  }
-  console.log("drawnVoxels", drawnVoxels);
-  console.timeEnd("Iterate over data");
-
-  console.time("Apply VoxelBuffer2D");
-  for (const voxelBuffer of Object.values(interpolationVoxelBuffers)) {
-    yield* call(
-      labelWithVoxelBuffer2D,
-      voxelBuffer,
-      ContourModeEnum.DRAW,
-      OverwriteModeEnum.OVERWRITE_EMPTY,
-      labeledZoomStep,
-    );
-  }
-  console.timeEnd("Apply VoxelBuffer2D");
-
-  console.timeEnd("Interpolate segmentation");
-  console.log("");
 }
 
 function* copySegmentationLayer(action: Action): Saga<void> {
@@ -1004,101 +600,6 @@ export function* floodFill(): Saga<void> {
       floodFillAction.callback();
     }
   }
-}
-
-function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
-  for (let i = 0; i < arr.length - 1; i++) {
-    yield [arr[i], arr[i + 1]];
-  }
-}
-
-function applyLabeledVoxelMapToAllMissingResolutions(
-  inputLabeledVoxelMap: LabeledVoxelsMap,
-  labeledZoomStep: number,
-  dimensionIndices: DimensionMap,
-  resolutionInfo: ResolutionInfo,
-  segmentationCube: DataCube,
-  cellId: number,
-  thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
-  // If shouldOverwrite is false, a voxel is only overwritten if
-  // its old value is equal to overwritableValue.
-  shouldOverwrite: boolean,
-  overwritableValue: number = 0,
-): void {
-  const thirdDim = dimensionIndices[2];
-
-  // This function creates a `get3DAddress` function which maps from
-  // a 2D vector address to the corresponding 3D vector address.
-  // The input address is local to a slice in the LabeledVoxelsMap (that's
-  // why it's 2D). The output address is local to the corresponding bucket.
-  const get3DAddressCreator = (targetResolution: Vector3) => {
-    const sampledThirdDimensionValue =
-      Math.floor(thirdDimensionOfSlice / targetResolution[thirdDim]) % Constants.BUCKET_WIDTH;
-    return (x: number, y: number, out: Vector3 | Float32Array) => {
-      out[dimensionIndices[0]] = x;
-      out[dimensionIndices[1]] = y;
-      out[dimensionIndices[2]] = sampledThirdDimensionValue;
-    };
-  };
-
-  // Get all available resolutions and divide the list into two parts.
-  // The pivotIndex is the index within allResolutionsWithIndices which refers to
-  // the labeled resolution.
-  // `downsampleSequence` contains the current mag and all higher mags (to which
-  // should be downsampled)
-  // `upsampleSequence` contains the current mag and all lower mags (to which
-  // should be upsampled)
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-  const allResolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
-  const pivotIndex = allResolutionsWithIndices.findIndex(([index]) => index === labeledZoomStep);
-  const downsampleSequence = allResolutionsWithIndices.slice(pivotIndex);
-  const upsampleSequence = allResolutionsWithIndices.slice(0, pivotIndex + 1).reverse();
-
-  // Given a sequence of resolutions, the inputLabeledVoxelMap is applied
-  // over all these resolutions.
-  function processSamplingSequence(
-    samplingSequence: Array<[number, Vector3]>,
-    getNumberOfSlices: (arg0: Vector3) => number,
-  ) {
-    // On each sampling step, a new LabeledVoxelMap is acquired
-    // which is used as the input for the next down-/upsampling
-    let currentLabeledVoxelMap: LabeledVoxelsMap = inputLabeledVoxelMap;
-
-    for (const [source, target] of pairwise(samplingSequence)) {
-      const [sourceZoomStep, sourceResolution] = source;
-      const [targetZoomStep, targetResolution] = target;
-      currentLabeledVoxelMap = sampleVoxelMapToResolution(
-        currentLabeledVoxelMap,
-        segmentationCube,
-        sourceResolution,
-        sourceZoomStep,
-        targetResolution,
-        targetZoomStep,
-        dimensionIndices,
-        thirdDimensionOfSlice,
-      );
-      const numberOfSlices = getNumberOfSlices(targetResolution);
-      applyVoxelMap(
-        currentLabeledVoxelMap,
-        segmentationCube,
-        cellId,
-        get3DAddressCreator(targetResolution),
-        numberOfSlices,
-        thirdDim,
-        shouldOverwrite,
-        overwritableValue,
-      );
-    }
-  }
-
-  // First upsample the voxel map and apply it to all better resolutions.
-  // sourceZoomStep will be higher than targetZoomStep
-  processSamplingSequence(upsampleSequence, (targetResolution) =>
-    Math.ceil(labeledResolution[thirdDim] / targetResolution[thirdDim]),
-  );
-  // Next we downsample the annotation and apply it.
-  // sourceZoomStep will be lower than targetZoomStep
-  processSamplingSequence(downsampleSequence, (_targetResolution) => 1);
 }
 
 export function* finishLayer(

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse } from "antd";
-import { CopyOutlined, RetweetOutlined } from "@ant-design/icons";
+import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
 import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
@@ -106,9 +106,18 @@ function DatasetSettingsSharingTab({
     if (!activeUser || !dataset) return undefined;
     if (!isUserAdminOrTeamManager(activeUser)) return undefined;
 
+    const header = (
+      <span>
+        All users with access permission to work with this dataset{" "}
+        <Tooltip title="Based on the specified team permissions and individiual user roles. Any changes will only appear after pressing the Save button.">
+          <InfoCircleOutlined style={{ color: "gray" }} />
+        </Tooltip>
+      </span>
+    );
+
     return (
       <Collapse collapsible="header">
-        <Collapse.Panel header="All users with access rights to this dataset" key="1">
+        <Collapse.Panel header={header} key="1">
           <DatasetAccessListView dataset={dataset} />
         </Collapse.Panel>
       </Collapse>

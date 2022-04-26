@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Empty}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext
 
@@ -21,8 +21,9 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
   def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.globalXInMag, bucket.globalYInMag, bucket.globalZInMag)
-    zarrArray.readBytesXYZ(shape, offset)
-    // TODO error handling? had to remove the tryo
+    zarrArray.readBytesXYZ(shape, offset).recover {
+      case t: Throwable => logError(t); return Failure(t.getMessage, Full(t), Empty)
+    }
   }
 
   override protected def onFinalize(): Unit = ()

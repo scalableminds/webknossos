@@ -72,8 +72,7 @@ class ShortChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRe
 
   val ma2DataType: MADataType = MADataType.SHORT
 
-  override def read(path: String): Future[MultiArray] = {
-    logger.info(f"read chunk $path, this=$this")
+  override def read(path: String): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
       readBytes(path).map { bytes =>
         val typedStorage = new Array[Short](chunkSize)
@@ -84,7 +83,6 @@ class ShortChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRe
         MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get)
-  }
 }
 
 class IntChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {

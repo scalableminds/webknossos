@@ -4,16 +4,23 @@ import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import ndarray from "ndarray";
 import api from "oxalis/api/internal_api";
-import { AnnotationToolEnum, ContourModeEnum } from "oxalis/constants";
+import {
+  AnnotationTool,
+  AnnotationToolEnum,
+  ContourModeEnum,
+  ToolsWithInterpolationCapabilities,
+} from "oxalis/constants";
 import Model from "oxalis/model";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { isBrushTool, isTraceTool } from "oxalis/model/accessors/tool_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import DataLayer from "oxalis/model/data_layer";
+import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
@@ -61,71 +68,43 @@ function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarr
   return newArr;
 }
 
+/*
+ * Computes a signed distance transform for an input nd array.
+ */
 function signedDist(arr: ndarray.NdArray) {
-  // print("arr", arr, 0);
+  // Copy the input twice to avoid mutating it
   arr = copy(Float32Array, arr);
-  const negatedCopy = copy(Float32Array, arr);
-  // print("copy", negatedCopy, 0);
+  const negatedArr = copy(Float32Array, arr);
 
-  isEqual(negatedCopy, 0);
-  // print("negatedCopy", negatedCopy, 0);
-  distanceTransform(negatedCopy);
-  // print("negatedCopy transformed", negatedCopy, 0);
-  mul(negatedCopy, -1);
-  // print("negatedCopy * -1", negatedCopy, 0);
-
+  // Normal distance transform for arr
   distanceTransform(arr);
-  // print("arr", arr, 0);
 
-  absMax(arr, negatedCopy);
+  // Invert negatedArr (1 to 0 and 0 to 1)
+  isEqual(negatedArr, 0);
+  distanceTransform(negatedArr);
+  // Negate the distances
+  mul(negatedArr, -1);
 
-  // print("signed", arr, 0);
+  // Create a combined array which contains positive
+  // distances for voxels outside of the labeled area
+  // and negative distances for voxels inside the labeled
+  // area.
+  absMax(arr, negatedArr);
   return arr;
 }
 
-// window.testNd = () => {
-//   const array = ndarray(new Uint8Array(25 * 2), [5, 5, 2], [1, 5, 25]);
-//   const array2 = ndarray(new Uint8Array(25 * 2), [5, 5, 2], [1, 5, 25]);
-//   // const subview = arr.lo(0, 1);
-//   const subview = array;
-
-//   let counter = 0;
-//   for (let z = 0; z < subview.shape[2]; ++z) {
-//     for (let y = 2; y < subview.shape[1]; ++y) {
-//       for (let x = 2; x < subview.shape[0]; ++x) {
-//         subview.set(x, y, z, 1);
-//       }
-//     }
-//   }
-
-//   console.log("array.get(4, 0, 0)", array.get(4, 0, 0));
-
-//   print("", subview, 0);
-//   const subviewDists = signedDist(subview);
-//   print("", subviewDists, 0);
-// };
-
-// function print(pref: string, arr: ndarray.NdArray, z: number) {
-//   console.log(pref);
-//   if (arr.data.length > 100) {
-//     return;
-//   }
-//   const lines = [];
-//   for (var y = 0; y < arr.shape[1]; ++y) {
-//     const chars = [];
-//     for (var x = 0; x < arr.shape[0]; ++x) {
-//       chars.push(arr.get(x, y, z));
-//     }
-//     lines.push(chars.join(" "));
-//   }
-//   console.log(lines.join("\n"));
-// }
-// testNd();
-
-export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<void> {
+export default function* maybeInterpolateSegmentationLayer(
+  layer: VolumeLayer,
+  isDrawing: boolean,
+  activeTool: AnnotationTool,
+): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
   const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
+
+  if (!ToolsWithInterpolationCapabilities.includes(activeTool) || !isDrawing) {
+    return;
+  }
 
   const isVolumeInterpolationEnabled = yield* select(
     (state) => state.userConfiguration.isVolumeInterpolationEnabled,
@@ -135,7 +114,6 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
     return;
   }
 
-  const thirdDim = 2;
   if (activeViewport !== "PLANE_XY") {
     // Interpolation is only done/supported in XY
     return;
@@ -143,18 +121,17 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
 
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
-  // Disable copy-segmentation for the same zoom steps where the trace tool is forbidden, too,
-  // to avoid large performance lags.
-  // const isResolutionTooLow = yield* select((state) =>
-  //   isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
-  // );
+  // Disable copy-segmentation for the same zoom steps where the brush/trace tool is forbidden, too.
+  const isResolutionTooLow = yield* select((state) =>
+    isVolumeAnnotationDisallowedForZoom(activeTool, state),
+  );
 
-  // if (isResolutionTooLow) {
-  //   Toast.warning(
-  //     'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
-  //   );
-  //   return;
-  // }
+  if (isResolutionTooLow) {
+    Toast.warning(
+      'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
+    );
+    return;
+  }
 
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   const segmentationLayer: DataLayer = yield* call(
@@ -164,7 +141,7 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
   const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-  // const dimensionIndices = Dimensions.getIndices(activeViewport);
+  const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   const activeCellId = volumeTracing.activeCellId;
 
@@ -216,7 +193,7 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
 
   console.time("Iterate over data");
 
-  const size = relevantBoxCurrentMag.getSize(); // V3.sub(relevantBoxMag1.max, relevantBoxMag1.min);
+  const size = relevantBoxCurrentMag.getSize();
   console.log("relevantBoxCurrentMag", relevantBoxCurrentMag);
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride);

@@ -96,7 +96,7 @@ import {
   createVolumeLayer,
   labelWithVoxelBuffer2D,
 } from "./volume/helpers";
-import interpolateSegmentationLayer from "./volume/volume_interpolation";
+import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -283,10 +283,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       ),
     );
 
-    const interpolateSegment = isBrushTool(activeTool) || isTraceTool(activeTool);
-    if (interpolateSegment && isDrawing) {
-      yield* call(interpolateSegmentationLayer, currentLayer);
-    }
+    yield* call(maybeInterpolateSegmentationLayer, currentLayer, isDrawing, activeTool);
 
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   }

@@ -13,17 +13,23 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 ### Changed
+- The mouse cursor now changes appearance to indicate the currently selected annotation tool  [#6132](https://github.com/scalableminds/webknossos/pull/6132)
 - Various changes to the Dataset table in the dashboard  [#6131](https://github.com/scalableminds/webknossos/pull/6131):
   - Renamed "Allowed Teams" column to "Access Permissions".
   - Add filter functionality to "Access Permissions" column to filter for public datasets.
   - Removed `isActive` and `isPublic` columns to save screen space.
   - Changed data layer entries to display layer names instead of categories, e.g. "color" --> "axons".
+- Moved the list of "user with access to the selected dataset" from the dashboard to the respective dataset's settings (Sharing Tab). [#6166](https://github.com/scalableminds/webknossos/pull/6166)
+- Sped up initial requests for remote zarr dataset by using asynchronous caching. [#6165](https://github.com/scalableminds/webknossos/pull/6165)
 
 ### Fixed
 - Fixed a bug that led to an error when drag-'n-dropping an empty volume annotation in the dataset view. [#6116](https://github.com/scalableminds/webknossos/pull/6116)
 - Fixed rare callstack overflow when annotating large areas. [#6076](https://github.com/scalableminds/webknossos/pull/6076)
 - Fixed the "Copy Slice" shortcut (`v` and `shift + v`) in resolutions other than the most detailed one. [#6130](https://github.com/scalableminds/webknossos/pull/6130)
+- Fixed a bug where dataset tags with spaces would be automatically wrapped in quotes. [#6159](https://github.com/scalableminds/webknossos/pull/6159)
+- Fixed a bug where during dataset upload, un-sorted anisotropic mags in the datasource-properties.json could lead to errors. [#6167](https://github.com/scalableminds/webknossos/pull/6167)
 
 ### Removed
+- Removed the functionality to unlink the fallback layer from an existing segmentation layer. Either create an annotation without fallback layer or from within an annotation with a fallback layer, create a new volume layer, instead. [#6146](https://github.com/scalableminds/webknossos/pull/6146)
 
 ### Breaking Changes

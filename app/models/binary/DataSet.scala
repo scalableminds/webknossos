@@ -235,8 +235,9 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(
-        sqlu"update webknossos.datasets set tags = '#${writeArrayTuple(tags.map(sanitize))}' where _id = ${id.id}")
+      query = writeArrayTuple(tags)
+      _ = logger.info(s"updating tags, setting to ${tags.mkString(",")} with sql set tags = '$query'")
+      _ <- run(sqlu"update webknossos.datasets set tags = '#${query}' where _id = ${id.id}")
     } yield ()
 
   def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DataSetViewConfiguration)(
@@ -270,9 +271,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
           defaultViewConfiguration.map(sanitize))}, #${optionLiteral(adminViewConfiguration.map(sanitize))},
                 ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status
-          .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(
-          details.map(sanitize))}, '#${writeArrayTuple(d.tags.toList.map(sanitize))}', ${new java.sql.Timestamp(
-          d.created)}, ${d.isDeleted})
+          .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(details.map(
+          sanitize))}, '#${writeArrayTuple(d.tags.toList)}', ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
     } yield ()
   }
@@ -449,12 +449,11 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
         sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration)
                     values(${_dataSet.id}, ${s.name}, '#${s.category.toString}', '#${s.elementClass.toString}',
                      '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', ${s.largestSegmentId}, '#${writeArrayTuple(
-          mappings.map(sanitize).toList)}', #${optionLiteral(
-          s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}, #${optionLiteral(
+          mappings.toList)}', #${optionLiteral(s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}, #${optionLiteral(
           s.adminViewConfiguration.map(d => Json.toJson(d).toString))})
           on conflict (_dataSet, name) do update set category = '#${s.category.toString}', elementClass = '#${s.elementClass.toString}',
                      boundingBox = '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', largestSegmentId = ${s.largestSegmentId},
-                     mappings = '#${writeArrayTuple(mappings.map(sanitize).toList)}',
+                     mappings = '#${writeArrayTuple(mappings.toList)}',
             defaultViewConfiguration = #${optionLiteral(s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}"""
       case d: AbstractDataLayer =>
         sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)

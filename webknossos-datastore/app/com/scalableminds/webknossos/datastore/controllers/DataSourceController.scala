@@ -195,13 +195,14 @@ Expects:
     ))
   def finishUpload(token: String): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
     implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
-        for {
-          (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-          _ <- remoteWebKnossosClient.reportUpload(dataSourceId, dataSetSizeBytes, token) ?~> "reportUpload.failed"
-        } yield Ok
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
+          for {
+            (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
+            _ <- remoteWebKnossosClient.reportUpload(dataSourceId, dataSetSizeBytes, token) ?~> "reportUpload.failed"
+          } yield Ok
+        }
       }
-
   }
 
   @ApiOperation(

@@ -61,9 +61,9 @@ module.exports = function(env = {}) {
 
   return {
     entry: {
-      main: "main.js",
-      light: "style_light.js",
-      dark: "style_dark.js",
+      main: "main.tsx",
+      light: "style_light.ts",
+      dark: "style_dark.ts",
     },
     mode: env.production ? "production" : "development",
     output: {
@@ -75,16 +75,19 @@ module.exports = function(env = {}) {
     module: {
       rules: [
         {
-          test: /\.worker\.js$/,
-          use: {
-            loader: "worker-loader",
-            options: {
-              filename: "[name].[contenthash].worker.js",
-            },
-          },
+          test: /\.worker\.ts$/,
+          use: [
+            {
+              loader: "worker-loader",
+              options: {
+                // This property crashes webpack for some reason:
+                // filename: "[name].[contenthash].worker.ts",
+              },
+            }
+          ]
         },
         {
-          test: /\.js$/,
+          test: /\.tsx?$/,
           exclude: /(node_modules|bower_components)/,
           use: "babel-loader",
         },
@@ -142,6 +145,7 @@ module.exports = function(env = {}) {
       alias: {
         react: path.resolve("./node_modules/react"),
       },
+      extensions: ['.ts', '.tsx', '.js', '.json'],
       fallback: {
         // Needed for jsonschema
         url: require.resolve("url/"),

@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.DataCubeHandle
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -44,7 +44,7 @@ class DataCubeCache(val maxEntries: Int)
     * returns it.
     */
   def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[DataCubeHandle])(
-      f: DataCubeHandle => Box[T]): Fox[T] = {
+      f: DataCubeHandle => Fox[T]): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
     def handleUncachedCube(): Fox[T] = {
@@ -62,9 +62,10 @@ class DataCubeCache(val maxEntries: Int)
       put(cachedCubeInfo, cubeFox)
 
       cubeFox.flatMap { cube =>
-        val result = f(cube)
-        cube.finishAccess()
-        result
+        for {
+          result <- f(cube)
+          _ = cube.finishAccess()
+        } yield result
       }
     }
 

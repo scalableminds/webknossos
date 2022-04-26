@@ -243,7 +243,7 @@ export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
       getSceneController().highlightUserBoundingBox(null);
 
       if (inputCatcher != null) {
-        inputCatcher.style.cursor = "auto";
+        inputCatcher.style.cursor = "move";
       }
     }
   },

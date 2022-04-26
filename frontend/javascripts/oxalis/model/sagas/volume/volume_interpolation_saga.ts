@@ -6,14 +6,12 @@ import ndarray from "ndarray";
 import api from "oxalis/api/internal_api";
 import {
   AnnotationTool,
-  AnnotationToolEnum,
   ContourModeEnum,
   ToolsWithInterpolationCapabilities,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { isBrushTool, isTraceTool } from "oxalis/model/accessors/tool_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,

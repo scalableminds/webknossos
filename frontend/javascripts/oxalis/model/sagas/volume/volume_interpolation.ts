@@ -4,8 +4,7 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import ndarray from "ndarray";
 import api from "oxalis/api/internal_api";
-import type { Vector3 } from "oxalis/constants";
-import { AnnotationToolEnum, ContourModeEnum, OverwriteModeEnum } from "oxalis/constants";
+import { AnnotationToolEnum, ContourModeEnum } from "oxalis/constants";
 import Model from "oxalis/model";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -131,6 +130,7 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
   const isVolumeInterpolationEnabled = yield* select(
     (state) => state.userConfiguration.isVolumeInterpolationEnabled,
   );
+  const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   if (!isVolumeInterpolationEnabled) {
     return;
@@ -266,7 +266,7 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
       labelWithVoxelBuffer2D,
       voxelBuffer,
       ContourModeEnum.DRAW,
-      OverwriteModeEnum.OVERWRITE_EMPTY,
+      overwriteMode,
       labeledZoomStep,
     );
   }

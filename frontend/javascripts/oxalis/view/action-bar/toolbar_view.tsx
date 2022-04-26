@@ -1,4 +1,4 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Switch } from "antd";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Button } from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect } from "react";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
@@ -27,7 +27,6 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { AnnotationTool, OverwriteMode } from "oxalis/constants";
 import Constants, {
   ToolsWithOverwriteCapabilities,
   AnnotationToolEnum,
@@ -35,9 +34,13 @@ import Constants, {
   FillModeEnum,
   VolumeTools,
   MappingStatusEnum,
+  AnnotationTool,
+  OverwriteMode,
+  ToolsWithInterpolationCapabilities,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
+
 const narrowButtonStyle = {
   paddingLeft: 10,
   paddingRight: 8,
@@ -211,11 +214,20 @@ function VolumeInterpolationButton() {
     (state: OxalisState) => state.userConfiguration.isVolumeInterpolationEnabled,
   );
 
-  const onChange = (checked: boolean) => {
-    Store.dispatch(updateUserSettingAction("isVolumeInterpolationEnabled", checked));
+  const onChange = () => {
+    Store.dispatch(updateUserSettingAction("isVolumeInterpolationEnabled", !isEnabled));
   };
 
-  return <Switch checked={isEnabled} onChange={onChange} />;
+  return (
+    <Tooltip title="When enabled, it suffices to only label every n-th slice in the XY viewport. The skipped slices will be filled automatically by interpolating between the labeled slices.">
+      <Button
+        type={isEnabled ? "primary" : "default"}
+        icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
+        onClick={onChange}
+        style={{ marginLeft: 12 }}
+      />
+    </Tooltip>
+  );
 }
 
 function AdditionalSkeletonModesButtons() {
@@ -772,7 +784,9 @@ function ToolSpecificSettings({
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
 
-      <VolumeInterpolationButton />
+      {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
+        <VolumeInterpolationButton />
+      ) : null}
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
     </>

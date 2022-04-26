@@ -195,6 +195,11 @@ export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEn
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.ERASE_BRUSH,
 ];
+export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationToolEnum> = [
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.BRUSH,
+];
+
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export const enum ContourModeEnum {
   DRAW = "DRAW",

@@ -55,17 +55,16 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
 
   // cache currently limited to 100 MB per array
   private lazy val chunkContentsCache: Cache[String, MultiArray] = {
-    // new ChunkContentsCache(maxSizeBytes = 1000 * 1000 * 100, bytesPerEntry = header.bytesPerChunk)
-
     val maxSizeBytes = 1000 * 1000 * 100
 
+    val maxEntries = maxSizeBytes / header.bytesPerChunk
     val defaultCachingSettings = CachingSettings("")
     val lfuCacheSettings =
       defaultCachingSettings.lfuCacheSettings
-        .withInitialCapacity(maxSizeBytes / header.bytesPerChunk)
-        .withMaxCapacity(maxSizeBytes / header.bytesPerChunk)
-        .withTimeToLive(20.minutes)
-        .withTimeToIdle(10.minutes)
+        .withInitialCapacity(maxEntries)
+        .withMaxCapacity(maxEntries)
+        .withTimeToLive(2.hours)
+        .withTimeToIdle(1.hour)
     val cachingSettings =
       defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
     val lfuCache: Cache[String, MultiArray] = LfuCache(cachingSettings)

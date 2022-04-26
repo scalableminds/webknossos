@@ -144,20 +144,19 @@ export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
 }
 export function setDirectionReducer(state: OxalisState, direction: Vector3) {
   const previousSpaceDirectionOrtho = state.flycam.spaceDirectionOrtho;
-  const spaceDirectionOrtho = direction.map((el, index) => {
+  const spaceDirectionOrtho = Utils.map3((el, index) => {
     if (el === 0) {
       return previousSpaceDirectionOrtho[index];
     }
 
     return el < 0 ? -1 : 1;
-  });
+  }, direction);
   return update(state, {
     flycam: {
       direction: {
         $set: direction,
       },
       spaceDirectionOrtho: {
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(1 | -1)[]' is not assignable to type '[1 | ... Remove this comment to see the full error message
         $set: spaceDirectionOrtho,
       },
     },
@@ -282,7 +281,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
         const vector = Dimensions.transDim(action.vector, planeId);
         const zoomFactor = increaseSpeedWithZoom ? state.flycam.zoomStep : 1;
         const scaleFactor = getBaseVoxelFactors(dataset.dataSource.scale);
-        const delta = [
+        const delta: Vector3 = [
           vector[0] * zoomFactor * scaleFactor[0],
           vector[1] * zoomFactor * scaleFactor[1],
           vector[2] * zoomFactor * scaleFactor[2],
@@ -294,7 +293,6 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
           delta[dim] *= state.flycam.spaceDirectionOrtho[dim];
         }
 
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
         return moveReducer(state, delta);
       }
 

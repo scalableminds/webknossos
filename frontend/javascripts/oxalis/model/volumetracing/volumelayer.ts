@@ -56,6 +56,10 @@ export class VoxelBuffer2D {
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
     this.getFast3DCoordinate = getFast3DCoordinate;
+
+    if (!V2.equals(this.minCoord2d, V2.floor(this.minCoord2d))) {
+      throw new Error("Minimum coordinate passed to VoxelBuffer2D is not an integer vector.");
+    }
   }
 
   linearizeIndex(x: number, y: number): number {
@@ -138,7 +142,7 @@ class VolumeLayer {
   plane: OrthoView;
   thirdDimensionValue: number;
 
-  // Stored in global coordinates:
+  // Stored in global (but mag-dependent) coordinates:
   minCoord: Vector3 | null | undefined;
   maxCoord: Vector3 | null | undefined;
 
@@ -196,7 +200,9 @@ class VolumeLayer {
     if (this.minCoord == null || this.maxCoord == null) {
       return null;
     }
-    return new BoundingBox({ min: this.minCoord, max: this.maxCoord });
+    const min = zoomedPositionToGlobalPosition(this.minCoord, this.activeResolution);
+    const max = zoomedPositionToGlobalPosition(this.maxCoord, this.activeResolution);
+    return new BoundingBox({ min, max });
   }
 
   getContourList(useGlobalCoords: boolean = false) {
@@ -428,7 +434,7 @@ class VolumeLayer {
     return voxelBuffer2D;
   }
 
-  globalCoordToMag2D(position: Vector3): Vector2 {
+  globalCoordToMag2DFloat(position: Vector3): Vector2 {
     return this.get2DCoordinate(
       scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
     );
@@ -441,7 +447,7 @@ class VolumeLayer {
     const unzoomedRadius = Math.round(brushSize / 2);
     const width = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[0]]);
     const height = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[1]]);
-    const floatingCoord2d = this.globalCoordToMag2D(position);
+    const floatingCoord2d = this.globalCoordToMag2DFloat(position);
     const minCoord2d: Vector2 = [
       Math.floor(floatingCoord2d[0] - width / 2),
       Math.floor(floatingCoord2d[1] - height / 2),

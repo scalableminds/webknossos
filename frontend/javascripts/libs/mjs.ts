@@ -183,6 +183,12 @@ const V2 = {
     r[1] = a[1] * k[1];
     return r;
   },
+  floor(vec: Vector2): Vector2 {
+    return [Math.floor(vec[0]), Math.floor(vec[1])];
+  },
+  equals(vec1: Vector2, vec2: Vector2): boolean {
+    return vec1[0] === vec2[0] && vec1[1] === vec2[1];
+  },
 };
 
 const _tmpVec: Vector3 = [0, 0, 0];

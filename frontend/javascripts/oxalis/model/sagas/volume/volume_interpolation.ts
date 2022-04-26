@@ -1,6 +1,6 @@
 import cwise from "cwise";
 import distanceTransform from "distance-transform";
-import { V3 } from "libs/mjs";
+import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import ndarray from "ndarray";
 import api from "oxalis/api/internal_api";
@@ -130,29 +130,31 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
   const isVolumeInterpolationEnabled = yield* select(
     (state) => state.userConfiguration.isVolumeInterpolationEnabled,
   );
-  const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   if (!isVolumeInterpolationEnabled) {
     return;
   }
 
+  const thirdDim = 2;
   if (activeViewport !== "PLANE_XY") {
-    // Interpolation is only done in XY
+    // Interpolation is only done/supported in XY
     return;
   }
+
+  const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   // Disable copy-segmentation for the same zoom steps where the trace tool is forbidden, too,
   // to avoid large performance lags.
-  const isResolutionTooLow = yield* select((state) =>
-    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
-  );
+  // const isResolutionTooLow = yield* select((state) =>
+  //   isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
+  // );
 
-  if (isResolutionTooLow) {
-    Toast.warning(
-      'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
-    );
-    return;
-  }
+  // if (isResolutionTooLow) {
+  //   Toast.warning(
+  //     'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
+  //   );
+  //   return;
+  // }
 
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   const segmentationLayer: DataLayer = yield* call(
@@ -185,25 +187,26 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
   // Annotate only every n-th slice while the remaining ones are interpolated automatically.
   const INTERPOLATION_DEPTH = 2;
 
-  const drawnBoundingBox = layer.getLabeledBoundingBox();
-  if (drawnBoundingBox == null) {
+  const drawnBoundingBoxMag1 = layer.getLabeledBoundingBox();
+  if (drawnBoundingBoxMag1 == null) {
     return;
   }
   console.time("Interpolate segmentation");
-  const xyPadding = V3.scale3(drawnBoundingBox.getSize(), [1, 1, 0]);
+  const xySize = V3.scale3(drawnBoundingBoxMag1.getSize(), [1, 1, 0]);
   const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
-  const relevantBoxMag1 = drawnBoundingBox
+  const relevantBoxMag1 = drawnBoundingBoxMag1
     // Increase the drawn region by a factor of 2 (use half the size as a padding on each size)
-    .paddedWithMargins(V3.scale(xyPadding, 0.5))
+    .paddedWithMargins(V3.scale(xySize, 0.5))
     // Intersect with the viewport
     .intersectedWith(viewportBoxMag1)
     // Also consider the n previous slices
-    .paddedWithMargins([0, 0, INTERPOLATION_DEPTH], [0, 0, 0])
+    .paddedWithMargins([0, 0, INTERPOLATION_DEPTH * labeledResolution[thirdDim]], [0, 0, 0])
     .rounded();
+  const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);
 
   console.time("Get Data");
   const inputData = yield* call(
-    [api.data, api.data.getDataFor2DBoundingBox],
+    [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     relevantBoxMag1,
     requestedZoomStep,
@@ -213,7 +216,8 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
 
   console.time("Iterate over data");
 
-  const size = V3.sub(relevantBoxMag1.max, relevantBoxMag1.min);
+  const size = relevantBoxCurrentMag.getSize(); // V3.sub(relevantBoxMag1.max, relevantBoxMag1.min);
+  console.log("relevantBoxCurrentMag", relevantBoxCurrentMag);
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride);
 
@@ -227,7 +231,11 @@ export default function* interpolateSegmentationLayer(layer: VolumeLayer): Saga<
       relevantBoxMag1.min[2] + targetOffsetZ,
     );
     interpolationVoxelBuffers[targetOffsetZ] = interpolationLayer.createVoxelBuffer2D(
-      interpolationLayer.globalCoordToMag2D(V3.add(relevantBoxMag1.min, [0, 0, targetOffsetZ])),
+      V2.floor(
+        interpolationLayer.globalCoordToMag2DFloat(
+          V3.add(relevantBoxMag1.min, [0, 0, targetOffsetZ]),
+        ),
+      ),
       size[0],
       size[1],
     );

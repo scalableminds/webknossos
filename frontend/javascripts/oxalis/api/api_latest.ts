@@ -109,6 +109,7 @@ import type {
   Vector3,
   Vector4,
   AnnotationTool,
+  TypedArray,
 } from "oxalis/constants";
 import Constants, {
   ControlModeEnum,
@@ -1301,6 +1302,14 @@ class DataApi {
     bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
   ) {
+    return this.getDataForBoundingBox(layerName, bbox, _zoomStep);
+  }
+
+  async getDataForBoundingBox(
+    layerName: string,
+    bbox: BoundingBoxType,
+    _zoomStep: number | null | undefined = null,
+  ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
     let zoomStep;
@@ -1346,7 +1355,7 @@ class DataApi {
       viewport,
     );
     const resolutionIndex = getRequestLogZoomStep(state);
-    const cuboid = await this.getDataFor2DBoundingBox(
+    const cuboid = await this.getDataForBoundingBox(
       layerName,
       {
         min,
@@ -1403,8 +1412,7 @@ class DataApi {
     elementClass: ElementClass,
     resolutions: Array<Vector3>,
     zoomStep: number,
-    // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
-  ): $TypedArray {
+  ): TypedArray {
     const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the resolution

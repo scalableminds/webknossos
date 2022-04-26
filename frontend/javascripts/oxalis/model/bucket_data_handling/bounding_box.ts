@@ -130,20 +130,18 @@ class BoundingBox {
   }
 
   fromMag1ToMag(mag: Vector3): BoundingBox {
-    const min = [
+    const min: Vector3 = [
       Math.floor(this.min[0] / mag[0]),
       Math.floor(this.min[1] / mag[1]),
       Math.floor(this.min[2] / mag[2]),
     ];
-    const max = [
+    const max: Vector3 = [
       Math.ceil(this.max[0] / mag[0]),
       Math.ceil(this.max[1] / mag[1]),
       Math.ceil(this.max[2] / mag[2]),
     ];
     return new BoundingBox({
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       min,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max,
     });
   }

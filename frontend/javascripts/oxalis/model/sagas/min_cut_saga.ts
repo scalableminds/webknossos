@@ -420,7 +420,7 @@ function* tryMinCutAtMag(
   const seedB = V3.sub(globalSeedB, boundingBoxTarget.min);
   console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
   const inputData = yield* call(
-    [api.data, api.data.getDataFor2DBoundingBox],
+    [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     boundingBoxMag1,
     resolutionIndex,

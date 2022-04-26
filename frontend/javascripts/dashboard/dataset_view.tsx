@@ -125,9 +125,6 @@ function DatasetView(props: Props) {
   }
 
   function renderPlaceholder() {
-    const noDatasetsPlaceholder =
-      "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
-
     const openPublicDatasetCard = (
       <OptionCard
         header="Open Demo Dataset"
@@ -142,34 +139,28 @@ function DatasetView(props: Props) {
         Have a look at a public dataset to experience webKnossos in action.
       </OptionCard>
     );
+
     const uploadPlaceholder = (
-      <React.Fragment>
-        <Row gutter={16} justify="center" align="bottom">
-          {features().isDemoInstance ? openPublicDatasetCard : null}
-          <OptionCard
-            header="Upload Dataset"
-            icon={<CloudUploadOutlined />}
-            action={
-              <Link to="/datasets/upload">
-                <Button>Open Import Dialog</Button>
-              </Link>
-            }
-            height={350}
-          >
-            webKnossos supports a variety of{" "}
-            <a href="https://docs.webknossos.org/webknossos/data_formats.html">file formats</a> and
-            is also able to convert them when necessary.
-          </OptionCard>
-        </Row>
-        <div
-          style={{
-            marginTop: 24,
-          }}
-        >
-          There are no datasets available yet.
-        </div>
-      </React.Fragment>
+      <OptionCard
+        header="Upload Dataset"
+        icon={<CloudUploadOutlined />}
+        action={
+          <Link to="/datasets/upload">
+            <Button>Open Import Dialog</Button>
+          </Link>
+        }
+        height={350}
+      >
+        webKnossos supports a variety of{" "}
+        <a href="https://docs.webknossos.org/webknossos/data_formats.html">file formats</a> and is
+        also able to convert them when necessary.
+      </OptionCard>
     );
+
+    const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+      ? "There are no datasets available yet. Upload one or try a public demo dataset."
+      : "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
+
     return context.isLoading ? null : (
       <Row
         justify="center"
@@ -179,13 +170,17 @@ function DatasetView(props: Props) {
         align="middle"
       >
         <Col span={18}>
+          <Row gutter={16} justify="center" align="bottom">
+            {features().isDemoInstance ? openPublicDatasetCard : null}
+            {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : null}
+          </Row>
           <div
             style={{
-              paddingBottom: 32,
+              marginTop: 24,
               textAlign: "center",
             }}
           >
-            {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : noDatasetsPlaceholder}
+            {emptyListHintText}
           </div>
         </Col>
       </Row>

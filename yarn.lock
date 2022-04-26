@@ -9728,7 +9728,7 @@ ndarray-ops@^1.2.2:
   dependencies:
     cwise-compiler "^1.0.0"
 
-ndarray@^1.0.16, ndarray@^1.0.18, ndarray@^1.0.19:
+ndarray@^1.0.18, ndarray@^1.0.19:
   version "1.0.19"
   resolved "https://registry.yarnpkg.com/ndarray/-/ndarray-1.0.19.tgz#6785b5f5dfa58b83e31ae5b2a058cfd1ab3f694e"
   integrity sha512-B4JHA4vdyZU30ELBw3g7/p9bZupyew5a7tX1Y/gGeF2hafrPaQZhgrGQfsvgfYbgdFZjYwuEcnaobeM/WMW+HQ==
@@ -15144,13 +15144,6 @@ yocto-queue@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
-
-zeros@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/zeros/-/zeros-1.0.0.tgz#64e2d83c0da8d322aa4cb882497b31b7dc33a540"
-  integrity sha1-ZOLYPA2o0yKqTLiCSXsxt9wzpUA=
-  dependencies:
-    ndarray "^1.0.16"
 
 zip-js-webpack@^1.0.0:
   version "1.0.0"

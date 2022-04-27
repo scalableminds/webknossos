@@ -265,7 +265,7 @@ function AdditionalSkeletonModesButtons() {
           />
         </ButtonComponent>
       </Tooltip>
-      {isMergerModeEnabled && (
+      {features().jobsEnabled && isMergerModeEnabled && (
         <Tooltip title="Apply this merger mode tracing.">
           <ButtonComponent
             style={narrowButtonStyle}

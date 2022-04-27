@@ -182,7 +182,7 @@ class JobListView extends React.PureComponent<Props, State> {
     ) {
       return (
         <span>
-          Applying merger mode to layer {job.layerName} of{" "}
+          Applied merger mode to layer {job.layerName} of{" "}
           <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}

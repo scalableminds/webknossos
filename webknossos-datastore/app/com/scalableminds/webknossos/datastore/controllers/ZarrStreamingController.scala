@@ -1,0 +1,314 @@
+package com.scalableminds.webknossos.datastore.controllers
+
+import java.io.{ByteArrayOutputStream, OutputStream}
+import java.nio.{ByteBuffer, ByteOrder}
+import java.util.Base64
+import akka.stream.scaladsl.StreamConverters
+import com.google.inject.Inject
+import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketProvider, WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{
+  ZarrBucketProvider,
+  ZarrDataLayer,
+  ZarrMag,
+  ZarrSegmentationLayer
+}
+import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
+import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.requests.{
+  Cuboid,
+  DataServiceDataRequest,
+  DataServiceMappingRequest,
+  DataServiceRequestSettings
+}
+import com.scalableminds.webknossos.datastore.models.{
+  DataRequest,
+  ImageThumbnail,
+  VoxelPosition,
+  WebKnossosDataRequest,
+  _
+}
+import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
+import com.scalableminds.webknossos.wrap.{BlockType, WKWHeader}
+import io.swagger.annotations._
+import net.liftweb.common.Full
+import net.liftweb.util.Helpers.tryo
+import play.api.http.HttpEntity
+import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json.Json
+import play.api.mvc._
+
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+
+@Api(tags = Array("datastore", "zarr-streaming"))
+class ZarrStreamingController @Inject()(
+    dataSourceRepository: DataSourceRepository,
+    config: DataStoreConfig,
+    accessTokenService: DataStoreAccessTokenService,
+    binaryDataServiceHolder: BinaryDataServiceHolder,
+    mappingService: MappingService,
+    slackNotificationService: DSSlackNotificationService,
+    isosurfaceServiceHolder: IsosurfaceServiceHolder,
+    findDataService: FindDataService,
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    extends Controller {
+
+  override def allowRemoteOrigin: Boolean = true
+
+  val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
+  isosurfaceServiceHolder.dataStoreIsosurfaceConfig =
+    (binaryDataService, mappingService, config.Datastore.Isosurface.timeout, config.Datastore.Isosurface.actorPoolSize)
+  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.dataStoreIsosurfaceService
+
+  def dataSourceFolderContents(token: Option[String],
+                               organizationName: String,
+                               dataSetName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        getTokenFromHeader(token, request)) {
+        for {
+          dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
+            "dataSource.notFound") ~> 404
+          layerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
+        } yield
+          Ok(
+            views.html.datastoreZarrDatasourceDir(
+              "Datastore",
+              s"$organizationName/dataSetName",
+              Map("datasource" -> ".") ++ layerNames.map { x =>
+                (x, x)
+              }.toMap
+            ))
+      }
+    }
+
+  def dataLayerFolderContents(token: Option[String],
+                              organizationName: String,
+                              dataSetName: String,
+                              dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        getTokenFromHeader(token, request)) {
+        for {
+          (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
+            "dataSource.notFound") ~> 404
+          mags = dataLayer.resolutions
+        } yield
+          Ok(
+            views.html.datastoreZarrDatasourceDir(
+              "Datastore",
+              "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
+              Map("color" -> ".") ++ mags.map { mag =>
+                (mag.toURLString, mag.toURLString)
+              }.toMap
+            )).withHeaders()
+      }
+    }
+
+  def dataLayerMagFolderContents(token: Option[String],
+                                 organizationName: String,
+                                 dataSetName: String,
+                                 dataLayerName: String,
+                                 mag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        getTokenFromHeader(token, request)) {
+        Future(
+          Ok(
+            views.html.datastoreZarrDatasourceDir(
+              "Datastore",
+              "%s/%s/%s/%s".format(organizationName, dataSetName, dataLayerName, mag),
+              Map(mag -> ".")
+            )).withHeaders())
+      }
+    }
+
+  /**
+    * Handles a request for .zarray file for a wkw dataset via a HTTP GET. Used by zarr-streaming.
+    */
+  def zArray(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String, mag: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      getTokenFromHeader(token, request)) {
+      for {
+        (_, dataLayer) <- dataSourceRepository
+          .getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages("dataSource.notFound") ~> 404
+        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        cubeLength = DataLayer.bucketLength
+        (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
+        // data request method always decompresses before sending
+        compressor = None
+      } yield
+        Ok(
+          Json.obj(
+            "dtype" -> dtype,
+            "fill_value" -> 0,
+            "zarr_format" -> 2,
+            "order" -> "F",
+            "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
+            "compressor" -> compressor,
+            "filters" -> None,
+            "shape" -> List(
+              channels,
+              // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+              (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / parsedMag.x,
+              (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / parsedMag.y,
+              (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / parsedMag.z
+            ),
+            "dimension_seperator" -> "."
+          ))
+    }
+  }
+
+  /**
+    * Handles requests for raw binary data via HTTP GET. Used by zarr streaming.
+    */
+  def rawZarrCube(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      mag: String,
+      cxyz: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      getTokenFromHeader(token, request)) {
+      for {
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
+        (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> Messages("Wrong Coords") ~> 404
+        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        _ <- bool2Fox(c == 0) ~> Messages("Channel must be 0") ~> 404
+        cubeSize = DataLayer.bucketLength
+        request = DataServiceDataRequest(
+          dataSource,
+          dataLayer,
+          None,
+          Cuboid(
+            topLeft = new VoxelPosition(x * cubeSize * parsedMag.x,
+                                        y * cubeSize * parsedMag.y,
+                                        z * cubeSize * parsedMag.z,
+                                        parsedMag),
+            width = cubeSize,
+            height = cubeSize,
+            depth = cubeSize
+          ),
+          DataServiceRequestSettings(halfByte = false)
+        )
+        (data, _) <- binaryDataService.handleDataRequests(List(request))
+      } yield Ok(data)
+    }
+  }
+
+  private def parseDotCoordinates(
+      cxyz: String,
+  ): Fox[(Int, Int, Int, Int)] = {
+    val singleRx = "\\s*([0-9]+).([0-9]+).([0-9]+).([0-9]+)\\s*".r
+
+    cxyz match {
+      case singleRx(c, x, y, z) =>
+        Fox.successful(Integer.parseInt(c), Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
+      case _ => Fox.failure("Coordinates not valid")
+    }
+  }
+
+  /**
+    * Get the datasource-properties.json file for a datasource via a HTTP GET request.
+    */
+  def dataSource(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      getTokenFromHeader(token, request)) {
+      for {
+        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
+          "dataSource.notFound") ~> 404
+        dataLayers = dataSource.dataLayers
+        zarrLayers = dataLayers.collect({
+          case d: WKWDataLayer =>
+            ZarrDataLayer(d.name,
+                          d.category,
+                          d.boundingBox,
+                          d.elementClass,
+                          d.resolutions.map(x => ZarrMag(x, None, None)),
+                          numChannels = if (d.elementClass == ElementClass.uint24) 3 else 1)
+          case s: WKWSegmentationLayer =>
+            ZarrSegmentationLayer(
+              s.name,
+              s.boundingBox,
+              s.elementClass,
+              s.resolutions.map(x => ZarrMag(x, None, None)),
+              mappings = s.mappings,
+              largestSegmentId = s.largestSegmentId,
+              numChannels = if (s.elementClass == ElementClass.uint24) 3 else 1
+            )
+        })
+        zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
+      } yield Ok(Json.toJson(zarrSource))
+    }
+  }
+
+  def zGroup(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String = "",
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      getTokenFromHeader(token, request)) {
+      Future(Ok(Json.obj("zarr_format" -> 2)))
+    }
+  }
+
+  private def getTokenFromHeader(token: Option[String], request: Request[AnyContent]) =
+    token or request.headers.get("X-Auth-Token")
+
+  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] = {
+    val singleRx = "\\s*([0-9]+)\\s*".r
+    val longMag = mag match {
+      case singleRx(x) => "%s-%s-%s".format(x, x, x)
+      case _           => mag
+    }
+    val parsedMag = Vec3Int.fromForm(longMag)
+    Some(parsedMag).filter(layer.containsResolution)
+  }
+
+  private def zarrDtypeFromElementClass(elementClass: ElementClass.Value): (Int, String) = elementClass match {
+    case ElementClass.uint8  => (1, "<u1")
+    case ElementClass.uint16 => (1, "<u2")
+    case ElementClass.uint24 => (3, "<u1")
+    case ElementClass.uint32 => (1, "<u4")
+    case ElementClass.uint64 => (1, "<u8")
+    case ElementClass.float  => (1, "<f4")
+    case ElementClass.double => (1, "<f8")
+    case ElementClass.int8   => (1, "<i1")
+    case ElementClass.int16  => (1, "<i2")
+    case ElementClass.int32  => (1, "<i4")
+    case ElementClass.int64  => (1, "<i8")
+  }
+
+  private def isWkwCompressed(mag: Vec3Int,
+                              dataSource: DataSource,
+                              dataLayer: DataLayer,
+                              dataLayerName: String): Fox[Boolean] = {
+    val result = dataLayer.bucketProvider match {
+      case provider: WKWBucketProvider =>
+        WKWHeader(
+          provider
+            .wkwHeaderFilePath(mag, Some(dataSource.id), Some(dataLayerName), binaryDataService.dataBaseDir)
+            .toFile)
+      case provider: ZarrBucketProvider => ???
+    }
+
+    result.flatMap((h) => Full(h.isCompressed))
+  }
+}

@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -17,6 +17,14 @@ class DataSourceRepository @Inject()(
 ) extends TemporaryStore[DataSourceId, InboxDataSource](system)
     with LazyLogging
     with FoxImplicits {
+
+  def getDataSourceAndDataLayer(organizationName: String,
+                                dataSetName: String,
+                                dataLayerName: String): Fox[(DataSource, DataLayer)] =
+    for {
+      dataSource <- findUsable(DataSourceId(dataSetName, organizationName)).toFox
+      dataLayer <- dataSource.getDataLayer(dataLayerName)
+    } yield (dataSource, dataLayer)
 
   def findUsable(id: DataSourceId): Option[DataSource] =
     find(id).flatMap(_.toUsable)

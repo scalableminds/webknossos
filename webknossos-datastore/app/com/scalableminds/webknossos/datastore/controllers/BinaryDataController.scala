@@ -80,7 +80,10 @@ class BinaryDataController @Inject()(
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 30 seconds) {
         val t = System.currentTimeMillis()
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ?~> Messages(
+            "dataSource.notFound") ~> 404
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
           duration = System.currentTimeMillis() - t
           _ = if (duration > 10000)
@@ -127,7 +130,10 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
         request = DataRequest(
           new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
           width,
@@ -185,7 +191,10 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
         request = DataRequest(
           new VoxelPosition(x * cubeSize * resolution,
                             y * cubeSize * resolution,
@@ -197,273 +206,6 @@ class BinaryDataController @Inject()(
         )
         (data, indices) <- requestData(dataSource, dataLayer, request)
       } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
-    }
-  }
-
-  def requestDatasourceFolderContents(token: Option[String],
-                                      organizationName: String,
-                                      dataSetName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        getTokenFromHeader(token, request)) {
-        for {
-          dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-            "dataSource.notFound") ~> 404
-          layerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
-        } yield
-          Ok(
-            views.html.datastoreZarrDatasourceDir(
-              "Datastore",
-              s"$organizationName/dataSetName",
-              Map("datasource" -> ".") ++ layerNames.map { x =>
-                (x, x)
-              }.toMap
-            ))
-      }
-    }
-
-  def requestDatalayerFolderContents(token: Option[String],
-                                     organizationName: String,
-                                     dataSetName: String,
-                                     dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        getTokenFromHeader(token, request)) {
-        for {
-          (_, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-          mags = dataLayer.resolutions
-        } yield
-          Ok(
-            views.html.datastoreZarrDatasourceDir(
-              "Datastore",
-              "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
-              Map("color" -> ".") ++ mags.map { mag =>
-                (mag.toURLString, mag.toURLString)
-              }.toMap
-            )).withHeaders()
-      }
-    }
-
-  def requestDatalayerMagFolderContents(token: Option[String],
-                                        organizationName: String,
-                                        dataSetName: String,
-                                        dataLayerName: String,
-                                        mag: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        getTokenFromHeader(token, request)) {
-        Future(
-          Ok(
-            views.html.datastoreZarrDatasourceDir(
-              "Datastore",
-              "%s/%s/%s/%s".format(organizationName, dataSetName, dataLayerName, mag),
-              Map(mag -> ".")
-            )).withHeaders())
-      }
-    }
-
-  /**
-    * Handles a request for .zarray file for a wkw dataset via a HTTP GET. Used by zarr-streaming.
-    */
-  def requestZArray(token: Option[String],
-                    organizationName: String,
-                    dataSetName: String,
-                    dataLayerName: String,
-                    mag: String,
-  ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      getTokenFromHeader(token, request)) {
-      for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
-        cubeLength = DataLayer.bucketLength
-        (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
-        // data request method always decompresses before sending
-        compressor = None
-      } yield
-        Ok(
-          Json.obj(
-            "dtype" -> dtype,
-            "fill_value" -> 0,
-            "zarr_format" -> 2,
-            "order" -> "F",
-            "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
-            "compressor" -> compressor,
-            "filters" -> None,
-            "shape" -> List(
-              channels,
-              (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / parsedMag.x,
-              (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / parsedMag.y,
-              (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / parsedMag.z
-            ),
-            "dimension_seperator" -> "/" // This doesn't seem to work effectively...
-          ))
-    }
-  }
-
-  private def getTokenFromHeader(token: Option[String], request: Request[AnyContent]) =
-    token or request.headers.get("X-Auth-Token")
-
-  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] = {
-    val singleRx = "\\s*([0-9]+)\\s*".r
-    val longMag = mag match {
-      case singleRx(x) => "%s-%s-%s".format(x, x, x)
-      case _           => mag
-    }
-    val parsedMag = Vec3Int.fromForm(longMag)
-    Some(parsedMag).filter(layer.containsResolution)
-  }
-
-  private def zarrDtypeFromElementClass(elementClass: ElementClass.Value): (Int, String) = elementClass match {
-    case ElementClass.uint8  => (1, "<u1")
-    case ElementClass.uint16 => (1, "<u2")
-    case ElementClass.uint24 => (3, "<u1")
-    case ElementClass.uint32 => (1, "<u4")
-    case ElementClass.uint64 => (1, "<u8")
-    case ElementClass.float  => (1, "<f4")
-    case ElementClass.double => (1, "<f8")
-    case ElementClass.int8   => (1, "<i1")
-    case ElementClass.int16  => (1, "<i2")
-    case ElementClass.int32  => (1, "<i4")
-    case ElementClass.int64  => (1, "<i8")
-  }
-
-  private def isWkwCompressed(mag: Vec3Int,
-                              dataSource: DataSource,
-                              dataLayer: DataLayer,
-                              dataLayerName: String): Fox[Boolean] = {
-    val result = dataLayer.bucketProvider match {
-      case provider: WKWBucketProvider =>
-        WKWHeader(
-          provider
-            .wkwHeaderFilePath(mag, Some(dataSource.id), Some(dataLayerName), binaryDataService.dataBaseDir)
-            .toFile)
-      case provider: ZarrBucketProvider => ???
-    }
-
-    result.flatMap((h) => Full(h.isCompressed))
-  }
-
-  private def isWkwLZ4Compressed(mag: Vec3Int,
-                                 dataSource: DataSource,
-                                 dataLayer: DataLayer,
-                                 dataLayerName: String): Fox[Boolean] =
-    dataLayer.bucketProvider match {
-      case provider: WKWBucketProvider =>
-        WKWHeader(
-          provider
-            .wkwHeaderFilePath(mag, Some(dataSource.id), Some(dataLayerName), binaryDataService.dataBaseDir)
-            .toFile).flatMap((h) => Full(h.blockType == BlockType.LZ4))
-      case _: ZarrBucketProvider => ???
-    }
-
-  def requestRawZarrWithDot(
-      token: Option[String],
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String,
-      mag: String,
-      cxyz: String,
-  ): Action[AnyContent] = {
-    val singleRx = "\\s*([0-9]+).([0-9]+).([0-9]+).([0-9]+)\\s*".r
-    cxyz match {
-      case singleRx(c, x, y, z) =>
-        requestRawZarr(token,
-                       organizationName,
-                       dataSetName,
-                       dataLayerName,
-                       mag,
-                       Integer.parseInt(c),
-                       Integer.parseInt(x),
-                       Integer.parseInt(y),
-                       Integer.parseInt(z))
-      case _ => Action { NotFound("Coordinates not valid") }
-    }
-  }
-
-  /**
-    * Handles requests for raw binary data via HTTP GET. Used by zarr streaming.
-    */
-  def requestRawZarr(
-      token: Option[String],
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String,
-      mag: String,
-      c: Int,
-      x: Int,
-      y: Int,
-      z: Int,
-  ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      getTokenFromHeader(token, request)) {
-      for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
-        _ <- bool2Fox(c == 0) ~> Messages("Channel must be 0") ~> 404
-        cubeSize = DataLayer.bucketLength
-        request = DataRequest(
-          new VoxelPosition(x * cubeSize * parsedMag.x,
-                            y * cubeSize * parsedMag.y,
-                            z * cubeSize * parsedMag.z,
-                            parsedMag),
-          cubeSize,
-          cubeSize,
-          cubeSize,
-          DataServiceRequestSettings(halfByte = false)
-        )
-        (data, indices) <- requestData(dataSource, dataLayer, request)
-      } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
-    }
-  }
-
-  /**
-    * Get the datasource-properties.json file for a datasource via a HTTP GET request.
-    */
-  def requestDataSource(
-      token: Option[String],
-      organizationName: String,
-      dataSetName: String,
-  ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      getTokenFromHeader(token, request)) {
-      for {
-        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-          "dataSource.notFound") ~> 404
-        dataLayers = dataSource.dataLayers
-        zarrLayers = dataLayers.collect({
-          case d: WKWDataLayer =>
-            ZarrDataLayer(d.name,
-                          d.category,
-                          d.boundingBox,
-                          d.elementClass,
-                          d.resolutions.map(x => ZarrMag(x, None, None)),
-                          numChannels = if (d.elementClass == ElementClass.uint24) 3 else 1)
-          case s: WKWSegmentationLayer =>
-            ZarrSegmentationLayer(
-              s.name,
-              s.boundingBox,
-              s.elementClass,
-              s.resolutions.map(x => ZarrMag(x, None, None)),
-              mappings = s.mappings,
-              largestSegmentId = s.largestSegmentId,
-              numChannels = if (s.elementClass == ElementClass.uint24) 3 else 1
-            )
-        })
-        zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
-      } yield Ok(Json.toJson(zarrSource))
-    }
-  }
-
-  def requestZGroup(
-      token: Option[String],
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String = "",
-  ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      getTokenFromHeader(token, request)) {
-      Future(Ok(Json.obj("zarr_format" -> 2)))
     }
   }
 
@@ -487,7 +229,10 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
         dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
                                   cubeSize,
                                   cubeSize,
@@ -524,7 +269,10 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
         dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
                                   width,
                                   height,
@@ -629,7 +377,10 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
         segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
         mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
         result <- mappingService.handleMappingRequest(mappingRequest)
@@ -649,7 +400,10 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ?~> Messages(
+            "dataSource.notFound") ~> 404
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
           isosurfaceRequest = IsosurfaceRequest(
             Some(dataSource),
@@ -689,7 +443,10 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ?~> Messages(
+            "dataSource.notFound") ~> 404
           meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
         } yield
           Ok(
@@ -707,7 +464,10 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ?~> Messages(
+            "dataSource.notFound") ~> 404
           positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
         } yield
           Ok(
@@ -725,22 +485,15 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
-            "histogram.layerMissing",
-            dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ?~> Messages(
+            "dataSource.notFound") ~> 404 ?~> Messages("histogram.layerMissing", dataLayerName)
           listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages("histogram.failed",
                                                                                                   dataLayerName)
         } yield Ok(Json.toJson(listOfHistograms))
       }
     }
-
-  private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
-      implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
-    for {
-      dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-        "dataSource.notFound") ~> 404
-      dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404
-    } yield (dataSource, dataLayer)
 
   private def requestData(
       dataSource: DataSource,
@@ -792,7 +545,10 @@ class BinaryDataController @Inject()(
       zoom: Option[Double]
   )(implicit m: MessagesProvider): Fox[OutputStream => Unit] =
     for {
-      (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                dataSetName,
+                                                                                dataLayerName) ?~> Messages(
+        "dataSource.notFound") ~> 404
       position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
       request = DataRequest(position, width, height, 1)
       image <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite = false)

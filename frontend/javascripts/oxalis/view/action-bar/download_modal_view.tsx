@@ -1,4 +1,4 @@
-import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button } from "antd";
+import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Select } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React from "react";
 import type { APIAnnotationType } from "types/api_flow_types";
@@ -13,6 +13,7 @@ import { CheckboxValueType } from "antd/lib/checkbox/Group";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph } = Typography;
+const { Option } = Select;
 type Props = {
   isVisible: boolean;
   onOk: () => void;
@@ -59,6 +60,14 @@ export default function DownloadModalView(props: Props) {
   const handleTabChange = (tab: string) => {
     modalType = tab;
     console.log(modalType);
+  };
+
+  const handleLayerSelection = (selection: string) => {
+    console.log(selection);
+  };
+
+  const handleBoundingBoxSelection = (bbox: string) => {
+    console.log(bbox);
   };
 
   const checkboxStyle = {
@@ -208,7 +217,15 @@ with wk.webknossos_context(token="MY_TOKEN"):
             >
               Select the layer you would like to prepare for export.
             </Col>
-            <Col span={15}>*layer selection*</Col>
+            <Col span={15}>
+              <Select defaultValue="l2" style={{ width: 300 }} onChange={handleLayerSelection}>
+                <Option value="l1">Layer 1 with extra information</Option>
+                <Option value="l2">Layer 2</Option>
+                <Option value="disabled" disabled>
+                  Disabled
+                </Option>
+              </Select>
+            </Col>
           </Row>
           <Divider
             style={{
@@ -228,7 +245,19 @@ with wk.webknossos_context(token="MY_TOKEN"):
             >
               Select a bounding box to constrain the data for export.
             </Col>
-            <Col span={15}>*bbox selection*</Col>
+            <Col span={15}>
+              <Select
+                defaultValue="b2"
+                style={{ width: 300 }}
+                onChange={handleBoundingBoxSelection}
+              >
+                <Option value="b1">BBox 1 with extra information</Option>
+                <Option value="b2">BBox 2</Option>
+                <Option value="disabled" disabled>
+                  Disabled
+                </Option>
+              </Select>
+            </Col>
           </Row>
           <Divider
             style={{
@@ -237,7 +266,7 @@ with wk.webknossos_context(token="MY_TOKEN"):
           />
           {moreInfoHint}
           <Checkbox style={{ position: "absolute", bottom: "16px" }} value="Fallback">
-            keep window open
+            Keep window open
           </Checkbox>
         </TabPane>
 

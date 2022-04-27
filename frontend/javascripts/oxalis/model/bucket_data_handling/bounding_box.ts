@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { mod } from "libs/utils";
+import { map3, mod } from "libs/utils";
 import Store from "oxalis/store";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
@@ -155,6 +155,23 @@ class BoundingBox {
       min: V3.sub(this.min, marginsLeft),
       max: V3.add(this.max, marginsRight),
     });
+  }
+
+  /*
+   * Each component of margins is used as
+   *   - a left margin IF the value is positive
+   *   - a right margin IF the value is negative (the absolute value will be
+   *     used then).
+   * For example:
+   *   The expression
+   *     boundingBox.paddedWithSignedMargins([10, 0, -10])
+   *   will leftpad the X with 10 and rightpad Y with 10.
+   */
+  paddedWithSignedMargins(margins: Vector3): BoundingBox {
+    const marginsLeft = map3((el) => (el > 0 ? el : 0), margins);
+    const marginsRight = map3((el) => (el < 0 ? -el : 0), margins);
+
+    return this.paddedWithMargins(marginsLeft, marginsRight);
   }
 
   rounded(): BoundingBox {

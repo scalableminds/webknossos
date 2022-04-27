@@ -144,15 +144,8 @@ export default function* maybeInterpolateSegmentationLayer(
   const activeCellId = volumeTracing.activeCellId;
 
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-  // let direction = 1;
-  // const useDynamicSpaceDirection = yield* select(
-  //   (state) => state.userConfiguration.dynamicSpaceDirection,
-  // );
-
-  // if (useDynamicSpaceDirection) {
-  //   const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
-  //   direction = spaceDirectionOrtho[thirdDim];
-  // }
+  const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
+  const directionFactor = spaceDirectionOrtho[thirdDim];
 
   const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
   if (volumeTracingLayer == null) {
@@ -175,7 +168,11 @@ export default function* maybeInterpolateSegmentationLayer(
     // Intersect with the viewport
     .intersectedWith(viewportBoxMag1)
     // Also consider the n previous slices
-    .paddedWithMargins([0, 0, INTERPOLATION_DEPTH * labeledResolution[thirdDim]], [0, 0, 0])
+    .paddedWithSignedMargins([
+      0,
+      0,
+      directionFactor * INTERPOLATION_DEPTH * labeledResolution[thirdDim],
+    ])
     .rounded();
   const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);
 

@@ -48,7 +48,7 @@ To fix split errors see section on flood filling below.
 
 ![Video: Proof-Reading Volume Annotations](https://www.youtube.com/watch?v=Sq4AuWanK14)
 
-After finishing the proof-reading a long-running job can be started to apply the combining of segments into a new dataset with the same layers. The job can be started via a modal. The modal can be open by clicking on the button next to the merger mode button.
+After finishing the proof-reading, a long-running job can be started to apply the merging of segments into a new dataset with the same layers. The job can be started via a modal. The modal can be open by clicking on the button next to the merger mode button.
 
 ![Button to open the Merger mode long-running job modal](./images/start_merger_mode_job_modal_button.jpg)
 ![Modal to start the Merger mode long-running job](./images/start_merger_mode_job_modal.jpg)

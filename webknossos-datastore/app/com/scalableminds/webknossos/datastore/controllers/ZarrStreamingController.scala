@@ -251,6 +251,8 @@ class ZarrStreamingController @Inject()(
               largestSegmentId = s.largestSegmentId,
               numChannels = if (s.elementClass == ElementClass.uint24) 3 else 1
             )
+          case z: ZarrDataLayer => z
+          case zs: ZarrSegmentationLayer => zs
         })
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
@@ -294,21 +296,5 @@ class ZarrStreamingController @Inject()(
     case ElementClass.int16  => (1, "<i2")
     case ElementClass.int32  => (1, "<i4")
     case ElementClass.int64  => (1, "<i8")
-  }
-
-  private def isWkwCompressed(mag: Vec3Int,
-                              dataSource: DataSource,
-                              dataLayer: DataLayer,
-                              dataLayerName: String): Fox[Boolean] = {
-    val result = dataLayer.bucketProvider match {
-      case provider: WKWBucketProvider =>
-        WKWHeader(
-          provider
-            .wkwHeaderFilePath(mag, Some(dataSource.id), Some(dataLayerName), binaryDataService.dataBaseDir)
-            .toFile)
-      case provider: ZarrBucketProvider => ???
-    }
-
-    result.flatMap((h) => Full(h.isCompressed))
   }
 }

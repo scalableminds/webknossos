@@ -17,7 +17,6 @@ import {
   getActiveSegmentationTracingLayer,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import DataLayer from "oxalis/model/data_layer";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -132,7 +131,7 @@ export default function* maybeInterpolateSegmentationLayer(
   }
 
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
-  const segmentationLayer: DataLayer = yield* call(
+  const segmentationLayer = yield* call(
     [Model, Model.getSegmentationTracingLayer],
     volumeTracing.tracingId,
   );
@@ -181,7 +180,7 @@ export default function* maybeInterpolateSegmentationLayer(
     [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     relevantBoxMag1,
-    requestedZoomStep,
+    labeledZoomStep,
   );
 
   console.timeEnd("Get Data");

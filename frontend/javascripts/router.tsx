@@ -23,7 +23,7 @@ import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
-import DatasetImportView from "dashboard/dataset/dataset_import_view";
+import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import JobListView from "admin/job/job_list_view";
@@ -333,7 +333,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/import"
                 render={({ match }: ContextRouter) => (
-                  <DatasetImportView
+                  <DatasetSettingsView
                     isEditingMode={false}
                     datasetId={{
                       name: match.params.datasetName || "",
@@ -351,7 +351,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
-                  <DatasetImportView
+                  <DatasetSettingsView
                     isEditingMode
                     datasetId={{
                       name: match.params.datasetName || "",

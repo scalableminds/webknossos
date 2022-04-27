@@ -21,7 +21,7 @@ import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import LinkButton from "components/link_button";
 import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
-import DatasetImportView from "dashboard/dataset/dataset_import_view";
+import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
 import CreditsFooter from "components/credits_footer";
@@ -502,7 +502,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       )}
       {this.state.datasetNameToImport != null && (
         <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
-          <DatasetImportView
+          <DatasetSettingsView
             isEditingMode={false}
             datasetId={{
               name: this.state.datasetNameToImport || "",

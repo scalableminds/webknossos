@@ -51,11 +51,11 @@ import features from "features";
 import { isDatasourceJSONValid } from "types/validation";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import { Hideable, hasFormError, jsonEditStyle } from "./helper_components";
-import DefaultConfigComponent from "./default_config_component";
-import ImportGeneralComponent from "./import_general_component";
-import ImportSharingComponent from "./import_sharing_component";
-import ImportDeleteComponent from "./import_delete_component";
-import SimpleAdvancedDataForm from "./simple_advanced_data_form";
+import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
+import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
+import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
+import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
+import DatasetSettingsDataTab from "./dataset_settings_data_tab";
 
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
@@ -153,7 +153,7 @@ function ensureValidScaleOnInferredDataSource(
   return inferredDataSourceClone;
 }
 
-class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, State> {
+class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, State> {
   formRef = React.createRef<FormInstance>();
   unblock: UnregisterCallback | null | undefined;
   blockTimeoutId: number | null | undefined;
@@ -866,7 +866,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
                     // to hidden form elements.
                   }
                   <Hideable hidden={this.state.activeTabKey !== "data"}>
-                    <SimpleAdvancedDataForm
+                    <DatasetSettingsDataTab
                       key="SimpleAdvancedDataForm"
                       isReadOnlyDataset={
                         this.state.dataset != null &&
@@ -903,9 +903,10 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
                   forceRender
                 >
                   <Hideable hidden={this.state.activeTabKey !== "sharing"}>
-                    <ImportSharingComponent
+                    <DatasetSettingsSharingTab
                       form={form}
                       datasetId={this.props.datasetId}
+                      dataset={this.state.dataset}
                       hasNoAllowedTeams={hasNoAllowedTeams}
                     />
                   </Hideable>
@@ -913,7 +914,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
                 <TabPane tab={<span>Metadata</span>} key="general" forceRender>
                   <Hideable hidden={this.state.activeTabKey !== "general"}>
-                    <ImportGeneralComponent />
+                    <DatasetSettingsMetadataTab />
                   </Hideable>
                 </TabPane>
 
@@ -923,7 +924,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
                   forceRender
                 >
                   <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
-                    <DefaultConfigComponent />
+                    <DatasetSettingsViewConfigTab />
                   </Hideable>
                 </TabPane>
 
@@ -931,7 +932,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
                   <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
                     <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
                       <DatasetCacheProvider>
-                        <ImportDeleteComponent datasetId={this.props.datasetId} />
+                        <DatasetSettingsDeleteTab datasetId={this.props.datasetId} />
                       </DatasetCacheProvider>
                     </Hideable>
                   </TabPane>
@@ -961,4 +962,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetImportView));
+export default connector(withRouter<RouteComponentProps & OwnProps, any>(DatasetSettingsView));

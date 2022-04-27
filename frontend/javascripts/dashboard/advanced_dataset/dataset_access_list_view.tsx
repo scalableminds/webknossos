@@ -4,6 +4,7 @@ import type { APIDataset, APIUser } from "types/api_flow_types";
 import { getDatasetAccessList } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
+
 type Props = {
   dataset: APIDataset;
 };
@@ -66,7 +67,6 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
   renderTable() {
     return (
       <div>
-        <h5>Users with Access Rights</h5>
         <ul>
           {this.state.datasetUsers.map((user: APIUser) => (
             <li key={user.id}>

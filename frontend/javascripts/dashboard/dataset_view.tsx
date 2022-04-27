@@ -222,7 +222,6 @@ function DatasetView(props: Props) {
         searchQuery={searchQuery}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
-        isUserTeamManager={Utils.isUserTeamManager(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}

@@ -8,8 +8,10 @@ import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_con
 import { layerViewConfigurations } from "messages";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
+
 const FormItem = Form.Item;
-export default function DefaultConfigComponent() {
+
+export default function DatasetSettingsViewConfigTab() {
   const columns = [
     {
       title: "Name",

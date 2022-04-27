@@ -1,48 +1,33 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import java.io.{ByteArrayOutputStream, OutputStream}
-import java.nio.{ByteBuffer, ByteOrder}
-import java.util.Base64
-import akka.stream.scaladsl.StreamConverters
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
+
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketProvider, WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{
-  ZarrBucketProvider,
   ZarrDataLayer,
   ZarrMag,
   ZarrSegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
   DataServiceDataRequest,
-  DataServiceMappingRequest,
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.models.{
-  DataRequest,
-  ImageThumbnail,
   VoxelPosition,
-  WebKnossosDataRequest,
   _
 }
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import com.scalableminds.webknossos.wrap.{BlockType, WKWHeader}
 import io.swagger.annotations._
-import net.liftweb.common.Full
-import net.liftweb.util.Helpers.tryo
-import play.api.http.HttpEntity
-import play.api.i18n.{Messages, MessagesProvider}
+import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc._
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 @Api(tags = Array("datastore", "zarr-streaming"))

@@ -384,7 +384,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           valuePropName="fileList"
           getValueFromEvent={normFile}
         >
-          <Upload.Dragger accept=".nml,.zip" name="nmlFiles" beforeUpload={() => false}>
+          <Upload.Dragger accept=".nml,.zip" name="nmlFiles" beforeUpload={() => false} multiple>
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>

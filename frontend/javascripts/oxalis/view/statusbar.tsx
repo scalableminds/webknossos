@@ -117,7 +117,7 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
       </span>
     ) : null;
   const rightDrag =
-    actionDescriptor.rightClick != null ? (
+    actionDescriptor.rightDrag != null ? (
       <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"

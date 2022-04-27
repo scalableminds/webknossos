@@ -23,9 +23,7 @@ type Props = {
 
 function Hint({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
   return (
-    <div style={{ ...style, fontSize: 12, color: "var(--ant-text-secondary)" }}>
-      {children}
-    </div>
+    <div style={{ ...style, fontSize: 12, color: "var(--ant-text-secondary)" }}>{children}</div>
   );
 }
 
@@ -99,7 +97,7 @@ with wk.webknossos_context(token="MY_TOKEN"):
       okText="Ok"
       onOk={handleOk}
       onCancel={onOk}
-      style={{overflow: "visible"}}
+      style={{ overflow: "visible" }}
     >
       <Tabs onChange={handleTabChange} type="card">
         <TabPane tab="Download" key="1">
@@ -270,6 +268,7 @@ with wk.webknossos_context(token="MY_TOKEN"):
                   border: "none",
                   width: "18px",
                   height: "16px",
+                  background: "transparent",
                 }}
                 onClick={() => copyCodeToClipboard("pip install webknossos")}
                 icon={<CopyOutlined />}
@@ -283,6 +282,7 @@ with wk.webknossos_context(token="MY_TOKEN"):
                   border: "none",
                   width: "18px",
                   height: "16px",
+                  background: "transparent",
                 }}
                 onClick={() => copyCodeToClipboard(wklibsInitCode)}
                 icon={<CopyOutlined />}

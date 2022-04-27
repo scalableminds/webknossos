@@ -31,7 +31,6 @@ import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import {
   copyAnnotationToUserAccount,
-  downloadNml,
   finishAnnotation,
   reOpenAnnotation,
   createExplorational,
@@ -39,6 +38,7 @@ import {
 import { location } from "libs/window";
 import {
   setVersionRestoreVisibilityAction,
+  setDownloadModalVisibilityAction,
   setShareModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -56,6 +56,7 @@ import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import Model from "oxalis/model";
 import SaveButton from "oxalis/view/action-bar/save_button";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
+import DownloadModalView from "oxalis/view/action-bar/download_modal_view";
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
@@ -83,6 +84,7 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   hasTracing: boolean;
   isShareModalOpen: boolean;
+  isDownloadModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
 };
 type Props = OwnProps & StateProps;
@@ -377,10 +379,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     Store.dispatch(setShareModalVisibilityAction(false));
   };
 
-  handleDownload = async () => {
-    await Model.ensureSavedState();
-    const { annotationId, annotationType, hasVolumeFallback } = this.props;
-    downloadNml(annotationId, annotationType, hasVolumeFallback);
+  handleDownloadOpen = () => {
+    Store.dispatch(setDownloadModalVisibilityAction(true));
+  };
+
+  handleDownloadClose = () => {
+    Store.dispatch(setDownloadModalVisibilityAction(false));
   };
 
   handleFinishAndGetNextTask = async () => {
@@ -438,6 +442,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       hasTracing,
       restrictions,
       task,
+      hasVolumeFallback,
       annotationType,
       annotationId,
       activeUser,
@@ -553,10 +558,20 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
     if (restrictions.allowDownload) {
       elements.push(
-        <Menu.Item key="download-button" onClick={this.handleDownload}>
+        <Menu.Item key="download-button" onClick={this.handleDownloadOpen}>
           <DownloadOutlined />
           Download
         </Menu.Item>,
+      );
+      modals.push(
+        <DownloadModalView
+          key="download-modal"
+          isVisible={this.props.isDownloadModalOpen}
+          onOk={this.handleDownloadClose}
+          annotationType={annotationType}
+          annotationId={annotationId}
+          hasVolumeFallback={hasVolumeFallback}
+        />,
       );
     }
 
@@ -653,6 +668,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     task: state.task,
     activeUser: state.activeUser,
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
+    isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };

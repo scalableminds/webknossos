@@ -186,13 +186,13 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
         {successfulTasks.map((task) => taskToShortText(task)).join("\n")}
       </pre>
     ) : (
-      "Too many tasks to show, please use CSV download above for a full list."
+      "Too many tasks to show, please use the CSV download above for a full list."
     );
   const failedTasksContent =
     failedTasks.length <= maxDisplayedTasksCount ? (
       <pre>{failedTasksAsString}</pre>
     ) : (
-      "Too many failed tasks to show, please use CSV download for a full list."
+      "Too many failed tasks to show, please use the CSV download for a full list."
     );
   const successPlural = successfulTasks.length === 1 ? "" : "s";
   const warningsPlural = warnings.length === 1 ? "" : "s";

@@ -17,5 +17,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 
 ### Removed
+ - Removed the option to download sample-datasets. To explore webKnossos, use the public sample datasets on webknossos.org. [#6151](https://github.com/scalableminds/webknossos/pull/6151)
 
 ### Breaking Changes

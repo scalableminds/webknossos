@@ -22,7 +22,6 @@ import com.scalableminds.webknossos.datastore.models.{
   _
 }
 import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import io.swagger.annotations._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
@@ -36,19 +35,12 @@ class ZarrStreamingController @Inject()(
     config: DataStoreConfig,
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
-    mappingService: MappingService,
-    slackNotificationService: DSSlackNotificationService,
-    isosurfaceServiceHolder: IsosurfaceServiceHolder,
-    findDataService: FindDataService,
-)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+)(implicit ec: ExecutionContext)
     extends Controller {
 
   override def allowRemoteOrigin: Boolean = true
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
-  isosurfaceServiceHolder.dataStoreIsosurfaceConfig =
-    (binaryDataService, mappingService, config.Datastore.Isosurface.timeout, config.Datastore.Isosurface.actorPoolSize)
-  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.dataStoreIsosurfaceService
 
   def dataSourceFolderContents(token: Option[String],
                                organizationName: String,

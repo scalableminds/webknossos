@@ -21,14 +21,13 @@ import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import LinkButton from "components/link_button";
 import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
-import DatasetImportView from "dashboard/dataset/dataset_import_view";
+import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
 import CreditsFooter from "components/credits_footer";
-import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import Toast from "libs/toast";
 import features from "features";
-import renderIndependently from "libs/render_independently";
+
 const { Step } = Steps;
 const FormItem = Form.Item;
 type StateProps = {
@@ -389,15 +388,6 @@ class OnboardingView extends React.PureComponent<Props, State> {
       datasetNameToImport: null,
     }));
   };
-  renderSampleDatasetsModal = () => {
-    renderIndependently((destroy) => (
-      <SampleDatasetsModal
-        organizationName={this.state.organizationName}
-        destroy={destroy}
-        onOk={this.advanceStep}
-      />
-    ));
-  };
   renderCreateOrganization = () => (
     <StepHeader
       header="Create or Join an Organization"
@@ -460,11 +450,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   renderUploadDatasets = () => (
     <StepHeader
       header="Add the first dataset to your organization."
-      subheader={
-        <React.Fragment>
-          Upload your dataset via drag and drop or add one of our sample datasets.
-        </React.Fragment>
-      }
+      subheader={<React.Fragment>Upload your dataset via drag and drop.</React.Fragment>}
       icon={<FileAddOutlined className="icon-big" />}
     >
       {this.state.isDatasetUploadModalVisible && (
@@ -502,7 +488,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       )}
       {this.state.datasetNameToImport != null && (
         <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
-          <DatasetImportView
+          <DatasetSettingsView
             isEditingMode={false}
             datasetId={{
               name: this.state.datasetNameToImport || "",
@@ -534,19 +520,6 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <a href="https://docs.webknossos.org/webknossos/data_formats.html">
             Learn more about supported data formats.
           </a>
-        </OptionCard>
-        <OptionCard
-          header="Add Sample Dataset"
-          icon={<RocketOutlined />}
-          action={
-            <Button type="primary" onClick={this.renderSampleDatasetsModal}>
-              Add Sample Dataset
-            </Button>
-          }
-          height={350}
-        >
-          This is the easiest way to try out webKnossos. Add one of our sample datasets and start
-          exploring in less than a minute.
         </OptionCard>
         <OptionCard
           header="Skip"

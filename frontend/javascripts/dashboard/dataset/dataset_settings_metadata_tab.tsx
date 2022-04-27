@@ -1,7 +1,8 @@
 import { Input, Col, Row, DatePicker } from "antd";
 import React from "react";
 import { FormItemWithInfo } from "./helper_components";
-export default function ImportGeneralComponent() {
+
+export default function DatasetSettingsMetadataTab() {
   return (
     <div>
       <Row gutter={48}>

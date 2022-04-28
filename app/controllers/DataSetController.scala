@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
-import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
+import io.swagger.annotations.{Api, ApiImplicitParam, ApiOperation, ApiParam, ApiResponse, ApiResponses}
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
@@ -261,8 +261,32 @@ class DataSetController @Inject()(userService: UserService,
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def update(organizationName: String, dataSetName: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
+  @ApiOperation(
+    value =
+      """Update information for a dataset.
+Expects:
+ - As JSON object body with keys:
+  - description (optional string)
+  - displayName (optional string)
+  - sortingKey (optional long)
+  - isPublic (boolean)
+  - tags (list of string)
+ - As GET parameters:
+  - organizationName (string): url-safe name of the organization owning the dataset
+  - dataSetName (string): name of the dataset
+""",
+    nickname = "datasetUpdate"
+  )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "datasetUpdateInformation",
+                           required = true,
+                           dataTypeClass = classOf[dataSetPublicReads],
+                           paramType = "body")))
+  def update(@ApiParam(value = "The url-safe name of the organization owning the dataset",
+                       example = "sample_organization") organizationName: String,
+             @ApiParam(value = "The name of the dataset") dataSetName: String)
+    : Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
         case (description, displayName, sortingKey, isPublic, tags) =>
@@ -287,8 +311,27 @@ class DataSetController @Inject()(userService: UserService,
       }
   }
 
-  @ApiOperation(hidden = true, value = "")
-  def updateTeams(organizationName: String, dataSetName: String): Action[JsValue] =
+  @ApiOperation(
+    value = """"Update teams of a dataset
+Expects:
+ - As JSON object body:
+   List of team strings.
+ - As GET parameters:
+  - organizationName (string): url-safe name of the organization owning the dataset
+  - dataSetName (string): name of the dataset
+""",
+  nickname = "datasetUpdateTeams"
+  )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "datasetUpdateTeamsInformation",
+                           required = true,
+                           dataTypeClass = List[String],
+                           paramType = "body")))
+  def updateTeams(@ApiParam(value = "The url-safe name of the organization owning the dataset",
+                            example = "sample_organization") organizationName: String,
+                  @ApiParam(value = "The name of the dataset") dataSetName: String)
+    : Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyAs[List[String]] { teams =>
         for {
@@ -306,8 +349,14 @@ class DataSetController @Inject()(userService: UserService,
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def getSharingToken(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
+  @ApiOperation(value = "Sharing token of a dataset", nickname = "datasetSharingToken")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON object containing the key sharingToken with the sharing token string."),
+          new ApiResponse(code = 400, message = badRequestLabel)))
+  def getSharingToken(@ApiParam(value = "The url-safe name of the organization owning the dataset",
+                                example = "sample_organization") organizationName: String,
+                      @ApiParam(value = "The name of the dataset") dataSetName: String)
+    : Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         token <- dataSetService.getSharingToken(dataSetName, request.identity._organization)

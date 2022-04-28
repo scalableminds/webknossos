@@ -3,24 +3,17 @@ package models.task
 import java.io.File
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
-import models.annotation.{
-  Annotation,
-  AnnotationDAO,
-  AnnotationService,
-  AnnotationState,
-  AnnotationType,
-  WKRemoteTracingStoreClient,
-  TracingStoreService
-}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationService, AnnotationState, AnnotationType, TracingStoreService, WKRemoteTracingStoreClient}
 import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO}
@@ -51,7 +44,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     tracingStoreService: TracingStoreService,
 )(implicit ec: ExecutionContext)
     extends FoxImplicits
-    with ProtoGeometryImplicits {
+    with ProtoGeometryImplicits with LazyLogging {
 
   def assertBatchLimit(batchSize: Int, taskTypeIds: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -79,6 +72,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
       taskTypeIdValidated <- ObjectId.parse(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
+      _ = logger.info("Creating from base annotation...")
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       dataSet <- dataSetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
       baseAnnotationIdValidated <- ObjectId.parse(baseAnnotation.baseId)
@@ -406,8 +400,9 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
             case _          => savedId
           }
       }
-      volumeTracingIds: List[Box[Option[String]]] <- Fox.sequence(
-        requestedTasks.map(requestedTask => saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)))
+      volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequence(requestedTasks){
+        requestedTask => saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)
+      }
       skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), skeletonTracingIds).zipped.toList,
                                                   isSkeletonId = true)
       volumeTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), volumeTracingIds).zipped.toList,

@@ -1,7 +1,7 @@
 package models.annotation
 
 import java.io.{File, FileInputStream, InputStream}
-import java.nio.file.{Files, StandardCopyOption}
+import java.nio.file.{Files, Paths, StandardCopyOption}
 
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
@@ -12,15 +12,17 @@ import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParser, NmlResults}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
+import oxalis.security.CompactRandomIDGenerator
 import play.api.i18n.MessagesProvider
-import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
+
+import scala.concurrent.ExecutionContext
 
 case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {
-  def getDataZipFrom(otherFiles: Map[String, TemporaryFile]): Option[File] =
-    otherFiles.get(dataZipLocation).map(_.path.toFile)
+  def getDataZipFrom(otherFiles: Map[String, File]): Option[File] =
+    otherFiles.get(dataZipLocation)
 }
 
-class AnnotationUploadService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends LazyLogging {
+class AnnotationUploadService @Inject()()(implicit ec: ExecutionContext) extends LazyLogging {
 
   private def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
       implicit m: MessagesProvider): NmlParseResult =
@@ -44,13 +46,15 @@ class AnnotationUploadService @Inject()(temporaryFileCreator: TemporaryFileCreat
       case Empty                  => NmlParseEmpty(name)
     }
 
+  private val tokenValueGenerator = new CompactRandomIDGenerator
+
   def extractFromZip(file: File,
                      zipFileName: Option[String] = None,
                      useZipName: Boolean,
                      overwritingDataSetName: Option[String],
                      isTaskUpload: Boolean)(implicit m: MessagesProvider): MultiNmlParseResult = {
     val name = zipFileName getOrElse file.getName
-    var otherFiles = Map.empty[String, TemporaryFile]
+    var otherFiles = Map.empty[String, File]
     var parseResults = List.empty[NmlParseResult]
 
     ZipIO.withUnziped(file) { (filename, inputStream) =>
@@ -59,9 +63,11 @@ class AnnotationUploadService @Inject()(temporaryFileCreator: TemporaryFileCreat
           extractFromNml(inputStream, filename.toString, overwritingDataSetName, isTaskUpload, Some(file.getPath))
         parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
-        val tempFile = temporaryFileCreator.create(filename.toString)
-        Files.copy(inputStream, tempFile.path, StandardCopyOption.REPLACE_EXISTING)
-        otherFiles += (file.getPath + filename.toString -> tempFile)
+        val tempFilePath = Paths.get(f"/tmp/wk-test/${filename.toString}-${tokenValueGenerator.generate}") //TODO ensure directory, extract, use sync random number generator. clean up.
+        Files.createFile(tempFilePath)
+        Files.copy(inputStream, tempFilePath, StandardCopyOption.REPLACE_EXISTING)
+        logger.info("FILE:", file.getPath + filename.toString)
+        otherFiles += (file.getPath + filename.toString -> tempFilePath.toFile)
       }
     }
     MultiNmlParseResult(parseResults, otherFiles)
@@ -123,7 +129,7 @@ class AnnotationUploadService @Inject()(temporaryFileCreator: TemporaryFileCreat
                 acc.combineWith(
                   extractFromFiles(
                     extractFromZip(file, Some(name), useZipName, overwritingDataSetName, isTaskUpload).otherFiles.toSeq
-                      .map(tuple => (tuple._2.path.toFile, tuple._1)),
+                      .map(tuple => (tuple._2, tuple._1)),
                     useZipName,
                     overwritingDataSetName,
                     isTaskUpload

@@ -1,6 +1,7 @@
 package models.annotation
 
 import java.io.File
+import java.nio.file.Files
 
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.io.ZipIO
@@ -9,7 +10,6 @@ import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
@@ -156,11 +156,14 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
       _ <- initialData match {
         case Some(file) =>
-          rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialData").withLongTimeout
+          for {
+            bytes <- Fox.successful(Files.readAllBytes(file.toPath))
+            _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialData").withLongTimeout
             .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
             .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
             .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
-            .post(file)
+            .post(bytes)
+          } yield ()
         case _ =>
           Fox.successful(())
       }

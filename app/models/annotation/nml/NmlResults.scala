@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.libs.Files.TemporaryFile
 
 object NmlResults extends LazyLogging {
 
@@ -51,7 +50,7 @@ object NmlResults extends LazyLogging {
   }
 
   case class MultiNmlParseResult(parseResults: List[NmlParseResult] = Nil,
-                                 otherFiles: Map[String, TemporaryFile] = Map.empty) {
+                                 otherFiles: Map[String, File] = Map.empty) {
 
     def combineWith(other: MultiNmlParseResult): MultiNmlParseResult =
       MultiNmlParseResult(parseResults ::: other.parseResults, other.otherFiles ++ otherFiles)
@@ -82,7 +81,7 @@ object NmlResults extends LazyLogging {
           case Full(success) if success.volumeLayers.length <= 1 =>
             success.volumeLayers.headOption match {
               case Some(UploadedVolumeLayer(tracing, dataZipLocation, _)) =>
-                Full((tracing, otherFiles.get(dataZipLocation).map(_.path.toFile)))
+                Full((tracing, otherFiles.get(dataZipLocation)))
               case None => Empty
             }
           case Full(success) if success.volumeLayers.length > 1 =>

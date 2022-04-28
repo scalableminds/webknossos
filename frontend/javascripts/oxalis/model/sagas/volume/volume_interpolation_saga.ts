@@ -39,13 +39,6 @@ const mul = cwise({
   },
 });
 
-const avg = cwise({
-  args: ["array", "array"],
-  body: function body(a: number, b: number) {
-    a = (a + b) / 2;
-  },
-});
-
 const absMax = cwise({
   args: ["array", "array"],
   body: function body(a: number, b: number) {
@@ -232,15 +225,15 @@ export default function* maybeInterpolateSegmentationLayer(
 
   const firstSliceDists = signedDist(firstSlice);
   const lastSliceDists = signedDist(lastSlice);
-  avg(firstSliceDists, lastSliceDists);
-
-  const avgDistances = firstSliceDists;
 
   let drawnVoxels = 0;
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
-      if (avgDistances.get(u, v) < 0) {
-        for (let targetOffsetW = 1; targetOffsetW < interpolationDepth; targetOffsetW++) {
+      const firstVal = firstSliceDists.get(u, v);
+      const lastVal = lastSliceDists.get(u, v);
+      for (let targetOffsetW = 1; targetOffsetW < interpolationDepth; targetOffsetW++) {
+        const k = targetOffsetW / interpolationDepth;
+        if (firstVal * (1 - k) + lastVal * k < 0) {
           const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetW];
           voxelBuffer2D.setValue(u, v, 1);
           drawnVoxels++;

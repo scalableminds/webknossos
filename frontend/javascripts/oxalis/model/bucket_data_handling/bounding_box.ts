@@ -67,20 +67,16 @@ class BoundingBox {
   }
 
   intersectedWith(other: BoundingBox): BoundingBox {
-    const newMin = [
-      Math.max(this.min[0], other.min[0]),
-      Math.max(this.min[1], other.min[1]),
-      Math.max(this.min[2], other.min[2]),
-    ];
-    const newMax = [
-      Math.min(this.max[0], other.max[0]),
-      Math.min(this.max[1], other.max[1]),
-      Math.min(this.max[2], other.max[2]),
-    ];
+    const newMin = V3.max(this.min, other.min);
+    const uncheckedMax = V3.min(this.max, other.max);
+
+    // Ensure the bounding box does not get a negative
+    // extent.
+    const extent = V3.max(V3.sub(uncheckedMax, newMin), [0, 0, 0]);
+    const newMax = V3.add(newMin, extent);
+
     return new BoundingBox({
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       min: newMin,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max: newMax,
     });
   }

@@ -11,6 +11,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { document } from "libs/window";
 import {
+  enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
@@ -37,10 +38,14 @@ import Constants, {
   AnnotationTool,
   OverwriteMode,
   ToolsWithInterpolationCapabilities,
+  OrthoViews,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
-import { CaretUpOutlined } from "@ant-design/icons";
+import { CaretDownOutlined, CaretUpOutlined, PauseOutlined } from "@ant-design/icons";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { V3 } from "libs/mjs";
+import Dimensions from "oxalis/model/dimensions";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -214,14 +219,48 @@ function VolumeInterpolationButton() {
   const isEnabled = useSelector(
     (state: OxalisState) => state.userConfiguration.isVolumeInterpolationEnabled,
   );
+  const lastCentroid = useSelector(
+    (state: OxalisState) => enforceActiveVolumeTracing(state).lastCentroid,
+  );
+  const position = useSelector((state: OxalisState) => V3.floor(getPosition(state.flycam)));
+  const activeViewport = useSelector(
+    (state: OxalisState) => state.viewModeData.plane.activeViewport,
+  );
+  const volumeInterpolationDepth = useSelector(
+    (state: OxalisState) => state.userConfiguration.volumeInterpolationDepth,
+  );
 
   const onChange = () => {
     Store.dispatch(updateUserSettingAction("isVolumeInterpolationEnabled", !isEnabled));
   };
 
+  let interpolationState = null;
+  if (activeViewport === OrthoViews.TDView || lastCentroid == null) {
+    interpolationState = "paused";
+  } else {
+    const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
+    const depthDistance = position[thirdDim] - lastCentroid[thirdDim];
+    const absDepthDistance = Math.abs(depthDistance);
+
+    if (absDepthDistance > volumeInterpolationDepth || absDepthDistance === 1) {
+      interpolationState = "paused";
+    } else {
+      interpolationState = depthDistance > 0 ? "forward" : "backward";
+    }
+  }
+
+  const directionIcon =
+    interpolationState === "paused" ? (
+      <PauseOutlined style={{ color: "#f5222d" }} />
+    ) : interpolationState === "forward" ? (
+      <CaretUpOutlined style={{ color: "#f5222d" }} />
+    ) : (
+      <CaretDownOutlined style={{ color: "#f5222d" }} />
+    );
+
   return (
     <Badge
-      count={<CaretUpOutlined style={{ color: "#f5222d" }} />}
+      count={directionIcon}
       style={{
         boxShadow: "none",
       }}

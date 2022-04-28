@@ -151,11 +151,10 @@ class ZarrStreamingController @Inject()(
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
-                                                                                  dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> 404
-        (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> Messages("Wrong Coords") ~> 404
+                                                                                  dataLayerName) ~> 404
+        (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> 404
         parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
-        _ <- bool2Fox(c == 0) ~> Messages("Channel must be 0") ~> 404
+        _ <- bool2Fox(c == 0) ~> "zarr.invalidFirstChunkCoord" ~> 404
         cubeSize = DataLayer.bucketLength
         request = DataServiceDataRequest(
           dataSource,
@@ -200,8 +199,7 @@ class ZarrStreamingController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       getTokenFromHeader(token, request)) {
       for {
-        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-          "dataSource.notFound") ~> 404
+        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ~> 404
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.collect({
           case d: WKWDataLayer =>

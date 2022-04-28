@@ -181,9 +181,9 @@ export default function* maybeInterpolateSegmentationLayer(
     .paddedWithMargins(V3.scale(uvSize, 0.5))
     // Intersect with the viewport
     .intersectedWith(viewportBoxMag1)
-    // Also consider the n previous slices
+    // Also consider the n previous/next slices
     .paddedWithSignedMargins(
-      transpose([0, 0, directionFactor * interpolationDepth * labeledResolution[thirdDim]]),
+      transpose([0, 0, -directionFactor * interpolationDepth * labeledResolution[thirdDim]]),
     )
     .rounded();
   const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);

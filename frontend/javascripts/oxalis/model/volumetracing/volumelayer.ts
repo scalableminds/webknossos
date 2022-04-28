@@ -67,7 +67,7 @@ export class VoxelBuffer2D {
   }
 
   setValue(x: number, y: number, value: number) {
-    this.map[x * this.height + y] = value;
+    this.map[this.linearizeIndex(x, y)] = value;
   }
 
   isEmpty(): boolean {

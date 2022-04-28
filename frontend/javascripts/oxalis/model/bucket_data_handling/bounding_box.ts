@@ -159,17 +159,17 @@ class BoundingBox {
 
   /*
    * Each component of margins is used as
-   *   - a left margin IF the value is positive
-   *   - a right margin IF the value is negative (the absolute value will be
+   *   - a left margin IF the value is negative (the absolute value will be
    *     used then).
+   *   - a right margin IF the value is positive
    * For example:
    *   The expression
-   *     boundingBox.paddedWithSignedMargins([10, 0, -10])
-   *   will leftpad the X with 10 and rightpad Y with 10.
+   *     boundingBox.paddedWithSignedMargins([10, 0, -20])
+   *   will rightpad in X with 10 and leftpad in Y with 20.
    */
   paddedWithSignedMargins(margins: Vector3): BoundingBox {
-    const marginsLeft = map3((el) => (el > 0 ? el : 0), margins);
-    const marginsRight = map3((el) => (el < 0 ? -el : 0), margins);
+    const marginsLeft = map3((el) => (el < 0 ? -el : 0), margins);
+    const marginsRight = map3((el) => (el > 0 ? el : 0), margins);
 
     return this.paddedWithMargins(marginsLeft, marginsRight);
   }

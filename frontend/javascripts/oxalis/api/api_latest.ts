@@ -1425,9 +1425,6 @@ class DataApi {
     const bucketWidth = Constants.BUCKET_WIDTH;
     buckets.reverse();
 
-    console.log("cutout topLeft", topLeft);
-    console.log("cutout size", extent);
-
     for (const bucket of buckets) {
       if (bucket.type === "null") {
         continue;

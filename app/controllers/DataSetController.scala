@@ -288,7 +288,7 @@ Expects:
     Array(
       new ApiImplicitParam(name = "datasetUpdateInformation",
                            required = true,
-                           dataTypeClass = classOf[dataSetPublicReads],
+                           dataTypeClass = classOf[JsObject],
                            paramType = "body")))
   def update(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                        example = "sample_organization") organizationName: String,
@@ -330,7 +330,7 @@ Expects:
     Array(
       new ApiImplicitParam(name = "datasetUpdateTeamsInformation",
                            required = true,
-                           dataTypeClass = List[String],
+                           dataType = "List[String]",
                            paramType = "body")))
   def updateTeams(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                             example = "sample_organization") organizationName: String,

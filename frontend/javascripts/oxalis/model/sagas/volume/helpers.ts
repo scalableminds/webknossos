@@ -157,6 +157,7 @@ export function* labelWithVoxelBuffer2D(
 ): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
+  if (voxelBuffer.isEmpty()) return;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   const activeCellId = volumeTracing.activeCellId;
   const segmentationLayer = yield* call(

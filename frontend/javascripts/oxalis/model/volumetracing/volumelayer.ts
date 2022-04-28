@@ -69,6 +69,10 @@ export class VoxelBuffer2D {
   setValue(x: number, y: number, value: number) {
     this.map[x * this.height + y] = value;
   }
+
+  isEmpty(): boolean {
+    return this.width == 0 || this.height == 0;
+  }
 }
 export class VoxelNeighborQueue3D {
   queue: Array<Vector3>;
@@ -448,6 +452,14 @@ class VolumeLayer {
     const width = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[0]]);
     const height = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[1]]);
     const floatingCoord2d = this.globalCoordToMag2DFloat(position);
+
+    const radiusOffset = Dimensions.transDim([unzoomedRadius, unzoomedRadius, 0], this.plane);
+    const topLeft = V3.sub(position, radiusOffset);
+    const bottomRight = V3.add(position, radiusOffset);
+
+    this.updateArea(topLeft);
+    this.updateArea(bottomRight);
+
     const minCoord2d: Vector2 = [
       Math.floor(floatingCoord2d[0] - width / 2),
       Math.floor(floatingCoord2d[1] - height / 2),

@@ -156,7 +156,7 @@ zip.file.notFound=No or invalid ZIP file specified
 dataLayer.notFound=DataLayer “{0}” not found
 dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
 
-dataLayer.wrongMag=DataLayer “{0}“ does not have mag “{1}“
+dataLayer.wrongMag=DataLayer “{0}” does not have mag “{1}”
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"

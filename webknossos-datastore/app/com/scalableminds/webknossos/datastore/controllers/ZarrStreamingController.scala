@@ -261,7 +261,7 @@ class ZarrStreamingController @Inject()(
   }
 
   private def getTokenFromHeader(token: Option[String], request: Request[AnyContent]) =
-    token or request.headers.get("X-Auth-Token")
+    token.orElse(request.headers.get("X-Auth-Token"))
 
   private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] = {
     val singleRx = "\\s*([0-9]+)\\s*".r

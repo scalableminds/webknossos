@@ -6,21 +6,14 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{
-  ZarrDataLayer,
-  ZarrMag,
-  ZarrSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
   DataServiceDataRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.{
-  VoxelPosition,
-  _
-}
+import com.scalableminds.webknossos.datastore.models.{VoxelPosition, _}
 import com.scalableminds.webknossos.datastore.services._
 import io.swagger.annotations._
 import play.api.i18n.Messages
@@ -228,7 +221,7 @@ class ZarrStreamingController @Inject()(
               largestSegmentId = s.largestSegmentId,
               numChannels = if (s.elementClass == ElementClass.uint24) 3 else 1
             )
-          case z: ZarrDataLayer => z
+          case z: ZarrDataLayer          => z
           case zs: ZarrSegmentationLayer => zs
         })
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)

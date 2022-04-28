@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.{VoxelPosition, _}
+import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.services._
 import io.swagger.annotations._
 import play.api.i18n.Messages

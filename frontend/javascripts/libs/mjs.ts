@@ -176,7 +176,6 @@ const M4x4 = {
 
 const V2 = {
   ...BareV2,
-  // scale2(a: Vector2, k: Vector2, r?: Vector2): Vector2;
   scale2(a: Vector2, k: Vector2, r?: Vector2Like): Vector2Like {
     if (r == null) r = new Float32Array(2);
     r[0] = a[0] * k[0];

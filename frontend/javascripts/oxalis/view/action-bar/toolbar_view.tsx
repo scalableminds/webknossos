@@ -11,7 +11,6 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { document } from "libs/window";
 import {
-  enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
@@ -42,9 +41,7 @@ import Constants, {
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
-import { CaretDownOutlined, CaretUpOutlined, PauseOutlined } from "@ant-design/icons";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { V3 } from "libs/mjs";
+import { CaretDownOutlined, CaretUpOutlined } from "@ant-design/icons";
 import Dimensions from "oxalis/model/dimensions";
 
 const narrowButtonStyle = {
@@ -219,44 +216,25 @@ function VolumeInterpolationButton() {
   const isEnabled = useSelector(
     (state: OxalisState) => state.userConfiguration.isVolumeInterpolationEnabled,
   );
-  const lastCentroid = useSelector(
-    (state: OxalisState) => enforceActiveVolumeTracing(state).lastCentroid,
-  );
-  const position = useSelector((state: OxalisState) => V3.floor(getPosition(state.flycam)));
+  const spaceDirectionOrtho = useSelector((state: OxalisState) => state.flycam.spaceDirectionOrtho);
   const activeViewport = useSelector(
     (state: OxalisState) => state.viewModeData.plane.activeViewport,
-  );
-  const volumeInterpolationDepth = useSelector(
-    (state: OxalisState) => state.userConfiguration.volumeInterpolationDepth,
   );
 
   const onChange = () => {
     Store.dispatch(updateUserSettingAction("isVolumeInterpolationEnabled", !isEnabled));
   };
 
-  let interpolationState = null;
-  if (activeViewport === OrthoViews.TDView || lastCentroid == null) {
-    interpolationState = "paused";
-  } else {
+  let directionIcon = null;
+  if (isEnabled && activeViewport !== OrthoViews.TDView) {
     const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
-    const depthDistance = position[thirdDim] - lastCentroid[thirdDim];
-    const absDepthDistance = Math.abs(depthDistance);
-
-    if (absDepthDistance > volumeInterpolationDepth || absDepthDistance === 1) {
-      interpolationState = "paused";
-    } else {
-      interpolationState = depthDistance > 0 ? "forward" : "backward";
-    }
+    directionIcon =
+      spaceDirectionOrtho[thirdDim] > 0 ? (
+        <CaretUpOutlined style={{ color: "#f1f1f1" }} />
+      ) : (
+        <CaretDownOutlined style={{ color: "#f1f1f1" }} />
+      );
   }
-
-  const directionIcon =
-    interpolationState === "paused" ? (
-      <PauseOutlined style={{ color: "#f5222d" }} />
-    ) : interpolationState === "forward" ? (
-      <CaretUpOutlined style={{ color: "#f5222d" }} />
-    ) : (
-      <CaretDownOutlined style={{ color: "#f5222d" }} />
-    );
 
   return (
     <Badge
@@ -265,7 +243,7 @@ function VolumeInterpolationButton() {
         boxShadow: "none",
       }}
     >
-      <Tooltip title="When enabled, it suffices to only label every n-th slice in the XY viewport. The skipped slices will be filled automatically by interpolating between the labeled slices.">
+      <Tooltip title="When enabled, it suffices to only label every n-th slice in the XY viewport. The skipped slices will be filled automatically by interpolating between the labeled slices. The little arrow indicates whether you are currently labeling with increasing or decreasing X/Y/Z.">
         <Button
           type={isEnabled ? "primary" : "default"}
           icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}

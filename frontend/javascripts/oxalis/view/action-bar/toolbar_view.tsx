@@ -40,6 +40,7 @@ import Constants, {
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
+import { CaretUpOutlined } from "@ant-design/icons";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -219,14 +220,21 @@ function VolumeInterpolationButton() {
   };
 
   return (
-    <Tooltip title="When enabled, it suffices to only label every n-th slice in the XY viewport. The skipped slices will be filled automatically by interpolating between the labeled slices.">
-      <Button
-        type={isEnabled ? "primary" : "default"}
-        icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
-        onClick={onChange}
-        style={{ marginLeft: 12 }}
-      />
-    </Tooltip>
+    <Badge
+      count={<CaretUpOutlined style={{ color: "#f5222d" }} />}
+      style={{
+        boxShadow: "none",
+      }}
+    >
+      <Tooltip title="When enabled, it suffices to only label every n-th slice in the XY viewport. The skipped slices will be filled automatically by interpolating between the labeled slices.">
+        <Button
+          type={isEnabled ? "primary" : "default"}
+          icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
+          onClick={onChange}
+          style={{ marginLeft: 12 }}
+        />
+      </Tooltip>
+    </Badge>
   );
 }
 

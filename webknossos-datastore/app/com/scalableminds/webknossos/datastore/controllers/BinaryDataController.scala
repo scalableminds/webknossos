@@ -10,13 +10,6 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketProvider, WKWDataLayer, WKWSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{
-  ZarrBucketProvider,
-  ZarrDataLayer,
-  ZarrMag,
-  ZarrSegmentationLayer
-}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -33,17 +26,15 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import com.scalableminds.webknossos.wrap.{BlockType, WKWHeader}
-import io.swagger.annotations._
-import net.liftweb.common.Full
+import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, ResponseHeader, Result}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Api(tags = Array("datastore"))
 class BinaryDataController @Inject()(
@@ -241,7 +232,7 @@ class BinaryDataController @Inject()(
         imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, dataRequest, imagesPerRow, blackAndWhite = false)
       } yield {
         Result(
-          header = play.api.mvc.ResponseHeader(200),
+          header = ResponseHeader(200),
           body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream =>
             imageProvider(outputStream)
           }, None, Some(contentTypeJpeg))
@@ -281,7 +272,7 @@ class BinaryDataController @Inject()(
         imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, dataRequest, 1, blackAndWhite)
       } yield {
         Result(
-          header = play.api.mvc.ResponseHeader(200),
+          header = ResponseHeader(200),
           body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream =>
             imageProvider(outputStream)
           }, None, Some(contentTypeJpeg))
@@ -318,7 +309,7 @@ class BinaryDataController @Inject()(
                                                        zoom)
       } yield {
         Result(
-          header = play.api.mvc.ResponseHeader(200),
+          header = ResponseHeader(200),
           body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream =>
             thumbnailProvider(outputStream)
           }, None, Some(contentTypeJpeg))

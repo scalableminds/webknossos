@@ -243,7 +243,7 @@ function VolumeInterpolationButton() {
         boxShadow: "none",
       }}
     >
-      <Tooltip title="When enabled, it suffices to only label every n-th slice in the XY viewport. The skipped slices will be filled automatically by interpolating between the labeled slices. The little arrow indicates whether you are currently labeling with increasing or decreasing X/Y/Z.">
+      <Tooltip title="When enabled, it suffices to only label every n-th slice. The skipped slices will be filled automatically by interpolating between the labeled slices. The little arrow indicates whether you are currently labeling with increasing or decreasing X/Y/Z.">
         <Button
           type={isEnabled ? "primary" : "default"}
           icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}

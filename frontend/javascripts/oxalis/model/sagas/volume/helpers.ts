@@ -47,8 +47,14 @@ export function* getBoundingBoxForViewport(
   );
 
   const currentViewportBounding = {
-    min: V3.sub(position, [halfViewportExtentX, halfViewportExtentY, 0]),
-    max: V3.add(position, [halfViewportExtentX, halfViewportExtentY, 1]),
+    min: V3.sub(
+      position,
+      Dimensions.transDim([halfViewportExtentX, halfViewportExtentY, 0], currentViewport),
+    ),
+    max: V3.add(
+      position,
+      Dimensions.transDim([halfViewportExtentX, halfViewportExtentY, 1], currentViewport),
+    ),
   };
 
   const { lowerBoundary, upperBoundary } = yield* select((state) => getBoundaries(state.dataset));

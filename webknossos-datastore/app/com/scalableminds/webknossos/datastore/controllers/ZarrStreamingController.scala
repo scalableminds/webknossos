@@ -205,12 +205,14 @@ class ZarrStreamingController @Inject()(
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.collect({
           case d: WKWDataLayer =>
-            ZarrDataLayer(d.name,
-                          d.category,
-                          d.boundingBox,
-                          d.elementClass,
-                          d.resolutions.map(x => ZarrMag(x, None, None)),
-                          numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1))
+            ZarrDataLayer(
+              d.name,
+              d.category,
+              d.boundingBox,
+              d.elementClass,
+              d.resolutions.map(x => ZarrMag(x, None, None)),
+              numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
+            )
           case s: WKWSegmentationLayer =>
             ZarrSegmentationLayer(
               s.name,
@@ -221,13 +223,15 @@ class ZarrStreamingController @Inject()(
               largestSegmentId = s.largestSegmentId,
               numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
             )
-          case z: ZarrDataLayer          =>
-            ZarrDataLayer(z.name,
+          case z: ZarrDataLayer =>
+            ZarrDataLayer(
+              z.name,
               z.category,
               z.boundingBox,
               z.elementClass,
               z.resolutions.map(x => ZarrMag(x, None, None)),
-              numChannels = Some(if (z.elementClass == ElementClass.uint24) 3 else 1))
+              numChannels = Some(if (z.elementClass == ElementClass.uint24) 3 else 1)
+            )
           case zs: ZarrSegmentationLayer =>
             ZarrSegmentationLayer(
               zs.name,

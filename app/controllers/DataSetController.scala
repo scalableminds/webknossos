@@ -262,8 +262,7 @@ class DataSetController @Inject()(userService: UserService,
     }
 
   @ApiOperation(
-    value =
-      """Update information for a dataset.
+    value = """Update information for a dataset.
 Expects:
  - As JSON object body with keys:
   - description (optional string)
@@ -285,17 +284,14 @@ Expects:
                            paramType = "body")))
   def update(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                        example = "sample_organization") organizationName: String,
-             @ApiParam(value = "The name of the dataset") dataSetName: String)
-    : Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
+             @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
+    sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
         case (description, displayName, sortingKey, isPublic, tags) =>
           for {
-            dataSet <- dataSetDAO
-              .findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
+            dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
               dataSetName) ~> NOT_FOUND
-            _ <- Fox
-              .assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
             _ <- dataSetDAO.updateFields(dataSet._id,
                                          description,
                                          displayName,
@@ -309,7 +305,7 @@ Expects:
             js <- dataSetService.publicWrites(updated, Some(request.identity), organization, dataStore)
           } yield Ok(Json.toJson(js))
       }
-  }
+    }
 
   @ApiOperation(
     value = """"Update teams of a dataset
@@ -320,7 +316,7 @@ Expects:
   - organizationName (string): url-safe name of the organization owning the dataset
   - dataSetName (string): name of the dataset
 """,
-  nickname = "datasetUpdateTeams"
+    nickname = "datasetUpdateTeams"
   )
   @ApiImplicitParams(
     Array(
@@ -330,8 +326,7 @@ Expects:
                            paramType = "body")))
   def updateTeams(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                             example = "sample_organization") organizationName: String,
-                  @ApiParam(value = "The name of the dataset") dataSetName: String)
-    : Action[JsValue] =
+                  @ApiParam(value = "The name of the dataset") dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyAs[List[String]] { teams =>
         for {
@@ -351,17 +346,19 @@ Expects:
 
   @ApiOperation(value = "Sharing token of a dataset", nickname = "datasetSharingToken")
   @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON object containing the key sharingToken with the sharing token string."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
+    Array(
+      new ApiResponse(code = 200,
+                      message = "JSON object containing the key sharingToken with the sharing token string."),
+      new ApiResponse(code = 400, message = badRequestLabel)
+    ))
   def getSharingToken(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                                 example = "sample_organization") organizationName: String,
-                      @ApiParam(value = "The name of the dataset") dataSetName: String)
-    : Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
+                      @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
       for {
         token <- dataSetService.getSharingToken(dataSetName, request.identity._organization)
       } yield Ok(Json.obj("sharingToken" -> token.trim))
-  }
+    }
 
   @ApiOperation(hidden = true, value = "")
   def deleteSharingToken(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {

@@ -6,7 +6,15 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
-import io.swagger.annotations.{Api, ApiImplicitParam, ApiOperation, ApiParam, ApiResponse, ApiResponses}
+import io.swagger.annotations.{
+  Api,
+  ApiImplicitParam,
+  ApiImplicitParams,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiResponses
+}
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}

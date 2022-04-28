@@ -210,7 +210,7 @@ class ZarrStreamingController @Inject()(
                           d.boundingBox,
                           d.elementClass,
                           d.resolutions.map(x => ZarrMag(x, None, None)),
-                          numChannels = if (d.elementClass == ElementClass.uint24) 3 else 1)
+                          numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1))
           case s: WKWSegmentationLayer =>
             ZarrSegmentationLayer(
               s.name,
@@ -219,10 +219,25 @@ class ZarrStreamingController @Inject()(
               s.resolutions.map(x => ZarrMag(x, None, None)),
               mappings = s.mappings,
               largestSegmentId = s.largestSegmentId,
-              numChannels = if (s.elementClass == ElementClass.uint24) 3 else 1
+              numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
             )
-          case z: ZarrDataLayer          => z
-          case zs: ZarrSegmentationLayer => zs
+          case z: ZarrDataLayer          =>
+            ZarrDataLayer(z.name,
+              z.category,
+              z.boundingBox,
+              z.elementClass,
+              z.resolutions.map(x => ZarrMag(x, None, None)),
+              numChannels = Some(if (z.elementClass == ElementClass.uint24) 3 else 1))
+          case zs: ZarrSegmentationLayer =>
+            ZarrSegmentationLayer(
+              zs.name,
+              zs.boundingBox,
+              zs.elementClass,
+              zs.resolutions.map(x => ZarrMag(x, None, None)),
+              mappings = zs.mappings,
+              largestSegmentId = zs.largestSegmentId,
+              numChannels = Some(if (zs.elementClass == ElementClass.uint24) 3 else 1)
+            )
         })
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))

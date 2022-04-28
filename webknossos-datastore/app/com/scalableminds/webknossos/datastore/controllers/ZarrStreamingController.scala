@@ -190,7 +190,7 @@ class ZarrStreamingController @Inject()(
   }
 
   /**
-    * Get the datasource-properties.json file for a datasource via a HTTP GET request.
+    * Zarr-specific datasource-properties.json file for a datasource. Note that the result here is not necessarily equal to the file used in the underlying storage.
     */
   def dataSource(
       token: Option[String],

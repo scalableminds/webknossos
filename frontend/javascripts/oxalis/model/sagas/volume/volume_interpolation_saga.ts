@@ -111,7 +111,9 @@ export default function* maybeInterpolateSegmentationLayer(
   }
 
   const isVolumeInterpolationEnabled = yield* select(
-    (state) => state.userConfiguration.isVolumeInterpolationEnabled,
+    (state) =>
+      state.userConfiguration.isVolumeInterpolationEnabled &&
+      state.tracing.restrictions.volumeInterpolationAllowed,
   );
 
   if (!isVolumeInterpolationEnabled) {

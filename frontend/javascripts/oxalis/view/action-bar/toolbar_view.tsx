@@ -213,6 +213,10 @@ function OverwriteModeSwitch({
 }
 
 function VolumeInterpolationButton() {
+  const isAllowed = useSelector(
+    (state: OxalisState) => state.tracing.restrictions.volumeInterpolationAllowed,
+  );
+
   const isEnabled = useSelector(
     (state: OxalisState) => state.userConfiguration.isVolumeInterpolationEnabled,
   );
@@ -226,7 +230,7 @@ function VolumeInterpolationButton() {
   };
 
   let directionIcon = null;
-  if (isEnabled && activeViewport !== OrthoViews.TDView) {
+  if (isEnabled && isAllowed && activeViewport !== OrthoViews.TDView) {
     const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
     directionIcon =
       spaceDirectionOrtho[thirdDim] > 0 ? (
@@ -244,8 +248,15 @@ function VolumeInterpolationButton() {
         zIndex: 1000,
       }}
     >
-      <Tooltip title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices. The little arrow indicates whether you are currently labeling with increasing or decreasing X/Y/Z.">
+      <Tooltip
+        title={
+          isAllowed
+            ? "When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices. The little arrow indicates whether you are currently labeling with increasing or decreasing X/Y/Z."
+            : "Volume Interpolation was disabled for this annotation."
+        }
+      >
         <Button
+          disabled={!isAllowed}
           type={isEnabled ? "primary" : "default"}
           icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
           onClick={onChange}

@@ -88,6 +88,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           r.settingsPreferredmode,
           r.settingsBranchpointsallowed,
           r.settingsSomaclickingallowed,
+          r.settingsVolumeinterpolationallowed,
           r.settingsMergermode,
           ResolutionRestrictions(r.settingsResolutionrestrictionsMin, r.settingsResolutionrestrictionsMax)
         ),
@@ -134,7 +135,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(sqlu"""insert into webknossos.taskTypes(
                           _id, _organization, _team, summary, description, settings_allowedModes, settings_preferredMode,
-                          settings_branchPointsAllowed, settings_somaClickingAllowed, settings_mergerMode,
+                          settings_branchPointsAllowed, settings_somaClickingAllowed, settings_volumeInterpolationAllowed, settings_mergerMode,
                           settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
                        values(${t._id.id}, $organizationId, ${t._team.id}, ${t.summary}, ${t.description},
@@ -142,6 +143,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                               #${optionLiteral(t.settings.preferredMode.map(sanitize))},
                               ${t.settings.branchPointsAllowed},
                               ${t.settings.somaClickingAllowed},
+                              ${t.settings.volumeInterpolationAllowed},
                               ${t.settings.mergerMode},
                               #${optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))},
                               #${optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))},
@@ -167,6 +169,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                          settings_preferredMode = #${optionLiteral(t.settings.preferredMode.map(sanitize))},
                          settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
                          settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
+                         settings_volumeInterpolationAllowed = ${t.settings.volumeInterpolationAllowed},
                          settings_mergerMode = ${t.settings.mergerMode},
                          settings_resolutionRestrictions_min = #$resolutionMinLiteral,
                            settings_resolutionRestrictions_max = #$resolutionMaxLiteral,

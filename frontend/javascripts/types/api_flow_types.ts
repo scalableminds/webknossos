@@ -212,6 +212,7 @@ export type APISettings = {
   readonly preferredMode?: APIAllowedMode;
   readonly branchPointsAllowed: boolean;
   readonly somaClickingAllowed: boolean;
+  readonly volumeInterpolationAllowed?: boolean;
   readonly mergerMode?: boolean;
   readonly resolutionRestrictions: APIResolutionRestrictions;
 };

@@ -193,6 +193,8 @@ export const annotation: APIAnnotation = {
     allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
+    volumeInterpolationAllowed: false,
+    mergerMode: false,
     resolutionRestrictions: {},
   },
   tags: ["ROI2017_wkw", "skeleton"],

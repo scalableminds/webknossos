@@ -6,6 +6,7 @@ import {
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
+import { APIAllowedMode } from "types/api_flow_types";
 test.before("Change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);
@@ -38,13 +39,13 @@ test("createTaskType and deleteTaskType", async (t) => {
       somaClickingAllowed: true,
       branchPointsAllowed: true,
       mergerMode: false,
-      allowedModes: ["orthogonal"],
+      volumeInterpolationAllowed: false,
+      allowedModes: ["orthogonal" as APIAllowedMode],
       resolutionRestrictions: {},
     },
     recommendedConfiguration: null,
-    tracingType: "skeleton",
+    tracingType: "skeleton" as "skeleton",
   };
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ id: null; summary: string; des... Remove this comment to see the full error message
   const createdTaskType = await api.createTaskType(newTaskType);
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting

@@ -106,6 +106,8 @@ export const annotation: APIAnnotation = {
     allowedModes: ["volume"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
+    volumeInterpolationAllowed: false,
+    mergerMode: false,
     resolutionRestrictions: {},
   },
   tags: ["ROI2017_wkw", "volume"],

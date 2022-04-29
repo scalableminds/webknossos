@@ -24,6 +24,7 @@ import {
   getResolutionUnion,
   hasSegmentation,
   isElementClassSupported,
+  isSegmentationLayer,
   getSegmentationLayers,
   getSegmentationLayerByNameOrFallbackName,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -156,7 +157,7 @@ export async function initialize(
     displayedVolumeTracings,
     getSharingToken(),
   );
-  applyAnnotationSpecificViewConfigurationInplace(annotation, initialDatasetSettings);
+  applyAnnotationSpecificViewConfigurationInplace(annotation, dataset, initialDatasetSettings);
   initializeSettings(initialUserSettings, initialDatasetSettings);
   let initializationInformation = null;
 
@@ -479,7 +480,7 @@ function setupLayerForVolumeTracing(
   // layers, we cannot render both at the same time. Hiding the existing segmentation
   // layer would be good, but this information is stored per dataset and not per annotation
   // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
-  const newLayers = originalLayers.filter((layer) => layer.category !== "segmentation");
+  const newLayers = originalLayers.slice(); // .filter((layer) => layer.category !== "segmentation");
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -493,7 +494,7 @@ function setupLayerForVolumeTracing(
       (layer) => layer.name === tracing.fallbackLayer,
     );
 
-    const fallbackLayer = originalLayers[fallbackLayerIndex];
+    const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
     const boundaries = getBoundaries(dataset);
     const resolutions = tracing.resolutions || [];
     const tracingHasResolutionList = resolutions.length > 0;
@@ -517,7 +518,11 @@ function setupLayerForVolumeTracing(
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
     };
-    newLayers.push(tracingLayer);
+    if (fallbackLayerIndex > -1) {
+      newLayers[fallbackLayerIndex] = tracingLayer;
+    } else {
+      newLayers.push(tracingLayer);
+    }
   }
 
   return newLayers;
@@ -726,6 +731,7 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
 
 function applyAnnotationSpecificViewConfigurationInplace(
   annotation: APIAnnotation | null | undefined,
+  dataset: APIDataset,
   initialDatasetSettings: DatasetConfiguration,
 ) {
   /*
@@ -733,12 +739,33 @@ function applyAnnotationSpecificViewConfigurationInplace(
   per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled" information per
   layer which should override the isDisabled information in DatasetConfiguration.
   */
-  if (annotation && annotation.viewConfiguration) {
+
+  // todo ?
+
+  if (!annotation) {
+    return;
+  }
+
+  if (annotation.viewConfiguration) {
     for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
       _.merge(
         initialDatasetSettings.layers[layerName],
         annotation.viewConfiguration.layers[layerName],
       );
+    }
+  } else {
+    const firstVolumeLayer = _.first(
+      annotation.annotationLayers.filter((layer) => layer.typ === "Volume"),
+    );
+    if (firstVolumeLayer && firstVolumeLayer.name) {
+      for (const layerName of Object.keys(initialDatasetSettings.layers)) {
+        if (isSegmentationLayer(dataset, layerName)) {
+          initialDatasetSettings.layers[layerName].isDisabled = true;
+        }
+      }
+
+      // don't store this for the dataset in general
+      initialDatasetSettings.layers[firstVolumeLayer.tracingId].isDisabled = false;
     }
   }
 }

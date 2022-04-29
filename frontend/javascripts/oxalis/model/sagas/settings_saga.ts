@@ -36,6 +36,7 @@ function* pushDatasetSettingsAsync(): Saga<void> {
       SETTINGS_RETRY_DELAY,
       updateDatasetConfiguration,
       dataset,
+      // mask updates to layer visibility here if this is an annotation?
       datasetConfiguration,
     );
   } catch (error) {

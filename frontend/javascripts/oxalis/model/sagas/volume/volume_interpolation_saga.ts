@@ -168,7 +168,6 @@ export default function* maybeInterpolateSegmentationLayer(
 
   const transpose = (vector: Vector3) => Dimensions.transDim(vector, activeViewport);
 
-  console.time("Interpolate segmentation");
   const uvSize = V3.scale3(drawnBoundingBoxMag1.getSize(), transpose([1, 1, 0]));
   const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
   const relevantBoxMag1 = drawnBoundingBoxMag1
@@ -183,17 +182,12 @@ export default function* maybeInterpolateSegmentationLayer(
     .rounded();
   const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);
 
-  console.time("Get Data");
   const inputData = yield* call(
     [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     relevantBoxMag1,
     labeledZoomStep,
   );
-
-  console.timeEnd("Get Data");
-
-  console.time("Iterate over data");
 
   const size = relevantBoxCurrentMag.getSize();
   const stride = [1, size[0], size[0] * size[1]];
@@ -228,25 +222,21 @@ export default function* maybeInterpolateSegmentationLayer(
   const firstSliceDists = signedDist(firstSlice);
   const lastSliceDists = signedDist(lastSlice);
 
-  let drawnVoxels = 0;
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
       const firstVal = firstSliceDists.get(u, v);
       const lastVal = lastSliceDists.get(u, v);
       for (let targetOffsetW = 1; targetOffsetW < interpolationDepth; targetOffsetW++) {
         const k = targetOffsetW / interpolationDepth;
-        if (firstVal * (1 - k) + lastVal * k < 0) {
+        const weightedAverage = firstVal * (1 - k) + lastVal * k;
+        if (weightedAverage < 0) {
           const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetW];
           voxelBuffer2D.setValue(u, v, 1);
-          drawnVoxels++;
         }
       }
     }
   }
-  console.log("drawnVoxels", drawnVoxels);
-  console.timeEnd("Iterate over data");
 
-  console.time("Apply VoxelBuffer2D");
   for (const voxelBuffer of Object.values(interpolationVoxelBuffers)) {
     yield* call(
       labelWithVoxelBuffer2D,
@@ -256,8 +246,4 @@ export default function* maybeInterpolateSegmentationLayer(
       labeledZoomStep,
     );
   }
-  console.timeEnd("Apply VoxelBuffer2D");
-
-  console.timeEnd("Interpolate segmentation");
-  console.log("");
 }

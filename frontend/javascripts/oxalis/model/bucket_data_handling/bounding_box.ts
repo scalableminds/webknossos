@@ -72,7 +72,7 @@ class BoundingBox {
 
     // Ensure the bounding box does not get a negative
     // extent.
-    const newMax = V3.max(newMin, uncheckedMax)
+    const newMax = V3.max(newMin, uncheckedMax);
 
     return new BoundingBox({
       min: newMin,

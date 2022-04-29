@@ -17,7 +17,7 @@ case class AnnotationSettings(
     preferredMode: Option[String] = None,
     branchPointsAllowed: Boolean = true,
     somaClickingAllowed: Boolean = true,
-    volumeInterpolationAllowed: Boolean = true,
+    volumeInterpolationAllowed: Boolean = false,
     mergerMode: Boolean = false,
     resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty
 )

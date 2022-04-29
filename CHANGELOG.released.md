@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [22.05.1](https://github.com/scalableminds/webknossos/releases/tag/22.05.1) - 2022-04-29
+[Commits](https://github.com/scalableminds/webknossos/compare/22.05.0...22.05.1)
+
+### Fixed
+- Fixed applying recommended settings when starting a task which provides recommended settings. [#6175](https://github.com/scalableminds/webknossos/pull/6175)
+
+### Removed
+ - Removed the option to download sample-datasets. To explore webKnossos, use the public sample datasets on webknossos.org. [#6151](https://github.com/scalableminds/webknossos/pull/6151)
+
+### Breaking Changes
+
+
 ## [22.05.0](https://github.com/scalableminds/webknossos/releases/tag/22.05.0) - 2022-04-26
 [Commits](https://github.com/scalableminds/webknossos/compare/22.04.0...22.05.0)
 

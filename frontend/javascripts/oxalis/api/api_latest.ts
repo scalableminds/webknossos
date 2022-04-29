@@ -1297,6 +1297,9 @@ class DataApi {
     return bucket;
   }
 
+  /*
+   * Deprecated! Use getDataForBoundingBox instead whose name describes its interface correctly.
+   */
   async getDataFor2DBoundingBox(
     layerName: string,
     bbox: BoundingBoxType,
@@ -1305,6 +1308,11 @@ class DataApi {
     return this.getDataForBoundingBox(layerName, bbox, _zoomStep);
   }
 
+  /*
+   * For the provided layer name and bounding box, an array is constructed with the actual data.
+   * By default, the finest existent quality is chosen, but the quality can be adapted via the
+   * zoomStep parameter.
+   */
   async getDataForBoundingBox(
     layerName: string,
     bbox: BoundingBoxType,

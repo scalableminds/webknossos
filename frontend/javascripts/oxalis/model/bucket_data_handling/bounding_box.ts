@@ -72,8 +72,7 @@ class BoundingBox {
 
     // Ensure the bounding box does not get a negative
     // extent.
-    const extent = V3.max(V3.sub(uncheckedMax, newMin), [0, 0, 0]);
-    const newMax = V3.add(newMin, extent);
+    const newMax = V3.max(newMin, uncheckedMax)
 
     return new BoundingBox({
       min: newMin,
@@ -161,7 +160,7 @@ class BoundingBox {
    * For example:
    *   The expression
    *     boundingBox.paddedWithSignedMargins([10, 0, -20])
-   *   will rightpad in X with 10 and leftpad in Y with 20.
+   *   will rightpad in X with 10 and leftpad in Z with 20.
    */
   paddedWithSignedMargins(margins: Vector3): BoundingBox {
     const marginsLeft = map3((el) => (el < 0 ? -el : 0), margins);

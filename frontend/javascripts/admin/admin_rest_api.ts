@@ -1083,6 +1083,7 @@ function startSegmentationAnnotationDependentJob(
   newDatasetName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
+  outputSegmentationLayerName?: string,
 ): Promise<APIJob> {
   const requestURL = new URL(
     `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}`,
@@ -1096,6 +1097,9 @@ function startSegmentationAnnotationDependentJob(
   requestURL.searchParams.append("annotationId", annotationId);
   requestURL.searchParams.append("annotationType", annotationType);
   requestURL.searchParams.append("newDatasetName", newDatasetName);
+  if (outputSegmentationLayerName != null) {
+    requestURL.searchParams.append("outputSegmentationLayerName", outputSegmentationLayerName);
+  }
   return Request.receiveJSON(requestURL.href, {
     method: "POST",
   });
@@ -1128,6 +1132,7 @@ export function startApplyMergerModeJob(
   fallbackLayerName: string,
   volumeLayerName: string | null | undefined,
   newDatasetName: string,
+  outputSegmentationLayerName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIJob> {
@@ -1140,6 +1145,7 @@ export function startApplyMergerModeJob(
     newDatasetName,
     annotationId,
     annotationType,
+    outputSegmentationLayerName,
   );
 }
 

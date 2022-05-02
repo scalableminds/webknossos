@@ -273,6 +273,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
                             annotationId: String,
                             annotationType: String,
                             newDatasetName: String,
+                            outputSegmentationLayerName: String,
                             volumeLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -293,6 +294,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
             "user_auth_token" -> userAuthToken.id,
             "annotation_id" -> annotationId,
+            "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "annotation_type" -> annotationType,
             "new_dataset_name" -> newDatasetName,
             "volume_layer_name" -> volumeLayerName

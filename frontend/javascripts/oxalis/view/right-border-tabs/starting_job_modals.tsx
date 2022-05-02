@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import type { APIJob, APIDataLayer } from "types/api_flow_types";
 import { Modal, Select, Button, Form, Input } from "antd";
 import {
@@ -179,38 +179,42 @@ type OutputSegmentationLayerNameProps = {
   layers: APIDataLayer[];
   additionalAllowedNames: string[];
 };
-type ValidateStatus = Parameters<typeof Form.Item>[0]["validateStatus"];
 
 function OutputSegmentationLayerNameFormItem({
   hasOutputSegmentationLayer,
   layers,
   additionalAllowedNames,
 }: OutputSegmentationLayerNameProps) {
-  const [validationStatus, setValidationStatus] = useState<ValidateStatus>("success");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  function validateSegmentationLayerName(event: React.ChangeEvent<HTMLInputElement>) {
-    const newOutputLayerName = event.target.value;
-    if (
-      layers.some((layer) => layer.name === newOutputLayerName) &&
-      !additionalAllowedNames.includes(newOutputLayerName)
-    ) {
-      setValidationStatus("error");
-      setErrorMessage("This name is already used by another segmentation layer of this dataset.");
-    } else {
-      setValidationStatus("success");
-      setErrorMessage(null);
-    }
-  }
   return (
     <Form.Item
       label="Name of output segmentation layer"
       name="outputSegmentationLayerName"
-      validateStatus={validationStatus}
-      help={errorMessage}
-      rules={[{ required: hasOutputSegmentationLayer }]}
+      rules={[
+        { required: hasOutputSegmentationLayer },
+        {
+          min: 3,
+        },
+        {
+          pattern: /[0-9a-zA-Z_-]+$/,
+        },
+        {
+          validator: async (_rule, newOutputLayerName) => {
+            if (
+              layers.some((layer) => layer.name === newOutputLayerName) &&
+              !additionalAllowedNames.includes(newOutputLayerName)
+            ) {
+              const reason =
+                "This name is already used by another segmentation layer of this dataset.";
+              return Promise.reject(reason);
+            } else {
+              return Promise.resolve();
+            }
+          },
+        },
+      ]}
       hidden={!hasOutputSegmentationLayer}
     >
-      <Input onChange={validateSegmentationLayerName} />
+      <Input />
     </Form.Item>
   );
 }
@@ -442,7 +446,14 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
       suggestedDatasetSuffix="with_merged_segmentation"
       chooseSegmentationLayer
       fixedSelectedLayer={activeSegmentationTracingLayer}
-      jobApiCall={async ({ newDatasetName, selectedLayer: segmentationLayer }) => {
+      jobApiCall={async ({
+        newDatasetName,
+        selectedLayer: segmentationLayer,
+        outputSegmentationLayerName,
+      }) => {
+        if (outputSegmentationLayerName == null) {
+          return Promise.resolve();
+        }
         const volumeLayerName = getReadableNameOfVolumeLayer(segmentationLayer, tracing);
         const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
         return startApplyMergerModeJob(
@@ -451,6 +462,7 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
           baseSegmentationName,
           volumeLayerName,
           newDatasetName,
+          outputSegmentationLayerName,
           tracing.annotationId,
           tracing.annotationType,
         );

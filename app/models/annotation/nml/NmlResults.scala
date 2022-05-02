@@ -49,8 +49,7 @@ object NmlResults extends LazyLogging {
     def succeeded = false
   }
 
-  case class MultiNmlParseResult(parseResults: List[NmlParseResult] = Nil,
-                                 otherFiles: Map[String, File] = Map.empty) {
+  case class MultiNmlParseResult(parseResults: List[NmlParseResult] = Nil, otherFiles: Map[String, File] = Map.empty) {
 
     def combineWith(other: MultiNmlParseResult): MultiNmlParseResult =
       MultiNmlParseResult(parseResults ::: other.parseResults, other.otherFiles ++ otherFiles)

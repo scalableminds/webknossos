@@ -9,6 +9,7 @@ import models.annotation.AnnotationDAO
 import models.user.InviteService
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
+import oxalis.files.TempFileService
 import oxalis.mail.{Mailer, MailerConfig}
 import oxalis.security.WkSilhouetteEnvironment
 import oxalis.telemetry.SlackNotificationService

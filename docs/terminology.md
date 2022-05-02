@@ -21,7 +21,7 @@ The underlying file formats zarr and wkw use **chunks** as a compressible unit a
 An **annotation** can consist of one or multiple **annotation layers**, which can either be a
 
 * **volume annotation layer**, or **volume layer** in short ([main guide](./volume_annotation.md)), or
-* **skeleton annotation layer**, or **skeleton layer** and **skeleton** in short, ([main guide](./skeleton_annotation.md)).
+* **skeleton annotation layer**, or **skeleton layer** and **skeleton** in short ([main guide](./skeleton_annotation.md)).
 
 **Volume-only** and **skeleton-only** annotations are restricted to the specific annotation layer type.
 

@@ -8,7 +8,7 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/22.05.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/22.05.1...HEAD)
 
 ### Added
  - Added support to stream zarr files using the corresponding [zarr spec](https://zarr.readthedocs.io/en/stable/spec/v2.html#storage). [#6144](https://github.com/scalableminds/webknossos/pull/6144)
@@ -18,6 +18,5 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 
 ### Removed
- - Removed the option to download sample-datasets. To explore webKnossos, use the public sample datasets on webknossos.org. [#6151](https://github.com/scalableminds/webknossos/pull/6151)
 
 ### Breaking Changes

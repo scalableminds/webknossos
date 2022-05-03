@@ -398,7 +398,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
             case _          => savedId
           }
       }
-      volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequence(requestedTasks) { requestedTask =>
+      // Note that volume tracings are saved sequentially to reduce server load
+      volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
         saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)
       }
       skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), skeletonTracingIds).zipped.toList,

@@ -6,12 +6,17 @@ import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import net.liftweb.common.Box.tryo
+import org.apache.commons.io.FileUtils
 import oxalis.cleanup.CleanUpService
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random
 
+/**
+  * Avoiding Java TemporaryFiles because of seeming openJDK regression,
+  * see discussion at https://github.com/scalableminds/webknossos/issues/6173
+  */
 class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: ExecutionContext) extends LazyLogging {
 
   private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve("webKnossosTempFiles")
@@ -26,6 +31,7 @@ class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: Exe
   def create(prefix: String = "tmpFile", lifeTime: FiniteDuration = 2 hours): Path = {
     ensureParent()
     val path = tmpDir.resolve(f"$prefix-${Random.alphanumeric.take(15).mkString("")}")
+    logger.info(f"Creating temp file at $path")
     Files.createFile(path)
     activeTempFiles.add((path, System.currentTimeMillis() + lifeTime.toMillis))
     path
@@ -42,5 +48,8 @@ class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: Exe
     }
     Fox.successful(())
   }
+
+  def cleanUpAll(): Unit =
+    FileUtils.deleteDirectory(tmpDir.toFile)
 
 }

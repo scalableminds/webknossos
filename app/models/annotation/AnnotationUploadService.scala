@@ -62,7 +62,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService)(implic
           extractFromNml(inputStream, filename.toString, overwritingDataSetName, isTaskUpload, Some(file.getPath))
         parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
-        val tempFile: Path = tempFileService.create(file.getPath + filename.toString)
+        val tempFile: Path = tempFileService.create(file.getPath.replaceAll("/", "_") + filename.toString)
         Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
         otherFiles += (file.getPath + filename.toString -> tempFile.toFile)
       }

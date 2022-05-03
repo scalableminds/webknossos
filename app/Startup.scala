@@ -28,6 +28,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         annotationDAO: AnnotationDAO,
                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                         lifecycle: ApplicationLifecycle,
+                        tempFileService: TempFileService,
                         inviteService: InviteService,
                         sqlClient: SQLClient,
                         slackNotificationService: SlackNotificationService)
@@ -65,6 +66,13 @@ class Startup @Inject()(actorSystem: ActorSystem,
     Future.successful {
       logger.info("Closing SQL Database handle")
       sqlClient.db.close()
+    }
+  }
+
+  lifecycle.addStopHook { () =>
+    Future.successful {
+      logger.info("Deleting temporary files")
+      tempFileService.cleanUpAll()
     }
   }
 

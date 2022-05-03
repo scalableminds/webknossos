@@ -350,11 +350,6 @@ export default class TextureBucketManager {
     );
     const currentZoomStep = this.currentAnchorPoint[3];
 
-    // console.log("try to sort entries beforehand");
-    // const entries = _.sortBy(Array.from(this.activeBucketToIndexMap.entries()), [
-    //   ([bucket]) => bucket.zoomedAddress[3],
-    // ]);
-
     const entries = this.activeBucketToIndexMap.entries();
 
     for (const [bucket, reservedAddress] of entries) {
@@ -367,6 +362,9 @@ export default class TextureBucketManager {
 
       const zoomStepDifference = bucketZoomStep - currentZoomStep;
       const isBaseBucket = zoomStepDifference === 0;
+
+      // Buckets with finer resolution than the current one cannot be used, since they would not fit onto the bucket texture
+      if (zoomStepDifference < 0) continue;
 
       if (isBaseBucket) {
         if (address === -1) {
@@ -400,6 +398,8 @@ export default class TextureBucketManager {
 
         if (lookUpIdx !== -1) {
           const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+          // TODO: Should this write also be skipped if the lookup buffer already contains a bucket with a better zoom step
+          // or is this situation impossible?
           this.lookUpBuffer[posInBuffer] = address;
           this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
         }
@@ -423,7 +423,6 @@ export default class TextureBucketManager {
           ) {
             // Another bucket was already placed here with a better zoomstep.
             // Skip the entire loop.
-            // TODO: clarify flicker when zooming from mag 4 to mag 8.
             break;
           }
 

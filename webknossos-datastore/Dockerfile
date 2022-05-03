@@ -1,4 +1,7 @@
 FROM openjdk:8-jre
+RUN apt-get update \
+  && apt-get -y install libblosc1 \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos-datastore \
   && groupadd -g 1000 -r webknossos \

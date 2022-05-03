@@ -4,15 +4,22 @@ import java.io.File
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import io.swagger.annotations.{
+  Api,
+  ApiImplicitParam,
+  ApiImplicitParams,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiResponses
+}
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.{AnnotationUploadService, _}
 import models.annotation.nml.NmlResults.TracingBoxContainer
-import models.annotation.nml.NmlService
 import models.project.ProjectDAO
 import models.task._
 import models.user._
@@ -25,6 +32,7 @@ import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
+@Api
 class TaskController @Inject()(taskCreationService: TaskCreationService,
                                annotationService: AnnotationService,
                                projectDAO: ProjectDAO,
@@ -32,20 +40,25 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                userService: UserService,
                                taskDAO: TaskDAO,
                                taskService: TaskService,
-                               nmlService: NmlService,
+                               nmlService: AnnotationUploadService,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with ResultBox
     with ProtoGeometryImplicits
     with FoxImplicits {
 
-  def read(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound" ~> NOT_FOUND
-      js <- taskService.publicWrites(task)
-    } yield Ok(js)
+  @ApiOperation(value = "Information about a task", nickname = "taskInfo")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON object containing information about this task."),
+          new ApiResponse(code = 400, message = badRequestLabel)))
+  def read(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound" ~> NOT_FOUND
+        js <- taskService.publicWrites(task)
+      } yield Ok(js)
   }
 
+  @ApiOperation(hidden = true, value = "")
   def create: Action[List[TaskParameters]] = sil.SecuredAction.async(validateJson[List[TaskParameters]]) {
     implicit request =>
       for {
@@ -63,6 +76,28 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       } yield Ok(Json.toJson(result))
   }
 
+  @ApiOperation(
+    value =
+      """Create new tasks from existing annotation files
+Expects:
+ - As Form data:
+   - taskTypeId (string) id of the task type to be used for the new tasks
+   - neededExperience (Experience) experience domain and level that selects which users can get the new tasks
+   - openInstances (int) if greater than one, multiple instances of the task will be given to users to annotate
+   - projectName (string) name of the project the task should be part of
+   - scriptId (string, optional) id of a user script that should be loaded for the annotators of the new tasks
+   - boundingBox (BoundingBox, optional) limit the bounding box where the annotators should be active
+ - As File attachment
+   - A zip file containing base annotations (each either NML or zip with NML + volume) for the new tasks. One task will be created per annotation.
+""",
+    nickname = "taskCreateFromFiles"
+  )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "TaskParameters",
+                           required = true,
+                           dataTypeClass = classOf[JsObject],
+                           paramType = "body")))
   def createFromFiles: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"
@@ -95,6 +130,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       result <- taskCreationService.createTasks(fullParamsWithTracings, request.identity)
     } yield Ok(Json.toJson(result))
   }
+
+  @ApiOperation(hidden = true, value = "")
   def update(taskId: String): Action[TaskParameters] = sil.SecuredAction.async(validateJson[TaskParameters]) {
     implicit request =>
       val params = request.body
@@ -110,6 +147,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       } yield JsonOk(json, Messages("task.editSuccess"))
   }
 
+  @ApiOperation(hidden = true, value = "")
   def delete(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
@@ -121,6 +159,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield JsonOk(Messages("task.removed"))
   }
 
+  @ApiOperation(hidden = true, value = "")
   def listTasksForType(taskTypeId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
@@ -129,6 +168,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(Json.toJson(js))
   }
 
+  @ApiOperation(hidden = true, value = "")
   def listTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
       userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
@@ -146,6 +186,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(Json.toJson(jsResult))
   }
 
+  @ApiOperation(hidden = true, value = "")
   def request: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log() {
       val user = request.identity
@@ -162,6 +203,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def peekNext: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     val user = request.identity
     for {
@@ -172,6 +214,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(taskJson)
   }
 
+  @ApiOperation(hidden = true, value = "")
   def listExperienceDomains: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       experienceDomains <- taskDAO.listExperienceDomains(request.identity._organization)

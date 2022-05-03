@@ -1,6 +1,6 @@
 package backend
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ApplyableVolumeAction, CreateSegmentVolumeAction, DeleteSegmentVolumeAction, UpdateSegmentVolumeAction}
@@ -15,7 +15,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     "add the specified segment" in {
       val createSegmentAction = CreateSegmentVolumeAction(
         id = 1000,
-        anchorPosition = Some(Point3D(5,5,5)),
+        anchorPosition = Some(Vec3Int(5,5,5)),
         name = Some("aSegment"),
         creationTime = Some(Dummies.timestampLong)
       )
@@ -45,7 +45,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     "update the specified segment" in {
       val updateSegmentAction = UpdateSegmentVolumeAction(
         id = 5,
-        anchorPosition = Some(Point3D(8,8,8)),
+        anchorPosition = Some(Vec3Int(8,8,8)),
         name = Some("aRenamedSegment"),
         creationTime = Some(Dummies.timestampLong)
       )
@@ -55,7 +55,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       val segment = result.segments.find(_.segmentId == updateSegmentAction.id).get
 
       assert(segment.segmentId == updateSegmentAction.id)
-      assert(segment.anchorPosition.contains(point3DToProto(Point3D(8,8,8))))
+      assert(segment.anchorPosition.contains(vec3IntToProto(Vec3Int(8,8,8))))
       assert(segment.name.contains("aRenamedSegment"))
       assert(segment.creationTime.contains(Dummies.timestampLong))
     }

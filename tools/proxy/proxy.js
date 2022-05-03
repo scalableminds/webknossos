@@ -13,7 +13,7 @@ const app = express();
 
 const ROOT = path.resolve(path.join(__dirname, "..", ".."));
 const PORT = parseInt(process.env.PORT || 9000, 10);
-const HOST = `http://localhost:${PORT}`;
+const HOST = `http://127.0.0.1:${PORT}`;
 const loggingPrefix = "Proxy:";
 
 function makeEnv(port, host) {
@@ -69,7 +69,7 @@ function spawnIfNotSpecified(keyword, command, args, options) {
 
 function shutdown() {
   console.log("", loggingPrefix, "Shutting down, terminating child processes...");
-  for (const proc of Object.values(processes).filter(x => x)) {
+  for (const proc of Object.values(processes).filter((x) => x)) {
     if (proc.connected) {
       proc.kill("SIGTERM");
     }
@@ -78,10 +78,10 @@ function shutdown() {
   process.exit(0);
 }
 
-for (const [key, proc] of Object.entries(processes).filter(x => x[1] !== null)) {
+for (const [key, proc] of Object.entries(processes).filter((x) => x[1] !== null)) {
   proc.stdout.pipe(prefixLines(`${key}: `)).pipe(process.stdout);
   proc.stderr.pipe(prefixLines(`${key}: `)).pipe(process.stderr);
-  proc.on("error", err => console.error(err, err.stack));
+  proc.on("error", (err) => console.error(err, err.stack));
   proc.on("exit", shutdown);
 }
 process.on("SIGTERM", shutdown);
@@ -96,11 +96,11 @@ proxy.on("error", (err, req, res) => {
 });
 
 function toBackend(req, res) {
-  proxy.web(req, res, { target: `http://localhost:${PORT + 1}` });
+  proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 1}` });
 }
 
 function toWebpackDev(req, res) {
-  proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
+  proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 2}` });
 }
 
 app.all("/assets/bundle/*", toWebpackDev);

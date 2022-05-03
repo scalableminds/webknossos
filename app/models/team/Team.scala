@@ -93,6 +93,14 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, id)
     } yield parsed
 
+  def countByNameAndOrganization(teamName: String, organizationId: ObjectId): Fox[Int] =
+    for {
+      countList <- run(
+        sql"select count(_id) from #$existingCollectionName where name = $teamName and _organization = $organizationId"
+          .as[Int])
+      count <- countList.headOption
+    } yield count
+
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery

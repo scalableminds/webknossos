@@ -87,7 +87,7 @@ PUT           /datastores/:name/datasources                                    c
 PATCH         /datastores/:name/status                                         controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/verifyUpload                                   controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String, key: String, token: String)
 POST          /datastores/:name/reportDatasetUpload                            controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
-POST          /datastores/:name/deleteErroneous                                controllers.WKRemoteDataStoreController.deleteErroneous(name: String, key: String)
+POST          /datastores/:name/deleteDataset                                  controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/jobExportProperties                            controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
 POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                      controllers.DataStoreController.create
@@ -119,7 +119,6 @@ PATCH         /annotations/:typ/:id/transfer                                   c
 GET           /annotations/:typ/:id/info                                       controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                 controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
 PATCH         /annotations/:typ/:id/downsample                                 controllers.AnnotationController.downsample(typ: String, id: String, tracingId: String)
-PATCH         /annotations/:typ/:id/unlinkFallback                             controllers.AnnotationController.unlinkFallback(typ: String, id: String, tracingId: String)
 PATCH         /annotations/:typ/:id/addAnnotationLayer                         controllers.AnnotationController.addAnnotationLayer(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                            controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                 controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
@@ -169,6 +168,7 @@ DELETE        /scripts/:id                                                     c
 GET           /projects                                                        controllers.ProjectController.list
 GET           /projects/assignments                                            controllers.ProjectController.listWithStatus
 POST          /projects                                                        controllers.ProjectController.create
+GET           /projects/byName/:name                                           controllers.ProjectController.readByName(name: String)
 GET           /projects/:id                                                    controllers.ProjectController.read(id: String)
 DELETE        /projects/:id                                                    controllers.ProjectController.delete(id: String)
 PUT           /projects/:id                                                    controllers.ProjectController.update(id: String)
@@ -202,11 +202,12 @@ GET           /time/user/:userId                                               c
 GET           /jobs/request                                                    controllers.WKRemoteWorkerController.requestJobs(key: String)
 GET           /jobs                                                            controllers.JobsController.list
 GET           /jobs/status                                                     controllers.JobsController.status
-GET           /jobs/run/convertToWkw/:organizationName/:dataSetName            controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String, dataStoreName: String)
-GET           /jobs/run/computeMeshFile/:organizationName/:dataSetName         controllers.JobsController.runComputeMeshFileJob(organizationName: String, dataSetName: String, layerName: String, mag: String, agglomerateView: Option[String])
-GET           /jobs/run/exportTiff/:organizationName/:dataSetName              controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
-GET           /jobs/run/inferNuclei/:organizationName/:dataSetName             controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String])
-GET           /jobs/run/globalizeFloodfills/:organizationName/:dataSetName     controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, newDataSetName: Option[String], layerName: Option[String], annotationId: Option[String], annotationType: Option[String])
+POST          /jobs/run/convertToWkw/:organizationName/:dataSetName            controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String, dataStoreName: String)
+POST          /jobs/run/computeMeshFile/:organizationName/:dataSetName         controllers.JobsController.runComputeMeshFileJob(organizationName: String, dataSetName: String, layerName: String, mag: String, agglomerateView: Option[String])
+POST          /jobs/run/exportTiff/:organizationName/:dataSetName              controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
+POST          /jobs/run/inferNuclei/:organizationName/:dataSetName             controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String])
+POST          /jobs/run/inferNeurons/:organizationName/:dataSetName            controllers.JobsController.runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: String, bbox: String)
+POST          /jobs/run/globalizeFloodfills/:organizationName/:dataSetName     controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, newDataSetName: Option[String], layerName: Option[String], annotationId: Option[String], annotationType: Option[String])
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                 controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                 controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

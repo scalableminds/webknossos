@@ -33,15 +33,15 @@ class ExportsController @Inject()(webKnossosClient: DSRemoteWebKnossosClient,
 
   private val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
 
+  override def allowRemoteOrigin: Boolean = true
+
   def download(token: Option[String], jobId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.downloadJobExport(jobId), token) {
-      AllowRemoteOrigin {
-        for {
-          exportProperties <- webKnossosClient.getJobExportProperties(jobId)
-          fullPath = exportProperties.fullPathIn(dataBaseDir)
-          _ <- bool2Fox(Files.exists(fullPath)) ?~> "job.export.fileNotFound"
-        } yield Ok.sendPath(fullPath, inline = false)
-      }
+      for {
+        exportProperties <- webKnossosClient.getJobExportProperties(jobId)
+        fullPath = exportProperties.fullPathIn(dataBaseDir)
+        _ <- bool2Fox(Files.exists(fullPath)) ?~> "job.export.fileNotFound"
+      } yield Ok.sendPath(fullPath, inline = false)
     }
 
   }

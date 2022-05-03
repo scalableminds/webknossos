@@ -1,15 +1,10 @@
 package models.annotation
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Source, StreamConverters}
-import akka.util.ByteString
-import com.scalableminds.util.io.NamedEnumeratorStream
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import models.annotation.AnnotationLayerType.AnnotationLayerType
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{Json, OFormat}
 import scalapb.GeneratedMessage
 
@@ -39,17 +34,9 @@ object AnnotationLayer extends FoxImplicits {
 case class FetchedAnnotationLayer(tracingId: String,
                                   name: Option[String],
                                   tracing: Either[SkeletonTracing, VolumeTracing],
-                                  volumeDataOpt: Option[Source[ByteString, _]] = None) {
+                                  volumeDataOpt: Option[Array[Byte]] = None) {
   def typ: AnnotationLayerType =
     if (tracing.isLeft) AnnotationLayerType.Skeleton else AnnotationLayerType.Volume
-
-  def volumeDataEnumerator(implicit ec: ExecutionContext, materializer: Materializer): Option[Enumerator[Array[Byte]]] =
-    volumeDataOpt.map(d => Enumerator.fromStream(d.runWith(StreamConverters.asInputStream())))
-
-  def namedVolumeDataEnumerator(index: Int, isSingle: Boolean)(
-      implicit ec: ExecutionContext,
-      materializer: Materializer): Option[NamedEnumeratorStream] =
-    volumeDataEnumerator.map(enumerator => NamedEnumeratorStream(volumeDataZipName(index, isSingle), enumerator))
 
   def volumeDataZipName(index: Int, isSingle: Boolean): String = {
     val indexLabel = if (isSingle) "" else s"_$index"
@@ -62,7 +49,7 @@ object FetchedAnnotationLayer {
   def fromAnnotationLayer[T <: GeneratedMessage](
       annotationLayer: AnnotationLayer,
       tracing: Either[SkeletonTracing, VolumeTracing],
-      volumeDataOpt: Option[Source[ByteString, _]] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
+      volumeDataOpt: Option[Array[Byte]] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
     for {
       _ <- bool2Fox(
         (annotationLayer.typ == AnnotationLayerType.Skeleton && tracing.isLeft) || annotationLayer.typ == AnnotationLayerType.Volume && tracing.isRight) ?~> "annotation.download.fetch.typeMismatch"

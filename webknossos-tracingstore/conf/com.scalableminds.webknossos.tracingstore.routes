@@ -16,7 +16,6 @@ GET         /volume/:tracingId/allData                          @com.scalablemin
 GET         /volume/:tracingId/allDataBlocking                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataBlocking(token: Option[String], tracingId: String, version: Option[Long])
 POST        /volume/:tracingId/data                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/duplicate                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(token: Option[String], tracingId: String, fromTask: Option[Boolean], minResolution: Option[Int], maxResolution: Option[Int], downsample: Option[Boolean])
-POST        /volume/:tracingId/unlinkFallback                   @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.unlinkFallback(token: Option[String], tracingId: String)
 GET         /volume/:tracingId/updateActionLog                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateActionLog(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/isosurface                       @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.requestIsosurface(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/importVolumeData                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.importVolumeData(token: Option[String], tracingId: String)
@@ -38,4 +37,4 @@ GET         /skeleton/:tracingId/updateActionLog                @com.scalablemin
 POST        /skeleton/getMultiple                               @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple(token: Option[String])
 
 POST        /skeleton/:tracingId/update                         @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.update(token: Option[String], tracingId: String)
-GET         /skeleton/:tracingId/duplicate                      @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.duplicate(token: Option[String], tracingId: String, version: Option[Long], fromTask: Option[Boolean])
+POST        /skeleton/:tracingId/duplicate                      @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.duplicate(token: Option[String], tracingId: String, version: Option[Long], fromTask: Option[Boolean])

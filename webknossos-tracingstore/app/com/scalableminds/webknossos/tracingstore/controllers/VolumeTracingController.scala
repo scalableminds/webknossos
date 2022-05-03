@@ -5,7 +5,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
@@ -51,17 +51,15 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
-            AllowRemoteOrigin {
-              for {
-                initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-                tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-                resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
-                resolutions <- tracingService
-                  .initializeWithData(tracingId, tracing, initialData, resolutionRestrictions)
-                  .toFox
-                _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
-              } yield Ok(Json.toJson(tracingId))
-            }
+            for {
+              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
+              resolutions <- tracingService
+                .initializeWithData(tracingId, tracing, initialData, resolutionRestrictions)
+                .toFox
+              _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
+            } yield Ok(Json.toJson(tracingId))
           }
         }
       }
@@ -71,12 +69,10 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
-          AllowRemoteOrigin {
-            val tracings: List[Option[VolumeTracing]] = request.body
-            val mergedTracing = tracingService.merge(tracings.flatten)
-            tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
-              Ok(Json.toJson(newId))
-            }
+          val tracings: List[Option[VolumeTracing]] = request.body
+          val mergedTracing = tracingService.merge(tracings.flatten)
+          tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
+            Ok(Json.toJson(newId))
           }
         }
       }
@@ -87,14 +83,12 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
-            AllowRemoteOrigin {
-              for {
-                initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-                tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-                resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
-                _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
-              } yield Ok(Json.toJson(tracingId))
-            }
+            for {
+              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
+              _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
+            } yield Ok(Json.toJson(tracingId))
           }
         }
       }
@@ -104,13 +98,11 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-          AllowRemoteOrigin {
-            for {
-              tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-            } yield {
-              val enumerator: Enumerator[Array[Byte]] = tracingService.allDataEnumerator(tracingId, tracing)
-              Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
-            }
+          for {
+            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
+          } yield {
+            val enumerator: Enumerator[Array[Byte]] = tracingService.allDataEnumerator(tracingId, tracing)
+            Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
           }
         }
       }
@@ -120,12 +112,10 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-          AllowRemoteOrigin {
-            for {
-              tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-              data <- tracingService.allDataFile(tracingId, tracing)
-            } yield Ok.sendFile(data)
-          }
+          for {
+            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
+            data <- tracingService.allDataFile(tracingId, tracing)
+          } yield Ok.sendFile(data)
         }
       }
     }
@@ -134,12 +124,10 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-          AllowRemoteOrigin {
-            for {
-              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              (data, indices) <- tracingService.data(tracingId, tracing, request.body)
-            } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
-          }
+          for {
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            (data, indices) <- tracingService.data(tracingId, tracing, request.body)
+          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
     }
@@ -159,53 +147,32 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
-          AllowRemoteOrigin {
-            for {
-              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
-              resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
-              (newId, newTracing) <- tracingService.duplicate(tracingId,
-                                                              tracing,
-                                                              fromTask.getOrElse(false),
-                                                              dataSetBoundingBox,
-                                                              resolutionRestrictions)
-              _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
-            } yield Ok(Json.toJson(newId))
-          }
+          for {
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
+            resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
+            (newId, newTracing) <- tracingService.duplicate(tracingId,
+                                                            tracing,
+                                                            fromTask.getOrElse(false),
+                                                            dataSetBoundingBox,
+                                                            resolutionRestrictions)
+            _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
+          } yield Ok(Json.toJson(newId))
         }
       }
     }
   }
 
-  def unlinkFallback(token: Option[String], tracingId: String): Action[DataSourceLike] =
-    Action.async(validateJson[DataSourceLike]) { implicit request =>
-      log() {
-        logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
-            AllowRemoteOrigin {
-              for {
-                tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-                updatedTracing = tracingService.unlinkFallback(tracing, request.body)
-                newId <- tracingService.save(updatedTracing, None, 0L)
-              } yield Ok(Json.toJson(newId))
-            }
-          }
-        }
-      }
-    }
-
   def importVolumeData(token: Option[String], tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), token) {
-          AllowRemoteOrigin {
-            for {
-              tracing <- tracingService.find(tracingId)
-              currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
-              zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
-              largestSegmentId <- tracingService.importVolumeData(tracingId, tracing, zipFile, currentVersion)
-            } yield Ok(Json.toJson(largestSegmentId))
-          }
+          for {
+            tracing <- tracingService.find(tracingId)
+            currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
+            zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
+            largestSegmentId <- tracingService.importVolumeData(tracingId, tracing, zipFile, currentVersion)
+          } yield Ok(Json.toJson(largestSegmentId))
         }
       }
     }
@@ -213,11 +180,9 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   def updateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-        AllowRemoteOrigin {
-          for {
-            updateLog <- tracingService.updateActionLog(tracingId)
-          } yield Ok(updateLog)
-        }
+        for {
+          updateLog <- tracingService.updateActionLog(tracingId)
+        } yield Ok(updateLog)
       }
     }
   }
@@ -225,18 +190,16 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   def requestIsosurface(token: Option[String], tracingId: String): Action[WebKnossosIsosurfaceRequest] =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-        AllowRemoteOrigin {
-          for {
-            // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
-            // consecutive 3D points (i.e., nine floats) form a triangle.
-            // There are no shared vertices between triangles.
-            (vertices, neighbors) <- tracingService.createIsosurface(tracingId, request.body)
-          } yield {
-            // We need four bytes for each float
-            val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
-            responseBuffer.asFloatBuffer().put(vertices)
-            Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
-          }
+        for {
+          // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+          // consecutive 3D points (i.e., nine floats) form a triangle.
+          // There are no shared vertices between triangles.
+          (vertices, neighbors) <- tracingService.createIsosurface(tracingId, request.body)
+        } yield {
+          // We need four bytes for each float
+          val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+          responseBuffer.asFloatBuffer().put(vertices)
+          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
         }
       }
     }
@@ -249,12 +212,10 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   def findData(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-      AllowRemoteOrigin {
-        for {
-          positionOpt <- tracingService.findData(tracingId)
-        } yield {
-          Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Point3D(1, 1, 1))))
-        }
+      for {
+        positionOpt <- tracingService.findData(tracingId)
+      } yield {
+        Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int(1, 1, 1))))
       }
     }
   }

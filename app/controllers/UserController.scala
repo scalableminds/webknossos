@@ -46,16 +46,18 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
-  def user(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    log() {
-      for {
-        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
-        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
-        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        js <- userService.publicWrites(user, request.identity)
-      } yield Ok(js)
-    }
+  @ApiOperation(value = "Returns a json with information about the user selected by the passed id",
+                nickname = "userInfoById")
+  def user(@ApiParam(value = "Id of the user to query") userId: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      log() {
+        for {
+          userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+          user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+          _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+          js <- userService.publicWrites(user, request.identity)
+        } yield Ok(js)
+      }
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -296,6 +298,14 @@ class UserController @Inject()(userService: UserService,
   private def checkNoSelfDeactivate(user: User, isActive: Boolean)(issuingUser: User): Boolean =
     issuingUser._id != user._id || isActive || user.isDeactivated
 
+  private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean, issuingUser: User): Fox[Unit] =
+    if (!isActive && !issuingUser.isDeactivated) {
+      for {
+        activeTasks: List[ObjectId] <- annotationDAO.findActiveTaskIdsForUser(user._id)
+        _ <- bool2Fox(activeTasks.isEmpty) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks.mkString(";")}"
+      } yield ()
+    } else Fox.successful(())
+
   private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     if (oldEmail == email) Fox.successful(())
@@ -347,6 +357,7 @@ class UserController @Inject()(userService: UserService,
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
+          _ <- checkNoDeactivateWithRemainingTask(user, isActive, issuingUser)
           _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
           _ <- preventZeroAdmins(user, isAdmin)
           teams <- Fox.combined(assignedMemberships.map(t =>

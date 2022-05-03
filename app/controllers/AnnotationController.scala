@@ -257,29 +257,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
   }
 
-  @ApiOperation(hidden = true, value = "")
-  def unlinkFallback(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.unlinkFallback.explorationalsOnly"
-        restrictions <- provider.restrictionsFor(typ, id)
-        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        annotation <- provider.provideAnnotation(typ, id, request.identity)
-        annotationLayer <- annotation.annotationLayers
-          .find(_.tracingId == tracingId)
-          .toFox ?~> "annotation.unlinkFallback.layerNotFound"
-        _ <- bool2Fox(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.unlinkFallback.noVolume"
-        dataSet <- dataSetDAO
-          .findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
-        dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSet.notImported"
-        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        newTracingId <- tracingStoreClient.unlinkFallback(tracingId, dataSource)
-        _ <- annotationLayerDAO.replaceTracingId(annotation._id, tracingId, newTracingId)
-        updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity)
-        js <- annotationService.publicWrites(updatedAnnotation, Some(request.identity))
-      } yield JsonOk(js)
-  }
-
   private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Long)(
       implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
     for {
@@ -332,11 +309,14 @@ class AnnotationController @Inject()(
           annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
         else Fox.successful(())
         tags = (request.body \ "tags").asOpt[List[String]]
+        viewConfiguration = (request.body \ "viewConfiguration").asOpt[JsObject]
         _ <- Fox.runOptional(name)(annotationDAO.updateName(annotation._id, _)) ?~> "annotation.edit.failed"
         _ <- Fox
           .runOptional(description)(annotationDAO.updateDescription(annotation._id, _)) ?~> "annotation.edit.failed"
         _ <- Fox.runOptional(visibility)(annotationDAO.updateVisibility(annotation._id, _)) ?~> "annotation.edit.failed"
         _ <- Fox.runOptional(tags)(annotationDAO.updateTags(annotation._id, _)) ?~> "annotation.edit.failed"
+        _ <- Fox
+          .runOptional(viewConfiguration)(vc => annotationDAO.updateViewConfiguration(annotation._id, Some(vc))) ?~> "annotation.edit.failed"
       } yield JsonOk(Messages("annotation.edit.success"))
   }
 
@@ -352,17 +332,24 @@ class AnnotationController @Inject()(
       } yield JsonOk(Messages("annotation.edit.success"))
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def annotationsForTask(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      taskIdValidated <- ObjectId.parse(taskId)
-      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
-      project <- projectDAO.findOne(task._project)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
-      annotations <- annotationService.annotationsFor(task._id) ?~> "task.annotation.failed"
-      jsons <- Fox.serialSequence(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-    } yield Ok(JsArray(jsons.flatten))
-  }
+  @ApiOperation(value = "Information about all annotations for a specific task", nickname = "annotationInfosByTaskId")
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200,
+                      message = "JSON list of objects containing information about the selected annotations."),
+      new ApiResponse(code = 400, message = badRequestLabel)
+    ))
+  def annotationsForTask(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        taskIdValidated <- ObjectId.parse(taskId)
+        task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
+        project <- projectDAO.findOne(task._project)
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
+        annotations <- annotationService.annotationsFor(task._id) ?~> "task.annotation.failed"
+        jsons <- Fox.serialSequence(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+      } yield Ok(JsArray(jsons.flatten))
+    }
 
   @ApiOperation(hidden = true, value = "")
   def cancel(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

@@ -10,6 +10,7 @@ object Dependencies {
   private val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   private val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
   private val akkaHttp = "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
+  private val akkaCaching = "com.typesafe.akka" %% "akka-http-caching" % akkaHttpVersion
   private val commonsCodec = "commons-codec" % "commons-codec" % "1.10"
   private val commonsEmail = "org.apache.commons" % "commons-email" % "1.5"
   private val commonsIo = "commons-io" % "commons-io" % "2.9.0"
@@ -43,6 +44,10 @@ object Dependencies {
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
   private val swagger = "io.swagger" %% "swagger-play2" % "1.7.1"
   private val jhdf = "cisd" % "jhdf5" % "19.04.0"
+  private val ucarCdm = "edu.ucar" % "cdm-core" % "5.3.3"
+  private val s3fs = "org.lasersonlab" % "s3fs" % "2.2.3"
+  private val jblosc = "org.lasersonlab" % "jblosc" % "1.0.1"
+  private val scalajHttp = "org.scalaj" %% "scalaj-http" % "2.4.2"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",
@@ -72,6 +77,7 @@ object Dependencies {
     grpcServices,
     scalapbRuntimeGrpc,
     akkaLogging,
+    akkaCaching,
     ehcache,
     gson,
     webknossosWrap,
@@ -83,7 +89,11 @@ object Dependencies {
     spire,
     akkaHttp,
     redis,
-    jhdf
+    jhdf,
+    ucarCdm,
+    s3fs,
+    jblosc,
+    scalajHttp
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

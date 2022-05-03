@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox => ProtoBox}
+import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto => ProtoBox}
 import net.liftweb.common.Full
 import scalapb.GeneratedMessage
 
@@ -13,8 +13,8 @@ trait ColorGenerator {
   private def getRandomComponent: Double =
     Math.random()
 
-  def getRandomColor: Color =
-    Color(getRandomComponent, getRandomComponent, getRandomComponent, 1.0)
+  def getRandomColor: ColorProto =
+    ColorProto(getRandomComponent, getRandomComponent, getRandomComponent, 1.0)
 }
 
 trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {

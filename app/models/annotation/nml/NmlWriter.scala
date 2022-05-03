@@ -1,6 +1,6 @@
 package models.annotation.nml
 
-import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -20,14 +20,14 @@ case class NmlParameters(
     dataSetName: String,
     organizationName: String,
     description: Option[String],
-    scale: Option[Scale],
+    scale: Option[Vec3Double],
     createdTimestamp: Long,
-    editPosition: Point3D,
-    editRotation: Vector3D,
+    editPosition: Vec3IntProto,
+    editRotation: Vec3DoubleProto,
     zoomLevel: Double,
     activeNodeId: Option[Int],
-    userBoundingBoxes: Seq[NamedBoundingBox],
-    taskBoundingBox: Option[BoundingBox]
+    userBoundingBoxes: Seq[NamedBoundingBoxProto],
+    taskBoundingBox: Option[BoundingBoxProto]
 )
 
 class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
@@ -35,7 +35,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
 
   def toNmlStream(annotationLayers: List[FetchedAnnotationLayer],
                   annotation: Option[Annotation],
-                  scale: Option[Scale],
+                  scale: Option[Vec3Double],
                   volumeFilename: Option[String],
                   organizationName: String,
                   annotationOwner: Option[User],
@@ -57,7 +57,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
 
   def toNml(annotationLayers: List[FetchedAnnotationLayer],
             annotation: Option[Annotation],
-            scale: Option[Scale],
+            scale: Option[Vec3Double],
             volumeFilename: Option[String],
             organizationName: String,
             annotationOwner: Option[User],
@@ -93,7 +93,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                volumeLayers: List[FetchedAnnotationLayer],
                                annotation: Option[Annotation],
                                organizationName: String,
-                               scale: Option[Scale]): Fox[NmlParameters] =
+                               scale: Option[Vec3Double]): Fox[NmlParameters] =
     for {
       parameterSourceAnnotationLayer <- selectLayerWithPrecedence(skeletonLayers, volumeLayers)
       nmlParameters = parameterSourceAnnotationLayer.tracing match {
@@ -108,7 +108,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             s.editRotation,
             s.zoomLevel,
             s.activeNodeId,
-            s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
+            s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             s.boundingBox
           )
         case Right(v) =>
@@ -122,7 +122,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             v.editRotation,
             v.zoomLevel,
             None,
-            v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
+            v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             if (annotation.exists(_._task.isDefined)) Some(v.boundingBox) else None
           )
       }
@@ -197,6 +197,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     Xml.withinElementSync("volume") {
       writer.writeAttribute("id", index.toString)
       writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index, isSingle)))
+      volumeLayer.name.foreach(n => writer.writeAttribute("name", n))
       volumeLayer.tracing match {
         case Right(volumeTracing) => volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
         case _                    => ()
@@ -309,7 +310,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     }
   }
 
-  def writeBoundingBox(b: BoundingBox)(implicit writer: XMLStreamWriter): Unit = {
+  def writeBoundingBox(b: BoundingBoxProto)(implicit writer: XMLStreamWriter): Unit = {
     writer.writeAttribute("topLeftX", b.topLeft.x.toString)
     writer.writeAttribute("topLeftY", b.topLeft.y.toString)
     writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
@@ -318,7 +319,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     writer.writeAttribute("depth", b.depth.toString)
   }
 
-  def writeColor(color: Option[Color])(implicit writer: XMLStreamWriter): Unit = {
+  def writeColor(color: Option[ColorProto])(implicit writer: XMLStreamWriter): Unit = {
     writer.writeAttribute("color.r", color.map(_.r.toString).getOrElse(""))
     writer.writeAttribute("color.g", color.map(_.g.toString).getOrElse(""))
     writer.writeAttribute("color.b", color.map(_.b.toString).getOrElse(""))

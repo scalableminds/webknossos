@@ -139,11 +139,6 @@ type APIUnimportedDataset = APIDatasetBase & {
   readonly isActive: false;
 };
 export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
-export type APISampleDataset = {
-  readonly name: string;
-  readonly description: string;
-  readonly status: "available" | "downloading" | "present";
-};
 export type APIDataSourceWithMessages = {
   readonly dataSource?: APIDataSource;
   readonly previousDataSource?: APIDataSource;

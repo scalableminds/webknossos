@@ -32,7 +32,6 @@ import type {
   APIProjectUpdater,
   APIProjectWithAssignments,
   APIResolutionRestrictions,
-  APISampleDataset,
   APIScript,
   APIScriptCreator,
   APIScriptUpdater,
@@ -1500,30 +1499,6 @@ export async function getAgglomeratesForDatasetLayer(
   return doWithToken((token) =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates?token=${token}`,
-    ),
-  );
-}
-
-export function getSampleDatasets(
-  datastoreUrl: string,
-  organizationName: string,
-): Promise<Array<APISampleDataset>> {
-  return doWithToken((token) =>
-    Request.receiveJSON(`${datastoreUrl}/data/datasets/sample/${organizationName}?token=${token}`),
-  );
-}
-
-export async function triggerSampleDatasetDownload(
-  datastoreUrl: string,
-  organizationName: string,
-  datasetName: string,
-) {
-  await doWithToken((token) =>
-    Request.triggerRequest(
-      `${datastoreUrl}/data/datasets/sample/${organizationName}/${datasetName}/download?token=${token}`,
-      {
-        method: "POST",
-      },
     ),
   );
 }

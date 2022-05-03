@@ -8,4 +8,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/22.04.0...HEAD)
 
+ - Note that the datastore API version has changed to 2.0. If you use webknossos-connect alongside your webKnossos instance, you will need to upgrade that one as well, compare [webknossos-connect#129](https://github.com/scalableminds/webknossos-connect/pull/129). [#6159](https://github.com/scalableminds/webknossos/pull/6159)
+
 ### Postgres Evolutions:

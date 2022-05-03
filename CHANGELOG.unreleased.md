@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
   - Add filter functionality to "Access Permissions" column to filter for public datasets.
   - Removed `isActive` and `isPublic` columns to save screen space.
   - Changed data layer entries to display layer names instead of categories, e.g. "color" --> "axons".
+- Changed the internal protocol for requesting image data. The zoomStep parameter has been replaced by mag. This increases the datastore API version to 2.0 [#6159](https://github.com/scalableminds/webknossos/pull/6159)
 
 ### Fixed
 - Fixed a bug that led to an error when drag-'n-dropping an empty volume annotation in the dataset view. [#6116](https://github.com/scalableminds/webknossos/pull/6116)

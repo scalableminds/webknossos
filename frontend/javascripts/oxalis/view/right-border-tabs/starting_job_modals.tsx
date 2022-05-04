@@ -4,7 +4,7 @@ import { Modal, Select, Button, Form, Input } from "antd";
 import {
   startNucleiInferralJob,
   startNeuronInferralJob,
-  startApplyMergerModeJob,
+  startMaterializingVolumeAnnotationJob,
   startGlobalizeFloodfillsJob,
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
@@ -19,14 +19,14 @@ import Toast from "libs/toast";
 import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
 import { Unicode, type Vector3 } from "oxalis/constants";
 import Model from "oxalis/model";
-import { capitalizeWords, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
+import { computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 
 const { ThinSpace } = Unicode;
 const jobNameToImagePath = {
   "neuron inferral": "neuron_inferral_example.jpg",
   "nuclei inferral": "nuclei_inferral_example.jpg",
-  "apply merger mode": "apply_merger_mode_example.jpg",
+  "materializing this volume annotation": "materialize_volume_annotation_example.jpg",
   "globalization of the floodfill operation(s)": null,
 };
 type Props = {
@@ -47,6 +47,7 @@ type StartingJobModalProps = Props & {
   chooseSegmentationLayer?: boolean;
   suggestedDatasetSuffix: string;
   fixedSelectedLayer?: APIDataLayer | null | undefined;
+  title: string;
 };
 
 type LayerSelectionProps = {
@@ -180,7 +181,7 @@ type OutputSegmentationLayerNameProps = {
   additionalAllowedNames: string[];
 };
 
-function OutputSegmentationLayerNameFormItem({
+export function OutputSegmentationLayerNameFormItem({
   hasOutputSegmentationLayer,
   layers,
   additionalAllowedNames,
@@ -222,7 +223,7 @@ function OutputSegmentationLayerNameFormItem({
 function StartingJobModal(props: StartingJobModalProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
-  const { handleClose, jobName, description, jobApiCall, fixedSelectedLayer } = props;
+  const { handleClose, jobName, description, jobApiCall, fixedSelectedLayer, title } = props;
   const [form] = Form.useForm();
   const userBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
@@ -292,17 +293,13 @@ function StartingJobModal(props: StartingJobModalProps) {
     initialLayerName = fixedSelectedLayer.name;
     initialOutputSegmentationLayerName = getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
   }
-  initialOutputSegmentationLayerName = `${initialOutputSegmentationLayerName}_corrected`;
-  // TODO: Other jobs also have an output segmentation layer. The names for them should also be configurable.
-  const hasOutputSegmentationLayer = jobName === "apply merger mode";
+  initialOutputSegmentationLayerName = `${
+    initialOutputSegmentationLayerName || "segmentation"
+  }_corrected`;
+  // TODO: Other jobs also have an output segmentation layer. The names for these jobs should also be configurable.
+  const hasOutputSegmentationLayer = jobName === "materializing this volume annotation";
   return (
-    <Modal
-      title={`Start ${capitalizeWords(jobName)}`}
-      onCancel={handleClose}
-      visible
-      width={700}
-      footer={null}
-    >
+    <Modal title={title} onCancel={handleClose} visible width={700} footer={null}>
       {description}
       <br />
       {jobNameToImagePath[jobName] != null ? (
@@ -349,7 +346,7 @@ function StartingJobModal(props: StartingJobModalProps) {
         />
         <div style={{ textAlign: "center" }}>
           <Button type="primary" size="large" htmlType="submit">
-            Start {capitalizeWords(jobName)}
+            {title}
           </Button>
         </div>
       </Form>
@@ -363,6 +360,7 @@ export function NucleiInferralModal({ handleClose }: Props) {
     <StartingJobModal
       handleClose={handleClose}
       jobName="nuclei inferral"
+      title="Start a Nuclei Inferral"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
         startNucleiInferralJob(
@@ -398,6 +396,7 @@ export function NeuronInferralModal({ handleClose }: Props) {
     <StartingJobModal
       handleClose={handleClose}
       jobName="neuron inferral"
+      title="Start a Neuron Inferral"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
@@ -435,17 +434,51 @@ export function NeuronInferralModal({ handleClose }: Props) {
   );
 }
 
-export function ApplyMergerModeModal({ handleClose }: Props) {
+type MaterializeVolumeAnnotationModalProps = Props & {
+  selectedVolumeLayer?: APIDataLayer;
+};
+
+export function MaterializeVolumeAnnotationModal({
+  selectedVolumeLayer,
+  handleClose,
+}: MaterializeVolumeAnnotationModalProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
+  const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;
+  const isMergerModeEnabled = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
+  );
+  let description = (
+    <p>
+      Start a job that takes the current state of this volume annotation and materializes it into a
+      new dataset. All annotations done on the
+      {` "${fixedSelectedLayer && getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing)}" `}
+      volume layer will be merged with the data of the fallback layer.
+      {isMergerModeEnabled
+        ? " Additionally, the skeletons will be used to merge segments as merger mode is active. "
+        : " "}
+      Please enter the name of the output dataset and the output segmentation layer.
+    </p>
+  );
+  if (tracing.volumes.length === 0) {
+    description = (
+      <p>
+        Start a job that takes the current state of this merger mode tracing and materializes it
+        into a new dataset. In the new output dataset the segments connected via skeleton nodes will
+        be merged. Please enter the name of the output dataset and the output segmentation layer.
+      </p>
+    );
+  }
+
   return (
     <StartingJobModal
       handleClose={handleClose}
-      jobName="apply merger mode"
+      title="Start Materializing this Volume Annotation"
+      jobName="materializing this volume annotation"
       suggestedDatasetSuffix="with_merged_segmentation"
       chooseSegmentationLayer
-      fixedSelectedLayer={activeSegmentationTracingLayer}
+      fixedSelectedLayer={fixedSelectedLayer}
       jobApiCall={async ({
         newDatasetName,
         selectedLayer: segmentationLayer,
@@ -456,7 +489,7 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
         }
         const volumeLayerName = getReadableNameOfVolumeLayer(segmentationLayer, tracing);
         const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
-        return startApplyMergerModeJob(
+        return startMaterializingVolumeAnnotationJob(
           dataset.owningOrganization,
           dataset.name,
           baseSegmentationName,
@@ -465,16 +498,10 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
           outputSegmentationLayerName,
           tracing.annotationId,
           tracing.annotationType,
+          isMergerModeEnabled,
         );
       }}
-      description={
-        <p>
-          Start a job that takes the current state of this merger mode tracing and applies it to the
-          segmentation layer. This will create a new dataset which contains the merged segmentation
-          layer. If this dataset has more than one segmentation layer, please select the
-          segmentation layer to which the merging should be applied to.
-        </p>
-      }
+      description={description}
     />
   );
 }
@@ -485,6 +512,7 @@ export function StartGlobalizeFloodfillsModal({ handleClose }: Props) {
   return (
     <StartingJobModal
       handleClose={handleClose}
+      title="Start Globalizing of the Floodfill Operation(s)"
       jobName="globalization of the floodfill operation(s)"
       suggestedDatasetSuffix="with_floodfills"
       chooseSegmentationLayer

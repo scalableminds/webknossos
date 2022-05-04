@@ -267,14 +267,15 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def runApplyMergerModeJob(organizationName: String,
-                            dataSetName: String,
-                            fallbackLayerName: String,
-                            annotationId: String,
-                            annotationType: String,
-                            newDatasetName: String,
-                            outputSegmentationLayerName: String,
-                            volumeLayerName: Option[String]): Action[AnyContent] =
+  def runMaterializeVolumeAnnotationJob(organizationName: String,
+                                        dataSetName: String,
+                                        fallbackLayerName: String,
+                                        annotationId: String,
+                                        annotationType: String,
+                                        newDatasetName: String,
+                                        outputSegmentationLayerName: String,
+                                        mergeSegments: Boolean,
+                                        volumeLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -286,7 +287,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             dataSetName) ~> NOT_FOUND
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
-          command = "apply_merger_mode"
+          command = "materialize_volume_annotation"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
@@ -297,6 +298,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "annotation_type" -> annotationType,
             "new_dataset_name" -> newDatasetName,
+            "merge_segments" -> mergeSegments,
             "volume_layer_name" -> volumeLayerName
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunApplyMergerMode"

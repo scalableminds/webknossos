@@ -948,6 +948,7 @@ export async function getJobs(): Promise<APIJob[]> {
     tracingId: job.commandArgs.volume_tracing_id,
     annotationId: job.commandArgs.annotation_id,
     annotationType: job.commandArgs.annotation_type,
+    mergeSegments: job.commandArgs.merge_segments,
     state: adaptJobState(job.command, job.state, job.manualState),
     manualState: job.manualState,
     result: job.returnValue,
@@ -1084,6 +1085,7 @@ function startSegmentationAnnotationDependentJob(
   annotationId: string,
   annotationType: APIAnnotationType,
   outputSegmentationLayerName?: string,
+  mergeSegments?: boolean
 ): Promise<APIJob> {
   const requestURL = new URL(
     `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}`,
@@ -1099,6 +1101,9 @@ function startSegmentationAnnotationDependentJob(
   requestURL.searchParams.append("newDatasetName", newDatasetName);
   if (outputSegmentationLayerName != null) {
     requestURL.searchParams.append("outputSegmentationLayerName", outputSegmentationLayerName);
+  }
+  if(mergeSegments != null){
+    requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
   }
   return Request.receiveJSON(requestURL.href, {
     method: "POST",
@@ -1126,7 +1131,7 @@ export function startGlobalizeFloodfillsJob(
   );
 }
 
-export function startApplyMergerModeJob(
+export function startMaterializingVolumeAnnotationJob(
   organizationName: string,
   datasetName: string,
   fallbackLayerName: string,
@@ -1135,9 +1140,10 @@ export function startApplyMergerModeJob(
   outputSegmentationLayerName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
+  mergeSegments: boolean,
 ): Promise<APIJob> {
   return startSegmentationAnnotationDependentJob(
-    "applyMergerMode",
+    "materializeVolumeAnnotation",
     organizationName,
     datasetName,
     fallbackLayerName,
@@ -1146,6 +1152,7 @@ export function startApplyMergerModeJob(
     annotationId,
     annotationType,
     outputSegmentationLayerName,
+    mergeSegments,
   );
 }
 

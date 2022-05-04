@@ -30,7 +30,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { ApplyMergerModeModal } from "oxalis/view/right-border-tabs/starting_job_modals";
+import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import type { AnnotationTool, OverwriteMode } from "oxalis/constants";
 import Constants, {
   ToolsWithOverwriteCapabilities,
@@ -276,7 +276,7 @@ function AdditionalSkeletonModesButtons() {
         </Tooltip>
       )}
       {features().jobsEnabled && showApplyMergerModeModal && (
-        <ApplyMergerModeModal handleClose={() => setShowApplyMergerModeModal(false)} />
+        <MaterializeVolumeAnnotationModal handleClose={() => setShowApplyMergerModeModal(false)} />
       )}
     </React.Fragment>
   );

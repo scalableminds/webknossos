@@ -175,17 +175,19 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
-      job.type === "apply_merger_mode" &&
+      job.type === "materialize_volume_annotation" &&
       job.organizationName &&
-      job.datasetName &&
-      job.layerName
+      job.datasetName
     ) {
       return (
         <span>
-          Applied merger mode to layer {job.layerName} of{" "}
+          Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
           <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
             {job.datasetName}
-          </Link>{" "}
+          </Link>
+          {job.mergeSegments
+            ? ". This includes merging the segments that were merged via merger mode."
+            : null}
         </span>
       );
     } else {
@@ -239,7 +241,7 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (
       job.type === "infer_nuclei" ||
       job.type === "infer_neurons" ||
-      job.type === "apply_merger_mode"
+      job.type === "materialize_volume_annotation"
     ) {
       return (
         <span>

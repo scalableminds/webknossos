@@ -71,7 +71,9 @@ class BinaryDataController @Inject()(
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 30 seconds) {
         val t = System.currentTimeMillis()
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ~> 404
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
           duration = System.currentTimeMillis() - t
           _ = if (duration > 10000)
@@ -118,7 +120,9 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> 404
         request = DataRequest(
           new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
           width,
@@ -176,7 +180,9 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> 404
         request = DataRequest(
           new VoxelPosition(x * cubeSize * resolution,
                             y * cubeSize * resolution,
@@ -211,7 +217,9 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> 404
         dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
                                   cubeSize,
                                   cubeSize,
@@ -248,7 +256,10 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
         dataRequest = DataRequest(new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
                                   width,
                                   height,
@@ -353,7 +364,9 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> 404
         segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
         mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
         result <- mappingService.handleMappingRequest(mappingRequest)
@@ -373,7 +386,9 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ~> 404
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
           isosurfaceRequest = IsosurfaceRequest(
             Some(dataSource),
@@ -413,7 +428,9 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ~> 404
           meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
         } yield
           Ok(
@@ -431,7 +448,9 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ~> 404
           positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
         } yield
           Ok(
@@ -449,22 +468,15 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
-            "histogram.layerMissing",
-            dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ?~> Messages(
+            "dataSource.notFound") ~> 404 ?~> Messages("histogram.layerMissing", dataLayerName)
           listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages("histogram.failed",
                                                                                                   dataLayerName)
         } yield Ok(Json.toJson(listOfHistograms))
       }
     }
-
-  private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
-      implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
-    for {
-      dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-        "dataSource.notFound") ~> 404
-      dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404
-    } yield (dataSource, dataLayer)
 
   private def requestData(
       dataSource: DataSource,
@@ -516,7 +528,9 @@ class BinaryDataController @Inject()(
       zoom: Option[Double]
   )(implicit m: MessagesProvider): Fox[OutputStream => Unit] =
     for {
-      (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                dataSetName,
+                                                                                dataLayerName) ~> 404
       position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
       request = DataRequest(position, width, height, 1)
       image <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite = false)

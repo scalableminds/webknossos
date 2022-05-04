@@ -3,7 +3,7 @@ package models.task
 import java.io.File
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -12,15 +12,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
-import models.annotation.{
-  Annotation,
-  AnnotationDAO,
-  AnnotationService,
-  AnnotationState,
-  AnnotationType,
-  WKRemoteTracingStoreClient,
-  TracingStoreService
-}
+import models.annotation._
 import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO}
@@ -406,8 +398,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
             case _          => savedId
           }
       }
-      volumeTracingIds: List[Box[Option[String]]] <- Fox.sequence(
-        requestedTasks.map(requestedTask => saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)))
+      // Note that volume tracings are saved sequentially to reduce server load
+      volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
+        saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)
+      }
       skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), skeletonTracingIds).zipped.toList,
                                                   isSkeletonId = true)
       volumeTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), volumeTracingIds).zipped.toList,

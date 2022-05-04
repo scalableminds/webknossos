@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 ### Changed
+- In annotation list in dashboard, replaced the non-standard word “Trace” by “Open”. [#6191](https://github.com/scalableminds/webknossos/pull/6191)
 
 ### Fixed
 - Fixed a bug in the task cration, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)

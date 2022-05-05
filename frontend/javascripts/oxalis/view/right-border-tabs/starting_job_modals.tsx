@@ -9,7 +9,11 @@ import {
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
-import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getColorLayers,
+  getSegmentationLayers,
+  getDataLayers,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   getReadableNameByVolumeTracingId,
   getActiveSegmentationTracingLayer,
@@ -183,14 +187,12 @@ function BoundingBoxSelectionFormItem({
 
 type OutputSegmentationLayerNameProps = {
   hasOutputSegmentationLayer: boolean;
-  layers: APIDataLayer[];
-  additionalAllowedNames: string[];
+  notAllowedLayerNames: string[];
 };
 
 export function OutputSegmentationLayerNameFormItem({
   hasOutputSegmentationLayer,
-  layers,
-  additionalAllowedNames,
+  notAllowedLayerNames,
 }: OutputSegmentationLayerNameProps) {
   return (
     <Form.Item
@@ -206,10 +208,7 @@ export function OutputSegmentationLayerNameFormItem({
         },
         {
           validator: async (_rule, newOutputLayerName) => {
-            if (
-              layers.some((layer) => layer.name === newOutputLayerName) &&
-              !additionalAllowedNames.includes(newOutputLayerName)
-            ) {
+            if (notAllowedLayerNames.includes(newOutputLayerName)) {
               const reason =
                 "This name is already used by another segmentation layer of this dataset.";
               return Promise.reject(reason);
@@ -238,6 +237,7 @@ function StartingJobModal(props: StartingJobModalProps) {
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
+  const allLayer = getDataLayers(dataset);
 
   const startJob = async ({
     layerName,
@@ -304,6 +304,18 @@ function StartingJobModal(props: StartingJobModalProps) {
   }_corrected`;
   // TODO: Other jobs also have an output segmentation layer. The names for these jobs should also be configurable.
   const hasOutputSegmentationLayer = jobName === JobNames.MATERIALIZE_VOLUME_ANNOTATION;
+  const notAllowedOutputLayerNames = allLayer
+    .filter((layer) => {
+      // Filtering out the layer that is currently selected as this name is allowed
+      // because the output layer overwrites the selected layer.
+      const currentSelectedVolumeLayerName = form.getFieldValue("layerName") || initialLayerName;
+      return (
+        getReadableNameOfVolumeLayer(layer, tracing) !== currentSelectedVolumeLayerName &&
+        layer.name !== currentSelectedVolumeLayerName
+      );
+    })
+    .map((layer) => getReadableNameOfVolumeLayer(layer, tracing) || layer.name);
+
   return (
     <Modal title={title} onCancel={handleClose} visible width={700} footer={null}>
       {description}
@@ -343,8 +355,7 @@ function StartingJobModal(props: StartingJobModalProps) {
         />
         <OutputSegmentationLayerNameFormItem
           hasOutputSegmentationLayer={hasOutputSegmentationLayer}
-          layers={layers}
-          additionalAllowedNames={[form.getFieldValue("layerName")]}
+          notAllowedLayerNames={notAllowedOutputLayerNames}
         />
         <BoundingBoxSelectionFormItem
           isBoundingBoxConfigurable={isBoundingBoxConfigurable}

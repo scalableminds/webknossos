@@ -1,22 +1,19 @@
 import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Select } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
-import React from "react";
+import React, { useState } from "react";
 import type { APIAnnotationType } from "types/api_flow_types";
 import Toast from "libs/toast";
-import { location } from "libs/window";
 import messages from "messages";
-import Store from "oxalis/store";
-import UrlManager from "oxalis/controller/url_manager";
 import Model from "oxalis/model";
-import { downloadNml } from "admin/admin_rest_api";
+import { downloadNml, getAuthToken } from "admin/admin_rest_api";
 import { CheckboxValueType } from "antd/lib/checkbox/Group";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
-const { Paragraph } = Typography;
+const { Paragraph, Text } = Typography;
 const { Option } = Select;
 type Props = {
   isVisible: boolean;
-  onOk: () => void;
+  onClose: () => void;
   annotationType: APIAnnotationType;
   annotationId: string;
   hasVolumeFallback: boolean;
@@ -28,38 +25,104 @@ function Hint({ children, style }: { children: React.ReactNode; style: React.CSS
   );
 }
 
-export function getUrl(sharingToken: string, includeToken: boolean) {
-  const { pathname, origin } = location;
-  const hash = UrlManager.buildUrlHashJson(Store.getState());
-  const query = includeToken ? `?token=${sharingToken}` : "";
-  const url = `${origin}${pathname}${query}#${hash}`;
-  return url;
-}
-
-export async function copyCodeToClipboard(code: string) {
+export async function copyToClipboard(code: string) {
   await navigator.clipboard.writeText(code);
-  Toast.success("Snippet copied to clipboard.");
+  Toast.warning("Snippet copied to clipboard.");
 }
 
-export default function DownloadModalView(props: Props) {
-  const { isVisible, onOk, annotationType, annotationId, hasVolumeFallback } = props;
+function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
+  return (
+    <pre>
+      <Button
+        style={{
+          float: "right",
+          border: "none",
+          width: "18px",
+          height: "16px",
+          background: "transparent",
+        }}
+        onClick={() => {
+          copyToClipboard(code);
+          if (onCopy) {
+            onCopy();
+          }
+        }}
+        icon={<CopyOutlined />}
+      />
+      {code}
+    </pre>
+  );
+}
+
+const okTextForTab = new Map([
+  ["download", "Download"],
+  ["export", "Start Export Job"],
+  ["python", null],
+]);
+
+export default function DownloadModalView(props: Props): JSX.Element {
+  const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
   const handleOk = async () => {
     await Model.ensureSavedState();
     downloadNml(annotationId, annotationType, hasVolumeFallback);
-
-    onOk();
+    onClose();
   };
-  let modalType = "Download";
+  const [currentFooter, setCurrentFooter] = useState<React.ReactNode>([
+    <Button key="ok" type="primary" onClick={handleOk}>
+      Download
+    </Button>,
+  ]);
+  const [activeTabKey, setActiveTabKey] = useState("download");
 
-  const maybeShowWarning = () => {};
+  const maybeShowWarning = () => {
+    if (activeTabKey === "download") {
+      if (hasVolumeFallback) {
+        return (
+          <Row>
+            <Text
+              style={{
+                margin: "6px 12px",
+              }}
+              type="warning"
+            >
+              {messages["annotation.no_fallback_data_included"]}
+            </Text>
+          </Row>
+        );
+      }
+    } else if (activeTabKey === "python") {
+      return (
+        <Row>
+          <Text
+            style={{
+              margin: "6px 12px",
+            }}
+            type="warning"
+          >
+            {messages["annotation.python_do_not_share_token"]}
+          </Text>
+        </Row>
+      );
+    }
+    return null;
+  };
 
   const handleCheckboxChange = (checkedValue: CheckboxValueType[]) => {
     console.log(checkedValue);
   };
 
-  const handleTabChange = (tab: string) => {
-    modalType = tab;
-    console.log(modalType);
+  const handleTabChange = (key: string) => {
+    setActiveTabKey(key);
+    const okText = okTextForTab.get(key);
+    if (okText != null) {
+      setCurrentFooter([
+        <Button key="ok" type="primary" onClick={handleOk}>
+          {okText}
+        </Button>,
+      ]);
+    } else {
+      setCurrentFooter(null);
+    }
   };
 
   const handleLayerSelection = (selection: string) => {
@@ -74,52 +137,46 @@ export default function DownloadModalView(props: Props) {
     height: "30px",
     lineHeight: "30px",
   };
-  const selection = ["Volume", "Skeleton", "Fallback"];
 
-  const moreInfoHint = (
-    <Hint
-      style={{
-        margin: "0px 12px 0px 12px",
-      }}
-    >
-      For more information on how to process downloaded layers visit the{" "}
-      <a href="https://docs.webknossos.org" target="_blank" rel="noreferrer">
-        user documentation...
-      </a>
-    </Hint>
-  );
+  const authToken = getAuthToken();
+  const wkInitSnippet = `import webknossos as wk
 
-  const wklibsInitCode = `import webknossos as wk
-
-with wk.webknossos_context(token="MY_TOKEN"):
-    dataset = wk.Dataset.download(
-        dataset_name_or_url="dataset_name",
-        organization_id="my_organization",
+with wk.webknossos_context(token="${authToken}"):
+    annotation = wk.Annotation.download(
+        "${annotationId}",
+        annotation_type="${annotationType}",
+        webknossos_url="${window.location.origin}"
     )
 `;
+
+  const alertTokenIsPrivate = () => {
+    Toast.warning(
+      "The clipboard contains private data. Do not share this information with anyone you do not trust!",
+    );
+  };
+
+  const selection = ["Volume", "Skeleton", "Fallback"];
 
   return (
     <Modal
       title="Download this Annotation"
       visible={isVisible}
       width={600}
-      okText="Ok"
+      footer={currentFooter}
       onOk={handleOk}
-      onCancel={onOk}
+      onCancel={onClose}
       style={{ overflow: "visible" }}
     >
-      <Tabs onChange={handleTabChange} type="card">
-        <TabPane tab="Download" key="1">
+      <Tabs activeKey={activeTabKey} onChange={handleTabChange} type="card">
+        <TabPane tab="Download" key="download">
           <Row>
-            <Col span={24}>
-              <Hint
-                style={{
-                  margin: "6px 12px",
-                }}
-              >
-                {messages["annotation.download"]}
-              </Hint>
-            </Col>
+            <Text
+              style={{
+                margin: "6px 12px",
+              }}
+            >
+              {messages["annotation.download"]}
+            </Text>
           </Row>
           <Divider
             style={{
@@ -142,7 +199,7 @@ with wk.webknossos_context(token="MY_TOKEN"):
             <Col span={15}>
               <CheckboxGroup onChange={handleCheckboxChange} defaultValue={selection}>
                 <Checkbox style={checkboxStyle} value="Volume">
-                  Volume as WKW
+                  Volume Annotations
                 </Checkbox>
                 <Hint
                   style={{
@@ -154,7 +211,7 @@ with wk.webknossos_context(token="MY_TOKEN"):
                 </Hint>
 
                 <Checkbox style={checkboxStyle} value="Skeleton">
-                  Skeleton as NML
+                  Skeleton Annotations
                 </Checkbox>
                 <Hint
                   style={{
@@ -162,19 +219,7 @@ with wk.webknossos_context(token="MY_TOKEN"):
                     marginBottom: 12,
                   }}
                 >
-                  Download a zip folder containing NML files.
-                </Hint>
-
-                <Checkbox style={checkboxStyle} value="Fallback">
-                  Fallback Layers
-                </Checkbox>
-                <Hint
-                  style={{
-                    marginLeft: 24,
-                    marginBottom: 12,
-                  }}
-                >
-                  Download a zip folder containing fallback layers as WKW files.
+                  Download an NML file (will always be included with a WKW download).
                 </Hint>
               </CheckboxGroup>
             </Col>
@@ -184,20 +229,32 @@ with wk.webknossos_context(token="MY_TOKEN"):
               margin: "18px 0",
             }}
           />
-          {moreInfoHint}
+          <Hint
+            style={{
+              margin: "0px 12px 0px 12px",
+            }}
+          >
+            For more information on how to process downloaded layers visit the{" "}
+            <a
+              href="https://docs.webknossos.org/api/webknossos/annotation/annotation.html"
+              target="_blank"
+              rel="noreferrer"
+            >
+              user documentation
+            </a>
+            .
+          </Hint>
         </TabPane>
 
-        <TabPane tab="Export" key="2">
+        <TabPane tab="TIFF Export" key="export">
           <Row>
-            <Col span={24}>
-              <Hint
-                style={{
-                  margin: "6px 12px",
-                }}
-              >
-                {messages["annotation.export"]}
-              </Hint>
-            </Col>
+            <Text
+              style={{
+                margin: "6px 12px",
+              }}
+            >
+              {messages["annotation.export"]}
+            </Text>
           </Row>
           <Divider
             style={{
@@ -206,7 +263,6 @@ with wk.webknossos_context(token="MY_TOKEN"):
           >
             Layer
           </Divider>
-          {maybeShowWarning()}
           <Row>
             <Col
               span={9}
@@ -264,23 +320,35 @@ with wk.webknossos_context(token="MY_TOKEN"):
               margin: "18px 0",
             }}
           />
-          {moreInfoHint}
+          <Hint
+            style={{
+              margin: "0px 12px 0px 12px",
+            }}
+          >
+            For more information on how to process downloaded layers visit the{" "}
+            <a
+              href="https://docs.webknossos.org/api/webknossos/annotation/annotation.html"
+              target="_blank"
+              rel="noreferrer"
+            >
+              user documentation
+            </a>
+            .
+          </Hint>
           <Checkbox style={{ position: "absolute", bottom: "16px" }} value="Fallback">
             Keep window open
           </Checkbox>
         </TabPane>
 
-        <TabPane tab="Python Client" key="3">
+        <TabPane tab="Python Client" key="python">
           <Row>
-            <Col span={24}>
-              <Hint
-                style={{
-                  margin: "6px 12px",
-                }}
-              >
-                {messages["annotation.python"]}
-              </Hint>
-            </Col>
+            <Text
+              style={{
+                margin: "6px 12px",
+              }}
+            >
+              {messages["annotation.python"]}
+            </Text>
           </Row>
           <Divider
             style={{
@@ -289,42 +357,31 @@ with wk.webknossos_context(token="MY_TOKEN"):
           >
             Code Snippets
           </Divider>
+          {maybeShowWarning()}
           <Paragraph>
-            <pre>
-              <Button
-                style={{
-                  float: "right",
-                  border: "none",
-                  width: "18px",
-                  height: "16px",
-                  background: "transparent",
-                }}
-                onClick={() => copyCodeToClipboard("pip install webknossos")}
-                icon={<CopyOutlined />}
-              />
-              pip install webknossos
-            </pre>
-            <pre>
-              <Button
-                style={{
-                  float: "right",
-                  border: "none",
-                  width: "18px",
-                  height: "16px",
-                  background: "transparent",
-                }}
-                onClick={() => copyCodeToClipboard(wklibsInitCode)}
-                icon={<CopyOutlined />}
-              />
-              {wklibsInitCode}
-            </pre>
+            <CopyableCodeSnippet code="pip install webknossos" />
+            <CopyableCodeSnippet code={wkInitSnippet} onCopy={alertTokenIsPrivate} />
           </Paragraph>
           <Divider
             style={{
               margin: "18px 0",
             }}
           />
-          {moreInfoHint}
+          <Hint
+            style={{
+              margin: "0px 12px 0px 12px",
+            }}
+          >
+            For more information on how to process downloaded layers visit the{" "}
+            <a
+              href="https://docs.webknossos.org/api/webknossos/annotation/annotation.html#Annotation.download"
+              target="_blank"
+              rel="noreferrer"
+            >
+              user documentation
+            </a>
+            .
+          </Hint>
         </TabPane>
       </Tabs>
     </Modal>

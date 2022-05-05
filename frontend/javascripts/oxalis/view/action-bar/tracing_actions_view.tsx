@@ -567,7 +567,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         <DownloadModalView
           key="download-modal"
           isVisible={this.props.isDownloadModalOpen}
-          onOk={this.handleDownloadClose}
+          onClose={this.handleDownloadClose}
           annotationType={annotationType}
           annotationId={annotationId}
           hasVolumeFallback={hasVolumeFallback}

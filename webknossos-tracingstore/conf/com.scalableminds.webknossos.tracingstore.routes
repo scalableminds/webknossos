@@ -26,15 +26,15 @@ POST        /volume/mergedFromContents                          @com.scalablemin
 
 # Zarr endpoints for volume annotations
 # Get all mags as dir listing
-GET         /volume/zarr/:tracingId                             @com.scalableminds.webknossos.tracingstore.controllers....AnyRef
-# Get existence of mag
-GET         /volume/zarr/:tracingId/:mag
-# Get .zarray
-GET         /volume/zarr/:tracingId/:mag/.zarray
+GET         /volume/zarr/:tracingId                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.volumeTracingFolderContent(token: Option[String], tracingId: String)
 # zgroups
-GET         /volume/zarr/:tracingId/.zgroup
+GET         /volume/zarr/:tracingId/.zgroup                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.zGroup(token: Option[String], tracingId: String)
+# Get existence of mag
+GET         /volume/zarr/:tracingId/:mag                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.volumeTracingMagFolderContent(token: Option[String], tracingId: String, mag: String)
+# Get .zarray
+GET         /volume/zarr/:tracingId/:mag/.zarray                @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.zArray(token: Option[String], tracingId: String, mag: String)
 # actual data
-GET         /volume/zarr/:tracingId/:mag/:cxyz
+GET         /volume/zarr/:tracingId/:mag/:cxyz                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.rawZarrCube(token: Option[String], tracingId: String, mag: String, cxyz: String)
 
 # Skeleton tracings
 POST        /skeleton/save                                      @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.save(token: Option[String])

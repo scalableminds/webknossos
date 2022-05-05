@@ -73,7 +73,7 @@ class ZarrStreamingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
-              Map("color" -> ".") ++ mags.map { mag =>
+              Map(dataLayerName -> ".") ++ mags.map { mag =>
                 (mag.toURLString, mag.toURLString)
               }.toMap
             )).withHeaders()
@@ -176,7 +176,7 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  private def parseDotCoordinates(
+  def parseDotCoordinates(
       cxyz: String,
   ): Fox[(Int, Int, Int, Int)] = {
     val singleRx = "\\s*([0-9]+).([0-9]+).([0-9]+).([0-9]+)\\s*".r

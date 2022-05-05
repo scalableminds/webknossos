@@ -108,7 +108,7 @@ type LayoutMenuProps = LayoutProps & {
   onDeleteLayout: (arg0: string) => void;
   addNewLayout: () => void;
 };
-export const LayoutMenu = (props: LayoutMenuProps) => {
+export function LayoutMenu(props: LayoutMenuProps) {
   const {
     storedLayoutNamesForView,
     layoutKey,
@@ -239,7 +239,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
       </Menu.ItemGroup>
     </Menu.SubMenu>
   );
-};
+}
 
 class TracingActionsView extends React.PureComponent<Props, State> {
   state: State = {

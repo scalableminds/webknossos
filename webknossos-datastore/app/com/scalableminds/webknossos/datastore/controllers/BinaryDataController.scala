@@ -102,7 +102,7 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "Target-mag height of the bounding box", required = true) height: Int,
       @ApiParam(value = "Target-mag depth of the bounding box", required = true) depth: Int,
       @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: Option[String],
-      @ApiParam(value = "[DEPRECATED: use mag instead] exponent of largest dimension of mag.", required = true) zoomStep: Option[
+      zoomStep: Option[
         Int],
       @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
   ): Action[AnyContent] = Action.async { implicit request =>

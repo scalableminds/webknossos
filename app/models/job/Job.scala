@@ -72,7 +72,7 @@ case class Job(
           }
         case "export_tiff" =>
           Some(s"$dataStorePublicUrl/data/exports/${_id.id}/download")
-        case "infer_nuclei" | "infer_neurons" | "apply_merger_mode" =>
+        case "infer_nuclei" | "infer_neurons" | "materialize_volume_annotation" =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
           }

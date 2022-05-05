@@ -1085,7 +1085,7 @@ function startSegmentationAnnotationDependentJob(
   annotationId: string,
   annotationType: APIAnnotationType,
   outputSegmentationLayerName?: string,
-  mergeSegments?: boolean
+  mergeSegments?: boolean,
 ): Promise<APIJob> {
   const requestURL = new URL(
     `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}`,
@@ -1102,7 +1102,7 @@ function startSegmentationAnnotationDependentJob(
   if (outputSegmentationLayerName != null) {
     requestURL.searchParams.append("outputSegmentationLayerName", outputSegmentationLayerName);
   }
-  if(mergeSegments != null){
+  if (mergeSegments != null) {
     requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
   }
   return Request.receiveJSON(requestURL.href, {

@@ -26,7 +26,7 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import io.swagger.annotations._
 import net.liftweb.util.Helpers.tryo
-import play.api.i18n.{Messages, MessagesProvider}
+import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc._
 
@@ -52,6 +52,7 @@ class BinaryDataController @Inject()(
   isosurfaceServiceHolder.dataStoreIsosurfaceConfig =
     (binaryDataService, mappingService, config.Datastore.Isosurface.timeout, config.Datastore.Isosurface.actorPoolSize)
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.dataStoreIsosurfaceService
+
   @ApiOperation(hidden = true, value = "")
   def requestViaWebKnossos(
       token: Option[String],
@@ -64,7 +65,9 @@ class BinaryDataController @Inject()(
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 30 seconds) {
         val t = System.currentTimeMillis()
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ~> 404
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
           duration = System.currentTimeMillis() - t
           _ = if (duration > 10000)
@@ -84,6 +87,10 @@ class BinaryDataController @Inject()(
 
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
+
+  /**
+    * Handles requests for raw binary data via HTTP GET.
+    */
   @ApiOperation(value = "Get raw binary data from a bounding box in a dataset layer", nickname = "datasetDownload")
   @ApiResponses(
     Array(
@@ -102,16 +109,17 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "Target-mag height of the bounding box", required = true) height: Int,
       @ApiParam(value = "Target-mag depth of the bounding box", required = true) depth: Int,
       @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: Option[String],
-      zoomStep: Option[
-        Int],
+      resolution: Option[Int],
       @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-        _ <- bool2Fox(!(zoomStep.isDefined && mag.isDefined)) ?~> "Can only interpret mag or zoomStep. Use only mag instead."
-        magFromZoomStep = zoomStep.map(dataLayer.magFromExponent(_, snapToClosest = true))
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> 404
+        _ <- bool2Fox(!(resolution.isDefined && mag.isDefined)) ?~> "Can only interpret mag or zoomStep. Use only mag instead."
+        magFromZoomStep = resolution.map(dataLayer.magFromExponent(_, snapToClosest = true))
         magParsedOpt <- Fox.runOptional(mag)(Vec3Int.fromMagLiteral(_).toFox)
         magParsed <- magParsedOpt.orElse(magFromZoomStep).toFox ?~> "No mag supplied"
         request = DataRequest(
@@ -126,6 +134,9 @@ class BinaryDataController @Inject()(
     }
   }
 
+  /**
+    * Handles a request for raw binary data via a HTTP GET. Used by knossos.
+    */
   @ApiOperation(hidden = true, value = "")
   def requestViaKnossos(token: Option[String],
                         organizationName: String,
@@ -139,7 +150,9 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> 404
         request = DataRequest(
           new VoxelPosition(x * cubeSize * resolution,
                             y * cubeSize * resolution,
@@ -168,7 +181,10 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
         position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
         request = DataRequest(position, width, height, 1)
         (data, _) <- requestData(dataSource, dataLayer, request)
@@ -191,7 +207,6 @@ class BinaryDataController @Inject()(
       } yield Ok(outputStream.toByteArray).as("image/jpeg")
     }
   }
-
   @ApiOperation(hidden = true, value = "")
   def mappingJson(
       token: Option[String],
@@ -203,7 +218,9 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ~> 404
         segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
         mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
         result <- mappingService.handleMappingRequest(mappingRequest)
@@ -211,6 +228,9 @@ class BinaryDataController @Inject()(
     }
   }
 
+  /**
+    * Handles isosurface requests.
+    */
   @ApiOperation(hidden = true, value = "")
   def requestIsosurface(token: Option[String],
                         organizationName: String,
@@ -220,7 +240,9 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ~> 404
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
           isosurfaceRequest = IsosurfaceRequest(
             Some(dataSource),
@@ -260,7 +282,9 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ~> 404
           meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
         } yield
           Ok(
@@ -278,7 +302,9 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ~> 404
           positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
         } yield
           Ok(
@@ -296,22 +322,15 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         token) {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
-            "histogram.layerMissing",
-            dataLayerName)
+          (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ?~> Messages(
+            "dataSource.notFound") ~> 404 ?~> Messages("histogram.layerMissing", dataLayerName)
           listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages("histogram.failed",
                                                                                                   dataLayerName)
         } yield Ok(Json.toJson(listOfHistograms))
       }
     }
-
-  private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
-      implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
-    for {
-      dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-        "dataSource.notFound") ~> 404
-      dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404
-    } yield (dataSource, dataLayer)
 
   private def requestData(
       dataSource: DataSource,

@@ -19,7 +19,8 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
   override def toString: String = s"($x, $y, $z)"
 
-  def toMagLiteral: String = s"$x-$y-$z"
+  def toMagLiteral(allowScalar: Boolean = false): String =
+    if (allowScalar && isIsotropic) s"$x" else s"$x-$y-$z"
 
   def toList = List(x, y, z)
 

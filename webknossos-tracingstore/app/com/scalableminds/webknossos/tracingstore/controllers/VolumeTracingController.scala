@@ -238,7 +238,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              Map(parsedMag -> ".")
+              Map(mag -> ".")
             )).withHeaders()
       }
     }
@@ -289,7 +289,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           parsedMag <- parseMagIfExists(tracing, mag) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
           (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> 404
 
-          _ <- bool2Fox(c == 0) ~> "zarr.invalidFirstChunkCoord" ~> 404
+          _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
           cubeSize = DataLayer.bucketLength
           request = WebKnossosDataRequest(
             position = Vec3Int(x, y, z),
@@ -299,8 +299,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             applyAgglomerate = None,
             version = None
           )
-          (data, indices) <- tracingService.data(tracingId, tracing, List(request))
-        } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+          (data, _) <- tracingService.data(tracingId, tracing, List(request))
+        } yield Ok(data).withHeaders()
       }
     }
 
@@ -332,8 +332,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       case ElementClass.uint8  => Some(1, "<u1")
       case ElementClass.uint16 => Some(1, "<u2")
       case ElementClass.uint24 => Some(3, "<u1")
-      case ElementClass.uint32 => Some(1, "<u3")
-      case ElementClass.uint64 => Some(1, "<u4")
+      case ElementClass.uint32 => Some(1, "<u4")
+      case ElementClass.uint64 => Some(1, "<u8")
       case _                   => None
     }
 

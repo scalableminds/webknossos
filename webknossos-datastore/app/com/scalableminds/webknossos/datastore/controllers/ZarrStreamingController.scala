@@ -152,9 +152,9 @@ class ZarrStreamingController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
                                                                                   dataLayerName) ~> 404
-        (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> 404
+        (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404
         parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
-        _ <- bool2Fox(c == 0) ~> "zarr.invalidFirstChunkCoord" ~> 404
+        _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
         cubeSize = DataLayer.bucketLength
         request = DataServiceDataRequest(
           dataSource,
@@ -176,7 +176,7 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  def parseDotCoordinates(
+  private def parseDotCoordinates(
       cxyz: String,
   ): Fox[(Int, Int, Int, Int)] = {
     val singleRx = "\\s*([0-9]+).([0-9]+).([0-9]+).([0-9]+)\\s*".r
@@ -258,7 +258,7 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  private def getTokenFromHeader(token: Option[String], request: Request[AnyContent]) =
+  private def getTokenFromHeader(token: Option[String], request: Request[AnyContent]): Option[String] =
     token.orElse(request.headers.get("X-Auth-Token"))
 
   private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] = {

@@ -26,7 +26,7 @@ The following interactions and modifiers are available when working with the vol
 - `Change Brush Size`: Changes the size of the brushing tool. 
 - `Overwrite Everything`: When labelling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labelled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
 - `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush/trace tool to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
-- `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labelling). 3D flood fill is constraint to a small, regional bounding box for performance reasons. Read more about flood fills below.
+- `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labelling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
 
 ![Adding labels with the Trace tool](./images/volume_trace.gif)
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
@@ -38,7 +38,7 @@ The active segment ID under the cursor can be found in the status bar at the bot
 
 ### Merging volume annotation with fallback data
 
-Once finished annotating a volume layer with a fallback layer, the state of this volume layer can be materialized into a new dataset. for this go to the layer settings in the left border. on the top right of the volume layer is the following button:
+After finishing the annotation of a volume layer with a fallback layer, the combined state of these layers can be materialized into a new dataset. For this go to the layer settings in the left border tab. On the top right of the volume layer is the following button:
 
 ![Icon to open the materialize volume annotation modal](./images/materialize_volume_annotation_icon.jpg)
 
@@ -57,7 +57,7 @@ To fix split errors see section on flood filling below.
 
 ![Video: Proof-Reading Volume Annotations](https://www.youtube.com/watch?v=Sq4AuWanK14)
 
-After finishing the proof-reading, a long-running job can be started to apply the merging of segments into a new dataset with the same layers. The job can be started via a modal. The modal can be open by clicking on the button next to the merger mode button.
+After finishing the proof-reading, a long-running job can be started to apply the merging of segments into a new dataset with the same layers. The job can be started via a modal. The modal can be opened by clicking on the button next to the merger mode button.
 
 ![Button to open the Merger mode long-running job modal](./images/start_merger_mode_job_modal_button.jpg)
 ![Modal to start the Merger mode long-running job](./images/start_merger_mode_job_modal.jpg)

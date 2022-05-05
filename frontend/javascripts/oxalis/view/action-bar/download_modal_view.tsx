@@ -5,6 +5,7 @@ import type { APIAnnotationType } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import Model from "oxalis/model";
+import features from "features";
 import { downloadNml, getAuthToken } from "admin/admin_rest_api";
 import { CheckboxValueType } from "antd/lib/checkbox/Group";
 const CheckboxGroup = Checkbox.Group;
@@ -27,7 +28,7 @@ function Hint({ children, style }: { children: React.ReactNode; style: React.CSS
 
 export async function copyToClipboard(code: string) {
   await navigator.clipboard.writeText(code);
-  Toast.warning("Snippet copied to clipboard.");
+  Toast.success("Snippet copied to clipboard.");
 }
 
 function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
@@ -62,6 +63,7 @@ const okTextForTab = new Map([
 
 export default function DownloadModalView(props: Props): JSX.Element {
   const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
+  const [activeTabKey, setActiveTabKey] = useState("download");
   const handleOk = async () => {
     await Model.ensureSavedState();
     downloadNml(annotationId, annotationType, hasVolumeFallback);
@@ -72,24 +74,21 @@ export default function DownloadModalView(props: Props): JSX.Element {
       Download
     </Button>,
   ]);
-  const [activeTabKey, setActiveTabKey] = useState("download");
 
   const maybeShowWarning = () => {
-    if (activeTabKey === "download") {
-      if (hasVolumeFallback) {
-        return (
-          <Row>
-            <Text
-              style={{
-                margin: "6px 12px",
-              }}
-              type="warning"
-            >
-              {messages["annotation.no_fallback_data_included"]}
-            </Text>
-          </Row>
-        );
-      }
+    if (activeTabKey === "download" && hasVolumeFallback) {
+      return (
+        <Row>
+          <Text
+            style={{
+              margin: "6px 12px",
+            }}
+            type="warning"
+          >
+            {messages["annotation.no_fallback_data_included"]}
+          </Text>
+        </Row>
+      );
     } else if (activeTabKey === "python") {
       return (
         <Row>
@@ -116,7 +115,12 @@ export default function DownloadModalView(props: Props): JSX.Element {
     const okText = okTextForTab.get(key);
     if (okText != null) {
       setCurrentFooter([
-        <Button key="ok" type="primary" onClick={handleOk}>
+        <Button
+          key="ok"
+          type="primary"
+          disabled={key === "export" && !features().jobsEnabled}
+          onClick={handleOk}
+        >
           {okText}
         </Button>,
       ]);
@@ -124,6 +128,25 @@ export default function DownloadModalView(props: Props): JSX.Element {
       setCurrentFooter(null);
     }
   };
+
+  const workerInfo = (
+    <Row>
+      <Divider
+        style={{
+          margin: "18px 0",
+        }}
+      />
+      <Text
+        style={{
+          margin: "6px 12px",
+        }}
+        type="warning"
+      >
+        {messages["annotation.export_no_worker"]}
+        <a href="mailto:hello@webknossos.com">hello@webknossos.com.</a>
+      </Text>
+    </Row>
+  );
 
   const handleLayerSelection = (selection: string) => {
     console.log(selection);
@@ -199,7 +222,7 @@ with wk.webknossos_context(token="${authToken}"):
             <Col span={15}>
               <CheckboxGroup onChange={handleCheckboxChange} defaultValue={selection}>
                 <Checkbox style={checkboxStyle} value="Volume">
-                  Volume Annotations
+                  Volume Annotations as WKW
                 </Checkbox>
                 <Hint
                   style={{
@@ -211,7 +234,7 @@ with wk.webknossos_context(token="${authToken}"):
                 </Hint>
 
                 <Checkbox style={checkboxStyle} value="Skeleton">
-                  Skeleton Annotations
+                  Skeleton Annotations as NML
                 </Checkbox>
                 <Hint
                   style={{
@@ -234,9 +257,9 @@ with wk.webknossos_context(token="${authToken}"):
               margin: "0px 12px 0px 12px",
             }}
           >
-            For more information on how to process downloaded layers visit the{" "}
+            For more information on how to work with annotation files visit the{" "}
             <a
-              href="https://docs.webknossos.org/api/webknossos/annotation/annotation.html"
+              href="https://docs.webknossos.org/webknossos/tooling.html"
               target="_blank"
               rel="noreferrer"
             >
@@ -256,65 +279,70 @@ with wk.webknossos_context(token="${authToken}"):
               {messages["annotation.export"]}
             </Text>
           </Row>
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Layer
-          </Divider>
-          <Row>
-            <Col
-              span={9}
-              style={{
-                lineHeight: "20px",
-                padding: "5px 12px",
-              }}
-            >
-              Select the layer you would like to prepare for export.
-            </Col>
-            <Col span={15}>
-              <Select defaultValue="l2" style={{ width: 300 }} onChange={handleLayerSelection}>
-                <Option value="l1">Layer 1 with extra information</Option>
-                <Option value="l2">Layer 2</Option>
-                <Option value="disabled" disabled>
-                  Disabled
-                </Option>
-              </Select>
-            </Col>
-          </Row>
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Bounding Box
-          </Divider>
-          {maybeShowWarning()}
-          <Row>
-            <Col
-              span={9}
-              style={{
-                lineHeight: "20px",
-                padding: "5px 12px",
-              }}
-            >
-              Select a bounding box to constrain the data for export.
-            </Col>
-            <Col span={15}>
-              <Select
-                defaultValue="b2"
-                style={{ width: 300 }}
-                onChange={handleBoundingBoxSelection}
+          {activeTabKey === "export" && !features().jobsEnabled ? (
+            workerInfo
+          ) : (
+            <div>
+              <Divider
+                style={{
+                  margin: "18px 0",
+                }}
               >
-                <Option value="b1">BBox 1 with extra information</Option>
-                <Option value="b2">BBox 2</Option>
-                <Option value="disabled" disabled>
-                  Disabled
-                </Option>
-              </Select>
-            </Col>
-          </Row>
+                Layer
+              </Divider>
+              <Row>
+                <Col
+                  span={9}
+                  style={{
+                    lineHeight: "20px",
+                    padding: "5px 12px",
+                  }}
+                >
+                  Select the layer you would like to prepare for export.
+                </Col>
+                <Col span={15}>
+                  <Select defaultValue="l2" style={{ width: 300 }} onChange={handleLayerSelection}>
+                    <Option value="l1">Layer 1 with extra information</Option>
+                    <Option value="l2">Layer 2</Option>
+                    <Option value="disabled" disabled>
+                      Disabled
+                    </Option>
+                  </Select>
+                </Col>
+              </Row>
+              <Divider
+                style={{
+                  margin: "18px 0",
+                }}
+              >
+                Bounding Box
+              </Divider>
+              <Row>
+                <Col
+                  span={9}
+                  style={{
+                    lineHeight: "20px",
+                    padding: "5px 12px",
+                  }}
+                >
+                  Select a bounding box to constrain the data for export.
+                </Col>
+                <Col span={15}>
+                  <Select
+                    defaultValue="b2"
+                    style={{ width: 300 }}
+                    onChange={handleBoundingBoxSelection}
+                  >
+                    <Option value="b1">BBox 1 with extra information</Option>
+                    <Option value="b2">BBox 2</Option>
+                    <Option value="disabled" disabled>
+                      Disabled
+                    </Option>
+                  </Select>
+                </Col>
+              </Row>
+            </div>
+          )}
           <Divider
             style={{
               margin: "18px 0",
@@ -325,9 +353,9 @@ with wk.webknossos_context(token="${authToken}"):
               margin: "0px 12px 0px 12px",
             }}
           >
-            For more information on how to process downloaded layers visit the{" "}
+            For more information on how to work with TIFF files visit the{" "}
             <a
-              href="https://docs.webknossos.org/api/webknossos/annotation/annotation.html"
+              href="https://docs.webknossos.org/webknossos/tooling.html"
               target="_blank"
               rel="noreferrer"
             >
@@ -335,7 +363,11 @@ with wk.webknossos_context(token="${authToken}"):
             </a>
             .
           </Hint>
-          <Checkbox style={{ position: "absolute", bottom: "16px" }} value="Fallback">
+          <Checkbox
+            style={{ position: "absolute", bottom: "16px" }}
+            value="Fallback"
+            disabled={activeTabKey === "export" && !features().jobsEnabled}
+          >
             Keep window open
           </Checkbox>
         </TabPane>
@@ -372,9 +404,9 @@ with wk.webknossos_context(token="${authToken}"):
               margin: "0px 12px 0px 12px",
             }}
           >
-            For more information on how to process downloaded layers visit the{" "}
+            For more information on how to work with annotation files visit the{" "}
             <a
-              href="https://docs.webknossos.org/api/webknossos/annotation/annotation.html#Annotation.download"
+              href="https://docs.webknossos.org/webknossos/tooling.html"
               target="_blank"
               rel="noreferrer"
             >

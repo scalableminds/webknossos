@@ -292,12 +292,14 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
   "annotation.download": "This volume annotation data is available for download immediately.",
   "annotation.export":
-    "Exporting will trigger a job to prepare TIFF data for download. This may take a while depending on the data you select. When the job has finished you can download your selected data in the download list.",
+    "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the (Jobs)[<url>] page.",
+  "annotation.export_no_worker":
+    "This webKnossos instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
   "annotation.python":
     "The following code snippets are suggestions to get you started quickly with the webKnossos Python client. To download and use this annotation in your Python project, simply copy and paste the code snippets to your script.",
   "project.delete": "Do you really want to delete this project?",
   "annotation.python_do_not_share_token":
-    "The snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
+    "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",
   "project.none_selected": "No currently selected project found.",

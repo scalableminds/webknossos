@@ -290,13 +290,14 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.was_edited": "Successfully updated annotation",
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
-  "annotation.download":
-    "The options in this tab are available for download immediately. If you would like to prepare data for donwload in TIFF format, please switch to the export tab.",
+  "annotation.download": "This volume annotation data is available for download immediately.",
   "annotation.export":
     "Exporting will trigger a job to prepare TIFF data for download. This may take a while depending on the data you select. When the job has finished you can download your selected data in the download list.",
   "annotation.python":
-    "The following code snippets are suggestions to get you started quickly with the wklibs python client. To download and use the dataset in your python project just copy and paste the code snippets to your script.",
+    "The following code snippets are suggestions to get you started quickly with the webKnossos Python client. To download and use this annotation in your Python project, simply copy and paste the code snippets to your script.",
   "project.delete": "Do you really want to delete this project?",
+  "annotation.python_do_not_share_token":
+    "The snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",
   "project.none_selected": "No currently selected project found.",

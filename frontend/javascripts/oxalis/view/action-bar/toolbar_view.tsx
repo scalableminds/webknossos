@@ -142,8 +142,12 @@ function RadioButtonWithTooltip({
         disabled={disabled}
         {...props}
         onClick={(evt) => {
-          if (document.activeElement) (document.activeElement as HTMLElement).blur();
-          if (onClick) onClick(evt);
+          if (document.activeElement) {
+            (document.activeElement as HTMLElement).blur();
+          }
+          if (onClick) {
+            onClick(evt);
+          }
         }}
       />
     </Tooltip>
@@ -226,10 +230,12 @@ function AdditionalSkeletonModesButtons() {
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
-  const [showApplyMergerModeModal, setShowApplyMergerModeModal] = useState<boolean>(false);
+  const [showMaterializeVolumeAnnotationModal, setShowMaterializeVolumeAnnotationModal] =
+    useState<boolean>(false);
   const isNewNodeNewTreeModeOn = useSelector(
     (state: OxalisState) => state.userConfiguration.newNodeNewTree,
   );
+
   const toggleNewNodeNewTreeMode = () =>
     dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
 
@@ -266,17 +272,19 @@ function AdditionalSkeletonModesButtons() {
         </ButtonComponent>
       </Tooltip>
       {features().jobsEnabled && isMergerModeEnabled && (
-        <Tooltip title="Apply this merger mode tracing.">
+        <Tooltip title="Materialize this merger mode annotation into a new dataset.">
           <ButtonComponent
             style={narrowButtonStyle}
-            onClick={() => setShowApplyMergerModeModal(true)}
+            onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
           >
             <ExportOutlined />
           </ButtonComponent>
         </Tooltip>
       )}
-      {features().jobsEnabled && showApplyMergerModeModal && (
-        <MaterializeVolumeAnnotationModal handleClose={() => setShowApplyMergerModeModal(false)} />
+      {features().jobsEnabled && showMaterializeVolumeAnnotationModal && (
+        <MaterializeVolumeAnnotationModal
+          handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
+        />
       )}
     </React.Fragment>
   );

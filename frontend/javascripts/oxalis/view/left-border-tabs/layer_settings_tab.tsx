@@ -474,7 +474,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           </div>
           <div className="flex-item">
-            {isVolumeTracing && !isDisabled ? this.getMergeWithFallbackLayerButton(layer) : null}
+            {isVolumeTracing && !isDisabled && maybeFallbackLayer != null
+              ? this.getMergeWithFallbackLayerButton(layer)
+              : null}
           </div>
           <div className="flex-item">
             {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}

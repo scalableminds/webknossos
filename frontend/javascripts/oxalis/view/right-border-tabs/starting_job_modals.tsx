@@ -23,10 +23,16 @@ import { computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 
 const { ThinSpace } = Unicode;
-const jobNameToImagePath = {
+const enum JobNames {
+  NEURON_INFERRAL = "neuron inferral",
+  NUCLEI_INFERRAL = "nuclei inferral",
+  MATERIALIZE_VOLUME_ANNOTATION = "materialize volume annotation",
+  GLOBALIZE_FLODDFILLS = "globalization of the floodfill operation(s)",
+}
+const jobNameToImagePath: Record<JobNames, string | null> = {
   "neuron inferral": "neuron_inferral_example.jpg",
   "nuclei inferral": "nuclei_inferral_example.jpg",
-  "materializing this volume annotation": "materialize_volume_annotation_example.jpg",
+  "materialize volume annotation": "materialize_volume_annotation_example.jpg",
   "globalization of the floodfill operation(s)": null,
 };
 type Props = {
@@ -297,7 +303,7 @@ function StartingJobModal(props: StartingJobModalProps) {
     initialOutputSegmentationLayerName || "segmentation"
   }_corrected`;
   // TODO: Other jobs also have an output segmentation layer. The names for these jobs should also be configurable.
-  const hasOutputSegmentationLayer = jobName === "materializing this volume annotation";
+  const hasOutputSegmentationLayer = jobName === JobNames.MATERIALIZE_VOLUME_ANNOTATION;
   return (
     <Modal title={title} onCancel={handleClose} visible width={700} footer={null}>
       {description}
@@ -359,7 +365,7 @@ export function NucleiInferralModal({ handleClose }: Props) {
   return (
     <StartingJobModal
       handleClose={handleClose}
-      jobName="nuclei inferral"
+      jobName={JobNames.NUCLEI_INFERRAL}
       title="Start a Nuclei Inferral"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
@@ -395,7 +401,7 @@ export function NeuronInferralModal({ handleClose }: Props) {
   return (
     <StartingJobModal
       handleClose={handleClose}
-      jobName="neuron inferral"
+      jobName={JobNames.NEURON_INFERRAL}
       title="Start a Neuron Inferral"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
@@ -446,17 +452,24 @@ export function MaterializeVolumeAnnotationModal({
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;
+  const readableVolumeLayerName =
+    fixedSelectedLayer && getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
+  const hasFallbackLayer =
+    fixedSelectedLayer && "tracingId" in fixedSelectedLayer
+      ? fixedSelectedLayer.fallbackLayer != null
+      : false;
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   let description = (
     <p>
       Start a job that takes the current state of this volume annotation and materializes it into a
-      new dataset. All annotations done on the
-      {` "${fixedSelectedLayer && getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing)}" `}
-      volume layer will be merged with the data of the fallback layer.
+      new dataset.
+      {hasFallbackLayer
+        ? ` All annotations done on the "${readableVolumeLayerName}" volume layer will be merged with the data of the fallback layer. `
+        : null}
       {isMergerModeEnabled
-        ? " Additionally, the skeletons will be used to merge segments as merger mode is active. "
+        ? " Since merger mode is currently active, in the new output dataset the segments connected via skeleton nodes will be merged. "
         : " "}
       Please enter the name of the output dataset and the output segmentation layer.
     </p>
@@ -465,8 +478,9 @@ export function MaterializeVolumeAnnotationModal({
     description = (
       <p>
         Start a job that takes the current state of this merger mode tracing and materializes it
-        into a new dataset. In the new output dataset the segments connected via skeleton nodes will
-        be merged. Please enter the name of the output dataset and the output segmentation layer.
+        into a new dataset. Since merger mode is currently active, in the new output dataset the
+        segments connected via skeleton nodes will be merged. Please enter the name of the output
+        dataset and the output segmentation layer.
       </p>
     );
   }
@@ -475,7 +489,7 @@ export function MaterializeVolumeAnnotationModal({
     <StartingJobModal
       handleClose={handleClose}
       title="Start Materializing this Volume Annotation"
-      jobName="materializing this volume annotation"
+      jobName={JobNames.MATERIALIZE_VOLUME_ANNOTATION}
       suggestedDatasetSuffix="with_merged_segmentation"
       chooseSegmentationLayer
       fixedSelectedLayer={fixedSelectedLayer}
@@ -513,7 +527,7 @@ export function StartGlobalizeFloodfillsModal({ handleClose }: Props) {
     <StartingJobModal
       handleClose={handleClose}
       title="Start Globalizing of the Floodfill Operation(s)"
-      jobName="globalization of the floodfill operation(s)"
+      jobName={JobNames.GLOBALIZE_FLODDFILLS}
       suggestedDatasetSuffix="with_floodfills"
       chooseSegmentationLayer
       jobApiCall={async ({ newDatasetName, selectedLayer: segmentationLayer }) => {

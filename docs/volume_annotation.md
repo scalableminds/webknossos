@@ -26,7 +26,7 @@ The following interactions and modifiers are available when working with the vol
 - `Change Brush Size`: Changes the size of the brushing tool. 
 - `Overwrite Everything`: When labelling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labelled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
 - `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush/trace tool to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
-- `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labelling). 3D flood fill is contraint to a small, regional bounding box for performance reasons. Read more about flood fills below.
+- `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labelling). 3D flood fill is constraint to a small, regional bounding box for performance reasons. Read more about flood fills below.
 
 ![Adding labels with the Trace tool](./images/volume_trace.gif)
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
@@ -35,6 +35,15 @@ The following interactions and modifiers are available when working with the vol
 In the `Segmentation` tab on the right-hand sidepanel, you can see the segment IDs which are available in your annotation. You can rename segments as needed.
 
 The active segment ID under the cursor can be found in the status bar at the bottom of the screen or through the context-sensitive menu on right-click.
+
+### Merging volume annotation with fallback data
+
+Once finished annotating a volume layer with a fallback layer, the state of this volume layer can be materialized into a new dataset. for this go to the layer settings in the left border. on the top right of the volume layer is the following button:
+
+![Icon to open the materialize volume annotation modal](./images/materialize_volume_annotation_icon.jpg)
+
+This button opens up a modal that starts a long-running job which will materialize the volume annotation.
+
 
 ### Proof-Reading and Merging Segments
 
@@ -57,9 +66,9 @@ After finishing the proof-reading, a long-running job can be started to apply th
 webKnossos supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, webKnossos can do this for you. This operation allows you to fix both split and merge errors:
 
 - For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute intensive you might be better of with the `Merger Mode`, explained above.
-- For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply to one of the partial segments that you just devided. 
+- For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply to one of the partial segments that you just divided. 
 
-Due to perfomance reasons, 3D flood-fills only work in a small, local bounding box. webKnossos will add bounding box around the affected area. In order to truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a webKnossos job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill" button. Make sure to do all local fill operations first and apply them all at once.
+Due to performance reasons, 3D flood-fills only work in a small, local bounding box. webKnossos will add bounding box around the affected area. In order to truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a webKnossos job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill" button. Make sure to do all local fill operations first and apply them all at once.
 
 Check the `Processing Jobs` page from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, processed dataset will appear as new dataset in your dashboard.
 

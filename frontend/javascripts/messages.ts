@@ -290,7 +290,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.was_edited": "Successfully updated annotation",
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
-  "annotation.download": "This volume annotation data is available for download immediately.",
+  "annotation.download": "The following volume annotation data is available for download immediately.",
   "annotation.export":
     "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the (Jobs)[<url>] page.",
   "annotation.export_no_worker":

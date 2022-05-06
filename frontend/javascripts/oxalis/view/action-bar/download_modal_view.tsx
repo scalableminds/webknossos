@@ -31,6 +31,26 @@ export async function copyToClipboard(code: string) {
   Toast.success("Snippet copied to clipboard.");
 }
 
+function MoreInfoHint() {
+  return (
+    <Hint
+      style={{
+        margin: "0px 12px 0px 12px",
+      }}
+    >
+      For more information on how to work with annotation files visit the{" "}
+      <a
+        href="https://docs.webknossos.org/webknossos/tooling.html"
+        target="_blank"
+        rel="noreferrer"
+      >
+        user documentation
+      </a>
+      .
+    </Hint>
+  );
+}
+
 function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
   return (
     <pre>
@@ -193,6 +213,7 @@ with wk.webknossos_context(token="${authToken}"):
       <Tabs activeKey={activeTabKey} onChange={handleTabChange} type="card">
         <TabPane tab="Download" key="download">
           <Row>
+            {maybeShowWarning()}
             <Text
               style={{
                 margin: "6px 12px",
@@ -208,7 +229,6 @@ with wk.webknossos_context(token="${authToken}"):
           >
             Options
           </Divider>
-          {maybeShowWarning()}
           <Row>
             <Col
               span={9}
@@ -252,21 +272,7 @@ with wk.webknossos_context(token="${authToken}"):
               margin: "18px 0",
             }}
           />
-          <Hint
-            style={{
-              margin: "0px 12px 0px 12px",
-            }}
-          >
-            For more information on how to work with annotation files visit the{" "}
-            <a
-              href="https://docs.webknossos.org/webknossos/tooling.html"
-              target="_blank"
-              rel="noreferrer"
-            >
-              user documentation
-            </a>
-            .
-          </Hint>
+          <MoreInfoHint />
         </TabPane>
 
         <TabPane tab="TIFF Export" key="export">
@@ -348,21 +354,7 @@ with wk.webknossos_context(token="${authToken}"):
               margin: "18px 0",
             }}
           />
-          <Hint
-            style={{
-              margin: "0px 12px 0px 12px",
-            }}
-          >
-            For more information on how to work with TIFF files visit the{" "}
-            <a
-              href="https://docs.webknossos.org/webknossos/tooling.html"
-              target="_blank"
-              rel="noreferrer"
-            >
-              user documentation
-            </a>
-            .
-          </Hint>
+          <MoreInfoHint />
           <Checkbox
             style={{ position: "absolute", bottom: "16px" }}
             value="Fallback"
@@ -399,21 +391,7 @@ with wk.webknossos_context(token="${authToken}"):
               margin: "18px 0",
             }}
           />
-          <Hint
-            style={{
-              margin: "0px 12px 0px 12px",
-            }}
-          >
-            For more information on how to work with annotation files visit the{" "}
-            <a
-              href="https://docs.webknossos.org/webknossos/tooling.html"
-              target="_blank"
-              rel="noreferrer"
-            >
-              user documentation
-            </a>
-            .
-          </Hint>
+          <MoreInfoHint />
         </TabPane>
       </Tabs>
     </Modal>

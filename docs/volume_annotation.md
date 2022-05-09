@@ -38,7 +38,7 @@ The active segment ID under the cursor can be found in the status bar at the bot
 
 ### Merging volume annotation with fallback data
 
-After finishing the annotation of a volume layer with a fallback layer, the combined state of these layers can be materialized into a new dataset. For this go to the layer settings in the left border tab. On the top right of the volume layer is the following button:
+After finishing the annotation of a volume layer with a fallback layer, the combined state of these layers can be materialized into a new dataset. For this, go to the layer settings in the left border tab. On the top right of the volume layer is the following button:
 
 ![Icon to open the materialize volume annotation modal](./images/materialize_volume_annotation_icon.jpg)
 

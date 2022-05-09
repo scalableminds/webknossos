@@ -211,7 +211,7 @@ class StatisticView extends React.PureComponent<{}, State> {
         <Row gutter={16}>
           <Col span={24}>
             <Card
-              title={`Best Tracers for Week ${this.state.startDate.format(
+              title={`Best Annotators for Week ${this.state.startDate.format(
                 "DD.MM",
               )} - ${this.state.endDate.format("DD.MM.YYYY")}`}
               style={{

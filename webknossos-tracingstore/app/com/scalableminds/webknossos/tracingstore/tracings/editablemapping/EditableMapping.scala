@@ -9,3 +9,7 @@ case class EditableMapping(
 ) {
   def toBytes: Array[Byte] = ???
 }
+
+object EditableMapping {
+  def fromBytes(bytes: Array[Byte]): EditableMapping = ???
+}

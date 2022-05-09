@@ -64,9 +64,7 @@ class SkeletonTracingService @Inject()(
           pendingUpdates <- findPendingUpdates(tracingId, existingVersion, newVersion)
           updatedTracing <- update(tracing, tracingId, pendingUpdates, newVersion)
           _ <- save(updatedTracing, Some(tracingId), newVersion)
-        } yield {
-          updatedTracing
-        }
+        } yield updatedTracing
       } else {
         Full(tracing)
       }
@@ -102,9 +100,7 @@ class SkeletonTracingService @Inject()(
           tracingId,
           Some(desiredVersion),
           Some(existingVersion + 1))(fromJson[List[SkeletonUpdateAction]])
-      } yield {
-        updateActionGroups.reverse.flatten
-      }
+      } yield updateActionGroups.reverse.flatten
     }
 
   private def update(tracing: SkeletonTracing,

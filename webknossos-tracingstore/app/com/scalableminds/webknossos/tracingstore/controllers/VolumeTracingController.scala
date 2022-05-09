@@ -12,9 +12,16 @@ import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, Web
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, EditableMappingUpdateAction}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  EditableMappingService,
+  EditableMappingUpdateAction
+}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
-import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient, TracingStoreAccessTokenService}
+import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteDatastoreClient,
+  TSRemoteWebKnossosClient,
+  TracingStoreAccessTokenService
+}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -154,10 +161,10 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             (newId, newTracing) <- tracingService.duplicate(tracingId,
-              tracing,
-              fromTask.getOrElse(false),
-              dataSetBoundingBox,
-              resolutionRestrictions)
+                                                            tracing,
+                                                            fromTask.getOrElse(false),
+                                                            dataSetBoundingBox,
+                                                            resolutionRestrictions)
             _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
           } yield Ok(Json.toJson(newId))
         }
@@ -230,13 +237,13 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
           organizationName <- tracing.organizationName ?~> "annotation.agglomerateSkeleton.noOrganizationNameKnown"
           fallbackLayer <- tracing.fallbackLayer ?~> "annotation.agglomerateSkeleton.noFallbackLayer"
-          // TODO: if editable mapping of this name exists, use that.
+          isEditableMapping <- editableMappingService.exists(mappingName)
           agglomerateSkeletonBytes <- remoteDatastoreClient.getAgglomerateSkeleton(token,
-            organizationName,
-            tracing.dataSetName,
-            fallbackLayer,
-            mappingName,
-            agglomerateId)
+                                                                                   organizationName,
+                                                                                   tracing.dataSetName,
+                                                                                   fallbackLayer,
+                                                                                   mappingName,
+                                                                                   agglomerateId)
         } yield Ok(agglomerateSkeletonBytes)
       }
     }
@@ -252,13 +259,17 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
 
-  def updateEditableMapping(token: Option[String], tracingId: String, version: Long): Action[EditableMappingUpdateAction] =
+  def updateEditableMapping(token: Option[String],
+                            tracingId: String,
+                            version: Long): Action[EditableMappingUpdateAction] =
     Action.async(validateJson[EditableMappingUpdateAction]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
         for {
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName.toFox
-          _ <- editableMappingService.assertExists(mappingName)
+          _ <- Fox.assertTrue(editableMappingService.exists(mappingName))
+          currentVersion <- editableMappingService.currentVersion(mappingName)
+          _ <- bool2Fox(version == currentVersion + 1) ?~> "version mismatch"
           _ <- editableMappingService.update(mappingName, request.body, version)
         } yield Ok
       }

@@ -30,14 +30,13 @@ object MergeAgglomerateUpdateAction {
   implicit val jsonFormat: OFormat[MergeAgglomerateUpdateAction] = Json.format[MergeAgglomerateUpdateAction]
 }
 
-
 object EditableMappingUpdateAction {
 
   implicit object editableMappingUpdateActionFormat extends Format[EditableMappingUpdateAction] {
     override def reads(json: JsValue): JsResult[EditableMappingUpdateAction] =
       (json \ "name").validate[String].flatMap {
-        case "mergeAgglomerate" => (json \ "value").validate[MergeAgglomerateUpdateAction]
-        case "splitAgglomerate" => (json \ "value").validate[SplitAgglomerateUpdateAction]
+        case "mergeAgglomerate"    => (json \ "value").validate[MergeAgglomerateUpdateAction]
+        case "splitAgglomerate"    => (json \ "value").validate[SplitAgglomerateUpdateAction]
         case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
       }
 

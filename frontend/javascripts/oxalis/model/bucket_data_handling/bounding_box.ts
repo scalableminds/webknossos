@@ -152,6 +152,25 @@ class BoundingBox {
     });
   }
 
+  alignWithMag(mag: Vector3, ceil: boolean = false): BoundingBox {
+    /*
+     * Rounds the bounding box, so that both min and max are divisible by mag.
+     * :argument ceil: If true, the bounding box is enlarged when necessary. If false, it's shrinked when necessary.
+     */
+    const align = (point: Vector3, round_fn: (vec: Vector3) => Vector3) =>
+      V3.scale3(round_fn(V3.divide3(point, mag)), mag);
+
+    if (ceil) {
+      const min = align(this.min, V3.floor);
+      const max = align(this.max, V3.ceil);
+      return new BoundingBox({ min, max });
+    } else {
+      const min = align(this.min, V3.ceil);
+      const max = align(this.max, V3.floor);
+      return new BoundingBox({ min, max });
+    }
+  }
+
   /*
    * Each component of margins is used as
    *   - a left margin IF the value is negative (the absolute value will be

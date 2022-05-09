@@ -179,6 +179,7 @@ export default function* maybeInterpolateSegmentationLayer(
     .paddedWithSignedMargins(
       transpose([0, 0, -directionFactor * interpolationDepth * labeledResolution[thirdDim]]),
     )
+    .alignWithMag(labeledResolution, true)
     .rounded();
   const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);
 
@@ -200,7 +201,7 @@ export default function* maybeInterpolateSegmentationLayer(
       volumeTracing,
       activeViewport,
       labeledResolution,
-      relevantBoxMag1.min[thirdDim] + targetOffsetW,
+      relevantBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * targetOffsetW,
     );
     interpolationVoxelBuffers[targetOffsetW] = interpolationLayer.createVoxelBuffer2D(
       V2.floor(

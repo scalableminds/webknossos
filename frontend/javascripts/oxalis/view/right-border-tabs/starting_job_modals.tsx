@@ -306,8 +306,11 @@ function StartingJobModal(props: StartingJobModalProps) {
   const hasOutputSegmentationLayer = jobName === JobNames.MATERIALIZE_VOLUME_ANNOTATION;
   const notAllowedOutputLayerNames = allLayers
     .filter((layer) => {
-      // Filtering out the layer that is currently selected as this name is allowed
-      // because the output layer overwrites the selected layer.
+      // Existing layer names may not be used for the output layer. The only exception
+      // is the name of the currently selected layer. This layer is the only one not
+      // copied over from the original dataset to the output dataset.
+      // Therefore, this name is available as the name for the output layer name.
+      // That is why that layer is filtered out here.
       const currentSelectedVolumeLayerName = form.getFieldValue("layerName") || initialLayerName;
       return (
         getReadableNameOfVolumeLayer(layer, tracing) !== currentSelectedVolumeLayerName &&

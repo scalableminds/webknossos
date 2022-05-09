@@ -57,9 +57,9 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
   private def exploreResolutions(baseDir: Path)(
       implicit report: DataSourceImportReport[Path]): Box[List[(WKWHeader, Vec3Int)]] =
-    PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutionDirs =>
-      val resolutionHeaders = resolutionDirs.sortBy(resolutionDirSortingKey).map { resolutionDir =>
-        val resolution = parseResolutionName(resolutionDir).get
+    PathUtils.listDirectories(baseDir, magDirFilter).flatMap { resolutionDirs =>
+      val resolutionHeaders = resolutionDirs.sortBy(magDirSortingKey).map { resolutionDir =>
+        val resolution = magFromPath(resolutionDir).get
         WKWHeader(resolutionDir.resolve("header.wkw").toFile).map { header =>
           (header, resolution)
         }.passFailure { f =>
@@ -109,7 +109,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       multiplierZ = resolution.cubeLength * resolution.resolution.z
 
       resolutionDirs <- PathUtils.listDirectories(baseDir, filterGen(""))
-      resolutionDir <- resolveHead(baseDir, resolutionDirs.sortBy(resolutionDirSortingKey))
+      resolutionDir <- resolveHead(baseDir, resolutionDirs.sortBy(magDirSortingKey))
 
       zDirs <- PathUtils.listDirectories(resolutionDir, filterGen("z"))
       zHeadDir <- resolveHead(resolutionDir, zDirs)

@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 case class ImagePartInfo(page: Int, x: Int, y: Int, height: Int, width: Int)
 
 case class PageInfo(idx: Int, start: Int, number: Int) {
-  def name = idx
+  def name: Int = idx
 }
 
 case class CombinedImage(pages: List[CombinedPage])
@@ -30,7 +30,7 @@ case class ImageCreatorParameters(
 
 object ImageCreator extends LazyLogging {
 
-  val defaultTargetType = BufferedImage.TYPE_3BYTE_BGR
+  private val defaultTargetType = BufferedImage.TYPE_3BYTE_BGR
 
   def spriteSheetFor(data: Array[Byte], params: ImageCreatorParameters): Option[CombinedImage] = {
     val targetType = defaultTargetType
@@ -38,7 +38,9 @@ object ImageCreator extends LazyLogging {
     createSpriteSheet(images, params, targetType)
   }
 
-  def calculateSprites(data: Array[Byte], params: ImageCreatorParameters, targetType: Int): List[BufferedImage] = {
+  private def calculateSprites(data: Array[Byte],
+                               params: ImageCreatorParameters,
+                               targetType: Int): List[BufferedImage] = {
     val imageData =
       if (params.useHalfBytes) {
         val r = new Array[Byte](data.length * 2)
@@ -59,9 +61,9 @@ object ImageCreator extends LazyLogging {
     }
   }
 
-  def createSpriteSheet(bufferedImages: List[BufferedImage],
-                        params: ImageCreatorParameters,
-                        targetType: Int): Option[CombinedImage] =
+  private def createSpriteSheet(bufferedImages: List[BufferedImage],
+                                params: ImageCreatorParameters,
+                                targetType: Int): Option[CombinedImage] =
     if (bufferedImages.isEmpty) {
       logger.warn("No images supplied for sprite sheet generation.")
       None
@@ -96,17 +98,7 @@ object ImageCreator extends LazyLogging {
       Some(CombinedImage(pages))
     }
 
-  def convertToType(sourceImage: BufferedImage, targetType: Int): BufferedImage =
-    sourceImage.getType() match {
-      case e if e == targetType =>
-        sourceImage
-      case _ =>
-        val image = new BufferedImage(sourceImage.getWidth(), sourceImage.getHeight(), targetType)
-        image.getGraphics().drawImage(sourceImage, 0, 0, null)
-        image
-    }
-
-  def toRGBArray(b: Array[Byte], bytesPerElement: Int, isSegmentation: Boolean) = {
+  private def toRGBArray(b: Array[Byte], bytesPerElement: Int, isSegmentation: Boolean) = {
     val colored = new Array[Int](b.length / bytesPerElement)
     var idx = 0
     val l = b.length
@@ -136,7 +128,7 @@ object ImageCreator extends LazyLogging {
     colored
   }
 
-  def idToRGB(b: Byte) = {
+  private def idToRGB(b: Byte) = {
     def hueToRGB(h: Double): Int = {
 
       val i: Double = Math.floor(h * 6f)
@@ -166,9 +158,9 @@ object ImageCreator extends LazyLogging {
     }
   }
 
-  def createBufferedImageFromBytes(b: Array[Byte],
-                                   targetType: Int,
-                                   params: ImageCreatorParameters): Option[BufferedImage] =
+  private def createBufferedImageFromBytes(b: Array[Byte],
+                                           targetType: Int,
+                                           params: ImageCreatorParameters): Option[BufferedImage] =
     try {
       val bufferedImage = new BufferedImage(params.slideWidth, params.slideHeight, targetType)
       bufferedImage.setRGB(0,

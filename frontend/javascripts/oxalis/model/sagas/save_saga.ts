@@ -915,11 +915,12 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: str
     for (const saveEntry of saveQueue) {
       for (const updateAction of saveEntry.actions) {
         if (updateAction.name === "updateBucket") {
-          const { position, zoomStep } = updateAction.value;
+          const { position, mag } = updateAction.value;
+          const resolutionIndex = segmentationResolutionInfo.getIndexByResolution(mag);
           const zoomedBucketAddress = globalPositionToBucketPosition(
             position,
             segmentationResolutionInfo.getDenseResolutions(),
-            zoomStep,
+            resolutionIndex,
           );
           const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
 

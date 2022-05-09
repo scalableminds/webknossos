@@ -77,7 +77,7 @@ trait DataLayerLike {
 
   def resolutions: List[Vec3Int]
 
-  def lookUpResolution(resolutionExponent: Int, snapToClosest: Boolean = false): Vec3Int = {
+  def magFromExponent(resolutionExponent: Int, snapToClosest: Boolean = false): Vec3Int = {
     val resPower = Math.pow(2, resolutionExponent).toInt
     val matchOpt = resolutions.find(resolution => resolution.maxDim == resPower)
     if (snapToClosest) matchOpt.getOrElse(resolutions.minBy(resolution => math.abs(resPower - resolution.maxDim)))

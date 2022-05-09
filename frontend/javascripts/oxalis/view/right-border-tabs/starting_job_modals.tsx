@@ -237,7 +237,7 @@ function StartingJobModal(props: StartingJobModalProps) {
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
-  const allLayer = getDataLayers(dataset);
+  const allLayers = getDataLayers(dataset);
 
   const startJob = async ({
     layerName,
@@ -304,7 +304,7 @@ function StartingJobModal(props: StartingJobModalProps) {
   }_corrected`;
   // TODO: Other jobs also have an output segmentation layer. The names for these jobs should also be configurable.
   const hasOutputSegmentationLayer = jobName === JobNames.MATERIALIZE_VOLUME_ANNOTATION;
-  const notAllowedOutputLayerNames = allLayer
+  const notAllowedOutputLayerNames = allLayers
     .filter((layer) => {
       // Filtering out the layer that is currently selected as this name is allowed
       // because the output layer overwrites the selected layer.
@@ -480,7 +480,7 @@ export function MaterializeVolumeAnnotationModal({
         ? ` All annotations done on the "${readableVolumeLayerName}" volume layer will be merged with the data of the fallback layer. `
         : null}
       {isMergerModeEnabled
-        ? " Since merger mode is currently active, in the new output dataset the segments connected via skeleton nodes will be merged. "
+        ? " Since the merger mode is currently active, the segments connected via skeleton nodes will be merged within the new output dataset. "
         : " "}
       Please enter the name of the output dataset and the output segmentation layer.
     </p>
@@ -489,9 +489,9 @@ export function MaterializeVolumeAnnotationModal({
     description = (
       <p>
         Start a job that takes the current state of this merger mode tracing and materializes it
-        into a new dataset. Since merger mode is currently active, in the new output dataset the
-        segments connected via skeleton nodes will be merged. Please enter the name of the output
-        dataset and the output segmentation layer.
+        into a new dataset. Since the merger mode is currently active, the segments connected via
+        skeleton nodes will be merged within the new output dataset. Please enter the name of the
+        output dataset and the output segmentation layer.
       </p>
     );
   }

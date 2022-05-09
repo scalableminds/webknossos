@@ -16,12 +16,10 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
-import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
 import { CategorizationSearch } from "oxalis/view/components/categorization_label";
 import features, { getDemoDatasetUrl } from "features";
-import renderIndependently from "libs/render_independently";
 import Persistence from "libs/persistence";
 import { getJobs } from "admin/admin_rest_api";
 import moment from "moment";
@@ -126,30 +124,7 @@ function DatasetView(props: Props) {
     setSearchQuery(event.target.value);
   }
 
-  function renderSampleDatasetsModal() {
-    renderIndependently((destroy) => (
-      <SampleDatasetsModal
-        onOk={context.checkDatasets}
-        organizationName={user.organization}
-        destroy={destroy}
-      />
-    ));
-  }
-
   function renderPlaceholder() {
-    const noDatasetsPlaceholder =
-      "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
-    const addSampleDatasetCard = (
-      <OptionCard
-        header="Add Sample Dataset"
-        icon={<RocketOutlined />}
-        action={<Button onClick={renderSampleDatasetsModal}>Add Sample Dataset</Button>}
-        height={350}
-      >
-        This is the easiest way to try out webKnossos. Add one of our sample datasets and start
-        exploring in less than a minute.
-      </OptionCard>
-    );
     const openPublicDatasetCard = (
       <OptionCard
         header="Open Demo Dataset"
@@ -164,34 +139,28 @@ function DatasetView(props: Props) {
         Have a look at a public dataset to experience webKnossos in action.
       </OptionCard>
     );
+
     const uploadPlaceholder = (
-      <React.Fragment>
-        <Row gutter={16} justify="center" align="bottom">
-          {features().isDemoInstance ? openPublicDatasetCard : addSampleDatasetCard}
-          <OptionCard
-            header="Upload Dataset"
-            icon={<CloudUploadOutlined />}
-            action={
-              <Link to="/datasets/upload">
-                <Button>Open Import Dialog</Button>
-              </Link>
-            }
-            height={350}
-          >
-            webKnossos supports a variety of{" "}
-            <a href="https://docs.webknossos.org/webknossos/data_formats.html">file formats</a> and
-            is also able to convert them when necessary.
-          </OptionCard>
-        </Row>
-        <div
-          style={{
-            marginTop: 24,
-          }}
-        >
-          There are no datasets available yet.
-        </div>
-      </React.Fragment>
+      <OptionCard
+        header="Upload Dataset"
+        icon={<CloudUploadOutlined />}
+        action={
+          <Link to="/datasets/upload">
+            <Button>Open Import Dialog</Button>
+          </Link>
+        }
+        height={350}
+      >
+        webKnossos supports a variety of{" "}
+        <a href="https://docs.webknossos.org/webknossos/data_formats.html">file formats</a> and is
+        also able to convert them when necessary.
+      </OptionCard>
     );
+
+    const emptyListHintText = Utils.isUserAdminOrDatasetManager(user)
+      ? "There are no datasets available yet. Upload one or try a public demo dataset."
+      : "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
+
     return context.isLoading ? null : (
       <Row
         justify="center"
@@ -201,13 +170,17 @@ function DatasetView(props: Props) {
         align="middle"
       >
         <Col span={18}>
+          <Row gutter={16} justify="center" align="bottom">
+            {features().isDemoInstance ? openPublicDatasetCard : null}
+            {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : null}
+          </Row>
           <div
             style={{
-              paddingBottom: 32,
+              marginTop: 24,
               textAlign: "center",
             }}
           >
-            {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : noDatasetsPlaceholder}
+            {emptyListHintText}
           </div>
         </Col>
       </Row>
@@ -222,7 +195,6 @@ function DatasetView(props: Props) {
         searchQuery={searchQuery}
         searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
-        isUserTeamManager={Utils.isUserTeamManager(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
         updateDataset={context.updateCachedDataset}

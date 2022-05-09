@@ -44,13 +44,12 @@ export default class RecommendedConfigurationModal extends React.Component<Props
   };
 
   render() {
-    const configurationEntries = _.map(this.props.config, (_value: any, key: string) => {
+    const configurationEntries = _.map(this.props.config, (value, key) => {
       // @ts-ignore Typescript doesn't infer that key will be of type keyof RecommendedConfiguration
       const settingsKey: keyof RecommendedConfiguration = key;
       return {
-        name: settings[settingsKey],
-        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-        value: settings[settingsKey].toString(),
+        name: key in settings ? settings[settingsKey] : null,
+        value: value?.toString(),
         comment: settingComments[settingsKey] || "",
       };
     });

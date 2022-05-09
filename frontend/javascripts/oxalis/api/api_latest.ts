@@ -65,6 +65,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import {
+  getDatasetResolutionInfo,
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
@@ -1460,6 +1461,33 @@ class DataApi {
   }
 
   /**
+   * Helper method to build the download URL for a raw data cuboid.
+   *
+   * @ignore
+   */
+  _getDownloadUrlForRawDataCuboid(
+    layerName: string,
+    topLeft: Vector3,
+    bottomRight: Vector3,
+    token: string,
+  ): string {
+    const { dataset } = Store.getState();
+    const resolutionInfo = getDatasetResolutionInfo(dataset);
+    const resolution = resolutionInfo.getLowestResolution();
+    const magString = resolution.join("-");
+    return (
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
+      `token=${token}&` +
+      `x=${topLeft[0]}&` +
+      `y=${topLeft[1]}&` +
+      `z=${topLeft[2]}&` +
+      `width=${bottomRight[0] - topLeft[0]}&` +
+      `height=${bottomRight[1] - topLeft[1]}&` +
+      `depth=${bottomRight[2] - topLeft[2]}`
+    );
+  }
+
+  /**
    * Downloads a cuboid of raw data from a dataset (not tracing) layer. A new window is opened for the download -
    * if that is not the case, please check your pop-up blocker.
    *
@@ -1467,18 +1495,13 @@ class DataApi {
    * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
    */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const { dataset } = Store.getState();
     return doWithToken((token) => {
-      const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?resolution=0&` +
-        `token=${token}&` +
-        `x=${topLeft[0]}&` +
-        `y=${topLeft[1]}&` +
-        `z=${topLeft[2]}&` +
-        `width=${bottomRight[0] - topLeft[0]}&` +
-        `height=${bottomRight[1] - topLeft[1]}&` +
-        `depth=${bottomRight[2] - topLeft[2]}`;
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'open' does not exist on type '(Window & ... Remove this comment to see the full error message
+      const downloadUrl = this._getDownloadUrlForRawDataCuboid(
+        layerName,
+        topLeft,
+        bottomRight,
+        token,
+      );
       window.open(downloadUrl);
       // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
       return Promise.resolve();
@@ -1486,18 +1509,13 @@ class DataApi {
   }
 
   getRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const { dataset } = Store.getState();
     return doWithToken((token) => {
-      const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?resolution=0&` +
-        `token=${token}&` +
-        `x=${topLeft[0]}&` +
-        `y=${topLeft[1]}&` +
-        `z=${topLeft[2]}&` +
-        `width=${bottomRight[0] - topLeft[0]}&` +
-        `height=${bottomRight[1] - topLeft[1]}&` +
-        `depth=${bottomRight[2] - topLeft[2]}`;
-      // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
+      const downloadUrl = this._getDownloadUrlForRawDataCuboid(
+        layerName,
+        topLeft,
+        bottomRight,
+        token,
+      );
       return Request.receiveArraybuffer(downloadUrl);
     });
   }

@@ -42,7 +42,7 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
     val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
     bucketStream.foreach {
       case (bucketPosition, data) =>
-        if (allowedResolutions.contains(bucketPosition.resolution)) {
+        if (allowedResolutions.contains(bucketPosition.mag)) {
           val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
           val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
           labelSet ++= nonZeroData
@@ -78,7 +78,7 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
                           allowedResolutions: Option[Set[Vec3Int]] = None): Unit =
     bucketStream.foreach {
       case (bucketPosition, bytes) =>
-        if (!isAllZero(bytes) && allowedResolutions.forall(_.contains(bucketPosition.resolution))) {
+        if (!isAllZero(bytes) && allowedResolutions.forall(_.contains(bucketPosition.mag))) {
           add(sourceVolumeIndex, bucketPosition, bytes)
         }
     }
@@ -128,7 +128,7 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
 
   def presentResolutions: Set[Vec3Int] =
     mergedVolume.map {
-      case (bucketPosition: BucketPosition, _) => bucketPosition.resolution
+      case (bucketPosition: BucketPosition, _) => bucketPosition.mag
     }.toSet
 
 }

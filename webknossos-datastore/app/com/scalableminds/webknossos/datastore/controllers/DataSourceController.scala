@@ -27,7 +27,6 @@ class DataSourceController @Inject()(
     dataSourceService: DataSourceService,
     remoteWebKnossosClient: DSRemoteWebKnossosClient,
     accessTokenService: DataStoreAccessTokenService,
-    sampleDatasetService: SampleDataSourceService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     meshFileService: MeshFileService,
     connectomeFileService: ConnectomeFileService,
@@ -244,24 +243,6 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def fetchSampleDataSource(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
-        for {
-          _ <- sampleDatasetService.initDownload(organizationName, dataSetName, token)
-        } yield JsonOk(Json.obj("messages" -> "downloadInitiated"))
-      }
-    }
-
-  @ApiOperation(hidden = true, value = "")
-  def listSampleDataSources(token: Option[String], organizationName: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources, token) {
-        Ok(Json.toJson(sampleDatasetService.listWithStatus(organizationName)))
-      }
-  }
-
-  @ApiOperation(hidden = true, value = "")
   def explore(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
     implicit request =>
       accessTokenService.validateAccessForSyncBlock(
@@ -431,9 +412,10 @@ Expects:
              layerName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
-        val count = binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
+        val (closedAgglomerateFileHandleCount, closedDataCubeHandleCount) =
+          binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
         logger.info(
-          s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}datasource $organizationName / $dataSetName: closed $count open file handles.")
+          s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$dataSetName: closed $closedDataCubeHandleCount data shard handles and $closedAgglomerateFileHandleCount agglomerate file handles.")
         val reloadedDataSource = dataSourceService.dataSourceFromFolder(
           dataSourceService.dataBaseDir.resolve(organizationName).resolve(dataSetName),
           organizationName)

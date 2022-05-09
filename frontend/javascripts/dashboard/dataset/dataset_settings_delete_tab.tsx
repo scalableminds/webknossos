@@ -8,12 +8,13 @@ import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import { confirmAsync } from "./helper_components";
+
 type Props = {
   datasetId: APIDatasetId;
   history: RouteComponentProps["history"];
 };
 
-const ImportDeleteComponent = ({ datasetId, history }: Props) => {
+const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [dataset, setDataset] = useState<APIDataset | null | undefined>(null);
   const datasetContext = useContext(DatasetCacheContext);
@@ -66,4 +67,4 @@ const ImportDeleteComponent = ({ datasetId, history }: Props) => {
   );
 };
 
-export default withRouter<RouteComponentProps & Props, any>(ImportDeleteComponent);
+export default withRouter<RouteComponentProps & Props, any>(DatasetSettingsDeleteTab);

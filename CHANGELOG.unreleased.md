@@ -8,9 +8,10 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/22.04.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/22.05.1...HEAD)
 
 ### Added
+ - Added support to stream zarr files using the corresponding [zarr spec](https://zarr.readthedocs.io/en/stable/spec/v2.html#storage). [#6144](https://github.com/scalableminds/webknossos/pull/6144)
 
 ### Changed
 - The mouse cursor now changes appearance to indicate the currently selected annotation tool  [#6132](https://github.com/scalableminds/webknossos/pull/6132)
@@ -20,14 +21,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
   - Removed `isActive` and `isPublic` columns to save screen space.
   - Changed data layer entries to display layer names instead of categories, e.g. "color" --> "axons".
 - While viewing tracings in read-only mode, the options to manipulate the tracing are now disabled. This leads to less confusion as previously the input was silently discarded. [#6140](https://github.com/scalableminds/webknossos/pull/6140).
+- Changed the internal protocol for requesting image data. The zoomStep parameter has been replaced by mag. This increases the datastore API version to 2.0 [#6159](https://github.com/scalableminds/webknossos/pull/6159)
 
 ### Fixed
-- Fixed a bug that led to an error when drag-'n-dropping an empty volume annotation in the dataset view. [#6116](https://github.com/scalableminds/webknossos/pull/6116)
-- Fixed rare callstack overflow when annotating large areas. [#6076](https://github.com/scalableminds/webknossos/pull/6076)
-- Fixed the "Copy Slice" shortcut (`v` and `shift + v`) in resolutions other than the most detailed one. [#6130](https://github.com/scalableminds/webknossos/pull/6130)
-- Fixed a bug where dataset tags with spaces would be automatically wrapped in quotes. [#6159](https://github.com/scalableminds/webknossos/pull/6159)
+- Fixed a bug in the task creation, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)
 
 ### Removed
-- Removed the functionality to unlink the fallback layer from an existing segmentation layer. Either create an annotation without fallback layer or from within an annotation with a fallback layer, create a new volume layer, instead. [#6146](https://github.com/scalableminds/webknossos/pull/6146)
 
 ### Breaking Changes

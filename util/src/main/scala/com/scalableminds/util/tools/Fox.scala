@@ -57,12 +57,28 @@ object Fox extends FoxImplicits {
       implicit ec: ExecutionContext): Fox[Nothing] =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
+  // run serially, fail on the first failure
   def serialSequence[A, B](l: List[A])(f: A => Future[B])(implicit ec: ExecutionContext): Future[List[B]] = {
     def runNext(remaining: List[A], results: List[B]): Future[List[B]] =
       remaining match {
         case head :: tail =>
           for {
             currentResult <- f(head)
+            results <- runNext(tail, currentResult :: results)
+          } yield results
+        case Nil =>
+          Future.successful(results.reverse)
+      }
+    runNext(l, Nil)
+  }
+
+  // run serially, return individual results in list of box
+  def serialSequenceBox[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Box[B]]] = {
+    def runNext(remaining: List[A], results: List[Box[B]]): Future[List[Box[B]]] =
+      remaining match {
+        case head :: tail =>
+          for {
+            currentResult <- f(head).futureBox
             results <- runNext(tail, currentResult :: results)
           } yield results
         case Nil =>
@@ -105,6 +121,7 @@ object Fox extends FoxImplicits {
     new Fox(r)
   }
 
+  // Run serially, fail on the first failure
   def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
     def runNext(remaining: List[A], results: List[B]): Fox[List[B]] =
       remaining match {

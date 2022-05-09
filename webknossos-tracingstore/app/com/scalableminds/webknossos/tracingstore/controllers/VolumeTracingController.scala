@@ -8,7 +8,6 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}

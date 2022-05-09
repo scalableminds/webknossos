@@ -528,7 +528,7 @@ function LoggedInAvatar({
           {[
             ["auto", "System-default"],
             ["light", "Light"],
-            ["dark", "Dark (beta)"],
+            ["dark", "Dark"],
           ].map(([key, label]) => (
             <Menu.Item
               key={key}

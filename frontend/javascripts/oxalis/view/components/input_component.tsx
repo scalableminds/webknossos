@@ -86,6 +86,7 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
 
   blurYourself = () =>
     document.activeElement ? (document.activeElement as HTMLElement).blur() : null;
+
   blurOnEscape = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -95,34 +96,19 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
 
   render() {
     const { isTextArea, onPressEnter, title, style, ...inputProps } = this.props;
-    let input;
-    if (isTextArea) {
-      input = (
-        <TextArea
-          {...inputProps}
-          style={title == null ? style : undefined}
-          onChange={this.handleChange}
-          onFocus={this.handleFocus}
-          onBlur={this.handleBlur}
-          value={this.state.currentValue}
-          onPressEnter={onPressEnter != null ? onPressEnter : undefined}
-          onKeyDown={this.blurOnEscape}
-        />
-      );
-    } else {
-      input = (
-        <Input
-          {...inputProps}
-          style={title == null ? style : undefined}
-          onChange={this.handleChange}
-          onFocus={this.handleFocus}
-          onBlur={this.handleBlur}
-          value={this.state.currentValue}
-          onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
-          onKeyDown={this.blurOnEscape}
-        />
-      );
-    }
+    const InputComponentType: typeof TextArea | typeof Input = isTextArea ? TextArea : Input;
+    const input = (
+      <InputComponentType
+        {...inputProps}
+        style={title == null ? style : undefined}
+        onChange={this.handleChange}
+        onFocus={this.handleFocus}
+        onBlur={this.handleBlur}
+        value={this.state.currentValue}
+        onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
+        onKeyDown={this.blurOnEscape}
+      />
+    );
     // The input needs to be wrapped in a span in order for the tooltip to work. See https://github.com/react-component/tooltip/issues/18#issuecomment-140078802.
     return title != null ? (
       <Tooltip title={title} style={style}>

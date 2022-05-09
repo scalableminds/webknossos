@@ -502,6 +502,7 @@ export type APIJob = {
   readonly annotationType: string | null | undefined;
   readonly organizationName: string | null | undefined;
   readonly boundingBox: string | null | undefined;
+  readonly mergeSegments: boolean | null | undefined;
   readonly type: string;
   readonly state: string;
   readonly manualState: string;

@@ -245,11 +245,15 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
 
-  def createEditableMapping(token: Option[String]): Action[AnyContent] =
+  def createEditableMapping(token: Option[String], tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
-      for {
-        id <- editableMappingService.create
-      } yield Ok(id)
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+        for {
+          tracing <- tracingService.find(tracingId)
+          tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
+          id <- editableMappingService.create(baseMappingName = tracingMappingName)
+        } yield Ok(id)
+      }
     }
 
 }

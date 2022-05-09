@@ -12,8 +12,13 @@ import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, Web
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TSRemoteWebKnossosClient}
+import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteDatastoreClient,
+  TSRemoteWebKnossosClient,
+  TracingStoreAccessTokenService
+}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -25,6 +30,8 @@ import scala.concurrent.ExecutionContext
 
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
                                         val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+                                        remoteDatastoreClient: TSRemoteDatastoreClient,
+                                        editableMappingService: EditableMappingService,
                                         val accessTokenService: TracingStoreAccessTokenService,
                                         val slackNotificationService: TSSlackNotificationService)(
     implicit val ec: ExecutionContext,
@@ -218,5 +225,31 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
   }
+
+  def agglomerateSkeleton(token: Option[String], tracingId: String, agglomerateId: Long): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+        for {
+          tracing <- tracingService.find(tracingId)
+          mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
+          organizationName <- tracing.organizationName ?~> "annotation.agglomerateSkeleton.noOrganizationNameKnown"
+          fallbackLayer <- tracing.fallbackLayer ?~> "annotation.agglomerateSkeleton.noFallbackLayer"
+          // TODO: if editable mapping of this name exists, use that.
+          agglomerateSkeletonBytes <- remoteDatastoreClient.getAgglomerateSkeleton(token,
+                                                                                   organizationName,
+                                                                                   tracing.dataSetName,
+                                                                                   fallbackLayer,
+                                                                                   mappingName,
+                                                                                   agglomerateId)
+        } yield Ok(agglomerateSkeletonBytes)
+      }
+    }
+
+  def createEditableMapping(token: Option[String]): Action[AnyContent] =
+    Action.async { implicit request =>
+      for {
+        id <- editableMappingService.create
+      } yield Ok(id)
+    }
 
 }

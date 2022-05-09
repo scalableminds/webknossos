@@ -99,6 +99,8 @@ services:
       - CIRCLE_TAG=${CIRCLE_TAG}
       - CIRCLE_BUILD_NUM=${CIRCLE_BUILD_NUM}
       - NODE_OPTIONS=--max_old_space_size=2048
+      # This will be picked up by ava so that the tests fail if a snapshot doesn't exist during CI, see https://github.com/avajs/ava/issues/1585
+      - CI
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
       - ".:/home/${USER_NAME:-sbt-user}/webknossos"

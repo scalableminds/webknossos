@@ -1,0 +1,52 @@
+@(kind: String, name: String, folderContents: Map[String, String])
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>webKnossos @(kind)</title>
+    <meta name="robot" content="noindex" />
+    @* <link rel="shortcut icon" type="image/png" href="https://static.webknossos.org/images/oxalis.svg" />*@
+    <style>
+      * {
+        font-family: "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+        sans-serif;
+        text-align: center
+      }
+
+      img {
+        display: block;
+        margin: auto;
+        padding: 3em 2em 0.5em 2em
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none
+      }
+
+      a#wkLink {
+        color: black;
+        font-size: 2em
+      }
+
+      p#hint {
+        color: #777;
+        margin-top: 4em
+      }
+    </style>
+  </head>
+  <body>
+    <a href="." id="wkLink">
+      <img src="https://static.webknossos.org/images/oxalis.svg" alt="" />
+      <span>Go to webKnossos</span>
+    </a>
+    <p id="hint">This is the webKnossos @(kind) “@(name)” folder.</p>
+    <p>The following are the contents of the folder:</p>
+    <ul>
+      @folderContents.map { case (name, link) =>
+        <li><a href=@link>@name</a>: @link</li>
+      }
+    </ul>
+  </body>
+</html>

@@ -4,7 +4,6 @@ import java.nio.file.Path
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.ExtendedTypes._
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.models.datasource._
 import net.liftweb.common.Box
@@ -61,21 +60,13 @@ trait DataSourceImporter {
     }
   }
 
-  protected def parseResolutionName(path: Path): Option[Vec3Int] =
-    path.getFileName.toString.toIntOpt match {
-      case Some(resolutionInt) => Some(Vec3Int(resolutionInt, resolutionInt, resolutionInt))
-      case None =>
-        val pattern = """(\d+)-(\d+)-(\d+)""".r
-        path.getFileName.toString match {
-          case pattern(x, y, z) => Some(Vec3Int(x.toInt, y.toInt, z.toInt))
-          case _                => None
-        }
-    }
+  protected def magFromPath(path: Path): Option[Vec3Int] =
+    Vec3Int.fromMagLiteral(path.getFileName.toString, allowScalar = true)
 
-  protected def resolutionDirFilter(path: Path): Boolean = parseResolutionName(path).isDefined
+  protected def magDirFilter(path: Path): Boolean = magFromPath(path).isDefined
 
-  protected def resolutionDirSortingKey(path: Path): Int =
-    parseResolutionName(path).get.maxDim
+  protected def magDirSortingKey(path: Path): Int =
+    magFromPath(path).get.maxDim
 
   protected def exploreMappings(baseDir: Path): Option[Set[String]] = MappingProvider.exploreMappings(baseDir)
 

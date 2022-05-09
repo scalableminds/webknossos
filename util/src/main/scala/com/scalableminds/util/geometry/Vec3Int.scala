@@ -1,5 +1,6 @@
 package com.scalableminds.util.geometry
 
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
@@ -16,8 +17,10 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def isIsotropic: Boolean =
     x == y && y == z
 
-  override def toString: String = "(%d, %d, %d)".format(x, y, z)
-  def toURLString: String = "%d-%d-%d".format(x, y, z)
+  override def toString: String = s"($x, $y, $z)"
+
+  def toMagLiteral(allowScalar: Boolean = false): String =
+    if (allowScalar && isIsotropic) s"$x" else s"$x-$y-$z"
 
   def toList = List(x, y, z)
 
@@ -48,21 +51,18 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 }
 
 object Vec3Int {
-  val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
-  val urlRx = "\\s*([0-9]+)-\\s*([0-9]+)-\\s*([0-9]+)\\s*".r
-  def toForm(p: Vec3Int) = Some("%d, %d, %d".format(p.x, p.y, p.z))
+  private val magLiteralRegex = """(\d+)-(\d+)-(\d+)""".r
 
-  def apply(t: (Int, Int, Int)): Vec3Int =
-    Vec3Int(t._1, t._2, t._3)
-
-  def fromForm(s: String) =
-    s match {
-      case formRx(x, y, z) =>
-        Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
-      case urlRx(x, y, z) =>
-        Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
+  def fromMagLiteral(s: String, allowScalar: Boolean = false): Option[Vec3Int] =
+    s.toIntOpt match {
+      case Some(scalar) if allowScalar => Some(Vec3Int.full(scalar))
       case _ =>
-        null
+        s match {
+          case magLiteralRegex(x, y, z) =>
+            Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
+          case _ =>
+            None
+        }
     }
 
   def fromArray[T <% Int](array: Array[T]) =
@@ -77,7 +77,7 @@ object Vec3Int {
   def full(i: Int): Vec3Int = Vec3Int(i, i, i)
 
   implicit object Vec3IntReads extends Reads[Vec3Int] {
-    def reads(json: JsValue) = json match {
+    def reads(json: JsValue): JsResult[Vec3Int] = json match {
       case JsArray(ts) if ts.size == 3 =>
         val c = ts.map(fromJson[Int](_)).flatMap(_.asOpt)
         if (c.size != 3)
@@ -90,7 +90,7 @@ object Vec3Int {
   }
 
   implicit object Vec3IntWrites extends Writes[Vec3Int] {
-    def writes(v: Vec3Int) = {
+    def writes(v: Vec3Int): JsArray = {
       val l = List(v.x, v.y, v.z)
       JsArray(l.map(toJson(_)))
     }

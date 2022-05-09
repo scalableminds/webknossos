@@ -71,6 +71,7 @@ const _window =
         pageYOffset: 0,
         addEventListener,
         removeEventListener,
+        open: (_url: string) => {},
       }
     : window;
 

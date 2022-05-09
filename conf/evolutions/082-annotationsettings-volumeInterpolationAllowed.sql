@@ -1,5 +1,3 @@
--- https://github.com/scalableminds/webknossos/pull/???
-
 START TRANSACTION;
 
 DROP VIEW webknossos.taskTypes_;

@@ -162,8 +162,8 @@ export default function RecommendedConfigurationView({
         <Row gutter={32}>
           <Col span={12}>
             <div>
-              The recommended configuration will be displayed to users when starting to trace a task
-              with this task type. The user is able to accept or decline this recommendation.
+              The recommended configuration will be displayed to users when starting to work on a
+              task with this task type. The user is able to accept or decline this recommendation.
               <br />
               <br />
               <FormItem

@@ -433,7 +433,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               <Checkbox disabled={isEditingMode}>
                 Restrict Resolutions{" "}
                 <Tooltip
-                  title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
+                  title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to annotate in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
                   placement="right"
                 >
                   <InfoCircleOutlined />

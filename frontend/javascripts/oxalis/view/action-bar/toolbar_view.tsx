@@ -1,5 +1,5 @@
 import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Button } from "antd";
-import { ExportOutlined } from "@ant-design/icons";
+import { CaretDownOutlined, CaretUpOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useState } from "react";
 
@@ -44,7 +44,6 @@ import Constants, {
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
-import { CaretDownOutlined, CaretUpOutlined } from "@ant-design/icons";
 import Dimensions from "oxalis/model/dimensions";
 
 import features from "features";

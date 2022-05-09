@@ -40,7 +40,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
     ZipIO.withUnziped(zipFile) {
       case (fileName, _) =>
         parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-          resolutionSet.add(bucketPosition.resolution)
+          resolutionSet.add(bucketPosition.mag)
         }
     }
     resolutionSet.toSet

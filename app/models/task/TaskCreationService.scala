@@ -45,11 +45,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     extends FoxImplicits
     with ProtoGeometryImplicits {
 
-  def assertBatchLimit(batchSize: Int, taskTypeIds: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def assertBatchLimit(batchSize: Int, taskTypeIds: List[String])(implicit ctx: DBAccessContext,
+                                                                  m: MessagesProvider): Fox[Unit] =
     for {
       isVolumeOrHybrid <- taskTypeService.containsVolumeOrHybridTaskType(taskTypeIds.toSet.toList)
       batchLimit = if (isVolumeOrHybrid) 100 else 1000
-      _ <- bool2Fox(batchSize <= batchLimit) ?~> "task.create.limitExceeded"
+      _ <- bool2Fox(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
     } yield ()
 
   // Used in create (without files) in case of base annotation

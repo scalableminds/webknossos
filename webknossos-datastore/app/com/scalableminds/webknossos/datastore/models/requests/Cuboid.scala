@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, VoxelPosit
 case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
 
   lazy val bottomRight: VoxelPosition =
-    topLeft.move(width * topLeft.resolution.x, height * topLeft.resolution.y, depth * topLeft.resolution.z)
+    topLeft.move(width * topLeft.mag.x, height * topLeft.mag.y, depth * topLeft.mag.z)
 
   val volume: Int = width * height * depth
 
@@ -43,5 +43,5 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     bucketList
   }
 
-  def resolution: Vec3Int = topLeft.resolution
+  def resolution: Vec3Int = topLeft.mag
 }

@@ -24,7 +24,7 @@ trait ApplyableVolumeAction extends VolumeUpdateAction
 
 case class UpdateBucketVolumeAction(position: Vec3Int,
                                     cubeSize: Int,
-                                    zoomStep: Int,
+                                    mag: Vec3Int,
                                     base64Data: String,
                                     actionTimestamp: Option[Long] = None,
                                     info: Option[String] = None)

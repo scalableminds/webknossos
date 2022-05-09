@@ -9,6 +9,7 @@ import models.annotation.AnnotationDAO
 import models.user.InviteService
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
+import oxalis.files.TempFileService
 import oxalis.mail.{Mailer, MailerConfig}
 import oxalis.security.WkSilhouetteEnvironment
 import oxalis.telemetry.SlackNotificationService
@@ -27,6 +28,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         annotationDAO: AnnotationDAO,
                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                         lifecycle: ApplicationLifecycle,
+                        tempFileService: TempFileService,
                         inviteService: InviteService,
                         sqlClient: SQLClient,
                         slackNotificationService: SlackNotificationService)
@@ -64,6 +66,13 @@ class Startup @Inject()(actorSystem: ActorSystem,
     Future.successful {
       logger.info("Closing SQL Database handle")
       sqlClient.db.close()
+    }
+  }
+
+  lifecycle.addStopHook { () =>
+    Future.successful {
+      logger.info("Deleting temporary files")
+      tempFileService.cleanUpAll()
     }
   }
 

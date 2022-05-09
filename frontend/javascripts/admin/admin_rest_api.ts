@@ -1780,7 +1780,7 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 // receives too many parameters, since this doesn't play well with the saga typings.
 type IsosurfaceRequest = {
   position: Vector3;
-  zoomStep: number;
+  mag: Vector3;
   segmentId: number;
   subsamplingStrides: Vector3;
   cubeSize: Vector3;
@@ -1798,7 +1798,7 @@ export function computeIsosurface(
 }> {
   const {
     position,
-    zoomStep,
+    mag,
     segmentId,
     subsamplingStrides,
     cubeSize,
@@ -1816,7 +1816,7 @@ export function computeIsosurface(
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, subsamplingStrides)),
           cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
-          zoomStep,
+          mag,
           // Segment to build mesh for
           segmentId,
           // Name and type of mapping to apply before building mesh (optional)

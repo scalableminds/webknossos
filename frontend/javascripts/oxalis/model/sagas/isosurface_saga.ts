@@ -368,6 +368,7 @@ function* maybeLoadIsosurface(
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
+  const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", {
@@ -387,7 +388,7 @@ function* maybeLoadIsosurface(
         useDataStore ? dataStoreUrl : tracingStoreUrl,
         {
           position: clippedPosition,
-          zoomStep,
+          mag,
           segmentId,
           subsamplingStrides,
           cubeSize,

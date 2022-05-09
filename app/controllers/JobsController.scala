@@ -126,7 +126,10 @@ class JobsController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
-  def runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String]): Action[AnyContent] =
+  def runInferNucleiJob(organizationName: String,
+                        dataSetName: String,
+                        layerName: String,
+                        newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -142,6 +145,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "layer_name" -> layerName,
+            "new_dataset_name" -> newDatasetName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNucleiInferral"
@@ -153,7 +157,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
   def runInferNeuronsJob(organizationName: String,
                          dataSetName: String,
                          layerName: String,
-                         bbox: String): Action[AnyContent] =
+                         bbox: String,
+                         newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -167,6 +172,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
+            "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
             "bbox" -> bbox,
@@ -180,10 +186,11 @@ class JobsController @Inject()(jobDAO: JobDAO,
   def runGlobalizeFloodfills(
       organizationName: String,
       dataSetName: String,
-      newDataSetName: Option[String],
-      layerName: Option[String],
-      annotationId: Option[String],
-      annotationType: Option[String],
+      fallbackLayerName: String,
+      annotationId: String,
+      annotationType: String,
+      newDatasetName: String,
+      volumeLayerName: Option[String]
   ): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -201,11 +208,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
-            "new_dataset_name" -> newDataSetName,
-            "layer_name" -> layerName,
+            "fallback_layer_name" -> fallbackLayerName,
+            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
+            "user_auth_token" -> userAuthToken.id,
             "annotation_id" -> annotationId,
             "annotation_type" -> annotationType,
-            "user_auth_token" -> userAuthToken.id,
+            "new_dataset_name" -> newDatasetName,
+            "volume_layer_name" -> volumeLayerName
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunGlobalizeFloodfills"
           js <- jobService.publicWrites(job)
@@ -253,6 +262,46 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "hide_unmapped_ids" -> hideUnmappedIds
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunTiffExport"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+
+  def runMaterializeVolumeAnnotationJob(organizationName: String,
+                                        dataSetName: String,
+                                        fallbackLayerName: String,
+                                        annotationId: String,
+                                        annotationType: String,
+                                        newDatasetName: String,
+                                        outputSegmentationLayerName: String,
+                                        mergeSegments: Boolean,
+                                        volumeLayerName: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.applyMergerMode.notAllowed.organization" ~> FORBIDDEN
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
+          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
+            request.identity.loginInfo)
+          command = "materialize_volume_annotation"
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> dataSetName,
+            "fallback_layer_name" -> fallbackLayerName,
+            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
+            "user_auth_token" -> userAuthToken.id,
+            "annotation_id" -> annotationId,
+            "output_segmentation_layer_name" -> outputSegmentationLayerName,
+            "annotation_type" -> annotationType,
+            "new_dataset_name" -> newDatasetName,
+            "merge_segments" -> mergeSegments,
+            "volume_layer_name" -> volumeLayerName
+          )
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunApplyMergerMode"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

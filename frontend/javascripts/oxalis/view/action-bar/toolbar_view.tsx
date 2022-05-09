@@ -1,6 +1,9 @@
+// @flow
 import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent } from "antd";
+import { ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
@@ -27,6 +30,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import type { AnnotationTool, OverwriteMode } from "oxalis/constants";
 import Constants, {
   ToolsWithOverwriteCapabilities,
@@ -38,6 +42,8 @@ import Constants, {
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
+import features from "features";
+
 const narrowButtonStyle = {
   paddingLeft: 10,
   paddingRight: 8,
@@ -119,6 +125,7 @@ function RadioButtonWithTooltip({
   title,
   disabledTitle,
   disabled,
+  onClick,
   ...props
 }: {
   title: string;
@@ -127,10 +134,22 @@ function RadioButtonWithTooltip({
   children: React.ReactNode;
   style: React.CSSProperties;
   value: string;
+  onClick?: Function;
 }) {
   return (
     <Tooltip title={disabled ? disabledTitle : title}>
-      <Radio.Button disabled={disabled} {...props} />
+      <Radio.Button
+        disabled={disabled}
+        {...props}
+        onClick={(evt) => {
+          if (document.activeElement) {
+            (document.activeElement as HTMLElement).blur();
+          }
+          if (onClick) {
+            onClick(evt);
+          }
+        }}
+      />
     </Tooltip>
   );
 }
@@ -211,6 +230,8 @@ function AdditionalSkeletonModesButtons() {
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
+  const [showMaterializeVolumeAnnotationModal, setShowMaterializeVolumeAnnotationModal] =
+    useState<boolean>(false);
   const isNewNodeNewTreeModeOn = useSelector(
     (state: OxalisState) => state.userConfiguration.newNodeNewTree,
   );
@@ -250,6 +271,21 @@ function AdditionalSkeletonModesButtons() {
           />
         </ButtonComponent>
       </Tooltip>
+      {features().jobsEnabled && isMergerModeEnabled && (
+        <Tooltip title="Materialize this merger mode annotation into a new dataset.">
+          <ButtonComponent
+            style={narrowButtonStyle}
+            onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
+          >
+            <ExportOutlined />
+          </ButtonComponent>
+        </Tooltip>
+      )}
+      {features().jobsEnabled && showMaterializeVolumeAnnotationModal && (
+        <MaterializeVolumeAnnotationModal
+          handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
+        />
+      )}
     </React.Fragment>
   );
 }
@@ -495,13 +531,7 @@ export default function ToolbarView() {
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
   return (
-    <div
-      onClick={() => {
-        if (document.activeElement)
-          // @ts-ignore
-          document.activeElement.blur();
-      }}
-    >
+    <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
         <RadioButtonWithTooltip
           title={moveToolDescription}
@@ -691,7 +721,7 @@ export default function ToolbarView() {
         isControlPressed={isControlPressed}
         isShiftPressed={isShiftPressed}
       />
-    </div>
+    </>
   );
 }
 

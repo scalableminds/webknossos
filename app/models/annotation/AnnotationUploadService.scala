@@ -15,15 +15,12 @@ import net.liftweb.util.Helpers.tryo
 import oxalis.files.TempFileService
 import play.api.i18n.MessagesProvider
 
-import scala.concurrent.ExecutionContext
-
 case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {
   def getDataZipFrom(otherFiles: Map[String, File]): Option[File] =
     otherFiles.get(dataZipLocation)
 }
 
-class AnnotationUploadService @Inject()(tempFileService: TempFileService)(implicit ec: ExecutionContext)
-    extends LazyLogging {
+class AnnotationUploadService @Inject()(tempFileService: TempFileService)() extends LazyLogging {
 
   private def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
       implicit m: MessagesProvider): NmlParseResult =

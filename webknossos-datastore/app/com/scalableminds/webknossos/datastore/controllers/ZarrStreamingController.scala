@@ -108,7 +108,7 @@ class ZarrStreamingController @Inject()(
       for {
         (_, dataLayer) <- dataSourceRepository
           .getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages("dataSource.notFound") ~> 404
-        magParsed <- Vec3Int.fromMagLiteral(mag) ?~> Messages("dataLayer.invalidMag", mag)
+        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
         _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
         cubeLength = DataLayer.bucketLength
         (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
@@ -154,7 +154,7 @@ class ZarrStreamingController @Inject()(
                                                                                   dataSetName,
                                                                                   dataLayerName) ~> 404
         (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> 404
-        magParsed <- Vec3Int.fromMagLiteral(mag) ?~> Messages("dataLayer.invalidMag", mag)
+        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
         _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
         _ <- bool2Fox(c == 0) ~> "zarr.invalidFirstChunkCoord" ~> 404
         cubeSize = DataLayer.bucketLength

@@ -408,13 +408,15 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                       name={["settings", "volumeInterpolationAllowed"]}
                       valuePropName="checked"
                     >
-                      <Checkbox>Allow Volume Interpolation</Checkbox>
-                      <Tooltip
-                        title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
-                        placement="right"
-                      >
-                        <InfoCircleOutlined />
-                      </Tooltip>
+                      <Checkbox>
+                        Allow Volume Interpolation
+                        <Tooltip
+                          title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
+                          placement="right"
+                        >
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </Checkbox>
                     </FormItem>
                   </div>
                 </div>

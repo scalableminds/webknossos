@@ -1,6 +1,6 @@
 #!/bin/bash
 
-testBundlePath="public/test-bundle"
+testBundlePath="public-test/test-bundle"
 jsPath="frontend/javascripts"
 FIND=find
 
@@ -21,11 +21,11 @@ function prepare {
   pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
   # --copy-files will copy files that are present in the source dir but are not transpiled (e.g.: json files)
   # "$@" inside this function refers to all arguments of the prepare function, not all arguments of this bash script
-  BABEL_ENV=test babel "$jsPath" --out-dir "$testBundlePath" --copy-files "$@"
+  BABEL_ENV=test babel --extensions .ts,.tsx "$jsPath" --out-dir "$testBundlePath" --copy-files "$@"
 }
 
 function ensureUpToDateTests {
-  lastChangedSource=$($FIND "$jsPath" -regex ".*\.js$" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
+  lastChangedSource=$($FIND "$jsPath" -regex ".*\.tsx?$" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
   lastChangedTests=$($FIND "$testBundlePath" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
 
   if [ ! $lastChangedTests ] || [ $lastChangedSource -gt $lastChangedTests ]

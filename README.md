@@ -7,15 +7,15 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using webKnossos](https://webknossos.org) - [On your own server](https://docs.webknossos.org/) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
+[Start using webKnossos](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
 
 [![](https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
 [![](https://img.shields.io/github/license/scalableminds/webknossos.svg?colorB=success)](https://github.com/scalableminds/webknossos/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/url/http/webknossos.svg?style=social)](https://twitter.com/webknossos)
 
-## Demo
-[https://webknossos.org/](https://webknossos.org/)
+## website and hosted version
+[https://webknossos.org](https://webknossos.org/)
 
 ## Features
 * Exploration of large 3D image datasets
@@ -72,26 +72,34 @@ For non-localhost deployments, check out the [installation guide in the document
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
+* [Blosc](https://github.com/Blosc/c-blosc)
 * [node.js 12+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
-### OS X
-If you are using OS X try using this awesome installer:
-https://gist.github.com/normanrz/9128496
-
-Or install Java manually and run:
-
+### MacOS
 ```bash
+# webKnossos needs to be run from x86_64 environment (only applicable for arm64-based Macs)
+arch -x86_64 /bin/zsh
+
 # Install Homebrew package manager
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed
-brew install git node postgresql sbt findutils coreutils gnu-sed redis
-npm install -g yarn
+brew install openjdk@8 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn
 
-# Start postgres
+# Set env variables for openjdk and openssl
+# You probably want to add these lines manually to avoid conflicts in your zshrc
+echo 'if [ $(arch) = "i386" ]; then' >> ~/.zshrc
+echo '  export PATH="/usr/local/opt/openjdk@8/bin:$PATH"' >> ~/.zshrc
+echo '  export PATH="/usr/local/opt/openssl/bin:$PATH"' >> ~/.zshrc
+echo '  export LDFLAGS="-L/usr/local/opt/openssl/lib"' >> ~/.zshrc
+echo '  export CPPFLAGS="-I/usr/local/opt/openssl/include"' >> ~/.zshrc
+echo 'fi' >> ~/.zshrc
+
+# Start postgres and redis
 brew services start postgresql
+brew services start redis
 
 # Create PostgreSQL user
 createdb
@@ -102,7 +110,11 @@ psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
 # Checkout the webKnossos git repository
 git clone git@github.com:scalableminds/webknossos.git
+
+
 ```
+
+Note: On arm64-based Macs (e.g. M1), you need to run webKnossos in an x86_64 environment (Rosetta 2). In case you accidentally started webKnossos in an arm64 environment, it is advisable to delete several caches `~/.m2`, `~/ivy2`, `~/.sbt`, `~/.yarn-cache` and run `./clean`. Since Postgres and Redis are isolated processes, they can be run either from arm64 or x86_64 environments.
 
 
 ### Ubuntu 20.04 LTS
@@ -118,7 +130,7 @@ curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-8-jdk yarn redis-server build-essential
+sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-8-jdk yarn redis-server build-essential libblosc1
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
@@ -207,9 +219,9 @@ Contact us at [hello@webknossos.org](mailto:hello@webknossos.org).
 webKnossos was inspired by [KNOSSOS](https://knossos.app).
 
 ### Thanks
-* [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 * [Browser Stack](https://www.browserstack.com/) for letting us test WebKnossos on a variety of different devices
-<a href="https://www.browserstack.com/"><img src="https://p14.zdusercontent.com/attachment/1015988/wustfygoUpQ0faC7tIiaOpJUM?token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..TpDEVjDPeSTDWdmL0pu6Mw.pdawodFlbAuP4ZbKn5Ucpyq69pCh3bUXv_XH_yJk7CdAzi6IIi7Az6VWriflXVKOyTWtqA8JkxqPu11s9R56jC2I5JwCc1DJILtD_j9fT4rAIth-hvnST0eA_LqBdXpRYKMHtxookA-dZ9pbvHBTFb-JG2PEKl1IXZCw5GlIRgW2Oxieg9xXtFpBN7R6_Q5yRiwuviemrK0ide1ygC8HTMDgdgdbCLuhHDDeNyluU7tR9kVtV7KZDsVd2WIBId-fSyzInofDhlk196_fHwR0WQd1pN7GDVIdfRhxTTTNWTw.g0PCM6T1kBG7AtBwKZmfzQ" width=100 alt="Browserstack Logo"></a>
+  <a href="https://www.browserstack.com/"><img src="https://avatars.githubusercontent.com/u/1119453?s=200&v=4" width=100 alt="Browserstack Logo" align="right"></a>
+* [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 
 # License
 AGPLv3

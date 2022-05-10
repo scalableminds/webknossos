@@ -540,7 +540,7 @@ List tasks matching search criteria
    - `"project"` `[STRING]` show only tasks of the project with this id
    - `"ids"` `[JSON LIST OF STRINGS]` show only tasks with these ids
    - `"tasktype"` `[STRING]` show only tasks matching the task type with this id
-   - `"random"` `[BOOLEAN]` if true, return randomized subset of the results, rather than the first 1000 matches in the database
+   - `"random"` `[BOOLEAN]` if true, return a randomized subset of the results, rather than the first 1000 matches in the database
 
 #### Returns
  - JSON list of objects containing task information

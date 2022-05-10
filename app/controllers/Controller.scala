@@ -4,7 +4,6 @@ import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
 import oxalis.security.{UserAwareRequestLogging, WkEnv}
@@ -17,7 +16,6 @@ import scala.concurrent.ExecutionContext
 trait Controller
     extends InjectedController
     with ExtendedController
-    with ValidationHelpers
     with UserAwareRequestLogging
     with I18nSupport
     with LazyLogging {

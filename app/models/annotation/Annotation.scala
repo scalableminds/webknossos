@@ -224,6 +224,17 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
+  def findActiveTaskIdsForUser(userId: ObjectId): Fox[List[ObjectId]] = {
+
+    val stateQuery = getStateQuery(isFinished = Some(false))
+    for {
+      r <- run(sql"""select _task from #$existingCollectionName
+             where _user = ${userId.id} and typ = '#${AnnotationType.Task.toString}' and #$stateQuery""".as[String])
+      r <- Fox.serialCombined(r.toList)(ObjectId.parse(_))
+    } yield r
+
+  }
+
   def countAllFor(userId: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType)(
       implicit ctx: DBAccessContext): Fox[Int] = {
     val stateQuery = getStateQuery(isFinished)
@@ -330,7 +341,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
          ${a._user.id}, ${a.description}, '#${a.visibility.toString}', ${a.name},
          #${optionLiteral(viewConfigurationStr.map(sanitize))},
          '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
-         '#${writeArrayTuple(a.tags.toList.map(sanitize))}', ${a.tracingTime}, '#${a.typ.toString}',
+         '#${writeArrayTuple(a.tags.toList)}', ${a.tracingTime}, '#${a.typ.toString}',
          ${new java.sql.Timestamp(a.created)}, ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
          """
     val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
@@ -354,7 +365,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
                viewConfiguration = #${optionLiteral(viewConfigurationStr.map(sanitize))},
                state = '#${a.state.toString}',
                statistics = '#${sanitize(a.statistics.toString)}',
-               tags = '#${writeArrayTuple(a.tags.toList.map(sanitize))}',
+               tags = '#${writeArrayTuple(a.tags.toList)}',
                tracingTime = ${a.tracingTime},
                typ = '#${a.typ.toString}',
                created = ${new java.sql.Timestamp(a.created)},
@@ -431,8 +442,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(
-        sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags.map(sanitize))}' where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags)}' where _id = ${id.id}")
     } yield ()
 
   def updateModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext): Fox[Unit] =

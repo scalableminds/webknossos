@@ -133,9 +133,10 @@ dataSet.delete.webknossos.failed=Could not delete dataset from webKnossos databa
 dataSet.delete.failed=Could not delete the dataset on disk.
 dataSet.upload.Datastore.restricted=Your organization is not allowed to upload datasets to this datastore. Please choose another datastore.
 dataSet.upload.validation.failed=Failed to validate Dataset information for upload.
-dataSet.upload.linkPublicOnly=Only layers of existing public datasets can be linked
+dataSet.upload.linkRestricted=Can only link layers of datasets that are either public or allowed to be administrated by your account
 dataSet.upload.invalidLinkedLayers=Could not link all requested layers
 dataSet.upload.cancel.failed=Could not cancel the upload.
+dataSet.upload.noFiles=Tried to finish upload with no files. May be a retry of a failed finish request, see previous errors.
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -154,6 +155,12 @@ zip.file.notFound=No or invalid ZIP file specified
 
 dataLayer.notFound=DataLayer “{0}” not found
 dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
+
+dataLayer.wrongMag=DataLayer “{0}” does not have mag “{1}”
+dataLayer.invalidMag=Supplied “{0}” is not a valid mag format. Please use “x-y-z”
+
+zarr.invalidChunkCoordinates=The requested chunk coordinates are in an invalid format. Expected c.x.y.z
+zarr.invalidFirstChunkCoord="First Channel must be 0"
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"
@@ -254,9 +261,6 @@ annotation.timelogging.read.failed=Time
 annotation.write.failed=Could not convert annotation to json
 annotation.noSkeleton=No skeleton tracing found for this annotation
 annotation.needsEitherSkeletonOrVolume=Annotation needs at least one of skeleton or volume
-annotation.unlinkFallback.explorationalsOnly=Could not unlink fallback segmentation (only allowed for explorational annotations).
-annotation.unlinkFallback.noVolume=Could not unlink fallback segmentation (only allowed for annotations with volume layer).
-annotation.unlinkFallback.layerNotFound=Could not unlink fallback segmentation (annotation layer not found)
 annotation.downsample.layerNotFound=Could not downsample volume annotation (annotation layer not found)
 annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid annotation because it is only allowed for explorational annotations.
 annotation.makeHybrid.failed=Could not convert to hybrid.
@@ -342,6 +346,7 @@ job.couldNotRunComputeMeshFile = Failed to start mesh file computation job.
 job.couldNotRunNucleiInferral = Failed to start nuclei inferral job.
 job.couldNotRunNeuronInferral = Failed to start neuron inferral job.
 job.couldNotRunGlobalizeFloodfills = Failed to start job for globalizing floodfills.
+job.couldNotRunApplyMergerMode = Failed to start job to apply merger mode tracing.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 jobs.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
@@ -353,6 +358,7 @@ job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allo
 job.inferNeurons.notAllowed.organization = Currently neuron inferral is only allowed for datasets of your own organization.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
+job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 

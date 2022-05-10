@@ -2,7 +2,9 @@ version: 2
 jobs:
   build_test_deploy:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-02
+      docker_layer_caching: true
+    resource_class: large
     environment:
       USER_NAME: circleci
       USER_UID: 1001
@@ -151,9 +153,9 @@ jobs:
             done
             (exit $s)
       - run:
-          name: Validate frontend types with flow
+          name: Validate frontend types
           command: |
-            .circleci/not-on-master.sh docker-compose run base yarn flow
+            .circleci/not-on-master.sh docker-compose run base yarn typecheck
       - run:
           name: Start webknossos
           background: true
@@ -245,6 +247,7 @@ jobs:
   nightly:
     docker:
       - image: scalableminds/puppeteer:master
+    resource_class: large
     steps:
       - checkout
       - run:
@@ -281,6 +284,9 @@ jobs:
 
       - store_artifacts:
           path: frontend/javascripts/test/screenshots
+
+      - store_artifacts:
+          path: frontend/javascripts/test/snapshots/type-check
 
 workflows:
   version: 2

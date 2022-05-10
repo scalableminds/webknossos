@@ -6,7 +6,7 @@ import "geometry.proto";
 
 message Segment {
 	  required int64 segmentId = 1;
-	  optional Point3D anchorPosition = 2;
+	  optional Vec3IntProto anchorPosition = 2;
 	  optional string name = 3;
 	  optional int64 creationTime = 4;
 }
@@ -21,20 +21,20 @@ message VolumeTracing {
     }
 
     optional int64 activeSegmentId = 1;
-    required BoundingBox boundingBox = 2;
+    required BoundingBoxProto boundingBox = 2;
     required int64 createdTimestamp = 3;
     required string dataSetName = 4;
-    required Point3D editPosition = 5;
-    required Vector3D editRotation = 6;
+    required Vec3IntProto editPosition = 5;
+    required Vec3DoubleProto editRotation = 6;
     required ElementClass elementClass = 7;
     optional string fallbackLayer = 8;
     required int64 largestSegmentId = 9;
     required int64 version = 10;
     required double zoomLevel = 11;
-    optional BoundingBox userBoundingBox = 12;
-    repeated NamedBoundingBox userBoundingBoxes = 13;
+    optional BoundingBoxProto userBoundingBox = 12;
+    repeated NamedBoundingBoxProto userBoundingBoxes = 13;
     optional string organizationName = 14; // to identify the dataset (may differ from annotation orga)
-    repeated Point3D resolutions = 15;
+    repeated Vec3IntProto resolutions = 15;
     repeated Segment segments = 16;
 }
 

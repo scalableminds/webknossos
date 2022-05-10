@@ -1,6 +1,7 @@
 package controllers
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.util.zip.Deflater
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
@@ -138,7 +139,7 @@ Expects:
 
   private def mergeAndSaveVolumeLayers(volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
-                                       otherFiles: Map[String, TemporaryFile]): Fox[List[AnnotationLayer]] = {
+                                       otherFiles: Map[String, File]): Fox[List[AnnotationLayer]] = {
     if (volumeLayersGrouped.isEmpty) return Fox.successful(List())
     if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
       return Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
@@ -377,6 +378,7 @@ Expects:
           case (volumeLayer, index) =>
             volumeLayer.volumeDataOpt.foreach { volumeData =>
               val dataZipName = volumeLayer.volumeDataZipName(index, fetchedVolumeLayers.length == 1)
+              zipper.stream.setLevel(Deflater.BEST_SPEED)
               zipper.addFileFromBytes(dataZipName, volumeData)
             }
         }

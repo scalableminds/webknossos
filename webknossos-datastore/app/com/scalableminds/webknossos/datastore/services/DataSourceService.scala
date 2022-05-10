@@ -120,15 +120,16 @@ class DataSourceService @Inject()(
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
 
-    // Check, that each dimension increases monotonically between different resolutions.
-    val resolutionsByX = dataSource.dataLayers.map(_.resolutions.sortBy(_.x))
-    val resolutionsByY = dataSource.dataLayers.map(_.resolutions.sortBy(_.y))
-    val resolutionsByZ = dataSource.dataLayers.map(_.resolutions.sortBy(_.z))
+    // Check that when mags are sorted by max dimension, all dimensions are sorted.
+    // This means each dimension increases monotonically.
+    val magsSorted = dataSource.dataLayers.map(_.resolutions.sortBy(_.maxDim))
+    val magsXIsSorted = magsSorted.map(_.map(_.x)) == magsSorted.map(_.map(_.x).sorted)
+    val magsYIsSorted = magsSorted.map(_.map(_.y)) == magsSorted.map(_.map(_.y).sorted)
+    val magsZIsSorted = magsSorted.map(_.map(_.z)) == magsSorted.map(_.map(_.z).sorted)
 
     val errors = List(
-      Check(dataSource.scale.isValid, "DataSource scale is invalid"),
-      Check(resolutionsByX == resolutionsByY && resolutionsByX == resolutionsByZ,
-            "Scales do not monotonically increase in all dimensions"),
+      Check(dataSource.scale.isStrictlyPositive, "DataSource scale is invalid"),
+      Check(magsXIsSorted && magsYIsSorted && magsZIsSorted, "Mags do not monotonically increase in all dimensions"),
       Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
       Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
       Check(

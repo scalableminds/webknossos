@@ -76,6 +76,7 @@ import ErrorHandling from "libs/error_handling";
 import type {
   AnnotationType,
   DatasetConfiguration,
+  DatasetLayerConfiguration,
   TraceOrViewCommand,
   UserConfiguration,
 } from "oxalis/store";
@@ -776,25 +777,37 @@ function applyAnnotationSpecificViewConfiguration(
         annotation.viewConfiguration.layers[layerName],
       );
     }
-  } else {
-    // The annotation does not contain a viewConfiguration (mainly happens when the
-    // annotation was opened for the very first time).
-    // Make the first volume layer visible and turn the other segmentation layers invisible,
-    // since only one segmentation layer can be visible currently.
-    const firstVolumeLayer = _.first(
-      annotation.annotationLayers.filter((layer) => layer.typ === "Volume"),
-    );
-    if (firstVolumeLayer && firstVolumeLayer.name) {
-      for (const layerName of Object.keys(initialDatasetSettings.layers)) {
-        if (isSegmentationLayer(dataset, layerName)) {
-          initialDatasetSettings.layers[layerName].isDisabled = true;
-        }
-      }
+    return initialDatasetSettings;
+  }
 
-      // don't store this for the dataset in general
-      initialDatasetSettings.layers[firstVolumeLayer.tracingId].isDisabled = false;
+  // The annotation does not contain a viewConfiguration (mainly happens when the
+  // annotation was opened for the very first time).
+  // Make the first volume layer visible and turn the other segmentation layers invisible,
+  // since only one segmentation layer can be visible currently.
+  const firstVolumeLayer = _.first(
+    annotation.annotationLayers.filter((layer) => layer.typ === "Volume"),
+  );
+  if (!firstVolumeLayer || !firstVolumeLayer.name) {
+    // No volume layer exists. Return the original dataset settings
+    return initialDatasetSettings;
+  }
+
+  const newLayers: Record<string, DatasetLayerConfiguration> = {};
+  for (const layerName of Object.keys(initialDatasetSettings.layers)) {
+    if (isSegmentationLayer(dataset, layerName)) {
+      const shouldBeDisabled = firstVolumeLayer.tracingId !== layerName;
+
+      newLayers[layerName] = {
+        ...initialDatasetSettings.layers[layerName],
+        isDisabled: shouldBeDisabled,
+      };
+    } else {
+      newLayers[layerName] = initialDatasetSettings.layers[layerName];
     }
   }
 
-  return initialDatasetSettings;
+  return {
+    ...initialDatasetSettings,
+    layers: newLayers,
+  };
 }

@@ -12,7 +12,7 @@ import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import { DatasetConfiguration } from "oxalis/store";
+import { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
@@ -32,15 +32,10 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   const dataset = yield* select((state) => state.dataset);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
 
-  const maskedDatasetConfiguration = _.cloneDeep(datasetConfiguration);
-  const controlMode = yield* select((state) => state.temporaryConfiguration.controlMode);
-
-  if (controlMode != "VIEW") {
-    for (const layerName of Object.keys(datasetConfiguration.layers)) {
-      maskedDatasetConfiguration.layers[layerName].isDisabled =
-        originalDatasetSettings.layers[layerName].isDisabled;
-    }
-  }
+  let maybeMaskedDatasetConfiguration = yield* prepareDatasetSettingsForSaving(
+    datasetConfiguration,
+    originalDatasetSettings,
+  );
 
   try {
     yield* retry(
@@ -48,7 +43,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
       SETTINGS_RETRY_DELAY,
       updateDatasetConfiguration,
       dataset,
-      maskedDatasetConfiguration,
+      maybeMaskedDatasetConfiguration,
     );
   } catch (error) {
     // We catch errors in view mode as they are not that important here and may annoy the user.
@@ -63,6 +58,45 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
       yield* call({ context: ErrorHandling, fn: ErrorHandling.notify }, error);
     }
   }
+}
+
+function* prepareDatasetSettingsForSaving(
+  datasetConfiguration: DatasetConfiguration,
+  originalDatasetSettings: DatasetConfiguration,
+) {
+  /**
+   * If an annotation is open, we don't want to change the visibility settings for
+   * the data layers within the dataset configuration. Instead, the visibilities
+   * are stored separately within the annotation (see annotation_saga.ts).
+   * Therefore, we restore the layer visibilities to their original value before
+   * sending them to the back-end.
+   * This is not very elegant, but currently the workaround to achieve that creating
+   * a new annotation with a fresh volume layer does not hide the original segmentation
+   * layer by default when opening the corresponding dataset again.
+   * Alternatively, annotation and dataset related settings could be maintained in the
+   * Store. However, implementing this would be quite involved.
+   * Also refer to the discussion here:
+   * https://github.com/scalableminds/webknossos/pull/6186/files#r861800882
+   */
+  const controlMode = yield* select((state) => state.temporaryConfiguration.controlMode);
+
+  if (controlMode == "VIEW") {
+    return datasetConfiguration;
+  }
+
+  const newLayers: Record<string, DatasetLayerConfiguration> = {};
+  for (const layerName of Object.keys(datasetConfiguration.layers)) {
+    newLayers[layerName] = {
+      ...datasetConfiguration.layers[layerName],
+      isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
+    };
+  }
+
+  const maskedDatasetConfiguration = {
+    ...datasetConfiguration,
+    layers: newLayers,
+  };
+  return maskedDatasetConfiguration;
 }
 
 function* trackUserSettingsAsync(action: UpdateUserSettingAction): Saga<void> {

@@ -1,9 +1,10 @@
+import _ from "lodash";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { all, takeEvery, throttle, call, retry, take } from "typed-redux-saga";
+import { type Saga, take } from "oxalis/model/sagas/effect-generators";
+import { all, takeEvery, throttle, call, retry } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -11,6 +12,7 @@ import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
+import { DatasetConfiguration } from "oxalis/store";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
@@ -24,11 +26,21 @@ function* pushUserSettingsAsync(): Saga<void> {
   );
 }
 
-function* pushDatasetSettingsAsync(): Saga<void> {
+function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
   const dataset = yield* select((state) => state.dataset);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
+
+  const maskedDatasetConfiguration = _.cloneDeep(datasetConfiguration);
+  const controlMode = yield* select((state) => state.temporaryConfiguration.controlMode);
+
+  if (controlMode != "VIEW") {
+    for (const layerName of Object.keys(datasetConfiguration.layers)) {
+      maskedDatasetConfiguration.layers[layerName].isDisabled =
+        originalDatasetSettings.layers[layerName].isDisabled;
+    }
+  }
 
   try {
     yield* retry(
@@ -36,8 +48,7 @@ function* pushDatasetSettingsAsync(): Saga<void> {
       SETTINGS_RETRY_DELAY,
       updateDatasetConfiguration,
       dataset,
-      // mask updates to layer visibility here if this is an annotation?
-      datasetConfiguration,
+      maskedDatasetConfiguration,
     );
   } catch (error) {
     // We catch errors in view mode as they are not that important here and may annoy the user.
@@ -73,11 +84,19 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
 }
 
 export default function* watchPushSettingsAsync(): Saga<void> {
-  yield* take("INITIALIZE_SETTINGS");
+  const action = yield* take("INITIALIZE_SETTINGS");
+  if (action.type !== "INITIALIZE_SETTINGS") {
+    throw new Error("Unexpected action. Satisfy flow.");
+  }
+
+  const { originalDatasetSettings } = action;
+
   yield* all([
     throttle(500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
-    throttle(500, "UPDATE_DATASET_SETTING", pushDatasetSettingsAsync),
-    throttle(500, "UPDATE_LAYER_SETTING", pushDatasetSettingsAsync),
+    throttle(500, "UPDATE_DATASET_SETTING", () =>
+      pushDatasetSettingsAsync(originalDatasetSettings),
+    ),
+    throttle(500, "UPDATE_LAYER_SETTING", () => pushDatasetSettingsAsync(originalDatasetSettings)),
     takeEvery("UPDATE_USER_SETTING", trackUserSettingsAsync),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
   ]);

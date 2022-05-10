@@ -745,24 +745,31 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
   }
 }
 
-function applyAnnotationSpecificViewConfigurationInplace(
+type Mutable<T> = {
+  -readonly [P in keyof T]: T[P];
+};
+
+function applyAnnotationSpecificViewConfiguration(
   annotation: APIAnnotation | null | undefined,
   dataset: APIDataset,
-  initialDatasetSettings: DatasetConfiguration,
-) {
-  /*
-  Apply annotation-specific view configurations to the dataset settings which are persisted
-  per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled" information per
-  layer which should override the isDisabled information in DatasetConfiguration.
-  */
-
-  // todo ?
+  originalDatasetSettings: DatasetConfiguration,
+): DatasetConfiguration {
+  /**
+   * Apply annotation-specific view configurations to the dataset settings which are persisted
+   * per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled"
+   * information per layer which should override the isDisabled information in DatasetConfiguration.
+   */
 
   if (!annotation) {
-    return;
+    return originalDatasetSettings;
   }
 
+  const initialDatasetSettings: Mutable<DatasetConfiguration> =
+    _.cloneDeep(originalDatasetSettings);
+
   if (annotation.viewConfiguration) {
+    // The annotation already contains a viewConfiguration. Merge that into the
+    // dataset settings.
     for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
       _.merge(
         initialDatasetSettings.layers[layerName],
@@ -770,6 +777,10 @@ function applyAnnotationSpecificViewConfigurationInplace(
       );
     }
   } else {
+    // The annotation does not contain a viewConfiguration (mainly happens when the
+    // annotation was opened for the very first time).
+    // Make the first volume layer visible and turn the other segmentation layers invisible,
+    // since only one segmentation layer can be visible currently.
     const firstVolumeLayer = _.first(
       annotation.annotationLayers.filter((layer) => layer.typ === "Volume"),
     );
@@ -784,4 +795,6 @@ function applyAnnotationSpecificViewConfigurationInplace(
       initialDatasetSettings.layers[firstVolumeLayer.tracingId].isDisabled = false;
     }
   }
+
+  return initialDatasetSettings;
 }

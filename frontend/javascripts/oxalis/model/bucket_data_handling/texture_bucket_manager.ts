@@ -248,10 +248,8 @@ export default class TextureBucketManager {
     }
 
     window.requestAnimationFrame(() => {
-      // setTimeout(() => {
       this.processWriterQueue();
     });
-    // }, 100);
   }
 
   getTextures(): Array<THREE.DataTexture | typeof UpdatableTexture> {

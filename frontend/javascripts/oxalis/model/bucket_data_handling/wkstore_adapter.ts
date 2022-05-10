@@ -33,7 +33,7 @@ const compressionPool = new WorkerPool(
 export const REQUEST_TIMEOUT = 60000;
 export type SendBucketInfo = {
   position: Vector3;
-  zoomStep: number;
+  mag: Vector3;
   cubeSize: number;
 };
 type RequestBucketInfo = SendBucketInfo & {
@@ -68,7 +68,7 @@ const createRequestBucketInfo = (
 function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3>): SendBucketInfo {
   return {
     position: bucketPositionToGlobalAddress(zoomedAddress, resolutions),
-    zoomStep: zoomedAddress[3],
+    mag: resolutions[zoomedAddress[3]],
     cubeSize: constants.BUCKET_WIDTH,
   };
 }

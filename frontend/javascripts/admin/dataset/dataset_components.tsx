@@ -35,14 +35,16 @@ export function CardContainer({
 export function DatasetNameFormItem({
   activeUser,
   initialName,
+  label,
 }: {
   activeUser: APIUser | null | undefined;
   initialName?: string;
+  label?: string;
 }) {
   return (
     <FormItem
       name="name"
-      label="Dataset Name"
+      label={label || "Dataset Name"}
       hasFeedback
       initialValue={initialName}
       rules={[

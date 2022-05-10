@@ -7,6 +7,7 @@ Example workflows:
 - [converting datasets on upload](./datasets.md#uploading-through-the-web-browser)
 - [automated analysis](./automated_analysis.md), e.g., nuclei inferal 
 - [mesh file (pre)-computation](./mesh_visualization.md)
+- [applying a merger mode annotation](./volume_annotation.md#proof_reading_and_merging_segments)
 - Tiff export of a bounding box
 - downsampling volume annotations
 

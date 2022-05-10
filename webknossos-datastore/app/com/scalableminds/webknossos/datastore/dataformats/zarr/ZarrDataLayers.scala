@@ -48,6 +48,8 @@ trait ZarrLayer extends DataLayer {
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
+  def numChannels: Option[Int] = Some(if (elementClass == ElementClass.uint24) 3 else 1)
+
 }
 
 case class ZarrDataLayer(
@@ -57,7 +59,8 @@ case class ZarrDataLayer(
     elementClass: ElementClass.Value,
     mags: List[ZarrMag],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    override val numChannels: Option[Int] = Some(1)
 ) extends ZarrLayer
 
 object ZarrDataLayer {
@@ -72,7 +75,8 @@ case class ZarrSegmentationLayer(
     largestSegmentId: Long,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    override val numChannels: Option[Int] = Some(1)
 ) extends SegmentationLayer
     with ZarrLayer
 

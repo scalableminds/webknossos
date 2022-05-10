@@ -122,6 +122,20 @@ export class ResolutionInfo {
     return resolution;
   }
 
+  getIndexByResolution(resolution: Vector3): number {
+    const index = Math.log2(Math.max(...resolution));
+
+    // Assert that the index exists and that the resolution at that index
+    // equals the resolution argument
+    const resolutionMaybe = this.getResolutionByIndex(index);
+    if (!_.isEqual(resolution, resolutionMaybe)) {
+      throw new Error(
+        `Resolution ${resolution} with index ${index} is not equal to existing resolution at that index: ${resolutionMaybe}.`,
+      );
+    }
+    return index;
+  }
+
   getResolutionByIndexWithFallback(
     index: number,
     fallbackResolutionInfo: ResolutionInfo | null | undefined,
@@ -165,6 +179,16 @@ export class ResolutionInfo {
 
   getLowestResolutionIndex(): number {
     return Math.log2(this.getLowestResolutionPowerOf2());
+  }
+
+  getHighestResolution(): Vector3 {
+    // @ts-ignore
+    return this.getResolutionByPowerOf2(this.getHighestResolutionPowerOf2());
+  }
+
+  getLowestResolution(): Vector3 {
+    // @ts-ignore
+    return this.getResolutionByPowerOf2(this.getLowestResolutionPowerOf2());
   }
 
   getAllIndices(): Array<number> {

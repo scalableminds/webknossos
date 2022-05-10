@@ -36,7 +36,7 @@ import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import type { ViewMode, Point2 } from "oxalis/constants";
+import type { ViewMode, Point2, Vector3 } from "oxalis/constants";
 import constants, { ArbitraryViewport } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
@@ -406,7 +406,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     const { lastNodeMatrix } = this;
-    const vector = [
+    const vector: Vector3 = [
       lastNodeMatrix[12] - matrix[12],
       lastNodeMatrix[13] - matrix[13],
       lastNodeMatrix[14] - matrix[14],

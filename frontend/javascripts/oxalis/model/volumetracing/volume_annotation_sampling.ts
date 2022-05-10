@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { Vector3, LabeledVoxelsMap } from "oxalis/constants";
+import type { Vector3, LabeledVoxelsMap, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -344,16 +344,11 @@ export function applyVoxelMap(
 
       if (sliceCount > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
-        const nextBucketZoomedAddress = [...labeledBucketZoomedAddress];
+        const nextBucketZoomedAddress: Vector4 = [...labeledBucketZoomedAddress];
         nextBucketZoomedAddress[thirdDimensionIndex]++;
         postprocessBucket(bucket);
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
         bucket = dataCube.getOrCreateBucket(nextBucketZoomedAddress);
         preprocessBucket(bucket);
-
-        if (bucket.type === "null") {
-          continue;
-        }
       }
 
       if (bucket.type === "null") {

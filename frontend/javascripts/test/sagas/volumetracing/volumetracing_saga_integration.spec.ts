@@ -148,7 +148,7 @@ test.serial("Executing a floodfill in mag 1", async (t) => {
       floodingCellId,
     );
     t.snapshot(
-      await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+      await t.context.api.data.getDataForBoundingBox(volumeTracingLayerName, {
         min: [32, 32, 32],
         max: [64, 64, 64],
       }),
@@ -276,7 +276,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
       floodingCellId,
     );
     t.false(hasRootSagaCrashed());
-    const cuboidData = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+    const cuboidData = await t.context.api.data.getDataForBoundingBox(volumeTracingLayerName, {
       min: [128 - 64, 128 - 64, 128 - 32],
       max: [128 + 64, 128 + 64, 128 + 32],
     });
@@ -290,7 +290,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
   async function assertInitialState() {
     t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0), 0);
     t.false(hasRootSagaCrashed());
-    const cuboidData = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+    const cuboidData = await t.context.api.data.getDataForBoundingBox(volumeTracingLayerName, {
       min: [0, 0, 0],
       max: [256, 256, 256],
     });
@@ -405,7 +405,7 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
   }
 
   t.snapshot(
-    await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+    await t.context.api.data.getDataForBoundingBox(volumeTracingLayerName, {
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
@@ -450,7 +450,7 @@ test.serial("Brushing/Tracing with already existing backend data", async (t) => 
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 5, 0]), oldCellId);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 1]), oldCellId);
   t.snapshot(
-    await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+    await t.context.api.data.getDataForBoundingBox(volumeTracingLayerName, {
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
@@ -719,7 +719,7 @@ async function eraseInMag4Helper(t, loadDataAtBeginning) {
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
   await t.context.api.tracing.save();
-  const data = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+  const data = await t.context.api.data.getDataForBoundingBox(volumeTracingLayerName, {
     min: [0, 0, 0],
     max: [35, 1, 1],
   });

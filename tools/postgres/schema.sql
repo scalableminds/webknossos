@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(81);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(82);
 COMMIT TRANSACTION;
 
 
@@ -209,6 +209,7 @@ CREATE TABLE webknossos.taskTypes(
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
+  settings_volumeInterpolationAllowed BOOLEAN NOT NULL DEFAULT false,
   settings_mergerMode BOOLEAN NOT NULL DEFAULT false,
   settings_resolutionRestrictions_min INT DEFAULT NULL,
   settings_resolutionRestrictions_max INT DEFAULT NULL,

@@ -1,4 +1,4 @@
-# Snapshot report for `public/test-bundle/test/backend-snapshot-tests/timetracking.e2e.js`
+# Snapshot report for `public-test/test-bundle/test/backend-snapshot-tests/timetracking.e2e.js`
 
 The actual snapshot is saved in `timetracking.e2e.js.snap`.
 

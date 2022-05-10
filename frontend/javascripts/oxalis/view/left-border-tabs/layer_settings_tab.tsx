@@ -14,7 +14,7 @@ import React from "react";
 import _ from "lodash";
 
 import classnames from "classnames";
-import type { APIDataset, EditableLayerProperties } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset, EditableLayerProperties } from "types/api_flow_types";
 import { ValueOf } from "types/globals";
 import { AsyncIconButton } from "components/async_clickables";
 import {
@@ -81,6 +81,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import { settings } from "messages";
+import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
@@ -115,6 +116,7 @@ type State = {
   // is shown for that VolumeTracing
   volumeTracingToDownsample: VolumeTracing | null | undefined;
   isAddVolumeLayerModalVisible: boolean;
+  layerToMergeWithFallback: APIDataLayer | null | undefined;
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
@@ -122,6 +124,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   state: State = {
     volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,
+    layerToMergeWithFallback: null,
   };
 
   constructor(props: DatasetSettingsProps) {
@@ -195,6 +198,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </Tooltip>
     );
   };
+
+  getMergeWithFallbackLayerButton = (layer: APIDataLayer) => (
+    <Tooltip title="Merge this volume annotation with its fallback layer.">
+      <i
+        onClick={() => this.setState({ layerToMergeWithFallback: layer })}
+        className="fas fa-object-ungroup"
+        style={{
+          cursor: "pointer",
+          opacity: 0.7,
+        }}
+      />
+    </Tooltip>
+  );
 
   getClipButton = (layerName: string, isInEditMode: boolean) => {
     const editModeAddendum = isInEditMode
@@ -379,69 +395,28 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                     </ul>
                   </div>
                   Bounding Box:
-                  <table
-                    style={{
-                      borderSpacing: 2,
-                      borderCollapse: "separate",
-                    }}
-                  >
+                  <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
                     <tbody>
                       <tr>
                         <td />
-                        <td
-                          style={{
-                            fontSize: 10,
-                          }}
-                        >
-                          X
-                        </td>
-                        <td
-                          style={{
-                            fontSize: 10,
-                          }}
-                        >
-                          Y
-                        </td>
-                        <td
-                          style={{
-                            fontSize: 10,
-                          }}
-                        >
-                          Z
-                        </td>
+                        <td style={{ fontSize: 10 }}>X</td>
+                        <td style={{ fontSize: 10 }}>Y</td>
+                        <td style={{ fontSize: 10 }}>Z</td>
                       </tr>
                       <tr>
-                        <td
-                          style={{
-                            fontSize: 10,
-                          }}
-                        >
-                          Min
-                        </td>
+                        <td style={{ fontSize: 10 }}>Min</td>
                         <td>{layer.boundingBox.topLeft[0]} </td>
                         <td>{layer.boundingBox.topLeft[1]} </td>
                         <td>{layer.boundingBox.topLeft[2]}</td>
                       </tr>
                       <tr>
-                        <td
-                          style={{
-                            fontSize: 10,
-                          }}
-                        >
-                          Max
-                        </td>
+                        <td style={{ fontSize: 10 }}>Max</td>
                         <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
                         <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
                         <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
                       </tr>
                       <tr>
-                        <td
-                          style={{
-                            fontSize: 10,
-                          }}
-                        >
-                          Size
-                        </td>
+                        <td style={{ fontSize: 10 }}>Size</td>
                         <td>{layer.boundingBox.width} </td>
                         <td>{layer.boundingBox.height} </td>
                         <td>{layer.boundingBox.depth}</td>
@@ -497,6 +472,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </div>
           <div className="flex-item">
             {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
+          </div>
+          <div className="flex-item">
+            {isVolumeTracing && !isDisabled && maybeFallbackLayer != null
+              ? this.getMergeWithFallbackLayerButton(layer)
+              : null}
           </div>
           <div className="flex-item">
             {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
@@ -666,7 +646,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     if (!foundPosition || !foundResolution) {
       const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
-      const centerPosition = V3.add(lowerBoundary, upperBoundary).map((el: number) => el / 2);
+      const centerPosition = V3.add(lowerBoundary, upperBoundary).map(
+        (el: number) => el / 2,
+      ) as Vector3;
       Toast.warning(
         `Couldn't find data within layer "${layerName}." Jumping to the center of the layer's bounding box.`,
       );
@@ -680,12 +662,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       `Jumping to position ${foundPosition.join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
     );
   };
+
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
     await api.data.reloadBuckets(layerName);
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
+
   getVolumeMagsToDownsample = (volumeTracing: VolumeTracing | null | undefined): Array<Vector3> => {
     if (this.props.task != null) {
       return [];
@@ -925,6 +909,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
             volumeTracing={this.state.volumeTracingToDownsample}
             magsToDownsample={this.getVolumeMagsToDownsample(this.state.volumeTracingToDownsample)}
+          />
+        ) : null}
+
+        {this.state.layerToMergeWithFallback != null ? (
+          <MaterializeVolumeAnnotationModal
+            selectedVolumeLayer={this.state.layerToMergeWithFallback}
+            handleClose={() => this.setState({ layerToMergeWithFallback: null })}
           />
         ) : null}
 

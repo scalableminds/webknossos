@@ -240,11 +240,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     if (controlMode !== ControlModeEnum.VIEW) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
         "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
         "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
         m: () => {
           // rotate allowed modes

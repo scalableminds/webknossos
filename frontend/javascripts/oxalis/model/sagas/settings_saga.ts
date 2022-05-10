@@ -1,11 +1,9 @@
-import _ from "lodash";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
-import { type Saga, take } from "oxalis/model/sagas/effect-generators";
+import { type Saga, take, select } from "oxalis/model/sagas/effect-generators";
 import { all, takeEvery, throttle, call, retry } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
@@ -32,7 +30,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   const dataset = yield* select((state) => state.dataset);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
 
-  let maybeMaskedDatasetConfiguration = yield* prepareDatasetSettingsForSaving(
+  const maybeMaskedDatasetConfiguration = yield* prepareDatasetSettingsForSaving(
     datasetConfiguration,
     originalDatasetSettings,
   );

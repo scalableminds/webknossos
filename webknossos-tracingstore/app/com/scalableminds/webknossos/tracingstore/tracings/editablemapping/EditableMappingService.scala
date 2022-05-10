@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import java.util.UUID
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
@@ -16,6 +17,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingDataStore,
   VersionedKeyValuePair
 }
+import net.liftweb.common.{Empty, Full}
 
 import scala.concurrent.ExecutionContext
 
@@ -54,12 +56,15 @@ class EditableMappingService @Inject()(
                                                                               emptyFallback = Some(-1L))
     } yield versionOrMinusOne >= 0
 
-  def get(editableMappingId: String, version: Option[Long] = None): Fox[EditableMapping] =
+  def get(editableMappingId: String,
+          remoteFallbackLayer: RemoteFallbackLayer,
+          version: Option[Long] = None): Fox[EditableMapping] =
     for {
       closestMaterializedVersion: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappings
         .get(editableMappingId, version)
       materialized <- applyPendingUpdates(editableMappingId,
                                           EditableMapping.fromBytes(closestMaterializedVersion.value),
+                                          remoteFallbackLayer,
                                           closestMaterializedVersion.version,
                                           version)
     } yield materialized
@@ -86,18 +91,55 @@ class EditableMappingService @Inject()(
 
   private def applyPendingUpdates(editableMappingId: String,
                                   existingEditableMapping: EditableMapping,
+                                  remoteFallbackLayer: RemoteFallbackLayer,
                                   existingVersion: Long,
                                   requestedVersion: Option[Long]): Fox[EditableMapping] =
     for {
       desiredVersion <- findDesiredOrNewestPossibleVersion(existingVersion, editableMappingId, requestedVersion)
       pendingUpdates <- findPendingUpdates(editableMappingId, existingVersion, desiredVersion)
-      appliedEditableMapping <- applyUpdates(existingEditableMapping, existingVersion, desiredVersion, pendingUpdates)
+      appliedEditableMapping <- applyUpdates(existingEditableMapping, pendingUpdates, remoteFallbackLayer)
     } yield appliedEditableMapping
 
   private def applyUpdates(existingEditableMapping: EditableMapping,
-                           existingVersion: Long,
-                           desiredVersion: Long,
-                           pendingUpdates: List[EditableMappingUpdateAction]): Fox[EditableMapping] = ???
+                           updates: List[EditableMappingUpdateAction],
+                           remoteFallbackLayer: RemoteFallbackLayer): Fox[EditableMapping] = {
+    def updateIter(mappingFox: Fox[EditableMapping],
+                   remainingUpdates: List[EditableMappingUpdateAction]): Fox[EditableMapping] =
+      mappingFox.futureBox.flatMap {
+        case Empty => Fox.empty
+        case Full(mapping) =>
+          remainingUpdates match {
+            case List() => Fox.successful(mapping)
+            case head :: tail =>
+              updateIter(applyOneUpdate(mapping, head, remoteFallbackLayer), tail)
+          }
+        case _ => mappingFox
+      }
+
+    updateIter(Some(existingEditableMapping), updates)
+  }
+
+  private def applyOneUpdate(mapping: EditableMapping,
+                             update: EditableMappingUpdateAction,
+                             remoteFallbackLayer: RemoteFallbackLayer): Fox[EditableMapping] =
+    update match {
+      case splitAction: SplitAgglomerateUpdateAction => applySplitAction(mapping, splitAction, remoteFallbackLayer)
+      case mergeAction: MergeAgglomerateUpdateAction => applyMergeAction(mapping, mergeAction, remoteFallbackLayer)
+    }
+
+  private def applySplitAction(mapping: EditableMapping,
+                               update: SplitAgglomerateUpdateAction,
+                               remoteFallbackLayer: RemoteFallbackLayer): Fox[EditableMapping] = ???
+
+  private def applyMergeAction(mapping: EditableMapping,
+                               update: MergeAgglomerateUpdateAction,
+                               remoteFallbackLayer: RemoteFallbackLayer): Fox[EditableMapping] =
+    for {
+      segmentId2 <- findSegmentIdAtPosition(update.segmentPosition2, remoteFallbackLayer)
+      // TODO
+    } yield mapping
+
+  private def findSegmentIdAtPosition(pos: Vec3Int, remoteFallbackLayer: RemoteFallbackLayer): Fox[Long] = ???
 
   private def findPendingUpdates(editableMappingId: String, existingVersion: Long, desiredVersion: Long)(
       implicit ec: ExecutionContext): Fox[List[EditableMappingUpdateAction]] =
@@ -118,8 +160,8 @@ class EditableMappingService @Inject()(
   def volumeData(tracing: VolumeTracing, dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
     for {
       editableMappingId <- tracing.mappingName.toFox
-      editableMapping <- get(editableMappingId)
       remoteFallbackLayer <- remoteFallbackLayer(tracing)
+      editableMapping <- get(editableMappingId, remoteFallbackLayer)
       (unmappedData, indices) <- getUnmappedDataFromDatastore(remoteFallbackLayer, dataRequests)
       segmentIds = collectSegmentIds(unmappedData, indices, tracing.elementClass)
       relevantMapping <- generateCombinedMappingSubset(segmentIds, editableMapping, remoteFallbackLayer)
@@ -145,7 +187,7 @@ class EditableMappingService @Inject()(
                                          remoteFallbackLayer: RemoteFallbackLayer,
                                          agglomerateId: Long): Fox[Array[Byte]] =
     for {
-      editableMapping <- get(editableMappingId)
+      editableMapping <- get(editableMappingId, remoteFallbackLayer)
       agglomerateIdIsPresent = editableMapping.agglomerateToSegments.contains(agglomerateId)
       skeletonBytes <- if (agglomerateIdIsPresent)
         getAgglomerateSkeleton(editableMappingId, editableMapping, remoteFallbackLayer, agglomerateId)
@@ -213,7 +255,7 @@ class EditableMappingService @Inject()(
     for {
       layerName <- tracing.fallbackLayer.toFox
       organizationName <- tracing.organizationName.toFox
-    } yield RemoteFallbackLayer(organizationName, tracing.dataSetName, layerName)
+    } yield RemoteFallbackLayer(organizationName, tracing.dataSetName, layerName, tracing.elementClass)
 
   private def mapData(unmappedData: Array[Byte],
                       indices: List[Int],

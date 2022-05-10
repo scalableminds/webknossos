@@ -746,10 +746,6 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
   }
 }
 
-type Mutable<T> = {
-  -readonly [P in keyof T]: T[P];
-};
-
 function applyAnnotationSpecificViewConfiguration(
   annotation: APIAnnotation | null | undefined,
   dataset: APIDataset,
@@ -765,8 +761,7 @@ function applyAnnotationSpecificViewConfiguration(
     return originalDatasetSettings;
   }
 
-  const initialDatasetSettings: Mutable<DatasetConfiguration> =
-    _.cloneDeep(originalDatasetSettings);
+  const initialDatasetSettings: DatasetConfiguration = _.cloneDeep(originalDatasetSettings);
 
   if (annotation.viewConfiguration) {
     // The annotation already contains a viewConfiguration. Merge that into the

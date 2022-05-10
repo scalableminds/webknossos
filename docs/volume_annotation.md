@@ -72,6 +72,12 @@ Due to performance reasons, 3D flood-fills only work in a small, local bounding 
 
 Check the `Processing Jobs` page from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, processed dataset will appear as new dataset in your dashboard.
 
+### Volume Interpolation
+When using the brush or trace tool, you can enable `Volume Interpolation` for faster annotation speed (in a task context, this feature has to be enabled explicitly).
+When enabled, it suffices to only label every second slice. The skipped slices will be filled automatically by interpolating between the labeled slices.
+
+Note that it is recommended to proof-read the interpolated slices afterwards, since the interpolation is a heuristic.
+
 ### Mappings / On-Demand Agglomeration
 With webKnossos it is possible to apply a precomputed agglomeration file to re-map/combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation. 
 

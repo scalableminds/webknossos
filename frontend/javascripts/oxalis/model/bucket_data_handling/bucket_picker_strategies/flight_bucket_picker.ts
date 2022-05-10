@@ -51,7 +51,7 @@ export default function determineBucketsForFlight(
   const queryMatrix = M4x4.scale1(1, matrix);
   const width = constants.VIEWPORT_WIDTH;
   const halfWidth = width / 2;
-  const cameraVertex = [0, 0, -sphericalCapRadius];
+  const cameraVertex: Vector3 = [0, 0, -sphericalCapRadius];
   const fallbackZoomStep = logZoomStep + 1;
   const isFallbackAvailable = fallbackZoomStep < resolutions.length;
 
@@ -62,7 +62,8 @@ export default function determineBucketsForFlight(
     return vec;
   };
 
-  const transformAndApplyMatrix = (vec: Vector3) =>
+  const transformAndApplyMatrix = (vec: Vector3): Vector3 =>
+    // @ts-ignore
     M4x4.transformPointsAffine(queryMatrix, transformToSphereCap(vec));
 
   let traversedBucketsWithPriorities: Array<[Vector4, number]> = [];
@@ -79,7 +80,7 @@ export default function determineBucketsForFlight(
       const z = 0;
       const transformedVec = transformAndApplyMatrix([x, y, z]);
       const bucketPos = globalPositionToBucketPositionFloat(
-        transformedVec,
+        transformedVec as Vector3,
         resolutions,
         logZoomStep,
       );

@@ -14,9 +14,11 @@ export function* getHalfViewportExtents(activeViewport: OrthoView): Saga<Vector2
   const viewportExtents = yield* select((state) =>
     getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
   );
-  const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactors);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'extent' implicitly has an 'any' type.
-  const halfViewportExtents = scaledViewportExtents.map((extent) => Math.round(extent / 2));
+  const baseVoxelFactorsXY = [baseVoxelFactors[0], baseVoxelFactors[1]] as Vector2;
+  const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactorsXY);
+  const halfViewportExtents = scaledViewportExtents.map((extent) =>
+    Math.round(extent / 2),
+  ) as Vector2;
   return halfViewportExtents;
 }
 export function getHalfViewportExtentsFromState(
@@ -29,8 +31,10 @@ export function getHalfViewportExtentsFromState(
     activeViewport,
   );
   const viewportExtents = getPlaneExtentInVoxelFromStore(state, zoom, activeViewport);
-  const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactors);
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'extent' implicitly has an 'any' type.
-  const halfViewportExtents = scaledViewportExtents.map((extent) => Math.round(extent / 2));
+  const baseVoxelFactorsXY = [baseVoxelFactors[0], baseVoxelFactors[1]] as Vector2;
+  const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactorsXY);
+  const halfViewportExtents = scaledViewportExtents.map((extent) =>
+    Math.round(extent / 2),
+  ) as Vector2;
   return halfViewportExtents;
 }

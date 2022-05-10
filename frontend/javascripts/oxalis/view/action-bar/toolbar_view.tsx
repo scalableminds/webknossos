@@ -1,6 +1,5 @@
-// @flow
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent } from "antd";
-import { ExportOutlined } from "@ant-design/icons";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Button } from "antd";
+import { CaretDownOutlined, CaretUpOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useState } from "react";
 
@@ -31,7 +30,6 @@ import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
-import type { AnnotationTool, OverwriteMode } from "oxalis/constants";
 import Constants, {
   ToolsWithOverwriteCapabilities,
   AnnotationToolEnum,
@@ -39,9 +37,15 @@ import Constants, {
   FillModeEnum,
   VolumeTools,
   MappingStatusEnum,
+  AnnotationTool,
+  OverwriteMode,
+  ToolsWithInterpolationCapabilities,
+  OrthoViews,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
+import Dimensions from "oxalis/model/dimensions";
+
 import features from "features";
 
 const narrowButtonStyle = {
@@ -225,6 +229,61 @@ function OverwriteModeSwitch({
   );
 }
 
+function VolumeInterpolationButton() {
+  const isAllowed = useSelector(
+    (state: OxalisState) => state.tracing.restrictions.volumeInterpolationAllowed,
+  );
+
+  const isEnabled = useSelector(
+    (state: OxalisState) => state.userConfiguration.isVolumeInterpolationEnabled,
+  );
+  const spaceDirectionOrtho = useSelector((state: OxalisState) => state.flycam.spaceDirectionOrtho);
+  const activeViewport = useSelector(
+    (state: OxalisState) => state.viewModeData.plane.activeViewport,
+  );
+
+  const onChange = () => {
+    Store.dispatch(updateUserSettingAction("isVolumeInterpolationEnabled", !isEnabled));
+  };
+
+  let directionIcon = null;
+  if (isEnabled && isAllowed && activeViewport !== OrthoViews.TDView) {
+    const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
+    directionIcon =
+      spaceDirectionOrtho[thirdDim] > 0 ? (
+        <CaretUpOutlined style={{ color: "#f1f1f1" }} />
+      ) : (
+        <CaretDownOutlined style={{ color: "#f1f1f1" }} />
+      );
+  }
+
+  return (
+    <Badge
+      count={directionIcon}
+      style={{
+        boxShadow: "none",
+        zIndex: 1000,
+      }}
+    >
+      <Tooltip
+        title={
+          isAllowed
+            ? "When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices. The little arrow indicates whether you are currently labeling with increasing or decreasing X/Y/Z."
+            : "Volume Interpolation was disabled for this annotation."
+        }
+      >
+        <Button
+          disabled={!isAllowed}
+          type={isEnabled ? "primary" : "default"}
+          icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
+          onClick={onChange}
+          style={{ marginLeft: 12 }}
+        />
+      </Tooltip>
+    </Badge>
+  );
+}
+
 function AdditionalSkeletonModesButtons() {
   const dispatch = useDispatch();
   const isMergerModeEnabled = useSelector(
@@ -319,6 +378,7 @@ function CreateCellButton() {
       style={{
         boxShadow: "none",
         background: activeCellColor,
+        zIndex: 1000,
       }}
     >
       <Tooltip
@@ -790,6 +850,10 @@ function ToolSpecificSettings({
         isShiftPressed={isShiftPressed}
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
+
+      {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
+        <VolumeInterpolationButton />
+      ) : null}
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
     </>

@@ -130,7 +130,7 @@ class PullQueue {
         }
       }
 
-      if (error instanceof DOMException && error.name !== "AbortError") {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
         // AbortErrors are deliberate. Don't show them on the console.
         console.error(error);
       }

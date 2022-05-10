@@ -132,6 +132,8 @@ export const userSettings = {
   useLegacyBindings: {
     type: "boolean",
   },
+  isVolumeInterpolationEnabled: { type: "boolean" },
+  volumeInterpolationDepth: { type: "number", minimum: 2, maximum: 2 },
   ...baseDatasetViewConfiguration,
 };
 export default {

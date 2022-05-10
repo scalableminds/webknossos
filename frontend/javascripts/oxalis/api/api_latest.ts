@@ -110,6 +110,7 @@ import type {
   Vector3,
   Vector4,
   AnnotationTool,
+  TypedArray,
 } from "oxalis/constants";
 import Constants, {
   ControlModeEnum,
@@ -317,7 +318,7 @@ class TracingApi {
 
   /**
    * Returns the comment for a given node and tree (optional).
-   * @param tree - Supplying the tree will provide a performance boost for looking up a comment.
+   * @param treeId - Supplying the tree id will provide a performance boost for looking up a comment.
    *
    * @example
    * const comment = api.tracing.getCommentForNode(23);
@@ -1297,7 +1298,23 @@ class DataApi {
     return bucket;
   }
 
+  /*
+   * Deprecated! Use getDataForBoundingBox instead whose name describes its interface correctly.
+   */
   async getDataFor2DBoundingBox(
+    layerName: string,
+    bbox: BoundingBoxType,
+    _zoomStep: number | null | undefined = null,
+  ) {
+    return this.getDataForBoundingBox(layerName, bbox, _zoomStep);
+  }
+
+  /*
+   * For the provided layer name and bounding box, an array is constructed with the actual data.
+   * By default, the finest existent quality is chosen, but the quality can be adapted via the
+   * zoomStep parameter.
+   */
+  async getDataForBoundingBox(
     layerName: string,
     bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
@@ -1347,7 +1364,7 @@ class DataApi {
       viewport,
     );
     const resolutionIndex = getRequestLogZoomStep(state);
-    const cuboid = await this.getDataFor2DBoundingBox(
+    const cuboid = await this.getDataForBoundingBox(
       layerName,
       {
         min,
@@ -1404,8 +1421,7 @@ class DataApi {
     elementClass: ElementClass,
     resolutions: Array<Vector3>,
     zoomStep: number,
-    // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
-  ): $TypedArray {
+  ): TypedArray {
     const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the resolution

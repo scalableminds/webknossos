@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Data
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
 import com.scalableminds.webknossos.wrap.VoxelType
 import net.liftweb.common.{Box, Failure, Full}
-import com.scalableminds.util.tools.ExtendedTypes._
 
 trait WKWDataFormatHelper {
 
@@ -54,31 +53,16 @@ trait WKWDataFormatHelper {
     val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
     path match {
       case CubeRx(_, resolutionStr, z, y, x) =>
-        val resolutionOpt = parseResolution(resolutionStr)
-        resolutionOpt match {
-          case Some(resolution) =>
-            Some(
-              BucketPosition(x.toInt * resolution.x * DataLayer.bucketLength,
-                             y.toInt * resolution.y * DataLayer.bucketLength,
-                             z.toInt * resolution.z * DataLayer.bucketLength,
-                             resolution))
-          case _ => None
+        Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true).map { mag =>
+          BucketPosition(x.toInt * mag.x * DataLayer.bucketLength,
+                         y.toInt * mag.y * DataLayer.bucketLength,
+                         z.toInt * mag.z * DataLayer.bucketLength,
+                         mag)
         }
       case _ =>
         None
     }
   }
-
-  protected def parseResolution(resolutionStr: String): Option[Vec3Int] =
-    resolutionStr.toIntOpt match {
-      case Some(resolutionInt) => Some(Vec3Int(resolutionInt, resolutionInt, resolutionInt))
-      case None =>
-        val pattern = """(\d+)-(\d+)-(\d+)""".r
-        resolutionStr match {
-          case pattern(x, y, z) => Some(Vec3Int(x.toInt, y.toInt, z.toInt))
-          case _                => None
-        }
-    }
 
   def voxelTypeToElementClass(voxelType: VoxelType.Value, voxelSize: Int): Box[ElementClass.Value] =
     (voxelType, voxelSize) match {

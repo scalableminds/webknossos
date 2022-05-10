@@ -16,17 +16,17 @@ class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper {
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])]): Iterator[NamedStream] = {
     val (voxelType, numChannels) = WKWDataFormat.elementClassToVoxelType(layer.elementClass)
     val header = WKWHeader(1, DataLayer.bucketLength, BlockType.LZ4, voxelType, numChannels)
-    val resolutions = new mutable.HashSet[Vec3Int]()
+    val mags = new mutable.HashSet[Vec3Int]()
     bucketStream.map {
       case (bucket, data) =>
         val filePath = wkwFilePath(bucket.toCube(bucket.bucketLength)).toString
-        resolutions += bucket.resolution
+        mags += bucket.mag
         NamedFunctionStream(
           filePath,
           os => Future.successful(WKWFile.write(os, header, Array(data).toIterator))
         )
-    } ++ resolutions.toSeq.map { resolution =>
-      NamedFunctionStream(wkwHeaderFilePath(resolution).toString,
+    } ++ mags.toSeq.map { mag =>
+      NamedFunctionStream(wkwHeaderFilePath(mag).toString,
                           os => Future.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true)))
     }
   }

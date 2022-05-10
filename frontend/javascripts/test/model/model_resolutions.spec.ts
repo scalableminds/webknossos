@@ -28,10 +28,10 @@ test("Complex convertToDenseResolution", (t) => {
       dataLayers: [
         {
           resolutions: [
+            [16, 16, 2],
             [2, 2, 1],
             [4, 4, 1],
             [8, 8, 1],
-            [16, 16, 2],
             [32, 32, 4],
           ],
         },

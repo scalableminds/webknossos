@@ -79,7 +79,16 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
       const bucketX = testAddresses[i++];
       const bucketY = testAddresses[i++];
       const bucketZ = testAddresses[i++];
-      const positionBucket = globalPositionToBucketPosition(position, resolutions, zoomStep);
+      const positionBucketWithZoomStep = globalPositionToBucketPosition(
+        position,
+        resolutions,
+        zoomStep,
+      );
+      const positionBucket: Vector3 = [
+        positionBucketWithZoomStep[0],
+        positionBucketWithZoomStep[1],
+        positionBucketWithZoomStep[2],
+      ];
       const distanceToPosition = V3.length(V3.sub([bucketX, bucketY, bucketZ], positionBucket));
       pullQueue.push({
         bucket: [bucketX, bucketY, bucketZ, zoomStep],

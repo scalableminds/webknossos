@@ -4,6 +4,11 @@ import java.util.UUID
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
+import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
   TracingDataStore,
@@ -13,7 +18,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 import scala.concurrent.ExecutionContext
 
 class EditableMappingService @Inject()(
-    val tracingDataStore: TracingDataStore
+    val tracingDataStore: TracingDataStore,
+    remoteDatastoreClient: TSRemoteDatastoreClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits {
 
@@ -104,4 +110,55 @@ class EditableMappingService @Inject()(
     for {
       _ <- tracingDataStore.editableMappingUpdates.put(editableMappingId, version, updateAction)
     } yield ()
+
+  def volumeData(tracingId: String,
+                 tracing: VolumeTracing,
+                 dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
+    for {
+      editableMappingId <- tracing.mappingName.toFox
+      editableMapping <- get(editableMappingId)
+      remoteFallbackLayer <- remoteFallbackLayer(tracing)
+      (unmappedData, indices) <- getUnmappedDataFromDatastore(remoteFallbackLayer, dataRequests)
+      segmentIds = collectSegmentIds(unmappedData, indices, tracing.elementClass)
+      relevantMapping <- generateCombinedMappingSubset(segmentIds, editableMapping, remoteFallbackLayer)
+      mappedData <- mapData(unmappedData, indices, relevantMapping)
+    } yield (mappedData, indices)
+
+  private def generateCombinedMappingSubset(segmentIds: Set[Long],
+                                            editableMapping: EditableMapping,
+                                            remoteFallbackLayer: RemoteFallbackLayer): Fox[Map[Long, Long]] = {
+    val segmentIdsInEditableMapping: Set[Long] = segmentIds.intersect(editableMapping.segmentToAgglomerate.keySet)
+    val segmentIdsInBaseMapping: Set[Long] = segmentIds.diff(segmentIdsInEditableMapping)
+    val editableMappingSubset =
+      editableMapping.segmentToAgglomerate.filterKeys(key => segmentIdsInEditableMapping.contains(key))
+    for {
+      baseMappingSubset <- getBaseSegmentToAgglomeate(editableMapping.baseMappingName,
+                                                      segmentIdsInBaseMapping,
+                                                      remoteFallbackLayer)
+    } yield editableMappingSubset ++ baseMappingSubset
+  }
+
+  private def getBaseSegmentToAgglomeate(mappingName: String,
+                                         segmentIds: Set[Long],
+                                         remoteFallbackLayer: RemoteFallbackLayer): Fox[Map[Long, Long]] = ???
+
+  private def getUnmappedDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer,
+                                           dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
+    for {
+      (data, indices) <- remoteDatastoreClient.getData(remoteFallbackLayer, dataRequests)
+    } yield (data, indices)
+
+  private def collectSegmentIds(data: Array[Byte], indices: List[Int], elementClass: ElementClass): Set[Long] = ???
+
+  private def remoteFallbackLayer(tracing: VolumeTracing): Fox[RemoteFallbackLayer] =
+    for {
+      layerName <- tracing.fallbackLayer.toFox
+      organizationName <- tracing.organizationName.toFox
+    } yield RemoteFallbackLayer(organizationName, tracing.dataSetName, layerName)
+
+  private def mapData(unmappedData: Array[Byte],
+                      indices: List[Int],
+                      relevantMapping: Map[Long, Long]): Fox[Array[Byte]] = ???
 }
+
+case class RemoteFallbackLayer(organizationName: String, dataSetName: String, layerName: String)

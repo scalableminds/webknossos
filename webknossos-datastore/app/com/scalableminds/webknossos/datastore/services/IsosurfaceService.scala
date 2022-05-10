@@ -185,7 +185,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
     )
 
     val offset = Vec3Double(cuboid.topLeft.x, cuboid.topLeft.y, cuboid.topLeft.z)
-    val scale = Vec3Double(cuboid.topLeft.resolution) * request.scale
+    val scale = Vec3Double(cuboid.topLeft.mag) * request.scale
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
     val vertexBuffer = mutable.ArrayBuffer[Vec3Double]()

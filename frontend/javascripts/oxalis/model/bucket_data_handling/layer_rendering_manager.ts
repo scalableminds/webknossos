@@ -4,7 +4,7 @@ import memoizeOne from "memoize-one";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import { getAreasFromState, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { M4x4 } from "libs/mjs";
+import { Matrix4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
@@ -106,7 +106,8 @@ export default class LayerRenderingManager {
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastAreas' has no initializer and is not... Remove this comment to see the full error message
   lastAreas: OrthoViewMap<Area>;
-  lastZoomedMatrix: typeof M4x4;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastZoomedMatrix' has no initializer and is ... Remove this comment to see the full error message
+  lastZoomedMatrix: Matrix4x4;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastViewMode' has no initializer and is ... Remove this comment to see the full error message
   lastViewMode: ViewMode;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastIsVisible' has no initializer and is... Remove this comment to see the full error message

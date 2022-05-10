@@ -43,6 +43,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   gpuMemoryFactor: "Hardware Utilization",
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
+  isVolumeInterpolationEnabled: "Volume Interpolation",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first

@@ -15,6 +15,7 @@ import Drawing from "libs/drawing";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 /*
   A VoxelBuffer2D instance holds a two dimensional slice
@@ -55,10 +56,22 @@ export class VoxelBuffer2D {
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
     this.getFast3DCoordinate = getFast3DCoordinate;
+
+    if (!V2.equals(this.minCoord2d, V2.floor(this.minCoord2d))) {
+      throw new Error("Minimum coordinate passed to VoxelBuffer2D is not an integer vector.");
+    }
   }
 
   linearizeIndex(x: number, y: number): number {
     return x * this.height + y;
+  }
+
+  setValue(x: number, y: number, value: number) {
+    this.map[this.linearizeIndex(x, y)] = value;
+  }
+
+  isEmpty(): boolean {
+    return this.width == 0 || this.height == 0;
   }
 }
 export class VoxelNeighborQueue3D {
@@ -132,8 +145,11 @@ class VolumeLayer {
   volumeTracingId: string;
   plane: OrthoView;
   thirdDimensionValue: number;
-  maxCoord: Vector3 | null | undefined;
+
+  // Stored in global (but mag-dependent) coordinates:
   minCoord: Vector3 | null | undefined;
+  maxCoord: Vector3 | null | undefined;
+
   activeResolution: Vector3;
 
   constructor(
@@ -182,6 +198,15 @@ class VolumeLayer {
 
     const difference = V3.sub(maxCoord, minCoord);
     return difference[0] * difference[1] * difference[2];
+  }
+
+  getLabeledBoundingBox(): BoundingBox | null {
+    if (this.minCoord == null || this.maxCoord == null) {
+      return null;
+    }
+    const min = zoomedPositionToGlobalPosition(this.minCoord, this.activeResolution);
+    const max = zoomedPositionToGlobalPosition(this.maxCoord, this.activeResolution);
+    return new BoundingBox({ min, max });
   }
 
   getContourList(useGlobalCoords: boolean = false) {
@@ -246,7 +271,7 @@ class VolumeLayer {
 
     const width = maxCoord2d[0] - minCoord2d[0] + 1;
     const height = maxCoord2d[1] - minCoord2d[1] + 1;
-    const map = this.createMap(width, height, 1);
+    const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height, 1);
 
     const setMap = (x: number, y: number, value: number = 1) => {
       x = Math.floor(x);
@@ -254,7 +279,7 @@ class VolumeLayer {
 
       // Leave a 1px border in order for fillOutsideArea to work
       if (x > minCoord2d[0] && x < maxCoord2d[0] && y > minCoord2d[1] && y < maxCoord2d[1]) {
-        map[(x - minCoord2d[0]) * height + (y - minCoord2d[1])] = value;
+        buffer2D.map[(x - minCoord2d[0]) * height + (y - minCoord2d[1])] = value;
       }
     };
 
@@ -270,16 +295,8 @@ class VolumeLayer {
     // Also, it will be very clear where to start the filling
     // algorithm.
     this.drawOutlineVoxels((x, y) => setMap(x, y, 0));
-    this.fillOutsideArea(map, width, height);
+    this.fillOutsideArea(buffer2D.map, width, height);
     this.drawOutlineVoxels(setMap);
-    const buffer2D = new VoxelBuffer2D(
-      map,
-      width,
-      height,
-      minCoord2d,
-      this.get3DCoordinate.bind(this),
-      this.getFast3DCoordinateFunction(),
-    );
     return buffer2D;
   }
 
@@ -317,7 +334,20 @@ class VolumeLayer {
     return Math.sqrt(distance);
   }
 
-  createMap(width: number, height: number, fillValue: number = 0): Uint8Array {
+  createVoxelBuffer2D(minCoord2d: Vector2, width: number, height: number, fillValue: number = 0) {
+    const map = this._createMap(width, height, fillValue);
+
+    return new VoxelBuffer2D(
+      map,
+      width,
+      height,
+      minCoord2d,
+      this.get3DCoordinate.bind(this),
+      this.getFast3DCoordinateFunction(),
+    );
+  }
+
+  _createMap(width: number, height: number, fillValue: number = 0): Uint8Array {
     const map = new Uint8Array(width * height);
 
     if (fillValue !== 0) {
@@ -347,7 +377,7 @@ class VolumeLayer {
   getRectangleVoxelBuffer2D(
     lastUnzoomedPosition: Vector3,
     unzoomedPosition: Vector3,
-  ): VoxelBuffer2D | null | undefined {
+  ): VoxelBuffer2D | null {
     const lastPosition = scaleGlobalPositionWithResolution(
       lastUnzoomedPosition,
       this.activeResolution,
@@ -387,11 +417,11 @@ class VolumeLayer {
       Math.ceil(Math.max(xa, xb, xc, xd)),
       Math.ceil(Math.max(ya, yb, yc, yd)),
     ];
-    const [width, height] = V3.sub(maxCoord2d, minCoord2d);
-    const map = this.createMap(width, height);
+    const [width, height] = V2.sub(maxCoord2d, minCoord2d);
+    const voxelBuffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
 
     const setMap = (x: number, y: number) => {
-      map[x * height + y] = 1;
+      voxelBuffer2D.setValue(x, y, 1);
     };
 
     // translate the coordinates so the containing box originates in (0|0)
@@ -405,15 +435,13 @@ class VolumeLayer {
     xd -= diffX;
     yd -= diffY;
     Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
-    const voxelBuffer2D = new VoxelBuffer2D(
-      map,
-      width,
-      height,
-      minCoord2d,
-      this.get3DCoordinate.bind(this),
-      this.getFast3DCoordinateFunction(),
-    );
     return voxelBuffer2D;
+  }
+
+  globalCoordToMag2DFloat(position: Vector3): Vector2 {
+    return this.get2DCoordinate(
+      scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
+    );
   }
 
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
@@ -423,21 +451,27 @@ class VolumeLayer {
     const unzoomedRadius = Math.round(brushSize / 2);
     const width = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[0]]);
     const height = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[1]]);
-    const map = this.createMap(width, height);
-    const floatingCoord2d = this.get2DCoordinate(
-      scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
-    );
+    const floatingCoord2d = this.globalCoordToMag2DFloat(position);
+
+    const radiusOffset = Dimensions.transDim([unzoomedRadius, unzoomedRadius, 0], this.plane);
+    const topLeft = V3.sub(position, radiusOffset);
+    const bottomRight = V3.add(position, radiusOffset);
+
+    this.updateArea(topLeft);
+    this.updateArea(bottomRight);
+
     const minCoord2d: Vector2 = [
       Math.floor(floatingCoord2d[0] - width / 2),
       Math.floor(floatingCoord2d[1] - height / 2),
     ];
+    const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] = this.get2DCoordinate(
       getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
 
     const setMap = (x: number, y: number) => {
-      map[x * height + y] = 1;
+      buffer2D.setValue(x, y, 1);
     };
 
     Drawing.fillCircle(
@@ -448,14 +482,6 @@ class VolumeLayer {
       scaleX / this.activeResolution[dimIndices[0]],
       scaleY / this.activeResolution[dimIndices[1]],
       setMap,
-    );
-    const buffer2D = new VoxelBuffer2D(
-      map,
-      width,
-      height,
-      minCoord2d,
-      this.get3DCoordinate.bind(this),
-      this.getFast3DCoordinateFunction(),
     );
     return buffer2D;
   }

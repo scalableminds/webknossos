@@ -180,7 +180,7 @@ export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
   // The new bounding box should cover half of what is displayed in the viewports.
   // As the flycam position is taken as a center, the factor is halved again, resulting in a 0.25.
   const extentFactor = 0.25;
-  const halfBoxExtent = [
+  const halfBoxExtent: Vector3 = [
     Math.max(xMinExtent * extentFactor, 1),
     Math.max(yMinExtent * extentFactor, 1),
     Math.max(zMinExtent * extentFactor, 1),

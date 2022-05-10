@@ -195,6 +195,11 @@ export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEn
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.ERASE_BRUSH,
 ];
+export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationToolEnum> = [
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.BRUSH,
+];
+
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export const enum ContourModeEnum {
   DRAW = "DRAW",
@@ -293,8 +298,8 @@ const Constants = {
   // Maximum of how many buckets will be held in RAM (per layer)
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
   FLOOD_FILL_EXTENTS: {
-    _2D: process.env.BABEL_ENV === "test" ? [512, 512, 1] : [768, 768, 1],
-    _3D: process.env.BABEL_ENV === "test" ? [64, 64, 32] : [96, 96, 96],
+    _2D: (process.env.BABEL_ENV === "test" ? [512, 512, 1] : [768, 768, 1]) as Vector3,
+    _3D: (process.env.BABEL_ENV === "test" ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
 };
 export default Constants;

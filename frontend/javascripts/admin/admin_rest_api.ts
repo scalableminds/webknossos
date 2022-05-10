@@ -943,12 +943,13 @@ export async function getJobs(): Promise<APIJob[]> {
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
     organizationName: job.commandArgs.organization_name,
-    layerName: job.commandArgs.layer_name,
+    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     boundingBox: job.commandArgs.bbox,
     exportFileName: job.commandArgs.export_file_name,
     tracingId: job.commandArgs.volume_tracing_id,
     annotationId: job.commandArgs.annotation_id,
     annotationType: job.commandArgs.annotation_type,
+    mergeSegments: job.commandArgs.merge_segments,
     state: adaptJobState(job.command, job.state, job.manualState),
     manualState: job.manualState,
     result: job.returnValue,
@@ -1048,9 +1049,10 @@ export function startNucleiInferralJob(
   organizationName: string,
   datasetName: string,
   layerName: string,
+  newDatasetName: string,
 ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}`,
+    `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}&newDatasetName=${newDatasetName}`,
     {
       method: "POST",
     },
@@ -1062,27 +1064,96 @@ export function startNeuronInferralJob(
   datasetName: string,
   layerName: string,
   bbox: Vector6,
+  newDatasetName: string,
 ): Promise<APIJob> {
   return Request.receiveJSON(
     `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?layerName=${layerName}&bbox=${bbox.join(
       ",",
-    )}`,
+    )}&newDatasetName=${newDatasetName}`,
+    {
+      method: "POST",
+    },
   );
+}
+
+function startSegmentationAnnotationDependentJob(
+  jobURLPath: string,
+  organizationName: string,
+  datasetName: string,
+  fallbackLayerName: string,
+  volumeLayerName: string | null | undefined,
+  newDatasetName: string,
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  outputSegmentationLayerName?: string,
+  mergeSegments?: boolean,
+): Promise<APIJob> {
+  const requestURL = new URL(
+    `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}`,
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Location' is not assignable to parameter of type 'string | URL | undefined'.
+    location,
+  );
+  if (volumeLayerName != null) {
+    requestURL.searchParams.append("volumeLayerName", volumeLayerName);
+  }
+  requestURL.searchParams.append("fallbackLayerName", fallbackLayerName);
+  requestURL.searchParams.append("annotationId", annotationId);
+  requestURL.searchParams.append("annotationType", annotationType);
+  requestURL.searchParams.append("newDatasetName", newDatasetName);
+  if (outputSegmentationLayerName != null) {
+    requestURL.searchParams.append("outputSegmentationLayerName", outputSegmentationLayerName);
+  }
+  if (mergeSegments != null) {
+    requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
+  }
+  return Request.receiveJSON(requestURL.href, {
+    method: "POST",
+  });
 }
 
 export function startGlobalizeFloodfillsJob(
   organizationName: string,
   datasetName: string,
-  newDataSetName: string,
-  layerName: string,
+  fallbackLayerName: string,
+  volumeLayerName: string | null | undefined,
+  newDatasetName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/globalizeFloodfills/${organizationName}/${datasetName}?newDataSetName=${newDataSetName}&layerName=${layerName}&annotationId=${annotationId}&annotationType=${annotationType}`,
-    {
-      method: "POST",
-    },
+  return startSegmentationAnnotationDependentJob(
+    "globalizeFloodfills",
+    organizationName,
+    datasetName,
+    fallbackLayerName,
+    volumeLayerName,
+    newDatasetName,
+    annotationId,
+    annotationType,
+  );
+}
+
+export function startMaterializingVolumeAnnotationJob(
+  organizationName: string,
+  datasetName: string,
+  fallbackLayerName: string,
+  volumeLayerName: string | null | undefined,
+  newDatasetName: string,
+  outputSegmentationLayerName: string,
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  mergeSegments: boolean,
+): Promise<APIJob> {
+  return startSegmentationAnnotationDependentJob(
+    "materializeVolumeAnnotation",
+    organizationName,
+    datasetName,
+    fallbackLayerName,
+    volumeLayerName,
+    newDatasetName,
+    annotationId,
+    annotationType,
+    outputSegmentationLayerName,
+    mergeSegments,
   );
 }
 
@@ -1781,7 +1852,7 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 // receives too many parameters, since this doesn't play well with the saga typings.
 type IsosurfaceRequest = {
   position: Vector3;
-  zoomStep: number;
+  mag: Vector3;
   segmentId: number;
   subsamplingStrides: Vector3;
   cubeSize: Vector3;
@@ -1799,7 +1870,7 @@ export function computeIsosurface(
 }> {
   const {
     position,
-    zoomStep,
+    mag,
     segmentId,
     subsamplingStrides,
     cubeSize,
@@ -1817,7 +1888,7 @@ export function computeIsosurface(
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, subsamplingStrides)),
           cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
-          zoomStep,
+          mag,
           // Segment to build mesh for
           segmentId,
           // Name and type of mapping to apply before building mesh (optional)

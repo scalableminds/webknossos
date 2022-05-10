@@ -304,6 +304,8 @@ export type UserConfiguration = {
   readonly overwriteMode: OverwriteMode;
   readonly fillMode: FillMode;
   readonly useLegacyBindings: boolean;
+  readonly isVolumeInterpolationEnabled: boolean;
+  readonly volumeInterpolationDepth: number;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

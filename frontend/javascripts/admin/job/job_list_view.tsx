@@ -174,6 +174,22 @@ class JobListView extends React.PureComponent<Props, State> {
           </Link>{" "}
         </span>
       );
+    } else if (
+      job.type === "materialize_volume_annotation" &&
+      job.organizationName &&
+      job.datasetName
+    ) {
+      return (
+        <span>
+          Materialize annotation for {job.layerName ? ` layer ${job.layerName} of ` : " "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>
+          {job.mergeSegments
+            ? ". This includes merging the segments that were merged via merger mode."
+            : null}
+        </span>
+      );
     } else {
       return <span>{job.type}</span>;
     }
@@ -222,7 +238,11 @@ class JobListView extends React.PureComponent<Props, State> {
           )}
         </span>
       );
-    } else if (job.type === "infer_nuclei" || job.type === "infer_neurons") {
+    } else if (
+      job.type === "infer_nuclei" ||
+      job.type === "infer_neurons" ||
+      job.type === "materialize_volume_annotation"
+    ) {
       return (
         <span>
           {job.resultLink && (

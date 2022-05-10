@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { mod } from "libs/utils";
+import { map3, mod } from "libs/utils";
 import Store from "oxalis/store";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
@@ -67,20 +67,15 @@ class BoundingBox {
   }
 
   intersectedWith(other: BoundingBox): BoundingBox {
-    const newMin = [
-      Math.max(this.min[0], other.min[0]),
-      Math.max(this.min[1], other.min[1]),
-      Math.max(this.min[2], other.min[2]),
-    ];
-    const newMax = [
-      Math.min(this.max[0], other.max[0]),
-      Math.min(this.max[1], other.max[1]),
-      Math.min(this.max[2], other.max[2]),
-    ];
+    const newMin = V3.max(this.min, other.min);
+    const uncheckedMax = V3.min(this.max, other.max);
+
+    // Ensure the bounding box does not get a negative
+    // extent.
+    const newMax = V3.max(newMin, uncheckedMax);
+
     return new BoundingBox({
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       min: newMin,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max: newMax,
     });
   }
@@ -98,7 +93,7 @@ class BoundingBox {
   chunkIntoBuckets() {
     const size = this.getSize();
     const start = [...this.min];
-    const chunkSize = [32, 32, 32];
+    const chunkSize: Vector3 = [32, 32, 32];
     const chunkBorderAlignments = [32, 32, 32];
     // Move the start to be aligned correctly. This doesn't actually change
     // the start of the first chunk, because we'll intersect with `self`,
@@ -113,11 +108,10 @@ class BoundingBox {
     for (const x of _.range(start[0] - startAdjust[0], start[0] + size[0], chunkSize[0])) {
       for (const y of _.range(start[1] - startAdjust[1], start[1] + size[1], chunkSize[1])) {
         for (const z of _.range(start[2] - startAdjust[2], start[2] + size[2], chunkSize[2])) {
-          const newMin = [x, y, z];
+          const newMin: Vector3 = [x, y, z];
           boxes.push(
             this.intersectedWith(
               new BoundingBox({
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
                 min: newMin,
                 max: V3.add(newMin, chunkSize),
               }),
@@ -131,21 +125,73 @@ class BoundingBox {
   }
 
   fromMag1ToMag(mag: Vector3): BoundingBox {
-    const min = [
+    const min: Vector3 = [
       Math.floor(this.min[0] / mag[0]),
       Math.floor(this.min[1] / mag[1]),
       Math.floor(this.min[2] / mag[2]),
     ];
-    const max = [
+    const max: Vector3 = [
       Math.ceil(this.max[0] / mag[0]),
       Math.ceil(this.max[1] / mag[1]),
       Math.ceil(this.max[2] / mag[2]),
     ];
     return new BoundingBox({
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       min,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
       max,
+    });
+  }
+
+  paddedWithMargins(marginsLeft: Vector3, marginsRight?: Vector3): BoundingBox {
+    if (marginsRight == null) {
+      marginsRight = marginsLeft;
+    }
+
+    return new BoundingBox({
+      min: V3.sub(this.min, marginsLeft),
+      max: V3.add(this.max, marginsRight),
+    });
+  }
+
+  alignWithMag(mag: Vector3, ceil: boolean = false): BoundingBox {
+    /*
+     * Rounds the bounding box, so that both min and max are divisible by mag.
+     * :argument ceil: If true, the bounding box is enlarged when necessary. If false, it's shrinked when necessary.
+     */
+    const align = (point: Vector3, round_fn: (vec: Vector3) => Vector3) =>
+      V3.scale3(round_fn(V3.divide3(point, mag)), mag);
+
+    if (ceil) {
+      const min = align(this.min, V3.floor);
+      const max = align(this.max, V3.ceil);
+      return new BoundingBox({ min, max });
+    } else {
+      const min = align(this.min, V3.ceil);
+      const max = align(this.max, V3.floor);
+      return new BoundingBox({ min, max });
+    }
+  }
+
+  /*
+   * Each component of margins is used as
+   *   - a left margin IF the value is negative (the absolute value will be
+   *     used then).
+   *   - a right margin IF the value is positive
+   * For example:
+   *   The expression
+   *     boundingBox.paddedWithSignedMargins([10, 0, -20])
+   *   will rightpad in X with 10 and leftpad in Z with 20.
+   */
+  paddedWithSignedMargins(margins: Vector3): BoundingBox {
+    const marginsLeft = map3((el) => (el < 0 ? -el : 0), margins);
+    const marginsRight = map3((el) => (el > 0 ? el : 0), margins);
+
+    return this.paddedWithMargins(marginsLeft, marginsRight);
+  }
+
+  rounded(): BoundingBox {
+    return new BoundingBox({
+      min: V3.floor(this.min),
+      max: V3.ceil(this.max),
     });
   }
 }

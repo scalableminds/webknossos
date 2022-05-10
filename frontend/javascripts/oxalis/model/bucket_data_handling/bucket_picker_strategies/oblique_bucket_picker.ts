@@ -80,7 +80,6 @@ export default function determineBucketsForOblique(
   );
 
   let traversedBuckets = _.flatten(
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '([a, b]: [Vector3, Vector3]) => ... Remove this comment to see the full error message
     chunk2(scanLinesPoints).map(([a, b]: [Vector3, Vector3]) =>
       traverse(a, b, resolutions, logZoomStep),
     ),

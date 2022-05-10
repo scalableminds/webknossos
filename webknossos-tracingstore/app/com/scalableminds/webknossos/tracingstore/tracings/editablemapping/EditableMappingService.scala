@@ -135,11 +135,20 @@ class EditableMappingService @Inject()(
                                update: MergeAgglomerateUpdateAction,
                                remoteFallbackLayer: RemoteFallbackLayer): Fox[EditableMapping] =
     for {
-      segmentId2 <- findSegmentIdAtPosition(update.segmentPosition2, remoteFallbackLayer)
+      segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2)
       // TODO
     } yield mapping
 
-  private def findSegmentIdAtPosition(pos: Vec3Int, remoteFallbackLayer: RemoteFallbackLayer): Fox[Long] = ???
+  private def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer, pos: Vec3Int): Fox[Long] =
+    for {
+      voxelAsBytes: Array[Byte] <- remoteDatastoreClient.getVoxelAtPosition(Some("TODO pass token here"),
+                                                                            remoteFallbackLayer,
+                                                                            pos,
+                                                                            mag = Vec3Int(1, 1, 1))
+      voxelAsLongList: List[Long] = bytesToLongList(voxelAsBytes, remoteFallbackLayer.elementClass)
+      _ <- Fox.bool2Fox(voxelAsLongList.length == 1) ?~> s"Expected one, got ${voxelAsLongList.length} segment id values for voxel."
+      voxelAsLong <- voxelAsLongList.headOption
+    } yield voxelAsLong
 
   private def findPendingUpdates(editableMappingId: String, existingVersion: Long, desiredVersion: Long)(
       implicit ec: ExecutionContext): Fox[List[EditableMappingUpdateAction]] =
@@ -249,16 +258,23 @@ class EditableMappingService @Inject()(
       (data, indices) <- remoteDatastoreClient.getData(remoteFallbackLayer, dataRequests)
     } yield (data, indices)
 
-  private def collectSegmentIds(data: Array[Byte], indices: List[Int], elementClass: ElementClass): Set[Long] = ???
+  private def collectSegmentIds(data: Array[Byte], indices: List[Int], elementClass: ElementClass): Set[Long] =
+    // TODO do we need to skip something, using the indices?
+    bytesToLongList(data, elementClass).toSet
 
   def remoteFallbackLayer(tracing: VolumeTracing): Fox[RemoteFallbackLayer] =
     for {
-      layerName <- tracing.fallbackLayer.toFox
-      organizationName <- tracing.organizationName.toFox
+      layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
+      organizationName <- tracing.organizationName.toFox ?~> "This feature is only implemented for volume annotations with an explicit organization name tag, not for legacy volume annotations."
     } yield RemoteFallbackLayer(organizationName, tracing.dataSetName, layerName, tracing.elementClass)
 
   private def mapData(unmappedData: Array[Byte],
                       indices: List[Int],
                       relevantMapping: Map[Long, Long],
                       elementClass: ElementClass): Fox[Array[Byte]] = ???
+
+  private def bytesToLongList(bytes: Array[Byte], elementClass: ElementClass): List[Long] = ???
+
+  private def longListToBytes(longs: List[Long], elementClass: ElementClass): Array[Byte] = ???
+
 }

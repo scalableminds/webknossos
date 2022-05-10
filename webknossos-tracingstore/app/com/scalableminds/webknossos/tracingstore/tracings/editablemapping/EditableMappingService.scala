@@ -5,8 +5,10 @@ import java.util.UUID
 import com.google.inject.Inject
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -21,7 +23,8 @@ class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     remoteDatastoreClient: TSRemoteDatastoreClient
 )(implicit ec: ExecutionContext)
-    extends KeyValueStoreImplicits {
+    extends KeyValueStoreImplicits
+    with ProtoGeometryImplicits {
 
   private def generateId: String = UUID.randomUUID.toString
 
@@ -36,6 +39,7 @@ class EditableMappingService @Inject()(
       Map(),
       Map(),
       Map(),
+      Map()
     )
     for {
       _ <- tracingDataStore.editableMappings.put(newId, 0L, newEditableMapping.toBytes)
@@ -111,9 +115,7 @@ class EditableMappingService @Inject()(
       _ <- tracingDataStore.editableMappingUpdates.put(editableMappingId, version, updateAction)
     } yield ()
 
-  def volumeData(tracingId: String,
-                 tracing: VolumeTracing,
-                 dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
+  def volumeData(tracing: VolumeTracing, dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
     for {
       editableMappingId <- tracing.mappingName.toFox
       editableMapping <- get(editableMappingId)
@@ -121,7 +123,7 @@ class EditableMappingService @Inject()(
       (unmappedData, indices) <- getUnmappedDataFromDatastore(remoteFallbackLayer, dataRequests)
       segmentIds = collectSegmentIds(unmappedData, indices, tracing.elementClass)
       relevantMapping <- generateCombinedMappingSubset(segmentIds, editableMapping, remoteFallbackLayer)
-      mappedData <- mapData(unmappedData, indices, relevantMapping)
+      mappedData <- mapData(unmappedData, indices, relevantMapping, tracing.elementClass)
     } yield (mappedData, indices)
 
   private def generateCombinedMappingSubset(segmentIds: Set[Long],
@@ -138,9 +140,66 @@ class EditableMappingService @Inject()(
     } yield editableMappingSubset ++ baseMappingSubset
   }
 
+  def getAgglomerateSkeletonWithFallback(userToken: Option[String],
+                                         editableMappingId: String,
+                                         remoteFallbackLayer: RemoteFallbackLayer,
+                                         agglomerateId: Long): Fox[Array[Byte]] =
+    for {
+      editableMapping <- get(editableMappingId)
+      agglomerateIdIsPresent = editableMapping.agglomerateToSegments.contains(agglomerateId)
+      skeletonBytes <- if (agglomerateIdIsPresent)
+        getAgglomerateSkeleton(editableMappingId, editableMapping, remoteFallbackLayer, agglomerateId)
+      else
+        remoteDatastoreClient.getAgglomerateSkeleton(userToken,
+                                                     remoteFallbackLayer,
+                                                     editableMapping.baseMappingName,
+                                                     agglomerateId)
+    } yield skeletonBytes
+
+  private def getAgglomerateSkeleton(editableMappingId: String,
+                                     editableMapping: EditableMapping,
+                                     remoteFallbackLayer: RemoteFallbackLayer,
+                                     agglomerateId: Long): Fox[Array[Byte]] =
+    for {
+      positions <- editableMapping.agglomerateToPositions.get(agglomerateId)
+      nodes = positions.zipWithIndex.map {
+        case (pos, idx) =>
+          NodeDefaults.createInstance.copy(
+            id = idx,
+            position = pos
+          )
+      }
+      edges <- editableMapping.agglomerateToEdges.get(agglomerateId)
+      skeletonEdges = edges.map { e =>
+        Edge(source = e._1.toInt, target = e._2.toInt)
+      }
+
+      trees = Seq(
+        Tree(
+          treeId = agglomerateId.toInt,
+          createdTimestamp = System.currentTimeMillis(),
+          nodes = nodes,
+          edges = skeletonEdges,
+          name = s"agglomerate $agglomerateId ($editableMappingId)"
+        ))
+
+      skeleton = SkeletonTracingDefaults.createInstance.copy(
+        dataSetName = remoteFallbackLayer.dataSetName,
+        trees = trees,
+        organizationName = Some(remoteFallbackLayer.organizationName)
+      )
+    } yield skeleton.toByteArray
+
   private def getBaseSegmentToAgglomeate(mappingName: String,
                                          segmentIds: Set[Long],
-                                         remoteFallbackLayer: RemoteFallbackLayer): Fox[Map[Long, Long]] = ???
+                                         remoteFallbackLayer: RemoteFallbackLayer): Fox[Map[Long, Long]] = {
+    val segmentIdsOrdered = segmentIds.toList
+    for {
+      agglomerateIdsOrdered <- remoteDatastoreClient.getAgglomerateIdsForSegmentIds(remoteFallbackLayer,
+                                                                                    mappingName,
+                                                                                    segmentIdsOrdered)
+    } yield segmentIdsOrdered.zip(agglomerateIdsOrdered).toMap
+  }
 
   private def getUnmappedDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer,
                                            dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
@@ -150,7 +209,7 @@ class EditableMappingService @Inject()(
 
   private def collectSegmentIds(data: Array[Byte], indices: List[Int], elementClass: ElementClass): Set[Long] = ???
 
-  private def remoteFallbackLayer(tracing: VolumeTracing): Fox[RemoteFallbackLayer] =
+  def remoteFallbackLayer(tracing: VolumeTracing): Fox[RemoteFallbackLayer] =
     for {
       layerName <- tracing.fallbackLayer.toFox
       organizationName <- tracing.organizationName.toFox
@@ -158,7 +217,6 @@ class EditableMappingService @Inject()(
 
   private def mapData(unmappedData: Array[Byte],
                       indices: List[Int],
-                      relevantMapping: Map[Long, Long]): Fox[Array[Byte]] = ???
+                      relevantMapping: Map[Long, Long],
+                      elementClass: ElementClass): Fox[Array[Byte]] = ???
 }
-
-case class RemoteFallbackLayer(organizationName: String, dataSetName: String, layerName: String)

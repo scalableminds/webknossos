@@ -17,17 +17,20 @@ class TSRemoteDatastoreClient @Inject()(
   private val datastoreUrl: String = config.Tracingstore.WebKnossos.uri
 
   def getAgglomerateSkeleton(userToken: Option[String],
-                             organizationName: String,
-                             dataSetName: String,
-                             dataLayerName: String,
+                             remoteFallbackLayer: RemoteFallbackLayer,
                              mappingName: String,
                              agglomerateId: Long): Fox[Array[Byte]] =
-    rpc(
-      s"$datastoreUrl/data/datasets/$organizationName/$dataSetName/layers/$dataLayerName/agglomerates/$mappingName/skeleton/$agglomerateId")
+    rpc(s"${remoteLayerUri(remoteFallbackLayer)}/agglomerates/$mappingName/skeleton/$agglomerateId")
       .addQueryStringOptional("token", userToken)
       .getWithBytesResponse
 
   def getData(remoteFallbackLayer: RemoteFallbackLayer,
               dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = ???
 
+  def getAgglomerateIdsForSegmentIds(remoteFallbackLayer: RemoteFallbackLayer,
+                                     mappingName: String,
+                                     segmentIdsOrdered: List[Long]): Fox[List[Long]] = ???
+
+  private def remoteLayerUri(remoteLayer: RemoteFallbackLayer): String =
+    s"$datastoreUrl/data/datasets/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/layers/${remoteLayer.layerName}"
 }

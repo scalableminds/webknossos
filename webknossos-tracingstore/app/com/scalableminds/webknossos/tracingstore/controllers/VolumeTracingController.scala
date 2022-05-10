@@ -138,7 +138,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             hasEditableMapping <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
             (data, indices) <- if (hasEditableMapping.getOrElse(false))
               tracingService.data(tracingId, tracing, request.body)
-            else editableMappingService.volumeData(tracingId, tracing, request.body)
+            else editableMappingService.volumeData(tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
@@ -238,15 +238,14 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
         for {
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
-          organizationName <- tracing.organizationName ?~> "annotation.agglomerateSkeleton.noOrganizationNameKnown"
-          fallbackLayer <- tracing.fallbackLayer ?~> "annotation.agglomerateSkeleton.noFallbackLayer"
+          remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
           isEditableMapping <- editableMappingService.exists(mappingName)
-          agglomerateSkeletonBytes <- remoteDatastoreClient.getAgglomerateSkeleton(token,
-                                                                                   organizationName,
-                                                                                   tracing.dataSetName,
-                                                                                   fallbackLayer,
-                                                                                   mappingName,
-                                                                                   agglomerateId)
+          agglomerateSkeletonBytes <- if (isEditableMapping)
+            editableMappingService.getAgglomerateSkeletonWithFallback(token,
+                                                                      mappingName,
+                                                                      remoteFallbackLayer,
+                                                                      agglomerateId)
+          else remoteDatastoreClient.getAgglomerateSkeleton(token, remoteFallbackLayer, mappingName, agglomerateId)
         } yield Ok(agglomerateSkeletonBytes)
       }
     }

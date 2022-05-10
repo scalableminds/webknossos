@@ -172,9 +172,9 @@ class EditableMappingService @Inject()(
       remoteFallbackLayer <- remoteFallbackLayer(tracing)
       editableMapping <- get(editableMappingId, remoteFallbackLayer)
       (unmappedData, indices) <- getUnmappedDataFromDatastore(remoteFallbackLayer, dataRequests)
-      segmentIds = collectSegmentIds(unmappedData, indices, tracing.elementClass)
+      segmentIds = collectSegmentIds(unmappedData, tracing.elementClass)
       relevantMapping <- generateCombinedMappingSubset(segmentIds, editableMapping, remoteFallbackLayer)
-      mappedData <- mapData(unmappedData, indices, relevantMapping, tracing.elementClass)
+      mappedData = mapData(unmappedData, relevantMapping, tracing.elementClass)
     } yield (mappedData, indices)
 
   private def generateCombinedMappingSubset(segmentIds: Set[Long],
@@ -258,8 +258,7 @@ class EditableMappingService @Inject()(
       (data, indices) <- remoteDatastoreClient.getData(remoteFallbackLayer, dataRequests)
     } yield (data, indices)
 
-  private def collectSegmentIds(data: Array[Byte], indices: List[Int], elementClass: ElementClass): Set[Long] =
-    // TODO do we need to skip something, using the indices?
+  private def collectSegmentIds(data: Array[Byte], elementClass: ElementClass): Set[Long] =
     bytesToLongList(data, elementClass).toSet
 
   def remoteFallbackLayer(tracing: VolumeTracing): Fox[RemoteFallbackLayer] =
@@ -269,9 +268,12 @@ class EditableMappingService @Inject()(
     } yield RemoteFallbackLayer(organizationName, tracing.dataSetName, layerName, tracing.elementClass)
 
   private def mapData(unmappedData: Array[Byte],
-                      indices: List[Int],
                       relevantMapping: Map[Long, Long],
-                      elementClass: ElementClass): Fox[Array[Byte]] = ???
+                      elementClass: ElementClass): Array[Byte] = {
+    val unmappedDataLongs = bytesToLongList(unmappedData, elementClass)
+    val mappedDataLongs = unmappedDataLongs.map(relevantMapping)
+    longListToBytes(mappedDataLongs, elementClass)
+  }
 
   private def bytesToLongList(bytes: Array[Byte], elementClass: ElementClass): List[Long] = ???
 

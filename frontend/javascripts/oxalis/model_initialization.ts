@@ -782,7 +782,7 @@ function applyAnnotationSpecificViewConfiguration(
   const firstVolumeLayer = _.first(
     annotation.annotationLayers.filter((layer) => layer.typ === "Volume"),
   );
-  if (!firstVolumeLayer || !firstVolumeLayer.name) {
+  if (!firstVolumeLayer) {
     // No volume layer exists. Return the original dataset settings
     return initialDatasetSettings;
   }

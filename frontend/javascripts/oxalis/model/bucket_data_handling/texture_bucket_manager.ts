@@ -352,9 +352,7 @@ export default class TextureBucketManager {
     );
     const currentZoomStep = this.currentAnchorPoint[3];
 
-    const entries = this.activeBucketToIndexMap.entries();
-
-    for (const [bucket, reservedAddress] of entries) {
+    for (const [bucket, reservedAddress] of this.activeBucketToIndexMap.entries()) {
       let address = -1;
       let bucketZoomStep = bucket.zoomedAddress[3];
 
@@ -377,14 +375,14 @@ export default class TextureBucketManager {
 
           while (!abortFallbackLoop) {
             if (
-              // why do we abort the loop if type === "null" ?
+              // If the fallbackBucket is a null bucket, we can abort the
+              // loop, since a null bucket cannot have yield another fallback
+              // bucket.
               fallbackBucket.type !== "null" &&
               fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep
             ) {
               if (this.committedBucketSet.has(fallbackBucket)) {
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
-                address = this.activeBucketToIndexMap.get(fallbackBucket);
-                address = address != null ? address : -1;
+                address = this.activeBucketToIndexMap.get(fallbackBucket) ?? -1;
                 bucketZoomStep = fallbackBucket.zoomedAddress[3];
                 abortFallbackLoop = true;
               } else {
@@ -401,8 +399,9 @@ export default class TextureBucketManager {
 
         if (lookUpIdx !== -1) {
           const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
-          // TODO: Should this write also be skipped if the lookup buffer already contains a bucket with a better zoom step
-          // or is this situation impossible?
+          // We don't need to check whether the lookUpBuffer already contains
+          // a bucket with a finer quality here, since this base bucket has already
+          // the best possible quality.
           this.lookUpBuffer[posInBuffer] = address;
           this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
         }
@@ -418,16 +417,14 @@ export default class TextureBucketManager {
 
           const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
           if (lookUpIdx === -1) {
-            // The lookUpIdx is invalid. Skip the entire loop.
+            // The lookUpIdx is invalid. Ignore this bucket.
             continue;
           } else if (
             this.lookUpBuffer[posInBuffer] > -1 &&
             this.lookUpBuffer[posInBuffer + 1] <= bucketZoomStep
           ) {
             // Another bucket was already placed here with a better zoomstep.
-            // Skip the entire loop.
-            // TODO: clarify flicker when zooming from mag 4 to mag 8.
-            // todo: was a break before
+            // Ignore this bucket.
             continue;
           }
 

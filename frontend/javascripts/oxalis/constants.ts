@@ -1,4 +1,4 @@
-export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"] as ViewMode[]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
 
 export const ViewModeValuesIndices = {
   Orthogonal: 0,
@@ -259,13 +259,13 @@ const Constants = {
   ARBITRARY_VIEW: 4,
   DEFAULT_BORDER_WIDTH: 400,
   DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,
-  MODE_PLANE_TRACING: "orthogonal",
-  MODE_ARBITRARY: "flight",
-  MODE_ARBITRARY_PLANE: "oblique",
-  MODE_VOLUME: "volume",
-  MODES_PLANE: ["orthogonal", "volume"],
-  MODES_ARBITRARY: ["flight", "oblique"],
-  MODES_SKELETON: ["orthogonal", "flight", "oblique"],
+  MODE_PLANE_TRACING: "orthogonal" as ViewMode,
+  MODE_ARBITRARY: "flight" as ViewMode,
+  MODE_ARBITRARY_PLANE: "oblique" as ViewMode,
+  MODE_VOLUME: "volume" as ViewMode,
+  MODES_PLANE: ["orthogonal", "volume"] as ViewMode[],
+  MODES_ARBITRARY: ["flight", "oblique"] as ViewMode[],
+  MODES_SKELETON: ["orthogonal", "flight", "oblique"] as ViewMode[],
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,

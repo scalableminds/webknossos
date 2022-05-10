@@ -8,6 +8,7 @@ import Constants, {
   FillModeEnum,
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
+import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
 const defaultViewportRect = {
   top: 0,
   left: 0,
@@ -25,10 +26,10 @@ const initialAnnotationInfo = {
     allowDownload: false,
     somaClickingAllowed: false,
     mergerMode: false,
-    allowedModes: ["orthogonal", "oblique", "flight"],
+    allowedModes: ["orthogonal", "oblique", "flight"] as APIAllowedMode[],
     resolutionRestrictions: {},
   },
-  visibility: "Internal",
+  visibility: "Internal" as APIAnnotationVisibility,
   tags: [],
   description: "",
   name: "",
@@ -36,7 +37,7 @@ const initialAnnotationInfo = {
     name: "localhost",
     url: "http://localhost:9000",
   },
-  annotationType: "View",
+  annotationType: "View" as APIAnnotationType,
   meshes: [],
 };
 // @ts-expect-error ts-migrate(2322) FIXME: Type 'HTMLElement | null' is not assignable to typ... Remove this comment to see the full error message
@@ -76,7 +77,6 @@ const defaultState: OxalisState = {
     useLegacyBindings: false,
   },
   temporaryConfiguration: {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'ViewMode'... Remove this comment to see the full error message
     viewMode: Constants.MODE_PLANE_TRACING,
     histogramData: {},
     flightmodeRecording: false,
@@ -132,7 +132,6 @@ const defaultState: OxalisState = {
     sortingKey: 123,
     publication: null,
   },
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ readOnly: { userBoundingBoxes: never[]; bo... Remove this comment to see the full error message
   tracing: {
     ...initialAnnotationInfo,
     readOnly: {

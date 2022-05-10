@@ -577,7 +577,7 @@ class DataCube {
         const dataArray = currentLabeledVoxelMap.get(thirdCoord);
 
         if (!dataArray) {
-          // Satisfy flow
+          // Satisfy typescript
           throw new Error("Map entry does not exist, even though it was just set.");
         }
 

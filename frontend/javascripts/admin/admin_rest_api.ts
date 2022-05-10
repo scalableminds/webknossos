@@ -66,6 +66,7 @@ import type {
   AnnotationType,
   MappingType,
   VolumeTracing,
+  UserConfiguration,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -1538,7 +1539,7 @@ export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
 }
 
-export function getUserConfiguration(): Record<string, any> {
+export function getUserConfiguration(): Promise<UserConfiguration> {
   return Request.receiveJSON("/api/user/userConfiguration");
 }
 

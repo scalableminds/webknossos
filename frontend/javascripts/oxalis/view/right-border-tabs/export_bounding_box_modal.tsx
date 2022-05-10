@@ -99,7 +99,7 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
     // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
     // must exist.
     if (tracing == null) {
-      // Satisfy flow.
+      // Satisfy typescript.
       throw new Error("Tracing is null, but layer.tracingId is defined.");
     }
 

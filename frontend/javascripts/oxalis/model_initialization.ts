@@ -73,7 +73,12 @@ import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/map
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
-import type { AnnotationType, DatasetConfiguration, TraceOrViewCommand } from "oxalis/store";
+import type {
+  AnnotationType,
+  DatasetConfiguration,
+  TraceOrViewCommand,
+  UserConfiguration,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
@@ -143,11 +148,11 @@ export async function initialize(
     };
   }
 
-  const [dataset, initialUserSettings, serverTracings]: [
-    APIDataset,
-    Record<string, any>,
-    Array<ServerTracing>,
-  ] = await fetchParallel(annotation, datasetId, versions);
+  const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
+    annotation,
+    datasetId,
+    versions,
+  );
   const displayedVolumeTracings = getServerVolumeTracings(serverTracings).map(
     (volumeTracing) => volumeTracing.id,
   );
@@ -157,8 +162,16 @@ export async function initialize(
     displayedVolumeTracings,
     getSharingToken(),
   );
-  applyAnnotationSpecificViewConfigurationInplace(annotation, dataset, initialDatasetSettings);
-  initializeSettings(initialUserSettings, initialDatasetSettings);
+  const annotationSpecificDatasetSettings = applyAnnotationSpecificViewConfiguration(
+    annotation,
+    dataset,
+    initialDatasetSettings,
+  );
+  initializeSettings(
+    initialUserSettings,
+    annotationSpecificDatasetSettings,
+    initialDatasetSettings,
+  );
   let initializationInformation = null;
 
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
@@ -202,7 +215,7 @@ async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: APIDatasetId,
   versions?: Versions,
-): Promise<[APIDataset, Record<string, any>, Array<ServerTracing>]> {
+): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
@@ -396,10 +409,13 @@ export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
 }
 
 function initializeSettings(
-  initialUserSettings: Record<string, any>,
-  initialDatasetSettings: Record<string, any>,
+  initialUserSettings: UserConfiguration,
+  initialDatasetSettings: DatasetConfiguration,
+  originalDatasetSettings: DatasetConfiguration,
 ): void {
-  Store.dispatch(initializeSettingsAction(initialUserSettings, initialDatasetSettings));
+  Store.dispatch(
+    initializeSettingsAction(initialUserSettings, initialDatasetSettings, originalDatasetSettings),
+  );
 }
 
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {

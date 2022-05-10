@@ -116,7 +116,7 @@ export async function requestWithFallback(
   }
 
   if (maybeVolumeTracing == null) {
-    // Satisfy flow
+    // Satisfy typescript
     return bucketBuffers;
   }
 

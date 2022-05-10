@@ -192,7 +192,7 @@ type LL = (vec: Vector3) => number;
 // mags.
 function* performMinCut(action: Action): Saga<void> {
   if (action.type !== "PERFORM_MIN_CUT") {
-    throw new Error("Satisfy flow.");
+    throw new Error("Satisfy typescript.");
   }
 
   const skeleton = yield* select((store) => store.tracing.skeleton);

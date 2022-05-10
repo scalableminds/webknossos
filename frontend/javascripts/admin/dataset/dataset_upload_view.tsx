@@ -763,9 +763,26 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   validator: syncValidator(
                     (files: FileWithPath[]) =>
                       files.filter((file) =>
-                        Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]),
+                        Utils.isFileExtensionEqualTo(file.path, ["tar", "rar", "gz"]),
                       ).length === 0,
-                    "Tar and rar archives are not supported currently. Please use zip archives.",
+                    "Tar, tar.gz and rar archives are not supported currently. Please use zip archives.",
+                  ),
+                },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) =>
+                      files.filter((file) =>
+                        Utils.isFileExtensionEqualTo(file.path, ["ply", "stl", "obj"]),
+                      ).length === 0,
+                    "PLY, STL and OBJ files are not supported. Please upload image files instead of 3D geometries.",
+                  ),
+                },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) =>
+                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, ["mrc"]))
+                        .length === 0,
+                    "MRC files are not supported currently.",
                   ),
                 },
                 {

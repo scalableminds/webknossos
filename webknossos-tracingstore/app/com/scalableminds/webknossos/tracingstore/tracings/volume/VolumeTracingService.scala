@@ -476,16 +476,17 @@ class VolumeTracingService @Inject()(
       _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
         saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
       }
-      updateGroup = UpdateActionGroup[VolumeTracing](tracing.version + 1,
-                                                     System.currentTimeMillis(),
-                                                     List(ImportVolumeData(mergedVolume.largestSegmentId.toSignedLong)),
-                                                     None,
-                                                     None,
-                                                     None,
-                                                     None,
-                                                     None)
+      updateGroup = UpdateActionGroup[VolumeTracing](
+        tracing.version + 1,
+        System.currentTimeMillis(),
+        List(ImportVolumeData(mergedVolume.largestSegmentId.toPositiveLong)),
+        None,
+        None,
+        None,
+        None,
+        None)
       _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
-    } yield mergedVolume.largestSegmentId.toSignedLong
+    } yield mergedVolume.largestSegmentId.toPositiveLong
   }
 
   def dummyTracing: VolumeTracing = ???

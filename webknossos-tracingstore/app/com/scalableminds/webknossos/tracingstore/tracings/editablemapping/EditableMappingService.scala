@@ -303,7 +303,7 @@ class EditableMappingService @Inject()(
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
-    } yield unsignedIntArray.map(_.toUnsignedLong)
+    } yield unsignedIntArray.map(_.toPositiveLong)
 
   private def longsToBytes(longs: Array[Long], elementClass: ElementClass): Fox[Array[Byte]] =
     for {

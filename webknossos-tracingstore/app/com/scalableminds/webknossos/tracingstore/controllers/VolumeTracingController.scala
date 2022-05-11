@@ -239,13 +239,11 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
           remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
-          isEditableMapping <- editableMappingService.exists(mappingName)
-          agglomerateSkeletonBytes <- if (isEditableMapping)
-            editableMappingService.getAgglomerateSkeletonWithFallback(mappingName,
-                                                                      remoteFallbackLayer,
-                                                                      agglomerateId,
-                                                                      token)
-          else remoteDatastoreClient.getAgglomerateSkeleton(token, remoteFallbackLayer, mappingName, agglomerateId)
+          _ <- Fox.assertTrue(editableMappingService.exists(mappingName)) ?~> "Cannot query agglomerate skeleton for volume annotation"
+          agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(mappingName,
+                                                                                                remoteFallbackLayer,
+                                                                                                agglomerateId,
+                                                                                                token)
         } yield Ok(agglomerateSkeletonBytes)
       }
     }

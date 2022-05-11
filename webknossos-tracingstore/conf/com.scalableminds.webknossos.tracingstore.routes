@@ -21,6 +21,7 @@ POST        /volume/:tracingId/isosurface                       @com.scalablemin
 POST        /volume/:tracingId/importVolumeData                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.importVolumeData(token: Option[String], tracingId: String)
 GET         /volume/:tracingId/findData                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.findData(token: Option[String], tracingId: String)
 GET         /volume/:tracingId/agglomerateSkeleton              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.agglomerateSkeleton(token: Option[String], tracingId: String, agglomerateId: Long)
+POST        /volume/:tracingId/createEditableMapping            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.createEditableMapping(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/updateEditableMapping            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateEditableMapping(token: Option[String], tracingId: String, version: Long)
 POST        /volume/getMultiple                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple(token: Option[String])
 POST        /volume/mergedFromIds                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromIds(token: Option[String], persist: Boolean)

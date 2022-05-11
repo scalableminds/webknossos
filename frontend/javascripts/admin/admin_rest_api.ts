@@ -873,13 +873,14 @@ export function convertToHybridTracing(
   });
 }
 
-export async function downloadNml(
+export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
   includeWkw: boolean = true,
   versions: Versions = {},
 ) {
+  console.log(includeWkw);
   const possibleVersionString = Object.entries(versions)
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");

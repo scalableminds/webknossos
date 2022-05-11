@@ -9,7 +9,7 @@ import * as React from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
 import type { APITaskType } from "types/api_flow_types";
-import { getTaskTypes, deleteTaskType, downloadNml } from "admin/admin_rest_api";
+import { getTaskTypes, deleteTaskType, downloadAnnotation } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import LinkButton from "components/link_button";
 import Persistence from "libs/persistence";
@@ -287,7 +287,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                     href="#"
                     onClick={() => {
                       const includesVolumeData = taskType.tracingType !== "skeleton";
-                      return downloadNml(taskType.id, "CompoundTaskType", includesVolumeData);
+                      return downloadAnnotation(taskType.id, "CompoundTaskType", includesVolumeData);
                     }}
                     title="Download all Finished Annotations"
                     icon={<DownloadOutlined />}

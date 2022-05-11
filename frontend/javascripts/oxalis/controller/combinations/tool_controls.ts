@@ -617,10 +617,35 @@ export class BoundingBoxTool {
     getSceneController().highlightUserBoundingBox(null);
   }
 }
+export class ProofreadTool {
+  static getPlaneMouseControls(_planeId: OrthoView): any {
+    return {
+      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        handleAgglomerateSkeletonAtClick(pos);
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftClick: "Select Segment to Proofread",
+      rightClick: "Context Menu",
+    };
+  }
+
+  static onToolDeselected() {}
+}
 const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
   [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
+  [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,
   [AnnotationToolEnum.ERASE_TRACE]: EraseTool,

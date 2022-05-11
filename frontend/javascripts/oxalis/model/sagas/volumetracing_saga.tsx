@@ -15,9 +15,9 @@ import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import {
   updateVolumeTracing,
   updateUserBoundingBoxes,
-  createSegmentVolumeAction,
-  updateSegmentVolumeAction,
-  deleteSegmentVolumeAction,
+  createSegmentUpdateAction,
+  updateSegmentUpdateAction,
+  deleteSegmentUpdateAction,
   removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
 import type { UpdateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
@@ -880,13 +880,13 @@ export function* diffSegmentLists(
 
   for (const segmentId of deletedSegmentIds) {
     // @ts-expect-error ts-migrate(2322) FIXME: Type '{ name: string; value: { id: number; }; }' i... Remove this comment to see the full error message
-    yield deleteSegmentVolumeAction(segmentId);
+    yield deleteSegmentUpdateAction(segmentId);
   }
 
   for (const segmentId of addedSegmentIds) {
     const segment = newSegments.get(segmentId);
     // @ts-expect-error ts-migrate(2554) FIXME: Expected 4 arguments, but got 3.
-    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
+    yield createSegmentUpdateAction(segment.id, segment.somePosition, segment.name);
   }
 
   for (const segmentId of bothSegmentIds) {
@@ -894,7 +894,7 @@ export function* diffSegmentLists(
     const prevSegment = prevSegments.get(segmentId);
 
     if (segment !== prevSegment) {
-      yield updateSegmentVolumeAction(
+      yield updateSegmentUpdateAction(
         segment.id,
         segment.somePosition,
         segment.name,
@@ -1107,8 +1107,8 @@ function* ensureValidBrushSize(): Saga<void> {
   yield* takeLatest(
     [
       "WK_READY",
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
-      (action) => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
+      (action: Action) =>
+        action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
     ],
     maybeClampBrushSize,
   );

@@ -28,6 +28,13 @@ import type {
   UpdateTreeGroupVisibilityUpdateAction,
   CreateEdgeUpdateAction,
   DeleteEdgeUpdateAction,
+  SplitAgglomerateUpdateAction,
+  MergeAgglomeratesUpdateAction,
+  CreateSegmentUpdateAction,
+  UpdateSegmentUpdateAction,
+  DeleteSegmentUpdateAction,
+  MoveTreeComponentUpdateAction,
+  MergeTreeUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
@@ -35,11 +42,15 @@ type Description = {
   description: string;
   icon: React.ReactNode;
 };
+const updateTracingDescription = {
+  description: "Modified the annotation.",
+  icon: <EditOutlined />,
+};
 // The order in which the update actions are added to this object,
 // determines the order in which update actions are checked
 // to describe an update action batch. See also the comment
 // of the `getDescriptionForBatch` function.
-const descriptionFns = {
+const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Description> = {
   importVolumeTracing: (): Description => ({
     description: "Imported a volume tracing.",
     icon: <PlusOutlined />,
@@ -55,6 +66,14 @@ const descriptionFns = {
   removeFallbackLayer: (): Description => ({
     description: "Removed the segmentation fallback layer.",
     icon: <DeleteOutlined />,
+  }),
+  splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => ({
+    description: `Split an agglomerate by separating the segments at position ${action.value.segment_1_position} and ${action.value.segment_2_position}.`,
+    icon: <DeleteOutlined />,
+  }),
+  mergeAgglomerates: (action: MergeAgglomeratesUpdateAction): Description => ({
+    description: `Merged two agglomerates by combining the segments at position ${action.value.segment_1_position} and ${action.value.segment_2_position}.`,
+    icon: <PlusOutlined />,
   }),
   deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({
     description:
@@ -116,6 +135,31 @@ const descriptionFns = {
     description: "Updated the 3D view.",
     icon: <CodeSandboxOutlined />,
   }),
+  createSegment: (action: CreateSegmentUpdateAction): Description => ({
+    description: `Added the segment with id ${action.value.id} to the segments list.`,
+    icon: <PlusOutlined />,
+  }),
+  updateSegment: (action: UpdateSegmentUpdateAction): Description => ({
+    description: `Updated the segment with id ${action.value.id} in the segments list.`,
+    icon: <EditOutlined />,
+  }),
+  deleteSegment: (action: DeleteSegmentUpdateAction): Description => ({
+    description: `Deleted the segment with id ${action.value.id} from the segments list.`,
+    icon: <DeleteOutlined />,
+  }),
+  // This should never be shown since currently this update action can only be triggered
+  // by merging or splitting trees which is recognized separately, before this description
+  // is accessed.
+  moveTreeComponent: (action: MoveTreeComponentUpdateAction): Description => ({
+    description: `Moved ${action.value.nodeIds.length} nodes from tree with id ${action.value.sourceId} to tree with id ${action.value.targetId}.`,
+    icon: <EditOutlined />,
+  }),
+  // This should never be shown since currently this update action is never dispatched.
+  mergeTree: (action: MergeTreeUpdateAction): Description => ({
+    description: `Merged the trees with id ${action.value.sourceId} and ${action.value.targetId}.`,
+    icon: <EditOutlined />,
+  }),
+  updateTracing: (): Description => updateTracingDescription,
 };
 
 function getDescriptionForSpecificBatch(
@@ -128,7 +172,6 @@ function getDescriptionForSpecificBatch(
     throw new Error("Flow constraint violated");
   }
 
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   return descriptionFns[type](firstAction, actions.length);
 }
 
@@ -198,10 +241,7 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
   }
 
   // Catch-all for other update actions, currently updateTracing.
-  return {
-    description: "Modified the annotation.",
-    icon: <EditOutlined />,
-  };
+  return updateTracingDescription;
 }
 
 type Props = {

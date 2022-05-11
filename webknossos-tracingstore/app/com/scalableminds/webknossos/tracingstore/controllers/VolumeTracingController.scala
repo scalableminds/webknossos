@@ -138,7 +138,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             hasEditableMapping <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
             (data, indices) <- if (hasEditableMapping.getOrElse(false))
               tracingService.data(tracingId, tracing, request.body)
-            else editableMappingService.volumeData(tracing, request.body)
+            else editableMappingService.volumeData(tracing, request.body, token)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
@@ -241,10 +241,10 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
           isEditableMapping <- editableMappingService.exists(mappingName)
           agglomerateSkeletonBytes <- if (isEditableMapping)
-            editableMappingService.getAgglomerateSkeletonWithFallback(token,
-                                                                      mappingName,
+            editableMappingService.getAgglomerateSkeletonWithFallback(mappingName,
                                                                       remoteFallbackLayer,
-                                                                      agglomerateId)
+                                                                      agglomerateId,
+                                                                      token)
           else remoteDatastoreClient.getAgglomerateSkeleton(token, remoteFallbackLayer, mappingName, agglomerateId)
         } yield Ok(agglomerateSkeletonBytes)
       }

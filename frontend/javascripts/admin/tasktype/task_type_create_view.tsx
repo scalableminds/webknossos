@@ -94,6 +94,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       settings: {
         somaClickingAllowed: true,
         branchPointsAllowed: true,
+        volumeInterpolationAllowed: false,
         mergerMode: false,
         preferredMode: null,
         resolutionRestrictions: {},
@@ -366,30 +367,58 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               }
             >
               {({ getFieldValue }) => (
-                <div
-                  style={{
-                    // These form items are always emitted here and only their visibility
-                    // is changed, since the values are always needed to create/edit
-                    // a task type (its schema requires it even though the fields are
-                    // irrelevant for volume-only tasks).
-                    display: getFieldValue(["tracingType"]) === "volume" ? "none" : "block",
-                  }}
-                >
-                  <FormItem
-                    name={["settings", "somaClickingAllowed"]}
-                    label="Settings"
-                    valuePropName="checked"
+                <div>
+                  {/* Skeleton-specific */}
+                  <div
+                    style={{
+                      // These form items are always emitted here and only their visibility
+                      // is changed, since the values are always needed to create/edit
+                      // a task type (its schema requires it even though the fields are
+                      // irrelevant for volume-only tasks).
+                      display: getFieldValue(["tracingType"]) === "volume" ? "none" : "block",
+                    }}
                   >
-                    <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
-                  </FormItem>
+                    <FormItem
+                      name={["settings", "somaClickingAllowed"]}
+                      label="Settings"
+                      valuePropName="checked"
+                    >
+                      <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
+                    </FormItem>
 
-                  <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
-                    <Checkbox>Allow Branchpoints</Checkbox>
-                  </FormItem>
+                    <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
+                      <Checkbox>Allow Branchpoints</Checkbox>
+                    </FormItem>
+                    <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
+                      <Checkbox>Merger Mode</Checkbox>
+                    </FormItem>
+                  </div>
 
-                  <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
-                    <Checkbox>Merger Mode</Checkbox>
-                  </FormItem>
+                  {/* Volume-specific */}
+                  <div
+                    style={{
+                      // These form items are always emitted here and only their visibility
+                      // is changed, since the values are always needed to create/edit
+                      // a task type (its schema requires it even though the fields are
+                      // irrelevant for skeleton-only tasks).
+                      display: getFieldValue(["tracingType"]) === "skeleton" ? "none" : "block",
+                    }}
+                  >
+                    <FormItem
+                      name={["settings", "volumeInterpolationAllowed"]}
+                      valuePropName="checked"
+                    >
+                      <Checkbox>
+                        Allow Volume Interpolation
+                        <Tooltip
+                          title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
+                          placement="right"
+                        >
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </Checkbox>
+                    </FormItem>
+                  </div>
                 </div>
               )}
             </FormItem>
@@ -404,7 +433,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               <Checkbox disabled={isEditingMode}>
                 Restrict Resolutions{" "}
                 <Tooltip
-                  title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
+                  title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to annotate in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
                   placement="right"
                 >
                   <InfoCircleOutlined />

@@ -65,6 +65,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
 import {
+  getDatasetResolutionInfo,
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
@@ -109,6 +110,7 @@ import type {
   Vector3,
   Vector4,
   AnnotationTool,
+  TypedArray,
 } from "oxalis/constants";
 import Constants, {
   ControlModeEnum,
@@ -316,7 +318,7 @@ class TracingApi {
 
   /**
    * Returns the comment for a given node and tree (optional).
-   * @param tree - Supplying the tree will provide a performance boost for looking up a comment.
+   * @param treeId - Supplying the tree id will provide a performance boost for looking up a comment.
    *
    * @example
    * const comment = api.tracing.getCommentForNode(23);
@@ -1296,7 +1298,23 @@ class DataApi {
     return bucket;
   }
 
+  /*
+   * Deprecated! Use getDataForBoundingBox instead whose name describes its interface correctly.
+   */
   async getDataFor2DBoundingBox(
+    layerName: string,
+    bbox: BoundingBoxType,
+    _zoomStep: number | null | undefined = null,
+  ) {
+    return this.getDataForBoundingBox(layerName, bbox, _zoomStep);
+  }
+
+  /*
+   * For the provided layer name and bounding box, an array is constructed with the actual data.
+   * By default, the finest existent quality is chosen, but the quality can be adapted via the
+   * zoomStep parameter.
+   */
+  async getDataForBoundingBox(
     layerName: string,
     bbox: BoundingBoxType,
     _zoomStep: number | null | undefined = null,
@@ -1346,7 +1364,7 @@ class DataApi {
       viewport,
     );
     const resolutionIndex = getRequestLogZoomStep(state);
-    const cuboid = await this.getDataFor2DBoundingBox(
+    const cuboid = await this.getDataForBoundingBox(
       layerName,
       {
         min,
@@ -1403,8 +1421,7 @@ class DataApi {
     elementClass: ElementClass,
     resolutions: Array<Vector3>,
     zoomStep: number,
-    // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name '$TypedArray'.
-  ): $TypedArray {
+  ): TypedArray {
     const resolution = resolutions[zoomStep];
     // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
     // by the resolution
@@ -1460,6 +1477,33 @@ class DataApi {
   }
 
   /**
+   * Helper method to build the download URL for a raw data cuboid.
+   *
+   * @ignore
+   */
+  _getDownloadUrlForRawDataCuboid(
+    layerName: string,
+    topLeft: Vector3,
+    bottomRight: Vector3,
+    token: string,
+  ): string {
+    const { dataset } = Store.getState();
+    const resolutionInfo = getDatasetResolutionInfo(dataset);
+    const resolution = resolutionInfo.getLowestResolution();
+    const magString = resolution.join("-");
+    return (
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
+      `token=${token}&` +
+      `x=${topLeft[0]}&` +
+      `y=${topLeft[1]}&` +
+      `z=${topLeft[2]}&` +
+      `width=${bottomRight[0] - topLeft[0]}&` +
+      `height=${bottomRight[1] - topLeft[1]}&` +
+      `depth=${bottomRight[2] - topLeft[2]}`
+    );
+  }
+
+  /**
    * Downloads a cuboid of raw data from a dataset (not tracing) layer. A new window is opened for the download -
    * if that is not the case, please check your pop-up blocker.
    *
@@ -1467,18 +1511,13 @@ class DataApi {
    * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
    */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const { dataset } = Store.getState();
     return doWithToken((token) => {
-      const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?resolution=0&` +
-        `token=${token}&` +
-        `x=${topLeft[0]}&` +
-        `y=${topLeft[1]}&` +
-        `z=${topLeft[2]}&` +
-        `width=${bottomRight[0] - topLeft[0]}&` +
-        `height=${bottomRight[1] - topLeft[1]}&` +
-        `depth=${bottomRight[2] - topLeft[2]}`;
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'open' does not exist on type '(Window & ... Remove this comment to see the full error message
+      const downloadUrl = this._getDownloadUrlForRawDataCuboid(
+        layerName,
+        topLeft,
+        bottomRight,
+        token,
+      );
       window.open(downloadUrl);
       // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
       return Promise.resolve();
@@ -1486,18 +1525,13 @@ class DataApi {
   }
 
   getRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const { dataset } = Store.getState();
     return doWithToken((token) => {
-      const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?resolution=0&` +
-        `token=${token}&` +
-        `x=${topLeft[0]}&` +
-        `y=${topLeft[1]}&` +
-        `z=${topLeft[2]}&` +
-        `width=${bottomRight[0] - topLeft[0]}&` +
-        `height=${bottomRight[1] - topLeft[1]}&` +
-        `depth=${bottomRight[2] - topLeft[2]}`;
-      // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
+      const downloadUrl = this._getDownloadUrlForRawDataCuboid(
+        layerName,
+        topLeft,
+        bottomRight,
+        token,
+      );
       return Request.receiveArraybuffer(downloadUrl);
     });
   }

@@ -109,7 +109,7 @@
     "react/state-in-constructor": "off", // probably want "never",
     "react/default-props-match-prop-types": "warn", // probably should be enabled
     "react/jsx-fragments": "off", // debateable. could be autofixed with eslint --fix ...
-    "max-classes-per-file": "warn", // seems useful, but requires some refactoring
+    "max-classes-per-file": "off", // seems useful, but requires some refactoring, set to off because it's visually distracting
     "prefer-object-spread": "off", // debateable. could be autofixed with eslint --fix ...
     "@typescript-eslint/lines-between-class-members": "off",
     "@typescript-eslint/naming-convention": [

@@ -221,7 +221,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
               "Tracingstore",
               "%s".format(tracingId),
               Map(tracingId -> ".") ++ mags.map { mag =>
-                (mag.toURLString, mag.toURLString)
+                (mag.toMagLiteral(allowScalar=true), mag.toMagLiteral(allowScalar=true))
               }.toMap
             )).withHeaders()
       }
@@ -286,20 +286,24 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          parsedMag <- parseMagIfExists(tracing, mag) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
-          (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> 404
 
+          val existingMags = tracing.resolutions.map(v => Vec3Int(v.x, v.y, v.z))
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
+
+          (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404
           _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
           cubeSize = DataLayer.bucketLength
           request = WebKnossosDataRequest(
             position = Vec3Int(x, y, z),
-            zoomStep = parsedMag.maxDim,
+            mag = magParsed,
             cubeSize = cubeSize,
             fourBit = Some(false),
             applyAgglomerate = None,
             version = None
           )
           (data, _) <- tracingService.data(tracingId, tracing, List(request))
+          // TODO fallback layer
         } yield Ok(data).withHeaders()
       }
     }
@@ -314,17 +318,6 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
         Fox.successful(Integer.parseInt(c), Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
       case _ => Fox.failure("Coordinates not valid")
     }
-  }
-
-  private def parseMagIfExists(tracing: VolumeTracing, mag: String): Option[Vec3Int] = {
-    val singleRx = "\\s*([0-9]+)\\s*".r
-    val longMag = mag match {
-      case singleRx(x) => "%s-%s-%s".format(x, x, x)
-      case _           => mag
-    }
-    val parsedMag = Vec3Int.fromForm(longMag)
-    val existingMags = tracing.resolutions.map(v => Vec3Int(v.x, v.y, v.z))
-    Some(parsedMag).filter(mag => existingMags.contains(mag))
   }
 
   private def zarrDtypeFromElementClass(elementClass: VolumeTracing.ElementClass): Option[(Int, String)] =

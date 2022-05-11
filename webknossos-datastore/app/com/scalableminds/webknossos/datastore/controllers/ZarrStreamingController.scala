@@ -73,8 +73,8 @@ class ZarrStreamingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
-              Map(dataLayerName -> ".") ++ mags.map { mag =>
-                (mag.toURLString, mag.toURLString)
+              Map("color" -> ".") ++ mags.map { mag =>
+                (mag.toMagLiteral(), mag.toMagLiteral())
               }.toMap
             )).withHeaders()
       }
@@ -108,7 +108,8 @@ class ZarrStreamingController @Inject()(
       for {
         (_, dataLayer) <- dataSourceRepository
           .getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages("dataSource.notFound") ~> 404
-        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+        _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
         cubeLength = DataLayer.bucketLength
         (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
         // data request method always decompresses before sending
@@ -126,9 +127,9 @@ class ZarrStreamingController @Inject()(
             "shape" -> List(
               channels,
               // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
-              (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / parsedMag.x,
-              (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / parsedMag.y,
-              (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / parsedMag.z
+              (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / magParsed.x,
+              (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / magParsed.y,
+              (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / magParsed.z
             ),
             "dimension_seperator" -> "."
           ))
@@ -152,19 +153,20 @@ class ZarrStreamingController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
                                                                                   dataLayerName) ~> 404
-        (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404
-        parsedMag <- parseMagIfExists(dataLayer, mag) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
-        _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
+        (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> 404
+        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+        _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        _ <- bool2Fox(c == 0) ~> "zarr.invalidFirstChunkCoord" ~> 404
         cubeSize = DataLayer.bucketLength
         request = DataServiceDataRequest(
           dataSource,
           dataLayer,
           None,
           Cuboid(
-            topLeft = new VoxelPosition(x * cubeSize * parsedMag.x,
-                                        y * cubeSize * parsedMag.y,
-                                        z * cubeSize * parsedMag.z,
-                                        parsedMag),
+            topLeft = new VoxelPosition(x * cubeSize * magParsed.x,
+                                        y * cubeSize * magParsed.y,
+                                        z * cubeSize * magParsed.z,
+                                        magParsed),
             width = cubeSize,
             height = cubeSize,
             depth = cubeSize
@@ -260,16 +262,6 @@ class ZarrStreamingController @Inject()(
 
   private def getTokenFromHeader(token: Option[String], request: Request[AnyContent]): Option[String] =
     token.orElse(request.headers.get("X-Auth-Token"))
-
-  private def parseMagIfExists(layer: DataLayer, mag: String): Option[Vec3Int] = {
-    val singleRx = "\\s*([0-9]+)\\s*".r
-    val longMag = mag match {
-      case singleRx(x) => "%s-%s-%s".format(x, x, x)
-      case _           => mag
-    }
-    val parsedMag = Vec3Int.fromForm(longMag)
-    Some(parsedMag).filter(layer.containsResolution)
-  }
 
   private def zarrDtypeFromElementClass(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "<u1")

@@ -1,4 +1,4 @@
-import { type DatasetLayerConfiguration } from "oxalis/store";
+import { type DatasetLayerConfiguration, type DatasetConfiguration } from "oxalis/store";
 
 export function getDefaultLayerViewConfiguration(
   dynamicDefault: Partial<DatasetLayerConfiguration> = {},
@@ -51,7 +51,7 @@ export const layerViewConfiguration = {
     type: "boolean",
   },
 };
-export const defaultDatasetViewConfigurationWithoutNull = {
+export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = {
   fourBit: false,
   interpolation: true,
   renderMissingDataBlack: false,

@@ -157,6 +157,7 @@ dataLayer.notFound=DataLayer “{0}” not found
 dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
 
 dataLayer.wrongMag=DataLayer “{0}” does not have mag “{1}”
+dataLayer.invalidMag=Supplied “{0}” is not a valid mag format. Please use “x-y-z”
 
 zarr.invalidChunkCoordinates=The requested chunk coordinates are in an invalid format. Expected c.x.y.z
 zarr.invalidFirstChunkCoord="First Channel must be 0"
@@ -346,6 +347,7 @@ job.couldNotRunComputeMeshFile = Failed to start mesh file computation job.
 job.couldNotRunNucleiInferral = Failed to start nuclei inferral job.
 job.couldNotRunNeuronInferral = Failed to start neuron inferral job.
 job.couldNotRunGlobalizeFloodfills = Failed to start job for globalizing floodfills.
+job.couldNotRunApplyMergerMode = Failed to start job to apply merger mode tracing.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 jobs.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
@@ -357,6 +359,7 @@ job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allo
 job.inferNeurons.notAllowed.organization = Currently neuron inferral is only allowed for datasets of your own organization.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
+job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 

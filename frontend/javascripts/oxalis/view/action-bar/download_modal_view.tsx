@@ -103,7 +103,6 @@ export default function DownloadModalView(props: Props): JSX.Element {
 
   const handleOk = async () => {
     await Model.ensureSavedState();
-    console.log(includeVolumeData);
     downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
     onClose();
   };
@@ -140,9 +139,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
   };
 
   const handleCheckboxChange = (checkedValues: CheckboxValueType[]) => {
-    console.log(checkedValues);
     setIncludeVolumeData(checkedValues.includes("Volume"));
-    console.log("Volumecheck: ", checkedValues.includes("Volume"));
   };
 
   const handleTabChange = (key: string) => {
@@ -167,14 +164,6 @@ export default function DownloadModalView(props: Props): JSX.Element {
       </Text>
     </Row>
   );
-
-  const handleLayerSelection = (selection: string) => {
-    console.log(selection);
-  };
-
-  const handleBoundingBoxSelection = (bbox: string) => {
-    console.log(bbox);
-  };
 
   const checkboxStyle = {
     height: "30px",

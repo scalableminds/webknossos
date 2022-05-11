@@ -889,7 +889,6 @@ export async function downloadAnnotation(
       timeout: 12000,
     });
   }
-  console.log(includeVolumeData);
   const skipVolumeDataString = includeVolumeData ? "" : "skipVolumeData=true";
   const maybeAmpersant = possibleVersionString === "" && !includeVolumeData ? "" : "&";
 

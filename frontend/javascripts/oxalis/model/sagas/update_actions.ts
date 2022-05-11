@@ -419,7 +419,7 @@ export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
-  creationTime: number | null | undefined,
+  creationTime: number | null | undefined = Date.now(),
 ): CreateSegmentVolumeAction {
   return {
     name: "createSegment",
@@ -435,7 +435,7 @@ export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
-  creationTime: number | null | undefined,
+  creationTime: number | null | undefined = Date.now(),
 ): UpdateSegmentVolumeAction {
   return {
     name: "updateSegment",
@@ -447,7 +447,7 @@ export function updateSegmentVolumeAction(
     },
   };
 }
-export function deleteSegmentVolumeAction(id: number) {
+export function deleteSegmentVolumeAction(id: number): DeleteSegmentVolumeAction {
   return {
     name: "deleteSegment",
     value: {

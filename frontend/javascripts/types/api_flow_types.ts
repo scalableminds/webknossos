@@ -212,7 +212,8 @@ export type APISettings = {
   readonly preferredMode?: APIAllowedMode;
   readonly branchPointsAllowed: boolean;
   readonly somaClickingAllowed: boolean;
-  readonly mergerMode?: boolean;
+  readonly volumeInterpolationAllowed: boolean;
+  readonly mergerMode: boolean;
   readonly resolutionRestrictions: APIResolutionRestrictions;
 };
 export enum APIAnnotationTypeEnum {
@@ -502,6 +503,7 @@ export type APIJob = {
   readonly annotationType: string | null | undefined;
   readonly organizationName: string | null | undefined;
   readonly boundingBox: string | null | undefined;
+  readonly mergeSegments: boolean | null | undefined;
   readonly type: string;
   readonly state: string;
   readonly manualState: string;

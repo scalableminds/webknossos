@@ -41,21 +41,20 @@ function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector
   return quat;
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'quat' implicitly has an 'any' type.
-function getCameraFromQuaternion(quat) {
+function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: number }) {
   // Derived from: https://stackoverflow.com/questions/1556260/convert-quaternion-rotation-to-rotation-matrix
   const { x, y, z, w } = quat;
-  const right = [
+  const right: Vector3 = [
     1.0 - 2.0 * y * y - 2.0 * z * z,
     2.0 * x * y + 2.0 * z * w,
     2.0 * x * z - 2.0 * y * w,
   ];
-  const up = [
+  const up: Vector3 = [
     2.0 * x * y - 2.0 * z * w,
     1.0 - 2.0 * x * x - 2.0 * z * z,
     2.0 * y * z + 2.0 * x * w,
   ];
-  const forward = [
+  const forward: Vector3 = [
     2.0 * x * z + 2.0 * y * w,
     2.0 * y * z - 2.0 * x * w,
     1.0 - 2.0 * x * x - 2.0 * y * y,
@@ -311,7 +310,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     Store.dispatch(
       setTDCameraWithoutTimeTrackingAction({
         position: newPosition,
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
         up: tweened.up,
         left,
         right,

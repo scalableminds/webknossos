@@ -1,6 +1,7 @@
 import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Select } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
+import { useFetch } from "libs/react_helpers";
 import type { APIAnnotationType } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -81,6 +82,20 @@ const okTextForTab = new Map([
   ["python", null],
 ]);
 
+function Footer({ tabKey, onClick }: { tabKey: string; onClick: () => void }) {
+  const okText = okTextForTab.get(tabKey);
+  return okText != null ? (
+    <Button
+      key="ok"
+      type="primary"
+      disabled={tabKey === "export" && !features().jobsEnabled}
+      onClick={onClick}
+    >
+      {okText}
+    </Button>
+  ) : null;
+}
+
 export default function DownloadModalView(props: Props): JSX.Element {
   const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
   const [activeTabKey, setActiveTabKey] = useState("download");
@@ -88,14 +103,10 @@ export default function DownloadModalView(props: Props): JSX.Element {
 
   const handleOk = async () => {
     await Model.ensureSavedState();
+    console.log(includeVolumeData);
     downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
     onClose();
   };
-  const [currentFooter, setCurrentFooter] = useState<React.ReactNode>([
-    <Button key="ok" type="primary" onClick={() => handleOk()}>
-      Download
-    </Button>,
-  ]);
 
   const maybeShowWarning = () => {
     if (activeTabKey === "download" && hasVolumeFallback) {
@@ -129,26 +140,13 @@ export default function DownloadModalView(props: Props): JSX.Element {
   };
 
   const handleCheckboxChange = (checkedValues: CheckboxValueType[]) => {
+    console.log(checkedValues);
     setIncludeVolumeData(checkedValues.includes("Volume"));
+    console.log("Volumecheck: ", checkedValues.includes("Volume"));
   };
 
   const handleTabChange = (key: string) => {
     setActiveTabKey(key);
-    const okText = okTextForTab.get(key);
-    if (okText != null) {
-      setCurrentFooter([
-        <Button
-          key="ok"
-          type="primary"
-          disabled={key === "export" && !features().jobsEnabled}
-          onClick={handleOk}
-        >
-          {okText}
-        </Button>,
-      ]);
-    } else {
-      setCurrentFooter(null);
-    }
   };
 
   const workerInfo = (
@@ -183,7 +181,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
     lineHeight: "30px",
   };
 
-  const authToken = getAuthToken().then((token) => token);
+  const authToken = useFetch(getAuthToken, "loading...", []);
   const wkInitSnippet = `import webknossos as wk
 
 with wk.webknossos_context(token="${authToken}"):
@@ -207,7 +205,7 @@ with wk.webknossos_context(token="${authToken}"):
       title="Download this Annotation"
       visible={isVisible}
       width={600}
-      footer={currentFooter}
+      footer={[<Footer tabKey={activeTabKey} onClick={handleOk} key="footer" />]}
       onOk={handleOk}
       onCancel={onClose}
       style={{ overflow: "visible" }}
@@ -243,7 +241,7 @@ with wk.webknossos_context(token="${authToken}"):
             </Col>
             <Col span={15}>
               <CheckboxGroup onChange={handleCheckboxChange} defaultValue={selection}>
-                <Checkbox style={checkboxStyle} value="Volume">
+                <Checkbox style={checkboxStyle} value="Volume" checked={includeVolumeData}>
                   Volume Annotations as WKW
                 </Checkbox>
                 <Hint

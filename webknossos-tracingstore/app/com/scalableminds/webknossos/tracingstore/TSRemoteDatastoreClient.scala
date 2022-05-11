@@ -65,4 +65,6 @@ class TSRemoteDatastoreClient @Inject()(
   def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer,
                           agglomerateId: Long,
                           userToken: Option[String]): Fox[AgglomerateGraph] = ???
+
+  def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String): Fox[Long]
 }

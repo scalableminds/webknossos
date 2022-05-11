@@ -10,12 +10,18 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceLike}
 import com.scalableminds.webknossos.datastore.models.{VoxelPosition, WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
-import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.datastore.services.{BinaryDataService, BinaryDataServiceHolder, UserAccessRequest}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
-import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreAccessTokenService}
+import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteWebKnossosClient,
+  TracingStoreAccessTokenService,
+  TracingStoreConfig
+}
+import net.liftweb.util.Helpers.urlEncode
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -25,12 +31,13 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
-                                        val remoteWebKnossosClient: TSRemoteWebKnossosClient,
-                                        val accessTokenService: TracingStoreAccessTokenService,
-                                        val slackNotificationService: TSSlackNotificationService)(
-    implicit val ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
+class VolumeTracingController @Inject()(
+    val tracingService: VolumeTracingService,
+    val config: TracingStoreConfig,
+    val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    val accessTokenService: TracingStoreAccessTokenService,
+    val slackNotificationService: TSSlackNotificationService,
+    val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings] {
 
   implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
@@ -306,8 +313,13 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             version = None
           )
           (data, _) <- tracingService.data(tracingId, tracing, List(request))
-          // TODO fallback layer
-        } yield Ok(data).withHeaders()
+
+          requestToken <- token ?~> "No relevant Token" ~> 404
+
+          dataWithFallback <- getFallbackLayerDataIfEmpty(tracing, data, mag, cxyz, requestToken)
+
+          _ = print(s"is all 0 ${dataWithFallback.forall(x => x == 0)}")
+        } yield Ok(dataWithFallback).withHeaders()
       }
     }
 
@@ -320,6 +332,30 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       case ElementClass.uint64 => Some(1, "<u8")
       case _                   => None
     }
+
+  private def getFallbackLayerDataIfEmpty(tracing: VolumeTracing,
+                                          data: Array[Byte],
+                                          mag: String,
+                                          cxyz: String,
+                                          requestToken: String): Fox[Array[Byte]] = {
+    val isAnnotationEmpty = data.forall(x => x == 0)
+
+    // print(s"is all 0 ${data.forall(x => x == 0)}")
+    // Since we only do all bucket requests, complete bucket needs to empty so that we use fallback
+
+    if (isAnnotationEmpty) {
+      val organizationName = tracing.getOrganizationName
+      val dataSetName = tracing.dataSetName
+      val dataLayerName = tracing.getFallbackLayer
+
+      rpc(
+        s"${config.Tracingstore.datastore.uri}/data/zarr/${urlEncode(organizationName)}/${dataSetName}/$dataLayerName/$mag/$cxyz")
+        .addQueryString("token" -> requestToken)
+        .getWithBytesResponse
+    } else {
+      Fox.successful(data)
+    }
+  }
 
   private def getNeighborIndices(neighbors: List[Int]) =
     List("NEIGHBORS" -> formatNeighborList(neighbors), "Access-Control-Expose-Headers" -> "NEIGHBORS")

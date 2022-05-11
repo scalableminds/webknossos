@@ -309,6 +309,17 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
     return;
   }
 
+  const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+  const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
+  const maybeTree = findTreeByName(trees, treeName).getOrElse(null);
+
+  if (maybeTree != null) {
+    Toast.info(
+      `Skeleton for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${treeName}".`,
+    );
+    return;
+  }
+
   const progressCallback = createProgressCallback({
     pauseDelay: 100,
     successMessageDelay: 2000,

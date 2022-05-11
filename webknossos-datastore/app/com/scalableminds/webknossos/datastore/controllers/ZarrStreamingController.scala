@@ -88,13 +88,19 @@ class ZarrStreamingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         getTokenFromHeader(token, request)) {
-        Future(
+        for {
+          (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                    dataSetName,
+                                                                                    dataLayerName) ~> 404
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               "%s/%s/%s/%s".format(organizationName, dataSetName, dataLayerName, mag),
               Map(mag -> ".")
-            )).withHeaders())
+            )).withHeaders()
       }
     }
 

@@ -2,10 +2,10 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -175,18 +175,6 @@ class ZarrStreamingController @Inject()(
         )
         (data, _) <- binaryDataService.handleDataRequests(List(request))
       } yield Ok(data)
-    }
-  }
-
-  private def parseDotCoordinates(
-      cxyz: String,
-  ): Fox[(Int, Int, Int, Int)] = {
-    val singleRx = "\\s*([0-9]+).([0-9]+).([0-9]+).([0-9]+)\\s*".r
-
-    cxyz match {
-      case singleRx(c, x, y, z) =>
-        Fox.successful(Integer.parseInt(c), Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
-      case _ => Fox.failure("Coordinates not valid")
     }
   }
 

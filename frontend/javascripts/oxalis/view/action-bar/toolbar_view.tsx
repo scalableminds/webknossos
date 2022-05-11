@@ -663,25 +663,23 @@ export default function ToolbarView() {
                 }}
               />
             </RadioButtonWithTooltip>
-            <RadioButtonWithTooltip
-              title="Bounding Box Tool - Create, resize and modify bounding boxes."
-              disabled={false}
-              style={narrowButtonStyle}
-              value={AnnotationToolEnum.BOUNDING_BOX}
-            >
-              <img
-                src="/assets/images/bounding-box.svg"
-                alt="Bounding Box Icon"
-                style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled
-                    ? 0.5
-                    : 1,
-                  ...imgStyleForSpaceyIcons,
-                }}
-              />
-            </RadioButtonWithTooltip>
           </React.Fragment>
         ) : null}
+        <RadioButtonWithTooltip
+          title="Bounding Box Tool - Create, resize and modify bounding boxes."
+          disabled={false}
+          style={narrowButtonStyle}
+          value={AnnotationToolEnum.BOUNDING_BOX}
+        >
+          <img
+            src="/assets/images/bounding-box.svg"
+            alt="Bounding Box Icon"
+            style={{
+              opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled ? 0.5 : 1,
+              ...imgStyleForSpaceyIcons,
+            }}
+          />
+        </RadioButtonWithTooltip>
       </Radio.Group>
 
       <ToolSpecificSettings

@@ -3,17 +3,23 @@ package com.scalableminds.webknossos.tracingstore
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
+import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
+import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
 import com.typesafe.scalalogging.LazyLogging
+import play.api.http.Status
 import play.api.inject.ApplicationLifecycle
+
+import scala.concurrent.ExecutionContext
 
 class TSRemoteDatastoreClient @Inject()(
     rpc: RPC,
     config: TracingStoreConfig,
     val lifecycle: ApplicationLifecycle
-) extends LazyLogging {
+)(implicit ec: ExecutionContext)
+    extends LazyLogging
+    with MissingBucketHeaders {
 
   private val datastoreUrl: String = config.Tracingstore.WebKnossos.uri
 
@@ -26,11 +32,13 @@ class TSRemoteDatastoreClient @Inject()(
       .getWithBytesResponse
 
   def getData(remoteFallbackLayer: RemoteFallbackLayer,
-              dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = ???
-
-  def getAgglomerateIdsForSegmentIds(remoteFallbackLayer: RemoteFallbackLayer,
-                                     mappingName: String,
-                                     segmentIdsOrdered: List[Long]): Fox[List[Long]] = ???
+              dataRequests: List[WebKnossosDataRequest]): Fox[(Array[Byte], List[Int])] =
+    for {
+      response <- rpc(s"${remoteLayerUri(remoteFallbackLayer)}/").post(dataRequests)
+      _ <- bool2Fox(Status.isSuccessful(response.status))
+      bytes = response.bodyAsBytes.toArray
+      indices <- parseMissingBucketHeader(response.header(missingBucketsHeader)) ?~> "failed to parse missing bucket header"
+    } yield (bytes, indices)
 
   def getVoxelAtPosition(userToken: Option[String],
                          remoteFallbackLayer: RemoteFallbackLayer,
@@ -46,6 +54,10 @@ class TSRemoteDatastoreClient @Inject()(
       .addQueryString("depth" -> "1")
       .addQueryString("mag" -> mag.toMagLiteral())
       .getWithBytesResponse
+
+  def getAgglomerateIdsForSegmentIds(remoteFallbackLayer: RemoteFallbackLayer,
+                                     mappingName: String,
+                                     segmentIdsOrdered: List[Long]): Fox[List[Long]] = ???
 
   private def remoteLayerUri(remoteLayer: RemoteFallbackLayer): String =
     s"$datastoreUrl/data/datasets/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/layers/${remoteLayer.layerName}"

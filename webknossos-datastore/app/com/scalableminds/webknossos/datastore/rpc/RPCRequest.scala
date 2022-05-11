@@ -78,6 +78,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     performRequest
   }
 
+  def postWithBytesResponse: Fox[Array[Byte]] = {
+    request = request.withMethod("POST")
+    extractBytesResponse(performRequest)
+  }
+
   def postWithJsonResponse[T: Reads]: Fox[T] = {
     request = request.withMethod("POST")
     parseJsonResponse(performRequest)

@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
+import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -255,7 +256,11 @@ class EditableMappingService @Inject()(
   private def getUnmappedDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer,
                                            dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
     for {
-      (data, indices) <- remoteDatastoreClient.getData(remoteFallbackLayer, dataRequests)
+      dataRequestsTyped <- Fox.serialCombined(dataRequests) {
+        case r: WebKnossosDataRequest => Fox.successful(r)
+        case _                        => Fox.failure("Editable Mappings currently only work for webKnossos data requests")
+      }
+      (data, indices) <- remoteDatastoreClient.getData(remoteFallbackLayer, dataRequestsTyped)
     } yield (data, indices)
 
   private def collectSegmentIds(data: Array[Byte], elementClass: ElementClass): Set[Long] =

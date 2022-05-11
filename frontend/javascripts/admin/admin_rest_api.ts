@@ -877,6 +877,7 @@ export async function downloadNml(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
+  includeWkw: boolean = true,
   versions: Versions = {},
 ) {
   const possibleVersionString = Object.entries(versions)

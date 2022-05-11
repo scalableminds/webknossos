@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import Model from "oxalis/model";
 import features from "features";
-import { downloadNml, getAuthToken } from "admin/admin_rest_api";
+import { downloadAnnotation, getAuthToken } from "admin/admin_rest_api";
 import { CheckboxValueType } from "antd/lib/checkbox/Group";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
@@ -84,9 +84,11 @@ const okTextForTab = new Map([
 export default function DownloadModalView(props: Props): JSX.Element {
   const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
   const [activeTabKey, setActiveTabKey] = useState("download");
+  const [includeWkw, setIncludeWkw] = useState<boolean>(false);
+
   const handleOk = async () => {
     await Model.ensureSavedState();
-    downloadNml(annotationId, annotationType, hasVolumeFallback);
+    downloadAnnotation(annotationId, annotationType, hasVolumeFallback, includeWkw);
     onClose();
   };
   const [currentFooter, setCurrentFooter] = useState<React.ReactNode>([
@@ -126,8 +128,8 @@ export default function DownloadModalView(props: Props): JSX.Element {
     return null;
   };
 
-  const handleCheckboxChange = (checkedValue: CheckboxValueType[]) => {
-    console.log(checkedValue);
+  const handleCheckboxChange = (checkedValues: CheckboxValueType[]) => {
+      setIncludeWkw(checkedValues.includes("Volume"));
   };
 
   const handleTabChange = (key: string) => {
@@ -253,7 +255,7 @@ with wk.webknossos_context(token="${authToken}"):
                   Download a zip folder containing WKW files.
                 </Hint>
 
-                <Checkbox style={checkboxStyle} value="Skeleton">
+                <Checkbox style={checkboxStyle} value="Skeleton" checked disabled>
                   Skeleton Annotations as NML
                 </Checkbox>
                 <Hint
@@ -262,7 +264,7 @@ with wk.webknossos_context(token="${authToken}"):
                     marginBottom: 12,
                   }}
                 >
-                  Download an NML file (will always be included with a WKW download).
+                  An NML file will always be included with any download.
                 </Hint>
               </CheckboxGroup>
             </Col>

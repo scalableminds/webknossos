@@ -287,7 +287,11 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                     href="#"
                     onClick={() => {
                       const includesVolumeData = taskType.tracingType !== "skeleton";
-                      return downloadAnnotation(taskType.id, "CompoundTaskType", includesVolumeData);
+                      return downloadAnnotation(
+                        taskType.id,
+                        "CompoundTaskType",
+                        includesVolumeData,
+                      );
                     }}
                     title="Download all Finished Annotations"
                     icon={<DownloadOutlined />}

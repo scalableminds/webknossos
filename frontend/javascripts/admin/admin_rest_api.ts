@@ -877,10 +877,9 @@ export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
-  includeWkw: boolean = true,
   versions: Versions = {},
+  includeVolumeData: boolean = true,
 ) {
-  console.log(includeWkw);
   const possibleVersionString = Object.entries(versions)
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
@@ -890,11 +889,15 @@ export async function downloadAnnotation(
       timeout: 12000,
     });
   }
+  console.log(includeVolumeData);
+  const skipVolumeDataString = includeVolumeData ? "" : "skipVolumeData=true";
+  const maybeAmpersant = possibleVersionString === "" && !includeVolumeData ? "" : "&";
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}${maybeAmpersant}${skipVolumeDataString}`;
   const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
     extractHeaders: true,
   });
+  console.log(downloadUrl);
   // Using headers to determine the name and type of the file.
   const contentDispositionHeader = headers["content-disposition"];
   const filenameStartingPart = 'filename="';

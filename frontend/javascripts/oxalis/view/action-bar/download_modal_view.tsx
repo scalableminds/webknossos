@@ -84,15 +84,15 @@ const okTextForTab = new Map([
 export default function DownloadModalView(props: Props): JSX.Element {
   const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
   const [activeTabKey, setActiveTabKey] = useState("download");
-  const [includeWkw, setIncludeWkw] = useState<boolean>(false);
+  const [includeVolumeData, setIncludeVolumeData] = useState(true);
 
   const handleOk = async () => {
     await Model.ensureSavedState();
-    downloadAnnotation(annotationId, annotationType, hasVolumeFallback, includeWkw);
+    downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
     onClose();
   };
   const [currentFooter, setCurrentFooter] = useState<React.ReactNode>([
-    <Button key="ok" type="primary" onClick={handleOk}>
+    <Button key="ok" type="primary" onClick={() => handleOk()}>
       Download
     </Button>,
   ]);
@@ -129,7 +129,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
   };
 
   const handleCheckboxChange = (checkedValues: CheckboxValueType[]) => {
-      setIncludeWkw(checkedValues.includes("Volume"));
+    setIncludeVolumeData(checkedValues.includes("Volume"));
   };
 
   const handleTabChange = (key: string) => {
@@ -183,7 +183,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
     lineHeight: "30px",
   };
 
-  const authToken = getAuthToken();
+  const authToken = getAuthToken().then((token) => token);
   const wkInitSnippet = `import webknossos as wk
 
 with wk.webknossos_context(token="${authToken}"):

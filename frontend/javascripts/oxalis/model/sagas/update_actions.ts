@@ -174,15 +174,15 @@ export type UpdateTdCameraUpdateAction = {
 export type SplitAgglomerateUpdateAction = {
   name: "splitAgglomerate";
   value: {
-    segment_1_position: Vector3;
-    segment_2_position: Vector3;
+    segmentPosition1: Vector3;
+    segmentPosition2: Vector3;
   };
 };
-export type MergeAgglomeratesUpdateAction = {
-  name: "mergeAgglomerates";
+export type MergeAgglomerateUpdateAction = {
+  name: "mergeAgglomerate";
   value: {
-    segment_1_position: Vector3;
-    segment_2_position: Vector3;
+    segmentPosition1: Vector3;
+    segmentPosition2: Vector3;
   };
 };
 export type UpdateAction =
@@ -209,7 +209,7 @@ export type UpdateAction =
   | RemoveFallbackLayerUpdateAction
   | UpdateTdCameraUpdateAction
   | SplitAgglomerateUpdateAction
-  | MergeAgglomeratesUpdateAction;
+  | MergeAgglomerateUpdateAction;
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
@@ -257,7 +257,7 @@ export type ServerUpdateAction =
   | AsServerAction<UpdateTdCameraUpdateAction>
   | AsServerAction<ImportVolumeTracingUpdateAction>
   | AsServerAction<SplitAgglomerateUpdateAction>
-  | AsServerAction<MergeAgglomeratesUpdateAction>;
+  | AsServerAction<MergeAgglomerateUpdateAction>;
 export function createTree(tree: Tree): UpdateTreeUpdateAction {
   return {
     name: "createTree",
@@ -529,26 +529,26 @@ export function serverCreateTracing(timestamp: number) {
   };
 }
 export function splitAgglomerate(
-  segment_1_position: Vector3,
-  segment_2_position: Vector3,
+  segmentPosition1: Vector3,
+  segmentPosition2: Vector3,
 ): SplitAgglomerateUpdateAction {
   return {
     name: "splitAgglomerate",
     value: {
-      segment_1_position,
-      segment_2_position,
+      segmentPosition1,
+      segmentPosition2,
     },
   };
 }
-export function mergeAgglomerates(
-  segment_1_position: Vector3,
-  segment_2_position: Vector3,
-): MergeAgglomeratesUpdateAction {
+export function mergeAgglomerate(
+  segmentPosition1: Vector3,
+  segmentPosition2: Vector3,
+): MergeAgglomerateUpdateAction {
   return {
-    name: "mergeAgglomerates",
+    name: "mergeAgglomerate",
     value: {
-      segment_1_position,
-      segment_2_position,
+      segmentPosition1,
+      segmentPosition2,
     },
   };
 }

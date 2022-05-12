@@ -29,7 +29,7 @@ import type {
   CreateEdgeUpdateAction,
   DeleteEdgeUpdateAction,
   SplitAgglomerateUpdateAction,
-  MergeAgglomeratesUpdateAction,
+  MergeAgglomerateUpdateAction,
   CreateSegmentUpdateAction,
   UpdateSegmentUpdateAction,
   DeleteSegmentUpdateAction,
@@ -68,11 +68,11 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     icon: <DeleteOutlined />,
   }),
   splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => ({
-    description: `Split an agglomerate by separating the segments at position ${action.value.segment_1_position} and ${action.value.segment_2_position}.`,
+    description: `Split an agglomerate by separating the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
     icon: <DeleteOutlined />,
   }),
-  mergeAgglomerates: (action: MergeAgglomeratesUpdateAction): Description => ({
-    description: `Merged two agglomerates by combining the segments at position ${action.value.segment_1_position} and ${action.value.segment_2_position}.`,
+  mergeAgglomerate: (action: MergeAgglomerateUpdateAction): Description => ({
+    description: `Merged two agglomerates by combining the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
     icon: <PlusOutlined />,
   }),
   deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({

@@ -73,7 +73,7 @@ function getReadableNameOfVolumeLayer(layer: APIDataLayer, tracing: HybridTracin
     : null;
 }
 
-function LayerSelectionFromItem({
+export function LayerSelectionFormItem({
   chooseSegmentationLayer,
   layers,
   tracing,
@@ -350,7 +350,7 @@ function StartingJobModal(props: StartingJobModalProps) {
           activeUser={activeUser}
           initialName={`${dataset.name}_${props.suggestedDatasetSuffix}`}
         />
-        <LayerSelectionFromItem
+        <LayerSelectionFormItem
           chooseSegmentationLayer={chooseSegmentationLayer}
           layers={layers}
           fixedLayerName={fixedSelectedLayer?.name}

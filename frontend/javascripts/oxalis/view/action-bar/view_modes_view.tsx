@@ -64,7 +64,6 @@ class ViewModesView extends PureComponent<Props, {}> {
           constants.MODE_ARBITRARY,
           constants.MODE_ARBITRARY_PLANE,
         ].map((mode) => (
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
           <Option key={mode} disabled={this.isDisabled(mode)} value={mode}>
             {Utils.capitalize(mode)}
           </Option>

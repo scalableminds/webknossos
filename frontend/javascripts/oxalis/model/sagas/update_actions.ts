@@ -441,11 +441,11 @@ export function updateUserBoundingBoxes(
     },
   };
 }
-export function createSegmentUpdateAction(
+export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
-  creationTime: number | null | undefined,
+  creationTime: number | null | undefined = Date.now(),
 ): CreateSegmentUpdateAction {
   return {
     name: "createSegment",
@@ -457,11 +457,11 @@ export function createSegmentUpdateAction(
     },
   };
 }
-export function updateSegmentUpdateAction(
+export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
-  creationTime: number | null | undefined,
+  creationTime: number | null | undefined = Date.now(),
 ): UpdateSegmentUpdateAction {
   return {
     name: "updateSegment",
@@ -473,7 +473,7 @@ export function updateSegmentUpdateAction(
     },
   };
 }
-export function deleteSegmentUpdateAction(id: number) {
+export function deleteSegmentVolumeAction(id: number): DeleteSegmentUpdateAction {
   return {
     name: "deleteSegment",
     value: {

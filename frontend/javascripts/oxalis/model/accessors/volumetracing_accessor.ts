@@ -124,8 +124,7 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   return contourTracingMode;
 }
 
-// @ts-expect-error ts-migrate(2739) FIXME: Type '{ TRACE: number; ERASE_TRACE: number; BRUSH:... Remove this comment to see the full error message
-const MAG_THRESHOLDS_FOR_ZOOM: Record<AnnotationTool, number> = {
+const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationTool, number>> = {
   // Note that these are relative to the lowest existing resolution index.
   // A threshold of 1 indicates that the respective tool can be used in the
   // lowest existing resolution as well as the next highest one.

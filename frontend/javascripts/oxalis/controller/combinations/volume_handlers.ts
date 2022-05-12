@@ -15,8 +15,10 @@ import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import api from "oxalis/api/internal_api";
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
+  const state = Store.getState();
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
-  Store.dispatch(startEditingAction(calculateGlobalPos(Store.getState(), pos), plane));
+  Store.dispatch(startEditingAction(calculateGlobalPos(state, pos), plane));
+  Store.dispatch(addToLayerAction(calculateGlobalPos(state, pos)));
 }
 export function handleEraseStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));

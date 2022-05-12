@@ -135,6 +135,9 @@ configure({
 });
 export function resetDatabase() {
   console.log("Resetting test database...");
-  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+  // The parameter needs to be set globally here.
+  // See https://github.com/shelljs/shelljs/issues/981#issuecomment-626840798
+  shell.config.fatal = true;
+  shell.exec("tools/postgres/prepareTestDB.sh", { silent: true });
 }
 export { tokenUserA, tokenUserB, tokenUserC, tokenUserD, tokenUserE, setCurrToken };

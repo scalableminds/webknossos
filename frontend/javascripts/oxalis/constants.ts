@@ -196,6 +196,11 @@ export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEn
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.ERASE_BRUSH,
 ];
+export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationToolEnum> = [
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.BRUSH,
+];
+
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export const enum ContourModeEnum {
   DRAW = "DRAW",
@@ -260,13 +265,13 @@ const Constants = {
   ARBITRARY_VIEW: 4,
   DEFAULT_BORDER_WIDTH: 400,
   DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,
-  MODE_PLANE_TRACING: "orthogonal",
-  MODE_ARBITRARY: "flight",
-  MODE_ARBITRARY_PLANE: "oblique",
-  MODE_VOLUME: "volume",
-  MODES_PLANE: ["orthogonal", "volume"],
-  MODES_ARBITRARY: ["flight", "oblique"],
-  MODES_SKELETON: ["orthogonal", "flight", "oblique"],
+  MODE_PLANE_TRACING: "orthogonal" as ViewMode,
+  MODE_ARBITRARY: "flight" as ViewMode,
+  MODE_ARBITRARY_PLANE: "oblique" as ViewMode,
+  MODE_VOLUME: "volume" as ViewMode,
+  MODES_PLANE: ["orthogonal", "volume"] as ViewMode[],
+  MODES_ARBITRARY: ["flight", "oblique"] as ViewMode[],
+  MODES_SKELETON: ["orthogonal", "flight", "oblique"] as ViewMode[],
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
@@ -294,8 +299,8 @@ const Constants = {
   // Maximum of how many buckets will be held in RAM (per layer)
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
   FLOOD_FILL_EXTENTS: {
-    _2D: process.env.BABEL_ENV === "test" ? [512, 512, 1] : [768, 768, 1],
-    _3D: process.env.BABEL_ENV === "test" ? [64, 64, 32] : [96, 96, 96],
+    _2D: (process.env.BABEL_ENV === "test" ? [512, 512, 1] : [768, 768, 1]) as Vector3,
+    _3D: (process.env.BABEL_ENV === "test" ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
 };
 export default Constants;

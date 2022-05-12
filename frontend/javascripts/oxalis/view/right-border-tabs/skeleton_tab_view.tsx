@@ -694,12 +694,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   }
 
   getActionsDropdown() {
+    const isEditingDisabled = !this.props.allowUpdate;
     return (
       <Menu>
         <Menu.Item
           key="shuffleAllTreeColors"
           onClick={this.shuffleAllTreeColors}
           title="Shuffle All Tree Colors"
+          disabled={isEditingDisabled}
         >
           <i className="fas fa-random" /> Shuffle All Tree Colors
         </Menu.Item>
@@ -710,7 +712,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         >
           <DownloadOutlined /> Download Selected Trees
         </Menu.Item>
-        <Menu.Item key="importNml" onClick={this.props.showDropzoneModal} title="Import NML files">
+        <Menu.Item
+          key="importNml"
+          onClick={this.props.showDropzoneModal}
+          title="Import NML files"
+          disabled={isEditingDisabled}
+        >
           <UploadOutlined /> Import NML
         </Menu.Item>
         <Menu.Item
@@ -774,8 +781,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     } else if (this.state.isUploading) {
       title = "Importing NML";
     }
-
     const { groupToDelete } = this.state;
+    const isEditingDisabled = !this.props.allowUpdate;
+
     return (
       <div id={treeTabId} className="padded-tab-content">
         <DomVisibilityObserver targetId={treeTabId}>
@@ -808,27 +816,37 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   </AdvancedSearchPopover>
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
-                    title="Create new Tree (C)"
-                    disabled={!this.props.allowUpdate}
+                    title={
+                      isEditingDisabled
+                        ? messages["tracing.read_only_mode_notification"]
+                        : "Create new Tree (C)"
+                    }
+                    disabled={isEditingDisabled}
                   >
                     <i className="fas fa-plus" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.handleDelete}
-                    title="Delete Selected Trees"
-                    disabled={!this.props.allowUpdate}
+                    title={
+                      isEditingDisabled
+                        ? messages["tracing.read_only_mode_notification"]
+                        : "Delete Selected Trees"
+                    }
+                    disabled={isEditingDisabled}
                   >
                     <i className="far fa-trash-alt" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees (1)"
+                    disabled={isEditingDisabled}
                   >
                     <i className="fas fa-toggle-on" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees (2)"
+                    disabled={isEditingDisabled}
                   >
                     <i className="fas fa-toggle-off" />
                   </ButtonComponent>
@@ -849,10 +867,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   <InputComponent
                     onChange={this.handleChangeTreeName}
                     value={activeTreeName || activeGroupName}
-                    disabled={noTreesAndGroups}
-                    style={{
-                      width: "70%",
-                    }}
+                    disabled={noTreesAndGroups || isEditingDisabled}
+                    title={
+                      isEditingDisabled
+                        ? messages["tracing.read_only_mode_notification"]
+                        : undefined
+                    }
+                    style={{ width: "70%" }}
                   />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeForward}

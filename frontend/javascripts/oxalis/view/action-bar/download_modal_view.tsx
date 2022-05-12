@@ -111,6 +111,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
   );
   const [activeTabKey, setActiveTabKey] = useState("download");
   const [includeVolumeData, setIncludeVolumeData] = useState(true);
+  const [keepWindowOpen, setKeepWindowOpen] = useState(false);
 
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
@@ -199,12 +200,16 @@ export default function DownloadModalView(props: Props): JSX.Element {
     return null;
   };
 
+  const handleTabChange = (key: string) => {
+    setActiveTabKey(key);
+  };
+
   const handleCheckboxChange = (checkedValues: CheckboxValueType[]) => {
     setIncludeVolumeData(checkedValues.includes("Volume"));
   };
 
-  const handleTabChange = (key: string) => {
-    setActiveTabKey(key);
+  const handleKeepWindowOpenChecked = (e: any) => {
+    setKeepWindowOpen(e.target.checked);
   };
 
   const workerInfo = (
@@ -248,7 +253,7 @@ with wk.webknossos_context(token="${authToken}"):
     );
   };
 
-  const selection = ["Volume", "Skeleton", "Fallback"];
+  const selection = ["Volume", "Skeleton"];
 
   return (
     <Modal
@@ -402,7 +407,8 @@ with wk.webknossos_context(token="${authToken}"):
           <MoreInfoHint />
           <Checkbox
             style={{ position: "absolute", bottom: "16px" }}
-            value="Fallback"
+            checked={keepWindowOpen}
+            onChange={handleKeepWindowOpenChecked}
             disabled={activeTabKey === "export" && !features().jobsEnabled}
           >
             Keep window open

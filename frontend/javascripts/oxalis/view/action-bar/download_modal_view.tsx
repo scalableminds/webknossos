@@ -192,7 +192,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
             }}
             type="warning"
           >
-            {messages["annotation.python_do_not_share_token"]}
+            {messages["annotation.python_do_not_share"]}
           </Text>
         </Row>
       );
@@ -337,6 +337,10 @@ with wk.webknossos_context(token="${authToken}"):
               }}
             >
               {messages["annotation.export"]}
+              <a href="/jobs" target="_blank">
+                Jobs Overview Page
+              </a>
+              .
             </Text>
           </Row>
           {activeTabKey === "export" && !features().jobsEnabled ? (
@@ -422,7 +426,12 @@ with wk.webknossos_context(token="${authToken}"):
                 margin: "6px 12px",
               }}
             >
-              {messages["annotation.python"]}
+              The following code snippets are suggestions to get you started quickly with the{" "}
+              <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
+                webKnossos Python API
+              </a>
+              . To download and use this annotation in your Python project, simply copy and paste
+              the code snippets to your script.
             </Text>
           </Row>
           <Divider

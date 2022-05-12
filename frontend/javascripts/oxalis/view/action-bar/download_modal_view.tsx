@@ -113,6 +113,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
   const [includeVolumeData, setIncludeVolumeData] = useState(true);
   const [keepWindowOpen, setKeepWindowOpen] = useState(false);
 
+  // const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const [startedExports, setStartedExports] = useState([]);
@@ -136,34 +137,37 @@ export default function DownloadModalView(props: Props): JSX.Element {
       downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
       onClose();
     } else if (activeTabKey === "export") {
-      const selectedLayer = getLayerByName(dataset, selectedLayerName);
-      const selectedBoundingBox = userBoundingBoxes.find(
-        (bbox) => bbox.id === selectedBoundingBoxID,
-      );
-      if (selectedLayer != null && selectedBoundingBox != null) {
-        const layerInfos = getLayerInfos(
-          selectedLayer,
-          tracing,
-          activeMappingInfos,
-          isMergerModeEnabled,
-        );
-        await handleStartExport(
-          dataset,
-          layerInfos,
-          selectedBoundingBox.boundingBox,
-          startedExports,
-          setStartedExports,
-        );
-        Toast.success("A new export job was started successfully.");
-      } else {
-        const basicWarning = "Starting an export job with the chosen parameters was not possible.";
-        const missingSelectionWarning =
-          selectedLayerName === "" || selectedBoundingBoxID === -1
-            ? " Please choose a layer and a bounding box for export."
-            : "";
+      const missingSelection = selectedLayerName === "" || selectedBoundingBoxID === -1;
+      const basicWarning = "Starting an export job with the chosen parameters was not possible.";
+      const missingSelectionWarning = " Please choose a layer and a bounding box for export.";
+
+      if (missingSelection) {
         Toast.warning(basicWarning + missingSelectionWarning);
+      } else {
+        const selectedLayer = getLayerByName(dataset, selectedLayerName);
+        const selectedBoundingBox = userBoundingBoxes.find(
+          (bbox) => bbox.id === selectedBoundingBoxID,
+        );
+        if (selectedLayer != null && selectedBoundingBox != null) {
+          const layerInfos = getLayerInfos(
+            selectedLayer,
+            tracing,
+            activeMappingInfos,
+            isMergerModeEnabled,
+          );
+          await handleStartExport(
+            dataset,
+            layerInfos,
+            selectedBoundingBox.boundingBox,
+            startedExports,
+            setStartedExports,
+          );
+          Toast.success("A new export job was started successfully.");
+        } else {
+          Toast.warning(basicWarning);
+        }
       }
-      if (!keepWindowOpen) {
+      if (!keepWindowOpen && !missingSelection) {
         onClose();
       }
     }

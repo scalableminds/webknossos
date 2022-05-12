@@ -1,4 +1,4 @@
-import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button, Select } from "antd";
+import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { useFetch } from "libs/react_helpers";
@@ -9,10 +9,18 @@ import Model from "oxalis/model";
 import features from "features";
 import { downloadAnnotation, getAuthToken } from "admin/admin_rest_api";
 import { CheckboxValueType } from "antd/lib/checkbox/Group";
+import {
+  LayerSelection,
+  BoundingBoxSelection,
+} from "oxalis/view/right-border-tabs/starting_job_modals";
+import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import { getDataLayers, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { useSelector } from "react-redux";
+import type { OxalisState } from "oxalis/store";
+import { handleStartExport, getLayerInfos } from "../right-border-tabs/export_bounding_box_modal";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
-const { Option } = Select;
 type Props = {
   isVisible: boolean;
   onClose: () => void;
@@ -98,13 +106,66 @@ function Footer({ tabKey, onClick }: { tabKey: string; onClick: () => void }) {
 
 export default function DownloadModalView(props: Props): JSX.Element {
   const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
+  const userBoundingBoxes = useSelector((state: OxalisState) =>
+    getUserBoundingBoxesFromState(state),
+  );
   const [activeTabKey, setActiveTabKey] = useState("download");
   const [includeVolumeData, setIncludeVolumeData] = useState(true);
 
+  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const [startedExports, setStartedExports] = useState([]);
+  const layers = getDataLayers(dataset);
+
+  const isMergerModeEnabled = useSelector(
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
+  );
+  const activeMappingInfos = useSelector(
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
+    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  );
+
+  const [selectedLayerName, setSelectedLayerName] = useState("");
+  const [selectedBoundingBoxID, setSelectedBoundingBoxId] = useState(-1);
+
   const handleOk = async () => {
-    await Model.ensureSavedState();
-    downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
-    onClose();
+    if (activeTabKey === "download") {
+      await Model.ensureSavedState();
+      downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
+      onClose();
+    } else if (activeTabKey === "export") {
+      const selectedLayer = getLayerByName(dataset, selectedLayerName);
+      const selectedBoundingBox = userBoundingBoxes.find(
+        (bbox) => bbox.id === selectedBoundingBoxID,
+      );
+      if (selectedLayer != null && selectedBoundingBox != null) {
+        const layerInfos = getLayerInfos(
+          selectedLayer,
+          tracing,
+          activeMappingInfos,
+          isMergerModeEnabled,
+        );
+        await handleStartExport(
+          dataset,
+          layerInfos,
+          selectedBoundingBox.boundingBox,
+          startedExports,
+          setStartedExports,
+        );
+        Toast.success("A new export job was started successfully.");
+      } else {
+        const basicWarning = "Starting an export job with the chosen parameters was not possible.";
+        const missingSelectionWarning =
+          selectedLayerName === "" || selectedBoundingBoxID === -1
+            ? " Please choose a layer and a bounding box for export."
+            : "";
+        Toast.warning(basicWarning + missingSelectionWarning);
+      }
+      if (!keepWindowOpen) {
+        onClose();
+      }
+    }
   };
 
   const maybeShowWarning = () => {
@@ -195,7 +256,6 @@ with wk.webknossos_context(token="${authToken}"):
       visible={isVisible}
       width={600}
       footer={[<Footer tabKey={activeTabKey} onClick={handleOk} key="footer" />]}
-      onOk={handleOk}
       onCancel={onClose}
       style={{ overflow: "visible" }}
     >
@@ -296,13 +356,14 @@ with wk.webknossos_context(token="${authToken}"):
                   Select the layer you would like to prepare for export.
                 </Col>
                 <Col span={15}>
-                  <Select defaultValue="l2" style={{ width: 300 }} onChange={handleLayerSelection}>
-                    <Option value="l1">Layer 1 with extra information</Option>
-                    <Option value="l2">Layer 2</Option>
-                    <Option value="disabled" disabled>
-                      Disabled
-                    </Option>
-                  </Select>
+                  {/* // if hasColorLayer(s) 
+                  from props.chooseSegmentationLayer*/}
+                  <LayerSelection
+                    layers={layers}
+                    setSelectedLayerName={setSelectedLayerName}
+                    tracing={tracing}
+                    style={{ width: 330 }}
+                  />
                 </Col>
               </Row>
               <Divider
@@ -323,17 +384,12 @@ with wk.webknossos_context(token="${authToken}"):
                   Select a bounding box to constrain the data for export.
                 </Col>
                 <Col span={15}>
-                  <Select
-                    defaultValue="b2"
-                    style={{ width: 300 }}
-                    onChange={handleBoundingBoxSelection}
-                  >
-                    <Option value="b1">BBox 1 with extra information</Option>
-                    <Option value="b2">BBox 2</Option>
-                    <Option value="disabled" disabled>
-                      Disabled
-                    </Option>
-                  </Select>
+                  <BoundingBoxSelection
+                    // from props.isBoundingBoxConfigurable
+                    userBoundingBoxes={userBoundingBoxes}
+                    setSelectedBoundingBoxId={setSelectedBoundingBoxId}
+                    style={{ width: 330 }}
+                  />
                 </Col>
               </Row>
             </div>

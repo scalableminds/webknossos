@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
@@ -189,4 +190,29 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     } catch {
       case e: Exception => Failure(e.getMessage)
     }
+
+  def largestAgglomerateId(organizationName: String,
+                           dataSetName: String,
+                           dataLayerName: String,
+                           mappingName: String): Box[Long] = {
+    val hdfFile =
+      dataBaseDir
+        .resolve(organizationName)
+        .resolve(dataSetName)
+        .resolve(dataLayerName)
+        .resolve(agglomerateDir)
+        .resolve(s"$mappingName.$agglomerateFileExtension")
+        .toFile
+
+    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+    Full(0L)
+  }
+
+  def generateAgglomerateGraph(organizationName: String,
+                               dataSetName: String,
+                               dataLayerName: String,
+                               mappingName: String,
+                               agglomerateId: Long): Box[AgglomerateGraph] =
+    Full(AgglomerateGraph.empty)
+
 }

@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
+package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.Vec3Int
 import play.api.libs.json.{Json, OFormat}

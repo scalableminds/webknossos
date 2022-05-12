@@ -7,15 +7,80 @@ import com.scalableminds.util.io.FileIO
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.i18n.Messages
-import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.json.Writes._
-import scala.concurrent.ExecutionContext.Implicits._
+import play.api.libs.json._
 
+import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
 
-object JsonHelper extends BoxImplicits with LazyLogging {
+trait AdditionalJsonFormats {
+  implicit def boxFormat[T: Format]: Format[Box[T]] = new Format[Box[T]] {
+    override def reads(json: JsValue): JsResult[Box[T]] =
+      (json \ "status").validate[String].flatMap {
+        case "Full"    => (json \ "value").validate[T].map(Full(_))
+        case "Empty"   => JsSuccess(Empty)
+        case "Failure" => (json \ "value").validate[String].map(Failure(_))
+        case _         => JsError("invalid status")
+      }
+
+    override def writes(o: Box[T]): JsValue = o match {
+      case Full(t)    => Json.obj("status" -> "Full", "value" -> Json.toJson(t))
+      case Empty      => Json.obj("status" -> "Empty")
+      case f: Failure => Json.obj("status" -> "Failure", "value" -> f.msg)
+    }
+  }
+
+  def oFormat[T](format: Format[T]): OFormat[T] = {
+    val oFormat: OFormat[T] = new OFormat[T]() {
+      override def writes(o: T): JsObject = format.writes(o).as[JsObject]
+      override def reads(json: JsValue): JsResult[T] = format.reads(json)
+    }
+    oFormat
+  }
+
+  implicit object FiniteDurationFormat extends Format[FiniteDuration] {
+    def reads(json: JsValue): JsResult[FiniteDuration] = LongReads.reads(json).map(_.seconds)
+    def writes(o: FiniteDuration): JsValue = LongWrites.writes(o.toSeconds)
+  }
+
+  implicit def optionFormat[T: Format]: Format[Option[T]] = new Format[Option[T]] {
+    override def reads(json: JsValue): JsResult[Option[T]] = json.validateOpt[T]
+
+    override def writes(o: Option[T]): JsValue = o match {
+      case Some(t) ⇒ implicitly[Writes[T]].writes(t)
+      case None ⇒ JsNull
+    }
+  }
+
+  implicit def longMapFormat[T: Format]: Format[Map[Long, T]] = new Format[Map[Long, T]] {
+    override def reads(jsValue: JsValue): JsResult[Map[Long, T]] =
+      jsValue match {
+        case JsObject(map) =>
+          val mapProcessed = map.map {
+            case (k, v: JsValue) => k.toLong -> v.validate[T]
+          }.toMap
+          if (mapProcessed.forall {
+                case (_, _: JsSuccess[T]) => true
+                case _                    => false
+              }) {
+            JsSuccess(mapProcessed.flatMap {
+              case (k, v: JsSuccess[T]) => Some(k -> v.value)
+              case _                    => None
+            })
+          } else JsError()
+        case _ => JsError()
+      }
+
+    override def writes(m: Map[Long, T]): JsValue =
+      JsObject(m.map {
+        case (k, v) => k.toString -> Json.toJson(v)
+      })
+  }
+}
+
+object JsonHelper extends BoxImplicits with LazyLogging with AdditionalJsonFormats {
 
   def jsonToFile[A: Writes](path: Path, value: A) =
     FileIO.printToFile(path.toFile) { printer =>
@@ -63,44 +128,6 @@ object JsonHelper extends BoxImplicits with LazyLogging {
         val errorStr = errors.map(m => Messages(m.message)).mkString(", ")
         s"Error at json path '$path': $errorStr."
     }.mkString("\n")
-
-  implicit def boxFormat[T: Format]: Format[Box[T]] = new Format[Box[T]] {
-    override def reads(json: JsValue): JsResult[Box[T]] =
-      (json \ "status").validate[String].flatMap {
-        case "Full"    => (json \ "value").validate[T].map(Full(_))
-        case "Empty"   => JsSuccess(Empty)
-        case "Failure" => (json \ "value").validate[String].map(Failure(_))
-        case _         => JsError("invalid status")
-      }
-
-    override def writes(o: Box[T]): JsValue = o match {
-      case Full(t)    => Json.obj("status" -> "Full", "value" -> Json.toJson(t))
-      case Empty      => Json.obj("status" -> "Empty")
-      case f: Failure => Json.obj("status" -> "Failure", "value" -> f.msg)
-    }
-  }
-
-  def oFormat[T](format: Format[T]): OFormat[T] = {
-    val oFormat: OFormat[T] = new OFormat[T]() {
-      override def writes(o: T): JsObject = format.writes(o).as[JsObject]
-      override def reads(json: JsValue): JsResult[T] = format.reads(json)
-    }
-    oFormat
-  }
-
-  implicit object FiniteDurationFormat extends Format[FiniteDuration] {
-    def reads(json: JsValue): JsResult[FiniteDuration] = LongReads.reads(json).map(_.seconds)
-    def writes(o: FiniteDuration): JsValue = LongWrites.writes(o.toSeconds)
-  }
-
-  implicit def optionFormat[T: Format]: Format[Option[T]] = new Format[Option[T]] {
-    override def reads(json: JsValue): JsResult[Option[T]] = json.validateOpt[T]
-
-    override def writes(o: Option[T]): JsValue = o match {
-      case Some(t) ⇒ implicitly[Writes[T]].writes(t)
-      case None ⇒ JsNull
-    }
-  }
 
   def parseJsonToFox[T: Reads](s: String): Box[T] =
     Json.parse(s).validate[T] match {

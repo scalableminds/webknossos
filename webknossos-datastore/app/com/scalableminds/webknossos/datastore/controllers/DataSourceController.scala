@@ -325,6 +325,51 @@ Expects:
   }
 
   @ApiOperation(hidden = true, value = "")
+  def agglomerateGraph(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      mappingName: String,
+      agglomerateId: Long
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+      for {
+        agglomerateGraph <- binaryDataServiceHolder.binaryDataService.agglomerateService.generateAgglomerateGraph(
+          organizationName,
+          dataSetName,
+          dataLayerName,
+          mappingName,
+          agglomerateId) ?~> "agglomerateGraph.failed"
+      } yield Ok(Json.toJson(agglomerateGraph))
+    }
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def largestAgglomerateId(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      mappingName: String
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+      for {
+        largestAgglomerateId: Long <- binaryDataServiceHolder.binaryDataService.agglomerateService
+          .largestAgglomerateId(
+            organizationName,
+            dataSetName,
+            dataLayerName,
+            mappingName,
+          )
+          .toFox
+      } yield Ok(Json.toJson(largestAgglomerateId))
+    }
+  }
+
+  @ApiOperation(hidden = true, value = "")
   def listMeshFiles(token: Option[String],
                     organizationName: String,
                     dataSetName: String,

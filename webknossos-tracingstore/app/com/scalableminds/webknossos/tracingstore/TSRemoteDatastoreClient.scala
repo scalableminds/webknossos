@@ -4,9 +4,9 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
-import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
+import com.scalableminds.webknossos.datastore.models.{AgglomerateGraph, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{AgglomerateGraph, RemoteFallbackLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.Status
 import play.api.inject.ApplicationLifecycle
@@ -63,8 +63,17 @@ class TSRemoteDatastoreClient @Inject()(
     s"$datastoreUrl/data/datasets/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/layers/${remoteLayer.layerName}"
 
   def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer,
+                          baseMappingName: String,
                           agglomerateId: Long,
-                          userToken: Option[String]): Fox[AgglomerateGraph] = ???
+                          userToken: Option[String]): Fox[AgglomerateGraph] =
+    rpc(s"${remoteLayerUri(remoteFallbackLayer)}/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId")
+      .addQueryStringOptional("token", userToken)
+      .getWithJsonResponse[AgglomerateGraph]
 
-  def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String): Fox[Long]
+  def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer,
+                              mappingName: String,
+                              userToken: Option[String]): Fox[Long] =
+    rpc(s"${remoteLayerUri(remoteFallbackLayer)}/agglomerates/$mappingName/largestAgglomerateId")
+      .addQueryStringOptional("token", userToken)
+      .getWithJsonResponse[Long]
 }

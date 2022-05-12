@@ -8,20 +8,16 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
   EditableMappingUpdateAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteDatastoreClient,
-  TSRemoteWebKnossosClient,
-  TracingStoreAccessTokenService
-}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreAccessTokenService}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -33,7 +29,6 @@ import scala.concurrent.ExecutionContext
 
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
                                         val remoteWebKnossosClient: TSRemoteWebKnossosClient,
-                                        remoteDatastoreClient: TSRemoteDatastoreClient,
                                         editableMappingService: EditableMappingService,
                                         val accessTokenService: TracingStoreAccessTokenService,
                                         val slackNotificationService: TSSlackNotificationService)(

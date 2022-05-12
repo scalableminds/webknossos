@@ -10,7 +10,12 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebKnossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{
+  AgglomerateGraph,
+  UnsignedInteger,
+  UnsignedIntegerArray,
+  WebKnossosDataRequest
+}
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -63,15 +68,24 @@ class EditableMappingService @Inject()(
     for {
       closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
         .get(editableMappingId, version)(fromJson[EditableMapping])
+      desiredVersion <- findDesiredOrNewestPossibleVersion(closestMaterializedVersion.version,
+                                                           editableMappingId,
+                                                           version)
       materialized <- applyPendingUpdates(
         editableMappingId,
+        desiredVersion,
         closestMaterializedVersion.value,
         remoteFallbackLayer,
         closestMaterializedVersion.version,
-        version,
         userToken
-      ) // TODO store materialized in cache or db
+      )
+      _ <- Fox.runIf(shouldPersistMaterialized(closestMaterializedVersion.version, desiredVersion)) {
+        tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized)
+      }
     } yield materialized
+
+  private def shouldPersistMaterialized(previouslyMaterializedVersion: Long, newVersion: Long): Boolean =
+    newVersion > previouslyMaterializedVersion && newVersion % 10 == 5
 
   private def findDesiredOrNewestPossibleVersion(existingMaterializedVersion: Long,
                                                  editableMappingId: String,
@@ -94,21 +108,12 @@ class EditableMappingService @Inject()(
     }
 
   private def applyPendingUpdates(editableMappingId: String,
+                                  desiredVersion: Long,
                                   existingEditableMapping: EditableMapping,
                                   remoteFallbackLayer: RemoteFallbackLayer,
                                   existingVersion: Long,
-                                  requestedVersion: Option[Long],
-                                  userToken: Option[String]): Fox[EditableMapping] =
-    for {
-      desiredVersion <- findDesiredOrNewestPossibleVersion(existingVersion, editableMappingId, requestedVersion)
-      pendingUpdates <- findPendingUpdates(editableMappingId, existingVersion, desiredVersion)
-      appliedEditableMapping <- applyUpdates(existingEditableMapping, pendingUpdates, remoteFallbackLayer, userToken)
-    } yield appliedEditableMapping
+                                  userToken: Option[String]): Fox[EditableMapping] = {
 
-  private def applyUpdates(existingEditableMapping: EditableMapping,
-                           updates: List[EditableMappingUpdateAction],
-                           remoteFallbackLayer: RemoteFallbackLayer,
-                           userToken: Option[String]): Fox[EditableMapping] = {
     def updateIter(mappingFox: Fox[EditableMapping],
                    remainingUpdates: List[EditableMappingUpdateAction]): Fox[EditableMapping] =
       mappingFox.futureBox.flatMap {
@@ -122,7 +127,10 @@ class EditableMappingService @Inject()(
         case _ => mappingFox
       }
 
-    updateIter(Some(existingEditableMapping), updates)
+    for {
+      pendingUpdates <- findPendingUpdates(editableMappingId, existingVersion, desiredVersion)
+      appliedEditableMapping <- updateIter(Some(existingEditableMapping), pendingUpdates)
+    } yield appliedEditableMapping
   }
 
   private def applyOneUpdate(mapping: EditableMapping,
@@ -158,7 +166,7 @@ class EditableMappingService @Inject()(
                          segmentId2: Long): (AgglomerateGraph, AgglomerateGraph) = {
     val edgesMinusOne = agglomerateGraph.edges.filter {
       case (from, to) =>
-        ((from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1))
+        (from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1)
     }
     val graph1Nodes: Set[Long] = computeConnectedComponent(startNode = segmentId1, edgesMinusOne)
     val graph1NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
@@ -174,7 +182,7 @@ class EditableMappingService @Inject()(
       affinities = graph1EdgesWithAffinities.map(_._2),
     )
 
-    val graph2Nodes: Set[Long] = agglomerateGraph.segments.toSet.diff(graph2Nodes)
+    val graph2Nodes: Set[Long] = agglomerateGraph.segments.toSet.diff(graph1Nodes)
     val graph2NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
       case (seg, _) => graph2Nodes.contains(seg)
     }
@@ -216,7 +224,8 @@ class EditableMappingService @Inject()(
                                    userToken: Option[String]): Fox[Long] =
     for {
       largestBaseAgglomerateId <- remoteDatastoreClient.getLargestAgglomerateId(remoteFallbackLayer,
-                                                                                mapping.baseMappingName)
+                                                                                mapping.baseMappingName,
+                                                                                userToken)
       keySet = mapping.agglomerateToGraph.keySet
     } yield math.max(if (keySet.isEmpty) 0L else keySet.max, largestBaseAgglomerateId)
 
@@ -262,7 +271,7 @@ class EditableMappingService @Inject()(
     if (mapping.agglomerateToGraph.contains(agglomerateId)) {
       Fox.successful(mapping.agglomerateToGraph(agglomerateId))
     } else {
-      remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer, agglomerateId, userToken)
+      remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer, mapping.baseMappingName, agglomerateId, userToken)
     }
 
   private def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer,

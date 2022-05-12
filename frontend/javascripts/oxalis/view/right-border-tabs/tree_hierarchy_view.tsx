@@ -330,18 +330,23 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       node.children,
       (child) => !child.expanded && child.type === TYPE_GROUP,
     );
+    const isEditingDisabled = !this.props.allowUpdate;
     const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === TYPE_GROUP);
-
     const createMenu = () => (
       <Menu>
-        <Menu.Item key="create" data-group-id={id} onClick={() => this.createGroup(id)}>
+        <Menu.Item
+          key="create"
+          data-group-id={id}
+          onClick={() => this.createGroup(id)}
+          disabled={isEditingDisabled}
+        >
           <PlusOutlined />
           Create new group
         </Menu.Item>
         <Menu.Item
           key="delete"
           data-group-id={id}
-          disabled={isRoot}
+          disabled={isRoot || isEditingDisabled}
           onClick={() => this.deleteGroup(id)}
         >
           <DeleteOutlined />
@@ -440,19 +445,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map((c) => Math.round(c * 255)).join(",");
+      const isEditingDisabled = !this.props.allowUpdate;
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
 
       const createMenu = () => (
         <Menu>
-          <Menu.Item key="changeTreeColor">
-            <div
-              style={{
-                position: "relative",
-                display: "inline-block",
-                width: "100%",
-              }}
-            >
+          <Menu.Item key="changeTreeColor" disabled={isEditingDisabled}>
+            <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
               <i
                 className="fas fa-eye-dropper fa-sm"
                 style={{
@@ -463,15 +463,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               <input
                 type="color"
                 value={Utils.rgbToHex(Utils.map3((value) => value * 255, tree.color))}
+                disabled={isEditingDisabled}
                 style={{
                   position: "absolute",
                   left: 0,
                   top: 0,
                   width: "100%",
                   opacity: 0,
-                  cursor: "pointer",
+                  cursor: isEditingDisabled ? "unset" : "pointer",
                 }}
                 onChange={(event) => {
+                  if (isEditingDisabled) {
+                    return;
+                  }
                   let color = Utils.hexToRgb(event.target.value);
                   color = Utils.map3((component) => component / 255, color);
                   this.props.onSetTreeColor(tree.treeId, color);
@@ -483,6 +487,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             key="shuffleTreeColor"
             onClick={() => this.props.onShuffleTreeColor(tree.treeId)}
             title="Shuffle Tree Color"
+            disabled={isEditingDisabled}
           >
             <i className="fas fa-adjust" /> Shuffle Tree Color
           </Menu.Item>
@@ -490,6 +495,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             key="deleteTree"
             onClick={() => this.props.onDeleteTree(tree.treeId)}
             title="Delete Tree"
+            disabled={isEditingDisabled}
           >
             <i className="fas fa-trash" /> Delete Tree
           </Menu.Item>

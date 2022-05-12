@@ -115,6 +115,7 @@ type StateProps = {
   useLegacyBindings: boolean;
   userBoundingBoxes: Array<UserBoundingBox>;
   mappingInfo: ActiveMappingInfo;
+  allowUpdate: boolean;
 };
 type Props = OwnProps & StateProps & DispatchProps;
 type PropsWithRef = Props & {
@@ -348,6 +349,7 @@ function NodeContextMenuOptions({
   useLegacyBindings,
   volumeTracing,
   infoRows,
+  allowUpdate,
 }: NodeContextMenuOptionsProps) {
   const dispatch = useDispatch();
 
@@ -386,46 +388,55 @@ function NodeContextMenuOptions({
         Select this Node
       </Menu.Item>
       {getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispatch)}
-      <Menu.Item
-        key="merge-trees"
-        disabled={areInSameTree}
-        onClick={() => (activeNodeId != null ? mergeTrees(clickedNodeId, activeNodeId) : null)}
-      >
-        Create Edge & Merge with this Tree{" "}
-        {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
-      </Menu.Item>
-      <Menu.Item
-        key="delete-edge"
-        disabled={!areNodesConnected}
-        onClick={() => (activeNodeId != null ? deleteEdge(activeNodeId, clickedNodeId) : null)}
-      >
-        Delete Edge to this Node{" "}
-        {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
-      </Menu.Item>
-      <Menu.Item key="delete-node" onClick={() => deleteNode(clickedNodeId, clickedTree.treeId)}>
-        Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
-      </Menu.Item>
-      {isBranchpoint ? (
-        <Menu.Item
-          className="node-context-menu-item"
-          key="branchpoint-node"
-          onClick={() =>
-            activeNodeId != null ? deleteBranchpointById(clickedNodeId, clickedTree.treeId) : null
-          }
-        >
-          Unmark as Branchpoint
-        </Menu.Item>
-      ) : (
-        <Menu.Item
-          className="node-context-menu-item"
-          key="branchpoint-node"
-          onClick={() =>
-            activeNodeId != null ? createBranchPoint(clickedNodeId, clickedTree.treeId) : null
-          }
-        >
-          Mark as Branchpoint {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
-        </Menu.Item>
-      )}
+      {allowUpdate ? (
+        <>
+          <Menu.Item
+            key="merge-trees"
+            disabled={areInSameTree}
+            onClick={() => (activeNodeId != null ? mergeTrees(clickedNodeId, activeNodeId) : null)}
+          >
+            Create Edge & Merge with this Tree{" "}
+            {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
+          </Menu.Item>
+          <Menu.Item
+            key="delete-edge"
+            disabled={!areNodesConnected}
+            onClick={() => (activeNodeId != null ? deleteEdge(activeNodeId, clickedNodeId) : null)}
+          >
+            Delete Edge to this Node{" "}
+            {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
+          </Menu.Item>
+          <Menu.Item
+            key="delete-node"
+            onClick={() => deleteNode(clickedNodeId, clickedTree.treeId)}
+          >
+            Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
+          </Menu.Item>
+          {isBranchpoint ? (
+            <Menu.Item
+              className="node-context-menu-item"
+              key="branchpoint-node"
+              onClick={() =>
+                activeNodeId != null
+                  ? deleteBranchpointById(clickedNodeId, clickedTree.treeId)
+                  : null
+              }
+            >
+              Unmark as Branchpoint
+            </Menu.Item>
+          ) : (
+            <Menu.Item
+              className="node-context-menu-item"
+              key="branchpoint-node"
+              onClick={() =>
+                activeNodeId != null ? createBranchPoint(clickedNodeId, clickedTree.treeId) : null
+              }
+            >
+              Mark as Branchpoint {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
+            </Menu.Item>
+          )}
+        </>
+      ) : null}
       {isTheSameNode ? null : (
         <Menu.Item
           key="measure-node-path-length"
@@ -445,9 +456,11 @@ function NodeContextMenuOptions({
       >
         Path Length of this Tree
       </Menu.Item>
-      <Menu.Item key="hide-tree" onClick={() => hideTree(clickedTree.treeId)}>
-        Hide this Tree
-      </Menu.Item>
+      {allowUpdate ? (
+        <Menu.Item key="hide-tree" onClick={() => hideTree(clickedTree.treeId)}>
+          Hide this Tree
+        </Menu.Item>
+      ) : null}
       {infoRows}
     </Menu>
   );
@@ -464,6 +477,7 @@ function getBoundingBoxMenuOptions({
   setBoundingBoxColor,
   hideBoundingBox,
   deleteBoundingBox,
+  allowUpdate,
 }: NoNodeContextMenuProps) {
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const newBoundingBoxMenuItem = (
@@ -477,6 +491,23 @@ function getBoundingBoxMenuOptions({
       {isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
     </Menu.Item>
   );
+  const hideBoundingBoxMenuItem =
+    clickedBoundingBoxId != null ? (
+      <Menu.Item
+        key="hide-bounding-box"
+        onClick={() => {
+          hideBoundingBox(clickedBoundingBoxId);
+        }}
+      >
+        Hide Bounding Box
+      </Menu.Item>
+    ) : null;
+  if (!allowUpdate && clickedBoundingBoxId != null) {
+    return [hideBoundingBoxMenuItem];
+  }
+  if (!allowUpdate) {
+    return [];
+  }
 
   if (clickedBoundingBoxId == null) {
     return [newBoundingBoxMenuItem];
@@ -599,6 +630,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     setActiveCell,
     mappingInfo,
     infoRows,
+    allowUpdate,
   } = props;
   const dispatch = useDispatch();
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
@@ -641,7 +673,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions =
-    skeletonTracing != null
+    skeletonTracing != null && allowUpdate
       ? [
           <Menu.Item key="create-node" onClick={() => setWaypoint(globalPosition, viewport, false)}>
             Create Node here
@@ -738,12 +770,14 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
           ) : null,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
-          <Menu.Item
-            key="fill-cell"
-            onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
-          >
-            Fill Segment (flood-fill region)
-          </Menu.Item>,
+          allowUpdate ? (
+            <Menu.Item
+              key="fill-cell"
+              onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
+            >
+              Fill Segment (flood-fill region)
+            </Menu.Item>
+          ) : null,
         ]
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
@@ -760,7 +794,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
   } else if (isBoundingBoxToolActive) {
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
   } else {
     allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
@@ -1088,6 +1121,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     datasetScale: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,
     dataset: state.dataset,
+    allowUpdate: state.tracing.restrictions.allowUpdate,
     visibleSegmentationLayer: getVisibleSegmentationLayer(state),
     currentMeshFile:
       visibleSegmentationLayer != null

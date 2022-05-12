@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { BoundingBoxType } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
-import type { Tracing, AnnotationType } from "oxalis/store";
+import type { Tracing, AnnotationType, HybridTracing } from "oxalis/store";
 import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { startExportTiffJob } from "admin/admin_rest_api";
@@ -31,110 +31,127 @@ type LayerInfos = {
   isColorLayer: boolean | null | undefined;
 };
 
-const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: Props) => {
-  const [startedExports, setStartedExports] = useState([]);
+const exportKey = (layerInfos: LayerInfos) =>
+  (layerInfos.layerName || "") + (layerInfos.tracingId || "");
+
+export function getLayerInfos(
+  layer: APIDataLayer,
+  tracing: HybridTracing | null | undefined,
+  activeMappingInfos: any,
+  isMergerModeEnabled: boolean,
+) {
   const annotationId = tracing != null ? tracing.annotationId : null;
   const annotationType = tracing != null ? tracing.annotationType : null;
-  const activeMappingInfos = useSelector(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-    (state) => state.temporaryConfiguration.activeMappingByLayer,
+
+  const hasMag1 = (dataLayer: APIDataLayer) => getResolutionInfo(dataLayer.resolutions).hasIndex(0);
+  const { mappingStatus, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
+    activeMappingInfos,
+    layer.name,
   );
-  const isMergerModeEnabled = useSelector(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-    (state) => state.temporaryConfiguration.isMergerModeEnabled,
-  );
+  const existsActivePersistentMapping =
+    mappingStatus === MappingStatusEnum.ENABLED && !isMergerModeEnabled;
+  const isColorLayer = layer.category === "color";
 
-  const exportKey = (layerInfos: LayerInfos) =>
-    (layerInfos.layerName || "") + (layerInfos.tracingId || "");
-
-  const handleStartExport = async (layerInfos: LayerInfos) => {
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-    setStartedExports(startedExports.concat(exportKey(layerInfos)));
-
-    if (layerInfos.tracingId) {
-      await Model.ensureSavedState();
-    }
-
-    await startExportTiffJob(
-      dataset.name,
-      dataset.owningOrganization,
-      Utils.computeArrayFromBoundingBox(boundingBox),
-      layerInfos.layerName,
-      layerInfos.tracingId,
-      layerInfos.annotationId,
-      layerInfos.annotationType,
-      layerInfos.mappingName,
-      layerInfos.mappingType,
-      layerInfos.hideUnmappedIds,
-    );
-  };
-
-  const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
-
-  const allLayerInfos = dataset.dataSource.dataLayers.map((layer) => {
-    const { mappingStatus, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
-      activeMappingInfos,
-      layer.name,
-    );
-    const existsActivePersistentMapping =
-      mappingStatus === MappingStatusEnum.ENABLED && !isMergerModeEnabled;
-    const isColorLayer = layer.category === "color";
-
-    if (layer.category === "color" || !layer.tracingId) {
-      return {
-        displayName: layer.name,
-        layerName: layer.name,
-        tracingId: null,
-        annotationId: null,
-        annotationType: null,
-        tracingVersion: null,
-        hasMag1: hasMag1(layer),
-        hideUnmappedIds: !isColorLayer && existsActivePersistentMapping ? hideUnmappedIds : null,
-        mappingName: !isColorLayer && existsActivePersistentMapping ? mappingName : null,
-        mappingType: !isColorLayer && existsActivePersistentMapping ? mappingType : null,
-        isColorLayer,
-      };
-    }
-
-    // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
-    // must exist.
-    if (tracing == null) {
-      // Satisfy flow.
-      throw new Error("Tracing is null, but layer.tracingId is defined.");
-    }
-
-    const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
-
-    if (layer.fallbackLayerInfo != null) {
-      return {
-        displayName: "Volume annotation with fallback segmentation",
-        layerName: layer.fallbackLayerInfo.name,
-        tracingId: volumeTracing.tracingId,
-        annotationId,
-        annotationType,
-        tracingVersion: volumeTracing.version,
-        hasMag1: hasMag1(layer),
-        hideUnmappedIds: existsActivePersistentMapping ? hideUnmappedIds : null,
-        mappingName: existsActivePersistentMapping ? mappingName : null,
-        mappingType: existsActivePersistentMapping ? mappingType : null,
-        isColorLayer: false,
-      };
-    }
-
+  if (layer.category === "color" || !layer.tracingId) {
     return {
-      displayName: "Volume annotation",
-      layerName: null,
+      displayName: layer.name,
+      layerName: layer.name,
+      tracingId: null,
+      annotationId: null,
+      annotationType: null,
+      tracingVersion: null,
+      hasMag1: hasMag1(layer),
+      hideUnmappedIds: !isColorLayer && existsActivePersistentMapping ? hideUnmappedIds : null,
+      mappingName: !isColorLayer && existsActivePersistentMapping ? mappingName : null,
+      mappingType: !isColorLayer && existsActivePersistentMapping ? mappingType : null,
+      isColorLayer,
+    };
+  }
+
+  // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
+  // must exist.
+  if (tracing == null) {
+    // Satisfy flow.
+    throw new Error("Tracing is null, but layer.tracingId is defined.");
+  }
+
+  const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
+
+  if (layer.fallbackLayerInfo != null) {
+    return {
+      displayName: "Volume annotation with fallback segmentation",
+      layerName: layer.fallbackLayerInfo.name,
       tracingId: volumeTracing.tracingId,
       annotationId,
       annotationType,
       tracingVersion: volumeTracing.version,
       hasMag1: hasMag1(layer),
-      hideUnmappedIds: null,
-      mappingName: null,
-      mappingType: null,
+      hideUnmappedIds: existsActivePersistentMapping ? hideUnmappedIds : null,
+      mappingName: existsActivePersistentMapping ? mappingName : null,
+      mappingType: existsActivePersistentMapping ? mappingType : null,
       isColorLayer: false,
     };
-  });
+  }
+
+  return {
+    displayName: "Volume annotation",
+    layerName: null,
+    tracingId: volumeTracing.tracingId,
+    annotationId,
+    annotationType,
+    tracingVersion: volumeTracing.version,
+    hasMag1: hasMag1(layer),
+    hideUnmappedIds: null,
+    mappingName: null,
+    mappingType: null,
+    isColorLayer: false,
+  };
+}
+
+export async function handleStartExport(
+  dataset: APIDataset,
+  layerInfos: LayerInfos,
+  boundingBox: BoundingBoxType,
+  startedExports: never[],
+  setStartedExports?: React.Dispatch<React.SetStateAction<never[]>>,
+) {
+  if (setStartedExports) {
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
+    setStartedExports(startedExports.concat(exportKey(layerInfos)));
+  }
+
+  if (layerInfos.tracingId) {
+    await Model.ensureSavedState();
+  }
+
+  await startExportTiffJob(
+    dataset.name,
+    dataset.owningOrganization,
+    Utils.computeArrayFromBoundingBox(boundingBox),
+    layerInfos.layerName,
+    layerInfos.tracingId,
+    layerInfos.annotationId,
+    layerInfos.annotationType,
+    layerInfos.mappingName,
+    layerInfos.mappingType,
+    layerInfos.hideUnmappedIds,
+  );
+}
+
+function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: Props) {
+  const [startedExports, setStartedExports] = useState([]);
+  const isMergerModeEnabled = useSelector(
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
+  );
+  const activeMappingInfos = useSelector(
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
+    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  );
+
+  const allLayerInfos = dataset.dataSource.dataLayers.map((layer: APIDataLayer) =>
+    getLayerInfos(layer, tracing, activeMappingInfos, isMergerModeEnabled),
+  );
   const exportButtonsList = allLayerInfos.map((layerInfos) => {
     const parenthesesInfos = [
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
@@ -147,7 +164,9 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
     return layerInfos ? (
       <p key={exportKey(layerInfos)}>
         <Button
-          onClick={() => handleStartExport(layerInfos)}
+          onClick={() =>
+            handleStartExport(dataset, layerInfos, boundingBox, startedExports, setStartedExports)
+          }
           disabled={
             // The export is already running or...
             // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
@@ -230,6 +249,6 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
       {downloadHint}
     </Modal>
   );
-};
+}
 
 export default ExportBoundingBoxModal;

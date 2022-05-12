@@ -342,8 +342,7 @@ export default class TextureBucketManager {
      *     - otherwise: write a fallback bucket to the look up buffer
      *   - else if the current bucket is a fallback bucket, write the address for that bucket into all
      *     the positions of the look up buffer which map to that fallback bucket (in an isotropic case, that's 8
-     *     positions). Only do this if the bucket belongs to the first fallback layer. Otherwise, the complexity
-           would be too high, due to the exponential combinations.
+     *     positions).
      */
     this.lookUpBuffer.fill(-2);
     const maxZoomStepDiff = getMaxZoomStepDiff(
@@ -362,6 +361,9 @@ export default class TextureBucketManager {
       const zoomStepDifference = bucketZoomStep - currentZoomStep;
       const isBaseBucket = zoomStepDifference === 0;
 
+      // Buckets with finer resolution than the current one cannot be used, since they would not fit onto the bucket texture
+      if (zoomStepDifference < 0) continue;
+
       if (isBaseBucket) {
         if (address === -1) {
           let fallbackBucket = bucket.getFallbackBucket();
@@ -370,14 +372,15 @@ export default class TextureBucketManager {
             currentZoomStep + (bucketDebuggingFlags.enforcedZoomDiff || maxZoomStepDiff);
 
           while (!abortFallbackLoop) {
-            if (fallbackBucket.type !== "null") {
-              if (
-                fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
-                this.committedBucketSet.has(fallbackBucket)
-              ) {
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
-                address = this.activeBucketToIndexMap.get(fallbackBucket);
-                address = address != null ? address : -1;
+            if (
+              // If the fallbackBucket is a null bucket, we can abort the
+              // loop, since a null bucket cannot have yield another fallback
+              // bucket.
+              fallbackBucket.type !== "null" &&
+              fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep
+            ) {
+              if (this.committedBucketSet.has(fallbackBucket)) {
+                address = this.activeBucketToIndexMap.get(fallbackBucket) ?? -1;
                 bucketZoomStep = fallbackBucket.zoomedAddress[3];
                 abortFallbackLoop = true;
               } else {
@@ -394,6 +397,9 @@ export default class TextureBucketManager {
 
         if (lookUpIdx !== -1) {
           const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+          // We don't need to check whether the lookUpBuffer already contains
+          // a bucket with a finer quality here, since this base bucket has already
+          // the best possible quality.
           this.lookUpBuffer[posInBuffer] = address;
           this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
         }
@@ -408,11 +414,16 @@ export default class TextureBucketManager {
           const lookUpIdx = this._getBucketIndex(baseBucketAddress);
 
           const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
-
-          if (this.lookUpBuffer[posInBuffer] !== -2 || lookUpIdx === -1) {
-            // Either, another bucket was already placed here. Or, the lookUpIdx is
-            // invalid. Skip the entire loop
-            break;
+          if (lookUpIdx === -1) {
+            // The lookUpIdx is invalid. Ignore this bucket.
+            continue;
+          } else if (
+            this.lookUpBuffer[posInBuffer] > -1 &&
+            this.lookUpBuffer[posInBuffer + 1] <= bucketZoomStep
+          ) {
+            // Another bucket was already placed here with a better zoomstep.
+            // Ignore this bucket.
+            continue;
           }
 
           this.lookUpBuffer[posInBuffer] = address;

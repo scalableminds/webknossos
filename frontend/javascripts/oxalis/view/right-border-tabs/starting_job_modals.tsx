@@ -73,13 +73,58 @@ function getReadableNameOfVolumeLayer(layer: APIDataLayer, tracing: HybridTracin
     : null;
 }
 
-export function LayerSelectionFormItem({
+export function LayerSelection({
+  layers,
+  tracing,
+  fixedLayerName,
+  layerType,
+  setSelectedLayerName,
+  style,
+}: {
+  layers: APIDataLayer[];
+  tracing: HybridTracing;
+  fixedLayerName?: string;
+  layerType?: string;
+  setSelectedLayerName?: React.Dispatch<React.SetStateAction<string>>;
+  style?: React.CSSProperties;
+}): JSX.Element {
+  const onSelect = setSelectedLayerName
+    ? (layerName: string) => setSelectedLayerName(layerName)
+    : undefined;
+  const maybeLayerType = typeof layerType !== "undefined" ? layerType : "";
+  const maybeSpace = typeof layerType !== "undefined" ? " " : "";
+  return (
+    <Select
+      showSearch
+      placeholder={`Select a ${maybeLayerType}${maybeSpace}layer`}
+      optionFilterProp="children"
+      filterOption={(input, option) =>
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+      }
+      disabled={fixedLayerName != null}
+      onSelect={onSelect}
+      style={style}
+    >
+      {layers.map((layer) => {
+        const readableName = getReadableNameOfVolumeLayer(layer, tracing) || layer.name;
+        return (
+          <Select.Option key={layer.name} value={layer.name}>
+            {readableName}
+          </Select.Option>
+        );
+      })}
+    </Select>
+  );
+}
+
+function LayerSelectionFormItem({
   chooseSegmentationLayer,
   layers,
   tracing,
   fixedLayerName,
 }: LayerSelectionProps): JSX.Element {
-  const layerType = chooseSegmentationLayer ? "segmentation layer" : "color layer";
+  const layerType = chooseSegmentationLayer ? "segmentation" : "color";
   return (
     <Form.Item
       label={layerType}
@@ -92,25 +137,12 @@ export function LayerSelectionFormItem({
       ]}
       hidden={layers.length === 1 && fixedLayerName == null}
     >
-      <Select
-        showSearch
-        placeholder={`Select a ${layerType}`}
-        optionFilterProp="children"
-        filterOption={(input, option) =>
-          // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-          option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-        }
-        disabled={fixedLayerName != null}
-      >
-        {layers.map((layer) => {
-          const readableName = getReadableNameOfVolumeLayer(layer, tracing) || layer.name;
-          return (
-            <Select.Option key={layer.name} value={layer.name}>
-              {readableName}
-            </Select.Option>
-          );
-        })}
-      </Select>
+      <LayerSelection
+        layers={layers}
+        fixedLayerName={fixedLayerName}
+        layerType={layerType}
+        tracing={tracing}
+      />
     </Form.Item>
   );
 }
@@ -142,6 +174,40 @@ function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined) {
   );
 }
 
+export function BoundingBoxSelection({
+  userBoundingBoxes,
+  setSelectedBoundingBoxId,
+  style,
+}: {
+  userBoundingBoxes: UserBoundingBox[];
+  setSelectedBoundingBoxId?: React.Dispatch<React.SetStateAction<number>>;
+  style?: React.CSSProperties;
+}): JSX.Element {
+  const onSelect = setSelectedBoundingBoxId
+    ? (boundingBoxId: number) => setSelectedBoundingBoxId(boundingBoxId)
+    : undefined;
+  return (
+    <Select
+      showSearch
+      placeholder="Select a bounding box"
+      optionFilterProp="children"
+      filterOption={(input, option) =>
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+      }
+      disabled={userBoundingBoxes.length < 1}
+      onSelect={onSelect}
+      style={style}
+    >
+      {userBoundingBoxes.map((userBB) => (
+        <Select.Option key={userBB.id} value={userBB.id}>
+          {renderUserBoundingBox(userBB)}
+        </Select.Option>
+      ))}
+    </Select>
+  );
+}
+
 function BoundingBoxSelectionFormItem({
   isBoundingBoxConfigurable,
   userBoundingBoxes,
@@ -165,21 +231,7 @@ function BoundingBoxSelectionFormItem({
         ]}
         hidden={!isBoundingBoxConfigurable}
       >
-        <Select
-          showSearch
-          placeholder="Select a bounding box"
-          optionFilterProp="children"
-          filterOption={(input, option) =>
-            // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-          }
-        >
-          {userBoundingBoxes.map((userBB) => (
-            <Select.Option key={userBB.id} value={userBB.id}>
-              {renderUserBoundingBox(userBB)}
-            </Select.Option>
-          ))}
-        </Select>
+        <BoundingBoxSelection userBoundingBoxes={userBoundingBoxes} />
       </Form.Item>
     </div>
   );

@@ -2,7 +2,7 @@ import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
-import constants from "oxalis/constants";
+import constants, { Vector3 } from "oxalis/constants";
 import test from "ava";
 import defaultState from "oxalis/default_state";
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
@@ -76,8 +76,8 @@ test("Flycam Accessors should calculate the request log zoom step (2/2)", (t) =>
   t.is(accessors.getRequestLogZoomStep(state), 3);
 });
 test.only("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", (t) => {
-  const scale = [4, 4, 35];
-  const resolutions = [
+  const scale: Vector3 = [4, 4, 35];
+  const resolutions: Vector3[] = [
     [1, 1, 1],
     [2, 2, 1],
     [4, 4, 1],
@@ -106,7 +106,6 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
   };
 
   const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
     constants.MODE_PLANE_TRACING,
     "BEST_QUALITY_FIRST",
     scale,

@@ -48,6 +48,8 @@ class TeamController @Inject()(teamDAO: TeamDAO,
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(teamNameReads) { teamName =>
       for {
+        existingTeamCount <- teamDAO.countByNameAndOrganization(teamName, request.identity._organization)
+        _ <- bool2Fox(existingTeamCount == 0) ?~> "team.nameInUse"
         _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
         team = Team(ObjectId.generate, request.identity._organization, teamName)
         _ <- teamDAO.insertOne(team)

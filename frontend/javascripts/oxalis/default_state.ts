@@ -39,11 +39,11 @@ const initialAnnotationInfo = {
   annotationType: "View",
   meshes: [],
 };
-// @ts-expect-error ts-migrate(2322) FIXME: Type 'HTMLElement | null' is not assignable to typ... Remove this comment to see the full error message
-const primaryStylesheetElement: HTMLLinkElement | null | undefined =
-  document.getElementById("primary-stylesheet");
+
+const primaryStylesheetElement: HTMLLinkElement | null | undefined = document.getElementById(
+  "primary-stylesheet",
+) as HTMLLinkElement;
 const defaultState: OxalisState = {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ fourBit: boolean; interpolation: boolean; ... Remove this comment to see the full error message
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,
@@ -53,7 +53,7 @@ const defaultState: OxalisState = {
     crosshairSize: 0.1,
     displayCrosshair: true,
     displayScalebars: true,
-    dynamicSpaceDirection: true,
+    dynamicSpaceDirection: false,
     hideTreeRemovalWarning: false,
     highlightCommentedNodes: false,
     keyboardDelay: 200,
@@ -74,9 +74,10 @@ const defaultState: OxalisState = {
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
     useLegacyBindings: false,
+    isVolumeInterpolationEnabled: false,
+    volumeInterpolationDepth: 2,
   },
   temporaryConfiguration: {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'ViewMode'... Remove this comment to see the full error message
     viewMode: Constants.MODE_PLANE_TRACING,
     histogramData: {},
     flightmodeRecording: false,

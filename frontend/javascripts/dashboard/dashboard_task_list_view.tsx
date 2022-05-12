@@ -244,7 +244,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     ) : (
       <span>
         <PlayCircleOutlined />
-        Trace
+        Open
       </span>
     );
     return task.annotation.state === "Finished" ? (

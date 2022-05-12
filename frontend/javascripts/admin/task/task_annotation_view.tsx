@@ -117,7 +117,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
       ) : (
         <React.Fragment>
           <PlayCircleOutlined />
-          Trace
+          Open
         </React.Fragment>
       );
     return (

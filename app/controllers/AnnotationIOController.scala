@@ -139,7 +139,7 @@ Expects:
 
   private def mergeAndSaveVolumeLayers(volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
-                                       otherFiles: Map[String, TemporaryFile]): Fox[List[AnnotationLayer]] = {
+                                       otherFiles: Map[String, File]): Fox[List[AnnotationLayer]] = {
     if (volumeLayersGrouped.isEmpty) return Fox.successful(List())
     if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
       return Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")

@@ -35,8 +35,8 @@ export async function screenshotDataset(
   page: Page,
   baseUrl: string,
   datasetId: APIDatasetId,
-  optionalViewOverride: string | null | undefined,
-  optionalDatasetConfigOverride: PartialDatasetConfiguration | null | undefined,
+  optionalViewOverride?: string | null | undefined,
+  optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(

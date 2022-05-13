@@ -39,8 +39,8 @@ if (!process.env.URL) {
 }
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
-// Ava's recommendation for Flow types
-// https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
 const test: TestInterface<{
   browser: Browser;
 }> = anyTest as any;
@@ -299,7 +299,6 @@ test.serial(
           name: datasetName,
           owningOrganization: "sample_organization",
         };
-        // @ts-expect-error ts-migrate(2554) FIXME: Expected 5 arguments, but got 4.
         const { screenshot, width, height } = await screenshotDataset(
           await getNewPage(t.context.browser),
           URL,

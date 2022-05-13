@@ -488,16 +488,9 @@ function setupLayerForVolumeTracing(
   tracings: Array<ServerVolumeTracing>,
 ): Array<APIDataLayer> {
   // This method adds/merges the segmentation layers of the tracing into the dataset layers.
-  // This is done by
-  // 1) removing all segmentation data layers (gathered in newLayers)
-  // 2) appending new tracing layers (using the original layers for fallback information)
+
   const originalLayers = dataset.dataSource.dataLayers;
-  // Remove other segmentation layers, since we are adding new ones.
-  // This is a temporary workaround. Even though we support multiple segmentation
-  // layers, we cannot render both at the same time. Hiding the existing segmentation
-  // layer would be good, but this information is stored per dataset and not per annotation
-  // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
-  const newLayers = originalLayers.slice(); // .filter((layer) => layer.category !== "segmentation");
+  const newLayers = originalLayers.slice();
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.

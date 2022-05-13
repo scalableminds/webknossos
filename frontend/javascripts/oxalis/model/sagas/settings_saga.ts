@@ -118,7 +118,7 @@ function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
 export default function* watchPushSettingsAsync(): Saga<void> {
   const action = yield* take("INITIALIZE_SETTINGS");
   if (action.type !== "INITIALIZE_SETTINGS") {
-    throw new Error("Unexpected action. Satisfy flow.");
+    throw new Error("Unexpected action. Satisfy typescript.");
   }
 
   const { originalDatasetSettings } = action;

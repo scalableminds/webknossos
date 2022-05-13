@@ -39,6 +39,7 @@ export default function BoundingBoxTab() {
     useState<UserBoundingBox | null>(null);
   const [isGlobalizeFloodfillsModalVisible, setIsGlobalizeFloodfillsModalVisible] = useState(false);
   const tracing = useSelector((state: OxalisState) => state.tracing);
+  const allowUpdate = tracing.restrictions.allowUpdate;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
@@ -152,28 +153,25 @@ export default function BoundingBoxTab() {
             onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
             onNameChange={_.partial(setBoundingBoxName, bb.id)}
             onColorChange={_.partial(setBoundingBoxColor, bb.id)}
+            allowUpdate={allowUpdate}
           />
         ))
       ) : (
         <div>No Bounding Boxes created yet.</div>
       )}
-      <div
-        style={{
-          display: "inline-block",
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        <Tooltip title="Click to add another bounding box.">
-          <PlusSquareOutlined
-            onClick={addNewBoundingBox}
-            style={{
-              cursor: "pointer",
-              marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
-            }}
-          />
-        </Tooltip>
-      </div>
+      {allowUpdate ? (
+        <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
+          <Tooltip title="Click to add another bounding box.">
+            <PlusSquareOutlined
+              onClick={addNewBoundingBox}
+              style={{
+                cursor: "pointer",
+                marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
+              }}
+            />
+          </Tooltip>
+        </div>
+      ) : null}
       {selectedBoundingBoxForExport != null ? (
         <ExportBoundingBoxModal
           dataset={dataset}

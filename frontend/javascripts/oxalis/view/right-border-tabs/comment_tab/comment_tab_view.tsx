@@ -75,6 +75,7 @@ function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparato
 
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
+  allowUpdate: boolean;
   setActiveNode: (nodeId: number) => void;
   deleteComment: () => void;
   createComment: (text: string) => void;
@@ -315,6 +316,9 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
   };
 
   renderMarkdownModal() {
+    if (!this.props.allowUpdate) {
+      return null;
+    }
     const activeCommentMaybe = this.getActiveComment(true);
 
     const onOk = () => this.setMarkdownModalVisibility(false);
@@ -398,6 +402,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       .replace(/\r?\n/g, "\\n");
     const isMultilineComment = activeCommentContent.indexOf("\\n") !== -1;
     const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
+    const isEditingDisabled = activeNodeMaybe.isNothing || !this.props.allowUpdate;
 
     const findCommentIndexFn = (commentOrTree: Tree | CommentType) =>
       "nodeId" in commentOrTree && commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
@@ -445,10 +450,14 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   />
                   <InputComponent
                     value={activeCommentContent}
-                    disabled={activeNodeMaybe.isNothing}
+                    disabled={isEditingDisabled}
+                    title={
+                      this.props.allowUpdate
+                        ? undefined
+                        : messages["tracing.read_only_mode_notification"]
+                    }
                     onChange={(evt) => this.handleChangeInput(evt, true)}
-                    /* @ts-expect-error ts-migrate(7006) FIXME: Parameter 'evt' implicitly has an 'any' type. */
-                    onPressEnter={(evt) => evt.target.blur()}
+                    onPressEnter={(evt) => (evt.target as HTMLElement).blur()}
                     placeholder="Add comment"
                     style={{
                       width: "50%",
@@ -456,10 +465,14 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   />
                   <ButtonComponent
                     onClick={() => this.setMarkdownModalVisibility(true)}
-                    disabled={activeNodeMaybe.isNothing}
+                    disabled={isEditingDisabled}
+                    title={
+                      this.props.allowUpdate
+                        ? "Open dialog to edit comment in multi-line mode"
+                        : messages["tracing.read_only_mode_notification"]
+                    }
                     type={isMultilineComment ? "primary" : "default"}
                     icon={<EditOutlined />}
-                    title="Open dialog to edit comment in multi-line mode"
                   />
                   <ButtonComponent
                     title="Jump to next comment"
@@ -521,6 +534,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
 const mapStateToProps = (state: OxalisState) => ({
   skeletonTracing: state.tracing.skeleton,
+  allowUpdate: state.tracing.restrictions.allowUpdate,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

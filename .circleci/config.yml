@@ -292,6 +292,10 @@ workflows:
   version: 2
   circleci_build:
     jobs:
+      - nightly:
+          filters:
+            tags:
+              only: /.*/
       - build_test_deploy:
           filters:
             tags:

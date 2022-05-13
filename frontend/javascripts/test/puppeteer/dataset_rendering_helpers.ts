@@ -6,10 +6,10 @@ import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'pixe... Remove this comment to see the full error message
 import pixelmatch from "pixelmatch";
-import type { APIDatasetId } from "../../types/api_flow_types";
-import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
+import type { APIDatasetId } from "../../types/api_flow_types";
+import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 
 export const { WK_AUTH_TOKEN } = process.env;
 

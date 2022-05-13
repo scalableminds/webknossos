@@ -1,10 +1,11 @@
-import { Input, InputProps } from "antd";
+import { Input, InputProps, Tooltip } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import TextArea, { TextAreaProps } from "antd/lib/input/TextArea";
 
 export type InputComponentProps = InputProps &
   TextAreaProps & {
+    title?: React.ReactNode;
     isTextArea?: boolean;
   };
 
@@ -83,8 +84,9 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
     );
   };
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
-  blurYourself = () => (document.activeElement ? document.activeElement.blur() : null);
+  blurYourself = () =>
+    document.activeElement ? (document.activeElement as HTMLElement).blur() : null;
+
   blurOnEscape = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -93,33 +95,28 @@ class InputComponent extends React.PureComponent<InputComponentProps, InputCompo
   };
 
   render() {
-    const { isTextArea, onPressEnter, ...inputProps } = this.props;
-
-    if (isTextArea) {
-      return (
-        <TextArea
-          {...inputProps}
-          onChange={this.handleChange}
-          onFocus={this.handleFocus}
-          onBlur={this.handleBlur}
-          value={this.state.currentValue}
-          onPressEnter={onPressEnter != null ? onPressEnter : undefined}
-          onKeyDown={this.blurOnEscape}
-        />
-      );
-    } else {
-      return (
-        <Input
-          {...inputProps}
-          onChange={this.handleChange}
-          onFocus={this.handleFocus}
-          onBlur={this.handleBlur}
-          value={this.state.currentValue}
-          onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
-          onKeyDown={this.blurOnEscape}
-        />
-      );
-    }
+    const { isTextArea, onPressEnter, title, style, ...inputProps } = this.props;
+    const InputComponentType: typeof TextArea | typeof Input = isTextArea ? TextArea : Input;
+    const input = (
+      <InputComponentType
+        {...inputProps}
+        style={title == null ? style : undefined}
+        onChange={this.handleChange}
+        onFocus={this.handleFocus}
+        onBlur={this.handleBlur}
+        value={this.state.currentValue}
+        onPressEnter={onPressEnter != null ? onPressEnter : this.blurYourself}
+        onKeyDown={this.blurOnEscape}
+      />
+    );
+    // The input needs to be wrapped in a span in order for the tooltip to work. See https://github.com/react-component/tooltip/issues/18#issuecomment-140078802.
+    return title != null ? (
+      <Tooltip title={title} style={style}>
+        <span>{input}</span>
+      </Tooltip>
+    ) : (
+      input
+    );
   }
 }
 

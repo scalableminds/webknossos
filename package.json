@@ -162,7 +162,7 @@
     "beautiful-react-hooks": "^0.30.5",
     "classnames": "^2.2.5",
     "comlink": "^4.3.0",
-    "cross-fetch": "^3.0.1",
+    "cross-fetch": "^3.1.5",
     "cwise": "^1.0.10",
     "data.maybe": "^1.2.2",
     "deep-for-each": "^2.0.3",

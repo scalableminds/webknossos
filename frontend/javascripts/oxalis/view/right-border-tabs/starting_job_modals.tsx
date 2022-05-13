@@ -85,7 +85,7 @@ export function LayerSelection({
   tracing: HybridTracing;
   fixedLayerName?: string;
   layerType?: string;
-  setSelectedLayerName?: React.Dispatch<React.SetStateAction<string>>;
+  setSelectedLayerName?: React.Dispatch<React.SetStateAction<string | null>>;
   style?: React.CSSProperties;
 }): JSX.Element {
   const onSelect = setSelectedLayerName

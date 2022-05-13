@@ -116,19 +116,17 @@ export default function DownloadModalView(props: Props): JSX.Element {
   // const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const [startedExports, setStartedExports] = useState([]);
+  const [startedExports, setStartedExports] = useState<string[]>([]);
   const layers = getDataLayers(dataset);
 
   const isMergerModeEnabled = useSelector(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-    (state) => state.temporaryConfiguration.isMergerModeEnabled,
+    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const activeMappingInfos = useSelector(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-    (state) => state.temporaryConfiguration.activeMappingByLayer,
+    (state: OxalisState) => state.temporaryConfiguration.activeMappingByLayer,
   );
 
-  const [selectedLayerName, setSelectedLayerName] = useState("");
+  const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
   const [selectedBoundingBoxID, setSelectedBoundingBoxId] = useState(-1);
 
   const handleOk = async () => {
@@ -137,11 +135,11 @@ export default function DownloadModalView(props: Props): JSX.Element {
       downloadAnnotation(annotationId, annotationType, hasVolumeFallback, {}, includeVolumeData);
       onClose();
     } else if (activeTabKey === "export") {
-      const missingSelection = selectedLayerName === "" || selectedBoundingBoxID === -1;
+      const missingSelection = selectedLayerName == null || selectedBoundingBoxID === -1;
       const basicWarning = "Starting an export job with the chosen parameters was not possible.";
       const missingSelectionWarning = " Please choose a layer and a bounding box for export.";
 
-      if (missingSelection) {
+      if (selectedLayerName == null || selectedBoundingBoxID === -1) {
         Toast.warning(basicWarning + missingSelectionWarning);
       } else {
         const selectedLayer = getLayerByName(dataset, selectedLayerName);

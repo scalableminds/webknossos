@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { BoundingBoxType } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
-import type { Tracing, AnnotationType, HybridTracing } from "oxalis/store";
+import type { OxalisState, Tracing, AnnotationType, HybridTracing } from "oxalis/store";
 import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { startExportTiffJob } from "admin/admin_rest_api";
@@ -112,11 +112,10 @@ export async function handleStartExport(
   dataset: APIDataset,
   layerInfos: LayerInfos,
   boundingBox: BoundingBoxType,
-  startedExports: never[],
-  setStartedExports?: React.Dispatch<React.SetStateAction<never[]>>,
+  startedExports: string[],
+  setStartedExports?: React.Dispatch<React.SetStateAction<string[]>>,
 ) {
   if (setStartedExports) {
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     setStartedExports(startedExports.concat(exportKey(layerInfos)));
   }
 
@@ -139,14 +138,12 @@ export async function handleStartExport(
 }
 
 function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: Props) {
-  const [startedExports, setStartedExports] = useState([]);
+  const [startedExports, setStartedExports] = useState<string[]>([]);
   const isMergerModeEnabled = useSelector(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-    (state) => state.temporaryConfiguration.isMergerModeEnabled,
+    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const activeMappingInfos = useSelector(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'temporaryConfiguration' does not exist o... Remove this comment to see the full error message
-    (state) => state.temporaryConfiguration.activeMappingByLayer,
+    (state: OxalisState) => state.temporaryConfiguration.activeMappingByLayer,
   );
 
   const allLayerInfos = dataset.dataSource.dataLayers.map((layer: APIDataLayer) =>
@@ -154,7 +151,6 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
   );
   const exportButtonsList = allLayerInfos.map((layerInfos) => {
     const parenthesesInfos = [
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
       startedExports.includes(exportKey(layerInfos)) ? "started" : null,
       layerInfos.mappingName != null ? `using mapping "${layerInfos.mappingName}"` : null,
       !layerInfos.hasMag1 ? "resolution 1 missing" : null,
@@ -169,7 +165,6 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
           }
           disabled={
             // The export is already running or...
-            // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
             startedExports.includes(exportKey(layerInfos)) || // The layer has no mag 1 or...
             !layerInfos.hasMag1 || // Merger mode is enabled and this layer is the volume tracing layer.
             (isMergerModeEnabled && layerInfos.tracingId != null)

@@ -1237,7 +1237,7 @@ export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
   datasetConfig: PartialDatasetConfiguration,
   options: RequestOptions = {},
-): Record<string, any> {
+): Promise<Record<string, any>> {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     { ...options, method: "PUT", data: datasetConfig },
@@ -1616,7 +1616,7 @@ export function getUserConfiguration(): Promise<UserConfiguration> {
 
 export function updateUserConfiguration(
   userConfiguration: Record<string, any>,
-): Record<string, any> {
+): Promise<Record<string, any>> {
   return Request.sendJSONReceiveJSON("/api/user/userConfiguration", {
     method: "PUT",
     data: userConfiguration,

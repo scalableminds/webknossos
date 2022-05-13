@@ -1,5 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import akka.http.caching.LfuCache
+import akka.http.caching.scaladsl.{Cache, CachingSettings}
+
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 import akka.stream.scaladsl.Source
@@ -7,21 +10,22 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceLike}
-import com.scalableminds.webknossos.datastore.models.{VoxelPosition, WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
-import com.scalableminds.webknossos.datastore.services.{BinaryDataService, BinaryDataServiceHolder, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteDataStoreClient,
   TSRemoteWebKnossosClient,
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
-import net.liftweb.util.Helpers.urlEncode
+import net.liftweb.common.Box
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -29,16 +33,19 @@ import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 class VolumeTracingController @Inject()(
     val tracingService: VolumeTracingService,
     val config: TracingStoreConfig,
     val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    val remoteDataStoreClient: TSRemoteDataStoreClient,
     val accessTokenService: TracingStoreAccessTokenService,
     val slackNotificationService: TSSlackNotificationService,
     val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
-    extends TracingController[VolumeTracing, VolumeTracings] {
+    extends TracingController[VolumeTracing, VolumeTracings]
+    with ProtoGeometryImplicits {
 
   implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
 
@@ -214,7 +221,7 @@ class VolumeTracingController @Inject()(
 
   def volumeTracingFolderContent(token: Option[String], tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           mags = tracing.resolutions.map(v => Vec3Int(v.x, v.y, v.z))
@@ -232,7 +239,7 @@ class VolumeTracingController @Inject()(
 
   def volumeTracingMagFolderContent(token: Option[String], tracingId: String, mag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
 
@@ -251,7 +258,7 @@ class VolumeTracingController @Inject()(
 
   def zArray(token: Option[String], tracingId: String, mag: String): Action[AnyContent] = Action.async {
     implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
 
@@ -260,7 +267,7 @@ class VolumeTracingController @Inject()(
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
           cubeLength = DataLayer.bucketLength
-          (channels, dtype) <- zarrDtypeFromElementClass(tracing.elementClass)
+          (channels, dtype) = ElementClass.toChannelAndZarrString(tracing.elementClass)
           // data request method always decompresses before sending
           compressor = None
         } yield
@@ -286,75 +293,83 @@ class VolumeTracingController @Inject()(
   }
 
   def zGroup(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       Future(Ok(Json.obj("zarr_format" -> 2)))
     }
   }
 
   def rawZarrCube(token: Option[String], tracingId: String, mag: String, cxyz: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-        for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+      {
+        val combinedToken = urlOrHeaderToken(token, request)
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), combinedToken) {
+          for {
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
 
-          existingMags = tracing.resolutions.map(v => Vec3Int(v.x, v.y, v.z))
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
-          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
+            existingMags = tracing.resolutions.map(v => Vec3Int(v.x, v.y, v.z))
+            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+            _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
-          (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404
-          _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
-          cubeSize = DataLayer.bucketLength
-          request = WebKnossosDataRequest(
-            position = Vec3Int(x, y, z),
-            mag = magParsed,
-            cubeSize = cubeSize,
-            fourBit = Some(false),
-            applyAgglomerate = None,
-            version = None
-          )
-          (data, _) <- tracingService.data(tracingId, tracing, List(request))
+            (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404
+            _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
+            cubeSize = DataLayer.bucketLength
+            request = WebKnossosDataRequest(
+              position = Vec3Int(x * cubeSize * magParsed.x, y * cubeSize * magParsed.y, z * cubeSize * magParsed.z),
+              mag = magParsed,
+              cubeSize = cubeSize,
+              fourBit = Some(false),
+              applyAgglomerate = None,
+              version = None
+            )
+            (data, _) <- tracingService.data(tracingId, tracing, List(request))
 
-          requestToken <- token ?~> "No relevant Token" ~> 404
-
-          dataWithFallback <- getFallbackLayerDataIfEmpty(tracing, data, mag, cxyz, requestToken)
-
-          _ = print(s"is all 0 ${dataWithFallback.forall(x => x == 0)}")
-        } yield Ok(dataWithFallback).withHeaders()
+            dataWithFallback <- getFallbackLayerDataIfEmpty(tracing, data, mag, cxyz, combinedToken) ?~> "Getting fallback layer failed" ~> 404
+          } yield Ok(dataWithFallback).withHeaders()
+        }
       }
-    }
-
-  private def zarrDtypeFromElementClass(elementClass: VolumeTracing.ElementClass): Option[(Int, String)] =
-    elementClass match {
-      case ElementClass.uint8  => Some(1, "<u1")
-      case ElementClass.uint16 => Some(1, "<u2")
-      case ElementClass.uint24 => Some(3, "<u1")
-      case ElementClass.uint32 => Some(1, "<u4")
-      case ElementClass.uint64 => Some(1, "<u8")
-      case _                   => None
     }
 
   private def getFallbackLayerDataIfEmpty(tracing: VolumeTracing,
                                           data: Array[Byte],
                                           mag: String,
                                           cxyz: String,
-                                          requestToken: String): Fox[Array[Byte]] = {
+                                          urlToken: Option[String]): Fox[Array[Byte]] = {
     val isAnnotationEmpty = data.forall(x => x == 0)
 
-    // print(s"is all 0 ${data.forall(x => x == 0)}")
     // Since we only do all bucket requests, complete bucket needs to empty so that we use fallback
-
     if (isAnnotationEmpty) {
       val organizationName = tracing.getOrganizationName
       val dataSetName = tracing.dataSetName
       val dataLayerName = tracing.getFallbackLayer
 
-      rpc(
-        s"${config.Tracingstore.datastore.uri}/data/zarr/${urlEncode(organizationName)}/${dataSetName}/$dataLayerName/$mag/$cxyz")
-        .addQueryString("token" -> requestToken)
-        .getWithBytesResponse
+      val dataStoreURI = Fox(
+        dataStoreURICache.getOrLoad(
+          (Some(organizationName), dataSetName),
+          K => remoteWebKnossosClient.getDataStoreURIForDataSource(K._1, K._2)
+        ))
+
+      dataStoreURI.flatMap(
+        dataStoreURL =>
+          remoteDataStoreClient
+            .fallbackLayerBucket(dataStoreURL, organizationName, dataSetName, dataLayerName, mag, cxyz, urlToken))
     } else {
       Fox.successful(data)
     }
+  }
+
+  private lazy val dataStoreURICache: Cache[(Option[String], String), Box[String]] = {
+    val defaultCachingSettings = CachingSettings("")
+    val maxEntries = 100
+    val lfuCacheSettings =
+      defaultCachingSettings.lfuCacheSettings
+        .withInitialCapacity(maxEntries)
+        .withMaxCapacity(maxEntries)
+        .withTimeToLive(2.hours)
+        .withTimeToIdle(1.hour)
+    val cachingSettings =
+      defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
+    val lfuCache: Cache[(Option[String], String), Box[String]] = LfuCache(cachingSettings)
+    lfuCache
   }
 
   private def getNeighborIndices(neighbors: List[Int]) =

@@ -8,8 +8,9 @@ import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
-import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import { RequestOptions } from "libs/request";
+import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
+
 export const { WK_AUTH_TOKEN } = process.env;
 
 type Screenshot = {

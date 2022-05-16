@@ -96,12 +96,31 @@ class AnnotationController @Inject()(
             timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
           } else Fox.successful(())
         }
-        _ = request.identity.map { user =>
+        _ = request.identity.foreach { user =>
           analyticsService.track(OpenAnnotationEvent(user, annotation))
         }
       } yield Ok(js)
     }
   }
+
+  @ApiOperation(hidden = true, value = "")
+  def infoWithoutType(annotationId: String, timestamp: Long): Action[AnyContent] =
+    sil.UserAwareAction.async { implicit request =>
+      for {
+        annotationIdValidated <- ObjectId.parse(annotationId)
+        annotation <- annotationDAO.findOne(annotationIdValidated) ?~> "annotation.notFound"
+        typ = if (annotation._task.isEmpty) AnnotationType.Explorational else AnnotationType.Task
+        restrictions <- provider.restrictionsFor(typ.toString, annotationId) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        js <- annotationService.publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
+        _ <- Fox.runOptional(request.identity) { user =>
+          timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
+        }
+        _ = request.identity.foreach { user =>
+          analyticsService.track(OpenAnnotationEvent(user, annotation))
+        }
+      } yield Ok(js)
+    }
 
   @ApiOperation(hidden = true, value = "")
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =

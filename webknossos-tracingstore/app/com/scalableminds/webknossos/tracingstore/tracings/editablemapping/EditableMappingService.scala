@@ -150,9 +150,11 @@ class EditableMappingService @Inject()(
                                userToken: Option[String]): Fox[EditableMapping] =
     for {
       agglomerateGraph <- agglomerateGraphForId(mapping, update.agglomerateId, remoteFallbackLayer, userToken)
+      segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition1, update.mag, userToken)
+      segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2, update.mag, userToken)
       largestExistingAgglomerateId <- largestAgglomerateId(mapping, remoteFallbackLayer, userToken)
       agglomerateId2 = largestExistingAgglomerateId + 1L
-      (graph1, graph2) = splitGraph(agglomerateGraph, update.segmentId1, update.segmentId2)
+      (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
       splitSegmentToAgglomerate = graph2.segments.map(_ -> agglomerateId2).toMap
     } yield
       EditableMapping(
@@ -234,10 +236,11 @@ class EditableMappingService @Inject()(
                                remoteFallbackLayer: RemoteFallbackLayer,
                                userToken: Option[String]): Fox[EditableMapping] =
     for {
-      segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2, userToken)
+      segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition1, update.mag, userToken)
+      segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2, update.mag, userToken)
       agglomerateGraph1 <- agglomerateGraphForId(mapping, update.agglomerateId1, remoteFallbackLayer, userToken)
       agglomerateGraph2 <- agglomerateGraphForId(mapping, update.agglomerateId2, remoteFallbackLayer, userToken)
-      mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, update.segmentId1, segmentId2)
+      mergedGraph = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
       _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "segment as queried by position is not contained in fetched agglomerate graph"
       mergedSegmentToAgglomerate: Map[Long, Long] = agglomerateGraph2.segments
         .map(s => s -> update.agglomerateId1)
@@ -276,12 +279,10 @@ class EditableMappingService @Inject()(
 
   private def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer,
                                       pos: Vec3Int,
+                                      mag: Vec3Int,
                                       userToken: Option[String]): Fox[Long] =
     for {
-      voxelAsBytes: Array[Byte] <- remoteDatastoreClient.getVoxelAtPosition(userToken,
-                                                                            remoteFallbackLayer,
-                                                                            pos,
-                                                                            mag = Vec3Int(1, 1, 1))
+      voxelAsBytes: Array[Byte] <- remoteDatastoreClient.getVoxelAtPosition(userToken, remoteFallbackLayer, pos, mag)
       voxelAsLongArray: Array[Long] <- bytesToLongs(voxelAsBytes, remoteFallbackLayer.elementClass)
       _ <- Fox.bool2Fox(voxelAsLongArray.length == 1) ?~> s"Expected one, got ${voxelAsLongArray.length} segment id values for voxel."
       voxelAsLong <- voxelAsLongArray.headOption
@@ -312,13 +313,14 @@ class EditableMappingService @Inject()(
       editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
       (unmappedData, indices) <- getUnmappedDataFromDatastore(remoteFallbackLayer, dataRequests)
       segmentIds <- collectSegmentIds(unmappedData, tracing.elementClass)
-      relevantMapping <- generateCombinedMappingSubset(segmentIds, editableMapping, remoteFallbackLayer)
+      relevantMapping <- generateCombinedMappingSubset(segmentIds, editableMapping, remoteFallbackLayer, userToken)
       mappedData <- mapData(unmappedData, relevantMapping, tracing.elementClass)
     } yield (mappedData, indices)
 
   private def generateCombinedMappingSubset(segmentIds: Set[Long],
                                             editableMapping: EditableMapping,
-                                            remoteFallbackLayer: RemoteFallbackLayer): Fox[Map[Long, Long]] = {
+                                            remoteFallbackLayer: RemoteFallbackLayer,
+                                            userToken: Option[String]): Fox[Map[Long, Long]] = {
     val segmentIdsInEditableMapping: Set[Long] = segmentIds.intersect(editableMapping.segmentToAgglomerate.keySet)
     val segmentIdsInBaseMapping: Set[Long] = segmentIds.diff(segmentIdsInEditableMapping)
     val editableMappingSubset =
@@ -326,7 +328,8 @@ class EditableMappingService @Inject()(
     for {
       baseMappingSubset <- getBaseSegmentToAgglomeate(editableMapping.baseMappingName,
                                                       segmentIdsInBaseMapping,
-                                                      remoteFallbackLayer)
+                                                      remoteFallbackLayer,
+                                                      userToken)
     } yield editableMappingSubset ++ baseMappingSubset
   }
 
@@ -381,12 +384,14 @@ class EditableMappingService @Inject()(
 
   private def getBaseSegmentToAgglomeate(mappingName: String,
                                          segmentIds: Set[Long],
-                                         remoteFallbackLayer: RemoteFallbackLayer): Fox[Map[Long, Long]] = {
+                                         remoteFallbackLayer: RemoteFallbackLayer,
+                                         userToken: Option[String]): Fox[Map[Long, Long]] = {
     val segmentIdsOrdered = segmentIds.toList
     for {
       agglomerateIdsOrdered <- remoteDatastoreClient.getAgglomerateIdsForSegmentIds(remoteFallbackLayer,
                                                                                     mappingName,
-                                                                                    segmentIdsOrdered)
+                                                                                    segmentIdsOrdered,
+                                                                                    userToken)
     } yield segmentIdsOrdered.zip(agglomerateIdsOrdered).toMap
   }
 

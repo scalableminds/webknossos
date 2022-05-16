@@ -57,7 +57,11 @@ class TSRemoteDatastoreClient @Inject()(
 
   def getAgglomerateIdsForSegmentIds(remoteFallbackLayer: RemoteFallbackLayer,
                                      mappingName: String,
-                                     segmentIdsOrdered: List[Long]): Fox[List[Long]] = ???
+                                     segmentIdsOrdered: List[Long],
+                                     userToken: Option[String]): Fox[List[Long]] =
+    rpc(s"${remoteLayerUri(remoteFallbackLayer)}/agglomerates/$mappingName/agglomeratesForSegments")
+      .addQueryStringOptional("token", userToken)
+      .postJsonWithJsonResponse[List[Long], List[Long]](segmentIdsOrdered)
 
   private def remoteLayerUri(remoteLayer: RemoteFallbackLayer): String =
     s"$datastoreUrl/data/datasets/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/layers/${remoteLayer.layerName}"

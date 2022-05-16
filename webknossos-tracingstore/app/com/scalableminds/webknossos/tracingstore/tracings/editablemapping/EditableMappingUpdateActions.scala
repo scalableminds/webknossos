@@ -6,7 +6,10 @@ import play.api.libs.json.{Format, JsError, JsResult, JsValue, Json, OFormat}
 
 trait EditableMappingUpdateAction {}
 
-case class SplitAgglomerateUpdateAction(agglomerateId: Long, segmentId1: Long, segmentId2: Long)
+case class SplitAgglomerateUpdateAction(agglomerateId: Long,
+                                        segmentPosition1: Vec3Int,
+                                        segmentPosition2: Vec3Int,
+                                        mag: Vec3Int)
     extends EditableMappingUpdateAction {}
 
 object SplitAgglomerateUpdateAction {
@@ -15,8 +18,9 @@ object SplitAgglomerateUpdateAction {
 
 case class MergeAgglomerateUpdateAction(agglomerateId1: Long,
                                         agglomerateId2: Long,
-                                        segmentId1: Long,
-                                        segmentPosition2: Vec3Int) // TODO: needs mag
+                                        segmentPosition1: Vec3Int,
+                                        segmentPosition2: Vec3Int,
+                                        mag: Vec3Int)
     extends EditableMappingUpdateAction {}
 
 object MergeAgglomerateUpdateAction {

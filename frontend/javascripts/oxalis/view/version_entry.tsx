@@ -68,11 +68,11 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     icon: <DeleteOutlined />,
   }),
   splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => ({
-    description: `Split an agglomerate by separating the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
+    description: `Split agglomerate ${action.value.agglomerateId} by separating the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
     icon: <DeleteOutlined />,
   }),
   mergeAgglomerate: (action: MergeAgglomerateUpdateAction): Description => ({
-    description: `Merged two agglomerates by combining the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
+    description: `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
     icon: <PlusOutlined />,
   }),
   deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({

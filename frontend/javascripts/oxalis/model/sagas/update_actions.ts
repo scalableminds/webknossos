@@ -174,15 +174,20 @@ export type UpdateTdCameraUpdateAction = {
 export type SplitAgglomerateUpdateAction = {
   name: "splitAgglomerate";
   value: {
+    agglomerateId: number;
     segmentPosition1: Vector3;
     segmentPosition2: Vector3;
+    mag: Vector3;
   };
 };
 export type MergeAgglomerateUpdateAction = {
   name: "mergeAgglomerate";
   value: {
+    agglomerateId1: number;
+    agglomerateId2: number;
     segmentPosition1: Vector3;
     segmentPosition2: Vector3;
+    mag: Vector3;
   };
 };
 export type UpdateAction =
@@ -529,26 +534,36 @@ export function serverCreateTracing(timestamp: number) {
   };
 }
 export function splitAgglomerate(
+  agglomerateId: number,
   segmentPosition1: Vector3,
   segmentPosition2: Vector3,
+  mag: Vector3,
 ): SplitAgglomerateUpdateAction {
   return {
     name: "splitAgglomerate",
     value: {
+      agglomerateId,
       segmentPosition1,
       segmentPosition2,
+      mag,
     },
   };
 }
 export function mergeAgglomerate(
+  agglomerateId1: number,
+  agglomerateId2: number,
   segmentPosition1: Vector3,
   segmentPosition2: Vector3,
+  mag: Vector3,
 ): MergeAgglomerateUpdateAction {
   return {
     name: "mergeAgglomerate",
     value: {
+      agglomerateId1,
+      agglomerateId2,
       segmentPosition1,
       segmentPosition2,
+      mag,
     },
   };
 }

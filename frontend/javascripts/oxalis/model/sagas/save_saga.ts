@@ -45,7 +45,7 @@ import {
   centerActiveNodeAction,
   setTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import type { UndoAction, RedoAction } from "oxalis/model/actions/save_actions";
+import type { UndoAction, RedoAction, SaveQueueType } from "oxalis/model/actions/save_actions";
 import {
   shiftSaveQueueAction,
   setSaveBusyAction,
@@ -717,12 +717,9 @@ function* applyAndGetRevertingVolumeBatch(
   };
 }
 
-export function* pushTracingTypeAsync(
-  tracingType: "skeleton" | "volume",
-  tracingId: string,
-): Saga<void> {
+export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: string): Saga<void> {
   yield* take("WK_READY");
-  yield* put(setLastSaveTimestampAction(tracingType, tracingId));
+  yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
   let loopCounter = 0;
 
   while (true) {
@@ -730,7 +727,7 @@ export function* pushTracingTypeAsync(
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
     // could have been triggered during the call to sendRequestToServer
-    saveQueue = yield* select((state) => selectQueue(state, tracingType, tracingId));
+    saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
 
     if (saveQueue.length === 0) {
       if (loopCounter % 100 === 0) {
@@ -747,21 +744,21 @@ export function* pushTracingTypeAsync(
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
-    yield* put(setSaveBusyAction(true, tracingType));
+    yield* put(setSaveBusyAction(true, saveQueueType));
 
     if (forcePush) {
       while (true) {
         // Send batches to the server until the save queue is empty.
-        saveQueue = yield* select((state) => selectQueue(state, tracingType, tracingId));
+        saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
 
         if (saveQueue.length > 0) {
-          yield* call(sendRequestToServer, tracingType, tracingId);
+          yield* call(sendRequestToServer, saveQueueType, tracingId);
         } else {
           break;
         }
       }
     } else {
-      saveQueue = yield* select((state) => selectQueue(state, tracingType, tracingId));
+      saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
 
       if (saveQueue.length > 0) {
         // Saving the tracing automatically (via timeout) only saves the current state.
@@ -769,11 +766,11 @@ export function* pushTracingTypeAsync(
         // important when the auto-saving happens during continuous movements.
         // Always draining the save queue completely would mean that save
         // requests are sent as long as the user moves.
-        yield* call(sendRequestToServer, tracingType, tracingId);
+        yield* call(sendRequestToServer, saveQueueType, tracingId);
       }
     }
 
-    yield* put(setSaveBusyAction(false, tracingType));
+    yield* put(setSaveBusyAction(false, saveQueueType));
   }
 }
 export function sendRequestWithToken(
@@ -808,14 +805,13 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
-export function* sendRequestToServer(
-  tracingType: "skeleton" | "volume",
-  tracingId: string,
-): Saga<void> {
-  const fullSaveQueue = yield* select((state) => selectQueue(state, tracingType, tracingId));
+export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: string): Saga<void> {
+  const fullSaveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
-  const { version, type } = yield* select((state) => selectTracing(state, tracingType, tracingId));
+  const { version, type } = yield* select((state) =>
+    selectTracing(state, saveQueueType, tracingId),
+  );
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
   let retryCount = 0;
@@ -846,12 +842,12 @@ export function* sendRequestToServer(
       }
 
       yield* put(
-        setVersionNumberAction(version + compactedSaveQueue.length, tracingType, tracingId),
+        setVersionNumberAction(version + compactedSaveQueue.length, saveQueueType, tracingId),
       );
-      yield* put(setLastSaveTimestampAction(tracingType, tracingId));
-      yield* put(shiftSaveQueueAction(saveQueue.length, tracingType, tracingId));
+      yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
+      yield* put(shiftSaveQueueAction(saveQueue.length, saveQueueType, tracingId));
 
-      if (tracingType === "volume") {
+      if (saveQueueType === "volume") {
         try {
           yield* call(markBucketsAsNotDirty, compactedSaveQueue, tracingId);
         } catch (error) {
@@ -1002,19 +998,19 @@ export function* saveTracingTypeAsync(
   /*
     Listen to changes to the annotation and derive UpdateActions from the
     old and new state.
-     The actual push to the server is done by the forked pushTracingTypeAsync saga.
+     The actual push to the server is done by the forked pushSaveQueueAsync saga.
   */
-  const tracingType =
+  const saveQueueType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  yield* fork(pushTracingTypeAsync, tracingType, tracingId);
-  let prevTracing = yield* select((state) => selectTracing(state, tracingType, tracingId));
+  yield* fork(pushSaveQueueAsync, saveQueueType, tracingId);
+  let prevTracing = yield* select((state) => selectTracing(state, saveQueueType, tracingId));
   let prevFlycam = yield* select((state) => state.flycam);
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
   yield* take("WK_READY");
 
   while (true) {
-    if (tracingType === "skeleton") {
+    if (saveQueueType === "skeleton") {
       yield* take([
         ...SkeletonTracingSaveRelevantActions,
         ...FlycamActions,
@@ -1036,7 +1032,7 @@ export function* saveTracingTypeAsync(
       (state) => state.tracing.restrictions.allowUpdate && state.tracing.restrictions.allowSave,
     );
     if (!allowUpdate) return;
-    const tracing = yield* select((state) => selectTracing(state, tracingType, tracingId));
+    const tracing = yield* select((state) => selectTracing(state, saveQueueType, tracingId));
     const flycam = yield* select((state) => state.flycam);
     const tdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
     const items = compactUpdateActions(
@@ -1055,7 +1051,7 @@ export function* saveTracingTypeAsync(
     );
 
     if (items.length > 0) {
-      yield* put(pushSaveQueueTransaction(items, tracingType, tracingId));
+      yield* put(pushSaveQueueTransaction(items, saveQueueType, tracingId));
     }
 
     prevTracing = tracing;

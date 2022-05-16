@@ -80,6 +80,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { SaveQueueType } from "oxalis/model/actions/save_actions";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -835,11 +836,11 @@ export async function getTracingForAnnotationType(
 export function getUpdateActionLog(
   tracingStoreUrl: string,
   tracingId: string,
-  tracingType: "skeleton" | "volume",
+  versionedObjectType: SaveQueueType,
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?token=${token}`,
     ),
   );
 }

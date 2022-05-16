@@ -138,7 +138,7 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   if (items.length === 0) return;
 
   // TODO: Will there be a separate end point for these update actions?
-  yield* put(pushSaveQueueTransaction(items, "editableMapping", volumeTracingId));
+  yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
 
   yield* call([api.data, api.data.reloadBuckets], layerName);

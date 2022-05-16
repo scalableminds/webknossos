@@ -228,7 +228,7 @@ annotationSpecs.map(async (annotationSpec) => {
         (condition) => {
           t.true(
             condition,
-            `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
+            `Annotation for dataset with name: "${datasetName}" does not look the same, see annotation_${datasetName}_${fallbackLayerName}.diff.png for the difference and annotation_${datasetName}_${fallbackLayerName}.new.png for the new screenshot.`,
           );
         },
       );

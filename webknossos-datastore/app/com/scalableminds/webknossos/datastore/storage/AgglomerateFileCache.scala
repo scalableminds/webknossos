@@ -1,50 +1,59 @@
 package com.scalableminds.webknossos.datastore.storage
 
+import java.nio.file.Path
 import java.util
+
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
-import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
-import com.scalableminds.webknossos.datastore.storage
-import spire.math.{ULong, min, max}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
+import spire.math.{ULong, max, min}
 
 import scala.collection.mutable
 
 case class CachedAgglomerateFile(reader: IHDF5Reader,
                                  dataset: HDF5DataSet,
+                                 agglomerateIdCache: AgglomerateIdCache,
                                  cache: Either[AgglomerateIdCache, BoundingBoxCache])
     extends SafeCachable {
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
 
 case class AgglomerateFileKey(
-    organization: String,
-    dataSourceName: String,
-    dataLayerName: String,
-    agglomerateName: String
-)
+    organizationName: String,
+    dataSetName: String,
+    layerName: String,
+    mappingName: String
+) {
+  def path(dataBaseDir: Path, agglomerateDir: String, agglomerateFileExtension: String): Path =
+    dataBaseDir
+      .resolve(organizationName)
+      .resolve(dataSetName)
+      .resolve(layerName)
+      .resolve(agglomerateDir)
+      .resolve(s"$mappingName.$agglomerateFileExtension")
+}
 
 object AgglomerateFileKey {
-  def from(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
-    storage.AgglomerateFileKey(dataRequest.dataSource.id.team,
-                               dataRequest.dataSource.id.name,
-                               dataRequest.dataLayer.name,
-                               dataRequest.settings.appliedAgglomerate.get)
+  def fromDataRequest(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
+    AgglomerateFileKey(dataRequest.dataSource.id.team,
+                       dataRequest.dataSource.id.name,
+                       dataRequest.dataLayer.name,
+                       dataRequest.settings.appliedAgglomerate.get)
 }
 
 class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateFileKey, CachedAgglomerateFile] {
   override def onElementRemoval(key: AgglomerateFileKey, value: CachedAgglomerateFile): Unit =
     value.scheduleForRemoval()
 
-  def withCache(dataRequest: DataServiceDataRequest)(
-      loadFn: DataServiceDataRequest => CachedAgglomerateFile): CachedAgglomerateFile = {
-    val agglomerateFileKey = AgglomerateFileKey.from(dataRequest)
+  def withCache(agglomerateFileKey: AgglomerateFileKey)(
+      loadFn: AgglomerateFileKey => CachedAgglomerateFile): CachedAgglomerateFile = {
 
     def handleUncachedAgglomerateFile() = {
-      val agglomerateFile = loadFn(dataRequest)
+      val agglomerateFile = loadFn(agglomerateFileKey)
       // We don't need to check the return value of the `tryAccess` call as we just created the agglomerate file and use it only to increase the access counter.
       agglomerateFile.tryAccess()
       put(agglomerateFileKey, agglomerateFile)

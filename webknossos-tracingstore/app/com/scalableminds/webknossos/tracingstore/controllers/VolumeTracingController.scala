@@ -12,11 +12,16 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, Volu
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
+import com.scalableminds.webknossos.tracingstore.tracings.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
   EditableMappingUpdateAction
 }
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ResolutionRestrictions,
+  UpdateMappingNameAction,
+  VolumeTracingService
+}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreAccessTokenService}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
@@ -243,14 +248,29 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
 
-  def createEditableMapping(token: Option[String], tracingId: String): Action[AnyContent] =
+  def makeMappingEditable(token: Option[String], tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
         for {
           tracing <- tracingService.find(tracingId)
           tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
           id <- editableMappingService.create(baseMappingName = tracingMappingName)
-        } yield Ok(id)
+          volumeUpdate = UpdateMappingNameAction(id,
+                                                 isEditable = Some(true),
+                                                 actionTimestamp = Some(System.currentTimeMillis()))
+          _ <- tracingService.handleUpdateGroup(
+            tracingId,
+            UpdateActionGroup[VolumeTracing](tracing.version + 1,
+                                             System.currentTimeMillis(),
+                                             List(volumeUpdate),
+                                             None,
+                                             None,
+                                             None,
+                                             None,
+                                             None),
+            tracing.version
+          )
+        } yield Ok
       }
     }
 
@@ -269,4 +289,18 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
         } yield Ok
       }
     }
+
+  def editableMappingUpdateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            mappingName <- tracing.mappingName.toFox
+            _ <- Fox.assertTrue(editableMappingService.exists(mappingName))
+            updateLog <- editableMappingService.updateActionLog(mappingName)
+          } yield Ok(updateLog)
+        }
+      }
+  }
 }

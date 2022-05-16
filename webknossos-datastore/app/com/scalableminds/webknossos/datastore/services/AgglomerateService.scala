@@ -4,6 +4,7 @@ import java.nio._
 import java.nio.file.{Files, Paths}
 
 import ch.systemsx.cisd.hdf5._
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree}
@@ -14,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataReq
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
@@ -45,10 +47,13 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     def intFunc(buf: ByteBuffer, lon: Long) = buf putInt lon.toInt
     def longFunc(buf: ByteBuffer, lon: Long) = buf putLong lon
 
+    val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
+
     def convertToAgglomerate(input: Array[ULong],
                              numBytes: Int,
                              bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
-      val cachedAgglomerateFile = agglomerateFileCache.withCache(request)(initHDFReader)
+
+      val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
 
       val agglomerateIds = cachedAgglomerateFile.cache match {
         case Left(agglomerateIdCache) =>
@@ -86,36 +91,31 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   // In this array, the agglomerate id is found by using the segment id as index.
   // There are two ways of how we prevent a file lookup for every input element. When present, we use the cumsum.json to initialize a BoundingBoxCache (see comment there).
   // Otherwise, we read configurable sized blocks from the agglomerate file and save them in a LRU cache.
-  private def initHDFReader(request: DataServiceDataRequest) = {
+  private def initHDFReader(agglomerateFileKey: AgglomerateFileKey) = {
     val hdfFile =
-      dataBaseDir
-        .resolve(request.dataSource.id.team)
-        .resolve(request.dataSource.id.name)
-        .resolve(request.dataLayer.name)
-        .resolve(agglomerateDir)
-        .resolve(s"${request.settings.appliedAgglomerate.get}.$agglomerateFileExtension")
-        .toFile
+      agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
 
     val cumsumPath =
       dataBaseDir
-        .resolve(request.dataSource.id.team)
-        .resolve(request.dataSource.id.name)
-        .resolve(request.dataLayer.name)
+        .resolve(agglomerateFileKey.organizationName)
+        .resolve(agglomerateFileKey.dataSetName)
+        .resolve(agglomerateFileKey.layerName)
         .resolve(agglomerateDir)
         .resolve(cumsumFileName)
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
 
-    val cache: Either[AgglomerateIdCache, BoundingBoxCache] =
+    val agglomerateIdCache = new AgglomerateIdCache(config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
+                                                    config.Datastore.Cache.AgglomerateFile.blockSize)
+
+    val defaultCache: Either[AgglomerateIdCache, BoundingBoxCache] =
       if (Files.exists(cumsumPath)) {
         Right(CumsumParser.parse(cumsumPath.toFile, ULong(config.Datastore.Cache.AgglomerateFile.cumsumMaxReaderRange)))
       } else {
-        Left(
-          new AgglomerateIdCache(config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
-                                 config.Datastore.Cache.AgglomerateFile.blockSize))
+        Left(agglomerateIdCache)
       }
 
-    CachedAgglomerateFile(reader, reader.`object`().openDataSet(datasetName), cache)
+    CachedAgglomerateFile(reader, reader.`object`().openDataSet(datasetName), agglomerateIdCache, defaultCache)
   }
 
   def generateSkeleton(organizationName: String,
@@ -191,28 +191,65 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       case e: Exception => Failure(e.getMessage)
     }
 
-  def largestAgglomerateId(organizationName: String,
-                           dataSetName: String,
-                           dataLayerName: String,
-                           mappingName: String): Box[Long] = {
-    val hdfFile =
-      dataBaseDir
-        .resolve(organizationName)
-        .resolve(dataSetName)
-        .resolve(dataLayerName)
-        .resolve(agglomerateDir)
-        .resolve(s"$mappingName.$agglomerateFileExtension")
-        .toFile
+  def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey): Box[Long] = {
+    val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
 
-    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    Full(0L)
+    tryo {
+      val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+      reader.`object`().getNumberOfElements("/agglomerate_to_segments_offsets") - 1L
+    }
   }
 
-  def generateAgglomerateGraph(organizationName: String,
-                               dataSetName: String,
-                               dataLayerName: String,
-                               mappingName: String,
-                               agglomerateId: Long): Box[AgglomerateGraph] =
-    Full(AgglomerateGraph.empty)
+  def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: List[Long]): Box[List[Long]] = {
+    val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
+
+    tryo {
+      val agglomerateIds = segmentIds.map { segmentId =>
+        cachedAgglomerateFile.agglomerateIdCache.withCache(ULong(segmentId),
+                                                           cachedAgglomerateFile.reader,
+                                                           cachedAgglomerateFile.dataset)(readHDF)
+      }
+      cachedAgglomerateFile.finishAccess()
+      agglomerateIds
+    }
+
+  }
+
+  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] =
+    tryo {
+      val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
+
+      val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+
+      val positionsRange: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+      val edgesRange: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
+
+      val nodeCount = positionsRange(1) - positionsRange(0)
+      val edgeCount = edgesRange(1) - edgesRange(0)
+      val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      if (nodeCount > edgeLimit) {
+        throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
+      }
+      if (edgeCount > edgeLimit) {
+        throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
+      }
+      val segmentIds: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", nodeCount.toInt, positionsRange(0))
+      val positions: Array[Array[Long]] =
+        reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
+      val edges: Array[Array[Long]] =
+        reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
+      val affinities: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_affinities", edgeCount.toInt, edgesRange(0))
+
+      AgglomerateGraph(
+        segments = segmentIds.toList,
+        edges = edges.toList.map(e => (e(0), e(1))),
+        positions = positions.toList.map(pos => Vec3Int(pos(0).toInt, pos(1).toInt, pos(2).toInt)),
+        affinities = affinities.toList
+      )
+    }
 
 }

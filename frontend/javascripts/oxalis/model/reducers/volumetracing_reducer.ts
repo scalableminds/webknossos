@@ -284,6 +284,12 @@ function VolumeTracingReducer(
       );
     }
 
+    case "SET_MAPPING_IS_EDITABLE": {
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        mappingIsEditable: true,
+      });
+    }
+
     default:
       return state;
   }

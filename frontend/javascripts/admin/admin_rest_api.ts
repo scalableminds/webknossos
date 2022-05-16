@@ -1562,6 +1562,17 @@ export function fetchMapping(
   );
 }
 
+export function makeMappingEditable(tracingStoreUrl: string, tracingId: string): Promise<void> {
+  return doWithToken((token) =>
+    Request.triggerRequest(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
+      {
+        method: "POST",
+      },
+    ),
+  );
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,

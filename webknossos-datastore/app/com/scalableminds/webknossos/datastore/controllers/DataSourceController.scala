@@ -16,6 +16,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 import java.io.File
 
+import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
 
@@ -337,10 +338,7 @@ Expects:
                                       token) {
       for {
         agglomerateGraph <- binaryDataServiceHolder.binaryDataService.agglomerateService.generateAgglomerateGraph(
-          organizationName,
-          dataSetName,
-          dataLayerName,
-          mappingName,
+          AgglomerateFileKey(organizationName, dataSetName, dataLayerName, mappingName),
           agglomerateId) ?~> "agglomerateGraph.failed"
       } yield Ok(Json.toJson(agglomerateGraph))
     }
@@ -359,13 +357,41 @@ Expects:
       for {
         largestAgglomerateId: Long <- binaryDataServiceHolder.binaryDataService.agglomerateService
           .largestAgglomerateId(
-            organizationName,
-            dataSetName,
-            dataLayerName,
-            mappingName,
+            AgglomerateFileKey(
+              organizationName,
+              dataSetName,
+              dataLayerName,
+              mappingName
+            )
           )
           .toFox
       } yield Ok(Json.toJson(largestAgglomerateId))
+    }
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def agglomerateIdsForSegmentIds(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      mappingName: String
+  ): Action[List[Long]] = Action.async(validateJson[List[Long]]) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+      for {
+        agglomerateIds: List[Long] <- binaryDataServiceHolder.binaryDataService.agglomerateService
+          .agglomerateIdsForSegmentIds(
+            AgglomerateFileKey(
+              organizationName,
+              dataSetName,
+              dataLayerName,
+              mappingName
+            ),
+            request.body
+          )
+          .toFox
+      } yield Ok(Json.toJson(agglomerateIds))
     }
   }
 

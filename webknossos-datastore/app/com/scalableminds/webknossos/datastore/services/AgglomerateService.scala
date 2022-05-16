@@ -4,6 +4,7 @@ import java.nio._
 import java.nio.file.{Files, Paths}
 
 import ch.systemsx.cisd.hdf5._
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree}
@@ -194,6 +195,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+    
     Full(0L)
   }
 
@@ -213,9 +215,41 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   }
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] = {
-    val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
+    tryo {
+      val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
 
-    Full(AgglomerateGraph.empty)
+      val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+
+      val positionsRange: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+      val edgesRange: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
+
+      val nodeCount = positionsRange(1) - positionsRange(0)
+      val edgeCount = edgesRange(1) - edgesRange(0)
+      val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      if (nodeCount > edgeLimit) {
+        throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
+      }
+      if (edgeCount > edgeLimit) {
+        throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
+      }
+      val segmentIds: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", nodeCount.toInt, positionsRange(0))
+      val positions: Array[Array[Long]] =
+        reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
+      val edges: Array[Array[Long]] =
+        reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
+      val affinities: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_affinities", edgeCount.toInt, edgesRange(0))
+
+      AgglomerateGraph(
+        segments = segmentIds.toList,
+        edges = edges.toList.map(e => (e(0), e(1))),
+        positions = positions.toList.map(pos => Vec3Int(pos(0).toInt, pos(1).toInt, pos(2).toInt)),
+        affinities = affinities.toList
+      )
+    }
   }
 
 }

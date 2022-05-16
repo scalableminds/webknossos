@@ -540,7 +540,7 @@ class TracingApi {
     const { task } = state;
 
     if (task == null) {
-      // Satisfy flow
+      // Satisfy typescript
       throw new Error("Cannot find task to finish.");
     }
 

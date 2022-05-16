@@ -474,7 +474,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             const toggledTreeState = toggleAllTreesReducer(state, skeletonTracing);
 
             if (toggledTreeState.tracing.skeleton == null) {
-              throw new Error("Satisfy flow");
+              throw new Error("Satisfy typescript");
             }
 
             // Ensure the active group is visible

@@ -552,6 +552,7 @@ function determineDefaultState(
     zoomStep: urlStateZoomStep,
     rotation: urlStateRotation,
     activeNode: urlStateActiveNode,
+    stateByLayer: urlStateByLayer,
     ...rest
   } = urlState;
   // If there is no editPosition (e.g. when viewing a dataset) and
@@ -594,12 +595,34 @@ function determineDefaultState(
     rotation = urlStateRotation;
   }
 
+  const stateByLayer = urlStateByLayer ?? {};
+
+  const volumeTracings = tracings.filter(
+    (tracing) => tracing.typ === "Volume",
+  ) as ServerVolumeTracing[];
+  for (const volumeTracing of volumeTracings) {
+    const { id: layerName, mappingName } = volumeTracing;
+
+    if (mappingName == null) continue;
+
+    if (!(layerName in stateByLayer)) {
+      stateByLayer[layerName] = {};
+    }
+    if (stateByLayer[layerName].mappingInfo == null) {
+      stateByLayer[layerName].mappingInfo = {
+        mappingName,
+        mappingType: "HDF5",
+      };
+    }
+  }
+
   const activeNode = urlStateActiveNode;
   return {
     position,
     zoomStep,
     rotation,
     activeNode,
+    stateByLayer,
     ...rest,
   };
 }

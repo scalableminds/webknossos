@@ -222,6 +222,8 @@ export type VolumeTracing = TracingBase & {
   // Stores points of the currently drawn region in global coordinates
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
+  readonly mappingName?: string | null | undefined;
+  readonly mappingIsEditable?: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";

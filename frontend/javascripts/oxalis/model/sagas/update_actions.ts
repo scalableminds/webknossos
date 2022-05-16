@@ -171,6 +171,12 @@ export type UpdateTdCameraUpdateAction = {
   name: "updateTdCamera";
   value: {};
 };
+export type UpdateMappingNameUpdateAction = {
+  name: "updateMappingName";
+  value: {
+    mappingName: string | null | undefined;
+  };
+};
 export type SplitAgglomerateUpdateAction = {
   name: "splitAgglomerate";
   value: {
@@ -213,6 +219,7 @@ export type UpdateAction =
   | UpdateTreeGroupsUpdateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateTdCameraUpdateAction
+  | UpdateMappingNameUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
 // This update action is only created in the frontend for display purposes
@@ -234,7 +241,7 @@ type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
 };
 
 type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
-// Since flow does not provide ways to perform type transformations on the
+// Since typescript does not provide ways to perform type transformations on the
 // single parts of a union, we need to write this out manually.
 export type ServerUpdateAction =
   | AsServerAction<UpdateTreeUpdateAction>
@@ -257,12 +264,14 @@ export type ServerUpdateAction =
   | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
   | AsServerAction<RevertToVersionUpdateAction>
   | AsServerAction<UpdateTreeGroupsUpdateAction>
-  | AsServerAction<CreateTracingUpdateAction>
   | AsServerAction<RemoveFallbackLayerUpdateAction>
   | AsServerAction<UpdateTdCameraUpdateAction>
-  | AsServerAction<ImportVolumeTracingUpdateAction>
+  | AsServerAction<UpdateMappingNameUpdateAction>
   | AsServerAction<SplitAgglomerateUpdateAction>
-  | AsServerAction<MergeAgglomerateUpdateAction>;
+  | AsServerAction<MergeAgglomerateUpdateAction>
+  // These two actions are never sent by the frontend and, therefore, don't exist in the UpdateAction type
+  | AsServerAction<ImportVolumeTracingUpdateAction>
+  | AsServerAction<CreateTracingUpdateAction>;
 export function createTree(tree: Tree): UpdateTreeUpdateAction {
   return {
     name: "createTree",
@@ -531,6 +540,14 @@ export function serverCreateTracing(timestamp: number) {
     value: {
       actionTimestamp: timestamp,
     },
+  };
+}
+export function updateMappingName(
+  mappingName: string | null | undefined,
+): UpdateMappingNameUpdateAction {
+  return {
+    name: "updateMappingName",
+    value: { mappingName },
   };
 }
 export function splitAgglomerate(

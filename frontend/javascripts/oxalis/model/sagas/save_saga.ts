@@ -102,6 +102,10 @@ import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update
 import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
+import type {
+  SetMappingAction,
+  SetMappingEnabledAction,
+} from "oxalis/model/actions/settings_actions";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 // This function is needed so that Flow is satisfied
@@ -1015,6 +1019,8 @@ export function* saveTracingTypeAsync(
         ...SkeletonTracingSaveRelevantActions,
         ...FlycamActions,
         ...ViewModeSaveRelevantActions,
+        // SET_TRACING is not included in SkeletonTracingSaveRelevantActions, because it is used by Undo/Redo and
+        // should not create its own Undo/Redo stack entry
         "SET_TRACING",
       ]);
     } else {

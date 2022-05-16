@@ -608,6 +608,8 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // https://github.com/scalableminds/webknossos/pull/4755
   resolutions?: Array<Point3>;
   organizationName?: string;
+  mappingName?: string | null | undefined;
+  mappingIsEditable?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type APIMeshFile = {

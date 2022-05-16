@@ -242,7 +242,8 @@ object DeleteSegmentVolumeAction {
   implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]
 }
 
-case class UpdateMappingNameAction(mappingName: String, actionTimestamp: Option[Long]) extends ApplyableVolumeAction {
+case class UpdateMappingNameAction(mappingName: String, isEditable: Option[Boolean], actionTimestamp: Option[Long])
+    extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
@@ -250,7 +251,7 @@ case class UpdateMappingNameAction(mappingName: String, actionTimestamp: Option[
     CompactVolumeUpdateAction("updateMappingName", actionTimestamp, Json.obj("mappingName" -> mappingName))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withMappingName(mappingName)
+    tracing.withMappingName(mappingName).withMappingIsEditable(isEditable.getOrElse(false))
 }
 
 object UpdateMappingNameAction {

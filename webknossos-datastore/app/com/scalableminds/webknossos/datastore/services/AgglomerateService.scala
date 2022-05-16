@@ -194,9 +194,10 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey): Box[Long] = {
     val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
 
-    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    
-    Full(0L)
+    tryo {
+      val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+      reader.`object`().getNumberOfElements("/agglomerate_to_segments_offsets") - 1L
+    }
   }
 
   def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: List[Long]): Box[List[Long]] = {
@@ -214,7 +215,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
   }
 
-  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] = {
+  def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] =
     tryo {
       val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
 
@@ -250,6 +251,5 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         affinities = affinities.toList
       )
     }
-  }
 
 }

@@ -24,6 +24,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Empty, Full}
+import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -60,6 +61,20 @@ class EditableMappingService @Inject()(
                                                                               version = Some(0L),
                                                                               emptyFallback = Some(-1L))
     } yield versionOrMinusOne >= 0
+
+  def updateActionLog(editableMappingId: String): Fox[JsValue] = {
+    def versionedTupleToJson(tuple: (Long, List[EditableMappingUpdateAction])): JsObject =
+      Json.obj(
+        "version" -> tuple._1,
+        "value" -> Json.toJson(tuple._2)
+      )
+
+    for {
+      updates <- tracingDataStore.editableMappingUpdates.getMultipleVersionsAsVersionValueTuple(editableMappingId)(
+        fromJson[List[EditableMappingUpdateAction]])
+      updateActionGroupsJs = updates.map(versionedTupleToJson)
+    } yield Json.toJson(updateActionGroupsJs)
+  }
 
   private def get(editableMappingId: String,
                   remoteFallbackLayer: RemoteFallbackLayer,

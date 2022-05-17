@@ -115,7 +115,7 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
 
   const items = [];
   if (action.type === "MERGE_TREES") {
-    if (sourceTree === targetTree || sourceNodeAgglomerateId === targetNodeAgglomerateId) {
+    if (sourceNodeAgglomerateId === targetNodeAgglomerateId) {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
       return;
     }
@@ -129,7 +129,7 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
       ),
     );
   } else if (action.type === "DELETE_EDGE") {
-    if (sourceTree !== targetTree || sourceNodeAgglomerateId !== targetNodeAgglomerateId) {
+    if (sourceNodeAgglomerateId !== targetNodeAgglomerateId) {
       Toast.error("Segments that should be split need to be in the same agglomerate.");
       return;
     }

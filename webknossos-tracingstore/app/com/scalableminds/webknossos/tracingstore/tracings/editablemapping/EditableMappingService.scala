@@ -42,6 +42,16 @@ class EditableMappingService @Inject()(
   def currentVersion(editableMappingId: String): Fox[Long] =
     tracingDataStore.editableMappings.getVersion(editableMappingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
+  def infoJson(tracingId: String, editableMappingId: String): Fox[JsObject] =
+    for {
+      version <- currentVersion(editableMappingId)
+    } yield
+      Json.obj(
+        "mappingName" -> editableMappingId,
+        "version" -> version,
+        "tracingId" -> tracingId
+      )
+
   def create(baseMappingName: String): Fox[String] = {
     val newId = generateId
     val newEditableMapping = EditableMapping(

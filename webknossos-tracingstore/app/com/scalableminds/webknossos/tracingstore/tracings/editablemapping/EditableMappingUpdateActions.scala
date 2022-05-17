@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.util.geometry.Vec3Int
 import play.api.libs.json.Format.GenericFormat
-import play.api.libs.json.{Format, JsError, JsResult, JsValue, Json, OFormat}
+import play.api.libs.json._
 
 trait EditableMappingUpdateAction {}
 
@@ -45,4 +45,14 @@ object EditableMappingUpdateAction {
     }
   }
 
+}
+
+case class EditableMappingUpdateActionGroup(
+    version: Long,
+    timestamp: Long,
+    actions: List[EditableMappingUpdateAction]
+)
+
+object EditableMappingUpdateActionGroup {
+  implicit val jsonFormat: OFormat[EditableMappingUpdateActionGroup] = Json.format[EditableMappingUpdateActionGroup]
 }

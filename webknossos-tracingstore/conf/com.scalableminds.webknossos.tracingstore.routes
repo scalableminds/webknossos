@@ -22,11 +22,14 @@ POST        /volume/:tracingId/importVolumeData                 @com.scalablemin
 GET         /volume/:tracingId/findData                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.findData(token: Option[String], tracingId: String)
 GET         /volume/:tracingId/agglomerateSkeleton/:agglomerateId     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.agglomerateSkeleton(token: Option[String], tracingId: String, agglomerateId: Long)
 POST        /volume/:tracingId/makeMappingEditable              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.makeMappingEditable(token: Option[String], tracingId: String)
-POST        /volume/:tracingId/updateEditableMapping            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateEditableMapping(token: Option[String], tracingId: String, version: Long)
-GET         /volume/:tracingId/editableMappingUpdateActionLog   @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingUpdateActionLog(token: Option[String], tracingId: String)
 POST        /volume/getMultiple                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple(token: Option[String])
 POST        /volume/mergedFromIds                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromIds(token: Option[String], persist: Boolean)
 POST        /volume/mergedFromContents                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromContents(token: Option[String], persist: Boolean)
+
+# Editable Mappings
+POST        /mapping/:tracingId/update                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateEditableMapping(token: Option[String], tracingId: String)
+GET         /mapping/:tracingId/updateActionLog                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingUpdateActionLog(token: Option[String], tracingId: String)
+GET         /mapping/:tracingId                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingInfo(token: Option[String], tracingId: String)
 
 # Skeleton tracings
 POST        /skeleton/save                                      @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.save(token: Option[String])

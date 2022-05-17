@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
-  EditableMappingUpdateAction
+  EditableMappingUpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ResolutionRestrictions,
@@ -254,8 +254,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
         for {
           tracing <- tracingService.find(tracingId)
           tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
-          id <- editableMappingService.create(baseMappingName = tracingMappingName)
-          volumeUpdate = UpdateMappingNameAction(id,
+          editableMappingId <- editableMappingService.create(baseMappingName = tracingMappingName)
+          volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
                                                  isEditable = Some(true),
                                                  actionTimestamp = Some(System.currentTimeMillis()))
           _ <- tracingService.handleUpdateGroup(
@@ -270,22 +270,23 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
                                              None),
             tracing.version
           )
-        } yield Ok
+          infoJson <- editableMappingService.infoJson(tracingId = tracingId, editableMappingId = editableMappingId)
+        } yield Ok(infoJson)
       }
     }
 
-  def updateEditableMapping(token: Option[String],
-                            tracingId: String,
-                            version: Long): Action[EditableMappingUpdateAction] =
-    Action.async(validateJson[EditableMappingUpdateAction]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+  def updateEditableMapping(token: Option[String], tracingId: String): Action[EditableMappingUpdateActionGroup] =
+    Action.async(validateJson[EditableMappingUpdateActionGroup]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), token) {
         for {
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName.toFox
           _ <- Fox.assertTrue(editableMappingService.exists(mappingName))
           currentVersion <- editableMappingService.currentVersion(mappingName)
-          _ <- bool2Fox(version == currentVersion + 1) ?~> "version mismatch"
-          _ <- editableMappingService.update(mappingName, request.body, version)
+          _ <- bool2Fox(request.body.version == currentVersion + 1) ?~> "version mismatch"
+          _ <- bool2Fox(request.body.actions.length == 1) ?~> "Editable mapping update group must contain exactly one update action"
+          updateAction <- request.body.actions.headOption.toFox
+          _ <- editableMappingService.update(mappingName, updateAction, request.body.version)
         } yield Ok
       }
     }
@@ -300,6 +301,19 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             _ <- Fox.assertTrue(editableMappingService.exists(mappingName))
             updateLog <- editableMappingService.updateActionLog(mappingName)
           } yield Ok(updateLog)
+        }
+      }
+  }
+
+  def editableMappingInfo(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            mappingName <- tracing.mappingName.toFox
+            infoJson <- editableMappingService.infoJson(tracingId = tracingId, editableMappingId = mappingName)
+          } yield Ok(infoJson)
         }
       }
   }

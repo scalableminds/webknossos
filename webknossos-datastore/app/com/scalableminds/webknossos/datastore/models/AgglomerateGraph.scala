@@ -6,7 +6,7 @@ import play.api.libs.json.{Json, OFormat}
 case class AgglomerateGraph(segments: List[Long],
                             edges: List[(Long, Long)],
                             positions: List[Vec3Int],
-                            affinities: List[Long])
+                            affinities: List[Float])
 
 object AgglomerateGraph {
   implicit val jsonFormat: OFormat[AgglomerateGraph] = Json.format[AgglomerateGraph]

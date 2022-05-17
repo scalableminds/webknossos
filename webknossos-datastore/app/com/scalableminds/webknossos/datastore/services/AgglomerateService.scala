@@ -241,8 +241,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
       val edges: Array[Array[Long]] =
         reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
-      val affinities: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_affinities", edgeCount.toInt, edgesRange(0))
+      val affinities: Array[Float] =
+        reader.float32().readArrayBlockWithOffset("/agglomerate_to_affinities", edgeCount.toInt, edgesRange(0))
 
       AgglomerateGraph(
         segments = segmentIds.toList,

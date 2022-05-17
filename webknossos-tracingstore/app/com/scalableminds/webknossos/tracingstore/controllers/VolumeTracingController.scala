@@ -275,18 +275,20 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
 
-  def updateEditableMapping(token: Option[String], tracingId: String): Action[EditableMappingUpdateActionGroup] =
-    Action.async(validateJson[EditableMappingUpdateActionGroup]) { implicit request =>
+  def updateEditableMapping(token: Option[String], tracingId: String): Action[List[EditableMappingUpdateActionGroup]] =
+    Action.async(validateJson[List[EditableMappingUpdateActionGroup]]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), token) {
         for {
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName.toFox
           _ <- Fox.assertTrue(editableMappingService.exists(mappingName))
           currentVersion <- editableMappingService.currentVersion(mappingName)
-          _ <- bool2Fox(request.body.version == currentVersion + 1) ?~> "version mismatch"
-          _ <- bool2Fox(request.body.actions.length == 1) ?~> "Editable mapping update group must contain exactly one update action"
-          updateAction <- request.body.actions.headOption.toFox
-          _ <- editableMappingService.update(mappingName, updateAction, request.body.version)
+          _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update group must contain exactly one update group"
+          updateGroup <- request.body.headOption.toFox
+          _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
+          _ <- bool2Fox(updateGroup.actions.length == 1) ?~> "Editable mapping update group must contain exactly one update action"
+          updateAction <- updateGroup.actions.headOption.toFox
+          _ <- editableMappingService.update(mappingName, updateAction, updateGroup.version)
         } yield Ok
       }
     }

@@ -991,16 +991,17 @@ export function performDiffTracing(
 
   return actions;
 }
-export function* saveTracingAsync(): Saga<void> {
-  yield* takeEvery("INITIALIZE_SKELETONTRACING", saveTracingTypeAsync);
-  yield* takeEvery("INITIALIZE_VOLUMETRACING", saveTracingTypeAsync);
-  yield* takeEvery("INITIALIZE_EDITABLE_MAPPING", saveEditableMappingAsync);
-}
 
 let isWkReady = false;
 
 function setWkReady() {
   isWkReady = true;
+}
+export function* saveTracingAsync(): Saga<void> {
+  yield* takeEvery("WK_READY", setWkReady);
+  yield* takeEvery("INITIALIZE_SKELETONTRACING", saveTracingTypeAsync);
+  yield* takeEvery("INITIALIZE_VOLUMETRACING", saveTracingTypeAsync);
+  yield* takeEvery("INITIALIZE_EDITABLE_MAPPING", saveEditableMappingAsync);
 }
 
 export function* saveEditableMappingAsync(
@@ -1009,7 +1010,6 @@ export function* saveEditableMappingAsync(
   // No diffing needs to be done for editable mappings as the saga pushes update actions
   // to the respective save queues, itself
   const volumeTracingId = initializeAction.mapping.tracingId;
-  yield* takeEvery("WK_READY", setWkReady);
   yield* fork(pushSaveQueueAsync, "mapping", volumeTracingId, isWkReady);
 }
 export function* saveTracingTypeAsync(

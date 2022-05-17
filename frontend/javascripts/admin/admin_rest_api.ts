@@ -1951,6 +1951,24 @@ export function getAgglomerateSkeleton(
   );
 }
 
+export function getEditableAgglomerateSkeleton(
+  tracingStoreUrl: string,
+  tracingId: string,
+  agglomerateId: number,
+): Promise<ArrayBuffer> {
+  return doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
+      {
+        useWebworkerForArrayBuffer: false,
+        showErrorToast: false,
+      },
+    ),
+  );
+}
+
 export function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
   datasetId: APIDatasetId,

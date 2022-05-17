@@ -70,7 +70,7 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { getAgglomerateSkeleton } from "admin/admin_rest_api";
+import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import createProgressCallback from "libs/progress_callback";
 import {
@@ -232,20 +232,36 @@ function* getAgglomerateSkeletonTracing(
   agglomerateId: number,
 ): Saga<ServerSkeletonTracing> {
   const dataset = yield* select((state) => state.dataset);
+  const annotation = yield* select((state) => state.tracing);
   const layerInfo = getLayerByName(dataset, layerName);
-  // If there is a fallbackLayer, request the agglomerate for that instead of the tracing segmentation layer
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
-  const effectiveLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerName;
+
+  const editableMapping = annotation.mappings.find(
+    (mapping) => mapping.mappingName === mappingName,
+  );
 
   try {
-    const nmlProtoBuffer = yield* call(
-      getAgglomerateSkeleton,
-      dataset.dataStore.url,
-      dataset,
-      effectiveLayerName,
-      mappingName,
-      agglomerateId,
-    );
+    let nmlProtoBuffer;
+    if (editableMapping == null) {
+      // If there is a fallbackLayer, request the agglomerate for that instead of the tracing segmentation layer
+      const effectiveLayerName =
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
+        layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerName;
+      nmlProtoBuffer = yield* call(
+        getAgglomerateSkeleton,
+        dataset.dataStore.url,
+        dataset,
+        effectiveLayerName,
+        mappingName,
+        agglomerateId,
+      );
+    } else {
+      nmlProtoBuffer = yield* call(
+        getEditableAgglomerateSkeleton,
+        annotation.tracingStore.url,
+        editableMapping.tracingId,
+        agglomerateId,
+      );
+    }
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
     if (!("trees" in parsedTracing)) {

@@ -1,6 +1,6 @@
 import update from "immutability-helper";
 import { ContourModeEnum } from "oxalis/constants";
-import type { OxalisState, VolumeTracing } from "oxalis/store";
+import type { EditableMapping, OxalisState, VolumeTracing } from "oxalis/store";
 import type {
   VolumeTracingAction,
   UpdateSegmentAction,
@@ -24,6 +24,7 @@ import {
   setContourTracingModeReducer,
   setMaxCellReducer,
   updateVolumeTracing,
+  updateEditableMapping,
   setMappingNameReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
@@ -200,6 +201,14 @@ function VolumeTracingReducer(
         },
       });
       return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
+    }
+
+    case "INITIALIZE_EDITABLE_MAPPING": {
+      const mapping: EditableMapping = {
+        type: "mapping",
+        ...action.mapping,
+      };
+      return updateEditableMapping(state, action.mapping.tracingId, mapping);
     }
 
     case "SET_SEGMENTS": {

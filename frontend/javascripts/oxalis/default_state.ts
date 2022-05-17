@@ -145,6 +145,7 @@ const defaultState: OxalisState = {
       tracingId: "",
     },
     volumes: [],
+    mappings: [],
     skeleton: null,
     user: null,
     annotationLayers: [],

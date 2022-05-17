@@ -612,6 +612,12 @@ export type ServerVolumeTracing = ServerTracingBase & {
   mappingIsEditable?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
+export type ServerEditableMapping = {
+  version: number;
+  mappingName: string;
+  // The id of the volume tracing the editable mapping belongs to
+  tracingId: string;
+};
 export type APIMeshFile = {
   meshFileName: string;
   mappingName?: string | null | undefined;

@@ -1,4 +1,4 @@
-import type { ServerVolumeTracing } from "types/api_flow_types";
+import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import type { Segment, SegmentMap } from "oxalis/store";
@@ -8,6 +8,10 @@ import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actio
 export type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING";
   tracing: ServerVolumeTracing;
+};
+export type InitializeEditableMappingAction = {
+  type: "INITIALIZE_EDITABLE_MAPPING";
+  mapping: ServerEditableMapping;
 };
 type CreateCellAction = {
   type: "CREATE_CELL";
@@ -128,7 +132,8 @@ export type VolumeTracingAction =
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetMaxCellAction
-  | SetMappingIsEditableAction;
+  | SetMappingIsEditableAction
+  | InitializeEditableMappingAction;
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
@@ -146,6 +151,12 @@ export const initializeVolumeTracingAction = (
 ): InitializeVolumeTracingAction => ({
   type: "INITIALIZE_VOLUMETRACING",
   tracing,
+});
+export const initializeEditableMappingAction = (
+  mapping: ServerEditableMapping,
+): InitializeEditableMappingAction => ({
+  type: "INITIALIZE_EDITABLE_MAPPING",
+  mapping,
 });
 export const createCellAction = (): CreateCellAction => ({
   type: "CREATE_CELL",

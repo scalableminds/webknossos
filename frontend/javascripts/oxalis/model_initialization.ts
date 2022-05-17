@@ -7,6 +7,7 @@ import type {
   APIDataLayer,
   ServerVolumeTracing,
   ServerTracing,
+  ServerEditableMapping,
 } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import {
@@ -38,6 +39,7 @@ import {
   getSharingToken,
   getUserConfiguration,
   getDatasetViewConfiguration,
+  getEditableMapping,
 } from "admin/admin_rest_api";
 import {
   initializeAnnotationAction,
@@ -50,7 +52,10 @@ import {
   setViewModeAction,
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
-import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  initializeEditableMappingAction,
+  initializeVolumeTracingAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
@@ -147,9 +152,8 @@ export async function initialize(
     Record<string, any>,
     Array<ServerTracing>,
   ] = await fetchParallel(annotation, datasetId, versions);
-  const displayedVolumeTracings = getServerVolumeTracings(serverTracings).map(
-    (volumeTracing) => volumeTracing.id,
-  );
+  const serverVolumeTracings = getServerVolumeTracings(serverTracings);
+  const displayedVolumeTracings = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
   initializeDataset(initialFetch, dataset, serverTracings);
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
@@ -178,7 +182,11 @@ export async function initialize(
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
   if (annotation != null) {
-    initializeTracing(annotation, serverTracings);
+    const editableMappings = await fetchEditableMappings(
+      annotation.tracingStore.url,
+      serverVolumeTracings,
+    );
+    initializeTracing(annotation, serverTracings, editableMappings);
   } else {
     // In view only tracings we need to set the view mode too.
     const { allowedModes } = determineAllowedModes(dataset);
@@ -207,6 +215,16 @@ async function fetchParallel(
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     annotation ? getTracingsForAnnotation(annotation, versions) : [],
   ]);
+}
+
+async function fetchEditableMappings(
+  tracingStoreUrl: string,
+  serverVolumeTracings: ServerVolumeTracing[],
+): Promise<ServerEditableMapping[]> {
+  const promises = serverVolumeTracings
+    .filter((tracing) => tracing.mappingIsEditable)
+    .map((tracing) => getEditableMapping(tracingStoreUrl, tracing.id));
+  return Promise.all(promises);
 }
 
 function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: number): any {
@@ -242,7 +260,11 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
   }
 }
 
-function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<ServerTracing>) {
+function initializeTracing(
+  _annotation: APIAnnotation,
+  serverTracings: Array<ServerTracing>,
+  editableMappings: Array<ServerEditableMapping>,
+) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   let annotation = _annotation;
@@ -279,6 +301,9 @@ function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<Ser
       );
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
     });
+
+    editableMappings.map((mapping) => Store.dispatch(initializeEditableMappingAction(mapping)));
+
     const skeletonTracing = getNullableSkeletonTracing(serverTracings);
 
     if (skeletonTracing != null) {

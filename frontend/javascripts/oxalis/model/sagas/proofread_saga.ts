@@ -7,7 +7,10 @@ import type {
   DeleteEdgeAction,
   MergeTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setMappingisEditableAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  initializeEditableMappingAction,
+  setMappingisEditableAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   enforceSkeletonTracing,
   findTreeByNodeId,
@@ -67,8 +70,13 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
     const upToDateVolumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
     if (upToDateVolumeTracing == null) return;
 
-    yield* call(makeMappingEditable, tracingStoreUrl, volumeTracingId);
+    const serverEditableMapping = yield* call(
+      makeMappingEditable,
+      tracingStoreUrl,
+      volumeTracingId,
+    );
     yield* put(setMappingisEditableAction());
+    yield* put(initializeEditableMappingAction(serverEditableMapping));
     yield* put(
       setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId),
     );

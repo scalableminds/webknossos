@@ -1,6 +1,6 @@
 import update from "immutability-helper";
 import { ContourMode, Vector3 } from "oxalis/constants";
-import type { MappingType, OxalisState, VolumeTracing } from "oxalis/store";
+import type { EditableMapping, MappingType, OxalisState, VolumeTracing } from "oxalis/store";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
@@ -18,6 +18,22 @@ export function updateVolumeTracing(
   });
   return updateKey(state, "tracing", {
     volumes: newVolumes,
+  });
+}
+export function updateEditableMapping(
+  state: OxalisState,
+  volumeTracingId: string,
+  shape: Partial<EditableMapping>,
+) {
+  const newMappings = state.tracing.mappings.map((mapping) => {
+    if (mapping.tracingId === volumeTracingId) {
+      return { ...mapping, ...shape };
+    } else {
+      return mapping;
+    }
+  });
+  return updateKey(state, "tracing", {
+    mappings: newMappings,
   });
 }
 export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {

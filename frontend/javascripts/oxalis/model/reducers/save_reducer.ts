@@ -13,7 +13,10 @@ import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
-import { updateVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import {
+  updateEditableMapping,
+  updateVolumeTracing,
+} from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
 
@@ -24,15 +27,24 @@ function updateQueueObj(
 ): SaveState["queue"] {
   if (action.saveQueueType === "skeleton") {
     return { ...oldQueueObj, skeleton: newQueue };
+  } else if (action.saveQueueType === "volume") {
+    return { ...oldQueueObj, volumes: { ...oldQueueObj.volumes, [action.tracingId]: newQueue } };
+  } else if (action.saveQueueType === "mapping") {
+    return { ...oldQueueObj, mappings: { ...oldQueueObj.mappings, [action.tracingId]: newQueue } };
   }
 
-  return { ...oldQueueObj, volumes: { ...oldQueueObj.volumes, [action.tracingId]: newQueue } };
+  return oldQueueObj;
 }
 
 export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
   return (
     queueObj.skeleton.length +
-    _.sum(Utils.values(queueObj.volumes).map((volumeQueue: SaveQueueEntry[]) => volumeQueue.length))
+    _.sum(
+      Utils.values(queueObj.volumes).map((volumeQueue: SaveQueueEntry[]) => volumeQueue.length),
+    ) +
+    _.sum(
+      Utils.values(queueObj.mappings).map((mappingQueue: SaveQueueEntry[]) => mappingQueue.length),
+    )
   );
 }
 
@@ -41,11 +53,17 @@ function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
     return updateKey2(state, "tracing", "skeleton", {
       version: action.version,
     });
+  } else if (action.saveQueueType === "volume") {
+    return updateVolumeTracing(state, action.tracingId, {
+      version: action.version,
+    });
+  } else if (action.saveQueueType === "mapping") {
+    return updateEditableMapping(state, action.tracingId, {
+      version: action.version,
+    });
   }
 
-  return updateVolumeTracing(state, action.tracingId, {
-    version: action.version,
-  });
+  return state;
 }
 
 function updateLastSaveTimestamp(state: OxalisState, action: SetLastSaveTimestampAction) {
@@ -53,15 +71,25 @@ function updateLastSaveTimestamp(state: OxalisState, action: SetLastSaveTimestam
     return updateKey2(state, "save", "lastSaveTimestamp", {
       skeleton: action.timestamp,
     });
+  } else if (action.saveQueueType === "volume") {
+    const newVolumesDict = {
+      ...state.save.lastSaveTimestamp.volumes,
+      [action.tracingId]: action.timestamp,
+    };
+    return updateKey2(state, "save", "lastSaveTimestamp", {
+      volumes: newVolumesDict,
+    });
+  } else if (action.saveQueueType === "mapping") {
+    const newMappingsDict = {
+      ...state.save.lastSaveTimestamp.mappings,
+      [action.tracingId]: action.timestamp,
+    };
+    return updateKey2(state, "save", "lastSaveTimestamp", {
+      mappings: newMappingsDict,
+    });
   }
 
-  const newVolumesDict = {
-    ...state.save.lastSaveTimestamp.volumes,
-    [action.tracingId]: action.timestamp,
-  };
-  return updateKey2(state, "save", "lastSaveTimestamp", {
-    volumes: newVolumesDict,
-  });
+  return state;
 }
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
@@ -71,6 +99,14 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       const newVolumesQueue = { ...state.save.queue.volumes, [action.tracing.id]: [] };
       return updateKey2(state, "save", "queue", {
         volumes: newVolumesQueue,
+      });
+    }
+
+    case "INITIALIZE_EDITABLE_MAPPING": {
+      // Set up empty save queue array for editable mapping
+      const newMappingsQueue = { ...state.save.queue.volumes, [action.mapping.tracingId]: [] };
+      return updateKey2(state, "save", "queue", {
+        mappings: newMappingsQueue,
       });
     }
 

@@ -54,6 +54,7 @@ import type {
   ServerTracing,
   TracingType,
   WkConnectDatasetConfig,
+  ServerEditableMapping,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -1563,14 +1564,26 @@ export function fetchMapping(
   );
 }
 
-export function makeMappingEditable(tracingStoreUrl: string, tracingId: string): Promise<void> {
+export function makeMappingEditable(
+  tracingStoreUrl: string,
+  tracingId: string,
+): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
-    Request.triggerRequest(
+    Request.receiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
       {
         method: "POST",
       },
     ),
+  );
+}
+
+export function getEditableMapping(
+  tracingStoreUrl: string,
+  tracingId: string,
+): Promise<ServerEditableMapping> {
+  return doWithToken((token) =>
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}?token=${token}`),
   );
 }
 

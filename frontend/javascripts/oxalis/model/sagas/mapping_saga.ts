@@ -103,12 +103,18 @@ function* maybeFetchMapping(
       ? layerInfo.fallbackLayer
       : layerInfo.name,
   ];
-  const [jsonMappings, hdf5Mappings] = yield* all([
+  const [jsonMappings, serverHdf5Mappings] = yield* all([
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getMappingsForDatasetLayer, ...params),
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getAgglomeratesForDatasetLayer, ...params),
   ]);
+  const editableMappings = yield* select((state) =>
+    state.tracing.volumes
+      .filter((volumeTracing) => volumeTracing.mappingIsEditable)
+      .map((volumeTracing) => volumeTracing.mappingName),
+  );
+  const hdf5Mappings = [...serverHdf5Mappings, ...editableMappings];
   const mappingsWithCorrectType = mappingType === "JSON" ? jsonMappings : hdf5Mappings;
 
   if (!mappingsWithCorrectType.includes(mappingName)) {

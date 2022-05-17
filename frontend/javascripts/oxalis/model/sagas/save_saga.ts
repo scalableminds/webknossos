@@ -8,6 +8,7 @@ import type {
   MaybeUnmergedBucketLoadedPromise,
   UpdateSegmentAction,
   InitializeVolumeTracingAction,
+  InitializeEditableMappingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   VolumeTracingSaveRelevantActions,
@@ -102,10 +103,6 @@ import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update
 import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
-import type {
-  SetMappingAction,
-  SetMappingEnabledAction,
-} from "oxalis/model/actions/settings_actions";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 // This function is needed so that Flow is satisfied
@@ -717,8 +714,13 @@ function* applyAndGetRevertingVolumeBatch(
   };
 }
 
-export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: string): Saga<void> {
-  yield* take("WK_READY");
+export function* pushSaveQueueAsync(
+  saveQueueType: SaveQueueType,
+  tracingId: string,
+  isWkReady: boolean = false,
+): Saga<void> {
+  if (!isWkReady) yield* take("WK_READY");
+
   yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
   let loopCounter = 0;
 
@@ -991,6 +993,23 @@ export function performDiffTracing(
 export function* saveTracingAsync(): Saga<void> {
   yield* takeEvery("INITIALIZE_SKELETONTRACING", saveTracingTypeAsync);
   yield* takeEvery("INITIALIZE_VOLUMETRACING", saveTracingTypeAsync);
+  yield* takeEvery("INITIALIZE_EDITABLE_MAPPING", saveEditableMappingAsync);
+}
+
+let isWkReady = false;
+
+function setWkReady() {
+  isWkReady = true;
+}
+
+export function* saveEditableMappingAsync(
+  initializeAction: InitializeEditableMappingAction,
+): Saga<void> {
+  // No diffing needs to be done for editable mappings as the saga pushes update actions
+  // to the respective save queues, itself
+  const volumeTracingId = initializeAction.mapping.tracingId;
+  yield* takeEvery("WK_READY", setWkReady);
+  yield* fork(pushSaveQueueAsync, "mapping", volumeTracingId, isWkReady);
 }
 export function* saveTracingTypeAsync(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,
@@ -1004,7 +1023,9 @@ export function* saveTracingTypeAsync(
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
   yield* fork(pushSaveQueueAsync, saveQueueType, tracingId);
-  let prevTracing = yield* select((state) => selectTracing(state, saveQueueType, tracingId));
+  let prevTracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
+    | VolumeTracing
+    | SkeletonTracing;
   let prevFlycam = yield* select((state) => state.flycam);
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
   yield* take("WK_READY");
@@ -1032,7 +1053,9 @@ export function* saveTracingTypeAsync(
       (state) => state.tracing.restrictions.allowUpdate && state.tracing.restrictions.allowSave,
     );
     if (!allowUpdate) return;
-    const tracing = yield* select((state) => selectTracing(state, saveQueueType, tracingId));
+    const tracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
+      | VolumeTracing
+      | SkeletonTracing;
     const flycam = yield* select((state) => state.flycam);
     const tdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
     const items = compactUpdateActions(

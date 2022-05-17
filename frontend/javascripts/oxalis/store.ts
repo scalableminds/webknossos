@@ -229,10 +229,18 @@ export type VolumeTracing = TracingBase & {
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
 };
+export type EditableMapping = {
+  readonly type: "mapping";
+  readonly version: number;
+  readonly mappingName: string;
+  // The id of the volume tracing the editable mapping belongs to
+  readonly tracingId: string;
+};
 export type HybridTracing = Annotation & {
   readonly skeleton: SkeletonTracing | null | undefined;
   readonly volumes: Array<VolumeTracing>;
   readonly readOnly: ReadOnlyTracing | null | undefined;
+  readonly mappings: Array<EditableMapping>;
 };
 export type Tracing = HybridTracing;
 export type TraceOrViewCommand =

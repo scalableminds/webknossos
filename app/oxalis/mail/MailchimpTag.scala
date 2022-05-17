@@ -6,7 +6,7 @@ object MailchimpTag extends ExtendedEnumeration {
   type MailchimpTag = Value
 
   val RegisteredAsUser, RegisteredAsAdmin, HasAnnotated, HasInvitedTeam, HasUploadedOwnDataset,
-  HasViewedPublishedDataset = Value
+  HasViewedPublishedDataset, WasActiveInWeeksTwoAndThree, WasInactiveInWeeksTwoAndThree = Value
 
   def format(tag: MailchimpTag): String =
     "[A-Z]".r

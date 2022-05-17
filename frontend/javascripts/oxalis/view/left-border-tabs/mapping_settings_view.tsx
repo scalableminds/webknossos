@@ -73,8 +73,6 @@ export const convertCellIdToCSS = (
 ) =>
   id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
-const hasSegmentation = () => Model.getVisibleSegmentationLayer() != null;
-
 const needle = "##";
 
 const packMappingNameAndCategory = (mappingName: string, category: MappingType) =>
@@ -170,10 +168,6 @@ class MappingSettingsView extends React.Component<Props, State> {
   };
 
   render() {
-    if (!hasSegmentation()) {
-      return <div className="padded-tab-content">No segmentation available</div>;
-    }
-
     const availableMappings =
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
         ? this.props.segmentationLayer.mappings

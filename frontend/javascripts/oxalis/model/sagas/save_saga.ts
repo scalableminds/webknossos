@@ -829,7 +829,8 @@ export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: st
         {
           method: "POST",
           data: compactedSaveQueue,
-          compress: true,
+          // TODO: Switch back to true before merging
+          compress: false,
         },
       );
       const endTime = Date.now();

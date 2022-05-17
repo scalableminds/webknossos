@@ -16,13 +16,13 @@ import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import Model from "oxalis/model";
-import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
+import type { EditableMapping, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import api from "oxalis/api/internal_api";
 type Props = {
   versionedObjectType: SaveQueueType;
-  tracing: SkeletonTracing | VolumeTracing;
+  tracing: SkeletonTracing | VolumeTracing | EditableMapping;
   allowUpdate: boolean;
 };
 type State = {

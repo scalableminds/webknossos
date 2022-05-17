@@ -781,14 +781,9 @@ export function getEnabledLayers(
   datasetConfiguration: DatasetConfiguration,
   options: {
     invert?: boolean;
-    onlyColorLayers: boolean;
-  } = {
-    onlyColorLayers: false,
-  },
+  }={},
 ): Array<DataLayerType> {
-  const dataLayers = options.onlyColorLayers
-    ? getColorLayers(dataset)
-    : dataset.dataSource.dataLayers;
+  const dataLayers = dataset.dataSource.dataLayers;
   const layerSettings = datasetConfiguration.layers;
   return dataLayers.filter((layer) => {
     const settings = layerSettings[layer.name];

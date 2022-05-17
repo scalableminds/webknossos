@@ -24,11 +24,14 @@ import {
   setContourTracingModeReducer,
   setMaxCellReducer,
   updateVolumeTracing,
+  setMappingNameReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import type { ServerVolumeTracing } from "types/api_flow_types";
+import { SetMappingAction, SetMappingEnabledAction } from "../actions/settings_actions";
+import { getMappingInfo } from "../accessors/dataset_accessor";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -171,12 +174,17 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
     fallbackLayer: tracing.fallbackLayer,
     userBoundingBoxes,
+    mappingName: tracing.mappingName,
+    mappingIsEditable: tracing.mappingIsEditable,
   };
   // @ts-expect-error ts-migrate(2322) FIXME: Type '{ createdTimestamp: number; type: string; se... Remove this comment to see the full error message
   return volumeTracing;
 }
 
-function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): OxalisState {
+function VolumeTracingReducer(
+  state: OxalisState,
+  action: VolumeTracingAction | SetMappingAction | SetMappingEnabledAction,
+): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
@@ -256,6 +264,30 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
       // Possibly update the maxCellId after volume annotation
       const { activeCellId, maxCellId } = volumeTracing;
       return setMaxCellReducer(state, volumeTracing, Math.max(activeCellId, maxCellId));
+    }
+
+    case "SET_MAPPING": {
+      return setMappingNameReducer(state, volumeTracing, action.mappingName, action.mappingType);
+    }
+
+    case "SET_MAPPING_ENABLED": {
+      const { mappingName, mappingType } = getMappingInfo(
+        state.temporaryConfiguration.activeMappingByLayer,
+        action.layerName,
+      );
+      return setMappingNameReducer(
+        state,
+        volumeTracing,
+        mappingName,
+        mappingType,
+        action.isMappingEnabled,
+      );
+    }
+
+    case "SET_MAPPING_IS_EDITABLE": {
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        mappingIsEditable: true,
+      });
     }
 
     default:

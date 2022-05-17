@@ -84,6 +84,7 @@ import {
   updateSegmentVolumeAction,
   updateUserBoundingBoxes,
   updateVolumeTracing,
+  updateMappingName,
 } from "oxalis/model/sagas/update_actions";
 import VolumeLayer, { getFast3DCoordinateHelper } from "oxalis/model/volumetracing/volumelayer";
 import { applyVoxelMap } from "oxalis/model/volumetracing/volume_annotation_sampling";
@@ -709,6 +710,10 @@ export function* diffVolumeTracing(
 
   if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
     yield removeFallbackLayer();
+  }
+
+  if (prevVolumeTracing.mappingName !== volumeTracing.mappingName) {
+    yield updateMappingName(volumeTracing.mappingName);
   }
 }
 

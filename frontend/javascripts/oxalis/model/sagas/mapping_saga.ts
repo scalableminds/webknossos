@@ -191,7 +191,7 @@ function* getLargestSegmentId(layerName: string): Saga<number> {
   const segmentationLayer = getLayerByName(dataset, layerName);
 
   if (segmentationLayer.category !== "segmentation") {
-    throw new Error("Mappings class must be instantiated with a segmentation layer.");
+    throw new Error("Mappings only exist for segmentation layers.");
   }
 
   return segmentationLayer.largestSegmentId;

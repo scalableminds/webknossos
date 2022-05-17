@@ -6,6 +6,7 @@ import type {
   PushSaveQueueTransaction,
   SetVersionNumberAction,
   ShiftSaveQueueAction,
+  SetLastSaveTimestampAction,
 } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -21,7 +22,7 @@ function updateQueueObj(
   oldQueueObj: SaveState["queue"],
   newQueue: any,
 ): SaveState["queue"] {
-  if (action.tracingType === "skeleton") {
+  if (action.saveQueueType === "skeleton") {
     return { ...oldQueueObj, skeleton: newQueue };
   }
 
@@ -36,7 +37,7 @@ export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
 }
 
 function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
-  if (action.tracingType === "skeleton" && state.tracing.skeleton != null) {
+  if (action.saveQueueType === "skeleton" && state.tracing.skeleton != null) {
     return updateKey2(state, "tracing", "skeleton", {
       version: action.version,
     });
@@ -47,9 +48,8 @@ function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
   });
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
-function updateLastSaveTimestamp(state, action) {
-  if (action.tracingType === "skeleton") {
+function updateLastSaveTimestamp(state: OxalisState, action: SetLastSaveTimestampAction) {
+  if (action.saveQueueType === "skeleton") {
     return updateKey2(state, "save", "lastSaveTimestamp", {
       skeleton: action.timestamp,
     });
@@ -86,7 +86,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 
         const transactionGroupCount = updateActionChunks.length;
         const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
-        const oldQueue = selectQueue(state, action.tracingType, action.tracingId);
+        const oldQueue = selectQueue(state, action.saveQueueType, action.tracingId);
         const newQueue = oldQueue.concat(
           updateActionChunks.map((actions, transactionGroupIndex) => ({
             // Placeholder, the version number will be updated before sending to the server
@@ -123,7 +123,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       const { count } = action;
 
       if (count > 0) {
-        const queue = selectQueue(state, action.tracingType, action.tracingId);
+        const queue = selectQueue(state, action.saveQueueType, action.tracingId);
 
         const processedQueueActionCount = _.sumBy(
           queue.slice(0, count),
@@ -163,6 +163,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
             $set: {
               skeleton: [],
               volumes: _.mapValues(state.save.queue.volumes, () => []),
+              mappings: _.mapValues(state.save.queue.mappings, () => []),
             },
           },
           progressInfo: {
@@ -181,7 +182,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       return update(state, {
         save: {
           isBusyInfo: {
-            [action.tracingType]: {
+            [action.saveQueueType]: {
               $set: action.isBusy,
             },
           },

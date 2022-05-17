@@ -113,7 +113,7 @@ class VersionView extends React.Component<Props, State> {
             {this.props.tracing.skeleton != null ? (
               <TabPane tab="Skeleton" key="skeleton">
                 <VersionList
-                  tracingType="skeleton"
+                  versionedObjectType="skeleton"
                   tracing={this.props.tracing.skeleton}
                   allowUpdate={this.state.initialAllowUpdate}
                 />
@@ -125,7 +125,7 @@ class VersionView extends React.Component<Props, State> {
                 key={volumeTracing.tracingId}
               >
                 <VersionList
-                  tracingType="volume"
+                  versionedObjectType="volume"
                   tracing={volumeTracing}
                   allowUpdate={this.state.initialAllowUpdate}
                 />

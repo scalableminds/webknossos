@@ -9,6 +9,7 @@ import { getUpdateActionLog, downloadNml } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import {
   pushSaveQueueTransaction,
+  SaveQueueType,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
 import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
@@ -20,7 +21,7 @@ import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import api from "oxalis/api/internal_api";
 type Props = {
-  tracingType: "skeleton" | "volume";
+  versionedObjectType: SaveQueueType;
   tracing: SkeletonTracing | VolumeTracing;
   allowUpdate: boolean;
 };
@@ -89,7 +90,7 @@ class VersionList extends React.Component<Props, State> {
       const updateActionLog = await getUpdateActionLog(
         tracingStoreUrl,
         tracingId,
-        this.props.tracingType,
+        this.props.versionedObjectType,
       );
       // Insert version 0
       updateActionLog.push({
@@ -118,14 +119,14 @@ class VersionList extends React.Component<Props, State> {
       Store.dispatch(
         setVersionNumberAction(
           this.getNewestVersion(),
-          this.props.tracingType,
+          this.props.versionedObjectType,
           this.props.tracing.tracingId,
         ),
       );
       Store.dispatch(
         pushSaveQueueTransaction(
           [revertToVersion(version)],
-          this.props.tracingType,
+          this.props.versionedObjectType,
           this.props.tracing.tracingId,
         ),
       );
@@ -136,13 +137,13 @@ class VersionList extends React.Component<Props, State> {
       const { annotationType, annotationId, volumes } = Store.getState().tracing;
       const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
       downloadNml(annotationId, annotationType, includesVolumeFallbackData, {
-        [this.props.tracingType]: version,
+        [this.props.versionedObjectType]: version,
       });
     }
   };
 
   handlePreviewVersion = (version: number) => {
-    if (this.props.tracingType === "skeleton") {
+    if (this.props.versionedObjectType === "skeleton") {
       return previewVersion({
         skeleton: version,
       });

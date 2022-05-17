@@ -1,6 +1,6 @@
 import update from "immutability-helper";
-import type { ContourMode, Vector3 } from "oxalis/constants";
-import type { OxalisState, VolumeTracing } from "oxalis/store";
+import { ContourMode, Vector3 } from "oxalis/constants";
+import type { MappingType, OxalisState, VolumeTracing } from "oxalis/store";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
@@ -104,5 +104,20 @@ export function setContourTracingModeReducer(
 export function setMaxCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     maxCellId: id,
+  });
+}
+export function setMappingNameReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+  mappingName: string | null | undefined,
+  mappingType: MappingType,
+  isMappingEnabled: boolean = true,
+) {
+  // Only HDF5 mappings are persisted in volume annotations for now
+  if (mappingType !== "HDF5" || !isMappingEnabled) {
+    mappingName = null;
+  }
+  return updateVolumeTracing(state, volumeTracing.tracingId, {
+    mappingName,
   });
 }

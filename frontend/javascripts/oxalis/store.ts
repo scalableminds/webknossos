@@ -63,6 +63,7 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
+import { SaveQueueType } from "./model/actions/save_actions";
 export type MutableCommentType = {
   content: string;
   nodeId: number;
@@ -222,6 +223,8 @@ export type VolumeTracing = TracingBase & {
   // Stores points of the currently drawn region in global coordinates
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
+  readonly mappingName?: string | null | undefined;
+  readonly mappingIsEditable?: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -365,19 +368,18 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
-export type IsBusyInfo = {
-  readonly skeleton: boolean;
-  readonly volume: boolean;
-};
+export type IsBusyInfo = Record<SaveQueueType, boolean>;
 export type SaveState = {
   readonly isBusyInfo: IsBusyInfo;
   readonly queue: {
     readonly skeleton: Array<SaveQueueEntry>;
     readonly volumes: Record<string, Array<SaveQueueEntry>>;
+    readonly mappings: Record<string, Array<SaveQueueEntry>>;
   };
   readonly lastSaveTimestamp: {
     readonly skeleton: number;
     readonly volumes: Record<string, number>;
+    readonly mappings: Record<string, number>;
   };
   readonly progressInfo: ProgressInfo;
 };

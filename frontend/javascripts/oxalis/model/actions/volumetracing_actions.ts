@@ -103,6 +103,9 @@ export type UpdateSegmentAction = {
   layerName: string;
   timestamp: number;
 };
+export type SetMappingIsEditableAction = {
+  type: "SET_MAPPING_IS_EDITABLE";
+};
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
@@ -124,7 +127,8 @@ export type VolumeTracingAction =
   | UpdateSegmentAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
-  | SetMaxCellAction;
+  | SetMaxCellAction
+  | SetMappingIsEditableAction;
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
@@ -132,6 +136,9 @@ export const VolumeTracingSaveRelevantActions = [
   "UPDATE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
+  // Note that the following two actions are defined in settings_actions.ts
+  "SET_MAPPING",
+  "SET_MAPPING_ENABLED",
 ];
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
 export const initializeVolumeTracingAction = (
@@ -263,3 +270,6 @@ export const dispatchFloodfillAsync = async (
   dispatch(action);
   await readyDeferred.promise();
 };
+export const setMappingisEditableAction = (): SetMappingIsEditableAction => ({
+  type: "SET_MAPPING_IS_EDITABLE",
+});

@@ -35,6 +35,7 @@ import type {
   DeleteSegmentUpdateAction,
   MoveTreeComponentUpdateAction,
   MergeTreeUpdateAction,
+  UpdateMappingNameUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
@@ -67,12 +68,19 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: "Removed the segmentation fallback layer.",
     icon: <DeleteOutlined />,
   }),
+  updateMappingName: (action: UpdateMappingNameUpdateAction): Description => ({
+    description:
+      action.value.mappingName != null
+        ? `Activated mapping ${action.value.mappingName}.`
+        : "Deactivated the active mapping.",
+    icon: <EyeOutlined />,
+  }),
   splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => ({
-    description: `Split an agglomerate by separating the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
+    description: `Split agglomerate ${action.value.agglomerateId} by separating the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
     icon: <DeleteOutlined />,
   }),
   mergeAgglomerate: (action: MergeAgglomerateUpdateAction): Description => ({
-    description: `Merged two agglomerates by combining the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
+    description: `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
     icon: <PlusOutlined />,
   }),
   deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({

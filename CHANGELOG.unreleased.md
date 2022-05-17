@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added Volume Interpolation feature. When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices. This feature is disabled by default. Note that the feature is even forbidden for tasks by default, but can be enabled/recommended. [#6162](https://github.com/scalableminds/webknossos/pull/6162)
 - Added a long-running job that applies the merging done via a merger mode tracing to a new output dataset. The job is accessible via a button next to the merger mode button once the merger mode is active. [#6086](https://github.com/scalableminds/webknossos/pull/6086)
 - Added support to stream zarr files using the corresponding [zarr spec](https://zarr.readthedocs.io/en/stable/spec/v2.html#storage). [#6144](https://github.com/scalableminds/webknossos/pull/6144)
+- Added segmentation layers to the functionality catching the case that more layers are active that the hardware allows. This prevents rendering issue with more than one segmentation layer and multiple color layers. [#6211](https://github.com/scalableminds/webknossos/pull/6211)
 
 ### Changed
 - When creating a new annotation with a volume layer (without fallback) for a dataset which has an existing segmentation layer, the original segmentation layer is still listed (and viewable) in the left sidebar. Earlier versions simply hid the original segmentation layer. [#6186](https://github.com/scalableminds/webknossos/pull/6186)

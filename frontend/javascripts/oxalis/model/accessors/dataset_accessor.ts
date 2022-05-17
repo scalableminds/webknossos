@@ -781,7 +781,7 @@ export function getEnabledLayers(
   datasetConfiguration: DatasetConfiguration,
   options: {
     invert?: boolean;
-  }={},
+  } = {},
 ): Array<DataLayerType> {
   const dataLayers = dataset.dataSource.dataLayers;
   const layerSettings = datasetConfiguration.layers;

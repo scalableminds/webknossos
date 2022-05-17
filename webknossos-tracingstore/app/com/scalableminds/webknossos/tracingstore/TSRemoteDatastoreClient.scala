@@ -32,9 +32,12 @@ class TSRemoteDatastoreClient @Inject()(
       .getWithBytesResponse
 
   def getData(remoteFallbackLayer: RemoteFallbackLayer,
-              dataRequests: List[WebKnossosDataRequest]): Fox[(Array[Byte], List[Int])] =
+              dataRequests: List[WebKnossosDataRequest],
+              userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
     for {
-      response <- rpc(s"${remoteLayerUri(remoteFallbackLayer)}/").post(dataRequests)
+      response <- rpc(s"${remoteLayerUri(remoteFallbackLayer)}/data")
+        .addQueryStringOptional("token", userToken)
+        .post(dataRequests)
       _ <- bool2Fox(Status.isSuccessful(response.status))
       bytes = response.bodyAsBytes.toArray
       indices <- parseMissingBucketHeader(response.header(missingBucketsHeader)) ?~> "failed to parse missing bucket header"

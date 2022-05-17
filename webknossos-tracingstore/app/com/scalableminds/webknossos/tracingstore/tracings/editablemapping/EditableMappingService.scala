@@ -336,7 +336,7 @@ class EditableMappingService @Inject()(
       editableMappingId <- tracing.mappingName.toFox
       remoteFallbackLayer <- remoteFallbackLayer(tracing)
       editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
-      (unmappedData, indices) <- getUnmappedDataFromDatastore(remoteFallbackLayer, dataRequests)
+      (unmappedData, indices) <- getUnmappedDataFromDatastore(remoteFallbackLayer, dataRequests, userToken)
       segmentIds <- collectSegmentIds(unmappedData, tracing.elementClass)
       relevantMapping <- generateCombinedMappingSubset(segmentIds, editableMapping, remoteFallbackLayer, userToken)
       mappedData <- mapData(unmappedData, relevantMapping, tracing.elementClass)
@@ -421,13 +421,14 @@ class EditableMappingService @Inject()(
   }
 
   private def getUnmappedDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer,
-                                           dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
+                                           dataRequests: DataRequestCollection,
+                                           userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
     for {
       dataRequestsTyped <- Fox.serialCombined(dataRequests) {
         case r: WebKnossosDataRequest => Fox.successful(r.copy(applyAgglomerate = None))
         case _                        => Fox.failure("Editable Mappings currently only work for webKnossos data requests")
       }
-      (data, indices) <- remoteDatastoreClient.getData(remoteFallbackLayer, dataRequestsTyped)
+      (data, indices) <- remoteDatastoreClient.getData(remoteFallbackLayer, dataRequestsTyped, userToken)
     } yield (data, indices)
 
   private def collectSegmentIds(data: Array[Byte], elementClass: ElementClass): Fox[Set[Long]] =

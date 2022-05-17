@@ -137,8 +137,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
             hasEditableMapping <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
             (data, indices) <- if (hasEditableMapping.getOrElse(false))
-              tracingService.data(tracingId, tracing, request.body)
-            else editableMappingService.volumeData(tracing, request.body, token)
+              editableMappingService.volumeData(tracing, request.body, token)
+            else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }

@@ -28,6 +28,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug in the task creation, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)
 - Fixed a bug in the task cration, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)
 - Fixed a rendering bug which could cause an incorrect magnification to be rendered in rare scenarios. [#6029](https://github.com/scalableminds/webknossos/pull/6029)
+- Fixed a bug which could cause a segmentation layer's "ID mapping" dropdown to disappear. [#6215](https://github.com/scalableminds/webknossos/pull/6215)
 
 ### Removed
 

@@ -39,12 +39,14 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  def currentVersion(editableMappingId: String): Fox[Long] =
-    tracingDataStore.editableMappings.getVersion(editableMappingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+  def newestMaterializableVersion(editableMappingId: String): Fox[Long] =
+    tracingDataStore.editableMappingUpdates.getVersion(editableMappingId,
+                                                       mayBeEmpty = Some(true),
+                                                       emptyFallback = Some(0L))
 
   def infoJson(tracingId: String, editableMappingId: String): Fox[JsObject] =
     for {
-      version <- currentVersion(editableMappingId)
+      version <- newestMaterializableVersion(editableMappingId)
     } yield
       Json.obj(
         "mappingName" -> editableMappingId,
@@ -93,9 +95,7 @@ class EditableMappingService @Inject()(
     for {
       closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
         .get(editableMappingId, version)(fromJson[EditableMapping])
-      desiredVersion <- findDesiredOrNewestPossibleVersion(closestMaterializedVersion.version,
-                                                           editableMappingId,
-                                                           version)
+      desiredVersion <- findDesiredOrNewestPossibleVersion(editableMappingId, version)
       materialized <- applyPendingUpdates(
         editableMappingId,
         desiredVersion,
@@ -112,19 +112,14 @@ class EditableMappingService @Inject()(
   private def shouldPersistMaterialized(previouslyMaterializedVersion: Long, newVersion: Long): Boolean =
     newVersion > previouslyMaterializedVersion && newVersion % 10 == 5
 
-  private def findDesiredOrNewestPossibleVersion(existingMaterializedVersion: Long,
-                                                 editableMappingId: String,
-                                                 desiredVersion: Option[Long]): Fox[Long] =
+  private def findDesiredOrNewestPossibleVersion(editableMappingId: String, desiredVersion: Option[Long]): Fox[Long] =
     /*
      * Determines the newest saved version from the updates column.
      * if there are no updates at all, assume mapping is brand new,
      * hence the emptyFallbck tracing.version)
      */
     for {
-      newestUpdateVersion <- tracingDataStore.editableMappingUpdates.getVersion(editableMappingId,
-                                                                                mayBeEmpty = Some(true),
-                                                                                emptyFallback =
-                                                                                  Some(existingMaterializedVersion))
+      newestUpdateVersion <- newestMaterializableVersion(editableMappingId)
     } yield {
       desiredVersion match {
         case None              => newestUpdateVersion
@@ -191,7 +186,7 @@ class EditableMappingService @Inject()(
   private def splitGraph(agglomerateGraph: AgglomerateGraph,
                          segmentId1: Long,
                          segmentId2: Long): (AgglomerateGraph, AgglomerateGraph) = {
-    val edgesMinusOne = agglomerateGraph.edges.filter {
+    val edgesMinusOne = agglomerateGraph.edges.filterNot {
       case (from, to) =>
         (from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1)
     }
@@ -227,11 +222,11 @@ class EditableMappingService @Inject()(
 
   private def computeConnectedComponent(startNode: Long, edges: List[(Long, Long)]): Set[Long] = {
     val neighborsByNode =
-      mutable.HashMap[Long, mutable.MutableList[Long]]().withDefaultValue(mutable.MutableList[Long]())
+      mutable.HashMap[Long, List[Long]]().withDefaultValue(List[Long]())
     edges.foreach {
       case (from, to) =>
-        neighborsByNode(from) += to
-        neighborsByNode(to) += from
+        neighborsByNode(from) = to :: neighborsByNode(from)
+        neighborsByNode(to) = from :: neighborsByNode(to)
     }
     val nodesToVisit = mutable.HashSet[Long](startNode)
     val visitedNodes = mutable.HashSet[Long]()

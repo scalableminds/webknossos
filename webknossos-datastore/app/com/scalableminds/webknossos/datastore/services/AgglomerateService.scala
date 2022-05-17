@@ -246,7 +246,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
       AgglomerateGraph(
         segments = segmentIds.toList,
-        edges = edges.toList.map(e => (e(0), e(1))),
+        edges = edges.toList.map(e => (segmentIds(e(0).toInt), segmentIds(e(1).toInt))),
         positions = positions.toList.map(pos => Vec3Int(pos(0).toInt, pos(1).toInt, pos(2).toInt)),
         affinities = affinities.toList
       )

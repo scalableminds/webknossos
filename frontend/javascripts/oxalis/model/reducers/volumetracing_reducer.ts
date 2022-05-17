@@ -24,7 +24,6 @@ import {
   setContourTracingModeReducer,
   setMaxCellReducer,
   updateVolumeTracing,
-  updateEditableMapping,
   setMappingNameReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
@@ -208,7 +207,17 @@ function VolumeTracingReducer(
         type: "mapping",
         ...action.mapping,
       };
-      return updateEditableMapping(state, action.mapping.tracingId, mapping);
+      const newMappings = state.tracing.mappings.filter(
+        (tracing) => tracing.tracingId !== mapping.tracingId,
+      );
+      newMappings.push(mapping);
+      return update(state, {
+        tracing: {
+          mappings: {
+            $set: newMappings,
+          },
+        },
+      });
     }
 
     case "SET_SEGMENTS": {

@@ -270,7 +270,7 @@ class ZarrStreamingController @Inject()(
   private def zarrDtypeFromElementClass(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")
     case ElementClass.uint16 => (1, "<u2")
-    case ElementClass.uint24 => (3, "<u1")
+    case ElementClass.uint24 => (3, "|u1")
     case ElementClass.uint32 => (1, "<u4")
     case ElementClass.uint64 => (1, "<u8")
     case ElementClass.float  => (1, "<f4")

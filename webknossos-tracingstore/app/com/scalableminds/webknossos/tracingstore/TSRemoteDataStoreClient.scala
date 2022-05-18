@@ -13,14 +13,7 @@ class TSRemoteDataStoreClient @Inject()(
     rpc: RPC,
     config: TracingStoreConfig,
     val lifecycle: ApplicationLifecycle
-) extends RemoteWebKnossosClient
-    with LazyLogging {
-
-  private val tracingStoreKey: String = config.Tracingstore.key
-  private val tracingStoreName: String = config.Tracingstore.name
-
-  private val webKnossosUrl: String = config.Tracingstore.WebKnossos.uri
-
+) extends LazyLogging {
   def fallbackLayerBucket(dataStoreURI: String,
                           organizationName: String,
                           dataSetName: String,
@@ -31,10 +24,4 @@ class TSRemoteDataStoreClient @Inject()(
     rpc(s"$dataStoreURI/data/zarr/${urlEncode(organizationName)}/$dataSetName/$dataLayerName/$mag/$cxyz")
       .addQueryStringOptional("token", urlToken)
       .getWithBytesResponse
-
-  override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
-    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/validateUserAccess")
-      .addQueryString("key" -> tracingStoreKey)
-      .addQueryStringOptional("token", token)
-      .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }

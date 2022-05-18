@@ -345,7 +345,7 @@ class VolumeTracingController @Inject()(
       val dataStoreURI = Fox(
         dataStoreURICache.getOrLoad(
           (Some(organizationName), dataSetName),
-          K => remoteWebKnossosClient.getDataStoreURIForDataSource(K._1, K._2)
+          keyTuple => remoteWebKnossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2)
         ))
 
       dataStoreURI.flatMap(

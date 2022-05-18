@@ -241,11 +241,13 @@ export default function DownloadModalView(props: Props): JSX.Element {
   const authToken = useFetch(getAuthToken, "loading...", []);
   const wkInitSnippet = `import webknossos as wk
 
-with wk.webknossos_context(token="${authToken}"):
+with wk.webknossos_context(
+    token="${authToken}",
+    url="${window.location.origin}"
+):
     annotation = wk.Annotation.download(
         "${annotationId}",
         annotation_type="${annotationType}",
-        webknossos_url="${window.location.origin}"
     )
 `;
 
@@ -259,7 +261,7 @@ with wk.webknossos_context(token="${authToken}"):
 
   return (
     <Modal
-      title="Download this Annotation"
+      title="Download this annotation"
       visible={isVisible}
       width={600}
       footer={[<Footer tabKey={activeTabKey} onClick={handleOk} key="footer" />]}
@@ -367,8 +369,6 @@ with wk.webknossos_context(token="${authToken}"):
                   Select the layer you would like to prepare for export.
                 </Col>
                 <Col span={15}>
-                  {/* // if hasColorLayer(s) 
-                  from props.chooseSegmentationLayer*/}
                   <LayerSelection
                     layers={layers}
                     setSelectedLayerName={setSelectedLayerName}
@@ -396,7 +396,6 @@ with wk.webknossos_context(token="${authToken}"):
                 </Col>
                 <Col span={15}>
                   <BoundingBoxSelection
-                    // from props.isBoundingBoxConfigurable
                     userBoundingBoxes={userBoundingBoxes}
                     setSelectedBoundingBoxId={setSelectedBoundingBoxId}
                     style={{ width: 330 }}

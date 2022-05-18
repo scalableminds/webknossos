@@ -890,13 +890,13 @@ export async function downloadAnnotation(
     });
   }
   const skipVolumeDataString = includeVolumeData ? "" : "skipVolumeData=true";
-  const maybeAmpersant = possibleVersionString === "" && !includeVolumeData ? "" : "&";
+  const maybeAmpersand = possibleVersionString === "" && !includeVolumeData ? "" : "&";
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}${maybeAmpersant}${skipVolumeDataString}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}${maybeAmpersand}${skipVolumeDataString}`;
   const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
     extractHeaders: true,
   });
-  console.log(downloadUrl);
+
   // Using headers to determine the name and type of the file.
   const contentDispositionHeader = headers["content-disposition"];
   const filenameStartingPart = 'filename="';

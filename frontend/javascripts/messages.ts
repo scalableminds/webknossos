@@ -105,7 +105,7 @@ Editing should be done in a single window only.
 
 In order to restore the current window, a reload is necessary.`,
   "react.rendering_error":
-    "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work endured. Please reload the page and try again.",
+    "Unfortunately, webKnossos encountered an error during rendering. Your latest changes may not have been saved. Please reload the page to try again.",
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save annotation. Retrying.",

@@ -295,6 +295,8 @@ const Constants = {
   DEFAULT_NODE_RADIUS: 1.0,
   RESIZE_THROTTLE_TIME: 50,
   MIN_TREE_ID: 1,
+  // TreeIds > 1024^2 break webKnossos, see https://github.com/scalableminds/webknossos/issues/5009
+  MAX_TREE_ID: 1048576,
   MIN_NODE_ID: 1,
   // Maximum of how many buckets will be held in RAM (per layer)
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,

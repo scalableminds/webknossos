@@ -141,6 +141,56 @@ class ZarrStreamingController @Inject()(
   }
 
   /**
+    * Handles a request for .zattrs file for a wkw dataset via a HTTP GET.
+    * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
+    * Used by zarr-streaming.
+    */
+  def zAttrs(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String = "",
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      getTokenFromHeader(token, request)) {
+      for {
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
+        existingMags = dataLayer.resolutions
+
+        dataSets = existingMags.map(
+          mag =>
+            Map(
+              "path" -> mag,
+              "coordinateTranformations" -> List(
+                Map("type" -> "scale", "scale" -> dataSource.scale * mag)
+              )
+          ))
+        header = Map(
+          "multiscales" -> List(
+            Map(
+              "version" -> "0.4",
+              "name" -> dataLayerName,
+              "axes" -> List(
+                Map("name" -> "c", "type" -> "channel"),
+                Map("name" -> "x", "type" -> "space", "unit" -> "nanometer"),
+                Map("name" -> "y", "type" -> "space", "unit" -> "nanometer"),
+                Map("name" -> "z", "type" -> "space", "unit" -> "nanometer")
+              ),
+              "datasets" -> dataSets
+            )
+          ))
+      } yield
+        Ok(
+          Json.obj(
+            header
+          ))
+    }
+  }
+
+  /**
     * Handles requests for raw binary data via HTTP GET. Used by zarr streaming.
     */
   def rawZarrCube(

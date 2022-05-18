@@ -252,6 +252,11 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       );
     }
 
+    case "SET_MAPPING_NAME": {
+      const { mappingName, layerName } = action;
+      return updateActiveMapping(state, { mappingName }, layerName);
+    }
+
     default: // pass;
   }
 

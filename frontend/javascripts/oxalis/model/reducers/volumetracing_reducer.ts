@@ -30,8 +30,12 @@ import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import type { ServerVolumeTracing } from "types/api_flow_types";
-import { SetMappingAction, SetMappingEnabledAction } from "../actions/settings_actions";
-import { getMappingInfo } from "../accessors/dataset_accessor";
+import {
+  SetMappingAction,
+  SetMappingEnabledAction,
+  SetMappingNameAction,
+} from "oxalis/model/actions/settings_actions";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -183,7 +187,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
 
 function VolumeTracingReducer(
   state: OxalisState,
-  action: VolumeTracingAction | SetMappingAction | SetMappingEnabledAction,
+  action: VolumeTracingAction | SetMappingAction | SetMappingEnabledAction | SetMappingNameAction,
 ): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
@@ -300,6 +304,13 @@ function VolumeTracingReducer(
         mappingType,
         action.isMappingEnabled,
       );
+    }
+
+    case "SET_MAPPING_NAME": {
+      const { mappingName, layerName } = action;
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        mappingName,
+      });
     }
 
     case "SET_MAPPING_IS_EDITABLE": {

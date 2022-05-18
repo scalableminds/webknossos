@@ -85,6 +85,11 @@ export type SetMappingAction = {
   layerName: string;
   showLoadingIndicator: boolean | null | undefined;
 };
+export type SetMappingNameAction = {
+  type: "SET_MAPPING_NAME";
+  mappingName: string;
+  layerName: string;
+};
 type SetHideUnmappedIdsAction = {
   type: "SET_HIDE_UNMAPPED_IDS";
   hideUnmappedIds: boolean;
@@ -102,6 +107,7 @@ export type SettingAction =
   | SetControlModeAction
   | SetMappingEnabledAction
   | SetMappingAction
+  | SetMappingNameAction
   | SetHideUnmappedIdsAction
   | SetHistogramDataAction
   | InitializeGpuSetupAction;
@@ -232,6 +238,14 @@ export const setMappingAction = (
   mappingColors,
   hideUnmappedIds,
   showLoadingIndicator,
+});
+export const setMappingNameAction = (
+  layerName: string,
+  mappingName: string,
+): SetMappingNameAction => ({
+  type: "SET_MAPPING_NAME",
+  layerName,
+  mappingName,
 });
 export const setHideUnmappedIdsAction = (
   layerName: string,

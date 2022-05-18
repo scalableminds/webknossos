@@ -28,6 +28,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { makeMappingEditable } from "admin/admin_rest_api";
+import { setMappingAction, setMappingNameAction } from "oxalis/model/actions/settings_actions";
 
 export default function* proofreadMapping(): Saga<any> {
   yield* take("INITIALIZE_SKELETONTRACING");
@@ -75,11 +76,13 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
       tracingStoreUrl,
       volumeTracingId,
     );
-    yield* put(setMappingisEditableAction());
-    yield* put(initializeEditableMappingAction(serverEditableMapping));
+    // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
     yield* put(
       setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId),
     );
+    yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName));
+    yield* put(setMappingisEditableAction());
+    yield* put(initializeEditableMappingAction(serverEditableMapping));
   }
 
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
@@ -145,7 +148,6 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
 
   if (items.length === 0) return;
 
-  // TODO: Will there be a separate end point for these update actions?
   yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
 

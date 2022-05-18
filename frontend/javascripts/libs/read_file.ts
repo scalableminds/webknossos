@@ -15,7 +15,7 @@ export function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
 
     reader.onload = () => {
       if (typeof reader.result === "string" || reader.result === null) {
-        // Satisfy flow
+        // Satisfy typescript
         throw new Error("Couldn't read buffer");
       }
 

@@ -39,7 +39,7 @@ user_A, user_B, user_C, user_D, user_E
  */
 // Teams
 test("teams_userDefault", async (t) => {
-  await setCurrToken(tokenUserA);
+  setCurrToken(tokenUserA);
 
   const teams = _.sortBy(await api.getTeams(), (team) => team.name);
 
@@ -50,7 +50,7 @@ test("teams_userDefault", async (t) => {
   t.is(teams.length, 4);
 });
 test("teams_user_D", async (t) => {
-  await setCurrToken(tokenUserD);
+  setCurrToken(tokenUserD);
 
   const teams = _.sortBy(await api.getTeams(), (team) => team.name);
 
@@ -58,7 +58,7 @@ test("teams_user_D", async (t) => {
   t.is(teams.length, 1);
 });
 test("teams_user_E", async (t) => {
-  await setCurrToken(tokenUserE);
+  setCurrToken(tokenUserE);
 
   const teams = _.sortBy(await api.getTeams(), (team) => team.name);
 
@@ -67,7 +67,7 @@ test("teams_user_E", async (t) => {
 });
 test("teams_delete_user_D", async (t) => {
   // the teamManager is not allowed to delete the team
-  await setCurrToken(tokenUserD);
+  setCurrToken(tokenUserD);
   t.plan(1);
   await api.deleteTeam("69882b370d889b84020efd4f").catch((err) => {
     t.is(err.messages[0].error, "Access denied. Only admin users can execute this operation.");
@@ -75,7 +75,7 @@ test("teams_delete_user_D", async (t) => {
 });
 test("teams_create_user_D", async (t) => {
   // the teamManager is not allowed to create a new team
-  await setCurrToken(tokenUserD);
+  setCurrToken(tokenUserD);
   t.plan(1);
   const newTeam = {
     name: "test-team-name",
@@ -86,7 +86,7 @@ test("teams_create_user_D", async (t) => {
 });
 // TaskTypes
 test("taskTypes_userDefault", async (t) => {
-  await setCurrToken(tokenUserA);
+  setCurrToken(tokenUserA);
 
   const taskTypes = _.sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
 
@@ -94,14 +94,14 @@ test("taskTypes_userDefault", async (t) => {
   t.is(taskTypes.length, 2);
 });
 test("taskTypes_user_D", async (t) => {
-  await setCurrToken(tokenUserD);
+  setCurrToken(tokenUserD);
 
   const taskTypes = _.sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
 
   t.is(taskTypes.length, 1);
 });
 test("taskTypes_user_E", async (t) => {
-  await setCurrToken(tokenUserE);
+  setCurrToken(tokenUserE);
 
   const taskTypes = _.sortBy(await api.getTaskTypes(), (taskType) => taskType.id);
 
@@ -109,28 +109,28 @@ test("taskTypes_user_E", async (t) => {
 });
 // Tasks
 test("tasks_user_D", async (t) => {
-  await setCurrToken(tokenUserD);
+  setCurrToken(tokenUserD);
   t.plan(1);
   await api.getTask("58135c192faeb34c0081c058").catch((err) => {
     t.is(err.messages[0].error, "Task couldn’t be found");
   });
 });
 test("tasks_user_E", async (t) => {
-  await setCurrToken(tokenUserE);
+  setCurrToken(tokenUserE);
   t.plan(1);
   await api.getTask("58135c192faeb34c0081c058").catch((err) => {
     t.is(err.messages[0].error, "Task couldn’t be found");
   });
 });
 test("tasks_user_C", async (t) => {
-  await setCurrToken(tokenUserC);
+  setCurrToken(tokenUserC);
   const task = await api.getTask("58135c192faeb34c0081c058");
   t.is(task.id, "58135c192faeb34c0081c058");
 });
 // User
 test("user_user_B", async (t) => {
   // teamMng are not allowed to de-/activate a user (if they are not an admin)
-  await setCurrToken(tokenUserB);
+  setCurrToken(tokenUserB);
   t.plan(2);
   const userIdC = "770b9f4d2a7c0e4d008da6ef";
   const user = await api.getUser(userIdC);
@@ -145,7 +145,7 @@ test("user_user_B", async (t) => {
 // Project
 test("project_user_B", async (t) => {
   // teamMng are not allowed to delete a project (if they are not an admin and they are not the owner)
-  await setCurrToken(tokenUserE);
+  setCurrToken(tokenUserE);
   t.plan(1);
   const projectId = "58135bfd2faeb3190181c057";
   await api.deleteProject(projectId).catch((err) => {

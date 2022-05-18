@@ -150,6 +150,7 @@ function LayerSelectionFormItem({
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;
   userBoundingBoxes: UserBoundingBox[];
+  onChangeSelectedBoundingBox: (bBoxId: number) => void ;
 };
 
 function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined) {
@@ -180,7 +181,7 @@ export function BoundingBoxSelection({
   style,
 }: {
   userBoundingBoxes: UserBoundingBox[];
-  setSelectedBoundingBoxId?: React.Dispatch<React.SetStateAction<number>>;
+  setSelectedBoundingBoxId?: (boundingBoxId: number) => void;
   style?: React.CSSProperties;
 }): JSX.Element {
   const onSelect = setSelectedBoundingBoxId
@@ -211,6 +212,7 @@ export function BoundingBoxSelection({
 function BoundingBoxSelectionFormItem({
   isBoundingBoxConfigurable,
   userBoundingBoxes,
+  onChangeSelectedBoundingBox,
 }: BoundingBoxSelectionProps): JSX.Element {
   return (
     <div style={isBoundingBoxConfigurable ? {} : { display: "none" }}>
@@ -231,7 +233,7 @@ function BoundingBoxSelectionFormItem({
         ]}
         hidden={!isBoundingBoxConfigurable}
       >
-        <BoundingBoxSelection userBoundingBoxes={userBoundingBoxes} />
+        <BoundingBoxSelection userBoundingBoxes={userBoundingBoxes} setSelectedBoundingBoxId={onChangeSelectedBoundingBox} />
       </Form.Item>
     </div>
   );
@@ -415,6 +417,7 @@ function StartingJobModal(props: StartingJobModalProps) {
         <BoundingBoxSelectionFormItem
           isBoundingBoxConfigurable={isBoundingBoxConfigurable}
           userBoundingBoxes={userBoundingBoxes}
+          onChangeSelectedBoundingBox={(bBoxId: number) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         />
         <div style={{ textAlign: "center" }}>
           <Button type="primary" size="large" htmlType="submit">

@@ -12,7 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added Volume Interpolation feature. When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices. This feature is disabled by default. Note that the feature is even forbidden for tasks by default, but can be enabled/recommended. [#6162](https://github.com/scalableminds/webknossos/pull/6162)
-- Added a batching mechanism to task creation via nmls to support uploading more that 100 nmls at a time. [#6216](https://github.com/scalableminds/webknossos/pull/6216)
+- Added a batching mechanism to the task creation via NML to support uploading more than 100 NMLs at a time. [#6216](https://github.com/scalableminds/webknossos/pull/6216)
 - Added a long-running job that applies the merging done via a merger mode tracing to a new output dataset. The job is accessible via a button next to the merger mode button once the merger mode is active. [#6086](https://github.com/scalableminds/webknossos/pull/6086)
 - Added support to stream zarr files using the corresponding [zarr spec](https://zarr.readthedocs.io/en/stable/spec/v2.html#storage). [#6144](https://github.com/scalableminds/webknossos/pull/6144)
 

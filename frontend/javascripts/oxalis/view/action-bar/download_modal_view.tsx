@@ -14,6 +14,7 @@ import {
   BoundingBoxSelection,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import { hasVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { getDataLayers, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { useSelector } from "react-redux";
 import type { OxalisState } from "oxalis/store";
@@ -257,6 +258,8 @@ with wk.webknossos_context(
   };
 
   const selection = ["Volume", "Skeleton"];
+  const hasVolumes = hasVolumeTracings(tracing);
+  const hasSkeleton = tracing.skeleton != null;
 
   return (
     <Modal
@@ -276,6 +279,8 @@ with wk.webknossos_context(
                 margin: "6px 12px",
               }}
             >
+              {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
+              {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
               {messages["annotation.download"]}
             </Text>
           </Row>
@@ -298,20 +303,30 @@ with wk.webknossos_context(
             </Col>
             <Col span={15}>
               <CheckboxGroup onChange={handleCheckboxChange} defaultValue={selection}>
-                <Checkbox style={checkboxStyle} value="Volume" checked={includeVolumeData}>
-                  Volume Annotations as WKW
-                </Checkbox>
-                <Hint
-                  style={{
-                    marginLeft: 24,
-                    marginBottom: 12,
-                  }}
-                >
-                  Download a zip folder containing WKW files.
-                </Hint>
+                {hasVolumes ? (
+                  <div>
+                    <Checkbox
+                      style={checkboxStyle}
+                      value="Volume"
+                      checked={hasSkeleton ? includeVolumeData : hasVolumes}
+                      disabled={!hasSkeleton}
+                    >
+                      Volume annotations as WKW
+                    </Checkbox>
+                    <Hint
+                      style={{
+                        marginLeft: 24,
+                        marginBottom: 12,
+                      }}
+                    >
+                      Download a zip folder containing WKW files.
+                    </Hint>
+                  </div>
+                ) : null}
 
                 <Checkbox style={checkboxStyle} value="Skeleton" checked disabled>
-                  Skeleton Annotations as NML
+                  {hasSkeleton ? "Skeleton annotations " : "Meta data "}
+                  as NML
                 </Checkbox>
                 <Hint
                   style={{

@@ -91,8 +91,8 @@ export function LayerSelection({
   const onSelect = setSelectedLayerName
     ? (layerName: string) => setSelectedLayerName(layerName)
     : undefined;
-  const maybeLayerType = typeof layerType !== "undefined" ? layerType : "";
-  const maybeSpace = typeof layerType !== "undefined" ? " " : "";
+  const maybeLayerType = layerType || "";
+  const maybeSpace = layerType != null ? " " : "";
   return (
     <Select
       showSearch

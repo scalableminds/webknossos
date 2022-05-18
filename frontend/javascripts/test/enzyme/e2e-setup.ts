@@ -36,6 +36,7 @@ const volatileKeys: Array<string | number | symbol> = [
   "modified",
   "created",
   "createdTimestamp",
+  "lastActivity",
   "tracingTime",
   "tracingId",
 ];

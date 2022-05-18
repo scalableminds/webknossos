@@ -42,6 +42,7 @@ class UserController @Inject()(userService: UserService,
     log() {
       for {
         userJs <- userService.publicWrites(request.identity, request.identity)
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield Ok(userJs)
     }
   }
@@ -75,6 +76,7 @@ class UserController @Inject()(userService: UserService,
         annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
@@ -99,6 +101,7 @@ class UserController @Inject()(userService: UserService,
         annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {

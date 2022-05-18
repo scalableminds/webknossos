@@ -9,6 +9,7 @@ import type {
   MappingType,
 } from "oxalis/store";
 import Deferred from "libs/deferred";
+
 export type UpdateUserSettingAction = {
   type: "UPDATE_USER_SETTING";
   propertyName: keyof UserConfiguration;
@@ -38,6 +39,7 @@ export type InitializeSettingsAction = {
   type: "INITIALIZE_SETTINGS";
   initialUserSettings: UserConfiguration;
   initialDatasetSettings: DatasetConfiguration;
+  originalDatasetSettings: DatasetConfiguration;
 };
 type SetViewModeAction = {
   type: "SET_VIEW_MODE";
@@ -144,14 +146,14 @@ export const updateLayerSettingAction = (
   value,
 });
 export const initializeSettingsAction = (
-  initialUserSettings: Record<string, any>,
-  initialDatasetSettings: Record<string, any>,
+  initialUserSettings: UserConfiguration,
+  initialDatasetSettings: DatasetConfiguration,
+  originalDatasetSettings: DatasetConfiguration,
 ): InitializeSettingsAction => ({
   type: "INITIALIZE_SETTINGS",
-  // @ts-expect-error ts-migrate(2740) FIXME: Type 'Record<string, any>' is missing the followin... Remove this comment to see the full error message
   initialUserSettings,
-  // @ts-expect-error ts-migrate(2740) FIXME: Type 'Record<string, any>' is missing the followin... Remove this comment to see the full error message
   initialDatasetSettings,
+  originalDatasetSettings,
 });
 export const setViewModeAction = (viewMode: ViewMode): SetViewModeAction => ({
   type: "SET_VIEW_MODE",

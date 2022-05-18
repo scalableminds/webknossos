@@ -606,7 +606,6 @@ export function determineAllowedModes(
 
   return {
     preferredMode,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string[]' is not assignable to type 'APIAllo... Remove this comment to see the full error message
     allowedModes,
   };
 }

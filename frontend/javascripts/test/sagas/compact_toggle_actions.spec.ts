@@ -123,7 +123,7 @@ function getActions(initialState, newState) {
   const updateActions = testDiffing(initialState, newState);
 
   if (newState.tracing.skeleton == null) {
-    // Satisfy flow
+    // Satisfy typescript
     throw new Error("newState.tracing.skeleton should not be null");
   }
 

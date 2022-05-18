@@ -174,7 +174,7 @@ export default function BoundingBoxTab() {
       ) : (
         <div>No Bounding Boxes created yet.</div>
       )}
-      {<div style={{ color: "rgba(0,0,0,0.25)" }}>{maybeUneditableExplanation}</div>}
+      <div style={{ color: "rgba(0,0,0,0.25)" }}>{maybeUneditableExplanation}</div>
       {allowUpdate ? (
         <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
           <Tooltip title="Click to add another bounding box.">

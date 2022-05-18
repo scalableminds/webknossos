@@ -618,10 +618,14 @@ export class BoundingBoxTool {
   }
 }
 export class ProofreadTool {
-  static getPlaneMouseControls(_planeId: OrthoView): any {
+  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
-      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        handleAgglomerateSkeletonAtClick(pos);
+      leftClick: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
+        const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
+
+        if (!didSelectNode) {
+          handleAgglomerateSkeletonAtClick(pos);
+        }
       },
     };
   }

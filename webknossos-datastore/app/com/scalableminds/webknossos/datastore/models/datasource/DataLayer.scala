@@ -61,14 +61,14 @@ object ElementClass extends ExtendedEnumeration {
   }
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
-    case ElementClass.uint8  => (1, "<u1")
+    case ElementClass.uint8  => (1, "|u1")
     case ElementClass.uint16 => (1, "<u2")
-    case ElementClass.uint24 => (3, "<u1")
+    case ElementClass.uint24 => (3, "|u1")
     case ElementClass.uint32 => (1, "<u4")
     case ElementClass.uint64 => (1, "<u8")
     case ElementClass.float  => (1, "<f4")
     case ElementClass.double => (1, "<f8")
-    case ElementClass.int8   => (1, "<i1")
+    case ElementClass.int8   => (1, "|i1")
     case ElementClass.int16  => (1, "<i2")
     case ElementClass.int32  => (1, "<i4")
     case ElementClass.int64  => (1, "<i8")

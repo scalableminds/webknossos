@@ -24,7 +24,7 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
 
   override protected def tick(): Unit = {
     for {
-      multiUsers: Seq[MultiUser] <- multiUserDAO.findAll
+      multiUsers: List[MultiUser] <- multiUserDAO.findAll
       _ <- Fox.serialCombined(multiUsers)(tagUserByActivity)
     } yield ()
     ()

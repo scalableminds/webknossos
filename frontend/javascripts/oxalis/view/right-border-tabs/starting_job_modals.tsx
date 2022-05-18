@@ -150,7 +150,7 @@ function LayerSelectionFormItem({
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;
   userBoundingBoxes: UserBoundingBox[];
-  onChangeSelectedBoundingBox: (bBoxId: number) => void ;
+  onChangeSelectedBoundingBox: (bBoxId: number) => void;
 };
 
 function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined) {
@@ -233,7 +233,10 @@ function BoundingBoxSelectionFormItem({
         ]}
         hidden={!isBoundingBoxConfigurable}
       >
-        <BoundingBoxSelection userBoundingBoxes={userBoundingBoxes} setSelectedBoundingBoxId={onChangeSelectedBoundingBox} />
+        <BoundingBoxSelection
+          userBoundingBoxes={userBoundingBoxes}
+          setSelectedBoundingBoxId={onChangeSelectedBoundingBox}
+        />
       </Form.Item>
     </div>
   );
@@ -417,7 +420,9 @@ function StartingJobModal(props: StartingJobModalProps) {
         <BoundingBoxSelectionFormItem
           isBoundingBoxConfigurable={isBoundingBoxConfigurable}
           userBoundingBoxes={userBoundingBoxes}
-          onChangeSelectedBoundingBox={(bBoxId: number) => form.setFieldsValue({ boundingBoxId: bBoxId })}
+          onChangeSelectedBoundingBox={(bBoxId: number) =>
+            form.setFieldsValue({ boundingBoxId: bBoxId })
+          }
         />
         <div style={{ textAlign: "center" }}>
           <Button type="primary" size="large" htmlType="submit">

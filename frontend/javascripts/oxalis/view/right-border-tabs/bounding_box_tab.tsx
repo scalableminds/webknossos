@@ -171,7 +171,11 @@ export default function BoundingBoxTab() {
             />
           </Tooltip>
         </div>
-      ) : null}
+      ) : (
+        <div style={{ color: "rgba(0,0,0,0.25)" }}>
+          Please create a new annotation to add custom bounding boxes
+        </div>
+      )}
       {selectedBoundingBoxForExport != null ? (
         <ExportBoundingBoxModal
           dataset={dataset}

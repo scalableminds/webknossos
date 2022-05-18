@@ -388,15 +388,16 @@ class EditableMappingService @Inject()(
                                      agglomerateId: Long): Fox[Array[Byte]] =
     for {
       graph <- editableMapping.agglomerateToGraph.get(agglomerateId)
+      nodeIdStartAtOneOffset = 1
       nodes = graph.positions.zipWithIndex.map {
         case (pos, idx) =>
           NodeDefaults.createInstance.copy(
-            id = idx,
+            id = idx + nodeIdStartAtOneOffset,
             position = pos
           )
       }
       skeletonEdges = graph.edges.map { e =>
-        Edge(source = e._1.toInt, target = e._2.toInt)
+        Edge(source = e._1.toInt + nodeIdStartAtOneOffset, target = e._2.toInt + nodeIdStartAtOneOffset)
       }
 
       trees = Seq(

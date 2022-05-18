@@ -224,13 +224,13 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          mags = tracing.resolutions.map(v => Vec3Int(v.x, v.y, v.z))
+          existingMags = tracing.resolutions.map(vec3IntFromProto)
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              Map(tracingId -> ".") ++ mags.map { mag =>
+              Map(tracingId -> ".") ++ existingMags.map { mag =>
                 (mag.toMagLiteral(allowScalar = true), mag.toMagLiteral(allowScalar = true))
               }.toMap
             )).withHeaders()
@@ -243,7 +243,7 @@ class VolumeTracingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
 
-          existingMags = tracing.resolutions.map(v => Vec3Int(v.x, v.y, v.z))
+          existingMags = tracing.resolutions.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
         } yield
@@ -262,7 +262,7 @@ class VolumeTracingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
 
-          existingMags = tracing.resolutions.map(v => Vec3Int(v.x, v.y, v.z))
+          existingMags = tracing.resolutions.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
@@ -306,7 +306,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
 
-            existingMags = tracing.resolutions.map(v => Vec3Int(v.x, v.y, v.z))
+            existingMags = tracing.resolutions.map(vec3IntFromProto)
             magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
             _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
@@ -321,9 +321,13 @@ class VolumeTracingController @Inject()(
               applyAgglomerate = None,
               version = None
             )
-            (data, _) <- tracingService.data(tracingId, tracing, List(request))
-
-            dataWithFallback <- getFallbackLayerDataIfEmpty(tracing, data, mag, cxyz, combinedToken) ?~> "Getting fallback layer failed" ~> 404
+            (data, missingBucketIndices) <- tracingService.data(tracingId, tracing, List(request))
+            dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
+                                                            data,
+                                                            missingBucketIndices,
+                                                            mag,
+                                                            cxyz,
+                                                            combinedToken) ?~> "Getting fallback layer failed" ~> 400
           } yield Ok(dataWithFallback).withHeaders()
         }
       }
@@ -331,33 +335,45 @@ class VolumeTracingController @Inject()(
 
   private def getFallbackLayerDataIfEmpty(tracing: VolumeTracing,
                                           data: Array[Byte],
+                                          missingBucketIndices: List[Int],
                                           mag: String,
                                           cxyz: String,
                                           urlToken: Option[String]): Fox[Array[Byte]] = {
-    val isAnnotationEmpty = data.forall(x => x == 0)
+    def dataStoreFromCache(organizationName: String, dataSetName: String): Future[Box[String]] =
+      dataStoreUriCache.getOrLoad(
+        (Some(organizationName), dataSetName),
+        keyTuple => remoteWebKnossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2)
+      )
 
-    // Since we only do all bucket requests, complete bucket needs to empty so that we use fallback
-    if (isAnnotationEmpty) {
-      val organizationName = tracing.getOrganizationName
+    def fallbackLayerData(): Fox[Array[Byte]] = {
+      val organizationName = tracing.organizationName
       val dataSetName = tracing.dataSetName
       val dataLayerName = tracing.getFallbackLayer
 
-      val dataStoreURI = Fox(
-        dataStoreURICache.getOrLoad(
-          (Some(organizationName), dataSetName),
-          keyTuple => remoteWebKnossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2)
-        ))
+      organizationName match {
+        case Some(orgName) =>
+          for {
+            dataStoreURL <- Fox(dataStoreFromCache(orgName, dataSetName))
+            fallbackData <- remoteDataStoreClient.fallbackLayerBucket(dataStoreURL,
+                                                                      orgName,
+                                                                      dataSetName,
+                                                                      dataLayerName,
+                                                                      mag,
+                                                                      cxyz,
+                                                                      urlToken)
+          } yield fallbackData
+        case None => Fox.failure("Organization Name is not set (Consider creating a new annotation).")
+      }
+    }
 
-      dataStoreURI.flatMap(
-        dataStoreURL =>
-          remoteDataStoreClient
-            .fallbackLayerBucket(dataStoreURL, organizationName, dataSetName, dataLayerName, mag, cxyz, urlToken))
+    if (missingBucketIndices.nonEmpty && tracing.fallbackLayer.isDefined) {
+      fallbackLayerData()
     } else {
       Fox.successful(data)
     }
   }
 
-  private lazy val dataStoreURICache: Cache[(Option[String], String), Box[String]] = {
+  private lazy val dataStoreUriCache: Cache[(Option[String], String), Box[String]] = {
     val defaultCachingSettings = CachingSettings("")
     val maxEntries = 1000
     val lfuCacheSettings =

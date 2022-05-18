@@ -106,19 +106,19 @@ function Footer({ tabKey, onClick }: { tabKey: string; onClick: () => void }) {
 
 export default function DownloadModalView(props: Props): JSX.Element {
   const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
-  const userBoundingBoxes = useSelector((state: OxalisState) =>
-    getUserBoundingBoxesFromState(state),
-  );
+
   const [activeTabKey, setActiveTabKey] = useState("download");
   const [includeVolumeData, setIncludeVolumeData] = useState(true);
   const [keepWindowOpen, setKeepWindowOpen] = useState(false);
+  const [startedExports, setStartedExports] = useState<string[]>([]);
+  const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
+  const [selectedBoundingBoxID, setSelectedBoundingBoxId] = useState(-1);
 
-  // const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const [startedExports, setStartedExports] = useState<string[]>([]);
-  const layers = getDataLayers(dataset);
-
+  const userBoundingBoxes = useSelector((state: OxalisState) =>
+    getUserBoundingBoxesFromState(state),
+  );
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
@@ -126,8 +126,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
     (state: OxalisState) => state.temporaryConfiguration.activeMappingByLayer,
   );
 
-  const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
-  const [selectedBoundingBoxID, setSelectedBoundingBoxId] = useState(-1);
+  const layers = getDataLayers(dataset);
 
   const handleOk = async () => {
     if (activeTabKey === "download") {

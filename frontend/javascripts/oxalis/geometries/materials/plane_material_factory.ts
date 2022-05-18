@@ -88,14 +88,14 @@ class PlaneMaterialFactory {
   attributes: Record<string, any>;
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
-  leastRecentlyVisibleColorLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
+  leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
   oldShaderCode: string | null | undefined;
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
-    this.leastRecentlyVisibleColorLayers = [];
+    this.leastRecentlyVisibleLayers = [];
   }
 
   setup() {
@@ -422,6 +422,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (state) => state.datasetConfiguration.layers,
         (layerSettings) => {
+          let updatedLayerVisibility = false;
           for (const dataLayer of Model.getAllLayers()) {
             const { elementClass } = dataLayer.cube;
             const settings = layerSettings[dataLayer.name];
@@ -435,10 +436,11 @@ class PlaneMaterialFactory {
                 oldVisibilityPerLayer[dataLayer.name] !== isLayerEnabled
               ) {
                 if (settings.isDisabled) {
-                  this.onDisableColorLayer(dataLayer.name, isSegmentationLayer);
+                  this.onDisableLayer(dataLayer.name, isSegmentationLayer);
                 } else {
-                  this.onEnableColorLayer(dataLayer.name);
+                  this.onEnableLayer(dataLayer.name);
                 }
+                updatedLayerVisibility = true;
               }
 
               oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
@@ -446,7 +448,9 @@ class PlaneMaterialFactory {
               this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
             }
           }
-
+          if (updatedLayerVisibility) {
+            this.recomputeFragmentShader();
+          }
           // TODO: Needed?
           app.vent.trigger("rerender");
         },
@@ -642,26 +646,27 @@ class PlaneMaterialFactory {
     }
 
     const state = Store.getState();
-    const enabledLayer = getEnabledLayers(state.dataset, state.datasetConfiguration, {}).map(
+    const enabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration, {}).map(
       ({ name, category }) => ({ name, isSegmentationLayer: category === "segmentation" }),
     );
-    const disabledLayer = getEnabledLayers(state.dataset, state.datasetConfiguration, {
+    const disabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration, {
       invert: true,
     }).map(({ name, category }) => ({ name, isSegmentationLayer: category === "segmentation" }));
-    // In case, this.leastRecentlyVisibleColorLayers does not contain all disabled layers
+    // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers
     // because they were already disabled on page load), append the disabled layers
     // which are not already in that array.
     // Note that the order of this array is important (earlier elements are more "recently used")
     // which is why it is important how this operation is done.
-    this.leastRecentlyVisibleColorLayers = [
-      ...this.leastRecentlyVisibleColorLayers,
-      ..._.without(disabledLayer, ...this.leastRecentlyVisibleColorLayers),
+    this.leastRecentlyVisibleLayers = [
+      ...this.leastRecentlyVisibleLayers,
+      ...disabledLayers.filter(
+        ({ name }) =>
+          !this.leastRecentlyVisibleLayers.some((otherLayer) => otherLayer.name === name),
+      ),
     ];
 
-    // Perform a uniq operation on leastRecentlyVisibleColorLayers to avoid that
-    // that invalid shaders are generated (due to duplicate layer names) when switching
-    // between the visibility of different segmentation layers.
-    const names = _.uniq(enabledLayer.concat(this.leastRecentlyVisibleColorLayers))
+    const names = enabledLayers
+      .concat(this.leastRecentlyVisibleLayers)
       .slice(0, maximumLayerCountToRender)
       .sort();
 
@@ -673,22 +678,20 @@ class PlaneMaterialFactory {
     return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames];
   }
 
-  onDisableColorLayer = (layerName: string, isSegmentationLayer: boolean) => {
-    this.leastRecentlyVisibleColorLayers = this.leastRecentlyVisibleColorLayers.filter(
+  onDisableLayer = (layerName: string, isSegmentationLayer: boolean) => {
+    this.leastRecentlyVisibleLayers = this.leastRecentlyVisibleLayers.filter(
       (entry) => entry.name !== layerName,
     );
-    this.leastRecentlyVisibleColorLayers = [
+    this.leastRecentlyVisibleLayers = [
       { name: layerName, isSegmentationLayer },
-      ...this.leastRecentlyVisibleColorLayers,
+      ...this.leastRecentlyVisibleLayers,
     ];
-    this.recomputeFragmentShader();
   };
 
-  onEnableColorLayer = (layerName: string) => {
-    this.leastRecentlyVisibleColorLayers = this.leastRecentlyVisibleColorLayers.filter(
+  onEnableLayer = (layerName: string) => {
+    this.leastRecentlyVisibleLayers = this.leastRecentlyVisibleLayers.filter(
       (entry) => entry.name !== layerName,
     );
-    this.recomputeFragmentShader();
   };
 
   getFragmentShader(): string {

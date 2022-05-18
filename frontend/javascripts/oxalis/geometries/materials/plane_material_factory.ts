@@ -417,7 +417,7 @@ class PlaneMaterialFactory {
         true,
       ),
     );
-    const oldVisibilityPerLayer = {};
+    const oldVisibilityPerLayer: Record<string, boolean> = {};
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (state) => state.datasetConfiguration.layers,
@@ -431,9 +431,7 @@ class PlaneMaterialFactory {
               const isSegmentationLayer = dataLayer.isSegmentation;
 
               if (
-                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 oldVisibilityPerLayer[dataLayer.name] != null &&
-                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 oldVisibilityPerLayer[dataLayer.name] !== isLayerEnabled
               ) {
                 if (settings.isDisabled) {
@@ -443,7 +441,6 @@ class PlaneMaterialFactory {
                 }
               }
 
-              // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
               oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
               const name = sanitizeName(dataLayer.name);
               this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
@@ -660,16 +657,19 @@ class PlaneMaterialFactory {
       ...this.leastRecentlyVisibleColorLayers,
       ..._.without(disabledLayer, ...this.leastRecentlyVisibleColorLayers),
     ];
-    const names = enabledLayer
-      .concat(this.leastRecentlyVisibleColorLayers)
+
+    // Perform a uniq operation on leastRecentlyVisibleColorLayers to avoid that
+    // that invalid shaders are generated (due to duplicate layer names) when switching
+    // between the visibility of different segmentation layers.
+    const names = _.uniq(enabledLayer.concat(this.leastRecentlyVisibleColorLayers))
       .slice(0, maximumLayerCountToRender)
       .sort();
-    const sanitizedColorLayerNames = names
-      .filter(({ isSegmentationLayer }) => !isSegmentationLayer)
-      .map(({ name }) => sanitizeName(name));
-    const sanitizedSegmentationLayerNames = names
-      .filter(({ isSegmentationLayer }) => isSegmentationLayer)
-      .map(({ name }) => sanitizeName(name));
+
+    const [sanitizedColorLayerNames, sanitizedSegmentationLayerNames] = _.partition(
+      names,
+      ({ isSegmentationLayer }) => !isSegmentationLayer,
+    ).map((layers) => layers.map(({ name }) => sanitizeName(name)));
+
     return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames];
   }
 

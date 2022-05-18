@@ -192,6 +192,7 @@ class CameraController extends React.PureComponent<Props> {
     tdCamera.right = cameraData.right;
     tdCamera.top = cameraData.top;
     tdCamera.bottom = cameraData.bottom;
+    tdCamera.far = cameraData.far;
     tdCamera.up = new THREE.Vector3(...cameraData.up);
     tdCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
     tdCamera.updateProjectionMatrix();
@@ -225,6 +226,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   // Use width and height to keep the same zoom.
   let width = tdCamera.right - tdCamera.left;
   let height = tdCamera.top - tdCamera.bottom;
+  let far = tdCamera.far;
   let position: Vector3;
   let up: Vector3;
 
@@ -241,6 +243,10 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const paddingFactor = 1.1;
     width = Math.sqrt(datasetExtent.width ** 2 + datasetExtent.height ** 2) * paddingFactor;
     height = width / aspectRatio;
+    // Take the whole maximum diagonal width of the dataset to get the possible maximum extent of the dataset.
+    // This is used as an indication to set the far plane.
+    // A padding factor of 2 is used to ensure the adaptive far value is big enough in any case.
+    far = Math.sqrt(width ** 2 + datasetExtent.depth ** 2) * 2;
     up = [0, 0, -1];
     // For very tall datasets that have a very low or high z starting coordinate, the planes might not be visible.
     // Thus take the z coordinate of the flycam instead of the z coordinate of the center.
@@ -311,6 +317,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       setTDCameraWithoutTimeTrackingAction({
         position: newPosition,
         up: tweened.up,
+        far,
         left,
         right,
         top,

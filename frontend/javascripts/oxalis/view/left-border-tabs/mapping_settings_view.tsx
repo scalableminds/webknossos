@@ -19,7 +19,6 @@ import {
   setHideUnmappedIdsAction,
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
-import Model from "oxalis/model";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
@@ -72,8 +71,6 @@ export const convertCellIdToCSS = (
   alpha?: number,
 ) =>
   id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
-
-const hasSegmentation = () => Model.getVisibleSegmentationLayer() != null;
 
 const needle = "##";
 
@@ -170,10 +167,6 @@ class MappingSettingsView extends React.Component<Props, State> {
   };
 
   render() {
-    if (!hasSegmentation()) {
-      return <div className="padded-tab-content">No segmentation available</div>;
-    }
-
     const availableMappings =
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
         ? this.props.segmentationLayer.mappings

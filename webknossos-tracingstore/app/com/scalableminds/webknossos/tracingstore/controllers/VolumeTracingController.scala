@@ -359,7 +359,7 @@ class VolumeTracingController @Inject()(
 
   private lazy val dataStoreURICache: Cache[(Option[String], String), Box[String]] = {
     val defaultCachingSettings = CachingSettings("")
-    val maxEntries = 100
+    val maxEntries = 1000
     val lfuCacheSettings =
       defaultCachingSettings.lfuCacheSettings
         .withInitialCapacity(maxEntries)

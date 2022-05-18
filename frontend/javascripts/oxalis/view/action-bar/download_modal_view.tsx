@@ -257,7 +257,6 @@ with wk.webknossos_context(
     );
   };
 
-  const selection = ["Volume", "Skeleton"];
   const hasVolumes = hasVolumeTracings(tracing);
   const hasSkeleton = tracing.skeleton != null;
 
@@ -302,7 +301,7 @@ with wk.webknossos_context(
               Select the data you would like to download.
             </Col>
             <Col span={15}>
-              <CheckboxGroup onChange={handleCheckboxChange} defaultValue={selection}>
+              <CheckboxGroup onChange={handleCheckboxChange} defaultValue={["Volume", "Skeleton"]}>
                 {hasVolumes ? (
                   <div>
                     <Checkbox

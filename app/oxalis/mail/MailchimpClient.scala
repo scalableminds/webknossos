@@ -22,7 +22,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
     logger.info(s"Registering user ${user._id} for Mailchimp, tag=${MailchimpTag.format(tag)}")
     for {
       _ <- registerUser(user.firstName, user.lastName, multiUser.email, emailMd5)
-      _ <- tagUser(emailMd5, tag)
+      _ <- tagByEmailMd5(emailMd5, tag)
     } yield ()
     ()
   }
@@ -44,13 +44,19 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
     if (conf.host.isEmpty) return
     for {
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      emailMd5 = SCrypt.md5(multiUser.email)
-      _ <- tagUser(emailMd5, tag)
+      _ = tagMultiUser(multiUser, tag)
     } yield ()
     ()
   }
 
-  private def tagUser(emailMd5: String, tag: MailchimpTag): Fox[WSResponse] = {
+  def tagMultiUser(multiUser: MultiUser, tag: MailchimpTag): Unit = {
+    if (conf.host.isEmpty) return
+    val emailMd5 = SCrypt.md5(multiUser.email)
+    tagByEmailMd5(emailMd5, tag)
+    ()
+  }
+
+  private def tagByEmailMd5(emailMd5: String, tag: MailchimpTag): Fox[WSResponse] = {
     val uri = s"${conf.host}/lists/${conf.listId}/members/$emailMd5/tags"
     val tagBody = Json.obj(
       "tags" -> List(Json.obj("name" -> MailchimpTag.format(tag), "status" -> "active"))

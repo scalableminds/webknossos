@@ -32,8 +32,16 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
 
   private def tagUserByActivity(multiUser: MultiUser): Fox[Unit] =
     for {
-      isActive <- multiUserDAO.hasAtLeastOneActiveUser(multiUser._id)
+      isActivated <- multiUserDAO.hasAtLeastOneActiveUser(multiUser._id)
       lastActivity <- multiUserDAO.lastActivity(multiUser._id)
-      // TODO logic, tagging
+      now = System.currentTimeMillis()
+      _ = if (isActivated && multiUser.created < now - (21 days).toMillis) {
+        if (lastActivity < now - (14 days).toMillis) {
+          mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasActiveInWeeksTwoAndThree)
+        } else if (lastActivity > now - (14 days).toMillis) {
+          mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasActiveInWeeksTwoAndThree)
+        }
+      }
+      // TODO exact logic
     } yield ()
 }

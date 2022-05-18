@@ -153,16 +153,18 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       val edges: Array[Array[Long]] =
         reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
 
+      val nodeIdStartAtOneOffset = 1
+
       val nodes = positions.zipWithIndex.map {
         case (pos, idx) =>
           NodeDefaults.createInstance.copy(
-            id = idx,
+            id = idx + nodeIdStartAtOneOffset,
             position = Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt)
           )
       }
 
       val skeletonEdges = edges.map { e =>
-        Edge(source = e(0).toInt, target = e(1).toInt)
+        Edge(source = e(0).toInt  + nodeIdStartAtOneOffset, target = e(1).toInt + nodeIdStartAtOneOffset)
       }
 
       val trees = Seq(

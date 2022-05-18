@@ -25,6 +25,7 @@ import {
   getResolutionUnion,
   hasSegmentation,
   isElementClassSupported,
+  isSegmentationLayer,
   getSegmentationLayers,
   getSegmentationLayerByNameOrFallbackName,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -77,7 +78,13 @@ import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/map
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
-import type { AnnotationType, DatasetConfiguration, TraceOrViewCommand } from "oxalis/store";
+import type {
+  AnnotationType,
+  DatasetConfiguration,
+  DatasetLayerConfiguration,
+  TraceOrViewCommand,
+  UserConfiguration,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
@@ -147,21 +154,29 @@ export async function initialize(
     };
   }
 
-  const [dataset, initialUserSettings, serverTracings]: [
-    APIDataset,
-    Record<string, any>,
-    Array<ServerTracing>,
-  ] = await fetchParallel(annotation, datasetId, versions);
+  const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
+    annotation,
+    datasetId,
+    versions,
+  );
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
-  const displayedVolumeTracings = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
+  const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
   initializeDataset(initialFetch, dataset, serverTracings);
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
-    displayedVolumeTracings,
+    serverVolumeTracingIds,
     getSharingToken(),
   );
-  applyAnnotationSpecificViewConfigurationInplace(annotation, initialDatasetSettings);
-  initializeSettings(initialUserSettings, initialDatasetSettings);
+  const annotationSpecificDatasetSettings = applyAnnotationSpecificViewConfiguration(
+    annotation,
+    dataset,
+    initialDatasetSettings,
+  );
+  initializeSettings(
+    initialUserSettings,
+    annotationSpecificDatasetSettings,
+    initialDatasetSettings,
+  );
   let initializationInformation = null;
 
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
@@ -209,7 +224,7 @@ async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: APIDatasetId,
   versions?: Versions,
-): Promise<[APIDataset, Record<string, any>, Array<ServerTracing>]> {
+): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
@@ -420,10 +435,13 @@ export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
 }
 
 function initializeSettings(
-  initialUserSettings: Record<string, any>,
-  initialDatasetSettings: Record<string, any>,
+  initialUserSettings: UserConfiguration,
+  initialDatasetSettings: DatasetConfiguration,
+  originalDatasetSettings: DatasetConfiguration,
 ): void {
-  Store.dispatch(initializeSettingsAction(initialUserSettings, initialDatasetSettings));
+  Store.dispatch(
+    initializeSettingsAction(initialUserSettings, initialDatasetSettings, originalDatasetSettings),
+  );
 }
 
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
@@ -495,16 +513,9 @@ function setupLayerForVolumeTracing(
   tracings: Array<ServerVolumeTracing>,
 ): Array<APIDataLayer> {
   // This method adds/merges the segmentation layers of the tracing into the dataset layers.
-  // This is done by
-  // 1) removing all segmentation data layers (gathered in newLayers)
-  // 2) appending new tracing layers (using the original layers for fallback information)
+
   const originalLayers = dataset.dataSource.dataLayers;
-  // Remove other segmentation layers, since we are adding new ones.
-  // This is a temporary workaround. Even though we support multiple segmentation
-  // layers, we cannot render both at the same time. Hiding the existing segmentation
-  // layer would be good, but this information is stored per dataset and not per annotation
-  // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
-  const newLayers = originalLayers.filter((layer) => layer.category !== "segmentation");
+  const newLayers = originalLayers.slice();
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -518,7 +529,7 @@ function setupLayerForVolumeTracing(
       (layer) => layer.name === tracing.fallbackLayer,
     );
 
-    const fallbackLayer = originalLayers[fallbackLayerIndex];
+    const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
     const boundaries = getBoundaries(dataset);
     const resolutions = tracing.resolutions || [];
     const tracingHasResolutionList = resolutions.length > 0;
@@ -542,7 +553,11 @@ function setupLayerForVolumeTracing(
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
     };
-    newLayers.push(tracingLayer);
+    if (fallbackLayerIndex > -1) {
+      newLayers[fallbackLayerIndex] = tracingLayer;
+    } else {
+      newLayers.push(tracingLayer);
+    }
   }
 
   return newLayers;
@@ -772,21 +787,63 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
   }
 }
 
-function applyAnnotationSpecificViewConfigurationInplace(
+function applyAnnotationSpecificViewConfiguration(
   annotation: APIAnnotation | null | undefined,
-  initialDatasetSettings: DatasetConfiguration,
-) {
-  /*
-  Apply annotation-specific view configurations to the dataset settings which are persisted
-  per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled" information per
-  layer which should override the isDisabled information in DatasetConfiguration.
-  */
-  if (annotation && annotation.viewConfiguration) {
+  dataset: APIDataset,
+  originalDatasetSettings: DatasetConfiguration,
+): DatasetConfiguration {
+  /**
+   * Apply annotation-specific view configurations to the dataset settings which are persisted
+   * per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled"
+   * information per layer which should override the isDisabled information in DatasetConfiguration.
+   */
+
+  if (!annotation) {
+    return originalDatasetSettings;
+  }
+
+  const initialDatasetSettings: DatasetConfiguration = _.cloneDeep(originalDatasetSettings);
+
+  if (annotation.viewConfiguration) {
+    // The annotation already contains a viewConfiguration. Merge that into the
+    // dataset settings.
     for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
       _.merge(
         initialDatasetSettings.layers[layerName],
         annotation.viewConfiguration.layers[layerName],
       );
     }
+    return initialDatasetSettings;
   }
+
+  // The annotation does not contain a viewConfiguration (mainly happens when the
+  // annotation was opened for the very first time).
+  // Make the first volume layer visible and turn the other segmentation layers invisible,
+  // since only one segmentation layer can be visible currently.
+  const firstVolumeLayer = _.first(
+    annotation.annotationLayers.filter((layer) => layer.typ === "Volume"),
+  );
+  if (!firstVolumeLayer) {
+    // No volume layer exists. Return the original dataset settings
+    return initialDatasetSettings;
+  }
+
+  const newLayers: Record<string, DatasetLayerConfiguration> = {};
+  for (const layerName of Object.keys(initialDatasetSettings.layers)) {
+    if (isSegmentationLayer(dataset, layerName)) {
+      const shouldBeDisabled = firstVolumeLayer.tracingId !== layerName;
+
+      newLayers[layerName] = {
+        ...initialDatasetSettings.layers[layerName],
+        isDisabled: shouldBeDisabled,
+      };
+    } else {
+      newLayers[layerName] = initialDatasetSettings.layers[layerName];
+    }
+  }
+
+  return {
+    ...initialDatasetSettings,
+    layers: newLayers,
+  };
 }

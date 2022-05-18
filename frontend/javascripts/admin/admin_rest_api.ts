@@ -67,6 +67,7 @@ import type {
   AnnotationType,
   MappingType,
   VolumeTracing,
+  UserConfiguration,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -1238,7 +1239,7 @@ export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
   datasetConfig: PartialDatasetConfiguration,
   options: RequestOptions = {},
-): Record<string, any> {
+): Promise<Record<string, any>> {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     { ...options, method: "PUT", data: datasetConfig },
@@ -1634,13 +1635,13 @@ export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
 }
 
-export function getUserConfiguration(): Record<string, any> {
+export function getUserConfiguration(): Promise<UserConfiguration> {
   return Request.receiveJSON("/api/user/userConfiguration");
 }
 
 export function updateUserConfiguration(
   userConfiguration: Record<string, any>,
-): Record<string, any> {
+): Promise<Record<string, any>> {
   return Request.sendJSONReceiveJSON("/api/user/userConfiguration", {
     method: "PUT",
     data: userConfiguration,

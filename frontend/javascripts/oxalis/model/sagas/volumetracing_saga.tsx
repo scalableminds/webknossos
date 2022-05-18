@@ -147,7 +147,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     if (startEditingAction.type !== "START_EDITING") {
-      throw new Error("Unexpected action. Satisfy flow.");
+      throw new Error("Unexpected action. Satisfy typescript.");
     }
 
     const volumeTracing = yield* select(enforceActiveVolumeTracing);
@@ -326,7 +326,7 @@ function* getBoundingBoxForFloodFill(
 
 function* copySegmentationLayer(action: Action): Saga<void> {
   if (action.type !== "COPY_SEGMENTATION_LAYER") {
-    throw new Error("Satisfy flow");
+    throw new Error("Satisfy typescript");
   }
 
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
@@ -469,7 +469,7 @@ export function* floodFill(): Saga<void> {
     const floodFillAction = yield* take("FLOOD_FILL");
 
     if (floodFillAction.type !== "FLOOD_FILL") {
-      throw new Error("Unexpected action. Satisfy flow.");
+      throw new Error("Unexpected action. Satisfy typescript.");
     }
 
     const { position: positionFloat, planeId } = floodFillAction;

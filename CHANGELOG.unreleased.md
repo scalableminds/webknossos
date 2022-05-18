@@ -16,6 +16,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support to stream zarr files using the corresponding [zarr spec](https://zarr.readthedocs.io/en/stable/spec/v2.html#storage). [#6144](https://github.com/scalableminds/webknossos/pull/6144)
 
 ### Changed
+- When creating a new annotation with a volume layer (without fallback) for a dataset which has an existing segmentation layer, the original segmentation layer is still listed (and viewable) in the left sidebar. Earlier versions simply hid the original segmentation layer. [#6186](https://github.com/scalableminds/webknossos/pull/6186)
+- Changing the visibility of a layer within an annotation does not change the visibility of the layer when viewing the corresponding dataset. [#6186](https://github.com/scalableminds/webknossos/pull/6186)
 - While viewing tracings in read-only mode, the options to manipulate the tracing are now disabled. This leads to less confusion as previously the input was silently discarded. [#6140](https://github.com/scalableminds/webknossos/pull/6140).
 - Changed default of `dynamicSpaceDirection` property to false to avoid confusion. [#6162](https://github.com/scalableminds/webknossos/pull/6162)
 - Changed the internal protocol for requesting image data. The zoomStep parameter has been replaced by mag. This increases the datastore API version to 2.0 [#6159](https://github.com/scalableminds/webknossos/pull/6159)
@@ -25,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug in the task creation, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)
 - Fixed a bug in the task cration, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)
 - Fixed a rendering bug which could cause an incorrect magnification to be rendered in rare scenarios. [#6029](https://github.com/scalableminds/webknossos/pull/6029)
+- Fixed a bug which could cause a segmentation layer's "ID mapping" dropdown to disappear. [#6215](https://github.com/scalableminds/webknossos/pull/6215)
 
 ### Removed
 

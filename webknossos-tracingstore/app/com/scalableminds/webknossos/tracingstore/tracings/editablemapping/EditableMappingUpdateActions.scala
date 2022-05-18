@@ -4,13 +4,18 @@ import com.scalableminds.util.geometry.Vec3Int
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json._
 
-trait EditableMappingUpdateAction {}
+trait EditableMappingUpdateAction {
+  def addTimestamp(timestamp: Long): EditableMappingUpdateAction
+}
 
 case class SplitAgglomerateUpdateAction(agglomerateId: Long,
                                         segmentPosition1: Vec3Int,
                                         segmentPosition2: Vec3Int,
-                                        mag: Vec3Int)
-    extends EditableMappingUpdateAction {}
+                                        mag: Vec3Int,
+                                        actionTimestamp: Option[Long] = None)
+    extends EditableMappingUpdateAction {
+  override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+}
 
 object SplitAgglomerateUpdateAction {
   implicit val jsonFormat: OFormat[SplitAgglomerateUpdateAction] = Json.format[SplitAgglomerateUpdateAction]
@@ -20,8 +25,11 @@ case class MergeAgglomerateUpdateAction(agglomerateId1: Long,
                                         agglomerateId2: Long,
                                         segmentPosition1: Vec3Int,
                                         segmentPosition2: Vec3Int,
-                                        mag: Vec3Int)
-    extends EditableMappingUpdateAction {}
+                                        mag: Vec3Int,
+                                        actionTimestamp: Option[Long] = None)
+    extends EditableMappingUpdateAction {
+  override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+}
 
 object MergeAgglomerateUpdateAction {
   implicit val jsonFormat: OFormat[MergeAgglomerateUpdateAction] = Json.format[MergeAgglomerateUpdateAction]

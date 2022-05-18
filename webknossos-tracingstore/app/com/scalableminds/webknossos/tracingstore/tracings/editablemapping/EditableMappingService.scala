@@ -22,6 +22,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingDataStore,
   VersionedKeyValuePair
 }
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -35,7 +36,8 @@ class EditableMappingService @Inject()(
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with FoxImplicits
-    with ProtoGeometryImplicits {
+    with ProtoGeometryImplicits
+    with LazyLogging {
 
   private def generateId: String = UUID.randomUUID.toString
 
@@ -96,6 +98,8 @@ class EditableMappingService @Inject()(
       closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
         .get(editableMappingId, version)(fromJson[EditableMapping])
       desiredVersion <- findDesiredOrNewestPossibleVersion(editableMappingId, version)
+      _ = logger.info(
+        f"Loading mapping version $desiredVersion, closest materialized is version ${closestMaterializedVersion.version} (${closestMaterializedVersion.value})")
       materialized <- applyPendingUpdates(
         editableMappingId,
         desiredVersion,
@@ -104,6 +108,7 @@ class EditableMappingService @Inject()(
         closestMaterializedVersion.version,
         userToken
       )
+      _ = logger.info(s"Materialized mapping: $materialized")
       _ <- Fox.runIf(shouldPersistMaterialized(closestMaterializedVersion.version, desiredVersion)) {
         tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized)
       }
@@ -149,6 +154,7 @@ class EditableMappingService @Inject()(
 
     for {
       pendingUpdates <- findPendingUpdates(editableMappingId, existingVersion, desiredVersion)
+      _ = logger.info(s"Applying ${pendingUpdates.length} mapping updates: $pendingUpdates...")
       appliedEditableMapping <- updateIter(Some(existingEditableMapping), pendingUpdates)
     } yield appliedEditableMapping
   }
@@ -170,11 +176,15 @@ class EditableMappingService @Inject()(
                                userToken: Option[String]): Fox[EditableMapping] =
     for {
       agglomerateGraph <- agglomerateGraphForId(mapping, update.agglomerateId, remoteFallbackLayer, userToken)
+      _ = logger.info(
+        s"Applying one split action on agglomerate ${update.agglomerateId} (previously $agglomerateGraph)...")
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition1, update.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2, update.mag, userToken)
       largestExistingAgglomerateId <- largestAgglomerateId(mapping, remoteFallbackLayer, userToken)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
+      _ = logger.info(
+        s"Graphs after split: Agglomerate ${update.agglomerateId}: $graph1, Aggloemrate $agglomerateId2: $graph2")
       splitSegmentToAgglomerate = graph2.segments.map(_ -> agglomerateId2).toMap
     } yield
       EditableMapping(
@@ -312,16 +322,19 @@ class EditableMappingService @Inject()(
       implicit ec: ExecutionContext): Fox[List[EditableMappingUpdateAction]] =
     if (desiredVersion == existingVersion) Fox.successful(List())
     else {
-      tracingDataStore.editableMappingUpdates.getMultipleVersions(
-        editableMappingId,
-        Some(desiredVersion),
-        Some(existingVersion + 1)
-      )(fromJson[EditableMappingUpdateAction])
+      for {
+        updates <- tracingDataStore.editableMappingUpdates.getMultipleVersions(
+          editableMappingId,
+          Some(desiredVersion),
+          Some(existingVersion + 1)
+        )(fromJson[List[EditableMappingUpdateAction]])
+      } yield updates.reverse.flatten
     }
 
-  def update(editableMappingId: String, updateAction: EditableMappingUpdateAction, version: Long): Fox[Unit] =
+  def update(editableMappingId: String, updateActionGroup: EditableMappingUpdateActionGroup, version: Long): Fox[Unit] =
     for {
-      _ <- tracingDataStore.editableMappingUpdates.put(editableMappingId, version, updateAction)
+      actionsWithTimestamp <- Fox.successful(updateActionGroup.actions.map(_.addTimestamp(updateActionGroup.timestamp)))
+      _ <- tracingDataStore.editableMappingUpdates.put(editableMappingId, version, actionsWithTimestamp)
     } yield ()
 
   def volumeData(tracing: VolumeTracing,

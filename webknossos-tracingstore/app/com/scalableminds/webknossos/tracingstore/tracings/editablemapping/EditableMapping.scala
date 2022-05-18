@@ -8,7 +8,9 @@ case class EditableMapping(
     baseMappingName: String,
     segmentToAgglomerate: Map[Long, Long],
     agglomerateToGraph: Map[Long, AgglomerateGraph],
-)
+) {
+  override def toString: String = f"EditableMapping(agglomerates:${agglomerateToGraph.keySet})"
+}
 
 object EditableMapping extends AdditionalJsonFormats {
   implicit val jsonFormat: OFormat[EditableMapping] = Json.format[EditableMapping]

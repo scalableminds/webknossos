@@ -396,8 +396,10 @@ class EditableMappingService @Inject()(
             position = pos
           )
       }
+      segmentIdToNodeIdMinusOne: Map[Long, Int] = graph.segments.zipWithIndex.toMap
       skeletonEdges = graph.edges.map { e =>
-        Edge(source = e._1.toInt + nodeIdStartAtOneOffset, target = e._2.toInt + nodeIdStartAtOneOffset)
+        Edge(source = segmentIdToNodeIdMinusOne(e._1) + nodeIdStartAtOneOffset,
+             target = segmentIdToNodeIdMinusOne(e._2) + nodeIdStartAtOneOffset)
       }
 
       trees = Seq(

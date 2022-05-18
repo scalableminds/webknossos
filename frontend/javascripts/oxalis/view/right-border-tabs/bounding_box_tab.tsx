@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
 import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
-import type { Vector3, Vector6, BoundingBoxType } from "oxalis/constants";
+import { Vector3, Vector6, BoundingBoxType, ControlModeEnum } from "oxalis/constants";
 import {
   changeUserBoundingBoxAction,
   addUserBoundingBoxAction,
@@ -106,6 +106,18 @@ export default function BoundingBoxTab() {
     activeSegmentationTracingLayer != null &&
     userBoundingBoxes.some((bbox) => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null);
 
+  const isViewMode = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  );
+
+  let maybeUneditableExplanation;
+  if (isViewMode) {
+    maybeUneditableExplanation = "Please create a new annotation to add custom bounding boxes.";
+  } else if (!allowUpdate) {
+    maybeUneditableExplanation =
+      "Copy this annotation to your account to adapt the bounding boxes.";
+  }
+
   return (
     <div
       className="padded-tab-content"
@@ -134,7 +146,10 @@ export default function BoundingBoxTab() {
           </Tooltip>
         </div>
       ) : null}
-      {userBoundingBoxes.length > 0 ? (
+      {/* In view mode, it's okay to render an empty list, since there will be
+          an explanation below, anyway.
+      */}
+      {userBoundingBoxes.length > 0 || isViewMode ? (
         userBoundingBoxes.map((bb) => (
           <UserBoundingBoxInput
             key={bb.id}
@@ -159,6 +174,7 @@ export default function BoundingBoxTab() {
       ) : (
         <div>No Bounding Boxes created yet.</div>
       )}
+      {<div style={{ color: "rgba(0,0,0,0.25)" }}>{maybeUneditableExplanation}</div>}
       {allowUpdate ? (
         <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
           <Tooltip title="Click to add another bounding box.">
@@ -171,11 +187,7 @@ export default function BoundingBoxTab() {
             />
           </Tooltip>
         </div>
-      ) : (
-        <div style={{ color: "rgba(0,0,0,0.25)" }}>
-          Please create a new annotation to add custom bounding boxes
-        </div>
-      )}
+      ) : null}
       {selectedBoundingBoxForExport != null ? (
         <ExportBoundingBoxModal
           dataset={dataset}

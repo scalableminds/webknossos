@@ -6,28 +6,20 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
-import io.swagger.annotations.{
-  Api,
-  ApiImplicitParam,
-  ApiImplicitParams,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-  ApiResponses
-}
+import io.swagger.annotations._
+import javax.inject.Inject
+import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
+import models.organization.OrganizationDAO
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
+import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import utils.ObjectId
-import javax.inject.Inject
-import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
-import models.organization.OrganizationDAO
-import oxalis.mail.{MailchimpClient, MailchimpTag}
 import play.api.mvc.{Action, AnyContent}
+import utils.ObjectId
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -330,7 +322,7 @@ Expects:
     Array(
       new ApiImplicitParam(name = "datasetUpdateTeamsInformation",
                            required = true,
-                           dataType = "List[String]",
+                           dataType = "com.scalableminds.util.swaggerhelpers.ListOfString",
                            paramType = "body")))
   def updateTeams(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                             example = "sample_organization") organizationName: String,

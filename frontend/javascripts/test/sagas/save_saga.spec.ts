@@ -19,7 +19,7 @@ const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions")
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 const {
-  pushTracingTypeAsync,
+  pushSaveQueueAsync,
   sendRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
@@ -79,7 +79,7 @@ test("SaveSaga should compact multiple updateTracing update actions", (t) => {
 test("SaveSaga should send update actions", (t) => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-  const saga = pushTracingTypeAsync(TRACING_TYPE, tracingId);
+  const saga = pushSaveQueueAsync(TRACING_TYPE, tracingId);
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTION));
   saga.next(); // setLastSaveTimestampAction
 
@@ -194,7 +194,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
 test("SaveSaga should send update actions right away and try to reach a state where all updates are saved", (t) => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-  const saga = pushTracingTypeAsync(TRACING_TYPE, tracingId);
+  const saga = pushSaveQueueAsync(TRACING_TYPE, tracingId);
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTION));
   saga.next();
   saga.next(); // select state
@@ -217,7 +217,7 @@ test("SaveSaga should send update actions right away and try to reach a state wh
 test("SaveSaga should not try to reach state with all actions being saved when saving is triggered by a timeout", (t) => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-  const saga = pushTracingTypeAsync(TRACING_TYPE, tracingId);
+  const saga = pushSaveQueueAsync(TRACING_TYPE, tracingId);
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTION));
   saga.next();
   saga.next(); // select state

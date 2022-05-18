@@ -119,7 +119,7 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => 
   const saga = saveTracingTypeAsync(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushTracingTypeAsync
+  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);
@@ -139,7 +139,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const saga = saveTracingTypeAsync(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushTracingTypeAsync
+  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);

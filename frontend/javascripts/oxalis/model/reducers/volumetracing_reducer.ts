@@ -307,7 +307,7 @@ function VolumeTracingReducer(
     }
 
     case "SET_MAPPING_NAME": {
-      const { mappingName, layerName } = action;
+      const { mappingName } = action;
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingName,
       });

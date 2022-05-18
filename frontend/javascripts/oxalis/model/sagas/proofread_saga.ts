@@ -28,7 +28,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { makeMappingEditable } from "admin/admin_rest_api";
-import { setMappingAction, setMappingNameAction } from "oxalis/model/actions/settings_actions";
+import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
 
 export default function* proofreadMapping(): Saga<any> {
   yield* take("INITIALIZE_SKELETONTRACING");

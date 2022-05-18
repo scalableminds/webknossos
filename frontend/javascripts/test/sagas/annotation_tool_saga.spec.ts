@@ -13,8 +13,16 @@ Object.values(AnnotationToolEnum).forEach((annotationTool) => {
 mockRequire("oxalis/model/accessors/tool_accessor", {
   getDisabledInfoForTools: () => disabledInfoMock,
 });
-const { MoveTool, SkeletonTool, BoundingBoxTool, DrawTool, EraseTool, FillCellTool, PickCellTool } =
-  mockRequire.reRequire("oxalis/controller/combinations/tool_controls");
+const {
+  MoveTool,
+  SkeletonTool,
+  BoundingBoxTool,
+  DrawTool,
+  EraseTool,
+  FillCellTool,
+  PickCellTool,
+  ProofreadTool,
+} = mockRequire.reRequire("oxalis/controller/combinations/tool_controls");
 const UiReducer = mockRequire.reRequire("oxalis/model/reducers/ui_reducer").default;
 const { wkReadyAction } = mockRequire.reRequire("oxalis/model/actions/actions");
 const { cycleToolAction, setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");
@@ -27,6 +35,7 @@ const allTools = [
   EraseTool,
   FillCellTool,
   PickCellTool,
+  ProofreadTool,
 ];
 const spies = allTools.map((tool) => sinon.spy(tool, "onToolDeselected"));
 test.beforeEach(() => {
@@ -67,6 +76,8 @@ test.serial(
     cycleTool();
     t.true(BoundingBoxTool.onToolDeselected.calledOnce);
     cycleTool();
+    t.true(ProofreadTool.onToolDeselected.calledOnce);
+    cycleTool();
     t.true(MoveTool.onToolDeselected.calledTwice);
   },
 );
@@ -101,8 +112,10 @@ test.serial("Selecting another tool should trigger a deselection of the previous
   t.true(FillCellTool.onToolDeselected.calledOnce);
   cycleTool(AnnotationToolEnum.BOUNDING_BOX);
   t.true(PickCellTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.MOVE);
+  cycleTool(AnnotationToolEnum.PROOFREAD);
   t.true(BoundingBoxTool.onToolDeselected.calledOnce);
+  cycleTool(AnnotationToolEnum.MOVE);
+  t.true(ProofreadTool.onToolDeselected.calledOnce);
   cycleTool(AnnotationToolEnum.SKELETON);
   t.true(MoveTool.onToolDeselected.calledTwice);
 });

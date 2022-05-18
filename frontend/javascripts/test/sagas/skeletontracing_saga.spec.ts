@@ -112,7 +112,7 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) =
   const saga = saveTracingTypeAsync(
     SkeletonTracingActions.initializeSkeletonTracingAction(skeletonTracing),
   );
-  saga.next(); // forking pushTracingTypeAsync
+  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.skeleton);
@@ -132,7 +132,7 @@ test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   const saga = saveTracingTypeAsync(
     SkeletonTracingActions.initializeSkeletonTracingAction(skeletonTracing),
   );
-  saga.next(); // forking pushTracingTypeAsync
+  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.skeleton);

@@ -2,6 +2,7 @@ import {
   tokenUserA,
   setCurrToken,
   resetDatabase,
+  replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
@@ -15,13 +16,13 @@ test("getUsers()", async (t) => {
   writeTypeCheckingFile(users, "user", "APIUser", {
     isArray: true,
   });
-  t.snapshot(users, {
+  t.snapshot(replaceVolatileValues(users), {
     id: "users-getUsers",
   });
 });
 test("getAdminUsers()", async (t) => {
   const adminUsers = await api.getAdminUsers();
-  t.snapshot(adminUsers, {
+  t.snapshot(replaceVolatileValues(adminUsers), {
     id: "users-adminUsers",
   });
 });
@@ -34,7 +35,7 @@ test("getEditableUsers()", async (t) => {
 test("getUser()", async (t) => {
   const activeUser = await api.getActiveUser();
   const user = await api.getUser(activeUser.id);
-  t.snapshot(user, {
+  t.snapshot(replaceVolatileValues(user), {
     id: "users-user",
   });
 });
@@ -44,11 +45,11 @@ test("updateUser()", async (t) => {
     firstName: "UpdatedFirstName",
   });
   const updatedUser = await api.updateUser(newUser);
-  t.snapshot(updatedUser, {
+  t.snapshot(replaceVolatileValues(updatedUser), {
     id: "users-updatedUser",
   });
   const oldUser = await api.updateUser(activeUser);
-  t.snapshot(oldUser, {
+  t.snapshot(replaceVolatileValues(oldUser), {
     id: "users-oldUser",
   });
 });

@@ -370,7 +370,8 @@ Expects:
                                           None,
                                           organizationName,
                                           Some(user),
-                                          taskOpt)
+                                          taskOpt,
+                                          skipVolumeData)
         temporaryFile = temporaryFileCreator.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
         _ <- zipper.addFileFromEnumerator(name + ".nml", nmlStream)

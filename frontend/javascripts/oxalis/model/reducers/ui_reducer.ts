@@ -78,6 +78,10 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_DOWNLOAD_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", { showDownloadModal: action.visible });
+    }
+
     case "SET_SHARE_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showShareModal: action.visible,

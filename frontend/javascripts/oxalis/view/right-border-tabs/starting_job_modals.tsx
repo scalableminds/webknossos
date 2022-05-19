@@ -73,13 +73,58 @@ function getReadableNameOfVolumeLayer(layer: APIDataLayer, tracing: HybridTracin
     : null;
 }
 
-function LayerSelectionFromItem({
+export function LayerSelection({
+  layers,
+  tracing,
+  fixedLayerName,
+  layerType,
+  setSelectedLayerName,
+  style,
+}: {
+  layers: APIDataLayer[];
+  tracing: HybridTracing;
+  fixedLayerName?: string;
+  layerType?: string;
+  setSelectedLayerName?: React.Dispatch<React.SetStateAction<string | null>>;
+  style?: React.CSSProperties;
+}): JSX.Element {
+  const onSelect = setSelectedLayerName
+    ? (layerName: string) => setSelectedLayerName(layerName)
+    : undefined;
+  const maybeLayerType = layerType || "";
+  const maybeSpace = layerType != null ? " " : "";
+  return (
+    <Select
+      showSearch
+      placeholder={`Select a ${maybeLayerType}${maybeSpace}layer`}
+      optionFilterProp="children"
+      filterOption={(input, option) =>
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+      }
+      disabled={fixedLayerName != null}
+      onSelect={onSelect}
+      style={style}
+    >
+      {layers.map((layer) => {
+        const readableName = getReadableNameOfVolumeLayer(layer, tracing) || layer.name;
+        return (
+          <Select.Option key={layer.name} value={layer.name}>
+            {readableName}
+          </Select.Option>
+        );
+      })}
+    </Select>
+  );
+}
+
+function LayerSelectionFormItem({
   chooseSegmentationLayer,
   layers,
   tracing,
   fixedLayerName,
 }: LayerSelectionProps): JSX.Element {
-  const layerType = chooseSegmentationLayer ? "segmentation layer" : "color layer";
+  const layerType = chooseSegmentationLayer ? "segmentation" : "color";
   return (
     <Form.Item
       label={layerType}
@@ -92,25 +137,12 @@ function LayerSelectionFromItem({
       ]}
       hidden={layers.length === 1 && fixedLayerName == null}
     >
-      <Select
-        showSearch
-        placeholder={`Select a ${layerType}`}
-        optionFilterProp="children"
-        filterOption={(input, option) =>
-          // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-          option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-        }
-        disabled={fixedLayerName != null}
-      >
-        {layers.map((layer) => {
-          const readableName = getReadableNameOfVolumeLayer(layer, tracing) || layer.name;
-          return (
-            <Select.Option key={layer.name} value={layer.name}>
-              {readableName}
-            </Select.Option>
-          );
-        })}
-      </Select>
+      <LayerSelection
+        layers={layers}
+        fixedLayerName={fixedLayerName}
+        layerType={layerType}
+        tracing={tracing}
+      />
     </Form.Item>
   );
 }
@@ -118,6 +150,7 @@ function LayerSelectionFromItem({
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;
   userBoundingBoxes: UserBoundingBox[];
+  onChangeSelectedBoundingBox: (bBoxId: number) => void;
 };
 
 function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined) {
@@ -142,9 +175,44 @@ function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined) {
   );
 }
 
+export function BoundingBoxSelection({
+  userBoundingBoxes,
+  setSelectedBoundingBoxId,
+  style,
+}: {
+  userBoundingBoxes: UserBoundingBox[];
+  setSelectedBoundingBoxId?: (boundingBoxId: number) => void;
+  style?: React.CSSProperties;
+}): JSX.Element {
+  const onSelect = setSelectedBoundingBoxId
+    ? (boundingBoxId: number) => setSelectedBoundingBoxId(boundingBoxId)
+    : undefined;
+  return (
+    <Select
+      showSearch
+      placeholder="Select a bounding box"
+      optionFilterProp="children"
+      filterOption={(input, option) =>
+        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
+        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+      }
+      disabled={userBoundingBoxes.length < 1}
+      onSelect={onSelect}
+      style={style}
+    >
+      {userBoundingBoxes.map((userBB) => (
+        <Select.Option key={userBB.id} value={userBB.id}>
+          {renderUserBoundingBox(userBB)}
+        </Select.Option>
+      ))}
+    </Select>
+  );
+}
+
 function BoundingBoxSelectionFormItem({
   isBoundingBoxConfigurable,
   userBoundingBoxes,
+  onChangeSelectedBoundingBox,
 }: BoundingBoxSelectionProps): JSX.Element {
   return (
     <div style={isBoundingBoxConfigurable ? {} : { display: "none" }}>
@@ -165,21 +233,10 @@ function BoundingBoxSelectionFormItem({
         ]}
         hidden={!isBoundingBoxConfigurable}
       >
-        <Select
-          showSearch
-          placeholder="Select a bounding box"
-          optionFilterProp="children"
-          filterOption={(input, option) =>
-            // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-          }
-        >
-          {userBoundingBoxes.map((userBB) => (
-            <Select.Option key={userBB.id} value={userBB.id}>
-              {renderUserBoundingBox(userBB)}
-            </Select.Option>
-          ))}
-        </Select>
+        <BoundingBoxSelection
+          userBoundingBoxes={userBoundingBoxes}
+          setSelectedBoundingBoxId={onChangeSelectedBoundingBox}
+        />
       </Form.Item>
     </div>
   );
@@ -350,7 +407,7 @@ function StartingJobModal(props: StartingJobModalProps) {
           activeUser={activeUser}
           initialName={`${dataset.name}_${props.suggestedDatasetSuffix}`}
         />
-        <LayerSelectionFromItem
+        <LayerSelectionFormItem
           chooseSegmentationLayer={chooseSegmentationLayer}
           layers={layers}
           fixedLayerName={fixedSelectedLayer?.name}
@@ -363,6 +420,9 @@ function StartingJobModal(props: StartingJobModalProps) {
         <BoundingBoxSelectionFormItem
           isBoundingBoxConfigurable={isBoundingBoxConfigurable}
           userBoundingBoxes={userBoundingBoxes}
+          onChangeSelectedBoundingBox={(bBoxId: number) =>
+            form.setFieldsValue({ boundingBoxId: bBoxId })
+          }
         />
         <div style={{ textAlign: "center" }}>
           <Button type="primary" size="large" htmlType="submit">

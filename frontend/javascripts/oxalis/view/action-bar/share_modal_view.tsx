@@ -209,7 +209,7 @@ export default function ShareModalView(props: Props) {
   const url = getUrl(sharingToken, includeToken);
   return (
     <Modal
-      title="Share this Annotation"
+      title="Share this annotation"
       visible={isVisible}
       width={800}
       okText={hasUpdatePermissions ? "Save" : "Ok"}

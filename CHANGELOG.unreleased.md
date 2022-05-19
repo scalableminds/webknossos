@@ -23,6 +23,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Changed default of `dynamicSpaceDirection` property to false to avoid confusion. [#6162](https://github.com/scalableminds/webknossos/pull/6162)
 - Changed the internal protocol for requesting image data. The zoomStep parameter has been replaced by mag. This increases the datastore API version to 2.0 [#6159](https://github.com/scalableminds/webknossos/pull/6159)
 - In annotation list in dashboard, replaced the non-standard word “Trace” by “Open”. [#6191](https://github.com/scalableminds/webknossos/pull/6191)
+- Tiff export via webknossos-worker is now allowed for all datasets that a (logged-in) user can see, no longer only for datasets of their own organization. [#6219](https://github.com/scalableminds/webknossos/pull/6219)
 
 ### Fixed
 - Fixed a bug in the task creation, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)

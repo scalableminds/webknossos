@@ -228,6 +228,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       val edgesRange: Array[Long] =
         reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
 
+      logger.info(s"positionsRange: ${positionsRange(0)} to ${positionsRange(1)}, agglomerateId: ${agglomerateId}")
+
       val nodeCount = positionsRange(1) - positionsRange(0)
       val edgeCount = edgesRange(1) - edgesRange(0)
       val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
@@ -237,13 +239,13 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       if (edgeCount > edgeLimit) {
         throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
       }
-      val segmentIds: Array[Long] =
+      val segmentIds: Array[Long] = if (nodeCount == 0L) Array[Long]() else
         reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", nodeCount.toInt, positionsRange(0))
-      val positions: Array[Array[Long]] =
+      val positions: Array[Array[Long]] = if (nodeCount == 0L) Array[Array[Long]]() else
         reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
-      val edges: Array[Array[Long]] =
+      val edges: Array[Array[Long]] = if (edgeCount == 0L) Array[Array[Long]]() else
         reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
-      val affinities: Array[Float] =
+      val affinities: Array[Float] = if (edgeCount == 0L) Array[Float]() else
         reader.float32().readArrayBlockWithOffset("/agglomerate_to_affinities", edgeCount.toInt, edgesRange(0))
 
       AgglomerateGraph(

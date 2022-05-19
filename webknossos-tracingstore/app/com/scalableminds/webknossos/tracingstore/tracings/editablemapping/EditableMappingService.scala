@@ -2,6 +2,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import java.util.UUID
 
+import akka.http.caching.LfuCache
+import akka.http.caching.scaladsl.{Cache, CachingSettings}
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -24,11 +26,20 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Empty, Full}
+import net.liftweb.common.{Box, Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
+import scala.concurrent.duration._
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+
+
+case class EditableMappingKey(
+                               editableMappingId: String,
+                               remoteFallbackLayer: RemoteFallbackLayer,
+                               userToken: Option[String],
+                               desiredVersion: Long
+                             )
 
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
@@ -40,6 +51,21 @@ class EditableMappingService @Inject()(
     with LazyLogging {
 
   private def generateId: String = UUID.randomUUID.toString
+
+  private lazy val materializedEditableMappingCache: Cache[EditableMappingKey, Box[EditableMapping]] = {
+    val maxEntries = 10
+    val defaultCachingSettings = CachingSettings("")
+    val lfuCacheSettings =
+      defaultCachingSettings.lfuCacheSettings
+        .withInitialCapacity(maxEntries)
+        .withMaxCapacity(maxEntries)
+        .withTimeToLive(2 hours)
+        .withTimeToIdle(1 hour)
+    val cachingSettings =
+      defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
+    val lfuCache: Cache[EditableMappingKey, Box[EditableMapping]] = LfuCache(cachingSettings)
+    lfuCache
+  }
 
   def newestMaterializableVersion(editableMappingId: String): Fox[Long] =
     tracingDataStore.editableMappingUpdates.getVersion(editableMappingId,
@@ -95,9 +121,34 @@ class EditableMappingService @Inject()(
                   userToken: Option[String],
                   version: Option[Long] = None): Fox[EditableMapping] =
     for {
-      closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
-        .get(editableMappingId, version)(fromJson[EditableMapping])
       desiredVersion <- findDesiredOrNewestPossibleVersion(editableMappingId, version)
+      materialized <- getWithCache(editableMappingId, remoteFallbackLayer, userToken, desiredVersion)
+    } yield materialized
+
+
+  private def getWithCache(editableMappingId: String,
+                           remoteFallbackLayer: RemoteFallbackLayer,
+                           userToken: Option[String],
+                           desiredVersion: Long,
+  ): Fox[EditableMapping] = {
+    val key = EditableMappingKey(editableMappingId, remoteFallbackLayer, userToken, desiredVersion)
+    logger.info("getWithCache")
+    for {
+      materializedBox <- materializedEditableMappingCache.getOrLoad(
+        key,
+        key => getVersioned(key.editableMappingId, key.remoteFallbackLayer, key.userToken, key.desiredVersion).futureBox)
+      materialized <- materializedBox.toFox
+    } yield materialized
+  }
+
+  private def getVersioned(editableMappingId: String,
+                           remoteFallbackLayer: RemoteFallbackLayer,
+                           userToken: Option[String],
+                           desiredVersion: Long,
+  ): Fox[EditableMapping] =
+    for {
+      closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
+        .get(editableMappingId, Some(desiredVersion))(fromJson[EditableMapping])
       _ = logger.info(
         f"Loading mapping version $desiredVersion, closest materialized is version ${closestMaterializedVersion.version} (${closestMaterializedVersion.value})")
       materialized <- applyPendingUpdates(

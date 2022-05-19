@@ -11,6 +11,7 @@ import { startExportTiffJob } from "admin/admin_rest_api";
 import Model from "oxalis/model";
 import * as Utils from "libs/utils";
 import features from "features";
+import _ from "lodash";
 type Props = {
   handleClose: () => void;
   tracing: Tracing | null | undefined;
@@ -137,6 +138,36 @@ export async function handleStartExport(
   );
 }
 
+export function isBoundingBoxExportable(boundingBox: BoundingBoxType) {
+  const dimensions = boundingBox.max.map((maxItem, index) => maxItem - boundingBox.min[index]);
+  const volume = dimensions[0] * dimensions[1] * dimensions[2];
+  const volumeExceeded = volume > features().exportTiffMaxVolumeMVx * 1024 * 1024;
+  const edgeLengthExceeded = dimensions.some(
+    (length) => length > features().exportTiffMaxEdgeLengthVx,
+  );
+
+  const dimensionString = dimensions.join(", ");
+
+  const volumeExceededMessage = volumeExceeded
+    ? `The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
+        features().exportTiffMaxVolumeMVx
+      } Megavoxels.`
+    : null;
+  const edgeLengthExceededMessage = edgeLengthExceeded
+    ? `An edge length of the selected bounding box (${dimensionString}) is too large. Tiff export is only supported for boxes with no edge length over ${
+        features().exportTiffMaxEdgeLengthVx
+      } vx.`
+    : null;
+
+  const alertMessage = _.compact([volumeExceededMessage, edgeLengthExceededMessage]).join("\n");
+  const alerts = alertMessage.length > 0 ? <Alert type="error" message={alertMessage} /> : null;
+
+  return {
+    isExportable: !volumeExceeded && !edgeLengthExceeded,
+    alerts,
+  };
+}
+
 function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: Props) {
   const [startedExports, setStartedExports] = useState<string[]>([]);
   const isMergerModeEnabled = useSelector(
@@ -176,30 +207,9 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
       </p>
     ) : null;
   });
-  const dimensions = boundingBox.max.map((maxItem, index) => maxItem - boundingBox.min[index]);
-  const volume = dimensions[0] * dimensions[1] * dimensions[2];
-  const volumeExceeded = volume > features().exportTiffMaxVolumeMVx * 1024 * 1024;
-  const edgeLengthExceeded = dimensions.some(
-    (length) => length > features().exportTiffMaxEdgeLengthVx,
-  );
-  const volumeExceededMessage = volumeExceeded ? (
-    <Alert
-      type="error"
-      message={`The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
-        features().exportTiffMaxVolumeMVx
-      } Megavoxels.`}
-    />
-  ) : null;
-  const edgeLengthExceededMessage = edgeLengthExceeded ? (
-    <Alert
-      type="error"
-      message={`An edge length of the selected bounding box (${dimensions.join(
-        ", ",
-      )}) is too large. Tiff export is only supported for boxes with no edge length over ${
-        features().exportTiffMaxEdgeLengthVx
-      } vx.`}
-    />
-  ) : null;
+
+  const { isExportable, alerts } = isBoundingBoxExportable(boundingBox);
+
   const downloadHint =
     startedExports.length > 0 ? (
       <p>
@@ -231,10 +241,9 @@ function ExportBoundingBoxModal({ handleClose, dataset, boundingBox, tracing }: 
         archive. {activeMappingMessage}
       </p>
 
-      {volumeExceededMessage}
-      {edgeLengthExceededMessage}
+      {alerts}
 
-      {volumeExceeded || edgeLengthExceeded ? null : (
+      {!isExportable ? null : (
         <div>
           {" "}
           <p>Please select a layer to export:</p> {exportButtonsList}

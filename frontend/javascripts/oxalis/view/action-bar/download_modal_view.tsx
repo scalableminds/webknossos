@@ -18,7 +18,11 @@ import { hasVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor
 import { getDataLayers, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { useSelector } from "react-redux";
 import type { OxalisState } from "oxalis/store";
-import { handleStartExport, getLayerInfos } from "../right-border-tabs/export_bounding_box_modal";
+import {
+  handleStartExport,
+  getLayerInfos,
+  isBoundingBoxExportable,
+} from "../right-border-tabs/export_bounding_box_modal";
 const CheckboxGroup = Checkbox.Group;
 const { TabPane } = Tabs;
 const { Paragraph, Text } = Typography;
@@ -91,13 +95,21 @@ const okTextForTab = new Map([
   ["python", null],
 ]);
 
-function Footer({ tabKey, onClick }: { tabKey: string; onClick: () => void }) {
+function Footer({
+  tabKey,
+  onClick,
+  boundingBoxCompatible,
+}: {
+  tabKey: string;
+  onClick: () => void;
+  boundingBoxCompatible: boolean;
+}) {
   const okText = okTextForTab.get(tabKey);
   return okText != null ? (
     <Button
       key="ok"
       type="primary"
-      disabled={tabKey === "export" && !features().jobsEnabled}
+      disabled={tabKey === "export" && (!features().jobsEnabled || !boundingBoxCompatible)}
       onClick={onClick}
     >
       {okText}
@@ -129,6 +141,12 @@ export default function DownloadModalView(props: Props): JSX.Element {
 
   const layers = getDataLayers(dataset);
 
+  const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxID);
+  let boundingBoxCompatibleInfo = null;
+  if (selectedBoundingBox != null) {
+    boundingBoxCompatibleInfo = isBoundingBoxExportable(selectedBoundingBox.boundingBox);
+  }
+
   const handleOk = async () => {
     if (activeTabKey === "download") {
       await Model.ensureSavedState();
@@ -143,9 +161,6 @@ export default function DownloadModalView(props: Props): JSX.Element {
         Toast.warning(basicWarning + missingSelectionWarning);
       } else {
         const selectedLayer = getLayerByName(dataset, selectedLayerName);
-        const selectedBoundingBox = userBoundingBoxes.find(
-          (bbox) => bbox.id === selectedBoundingBoxID,
-        );
         if (selectedLayer != null && selectedBoundingBox != null) {
           const layerInfos = getLayerInfos(
             selectedLayer,
@@ -265,7 +280,14 @@ with wk.webknossos_context(
       title="Download this annotation"
       visible={isVisible}
       width={600}
-      footer={[<Footer tabKey={activeTabKey} onClick={handleOk} key="footer" />]}
+      footer={[
+        <Footer
+          tabKey={activeTabKey}
+          onClick={handleOk}
+          key="footer"
+          boundingBoxCompatible={boundingBoxCompatibleInfo?.isExportable || false}
+        />,
+      ]}
       onCancel={onClose}
       style={{ overflow: "visible" }}
     >
@@ -414,6 +436,7 @@ with wk.webknossos_context(
                     style={{ width: 330 }}
                   />
                 </Col>
+                {boundingBoxCompatibleInfo?.alerts}
               </Row>
             </div>
           )}

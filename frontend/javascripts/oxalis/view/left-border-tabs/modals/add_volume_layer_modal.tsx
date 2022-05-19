@@ -4,10 +4,16 @@ import React, { useState } from "react";
 import _ from "lodash";
 import type { APIDataset } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
-import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
+import {
+  NewVolumeLayerSelection,
+  RestrictResolutionSlider,
+} from "dashboard/advanced_dataset/create_explorative_modal";
 import type { Tracing } from "oxalis/store";
 import { addAnnotationLayer } from "admin/admin_rest_api";
-import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getDatasetResolutionInfo,
+  getSegmentationLayers,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingLayers } from "oxalis/model/accessors/volumetracing_accessor";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
@@ -25,6 +31,9 @@ export default function AddVolumeLayerModal({
   >(null);
   const [newLayerName, setNewLayerName] = useState("Volume");
 
+  const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+  const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
+
   const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setNewLayerName(evt.target.value);
 
@@ -32,7 +41,7 @@ export default function AddVolumeLayerModal({
   const volumeTracingLayers = getVolumeTracingLayers(dataset);
 
   const availableSegmentationLayers = _.differenceWith(segmentationLayers, volumeTracingLayers);
-
+  let selectedSegmentationLayer = null;
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
 
@@ -41,15 +50,22 @@ export default function AddVolumeLayerModal({
         typ: "Volume",
         name: newLayerName,
         fallbackLayerName: undefined,
-        resolutionRestrictions: undefined,
+        resolutionRestrictions: {
+          min: resolutionIndices[0],
+          max: resolutionIndices[1],
+        },
       });
     } else {
-      const fallbackLayerName = availableSegmentationLayers[selectedSegmentationLayerIndex].name;
+      selectedSegmentationLayer = availableSegmentationLayers[selectedSegmentationLayerIndex];
+      const fallbackLayerName = selectedSegmentationLayer.name;
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
         name: newLayerName,
         fallbackLayerName,
-        resolutionRestrictions: undefined,
+        resolutionRestrictions: {
+          min: resolutionIndices[0],
+          max: resolutionIndices[1],
+        },
       });
     }
 
@@ -84,6 +100,12 @@ export default function AddVolumeLayerModal({
           setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
         />
       ) : null}
+      <RestrictResolutionSlider
+        datasetResolutionInfo={datasetResolutionInfo}
+        selectedSegmentationLayer={selectedSegmentationLayer}
+        resolutionIndices={resolutionIndices}
+        setResolutionIndices={setResolutionIndices}
+      />
       <Row justify="center" align="middle">
         <AsyncButton onClick={handleAddVolumeLayer} type="primary" icon={<PlusOutlined />}>
           Add Volume Annotation Layer

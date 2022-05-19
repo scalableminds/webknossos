@@ -198,7 +198,8 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           """)
     } yield ()
 
-  def updateLastActivity(userId: ObjectId, lastActivity: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateLastActivity(userId: ObjectId, lastActivity: Long = System.currentTimeMillis())(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     updateTimestampCol(userId, _.lastactivity, new java.sql.Timestamp(lastActivity))
 
   def updateUserConfiguration(userId: ObjectId, userConfiguration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =

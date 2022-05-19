@@ -9,6 +9,7 @@ import models.annotation.AnnotationState._
 import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
 import models.organization.OrganizationDAO
+import models.user.UserDAO
 import models.user.time.TimeSpanService
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
@@ -23,6 +24,7 @@ class WKRemoteTracingStoreController @Inject()(
     timeSpanService: TimeSpanService,
     dataSetService: DataSetService,
     organizationDAO: OrganizationDAO,
+    userDAO: UserDAO,
     analyticsService: AnalyticsService,
     dataSetDAO: DataSetDAO,
     annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
@@ -47,6 +49,7 @@ class WKRemoteTracingStoreController @Inject()(
           _ <- Fox.runOptional(userBox)(user =>
             timeSpanService.logUserInteraction(report.timestamps, user, annotation)(GlobalAccessContext))
           _ = userBox.map { user =>
+            userDAO.updateLastActivity(user._id)(GlobalAccessContext)
             if (report.significantChangesCount > 0) {
               analyticsService.track(UpdateAnnotationEvent(user, annotation, report.significantChangesCount))
             }

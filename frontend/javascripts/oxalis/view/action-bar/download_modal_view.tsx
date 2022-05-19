@@ -177,7 +177,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
         <Row>
           <Text
             style={{
-              margin: "6px 12px",
+              margin: "0 6px 12px",
             }}
             type="warning"
           >
@@ -190,7 +190,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
         <Row>
           <Text
             style={{
-              margin: "6px 12px",
+              margin: "0 6px 12px",
             }}
             type="warning"
           >
@@ -223,7 +223,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
       />
       <Text
         style={{
-          margin: "6px 12px",
+          margin: "0 6px 12px",
         }}
         type="warning"
       >
@@ -275,7 +275,7 @@ with wk.webknossos_context(
             {maybeShowWarning()}
             <Text
               style={{
-                margin: "6px 12px",
+                margin: "0 6px 12px",
               }}
             >
               {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
@@ -307,7 +307,8 @@ with wk.webknossos_context(
                     <Checkbox
                       style={checkboxStyle}
                       value="Volume"
-                      checked={hasSkeleton ? includeVolumeData : hasVolumes}
+                      // If no skeleton is available, volume is always selected
+                      checked={!hasSkeleton ? true : includeVolumeData}
                       disabled={!hasSkeleton}
                     >
                       Volume annotations as WKW
@@ -324,8 +325,7 @@ with wk.webknossos_context(
                 ) : null}
 
                 <Checkbox style={checkboxStyle} value="Skeleton" checked disabled>
-                  {hasSkeleton ? "Skeleton annotations " : "Meta data "}
-                  as NML
+                  {hasSkeleton ? "Skeleton annotations" : "Meta data"} as NML
                 </Checkbox>
                 <Hint
                   style={{
@@ -350,7 +350,7 @@ with wk.webknossos_context(
           <Row>
             <Text
               style={{
-                margin: "6px 12px",
+                margin: "0 6px 12px",
               }}
             >
               {messages["annotation.export"]}
@@ -437,7 +437,7 @@ with wk.webknossos_context(
           <Row>
             <Text
               style={{
-                margin: "6px 12px",
+                margin: "0 6px 12px",
               }}
             >
               The following code snippets are suggestions to get you started quickly with the{" "}

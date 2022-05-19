@@ -876,11 +876,12 @@ export function convertToHybridTracing(
   });
 }
 
-export async function downloadNml(
+export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
   versions: Versions = {},
+  includeVolumeData: boolean = true,
 ) {
   const possibleVersionString = Object.entries(versions)
     .map(([key, val]) => `${key}Version=${val}`)
@@ -891,11 +892,14 @@ export async function downloadNml(
       timeout: 12000,
     });
   }
+  const skipVolumeDataString = includeVolumeData ? "" : "skipVolumeData=true";
+  const maybeAmpersand = possibleVersionString === "" && !includeVolumeData ? "" : "&";
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}${maybeAmpersand}${skipVolumeDataString}`;
   const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
     extractHeaders: true,
   });
+
   // Using headers to determine the name and type of the file.
   const contentDispositionHeader = headers["content-disposition"];
   const filenameStartingPart = 'filename="';

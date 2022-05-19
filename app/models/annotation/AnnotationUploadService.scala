@@ -20,7 +20,7 @@ case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, 
     otherFiles.get(dataZipLocation)
 }
 
-class AnnotationUploadService @Inject()(tempFileService: TempFileService)() extends LazyLogging {
+class AnnotationUploadService @Inject()(tempFileService: TempFileService) extends LazyLogging {
 
   private def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
       implicit m: MessagesProvider): NmlParseResult =

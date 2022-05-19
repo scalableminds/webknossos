@@ -247,15 +247,15 @@ class EditableMappingService @Inject()(
   private def splitGraph(agglomerateGraph: AgglomerateGraph,
                          segmentId1: Long,
                          segmentId2: Long): (AgglomerateGraph, AgglomerateGraph) = {
-    val edgesMinusOne = agglomerateGraph.edges.filterNot {
-      case (from, to) =>
+    val edgesAndAffinitiesMinusOne: List[((Long, Long), Float)] = agglomerateGraph.edges.zip(agglomerateGraph.affinities).filterNot {
+      case ((from, to), _) =>
         (from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1)
     }
-    val graph1Nodes: Set[Long] = computeConnectedComponent(startNode = segmentId1, edgesMinusOne)
+    val graph1Nodes: Set[Long] = computeConnectedComponent(startNode = segmentId1, edgesAndAffinitiesMinusOne.map(_._1))
     val graph1NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
       case (seg, _) => graph1Nodes.contains(seg)
     }
-    val graph1EdgesWithAffinities = agglomerateGraph.edges.zip(agglomerateGraph.affinities).filter {
+    val graph1EdgesWithAffinities = edgesAndAffinitiesMinusOne.filter {
       case (e, _) => graph1Nodes.contains(e._1) && graph1Nodes.contains(e._2)
     }
     val graph1 = AgglomerateGraph(
@@ -269,7 +269,7 @@ class EditableMappingService @Inject()(
     val graph2NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
       case (seg, _) => graph2Nodes.contains(seg)
     }
-    val graph2EdgesWithAffinities = agglomerateGraph.edges.zip(agglomerateGraph.affinities).filter {
+    val graph2EdgesWithAffinities = edgesAndAffinitiesMinusOne.filter {
       case (e, _) => graph2Nodes.contains(e._1) && graph2Nodes.contains(e._2)
     }
     val graph2 = AgglomerateGraph(

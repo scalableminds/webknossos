@@ -33,6 +33,14 @@ import scala.concurrent.duration._
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
+
+case class EditableMappingKey(
+                               editableMappingId: String,
+                               remoteFallbackLayer: RemoteFallbackLayer,
+                               userToken: Option[String],
+                               desiredVersion: Long
+                             )
+
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     remoteDatastoreClient: TSRemoteDatastoreClient
@@ -44,7 +52,7 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  private lazy val materializedEditableMappingCache: Cache[String, Box[EditableMapping]] = {
+  private lazy val materializedEditableMappingCache: Cache[EditableMappingKey, Box[EditableMapping]] = {
     val maxEntries = 10
     val defaultCachingSettings = CachingSettings("")
     val lfuCacheSettings =
@@ -55,7 +63,7 @@ class EditableMappingService @Inject()(
         .withTimeToIdle(1 hour)
     val cachingSettings =
       defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
-    val lfuCache: Cache[String, Box[EditableMapping]] = LfuCache(cachingSettings)
+    val lfuCache: Cache[EditableMappingKey, Box[EditableMapping]] = LfuCache(cachingSettings)
     lfuCache
   }
 
@@ -117,16 +125,18 @@ class EditableMappingService @Inject()(
       materialized <- getWithCache(editableMappingId, remoteFallbackLayer, userToken, desiredVersion)
     } yield materialized
 
+
   private def getWithCache(editableMappingId: String,
                            remoteFallbackLayer: RemoteFallbackLayer,
                            userToken: Option[String],
                            desiredVersion: Long,
   ): Fox[EditableMapping] = {
-    val key = f"$editableMappingId---$desiredVersion"
+    val key = EditableMappingKey(editableMappingId, remoteFallbackLayer, userToken, desiredVersion)
+    logger.info("getWithCache")
     for {
       materializedBox <- materializedEditableMappingCache.getOrLoad(
         key,
-        _ => getVersioned(editableMappingId, remoteFallbackLayer, userToken, desiredVersion).futureBox)
+        key => getVersioned(key.editableMappingId, key.remoteFallbackLayer, key.userToken, key.desiredVersion).futureBox)
       materialized <- materializedBox.toFox
     } yield materialized
   }

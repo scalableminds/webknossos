@@ -13,15 +13,8 @@ import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, Web
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateActionGroup
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  EditableMappingService,
-  EditableMappingUpdateActionGroup
-}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ResolutionRestrictions,
-  UpdateMappingNameAction,
-  VolumeTracingService
-}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, EditableMappingUpdateActionGroup, EditableMappingsIsosurfaceService}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, UpdateMappingNameAction, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreAccessTokenService}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
@@ -35,6 +28,7 @@ import scala.concurrent.ExecutionContext
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
                                         val remoteWebKnossosClient: TSRemoteWebKnossosClient,
                                         editableMappingService: EditableMappingService,
+                                        editableMappingIsosurfaceService: EditableMappingsIsosurfaceService,
                                         val accessTokenService: TracingStoreAccessTokenService,
                                         val slackNotificationService: TSSlackNotificationService)(
     implicit val ec: ExecutionContext,
@@ -206,7 +200,11 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
-          (vertices, neighbors) <- tracingService.createIsosurface(tracingId, request.body)
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          hasEditableMapping <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
+          (vertices, neighbors) <- if (hasEditableMapping.getOrElse(false))
+            editableMappingIsosurfaceService.createIsosurface(tracing, request.body, token)
+          else tracingService.createIsosurface(tracingId, request.body)
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)

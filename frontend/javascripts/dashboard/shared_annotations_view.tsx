@@ -116,7 +116,7 @@ class SharedAnnotationsView extends React.PureComponent<any, State> {
           width={280}
           dataIndex="owner"
           sorter={Utils.localeCompareBy(typeHint, (annotation) =>
-            annotation.owner ? annotation.owner : "",
+            annotation.owner ? annotation.owner.firstName : "",
           )}
           render={(name: string, tracing: APIAnnotationCompact) =>
             tracing.owner ? tracing.owner : ""

@@ -41,7 +41,7 @@ import models.mesh.{MeshDAO, MeshService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
-import models.team.{Team, TeamDAO}
+import models.team.{Team, TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -89,6 +89,7 @@ class AnnotationService @Inject()(
     taskDAO: TaskDAO,
     teamDAO: TeamDAO,
     userService: UserService,
+    teamService: TeamService,
     dataStoreDAO: DataStoreDAO,
     projectDAO: ProjectDAO,
     organizationDAO: OrganizationDAO,
@@ -788,6 +789,8 @@ class AnnotationService @Inject()(
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       meshes <- meshDAO.findAllWithAnnotation(annotation._id)
       meshesJs <- Fox.serialCombined(meshes)(meshService.publicWrites)
+      teams <- sharedTeamsFor(annotation._id)
+      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_))
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
     } yield {
@@ -811,6 +814,7 @@ class AnnotationService @Inject()(
         "visibility" -> annotation.visibility,
         "settings" -> settings,
         "tracingTime" -> annotation.tracingTime,
+        "teams" -> teamsJson,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "user" -> userJson,
         "meshes" -> meshesJs
@@ -832,11 +836,14 @@ class AnnotationService @Inject()(
     }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def compactWrites(annotation: Annotation, requestingUser: Option[User])(
+      implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      userBox <- userDAO.findOne(annotation._user).futureBox
+      teams <- sharedTeamsFor(annotation._id)
+      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_))
+      userJson <- userJsonForAnnotation(annotation._user, requestingUser)
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -852,10 +859,9 @@ class AnnotationService @Inject()(
         "organization" -> organization.name,
         "visibility" -> annotation.visibility,
         "tracingTime" -> annotation.tracingTime,
+        "teams" -> teamsJson,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "owner" -> userBox.toOption.map { user =>
-          s"${user.firstName} ${user.lastName}"
-        }
+        "owner" -> userJson
       )
     }
 }

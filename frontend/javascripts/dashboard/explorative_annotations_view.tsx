@@ -1,7 +1,7 @@
 import { RouteComponentProps, Link, withRouter } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tooltip } from "antd";
+import { Spin, Input, Table, Button, Modal, Tooltip, Tag } from "antd";
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -10,12 +10,19 @@ import {
   PlusOutlined,
   UploadOutlined,
   CopyOutlined,
+  TeamOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
 import { AsyncLink } from "components/async_clickables";
-import type { APIAnnotationCompact } from "types/api_flow_types";
+import {
+  annotationToCompact,
+  APIAnnotation,
+  APIAnnotationCompact,
+  APIUser,
+} from "types/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
 import {
   finishAllAnnotations,
@@ -25,8 +32,9 @@ import {
   getCompactAnnotations,
   downloadNml,
   getCompactAnnotationsForUser,
+  getAvailableAnnotations,
 } from "admin/admin_rest_api";
-import { formatHash } from "libs/format_utils";
+import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
@@ -57,6 +65,7 @@ type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
   history: RouteComponentProps["history"];
+  activeUser: APIUser;
 };
 type State = {
   shouldShowArchivedTracings: boolean;
@@ -75,8 +84,19 @@ const persistence = new Persistence<PartialState>(
   "explorativeList",
 );
 
+const READ_ONLY_ICON = (
+  <span className="fa-stack fa-1x">
+    <i className="fas fa-pen fa-stack-1x"></i>
+    <i className="fas fa-slash fa-stack-1x"></i>
+  </span>
+);
+
+function formatUserName(user: APIUser) {
+  return `${user.firstName} ${user.lastName}`;
+}
+
 class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
-  state = {
+  state: State = {
     shouldShowArchivedTracings: false,
     archivedModeState: {
       tracings: [],
@@ -94,9 +114,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    this.setState(persistence.load(this.props.history) as PartialState, () =>
-      this.fetchNextPage(0),
-    );
+    this.setState(persistence.load(this.props.history) as PartialState, () => {
+      this.fetchNextPage(0);
+    });
   }
 
   componentDidUpdate(_prevProps: Props, prevState: State) {
@@ -133,7 +153,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   fetchNextPage = async (pageNumber: number) => {
-    // this refers not to the pagination of antd but to the pagination of querying data from SQL
+    // this does not refer to the pagination of antd but to the pagination of querying data from SQL
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
     const previousTracings = this.getCurrentModeState().tracings;
 
@@ -145,13 +165,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       this.setState({
         isLoading: true,
       });
+
       const tracings =
         this.props.userId != null
-          ? await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings, pageNumber)
-          : await getCompactAnnotations(showArchivedTracings, pageNumber);
+          ? // todo: also implement pendant for getCompactAnnotationsForUser
+            await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings, pageNumber)
+          : await getAvailableAnnotations(showArchivedTracings, pageNumber);
+
       this.setModeState(
         {
-          // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
           tracings: previousTracings.concat(tracings),
           lastLoadedPage: pageNumber,
           loadedAllTracings: tracings.length !== pageLength || tracings.length === 0,
@@ -179,10 +201,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationCompact) => {
-    const newTracing =
+    const newTracing = annotationToCompact(
       type === "finish"
         ? await finishAnnotation(tracing.id, tracing.typ)
-        : await reOpenAnnotation(tracing.id, tracing.typ);
+        : await reOpenAnnotation(tracing.id, tracing.typ),
+    );
 
     if (type === "finish") {
       Toast.success(messages["annotation.was_finished"]);
@@ -190,7 +213,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       Toast.success(messages["annotation.was_re_opened"]);
     }
 
-    const newTracings = this.getCurrentTracings().filter((t) => t.id !== tracing.id);
+    const newTracings = this.getCurrentOwnTracings().filter((t) => t.id !== tracing.id);
     const { shouldShowArchivedTracings } = this.state;
 
     if (type === "finish") {
@@ -272,7 +295,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getCurrentTracings(): Array<APIAnnotationCompact> {
+  getCurrentOwnTracings(): Array<APIAnnotationCompact> {
     return this.getCurrentModeState().tracings;
   }
 
@@ -284,7 +307,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   renameTracing(tracing: APIAnnotationCompact, name: string) {
-    const tracings = this.getCurrentTracings();
+    const tracings = this.getCurrentOwnTracings();
     const newTracings = tracings.map((currentTracing) => {
       if (currentTracing.id !== tracing.id) {
         return currentTracing;
@@ -310,7 +333,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   archiveAll = () => {
-    const selectedAnnotations = this.getFilteredTracings();
+    const selectedAnnotations = this.getAllFilteredTracings();
     Modal.confirm({
       content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags?`,
       onOk: async () => {
@@ -332,7 +355,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   addTagToSearch = (tag: string): void => {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
     if (!this.state.tags.includes(tag)) {
       this.setState((prevState) => ({
         tags: [...prevState.tags, tag],
@@ -401,9 +423,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getFilteredTracings() {
+  getAllFilteredTracings() {
+    const allTracings = _.uniqBy(this.getCurrentOwnTracings(), (annotation) => annotation.id);
     return Utils.filterWithSearchQueryAND(
-      this.getCurrentTracings(),
+      allTracings,
       ["id", "name", "modified", "tags"],
       `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
     );
@@ -417,7 +440,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
     return (
       <div>
-        {formatHash(tracing.id)}
         <Tooltip title="Copy long ID" placement="bottom">
           <Button
             onClick={copyIdToClipboard}
@@ -429,26 +451,39 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             }}
           />
         </Tooltip>
+        {formatHash(tracing.id)}
       </div>
     );
   }
 
   renderNameWithDescription(tracing: APIAnnotationCompact) {
     return (
-      <TextWithDescription
-        isEditable
-        value={tracing.name ? tracing.name : "Unnamed Annotation"}
-        onChange={(newName) => this.renameTracing(tracing, newName)}
-        label="Annotation Name"
-        description={tracing.description}
-      />
+      <div style={{ color: tracing.name ? "inherit" : "#7c7c7c" }}>
+        <TextWithDescription
+          isEditable
+          value={tracing.name ? tracing.name : "Unnamed Annotation"}
+          onChange={(newName) => this.renameTracing(tracing, newName)}
+          label="Annotation Name"
+          description={tracing.description}
+        />
+      </div>
     );
   }
 
   renderTable() {
-    const filteredAndSortedTracings = this.getFilteredTracings().sort(
+    const filteredAndSortedTracings = this.getAllFilteredTracings().sort(
       Utils.compareBy(typeHint, (annotation) => annotation.modified, false),
     );
+    const renderOwner = (owner: APIUser) => {
+      const ownerName = this.props.isAdminView ? (
+        formatUserName(owner)
+      ) : owner.id == this.props.activeUser.id ? (
+        <i>me</i>
+      ) : (
+        formatUserName(owner)
+      );
+      return ownerName;
+    };
     return (
       <Table
         dataSource={filteredAndSortedTracings}
@@ -473,9 +508,21 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           width={100}
-          render={(__, tracing: APIAnnotationCompact) => this.renderIdAndCopyButton(tracing)}
+          render={(__, tracing: APIAnnotationCompact) => {
+            return (
+              <>
+                <div className="monospace-id">{this.renderIdAndCopyButton(tracing)}</div>
+
+                {tracing.owner?.id != this.props.activeUser.id ? (
+                  <div style={{ color: "#7c7c7c" }}>
+                    {READ_ONLY_ICON}
+                    read-only
+                  </div>
+                ) : null}
+              </>
+            );
+          }}
           sorter={Utils.localeCompareBy(typeHint, (annotation) => annotation.id)}
-          className="monospace-id"
         />
         <Column
           title="Name"
@@ -485,6 +532,32 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           render={(name: string, tracing: APIAnnotationCompact) =>
             this.renderNameWithDescription(tracing)
           }
+        />
+        <Column
+          title="Owner & Teams"
+          dataIndex="owner"
+          width={200}
+          sorter={Utils.localeCompareBy(
+            typeHint,
+            (annotation) => annotation.owner?.firstName || "",
+          )}
+          render={(owner: APIUser | null, tracing: APIAnnotationCompact) => {
+            const ownerName = owner != null ? renderOwner(owner) : null;
+            const teamTags = tracing.teams.map((t) => (
+              <Tag color={stringToColor(t.name)}>{t.name}</Tag>
+            ));
+
+            return (
+              <>
+                <div>
+                  <UserOutlined />
+                  {ownerName}
+                </div>
+                {teamTags.length > 0 ? <TeamOutlined /> : null}
+                {teamTags}
+              </>
+            );
+          }}
         />
         <Column
           title="Stats"

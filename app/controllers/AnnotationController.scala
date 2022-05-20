@@ -65,6 +65,7 @@ class AnnotationController @Inject()(
 
   implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
+  private val DefaultAnnotationListLimit = 1000 // todo: dry with in DefaultAnnotationListLimit in UserController
 
   @ApiOperation(value = "Information about an annotation", nickname = "annotationInfo")
   @ApiResponses(
@@ -396,11 +397,32 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
+  def availableAnnotations(isFinished: Option[Boolean],
+                           limit: Option[Int],
+                           pageNumber: Option[Int] = None,
+                           includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        userTeams <- userService.teamIdsFor(request.identity._id)
+        // todo: how to combine this with pageNumber?
+        sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
+        userAnnotations <- annotationDAO.findAllFor(request.identity._id,
+                                                    isFinished,
+                                                    AnnotationType.Explorational,
+                                                    limit.getOrElse(DefaultAnnotationListLimit),
+                                                    pageNumber.getOrElse(0))
+
+        json <- Fox.serialCombined((sharedAnnotations ++ userAnnotations).distinct)(
+          annotationService.compactWrites(_, Some(request.identity)))
+      } yield Ok(Json.toJson(json))
+    }
+
+  @ApiOperation(hidden = true, value = "")
   def sharedAnnotations: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       userTeams <- userService.teamIdsFor(request.identity._id)
       sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
-      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites(_))
+      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites(_, Some(request.identity)))
     } yield Ok(Json.toJson(json))
   }
 

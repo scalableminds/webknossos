@@ -560,6 +560,15 @@ export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON("/api/annotations/shared");
 }
 
+export function getAvailableAnnotations(
+  isFinished: boolean,
+  pageNumber: number = 0,
+): Promise<Array<APIAnnotationCompact>> {
+  return Request.receiveJSON(
+    `/api/annotations/available?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
+  );
+}
+
 export function getTeamsForSharedAnnotation(
   typ: string,
   id: string,

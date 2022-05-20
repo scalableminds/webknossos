@@ -332,8 +332,50 @@ export type APIAnnotationCompact = {
   readonly tags: Array<string>;
   readonly tracingTime: number | null | undefined;
   readonly typ: APIAnnotationType;
-  readonly owner?: string;
+  readonly owner?: APIUser;
+  readonly teams: APITeam[];
 };
+
+export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCompact {
+  const {
+    annotationLayers,
+    dataSetName,
+    organization,
+    description,
+    formattedHash,
+    modified,
+    id,
+    visibility,
+    name,
+    state,
+    stats,
+    tags,
+    tracingTime,
+    typ,
+    owner,
+    teams,
+  } = annotation;
+
+  return {
+    annotationLayers,
+    dataSetName,
+    organization,
+    description,
+    formattedHash,
+    modified,
+    id,
+    visibility,
+    name,
+    state,
+    stats,
+    tags,
+    tracingTime,
+    typ,
+    owner,
+    teams,
+  };
+}
+
 export type LocalMeshMetaData = {
   isVisible?: boolean;
   isLoaded?: boolean;

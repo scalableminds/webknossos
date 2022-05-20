@@ -17,7 +17,6 @@ import DatasetView from "dashboard/dataset_view";
 import DatasetCacheProvider from "dashboard/dataset/dataset_cache_provider";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
-import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
@@ -136,29 +135,12 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         <TabPane tab={`${optionalMyPrefix}Tasks`} key="tasks">
           <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
         </TabPane>,
-        <TabPane tab={`${optionalMyPrefix} Annotations`} key="explorativeAnnotations">
+        <TabPane tab={`Annotations`} key="explorativeAnnotations">
           <ExplorativeAnnotationsView
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}
+            activeUser={this.props.activeUser}
           />
-        </TabPane>,
-        <TabPane
-          tab={
-            <div>
-              Shared Annotations
-              <Tooltip title="This is the Shared Annotations tab. Annotations that are shared with teams you are a member of are displayed here. You can share your own annotations in the sharing modal in the annotation view.">
-                <InfoCircleOutlined
-                  style={{
-                    color: "gray",
-                    marginLeft: 6,
-                  }}
-                />
-              </Tooltip>
-            </div>
-          }
-          key="sharedAnnotations"
-        >
-          <SharedAnnotationsView />
         </TabPane>,
       ];
     } else {

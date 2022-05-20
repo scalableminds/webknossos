@@ -17,19 +17,13 @@ import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
 import { AsyncLink } from "components/async_clickables";
-import {
-  annotationToCompact,
-  APIAnnotation,
-  APIAnnotationCompact,
-  APIUser,
-} from "types/api_flow_types";
+import { annotationToCompact, APIAnnotationCompact, APIUser } from "types/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
 import {
   finishAllAnnotations,
   editAnnotation,
   finishAnnotation,
   reOpenAnnotation,
-  getCompactAnnotations,
   downloadNml,
   getCompactAnnotationsForUser,
   getAvailableAnnotations,
@@ -86,8 +80,8 @@ const persistence = new Persistence<PartialState>(
 
 const READ_ONLY_ICON = (
   <span className="fa-stack fa-1x">
-    <i className="fas fa-pen fa-stack-1x"></i>
-    <i className="fas fa-slash fa-stack-1x"></i>
+    <i className="fas fa-pen fa-stack-1x" />
+    <i className="fas fa-slash fa-stack-1x" />
   </span>
 );
 
@@ -475,14 +469,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       Utils.compareBy(typeHint, (annotation) => annotation.modified, false),
     );
     const renderOwner = (owner: APIUser) => {
-      const ownerName = this.props.isAdminView ? (
-        formatUserName(owner)
-      ) : owner.id == this.props.activeUser.id ? (
-        <i>me</i>
-      ) : (
-        formatUserName(owner)
-      );
-      return ownerName;
+      if (!this.props.isAdminView && owner.id == this.props.activeUser.id) {
+        return <i>me</i>;
+      }
+      return formatUserName(owner);
     };
     return (
       <Table
@@ -508,20 +498,18 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           width={100}
-          render={(__, tracing: APIAnnotationCompact) => {
-            return (
-              <>
-                <div className="monospace-id">{this.renderIdAndCopyButton(tracing)}</div>
+          render={(__, tracing: APIAnnotationCompact) => (
+            <>
+              <div className="monospace-id">{this.renderIdAndCopyButton(tracing)}</div>
 
-                {tracing.owner?.id != this.props.activeUser.id ? (
-                  <div style={{ color: "#7c7c7c" }}>
-                    {READ_ONLY_ICON}
-                    read-only
-                  </div>
-                ) : null}
-              </>
-            );
-          }}
+              {tracing.owner?.id != this.props.activeUser.id ? (
+                <div style={{ color: "#7c7c7c" }}>
+                  {READ_ONLY_ICON}
+                  read-only
+                </div>
+              ) : null}
+            </>
+          )}
           sorter={Utils.localeCompareBy(typeHint, (annotation) => annotation.id)}
         />
         <Column
@@ -544,7 +532,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           render={(owner: APIUser | null, tracing: APIAnnotationCompact) => {
             const ownerName = owner != null ? renderOwner(owner) : null;
             const teamTags = tracing.teams.map((t) => (
-              <Tag color={stringToColor(t.name)}>{t.name}</Tag>
+              <Tag key={t.id} color={stringToColor(t.name)}>
+                {t.name}
+              </Tag>
             ));
 
             return (

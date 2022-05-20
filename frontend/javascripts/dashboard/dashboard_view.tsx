@@ -1,7 +1,6 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { Spin, Tabs, Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import React, { PureComponent } from "react";
@@ -135,7 +134,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         <TabPane tab={`${optionalMyPrefix}Tasks`} key="tasks">
           <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
         </TabPane>,
-        <TabPane tab={`Annotations`} key="explorativeAnnotations">
+        <TabPane tab="Annotations" key="explorativeAnnotations">
           <ExplorativeAnnotationsView
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}

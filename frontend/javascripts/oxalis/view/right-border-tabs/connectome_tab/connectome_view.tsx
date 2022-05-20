@@ -791,7 +791,17 @@ class ConnectomeView extends React.Component<Props, State> {
     const { filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
 
     if (currentConnectomeFile == null) {
-      return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No connectome available." />;
+      return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <span>
+              No connectome file available for this dataset.{" "}
+              <a href="https://docs.webknossos.org/webknossos/connectome_viewer.html">Read more about this feature in the documentation.</a>
+            </span>
+          }
+        />
+      );
     } else if (activeAgglomerateIds.length === 0 || filteredConnectomeData == null) {
       return (
         <Empty

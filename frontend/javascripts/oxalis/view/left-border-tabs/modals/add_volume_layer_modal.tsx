@@ -45,14 +45,21 @@ export default function AddVolumeLayerModal({
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
 
+    const minResolutionAllowed = Math.max(
+      ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[0]),
+    );
+    const maxResolutionAllowed = Math.max(
+      ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[1]),
+    );
+
     if (selectedSegmentationLayerIndex == null) {
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
         name: newLayerName,
         fallbackLayerName: undefined,
         resolutionRestrictions: {
-          min: resolutionIndices[0],
-          max: resolutionIndices[1],
+          min: minResolutionAllowed,
+          max: maxResolutionAllowed,
         },
       });
     } else {
@@ -63,8 +70,8 @@ export default function AddVolumeLayerModal({
         name: newLayerName,
         fallbackLayerName,
         resolutionRestrictions: {
-          min: resolutionIndices[0],
-          max: resolutionIndices[1],
+          min: minResolutionAllowed,
+          max: maxResolutionAllowed,
         },
       });
     }

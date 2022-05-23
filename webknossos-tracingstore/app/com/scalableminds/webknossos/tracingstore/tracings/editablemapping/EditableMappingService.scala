@@ -129,7 +129,6 @@ class EditableMappingService @Inject()(
                            desiredVersion: Long,
   ): Fox[EditableMapping] = {
     val key = EditableMappingKey(editableMappingId, remoteFallbackLayer, userToken, desiredVersion)
-    logger.info("getWithCache")
     for {
       materializedBox <- materializedEditableMappingCache.getOrLoad(
         key,
@@ -143,7 +142,8 @@ class EditableMappingService @Inject()(
                            remoteFallbackLayer: RemoteFallbackLayer,
                            userToken: Option[String],
                            desiredVersion: Long,
-  ): Fox[EditableMapping] =
+  ): Fox[EditableMapping] = {
+    logger.info("cache miss")
     for {
       closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
         .get(editableMappingId, Some(desiredVersion))(fromJson[EditableMapping])
@@ -162,6 +162,7 @@ class EditableMappingService @Inject()(
         tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized)
       }
     } yield materialized
+  }
 
   private def shouldPersistMaterialized(previouslyMaterializedVersion: Long, newVersion: Long): Boolean =
     newVersion > previouslyMaterializedVersion && newVersion % 10 == 5
@@ -542,12 +543,12 @@ class EditableMappingService @Inject()(
       )
 
       isosurfaceRequest = IsosurfaceRequest(
-        None,
-        segmentationLayer,
-        request.cuboid(segmentationLayer),
-        request.segmentId,
-        request.subsamplingStrides,
-        request.scale,
+        dataSource = None,
+        dataLayer = segmentationLayer,
+        cuboid = request.cuboid(segmentationLayer),
+        segmentId = request.segmentId,
+        subsamplingStrides = request.subsamplingStrides,
+        scale = request.scale,
         mapping = None,
         mappingType = None
       )

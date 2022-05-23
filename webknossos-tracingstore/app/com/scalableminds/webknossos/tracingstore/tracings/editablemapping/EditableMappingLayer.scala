@@ -17,13 +17,12 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
-
     for {
       editableMappingId <- Fox.successful(layer.name)
       remoteFallbackLayer <- layer.editableMappingService.remoteFallbackLayer(layer.tracing)
       editableMapping <- layer.editableMappingService.get(editableMappingId, remoteFallbackLayer, layer.token)
       dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
-        position = Vec3Int(bucket.globalX, bucket.globalY, bucket.globalZ),
+        position = Vec3Int(bucket.topLeft.x, bucket.topLeft.y, bucket.topLeft.z),
         mag = bucket.mag,
         cubeSize = layer.lengthOfUnderlyingCubes(bucket.mag),
         fourBit = None,

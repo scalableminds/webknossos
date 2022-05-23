@@ -1524,7 +1524,11 @@ class DataApi {
     });
   }
 
-  getRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
+  getRawDataCuboid(
+    layerName: string,
+    topLeft: Vector3,
+    bottomRight: Vector3,
+  ): Promise<ArrayBuffer> {
     return doWithToken((token) => {
       const downloadUrl = this._getDownloadUrlForRawDataCuboid(
         layerName,

@@ -27,6 +27,8 @@ import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
+import { proofreadAtPosition } from "oxalis/model/actions/proofread_actions";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -621,11 +623,10 @@ export class ProofreadTool {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
       leftClick: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
-        const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
+        SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
 
-        if (!didSelectNode) {
-          handleAgglomerateSkeletonAtClick(pos);
-        }
+        const globalPosition = calculateGlobalPos(Store.getState(), pos);
+        Store.dispatch(proofreadAtPosition(globalPosition));
       },
     };
   }

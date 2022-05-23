@@ -3,6 +3,7 @@ import type { MappingType } from "oxalis/store";
 export type IsosurfaceMappingInfo = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
+  useDataStore?: boolean | null | undefined;
 };
 export type LoadAdHocMeshAction = {
   type: "LOAD_AD_HOC_MESH_ACTION";

@@ -1,5 +1,5 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { takeEvery, put, call } from "typed-redux-saga";
+import { takeEvery, put, call, all } from "typed-redux-saga";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import { AnnotationToolEnum, MappingStatusEnum } from "oxalis/constants";
 import Toast from "libs/toast";
@@ -11,8 +11,10 @@ import {
   initializeEditableMappingAction,
   setMappingisEditableAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import type { ProofreadAtPositionAction } from "oxalis/model/actions/proofread_actions";
 import {
   enforceSkeletonTracing,
+  findTreeByName,
   findTreeByNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -28,12 +30,117 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { makeMappingEditable } from "admin/admin_rest_api";
-import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
+import {
+  setMappingNameAction,
+  updateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
+import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_handlers";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
+import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
+import { V3 } from "libs/mjs";
+import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 
 export default function* proofreadMapping(): Saga<any> {
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
   yield* takeEvery(["DELETE_EDGE", "MERGE_TREES"], splitOrMergeAgglomerate);
+  yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
+}
+
+const COARSE_RESOLUTION_INDEX = 4;
+// @ts-ignore
+const PROOFREAD_SEGMENT_SURROUND_NM: number = window.__proofreadSurroundNm || 2000;
+let oldSegmentIdsInSurround: number[] | null = null;
+
+function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
+  const { position } = action;
+  const treeName = yield* call(loadAgglomerateSkeletonAtPosition, position);
+
+  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
+  if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
+
+  const layerName = volumeTracingLayer.tracingId;
+
+  const oldPreferredQuality = yield* select(
+    (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
+  );
+  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
+  const resolutionIndices = resolutionInfo.getAllIndices();
+  const coarseResolutionIndex =
+    resolutionIndices[Math.min(COARSE_RESOLUTION_INDEX, resolutionIndices.length - 1)];
+  yield* put(
+    updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", coarseResolutionIndex),
+  );
+  const segmentId = getSegmentIdForPosition(position);
+  yield* put(loadAdHocMeshAction(segmentId, position));
+  yield* put(
+    updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", oldPreferredQuality),
+  );
+
+  if (treeName == null) return;
+
+  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+  const { trees } = skeletonTracing;
+  const tree = findTreeByName(trees, treeName).getOrElse(null);
+
+  if (tree == null) return;
+
+  // Find all segments (nodes) that are within x µm to load meshes in oversegmentation
+  const nodePositions = tree.nodes.map((node) => node.position);
+  const distanceSquared = PROOFREAD_SEGMENT_SURROUND_NM ** 2;
+  const scale = yield* select((state) => state.dataset.dataSource.scale);
+
+  const nodePositionsInSurround = nodePositions.filter(
+    (nodePosition) => V3.scaledSquaredDist(nodePosition, position, scale) <= distanceSquared,
+  );
+  const mag = resolutionInfo.getLowestResolution();
+
+  const fallbackLayerName = volumeTracingLayer.fallbackLayer;
+  if (fallbackLayerName == null) return;
+
+  // Request unmapped segmentation ids
+  const segmentIdsArrayBuffers: ArrayBuffer[] = yield* all(
+    nodePositionsInSurround.map((nodePosition) =>
+      call(
+        [api.data, api.data.getRawDataCuboid],
+        fallbackLayerName,
+        nodePosition,
+        V3.add(nodePosition, mag),
+      ),
+    ),
+  );
+  // HACK: This only works for uint32 segmentations
+  const segmentIdsInSurround = segmentIdsArrayBuffers.map((buffer) => new Uint32Array(buffer)[0]);
+
+  if (oldSegmentIdsInSurround != null) {
+    // Remove old meshes in oversegmentation
+    yield* all(
+      oldSegmentIdsInSurround.map((nodeSegmentId) =>
+        put(removeIsosurfaceAction(layerName, nodeSegmentId)),
+      ),
+    );
+  }
+
+  // Load meshes in oversegmentation
+  const noMappingInfo = {
+    mappingName: null,
+    mappingType: null,
+    useDataStore: true,
+  };
+  yield* all(
+    segmentIdsInSurround.map((nodeSegmentId, index) =>
+      put(
+        loadAdHocMeshAction(
+          nodeSegmentId,
+          nodePositionsInSurround[index],
+          noMappingInfo,
+          layerName,
+        ),
+      ),
+    ),
+  );
+
+  oldSegmentIdsInSurround = segmentIdsInSurround;
 }
 
 function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {

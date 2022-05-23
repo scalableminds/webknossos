@@ -330,7 +330,7 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
   const maybeTree = findTreeByName(trees, treeName).getOrElse(null);
 
   if (maybeTree != null) {
-    Toast.info(
+    console.warn(
       `Skeleton for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${treeName}".`,
     );
     return;

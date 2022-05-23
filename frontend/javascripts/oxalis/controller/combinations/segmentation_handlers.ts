@@ -17,6 +17,7 @@ import {
   getSegmentIdForPositionAsync,
 } from "oxalis/controller/combinations/volume_handlers";
 import { setActiveConnectomeAgglomerateIdsAction } from "oxalis/model/actions/connectome_actions";
+import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
 export function hasAgglomerateMapping(state: OxalisState) {
   const segmentation = Model.getVisibleSegmentationLayer();
 
@@ -81,22 +82,22 @@ export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const globalPosition = calculateGlobalPos(state, clickPosition);
   loadAgglomerateSkeletonAtPosition(globalPosition);
 }
-export async function loadAgglomerateSkeletonAtPosition(position: Vector3): Promise<void> {
+export async function loadAgglomerateSkeletonAtPosition(position: Vector3): Promise<string | null> {
   const segmentation = Model.getVisibleSegmentationLayer();
 
   if (!segmentation) {
-    return;
+    return null;
   }
 
   const segmentId = await getSegmentIdForPositionAsync(position);
-  loadAgglomerateSkeletonForSegmentId(segmentId);
+  return loadAgglomerateSkeletonForSegmentId(segmentId);
 }
-export function loadAgglomerateSkeletonForSegmentId(segmentId: number): void {
+export function loadAgglomerateSkeletonForSegmentId(segmentId: number): string | null {
   const state = Store.getState();
   const segmentation = Model.getVisibleSegmentationLayer();
 
   if (!segmentation) {
-    return;
+    return null;
   }
 
   const { mappingName } = getMappingInfo(
@@ -107,9 +108,11 @@ export function loadAgglomerateSkeletonForSegmentId(segmentId: number): void {
 
   if (mappingName && isAgglomerateMappingEnabled.value) {
     Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, segmentId));
+    return getTreeNameForAgglomerateSkeleton(segmentId, mappingName);
   } else {
     Toast.error(isAgglomerateMappingEnabled.reason);
   }
+  return null;
 }
 export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
   const state = Store.getState();

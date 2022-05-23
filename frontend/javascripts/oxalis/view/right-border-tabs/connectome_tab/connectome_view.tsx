@@ -797,7 +797,9 @@ class ConnectomeView extends React.Component<Props, State> {
           description={
             <span>
               No connectome file available for this dataset.{" "}
-              <a href="https://docs.webknossos.org/webknossos/connectome_viewer.html">Read more about this feature in the documentation.</a>
+              <a href="https://docs.webknossos.org/webknossos/connectome_viewer.html">
+                Read more about this feature in the documentation.
+              </a>
             </span>
           }
         />

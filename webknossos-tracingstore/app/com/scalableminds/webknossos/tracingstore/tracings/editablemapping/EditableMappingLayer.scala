@@ -19,8 +19,11 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
     val bucket: BucketPosition = readInstruction.bucket
     for {
       editableMappingId <- Fox.successful(layer.name)
+      _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService.remoteFallbackLayer(layer.tracing)
+      beforeGet = System.currentTimeMillis()
       editableMapping <- layer.editableMappingService.get(editableMappingId, remoteFallbackLayer, layer.token)
+      afterGet = System.currentTimeMillis()
       dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
         position = Vec3Int(bucket.topLeft.x, bucket.topLeft.y, bucket.topLeft.z),
         mag = bucket.mag,
@@ -33,13 +36,19 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       (unmappedData, indices) <- layer.editableMappingService.getUnmappedDataFromDatastore(remoteFallbackLayer,
                                                                                            dataRequestCollection,
                                                                                            layer.token)
+      afterGetUnmapped = System.currentTimeMillis()
       _ <- bool2Fox(indices.isEmpty)
       segmentIds <- layer.editableMappingService.collectSegmentIds(unmappedData, layer.tracing.elementClass)
+      afterCollectSegmentIds = System.currentTimeMillis()
       relevantMapping <- layer.editableMappingService.generateCombinedMappingSubset(segmentIds,
                                                                                     editableMapping,
                                                                                     remoteFallbackLayer,
                                                                                     layer.token)
-      mappedData <- layer.editableMappingService.mapData(unmappedData, relevantMapping, layer.elementClass)
+      afterCombineMapping = System.currentTimeMillis()
+      mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedData, relevantMapping, layer.elementClass)
+      afterMapData = System.currentTimeMillis()
+      _ = logger.info(
+        s"load bucket timing: getMapping: ${afterGet - beforeGet} ms, getUnmapped: ${afterGetUnmapped - afterGet} ms, collectSegments: ${afterCollectSegmentIds - afterGet} ms, combine: ${afterCombineMapping - afterCollectSegmentIds}, mapData: ${afterMapData - afterCombineMapping}. Total ${afterMapData - beforeGet}. ${mappedData.length} bytes, ${segmentIds.size} segments")
     } yield mappedData
   }
 }

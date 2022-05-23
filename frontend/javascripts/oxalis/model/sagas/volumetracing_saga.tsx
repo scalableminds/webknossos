@@ -713,7 +713,7 @@ export function* diffVolumeTracing(
   }
 
   if (prevVolumeTracing.mappingName !== volumeTracing.mappingName) {
-    yield updateMappingName(volumeTracing.mappingName);
+    yield updateMappingName(volumeTracing.mappingName, volumeTracing.mappingIsEditable);
   }
 }
 

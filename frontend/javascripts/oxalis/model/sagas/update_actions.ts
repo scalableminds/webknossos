@@ -175,6 +175,7 @@ export type UpdateMappingNameUpdateAction = {
   name: "updateMappingName";
   value: {
     mappingName: string | null | undefined;
+    isEditable: boolean | undefined;
   };
 };
 export type SplitAgglomerateUpdateAction = {
@@ -544,10 +545,11 @@ export function serverCreateTracing(timestamp: number) {
 }
 export function updateMappingName(
   mappingName: string | null | undefined,
+  isEditable: boolean | undefined,
 ): UpdateMappingNameUpdateAction {
   return {
     name: "updateMappingName",
-    value: { mappingName },
+    value: { mappingName, isEditable },
   };
 }
 export function splitAgglomerate(

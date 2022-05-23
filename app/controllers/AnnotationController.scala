@@ -413,7 +413,7 @@ class AnnotationController @Inject()(
                                                     pageNumber.getOrElse(0))
 
         json <- Fox.serialCombined((sharedAnnotations ++ userAnnotations).distinct)(
-          annotationService.compactWrites(_, Some(request.identity)))
+          annotationService.compactWrites)
       } yield Ok(Json.toJson(json))
     }
 
@@ -422,7 +422,7 @@ class AnnotationController @Inject()(
     for {
       userTeams <- userService.teamIdsFor(request.identity._id)
       sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
-      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites(_, Some(request.identity)))
+      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites)
     } yield Ok(Json.toJson(json))
   }
 

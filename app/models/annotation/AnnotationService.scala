@@ -836,14 +836,19 @@ class AnnotationService @Inject()(
     }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation, requestingUser: Option[User])(
+  def compactWrites(annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
       teams <- sharedTeamsFor(annotation._id)
-      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_))
-      userJson <- userJsonForAnnotation(annotation._user, requestingUser)
+      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization)))
+      user <- userDAO.findOne(annotation._user)(GlobalAccessContext)
+      userJson = Json.obj(
+        "id" -> user._id,
+        "firstName" -> user.firstName,
+        "lastName" -> user.lastName
+      )
     } yield {
       Json.obj(
         "modified" -> annotation.modified,

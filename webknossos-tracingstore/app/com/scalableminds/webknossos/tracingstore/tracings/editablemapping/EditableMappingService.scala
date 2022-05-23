@@ -36,6 +36,12 @@ case class EditableMappingKey(
     desiredVersion: Long
 )
 
+case class UnmappedRemoteDataKey(
+    remoteFallbackLayer: RemoteFallbackLayer,
+    dataRequests: List[WebKnossosDataRequest],
+    userToken: Option[String]
+)
+
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
@@ -51,7 +57,7 @@ class EditableMappingService @Inject()(
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
   private lazy val materializedEditableMappingCache: Cache[EditableMappingKey, Box[EditableMapping]] = {
-    val maxEntries = 10
+    val maxEntries = 20
     val defaultCachingSettings = CachingSettings("")
     val lfuCacheSettings =
       defaultCachingSettings.lfuCacheSettings
@@ -62,6 +68,21 @@ class EditableMappingService @Inject()(
     val cachingSettings =
       defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
     val lfuCache: Cache[EditableMappingKey, Box[EditableMapping]] = LfuCache(cachingSettings)
+    lfuCache
+  }
+
+  private lazy val unmappedRemoteDataCache: Cache[UnmappedRemoteDataKey, Box[(Array[Byte], List[Int])]] = {
+    val maxEntries = 3000
+    val defaultCachingSettings = CachingSettings("")
+    val lfuCacheSettings =
+      defaultCachingSettings.lfuCacheSettings
+        .withInitialCapacity(maxEntries)
+        .withMaxCapacity(maxEntries)
+        .withTimeToLive(2 hours)
+        .withTimeToIdle(1 hour)
+    val cachingSettings =
+      defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
+    val lfuCache: Cache[UnmappedRemoteDataKey, Box[(Array[Byte], List[Int])]] = LfuCache(cachingSettings)
     lfuCache
   }
 
@@ -486,17 +507,26 @@ class EditableMappingService @Inject()(
                                    dataRequests: DataRequestCollection,
                                    userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
     for {
-      dataRequestsTyped <- Fox.serialCombined(dataRequests) {
+      dataRequestsTyped: List[WebKnossosDataRequest] <- Fox.serialCombined(dataRequests) {
         case r: WebKnossosDataRequest => Fox.successful(r.copy(applyAgglomerate = None))
         case _                        => Fox.failure("Editable Mappings currently only work for webKnossos data requests")
       }
-      (data, indices) <- remoteDatastoreClient.getData(remoteFallbackLayer, dataRequestsTyped, userToken)
+      key = UnmappedRemoteDataKey(remoteFallbackLayer, dataRequestsTyped, userToken)
+      resultBox <- unmappedRemoteDataCache.getOrLoad(
+        key,
+        k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests, k.userToken))
+      (data, indices) <- resultBox.toFox
     } yield (data, indices)
 
   def collectSegmentIds(data: Array[Byte], elementClass: ElementClass): Fox[Set[Long]] =
     for {
+      before <- Fox.successful(System.currentTimeMillis())
       dataAsLongs <- bytesToLongs(data, elementClass)
-    } yield dataAsLongs.toSet
+      afterToLong = System.currentTimeMillis()
+      result = dataAsLongs.toSet
+      afterToSet = System.currentTimeMillis()
+      //_ = logger.info(s"collect segment Ids timing - toLong: ${afterToLong - before} ms, toSet: ${afterToSet - afterToLong} ms")
+    } yield result
 
   def remoteFallbackLayer(tracing: VolumeTracing): Fox[RemoteFallbackLayer] =
     for {

@@ -1,10 +1,12 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.nio._
+
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -14,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure}
-import java.nio._
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -54,7 +56,8 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                         actorSystem: ActorSystem,
                         isosurfaceTimeout: FiniteDuration,
                         isosurfaceActorPoolSize: Int)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
 
   private val agglomerateService
     : Option[AgglomerateService] = try { Some(binaryDataService.agglomerateService) } catch {
@@ -194,12 +197,15 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
     val vertexBuffer = mutable.ArrayBuffer[Vec3Double]()
 
     for {
+      before <- Fox.successful(System.currentTimeMillis())
       data <- binaryDataService.handleDataRequest(dataRequest)
+      afterLoading = System.currentTimeMillis()
       agglomerateMappedData = applyAgglomerate(data)
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
       neighbors = findNeighbors(mappedData, dataDimensions, mappedSegmentId)
+      afterPreprocessing = System.currentTimeMillis()
     } yield {
       for {
         x <- 0 until dataDimensions.x by 32
@@ -221,6 +227,9 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                                          vertexBuffer)
         }
       }
+      val afterMarchingCubes = System.currentTimeMillis()
+      logger.info(
+        s"Isosurface generation timing - loading: ${afterLoading - before} ms, preprocessing: ${afterPreprocessing - afterLoading}, marchingCubes: ${afterMarchingCubes - afterPreprocessing}")
       (vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray, neighbors)
     }
   }

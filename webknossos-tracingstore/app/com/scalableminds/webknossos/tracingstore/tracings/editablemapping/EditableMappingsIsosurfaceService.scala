@@ -1,3 +1,4 @@
+/*
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import java.nio.{Buffer, ByteBuffer, ByteOrder, IntBuffer, LongBuffer, ShortBuffer}
@@ -147,3 +148,4 @@ class EditableMappingsIsosurfaceService @Inject()(editableMappingService: Editab
   }
 
 }
+ */

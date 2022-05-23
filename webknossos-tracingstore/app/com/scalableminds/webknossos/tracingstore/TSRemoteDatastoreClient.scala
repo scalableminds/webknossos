@@ -37,6 +37,7 @@ class TSRemoteDatastoreClient @Inject()(
     for {
       response <- rpc(s"${remoteLayerUri(remoteFallbackLayer)}/data")
         .addQueryStringOptional("token", userToken)
+        .silent
         .post(dataRequests)
       _ <- bool2Fox(Status.isSuccessful(response.status))
       bytes = response.bodyAsBytes.toArray
@@ -56,6 +57,7 @@ class TSRemoteDatastoreClient @Inject()(
       .addQueryString("height" -> "1")
       .addQueryString("depth" -> "1")
       .addQueryString("mag" -> mag.toMagLiteral())
+      .silent
       .getWithBytesResponse
 
   def getAgglomerateIdsForSegmentIds(remoteFallbackLayer: RemoteFallbackLayer,
@@ -64,6 +66,7 @@ class TSRemoteDatastoreClient @Inject()(
                                      userToken: Option[String]): Fox[List[Long]] =
     rpc(s"${remoteLayerUri(remoteFallbackLayer)}/agglomerates/$mappingName/agglomeratesForSegments")
       .addQueryStringOptional("token", userToken)
+      .silent
       .postJsonWithJsonResponse[List[Long], List[Long]](segmentIdsOrdered)
 
   private def remoteLayerUri(remoteLayer: RemoteFallbackLayer): String =

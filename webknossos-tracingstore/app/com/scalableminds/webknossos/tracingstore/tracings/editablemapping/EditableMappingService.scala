@@ -12,12 +12,8 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.{
-  AgglomerateGraph,
-  UnsignedInteger,
-  UnsignedIntegerArray,
-  WebKnossosDataRequest
-}
+import com.scalableminds.webknossos.datastore.models._
+import com.scalableminds.webknossos.datastore.services.{IsosurfaceRequest, IsosurfaceService, IsosurfaceServiceHolder}
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -29,20 +25,20 @@ import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
-import scala.concurrent.duration._
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-
+import scala.concurrent.duration._
 
 case class EditableMappingKey(
-                               editableMappingId: String,
-                               remoteFallbackLayer: RemoteFallbackLayer,
-                               userToken: Option[String],
-                               desiredVersion: Long
-                             )
+    editableMappingId: String,
+    remoteFallbackLayer: RemoteFallbackLayer,
+    userToken: Option[String],
+    desiredVersion: Long
+)
 
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
+    val isosurfaceServiceHolder: IsosurfaceServiceHolder,
     remoteDatastoreClient: TSRemoteDatastoreClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
@@ -51,6 +47,8 @@ class EditableMappingService @Inject()(
     with LazyLogging {
 
   private def generateId: String = UUID.randomUUID.toString
+
+  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
   private lazy val materializedEditableMappingCache: Cache[EditableMappingKey, Box[EditableMapping]] = {
     val maxEntries = 10
@@ -116,15 +114,14 @@ class EditableMappingService @Inject()(
     } yield Json.toJson(updateActionGroupsJs)
   }
 
-  private def get(editableMappingId: String,
-                  remoteFallbackLayer: RemoteFallbackLayer,
-                  userToken: Option[String],
-                  version: Option[Long] = None): Fox[EditableMapping] =
+  def get(editableMappingId: String,
+          remoteFallbackLayer: RemoteFallbackLayer,
+          userToken: Option[String],
+          version: Option[Long] = None): Fox[EditableMapping] =
     for {
       desiredVersion <- findDesiredOrNewestPossibleVersion(editableMappingId, version)
       materialized <- getWithCache(editableMappingId, remoteFallbackLayer, userToken, desiredVersion)
     } yield materialized
-
 
   private def getWithCache(editableMappingId: String,
                            remoteFallbackLayer: RemoteFallbackLayer,
@@ -136,7 +133,8 @@ class EditableMappingService @Inject()(
     for {
       materializedBox <- materializedEditableMappingCache.getOrLoad(
         key,
-        key => getVersioned(key.editableMappingId, key.remoteFallbackLayer, key.userToken, key.desiredVersion).futureBox)
+        key =>
+          getVersioned(key.editableMappingId, key.remoteFallbackLayer, key.userToken, key.desiredVersion).futureBox)
       materialized <- materializedBox.toFox
     } yield materialized
   }
@@ -247,10 +245,11 @@ class EditableMappingService @Inject()(
   private def splitGraph(agglomerateGraph: AgglomerateGraph,
                          segmentId1: Long,
                          segmentId2: Long): (AgglomerateGraph, AgglomerateGraph) = {
-    val edgesAndAffinitiesMinusOne: List[((Long, Long), Float)] = agglomerateGraph.edges.zip(agglomerateGraph.affinities).filterNot {
-      case ((from, to), _) =>
-        (from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1)
-    }
+    val edgesAndAffinitiesMinusOne: List[((Long, Long), Float)] =
+      agglomerateGraph.edges.zip(agglomerateGraph.affinities).filterNot {
+        case ((from, to), _) =>
+          (from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1)
+      }
     val graph1Nodes: Set[Long] = computeConnectedComponent(startNode = segmentId1, edgesAndAffinitiesMinusOne.map(_._1))
     val graph1NodesWithPositions = agglomerateGraph.segments.zip(agglomerateGraph.positions).filter {
       case (seg, _) => graph1Nodes.contains(seg)
@@ -401,10 +400,10 @@ class EditableMappingService @Inject()(
       mappedData <- mapData(unmappedData, relevantMapping, tracing.elementClass)
     } yield (mappedData, indices)
 
-  private def generateCombinedMappingSubset(segmentIds: Set[Long],
-                                            editableMapping: EditableMapping,
-                                            remoteFallbackLayer: RemoteFallbackLayer,
-                                            userToken: Option[String]): Fox[Map[Long, Long]] = {
+  def generateCombinedMappingSubset(segmentIds: Set[Long],
+                                    editableMapping: EditableMapping,
+                                    remoteFallbackLayer: RemoteFallbackLayer,
+                                    userToken: Option[String]): Fox[Map[Long, Long]] = {
     val segmentIdsInEditableMapping: Set[Long] = segmentIds.intersect(editableMapping.segmentToAgglomerate.keySet)
     val segmentIdsInBaseMapping: Set[Long] = segmentIds.diff(segmentIdsInEditableMapping)
     val editableMappingSubset =
@@ -482,9 +481,9 @@ class EditableMappingService @Inject()(
     } yield segmentIdsOrdered.zip(agglomerateIdsOrdered).toMap
   }
 
-  private def getUnmappedDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer,
-                                           dataRequests: DataRequestCollection,
-                                           userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
+  def getUnmappedDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer,
+                                   dataRequests: DataRequestCollection,
+                                   userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
     for {
       dataRequestsTyped <- Fox.serialCombined(dataRequests) {
         case r: WebKnossosDataRequest => Fox.successful(r.copy(applyAgglomerate = None))
@@ -493,7 +492,7 @@ class EditableMappingService @Inject()(
       (data, indices) <- remoteDatastoreClient.getData(remoteFallbackLayer, dataRequestsTyped, userToken)
     } yield (data, indices)
 
-  private def collectSegmentIds(data: Array[Byte], elementClass: ElementClass): Fox[Set[Long]] =
+  def collectSegmentIds(data: Array[Byte], elementClass: ElementClass): Fox[Set[Long]] =
     for {
       dataAsLongs <- bytesToLongs(data, elementClass)
     } yield dataAsLongs.toSet
@@ -504,9 +503,9 @@ class EditableMappingService @Inject()(
       organizationName <- tracing.organizationName.toFox ?~> "This feature is only implemented for volume annotations with an explicit organization name tag, not for legacy volume annotations."
     } yield RemoteFallbackLayer(organizationName, tracing.dataSetName, layerName, tracing.elementClass)
 
-  private def mapData(unmappedData: Array[Byte],
-                      relevantMapping: Map[Long, Long],
-                      elementClass: ElementClass): Fox[Array[Byte]] =
+  def mapData(unmappedData: Array[Byte],
+              relevantMapping: Map[Long, Long],
+              elementClass: ElementClass): Fox[Array[Byte]] =
     for {
       unmappedDataLongs <- bytesToLongs(unmappedData, elementClass)
       mappedDataLongs = unmappedDataLongs.map(relevantMapping)
@@ -525,5 +524,34 @@ class EditableMappingService @Inject()(
       unsignedIntArray: Array[UnsignedInteger] = longs.map(UnsignedInteger.fromLongWithElementClass(_, elementClass))
       bytes = UnsignedIntegerArray.toByteArray(unsignedIntArray, elementClass)
     } yield bytes
+
+  def createIsosurface(tracing: VolumeTracing,
+                       request: WebKnossosIsosurfaceRequest,
+                       token: Option[String]): Fox[(Array[Float], List[Int])] =
+    for {
+      mappingName <- tracing.mappingName.toFox
+      segmentationLayer = EditableMappingLayer(
+        mappingName,
+        tracing.boundingBox,
+        resolutions = tracing.resolutions.map(vec3IntFromProto).toList,
+        largestSegmentId = 0L,
+        elementClass = tracing.elementClass,
+        token,
+        tracing = tracing,
+        editableMappingService = this
+      )
+
+      isosurfaceRequest = IsosurfaceRequest(
+        None,
+        segmentationLayer,
+        request.cuboid(segmentationLayer),
+        request.segmentId,
+        request.subsamplingStrides,
+        request.scale,
+        mapping = None,
+        mappingType = None
+      )
+      result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+    } yield result
 
 }

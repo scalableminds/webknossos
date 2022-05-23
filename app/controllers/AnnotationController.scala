@@ -65,7 +65,6 @@ class AnnotationController @Inject()(
 
   implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
-  private val DefaultAnnotationListLimit = 1000 // todo: dry with in DefaultAnnotationListLimit in UserController
 
   @ApiOperation(value = "Information about an annotation", nickname = "annotationInfo")
   @ApiResponses(
@@ -403,18 +402,21 @@ class AnnotationController @Inject()(
                            includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        userTeams <- userService.teamIdsFor(request.identity._id)
-        // todo: how to combine this with pageNumber?
-        sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
-        userAnnotations <- annotationDAO.findAllFor(request.identity._id,
-                                                    isFinished,
-                                                    AnnotationType.Explorational,
-                                                    limit.getOrElse(DefaultAnnotationListLimit),
-                                                    pageNumber.getOrElse(0))
-
-        json <- Fox.serialCombined((sharedAnnotations ++ userAnnotations).distinct)(
-          annotationService.compactWrites)
-      } yield Ok(Json.toJson(json))
+        availableAnnotations <- annotationDAO.findAllReadableExplorationalsFor(
+          request.identity._id,
+          isFinished,
+          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber.getOrElse(0))
+        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
+          annotationDAO.countAllReadableExplorationalsFor(request.identity._id, isFinished))
+        jsonList <- Fox.serialCombined(availableAnnotations)(annotationService.compactWrites)
+      } yield {
+        val result = Ok(Json.toJson(jsonList))
+        annotationCount match {
+          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+          case None        => result
+        }
+      }
     }
 
   @ApiOperation(hidden = true, value = "")

@@ -105,6 +105,8 @@ class AnnotationService @Inject()(
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
 
+  val DefaultAnnotationListLimit = 1000
+
   private def selectSuitableTeam(user: User, dataSet: DataSet): Fox[ObjectId] =
     (for {
       userTeamIds <- userService.teamIdsFor(user._id)
@@ -836,8 +838,7 @@ class AnnotationService @Inject()(
     }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation)(
-      implicit ctx: DBAccessContext): Fox[JsObject] =
+  def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"

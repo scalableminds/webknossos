@@ -56,7 +56,10 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                         isosurfaceActorPoolSize: Int)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  private val agglomerateService: Option[AgglomerateService] = Option(binaryDataService.agglomerateService)
+  private val agglomerateService
+    : Option[AgglomerateService] = try { Some(binaryDataService.agglomerateService) } catch {
+    case _: NullPointerException => None
+  }
 
   implicit val timeout: Timeout = Timeout(isosurfaceTimeout)
 

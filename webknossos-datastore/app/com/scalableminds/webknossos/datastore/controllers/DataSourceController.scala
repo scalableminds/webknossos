@@ -337,9 +337,11 @@ Expects:
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
+        _ <- Fox.successful(logger.info(s"Generating agglomerate graph..."))
         agglomerateGraph <- binaryDataServiceHolder.binaryDataService.agglomerateService.generateAgglomerateGraph(
           AgglomerateFileKey(organizationName, dataSetName, dataLayerName, mappingName),
           agglomerateId) ?~> "agglomerateGraph.failed"
+        _ <- Fox.successful(logger.info(s"Serializing agglomerate graph ${agglomerateGraph}..."))
       } yield Ok(Json.toJson(agglomerateGraph))
     }
   }

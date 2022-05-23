@@ -5,7 +5,7 @@ import moment from "moment";
 import type { APIUpdateActionBatch } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import { chunkIntoTimeWindows } from "libs/utils";
-import { getUpdateActionLog, downloadNml } from "admin/admin_rest_api";
+import { getUpdateActionLog, downloadAnnotation } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import {
   pushSaveQueueTransaction,
@@ -136,7 +136,7 @@ class VersionList extends React.Component<Props, State> {
     } else {
       const { annotationType, annotationId, volumes } = Store.getState().tracing;
       const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
-      downloadNml(annotationId, annotationType, includesVolumeFallbackData, {
+      downloadAnnotation(annotationId, annotationType, includesVolumeFallbackData, {
         [this.props.versionedObjectType]: version,
       });
     }

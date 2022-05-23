@@ -87,8 +87,8 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
 
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
   // The mag the agglomerate skeleton corresponds to should be the finest available mag of the volume tracing layer
-  const agglomerateFileMag = resolutionInfo.getHighestResolution();
-  const agglomerateFileZoomstep = resolutionInfo.getHighestResolutionIndex();
+  const agglomerateFileMag = resolutionInfo.getLowestResolution();
+  const agglomerateFileZoomstep = resolutionInfo.getLowestResolutionIndex();
   const { sourceNodeId, targetNodeId } = action;
 
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));

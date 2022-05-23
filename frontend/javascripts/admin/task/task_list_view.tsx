@@ -19,7 +19,7 @@ import _ from "lodash";
 import features from "features";
 import { AsyncLink } from "components/async_clickables";
 import type { APITask, APITaskType } from "types/api_flow_types";
-import { deleteTask, getTasks, downloadNml } from "admin/admin_rest_api";
+import { deleteTask, getTasks, downloadAnnotation } from "admin/admin_rest_api";
 import { formatTuple, formatSeconds } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
@@ -418,7 +418,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                       href="#"
                       onClick={() => {
                         const includesVolumeData = task.type.tracingType !== "skeleton";
-                        return downloadNml(task.id, "CompoundTask", includesVolumeData);
+                        return downloadAnnotation(task.id, "CompoundTask", includesVolumeData);
                       }}
                       title="Download all Finished Annotations"
                       icon={<DownloadOutlined />}

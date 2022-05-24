@@ -201,6 +201,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         contourTracingMode,
         overwriteMode,
         labeledZoomStep,
+        initialViewport,
       );
     }
 
@@ -245,6 +246,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
             contourTracingMode,
             overwriteMode,
             labeledZoomStep,
+            activeViewport,
           );
         }
 
@@ -254,6 +256,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
           contourTracingMode,
           overwriteMode,
           labeledZoomStep,
+          activeViewport,
         );
       }
 
@@ -267,6 +270,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,
+      initialViewport,
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
@@ -463,6 +467,7 @@ export function* finishLayer(
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
+  activeViewport: OrthoView,
 ): Saga<void> {
   if (layer == null || layer.isEmpty()) {
     return;
@@ -475,6 +480,7 @@ export function* finishLayer(
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,
+      activeViewport,
     );
   }
 

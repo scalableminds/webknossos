@@ -47,27 +47,49 @@ export default function* proofreadMapping(): Saga<any> {
   yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
 }
 
-const COARSE_RESOLUTION_INDEX = 4;
-// @ts-ignore
-const PROOFREAD_SEGMENT_SURROUND_NM: number = window.__proofreadSurroundNm || 2000;
+function proofreadCoarseResolutionIndex(): number {
+  // @ts-ignore
+  return window.__proofreadCoarseResolutionIndex != null
+    ? // @ts-ignore
+      window.__proofreadCoarseResolutionIndex
+    : 4;
+}
+function proofreadFineResolutionIndex(): number {
+  // @ts-ignore
+  return window.__proofreadFineResolutionIndex != null
+    ? // @ts-ignore
+      window.__proofreadFineResolutionIndex
+    : 0;
+}
+function proofreadUsingMeshes(): boolean {
+  // @ts-ignore
+  return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
+}
+function proofreadSegmentSurroundNm(): number {
+  // @ts-ignore
+  return window.__proofreadSurroundNm != null ? window.__proofreadSurroundNm : 2000;
+}
 let oldSegmentIdsInSurround: number[] | null = null;
 
 function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
   const { position } = action;
   const treeName = yield* call(loadAgglomerateSkeletonAtPosition, position);
 
+  if (!proofreadUsingMeshes()) return;
+
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
 
   const layerName = volumeTracingLayer.tracingId;
 
+  // Load the whole agglomerate mesh in a coarse resolution for performance reasons
   const oldPreferredQuality = yield* select(
     (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
   );
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
   const resolutionIndices = resolutionInfo.getAllIndices();
   const coarseResolutionIndex =
-    resolutionIndices[Math.min(COARSE_RESOLUTION_INDEX, resolutionIndices.length - 1)];
+    resolutionIndices[Math.min(proofreadCoarseResolutionIndex(), resolutionIndices.length - 1)];
   yield* put(
     updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", coarseResolutionIndex),
   );
@@ -87,7 +109,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
 
   // Find all segments (nodes) that are within x µm to load meshes in oversegmentation
   const nodePositions = tree.nodes.map((node) => node.position);
-  const distanceSquared = PROOFREAD_SEGMENT_SURROUND_NM ** 2;
+  const distanceSquared = proofreadSegmentSurroundNm() ** 2;
   const scale = yield* select((state) => state.dataset.dataSource.scale);
 
   const nodePositionsInSurround = nodePositions.filter(
@@ -121,12 +143,18 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
     );
   }
 
-  // Load meshes in oversegmentation
+  // Load meshes in oversegmentation in fine resolution
   const noMappingInfo = {
     mappingName: null,
     mappingType: null,
     useDataStore: true,
   };
+  yield* put(
+    updateTemporarySettingAction(
+      "preferredQualityForMeshAdHocComputation",
+      proofreadFineResolutionIndex(),
+    ),
+  );
   yield* all(
     segmentIdsInSurround.map((nodeSegmentId, index) =>
       put(

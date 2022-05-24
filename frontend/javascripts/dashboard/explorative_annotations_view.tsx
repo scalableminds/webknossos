@@ -17,7 +17,12 @@ import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
 import { AsyncLink } from "components/async_clickables";
-import { annotationToCompact, APIAnnotationCompact, APIUser } from "types/api_flow_types";
+import {
+  annotationToCompact,
+  APIAnnotation,
+  APIAnnotationCompact,
+  APIUser,
+} from "types/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
 import {
   finishAllAnnotations,
@@ -162,7 +167,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
       const tracings =
         this.props.userId != null
-          ? // todo: also implement pendant for getCompactAnnotationsForUser
+          ? // todo: also implement pendant for getCompactAnnotationsForUser ?
             await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings, pageNumber)
           : await getReadableAnnotations(showArchivedTracings, pageNumber);
 
@@ -263,13 +268,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             Download
           </AsyncLink>
           <br />
-          <AsyncLink
-            href="#"
-            onClick={() => this.finishOrReopenTracing("finish", tracing)}
-            icon={<InboxOutlined key="inbox" />}
-          >
-            Archive
-          </AsyncLink>
+          {this.isTracingEditable(tracing) ? (
+            <AsyncLink
+              href="#"
+              onClick={() => this.finishOrReopenTracing("finish", tracing)}
+              icon={<InboxOutlined key="inbox" />}
+            >
+              Archive
+            </AsyncLink>
+          ) : null}
           <br />
         </div>
       );
@@ -454,7 +461,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     return (
       <div style={{ color: tracing.name ? "inherit" : "#7c7c7c" }}>
         <TextWithDescription
-          isEditable
+          isEditable={this.isTracingEditable(tracing)}
           value={tracing.name ? tracing.name : "Unnamed Annotation"}
           onChange={(newName) => this.renameTracing(tracing, newName)}
           label="Annotation Name"
@@ -462,6 +469,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         />
       </div>
     );
+  }
+
+  isTracingEditable(tracing: APIAnnotationCompact): boolean {
+    return tracing.owner?.id == this.props.activeUser.id;
   }
 
   renderTable() {
@@ -502,7 +513,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <>
               <div className="monospace-id">{this.renderIdAndCopyButton(tracing)}</div>
 
-              {tracing.owner?.id != this.props.activeUser.id ? (
+              {!this.isTracingEditable(tracing) ? (
                 <div style={{ color: "#7c7c7c" }}>
                   {READ_ONLY_ICON}
                   read-only

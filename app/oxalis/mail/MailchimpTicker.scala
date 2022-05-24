@@ -35,13 +35,23 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
       isActivated <- multiUserDAO.hasAtLeastOneActiveUser(multiUser._id)
       lastActivity <- multiUserDAO.lastActivity(multiUser._id)
       now = System.currentTimeMillis()
-      _ = if (isActivated && multiUser.created < now - (21 days).toMillis) {
-        if (lastActivity < now - (14 days).toMillis) {
-          mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasActiveInWeeksTwoAndThree)
-        } else if (lastActivity > now - (14 days).toMillis) {
-          mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasActiveInWeeksTwoAndThree)
-        }
-      }
-      // TODO exact logic
+      registeredAtLeast21DaysAgo = multiUser.created < now - (21 days).toMillis
+      registeredAtMost22DaysAgo = multiUser.created > now - (22 days).toMillis
+      shouldBeTaggedNow = isActivated && registeredAtLeast21DaysAgo && registeredAtMost22DaysAgo
+      _ <- if (shouldBeTaggedNow) {
+        for {
+          previousTags <- mailchimpClient.tagsForMultiUser(multiUser)
+          alreadyTagged = previousTags.contains(MailchimpTag.WasInactiveInWeeksTwoAndThree) || previousTags.contains(
+            MailchimpTag.WasActiveInWeeksTwoOrThree)
+        } yield
+          if (alreadyTagged) ()
+          else {
+            if (lastActivity < now - (14 days).toMillis) {
+              mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasInactiveInWeeksTwoAndThree)
+            } else {
+              mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasActiveInWeeksTwoOrThree)
+            }
+          }
+      } else Fox.successful(())
     } yield ()
 }

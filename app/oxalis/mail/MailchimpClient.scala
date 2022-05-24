@@ -8,9 +8,11 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.user.{MultiUser, MultiUserDAO, User}
 import oxalis.mail.MailchimpTag.MailchimpTag
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.libs.ws.WSResponse
 import utils.WkConf
+
+import scala.concurrent.ExecutionContext
 
 class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUserDAO) extends LazyLogging {
 
@@ -64,4 +66,25 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
     rpc(uri).silent.withBasicAuth(conf.user, conf.password).post(tagBody)
   }
 
+  def tagsForMultiUser(multiUser: MultiUser)(implicit ec: ExecutionContext): Fox[List[MailchimpTag]] = {
+    if (conf.host.isEmpty) return Fox.successful(List.empty)
+    val emailMd5 = SCrypt.md5(multiUser.email)
+    val uri = s"${conf.host}/lists/${conf.listId}/members/$emailMd5/tags"
+    for {
+      response: MailchimpTagsResponse <- rpc(uri).silent
+        .withBasicAuth(conf.user, conf.password)
+        .getWithJsonResponse[MailchimpTagsResponse]
+    } yield response.tags.flatMap(t => MailchimpTag.fromString(t.name))
+  }
+
+}
+
+case class MailchimpTagsResponse(tags: List[MailchimpTagResponse])
+case class MailchimpTagResponse(id: String, name: String, date_added: String)
+
+object MailchimpTagResponse {
+  implicit val jsonFormat: OFormat[MailchimpTagResponse] = Json.format[MailchimpTagResponse]
+}
+object MailchimpTagsResponse {
+  implicit val jsonFormat: OFormat[MailchimpTagsResponse] = Json.format[MailchimpTagsResponse]
 }

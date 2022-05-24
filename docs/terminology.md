@@ -40,7 +40,7 @@ A **project** is a collection of tasks.
 See also the [task and projects guide](./tasks.md).
 
 ## Segments
-At its lowest-level a **segment** is the collection of several annotated voxels. At a larger level, segments can grow to be the size of a whole cell bodies or partial cells, e.g. a single axon.
+At its lowest-level a **segment** is the collection of several annotated voxels. At a larger level, segments can grow to be the size of whole cell bodies or partial cells, e.g. a single axon.
 
 Typically many segments make up a segmentation. Segments can be painted manually using the webKnossos volume annotation tools or created through third-party programs typically resulting in larger segmentations of a dataset.
 

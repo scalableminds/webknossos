@@ -231,7 +231,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     val stateQuery = getStateQuery(isFinished)
     for {
       r <- run(sql"""select #$columns from #$existingCollectionName
-                     typ = '#${AnnotationType.Explorational.toString}' and #$stateQuery and #${readAccessQ(userId)}
+                     where typ = '#${AnnotationType.Explorational.toString}' and #$stateQuery and #${readAccessQ(userId)}
                      order by _id desc limit $limit offset ${pageNumber * limit}""".as[AnnotationsRow])
       parsed <- parseAll(r)
     } yield parsed

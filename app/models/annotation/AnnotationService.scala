@@ -846,7 +846,7 @@ class AnnotationService @Inject()(
       teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization)))
       user <- userDAO.findOne(annotation._user)(GlobalAccessContext)
       userJson = Json.obj(
-        "id" -> user._id,
+        "id" -> user._id.toString,
         "firstName" -> user.firstName,
         "lastName" -> user.lastName
       )

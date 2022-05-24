@@ -312,6 +312,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(fillCellControls),
       Object.keys(pickCellControls),
       Object.keys(boundingBoxControls),
+      Object.keys(proofreadControls),
     );
 
     const controls: Record<string, any> = {};

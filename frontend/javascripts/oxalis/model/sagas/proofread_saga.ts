@@ -1,7 +1,7 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { takeEvery, put, call, all } from "typed-redux-saga";
 import { select, take } from "oxalis/model/sagas/effect-generators";
-import { AnnotationToolEnum, MappingStatusEnum } from "oxalis/constants";
+import { AnnotationToolEnum, MappingStatusEnum, Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 import type {
   DeleteEdgeAction,
@@ -28,7 +28,11 @@ import {
   getActiveSegmentationTracingLayer,
   getActiveSegmentationTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getMappingInfo,
+  getResolutionInfo,
+  ResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import { makeMappingEditable } from "admin/admin_rest_api";
 import {
   setMappingNameAction,
@@ -71,18 +75,14 @@ function proofreadSegmentSurroundNm(): number {
 }
 let oldSegmentIdsInSurround: number[] | null = null;
 
-function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
-  const { position } = action;
-  const treeName = yield* call(loadAgglomerateSkeletonAtPosition, position);
-
-  if (!proofreadUsingMeshes()) return;
-
-  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
-  if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
+function* loadCoarseAdHocMesh(
+  layerName: string,
+  resolutionInfo: ResolutionInfo,
+  segmentId: number,
+  position: Vector3,
+): Saga<void> {
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracing == null) return;
-
-  const layerName = volumeTracingLayer.tracingId;
 
   const activeMappingByLayer = yield* select(
     (state) => state.temporaryConfiguration.activeMappingByLayer,
@@ -94,14 +94,14 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
   const oldPreferredQuality = yield* select(
     (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
   );
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
+
   const resolutionIndices = resolutionInfo.getAllIndices();
   const coarseResolutionIndex =
     resolutionIndices[Math.min(proofreadCoarseResolutionIndex(), resolutionIndices.length - 1)];
   yield* put(
     updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", coarseResolutionIndex),
   );
-  const segmentId = getSegmentIdForPosition(position);
+
   // Use the data store if the mapping is not editable yet. If it, is request the mesh from the tracing store.
   const useDataStore = !volumeTracing.mappingIsEditable;
   yield* put(
@@ -115,6 +115,23 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
   yield* put(
     updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", oldPreferredQuality),
   );
+}
+
+function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
+  const { position } = action;
+  const treeName = yield* call(loadAgglomerateSkeletonAtPosition, position);
+
+  if (!proofreadUsingMeshes()) return;
+
+  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
+  if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
+
+  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
+
+  const layerName = volumeTracingLayer.tracingId;
+  const segmentId = getSegmentIdForPosition(position);
+
+  yield* call(loadCoarseAdHocMesh, layerName, resolutionInfo, segmentId, position);
 
   if (treeName == null) return;
 
@@ -160,12 +177,17 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
     );
   }
 
+  oldSegmentIdsInSurround = segmentIdsInSurround;
+
   // Load meshes in oversegmentation in fine resolution
   const noMappingInfo = {
     mappingName: null,
     mappingType: null,
     useDataStore: true,
   };
+  const oldPreferredQuality = yield* select(
+    (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
+  );
   yield* put(
     updateTemporarySettingAction(
       "preferredQualityForMeshAdHocComputation",
@@ -184,8 +206,9 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
       ),
     ),
   );
-
-  oldSegmentIdsInSurround = segmentIdsInSurround;
+  yield* put(
+    updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", oldPreferredQuality),
+  );
 }
 
 function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
@@ -304,4 +327,53 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   yield* call([Model, Model.ensureSavedState]);
 
   yield* call([api.data, api.data.reloadBuckets], layerName);
+
+  if (proofreadUsingMeshes()) {
+    // Remove old over segmentation meshes
+    if (oldSegmentIdsInSurround != null) {
+      // Remove old meshes in oversegmentation
+      yield* all(
+        oldSegmentIdsInSurround.map((nodeSegmentId) =>
+          put(removeIsosurfaceAction(layerName, nodeSegmentId)),
+        ),
+      );
+      oldSegmentIdsInSurround = null;
+    }
+
+    // Remove old agglomerate mesh(es) and load new agglomerate mesh(es)
+    yield* put(removeIsosurfaceAction(layerName, sourceNodeAgglomerateId));
+    if (targetNodeAgglomerateId !== sourceNodeAgglomerateId) {
+      yield* put(removeIsosurfaceAction(layerName, targetNodeAgglomerateId));
+    } else {
+      const newTargetNodeAgglomerateId = yield* call(
+        [api.data, api.data.getDataValue],
+        layerName,
+        targetNodePosition,
+        agglomerateFileZoomstep,
+      );
+
+      yield* call(
+        loadCoarseAdHocMesh,
+        layerName,
+        resolutionInfo,
+        newTargetNodeAgglomerateId,
+        targetNodePosition,
+      );
+    }
+
+    const newSourceNodeAgglomerateId = yield* call(
+      [api.data, api.data.getDataValue],
+      layerName,
+      sourceNodePosition,
+      agglomerateFileZoomstep,
+    );
+
+    yield* call(
+      loadCoarseAdHocMesh,
+      layerName,
+      resolutionInfo,
+      newSourceNodeAgglomerateId,
+      sourceNodePosition,
+    );
+  }
 }

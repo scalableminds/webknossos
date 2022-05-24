@@ -315,14 +315,16 @@ function handleAgglomerateLoadingError(
   ErrorHandling.notify(e);
 }
 
-function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
+export function* loadAgglomerateSkeletonWithId(
+  action: LoadAgglomerateSkeletonAction,
+): Saga<string | null> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
+  if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
 
   if (agglomerateId === 0) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
-    return;
+    return null;
   }
 
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
@@ -333,7 +335,7 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
     console.warn(
       `Skeleton for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${treeName}".`,
     );
-    return;
+    return treeName;
   }
 
   const progressCallback = createProgressCallback({
@@ -364,10 +366,11 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
     hideFn();
     // @ts-ignore
     handleAgglomerateLoadingError(e);
-    return;
+    return null;
   }
 
   yield* call(progressCallback, true, "Skeleton generation done.");
+  return treeName;
 }
 
 function* loadConnectomeAgglomerateSkeletonWithId(

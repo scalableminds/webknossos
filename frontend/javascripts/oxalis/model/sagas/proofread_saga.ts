@@ -79,6 +79,8 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
 
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
+  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+  if (volumeTracing == null) return;
 
   const layerName = volumeTracingLayer.tracingId;
 
@@ -100,7 +102,16 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
     updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", coarseResolutionIndex),
   );
   const segmentId = getSegmentIdForPosition(position);
-  yield* put(loadAdHocMeshAction(segmentId, position, { mappingName, mappingType, passive: true }));
+  // Use the data store if the mapping is not editable yet. If it, is request the mesh from the tracing store.
+  const useDataStore = !volumeTracing.mappingIsEditable;
+  yield* put(
+    loadAdHocMeshAction(segmentId, position, {
+      mappingName,
+      mappingType,
+      passive: true,
+      useDataStore,
+    }),
+  );
   yield* put(
     updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", oldPreferredQuality),
   );

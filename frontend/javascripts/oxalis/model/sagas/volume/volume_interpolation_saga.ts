@@ -87,15 +87,14 @@ const isNonZero = cwise({
   args: ["array"],
   // The following function is parsed by cwise which is why
   // the shorthand syntax is not supported.
-  // eslint-disable-next-line object-shorthand
+  // Also, cwise uses this function content to build
+  // the target function. Adding a return here would not
+  // yield the desired behavior for isNonZero.
+  // eslint-disable-next-line consistent-return, object-shorthand
   body: function (a) {
     if (a > 0) {
       return true;
     }
-    // cwise compiles uses this function content to build
-    // the target function. Adding a return here would not
-    // yield the desired behavior for isNonZero.
-    // eslint-disable-next-line consistent-return
   },
   // The following function is parsed by cwise which is why
   // the shorthand syntax is not supported.

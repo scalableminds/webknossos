@@ -1,19 +1,26 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
 import {
   doesSupportVolumeWithFallback,
   getDatasetResolutionInfo,
   getSegmentationLayers,
   getResolutionInfo,
+  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 type Props = {
   datasetId: APIDatasetId;
   onClose: () => void;
+};
+type RestrictResolutionSliderProps = {
+  datasetResolutionInfo: ResolutionInfo;
+  selectedSegmentationLayer: APISegmentationLayer | null;
+  resolutionIndices: number[];
+  setResolutionIndices: (userIndices: number[]) => void;
 };
 export function NewVolumeLayerSelection({
   segmentationLayers,
@@ -63,6 +70,86 @@ export function NewVolumeLayerSelection({
   );
 }
 
+export function RestrictResolutionSlider({
+  datasetResolutionInfo,
+  selectedSegmentationLayer,
+  resolutionIndices,
+  setResolutionIndices,
+}: RestrictResolutionSliderProps) {
+  let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
+  let lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
+
+  if (selectedSegmentationLayer != null) {
+    const datasetFallbackLayerResolutionInfo = getResolutionInfo(
+      selectedSegmentationLayer.resolutions,
+    );
+    highestResolutionIndex = datasetFallbackLayerResolutionInfo.getHighestResolutionIndex();
+    lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getClosestExistingIndex(0);
+  }
+
+  const highResolutionIndex = Math.min(highestResolutionIndex, resolutionIndices[1]);
+  const lowResolutionIndex = Math.max(lowestResolutionIndex, resolutionIndices[0]);
+
+  useEffect(() => {
+    setResolutionIndices([lowestResolutionIndex, highestResolutionIndex]);
+  }, [lowestResolutionIndex, highestResolutionIndex]);
+
+  return lowestResolutionIndex < highestResolutionIndex ? (
+    <React.Fragment>
+      <h5
+        style={{
+          marginBottom: 0,
+        }}
+      >
+        Restrict Volume Resolutions{" "}
+        <Tooltip
+          title="Select which of the dataset resolutions the volume data should be created at. Restricting the available resolutions can greatly improve the performance when annotating large structures, such as nuclei, since the volume data does not need to be stored in all quality levels. How to read: Resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
+          placement="right"
+        >
+          <InfoCircleOutlined />
+        </Tooltip>
+      </h5>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          alignContent: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "5em",
+          }}
+        >
+          {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
+        </div>
+        <Slider
+          tooltipVisible={false}
+          onChange={(value) => setResolutionIndices(value)}
+          range
+          step={1}
+          min={lowestResolutionIndex}
+          max={highestResolutionIndex}
+          value={[lowResolutionIndex, highResolutionIndex]}
+          style={{
+            flexGrow: 1,
+          }}
+        />
+        <div
+          style={{
+            width: "6.5em",
+            textAlign: "right",
+          }}
+        >
+          {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
+        </div>
+      </div>
+    </React.Fragment>
+  ) : null;
+}
+
 function CreateExplorativeModal({ datasetId, onClose }: Props) {
   const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
   const [annotationType, setAnnotationType] = useState("hybrid");
@@ -98,58 +185,12 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
     const resolutionSlider =
       annotationType !== "skeleton" ? (
-        <React.Fragment>
-          <h5
-            style={{
-              marginBottom: 0,
-            }}
-          >
-            Restrict Volume Resolutions{" "}
-            <Tooltip
-              title="Select which of the dataset resolutions the volume data should be created at. Restricting the available resolutions can greatly improve the performance when annotating large structures, such as nuclei, since the volume data does not need to be stored in all quality levels. How to read: Resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
-              placement="right"
-            >
-              <InfoCircleOutlined />
-            </Tooltip>
-          </h5>
-          <div
-            style={{
-              marginBottom: 16,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              alignContent: "center",
-            }}
-          >
-            <div
-              style={{
-                width: "5em",
-              }}
-            >
-              {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
-            </div>
-            <Slider
-              tooltipVisible={false}
-              onChange={(value) => setUserDefinedResolutionIndices(value)}
-              range
-              step={1}
-              min={lowestResolutionIndex}
-              max={highestResolutionIndex}
-              value={[lowResolutionIndex, highResolutionIndex]}
-              style={{
-                flexGrow: 1,
-              }}
-            />
-            <div
-              style={{
-                width: "6.5em",
-                textAlign: "right",
-              }}
-            >
-              {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
-            </div>
-          </div>
-        </React.Fragment>
+        <RestrictResolutionSlider
+          datasetResolutionInfo={datasetResolutionInfo}
+          selectedSegmentationLayer={selectedSegmentationLayer}
+          resolutionIndices={userDefinedResolutionIndices}
+          setResolutionIndices={setUserDefinedResolutionIndices}
+        />
       ) : null;
     modalContent = (
       <React.Fragment>
@@ -175,7 +216,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           />
         ) : null}
 
-        {lowestResolutionIndex < highestResolutionIndex ? resolutionSlider : null}
+        {resolutionSlider}
         <div
           style={{
             textAlign: "right",

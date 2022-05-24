@@ -33,6 +33,7 @@ case class Annotation(
     tags: Set[String] = Set.empty,
     tracingTime: Option[Long] = None,
     typ: AnnotationType.Value = AnnotationType.Explorational,
+    othersMayEdit: Boolean = false,
     created: Long = System.currentTimeMillis,
     modified: Long = System.currentTimeMillis,
     isDeleted: Boolean = false
@@ -168,6 +169,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         parseArrayTuple(r.tags).toSet,
         r.tracingtime,
         typ,
+        r.othersmayedit,
         r.created.getTime,
         r.modified.getTime,
         r.isdeleted
@@ -336,12 +338,13 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     val viewConfigurationStr: Option[String] = a.viewConfiguration.map(Json.toJson(_).toString)
     val insertAnnotationQuery = sqlu"""
         insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility,
-                                           name, viewConfiguration, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+                                           name, viewConfiguration, state, statistics, tags, tracingTime, typ, othersMayEdit, created, modified, isDeleted)
         values(${a._id.id}, ${a._dataSet.id}, ${a._task.map(_.id)}, ${a._team.id},
          ${a._user.id}, ${a.description}, '#${a.visibility.toString}', ${a.name},
          #${optionLiteral(viewConfigurationStr.map(sanitize))},
          '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
          '#${writeArrayTuple(a.tags.toList)}', ${a.tracingTime}, '#${a.typ.toString}',
+         ${a.othersMayEdit},
          ${new java.sql.Timestamp(a.created)}, ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
          """
     val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
@@ -368,6 +371,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
                tags = '#${writeArrayTuple(a.tags.toList)}',
                tracingTime = ${a.tracingTime},
                typ = '#${a.typ.toString}',
+               othersMayEdit = ${a.othersMayEdit},
                created = ${new java.sql.Timestamp(a.created)},
                modified = ${new java.sql.Timestamp(a.modified)},
                isDeleted = ${a.isDeleted}
@@ -461,6 +465,9 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
 
   def updateUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     updateObjectIdCol(id, _._User, userId)
+
+  def updateOthersMayEdit(id: ObjectId, othersMayEdit: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+    updateBooleanCol(id, _.othersmayedit, othersMayEdit)
 
   def updateViewConfiguration(id: ObjectId, viewConfiguration: Option[JsObject])(
       implicit ctx: DBAccessContext): Fox[Unit] = {

@@ -43,6 +43,7 @@ CREATE TABLE webknossos.annotations(
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
+  othersMayEdit BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
@@ -64,6 +65,12 @@ CREATE TABLE webknossos.annotation_sharedTeams(
   _annotation CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
   PRIMARY KEY (_annotation, _team)
+);
+
+CREATE TABLE webknossos.annotation_contributors(
+  _annotation CHAR(24) NOT NULL,
+  _user CHAR(24) NOT NULL,
+  PRIMARY KEY (_annotation, _user)
 );
 
 CREATE TABLE webknossos.meshes(

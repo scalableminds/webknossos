@@ -354,6 +354,7 @@ export type Task = APITask;
 export type SaveQueueEntry = {
   version: number;
   timestamp: number;
+  authorId: string,
   actions: Array<UpdateAction>;
   transactionId: string;
   transactionGroupCount: number;

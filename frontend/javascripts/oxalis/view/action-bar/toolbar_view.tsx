@@ -19,9 +19,7 @@ import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
-  getLabelActionFromPreviousSlice,
   getRenderableResolutionForActiveSegmentationTracing,
-  getLastLabelAction,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -29,7 +27,7 @@ import {
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
-import { pluralize, toNullable } from "libs/utils";
+import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -45,16 +43,12 @@ import Constants, {
   AnnotationTool,
   OverwriteMode,
   ToolsWithInterpolationCapabilities,
-  OrthoViews,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
-import Dimensions from "oxalis/model/dimensions";
 
 import features from "features";
-import { V3 } from "libs/mjs";
-import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
-import { MAXIMUM_INTERPOLATION_DEPTH } from "oxalis/model/sagas/volume/volume_interpolation_saga";
+import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -239,58 +233,17 @@ function OverwriteModeSwitch({
 
 function VolumeInterpolationButton() {
   const dispatch = useDispatch();
-  const isAllowed = useSelector(
-    (state: OxalisState) => state.tracing.restrictions.volumeInterpolationAllowed,
-  );
 
   const onClick = () => {
     dispatch(interpolateSegmentationLayerAction());
   };
 
-  const volumeTracing = useSelector((state: OxalisState) => getActiveSegmentationTracing(state));
-  const mostRecentLabelAction = volumeTracing != null ? getLastLabelAction(volumeTracing) : null;
-
-  const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
-
-  const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
-  const previousCentroid = useSelector((state: OxalisState) => {
-    if (!volumeTracing) {
-      return null;
-    }
-    return getLabelActionFromPreviousSlice(state, volumeTracing, thirdDim)?.centroid;
-  });
-  let isPossible = false;
-  let tooltipAddendum =
-    "Not available because all recent label actions were performed on the current slice.";
-  const position = useSelector((state: OxalisState) => getFlooredPosition(state.flycam));
-
-  if (previousCentroid != null) {
-    const interpolationDepth = Math.abs(V3.floor(V3.sub(previousCentroid, position))[thirdDim]);
-    isPossible = true;
-    tooltipAddendum = `Labels ${interpolationDepth - 1} ${pluralize(
-      "slice",
-      interpolationDepth - 1,
-    )} along ${Dimensions.dimensionNameForIndex(thirdDim)}`;
-
-    if (activeViewport === OrthoViews.TDView) {
-      isPossible = false;
-      tooltipAddendum = "Not available for the 3D viewport";
-    } else if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
-      isPossible = false;
-      tooltipAddendum = `Not available since last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH})`;
-    }
-  }
+  const { tooltipTitle, isDisabled } = useSelector(getInterpolationInfo);
 
   return (
-    <Tooltip
-      title={
-        isAllowed
-          ? `Interpolate current segment between last labeled and current slice (V) – ${tooltipAddendum}`
-          : "Volume Interpolation was disabled for this annotation."
-      }
-    >
+    <Tooltip title={tooltipTitle}>
       <Button
-        disabled={!(isAllowed && isPossible)}
+        disabled={isDisabled}
         icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
         onClick={onClick}
         style={{ marginLeft: 12 }}

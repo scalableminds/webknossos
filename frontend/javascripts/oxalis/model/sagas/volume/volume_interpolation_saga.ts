@@ -2,10 +2,10 @@ import cwise from "cwise";
 import distanceTransform from "distance-transform";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import ndarray from "ndarray";
+import { pluralize } from "libs/utils";
+import ndarray, { NdArray } from "ndarray";
 import api from "oxalis/api/internal_api";
 import {
-  AnnotationTool,
   ContourModeEnum,
   OrthoViews,
   ToolsWithInterpolationCapabilities,
@@ -16,20 +16,69 @@ import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
   getLabelActionFromPreviousSlice,
   getLastLabelAction,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import { OxalisState } from "oxalis/store";
 import { call } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 
 export const MAXIMUM_INTERPOLATION_DEPTH = 8;
+
+export function getInterpolationInfo(state: OxalisState) {
+  const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
+  const volumeTracing = getActiveSegmentationTracing(state);
+  const mostRecentLabelAction = volumeTracing != null ? getLastLabelAction(volumeTracing) : null;
+
+  const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
+
+  const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
+  const previousCentroid = !volumeTracing
+    ? null
+    : getLabelActionFromPreviousSlice(state, volumeTracing, thirdDim)?.centroid;
+
+  let disabledExplanation = null;
+  let tooltipAddendum = "";
+
+  const position = getFlooredPosition(state.flycam);
+
+  if (previousCentroid != null) {
+    const interpolationDepth = Math.abs(V3.floor(V3.sub(previousCentroid, position))[thirdDim]);
+
+    if (activeViewport === OrthoViews.TDView) {
+      disabledExplanation = "Not available for the 3D viewport";
+    } else if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
+      disabledExplanation = `Not available since last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH})`;
+    } else if (interpolationDepth < 2) {
+      disabledExplanation =
+        "Not available since last labeled slice should be at least 2 slices away";
+    } else {
+      tooltipAddendum = `Labels ${interpolationDepth - 1} ${pluralize(
+        "slice",
+        interpolationDepth - 1,
+      )} along ${Dimensions.dimensionNameForIndex(thirdDim)}`;
+    }
+  } else {
+    disabledExplanation =
+      "Not available because all recent label actions were performed on the current slice.";
+  }
+
+  const isPossible = disabledExplanation != null;
+  tooltipAddendum = disabledExplanation || tooltipAddendum;
+
+  const tooltipTitle = isAllowed
+    ? `Interpolate current segment between last labeled and current slice (V) – ${tooltipAddendum}`
+    : "Volume Interpolation was disabled for this annotation.";
+  const isDisabled = !(isAllowed && isPossible);
+  return { tooltipTitle, disabledExplanation, isDisabled, activeViewport, previousCentroid };
+}
 
 const isEqual = cwise({
   args: ["array", "scalar"],
@@ -37,6 +86,25 @@ const isEqual = cwise({
     a = a === b ? 1 : 0;
   },
 });
+
+const isNonZero = cwise({
+  args: ["array"],
+  // The following function is parsed by cwise which is why
+  // the shorthand syntax is not supported.
+  // eslint-disable-next-line object-shorthand
+  body: function (a) {
+    if (a > 0) {
+      return true;
+    }
+    return false;
+  },
+  // The following function is parsed by cwise which is why
+  // the shorthand syntax is not supported.
+  // eslint-disable-next-line object-shorthand
+  post: function () {
+    return false;
+  },
+}) as (arr: NdArray) => boolean;
 
 const mul = cwise({
   args: ["array", "scalar"],
@@ -135,13 +203,15 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
 
+  const { activeViewport, previousCentroid, disabledExplanation } = yield* select(
+    getInterpolationInfo,
+  );
+
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   const segmentationLayer = yield* call(
     [Model, Model.getSegmentationTracingLayer],
     volumeTracing.tracingId,
   );
-  const mostRecentLabelAction = volumeTracing != null ? getLastLabelAction(volumeTracing) : null;
-  const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
 
   const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
@@ -159,32 +229,22 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
 
-  const previousCentroid = yield* select(
-    (store) => getLabelActionFromPreviousSlice(store, volumeTracing, thirdDim)?.centroid,
-  );
-  if (previousCentroid == null) {
-    console.warn("no last centroid");
+  if (disabledExplanation != null || previousCentroid == null) {
+    // A disabledExplanation should always exist if previousCentroid is null,
+    // but this logic is inferred by TS.
+    if (disabledExplanation) {
+      Toast.warning(`Could not interpolate segment: ${disabledExplanation}`);
+    }
     return;
   }
   const interpolationDepth = Math.abs(V3.floor(V3.sub(previousCentroid, position))[thirdDim]);
 
-  if (interpolationDepth < 2 || interpolationDepth > 8) {
-    console.warn("interpolation depth too small or too high", interpolationDepth);
-    return;
-  }
-
   const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
-  const drawnBoundingBoxMag1 = viewportBoxMag1;
 
   const transpose = (vector: Vector3) => Dimensions.transDim(vector, activeViewport);
 
-  const uvSize = V3.scale3(drawnBoundingBoxMag1.getSize(), transpose([1, 1, 0]));
-  const relevantBoxMag1 = drawnBoundingBoxMag1
-    // Increase the drawn region by a factor of 2 (use half the size as a padding on each size)
-    .paddedWithMargins(V3.scale(uvSize, 0.5))
-    // Intersect with the viewport
-    .intersectedWith(viewportBoxMag1)
-    // Also consider the n previous/next slices
+  const relevantBoxMag1 = viewportBoxMag1
+    // Consider the n previous/next slices
     .paddedWithSignedMargins(
       transpose([0, 0, -directionFactor * interpolationDepth * labeledResolution[thirdDim]]),
     )
@@ -228,6 +288,13 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   isEqual(firstSlice, activeCellId);
   isEqual(lastSlice, activeCellId);
+
+  if (!isNonZero(firstSlice) || !isNonZero(lastSlice)) {
+    Toast.warning(
+      `Could not interpolate segment, because id ${activeCellId} was not found in source/target slice.`,
+    );
+    return;
+  }
 
   const firstSliceDists = signedDist(firstSlice);
   const lastSliceDists = signedDist(lastSlice);

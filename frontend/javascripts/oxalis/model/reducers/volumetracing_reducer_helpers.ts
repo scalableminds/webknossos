@@ -43,6 +43,8 @@ export function createCellReducer(state: OxalisState, volumeTracing: VolumeTraci
     activeCellId: id,
   });
 }
+
+const MAXIMUM_CENTROID_COUNT = 50;
 export function updateDirectionReducer(
   state: OxalisState,
   volumeTracing: VolumeTracing,
@@ -50,16 +52,17 @@ export function updateDirectionReducer(
 ) {
   let newState = state;
 
-  if (volumeTracing.lastCentroid != null) {
+  const lastCentroid = volumeTracing.lastCentroids[0];
+  if (lastCentroid != null) {
     newState = setDirectionReducer(state, [
-      centroid[0] - volumeTracing.lastCentroid[0],
-      centroid[1] - volumeTracing.lastCentroid[1],
-      centroid[2] - volumeTracing.lastCentroid[2],
+      centroid[0] - lastCentroid[0],
+      centroid[1] - lastCentroid[1],
+      centroid[2] - lastCentroid[2],
     ]);
   }
 
   return updateVolumeTracing(newState, volumeTracing.tracingId, {
-    lastCentroid: centroid,
+    lastCentroids: [centroid].concat(volumeTracing.lastCentroids).slice(0, MAXIMUM_CENTROID_COUNT),
   });
 }
 export function addToLayerReducer(

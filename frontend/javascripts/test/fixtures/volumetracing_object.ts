@@ -15,7 +15,7 @@ const volumeTracing = {
   activeTool: AnnotationToolEnum.MOVE,
   maxCellId: 0,
   contourList: [],
-  lastCentroid: null,
+  lastCentroids: [],
   tracingId: "tracingId",
 };
 const notEmptyViewportRect = {

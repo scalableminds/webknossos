@@ -16,14 +16,18 @@ import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessor
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
+  getPreviousCentroidInDim,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { call } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+
+export const MAXIMUM_INTERPOLATION_DEPTH = 8;
 
 const isEqual = cwise({
   args: ["array", "scalar"],
@@ -99,7 +103,7 @@ function signedDist(arr: ndarray.NdArray) {
 }
 
 export default function* maybeInterpolateSegmentationLayer(
-  layer: VolumeLayer,
+  drawnBoundingBoxMag1: BoundingBox | null,
   isDrawing: boolean,
   activeTool: AnnotationTool,
 ): Saga<void> {
@@ -110,13 +114,11 @@ export default function* maybeInterpolateSegmentationLayer(
     return;
   }
 
-  const isVolumeInterpolationEnabled = yield* select(
-    (state) =>
-      state.userConfiguration.isVolumeInterpolationEnabled &&
-      state.tracing.restrictions.volumeInterpolationAllowed,
+  const isVolumeInterpolationAllowed = yield* select(
+    (state) => state.tracing.restrictions.volumeInterpolationAllowed,
   );
 
-  if (!isVolumeInterpolationEnabled) {
+  if (!isVolumeInterpolationAllowed) {
     return;
   }
 
@@ -156,20 +158,29 @@ export default function* maybeInterpolateSegmentationLayer(
     return;
   }
 
-  // Annotate only every n-th slice while the remaining ones are interpolated automatically.
-  const interpolationDepth = yield* select(
-    (store) => store.userConfiguration.volumeInterpolationDepth,
+  const previousCentroid = yield* select((store) =>
+    getPreviousCentroidInDim(store, volumeTracing, thirdDim),
   );
-
-  const drawnBoundingBoxMag1 = layer.getLabeledBoundingBox();
-  if (drawnBoundingBoxMag1 == null) {
+  if (previousCentroid == null) {
+    console.warn("no last centroid");
     return;
+  }
+  const interpolationDepth = Math.abs(V3.floor(V3.sub(previousCentroid, position))[thirdDim]);
+
+  if (interpolationDepth < 2 || interpolationDepth > 8) {
+    console.warn("interpolation depth too small or too high", interpolationDepth);
+    return;
+  }
+
+  const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
+  if (drawnBoundingBoxMag1 == null) {
+    drawnBoundingBoxMag1 = viewportBoxMag1;
+    // return;
   }
 
   const transpose = (vector: Vector3) => Dimensions.transDim(vector, activeViewport);
 
   const uvSize = V3.scale3(drawnBoundingBoxMag1.getSize(), transpose([1, 1, 0]));
-  const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
   const relevantBoxMag1 = drawnBoundingBoxMag1
     // Increase the drawn region by a factor of 2 (use half the size as a padding on each size)
     .paddedWithMargins(V3.scale(uvSize, 0.5))

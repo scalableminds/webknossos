@@ -27,12 +27,13 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
 }
+
 export function getVolumeTracingById(tracing: Tracing, tracingId: string): VolumeTracing {
   const volumeTracing = tracing.volumes.find((t) => t.tracingId === tracingId);
 
@@ -42,10 +43,12 @@ export function getVolumeTracingById(tracing: Tracing, tracingId: string): Volum
 
   return volumeTracing;
 }
+
 export function getVolumeTracingLayers(dataset: APIDataset): Array<APISegmentationLayer> {
   const layers = getSegmentationLayers(dataset);
   return layers.filter((layer) => layer.tracingId != null);
 }
+
 export function getVolumeTracingByLayerName(
   tracing: Tracing,
   layerName: string,
@@ -55,14 +58,17 @@ export function getVolumeTracingByLayerName(
   const volumeTracing = tracing.volumes.find((t) => t.tracingId === layerName);
   return volumeTracing;
 }
+
 export function hasVolumeTracings(tracing: Tracing): boolean {
   return tracing.volumes.length > 0;
 }
+
 export function getVolumeDescriptors(
   annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
 ): Array<AnnotationLayerDescriptor> {
   return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
 }
+
 export function getVolumeDescriptorById(
   annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
   tracingId: string,
@@ -77,6 +83,7 @@ export function getVolumeDescriptorById(
 
   return descriptors[0];
 }
+
 export function getReadableNameByVolumeTracingId(
   tracing: APIAnnotation | APIAnnotationCompact | HybridTracing,
   tracingId: string,
@@ -115,10 +122,12 @@ export function getServerVolumeTracings(
   );
   return volumeTracings;
 }
+
 export function getActiveCellId(volumeTracing: VolumeTracing): number {
   const { activeCellId } = volumeTracing;
   return activeCellId;
 }
+
 export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode {
   const { contourTracingMode } = volumeTracing;
   return contourTracingMode;
@@ -137,6 +146,7 @@ const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationTool, number>> = {
 export function isVolumeTool(tool: AnnotationTool): boolean {
   return VolumeTools.indexOf(tool) > -1;
 }
+
 export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: OxalisState) {
   if (state.tracing.volumes.length === 0) {
     return true;
@@ -171,12 +181,14 @@ export function getMaximumBrushSize(state: OxalisState) {
   // we double the maximum brush size.
   return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingResolutionIndex;
 }
+
 export function isSegmentationMissingForZoomstep(
   state: OxalisState,
   maxZoomStepForSegmentation: number,
 ): boolean {
   return getRequestLogZoomStep(state) > maxZoomStepForSegmentation;
 }
+
 export function getRequestedOrVisibleSegmentationLayer(
   state: OxalisState,
   layerName: string | null | undefined,
@@ -230,9 +242,11 @@ export function getRequestedOrDefaultSegmentationTracingLayer(
 
   return getTracingForSegmentationLayer(state, visibleLayer);
 }
+
 export function getActiveSegmentationTracing(state: OxalisState): VolumeTracing | null | undefined {
   return getRequestedOrDefaultSegmentationTracingLayer(state, null);
 }
+
 export function getActiveSegmentationTracingLayer(
   state: OxalisState,
 ): APISegmentationLayer | null | undefined {
@@ -244,6 +258,7 @@ export function getActiveSegmentationTracingLayer(
 
   return getSegmentationLayerForTracing(state, tracing);
 }
+
 export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
   const tracing = getActiveSegmentationTracing(state);
 
@@ -253,6 +268,7 @@ export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
 
   return tracing;
 }
+
 export function getRequestedOrVisibleSegmentationLayerEnforced(
   state: OxalisState,
   layerName: string | null | undefined,
@@ -268,6 +284,7 @@ export function getRequestedOrVisibleSegmentationLayerEnforced(
     "No segmentation layer is currently visible. Pass a valid layerName (you may want to use `getSegmentationLayerName`)",
   );
 }
+
 export function getNameOfRequestedOrVisibleSegmentationLayer(
   state: OxalisState,
   layerName: string | null | undefined,
@@ -275,6 +292,7 @@ export function getNameOfRequestedOrVisibleSegmentationLayer(
   const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
   return layer != null ? layer.name : null;
 }
+
 export function getSegmentsForLayer(
   state: OxalisState,
   layerName: string | null | undefined,
@@ -291,6 +309,7 @@ export function getSegmentsForLayer(
 
   return state.localSegmentationData[layer.name].segments;
 }
+
 export function getVisibleSegments(state: OxalisState): SegmentMap | null | undefined {
   const layer = getVisibleSegmentationLayer(state);
 
@@ -387,9 +406,20 @@ function _getRenderableResolutionForActiveSegmentationTracing(state: OxalisState
 export const getRenderableResolutionForActiveSegmentationTracing = reuseInstanceOnEquality(
   _getRenderableResolutionForActiveSegmentationTracing,
 );
+
 export function getMappingInfoForVolumeTracing(
   state: OxalisState,
   tracingId: string | null | undefined,
 ): ActiveMappingInfo {
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
+}
+
+export function getPreviousCentroidInDim(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+  dim: 0 | 1 | 2,
+): Vector3 | undefined {
+  const position = getFlooredPosition(state.flycam);
+
+  return volumeTracing.lastCentroids.find((el) => Math.floor(el[dim]) != position[dim]);
 }

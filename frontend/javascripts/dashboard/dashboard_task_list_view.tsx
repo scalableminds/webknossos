@@ -28,7 +28,7 @@ import {
   finishTask,
   requestTask,
   peekNextTasks,
-  downloadNml,
+  downloadAnnotation,
 } from "admin/admin_rest_api";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -272,7 +272,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
               href="#"
               onClick={() => {
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
-                return downloadNml(annotation.id, "Task", isVolumeIncluded);
+                return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
               }}
               icon={<DownloadOutlined />}
             >

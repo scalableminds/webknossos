@@ -105,7 +105,7 @@ Editing should be done in a single window only.
 
 In order to restore the current window, a reload is necessary.`,
   "react.rendering_error":
-    "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work is persisted. Please reload the page and try again.",
+    "Unfortunately, webKnossos encountered an error during rendering. Your latest changes may not have been saved. Please reload the page to try again.",
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save annotation. Retrying.",
@@ -293,6 +293,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.was_edited": "Successfully updated annotation",
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
+  "annotation.download": "The following annotation data is available for download immediately.",
+  "annotation.export":
+    "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the ",
+  "annotation.export_no_worker":
+    "This webKnossos instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
+  "annotation.python_do_not_share":
+    "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",

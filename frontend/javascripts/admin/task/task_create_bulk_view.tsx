@@ -11,7 +11,7 @@ import Messages from "messages";
 import Toast from "libs/toast";
 const FormItem = Form.Item;
 const { TextArea } = Input;
-const NUM_TASKS_PER_BATCH = 100;
+export const NUM_TASKS_PER_BATCH = 100;
 export type NewTask = {
   readonly boundingBox: BoundingBoxObject | null | undefined;
   readonly dataSet: string;

@@ -26,7 +26,7 @@ import {
   reOpenAnnotation,
   downloadNml,
   getCompactAnnotationsForUser,
-  getAvailableAnnotations,
+  getReadableAnnotations,
 } from "admin/admin_rest_api";
 import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
@@ -164,7 +164,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         this.props.userId != null
           ? // todo: also implement pendant for getCompactAnnotationsForUser
             await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings, pageNumber)
-          : await getAvailableAnnotations(showArchivedTracings, pageNumber);
+          : await getReadableAnnotations(showArchivedTracings, pageNumber);
 
       this.setModeState(
         {

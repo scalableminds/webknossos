@@ -396,20 +396,20 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def availableAnnotations(isFinished: Option[Boolean],
+  def readableAnnotations(isFinished: Option[Boolean],
                            limit: Option[Int],
                            pageNumber: Option[Int] = None,
                            includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        availableAnnotations <- annotationDAO.findAllReadableExplorationalsFor(
+        readableAnnotations <- annotationDAO.findAllReadableExplorationalsFor(
           request.identity._id,
           isFinished,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0))
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllReadableExplorationalsFor(request.identity._id, isFinished))
-        jsonList <- Fox.serialCombined(availableAnnotations)(annotationService.compactWrites)
+        jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {

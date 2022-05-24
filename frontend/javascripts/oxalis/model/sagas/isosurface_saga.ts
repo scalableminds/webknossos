@@ -405,7 +405,11 @@ function* maybeLoadIsosurface(
         getSceneController().removeIsosurfaceById(segmentId);
       }
 
-      getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
+      getSceneController().addIsosurfaceFromVertices(
+        vertices,
+        segmentId,
+        isosurfaceMappingInfo.passive || false,
+      );
       return neighbors.map((neighbor) =>
         getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
       );

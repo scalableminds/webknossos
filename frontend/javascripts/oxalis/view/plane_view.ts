@@ -170,7 +170,9 @@ class PlaneView {
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
-    const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);
+    // @ts-ignore
+    const intersectableObjects = isosurfacesRootGroup.children.filter((obj) => !obj.passive);
+    const intersections = raycaster.intersectObjects(intersectableObjects, true);
     const hitObject = intersections.length > 0 ? intersections[0].object : null;
 
     // Check whether we are hitting the same object as before, since we can return early

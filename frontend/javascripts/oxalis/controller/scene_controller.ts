@@ -191,7 +191,11 @@ class SceneController {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
-  constructSceneMesh(cellId: number, geometry: THREE.Geometry | THREE.BufferGeometry) {
+  constructSceneMesh(
+    cellId: number,
+    geometry: THREE.Geometry | THREE.BufferGeometry,
+    passive: boolean,
+  ) {
     const [hue] = jsConvertCellIdToHSLA(cellId);
     const color = new THREE.Color().setHSL(hue, 0.75, 0.05);
     const meshMaterial = new THREE.MeshLambertMaterial({
@@ -202,13 +206,14 @@ class SceneController {
     const mesh = new THREE.Mesh(geometry, meshMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    mesh.renderOrder = passive ? 1 : 0;
     const tweenAnimation = new TWEEN.Tween({
       opacity: 0,
     });
     tweenAnimation
       .to(
         {
-          opacity: 0.95,
+          opacity: passive ? 0.2 : 0.7,
         },
         500,
       )
@@ -234,13 +239,17 @@ class SceneController {
 
     const meshNumber = _.size(this.stlMeshes);
 
-    const mesh = this.constructSceneMesh(meshNumber, geometry);
+    const mesh = this.constructSceneMesh(meshNumber, geometry, false);
     this.meshesRootGroup.add(mesh);
     this.stlMeshes[id] = mesh;
     this.updateMeshPostion(id, position);
   }
 
-  addIsosurfaceFromVertices(vertices: Float32Array, segmentationId: number): void {
+  addIsosurfaceFromVertices(
+    vertices: Float32Array,
+    segmentationId: number,
+    passive: boolean,
+  ): void {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
     // convert to normal (unbuffered) geometry to merge vertices
@@ -255,14 +264,15 @@ class SceneController {
     geometry.computeFaceNormals();
     // and back to a BufferGeometry
     bufferGeometry = new THREE.BufferGeometry().fromGeometry(geometry);
-    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId);
+    this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId, passive);
   }
 
   addIsosurfaceFromGeometry(
     geometry: THREE.Geometry | THREE.BufferGeometry,
     segmentationId: number,
+    passive: boolean = false,
   ): void {
-    const mesh = this.constructSceneMesh(segmentationId, geometry);
+    const mesh = this.constructSceneMesh(segmentationId, geometry, passive);
 
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       const newGroup = new THREE.Group();
@@ -270,6 +280,8 @@ class SceneController {
       this.isosurfacesRootGroup.add(newGroup);
       // @ts-ignore
       newGroup.cellId = segmentationId;
+      // @ts-ignore
+      newGroup.passive = passive;
     }
 
     this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);

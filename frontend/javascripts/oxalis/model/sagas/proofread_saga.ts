@@ -82,6 +82,12 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
 
   const layerName = volumeTracingLayer.tracingId;
 
+  const activeMappingByLayer = yield* select(
+    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  );
+  const mappingInfo = getMappingInfo(activeMappingByLayer, layerName);
+  const { mappingName, mappingType } = mappingInfo;
+
   // Load the whole agglomerate mesh in a coarse resolution for performance reasons
   const oldPreferredQuality = yield* select(
     (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
@@ -94,7 +100,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<any> {
     updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", coarseResolutionIndex),
   );
   const segmentId = getSegmentIdForPosition(position);
-  yield* put(loadAdHocMeshAction(segmentId, position));
+  yield* put(loadAdHocMeshAction(segmentId, position, { mappingName, mappingType, passive: true }));
   yield* put(
     updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", oldPreferredQuality),
   );

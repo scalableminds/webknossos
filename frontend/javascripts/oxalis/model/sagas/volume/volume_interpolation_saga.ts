@@ -47,9 +47,8 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
   let disabledExplanation = null;
   let tooltipAddendum = "";
 
-  const position = getFlooredPosition(state.flycam);
-
   if (previousCentroid != null) {
+    const position = getFlooredPosition(state.flycam);
     const interpolationDepth = Math.abs(V3.floor(V3.sub(previousCentroid, position))[thirdDim]);
 
     if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
@@ -229,7 +228,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   if (disabledExplanation != null || previousCentroid == null) {
     // A disabledExplanation should always exist if previousCentroid is null,
-    // but this logic is inferred by TS.
+    // but this logic is not inferred by TS.
     if (disabledExplanation) {
       Toast.warning(disabledExplanation);
     }

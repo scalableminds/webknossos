@@ -44,7 +44,7 @@ export function createCellReducer(state: OxalisState, volumeTracing: VolumeTraci
   });
 }
 
-const MAXIMUM_CENTROID_COUNT = 50;
+const MAXIMUM_LABEL_ACTIONS_COUNT = 50;
 export function updateDirectionReducer(
   state: OxalisState,
   volumeTracing: VolumeTracing,
@@ -71,7 +71,7 @@ export function updateDirectionReducer(
   return updateVolumeTracing(newState, volumeTracing.tracingId, {
     lastLabelActions: [labelAction]
       .concat(volumeTracing.lastLabelActions)
-      .slice(0, MAXIMUM_CENTROID_COUNT),
+      .slice(0, MAXIMUM_LABEL_ACTIONS_COUNT),
   });
 }
 export function addToLayerReducer(

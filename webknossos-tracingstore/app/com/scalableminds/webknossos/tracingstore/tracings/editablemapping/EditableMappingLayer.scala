@@ -38,14 +38,17 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
                                                                                            layer.token)
       afterGetUnmapped = System.currentTimeMillis()
       _ <- bool2Fox(indices.isEmpty)
-      segmentIds <- layer.editableMappingService.collectSegmentIds(unmappedData, layer.tracing.elementClass)
+      unmappedDataTyped <- layer.editableMappingService.bytesToUnsignedInt(unmappedData, layer.tracing.elementClass)
+      segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
       afterCollectSegmentIds = System.currentTimeMillis()
       relevantMapping <- layer.editableMappingService.generateCombinedMappingSubset(segmentIds,
                                                                                     editableMapping,
                                                                                     remoteFallbackLayer,
                                                                                     layer.token)
       afterCombineMapping = System.currentTimeMillis()
-      mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedData, relevantMapping, layer.elementClass)
+      mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
+                                                                      relevantMapping,
+                                                                      layer.elementClass)
       afterMapData = System.currentTimeMillis()
       _ = logger.info(
         s"load bucket timing: getMapping: ${afterGet - beforeGet} ms, getUnmapped: ${afterGetUnmapped - afterGet} ms, collectSegments: ${afterCollectSegmentIds - afterGet} ms, combine: ${afterCombineMapping - afterCollectSegmentIds}, mapData: ${afterMapData - afterCombineMapping}. Total ${afterMapData - beforeGet}. ${mappedData.length} bytes, ${segmentIds.size} segments")

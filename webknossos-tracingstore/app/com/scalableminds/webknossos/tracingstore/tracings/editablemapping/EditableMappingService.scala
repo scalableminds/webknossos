@@ -417,9 +417,10 @@ class EditableMappingService @Inject()(
       remoteFallbackLayer <- remoteFallbackLayer(tracing)
       editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
       (unmappedData, indices) <- getUnmappedDataFromDatastore(remoteFallbackLayer, dataRequests, userToken)
-      segmentIds <- collectSegmentIds(unmappedData, tracing.elementClass)
+      unmappedDataTyped <- bytesToUnsignedInt(unmappedData, tracing.elementClass)
+      segmentIds = collectSegmentIds(unmappedDataTyped)
       relevantMapping <- generateCombinedMappingSubset(segmentIds, editableMapping, remoteFallbackLayer, userToken)
-      mappedData <- mapData(unmappedData, relevantMapping, tracing.elementClass)
+      mappedData <- mapData(unmappedDataTyped, relevantMapping, tracing.elementClass)
     } yield (mappedData, indices)
 
   def generateCombinedMappingSubset(segmentIds: Set[Long],
@@ -518,15 +519,10 @@ class EditableMappingService @Inject()(
       (data, indices) <- resultBox.toFox
     } yield (data, indices)
 
-  def collectSegmentIds(data: Array[Byte], elementClass: ElementClass): Fox[Set[Long]] =
-    for {
-      before <- Fox.successful(System.currentTimeMillis())
-      dataAsLongs <- bytesToLongs(data, elementClass)
-      afterToLong = System.currentTimeMillis()
-      result = dataAsLongs.toSet
-      afterToSet = System.currentTimeMillis()
-      //_ = logger.info(s"collect segment Ids timing - toLong: ${afterToLong - before} ms, toSet: ${afterToSet - afterToLong} ms")
-    } yield result
+  def collectSegmentIds(data: Array[UnsignedInteger]): Set[Long] =
+    data.toSet.map { u: UnsignedInteger =>
+      u.toPositiveLong
+    }
 
   def remoteFallbackLayer(tracing: VolumeTracing): Fox[RemoteFallbackLayer] =
     for {
@@ -534,14 +530,15 @@ class EditableMappingService @Inject()(
       organizationName <- tracing.organizationName.toFox ?~> "This feature is only implemented for volume annotations with an explicit organization name tag, not for legacy volume annotations."
     } yield RemoteFallbackLayer(organizationName, tracing.dataSetName, layerName, tracing.elementClass)
 
-  def mapData(unmappedData: Array[Byte],
+  def mapData(unmappedData: Array[UnsignedInteger],
               relevantMapping: Map[Long, Long],
-              elementClass: ElementClass): Fox[Array[Byte]] =
+              elementClass: ElementClass): Fox[Array[Byte]] = {
+    val unmappedDataLongs = unmappedData.map(_.toPositiveLong)
+    val mappedDataLongs = unmappedDataLongs.map(relevantMapping)
     for {
-      unmappedDataLongs <- bytesToLongs(unmappedData, elementClass)
-      mappedDataLongs = unmappedDataLongs.map(relevantMapping)
       bytes <- longsToBytes(mappedDataLongs, elementClass)
     } yield bytes
+  }
 
   private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClass): Fox[Array[Long]] =
     for {
@@ -549,7 +546,13 @@ class EditableMappingService @Inject()(
       unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield unsignedIntArray.map(_.toPositiveLong)
 
-  private def longsToBytes(longs: Array[Long], elementClass: ElementClass): Fox[Array[Byte]] =
+  def bytesToUnsignedInt(bytes: Array[Byte], elementClass: ElementClass): Fox[Array[UnsignedInteger]] =
+    for {
+      _ <- bool2Fox(!elementClass.isuint64)
+      unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
+    } yield unsignedIntArray
+
+  def longsToBytes(longs: Array[Long], elementClass: ElementClass): Fox[Array[Byte]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       unsignedIntArray: Array[UnsignedInteger] = longs.map(UnsignedInteger.fromLongWithElementClass(_, elementClass))

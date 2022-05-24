@@ -565,7 +565,7 @@ export function getReadableAnnotations(
   pageNumber: number = 0,
 ): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON(
-    `/api/annotations/available?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
+    `/api/annotations/readable?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
 }
 

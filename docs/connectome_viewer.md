@@ -2,7 +2,7 @@
 
 While webKnossos works great for many different imaging environments, the Synapse and Connectome Viewer is designed in particular for Neuroscientists. The Synapse and Connectome viewer offers a way of listing all incoming and outgoing synapses for a given segment/cell in a neuron segmentation for exploration and analysis. 
 
-Synapse locations, type, and partners have to be pre-computed outside of webKnossos, e.g. with [Voxelytics](https://voxelytics.com). webKnossos can load the resulting synaptic connectivity maps, ofter called Connectome, and offer deeper insights into your dataset.
+Synapse locations, type, and partners have to be pre-computed outside of webKnossos, e.g. with [Voxelytics](https://voxelytics.com). webKnossos can load the resulting synaptic connectivity maps, often called Connectome, and offer deeper insights into your dataset.
 
 ## Features
 

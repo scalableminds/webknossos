@@ -104,15 +104,12 @@ function signedDist(arr: ndarray.NdArray) {
   return arr;
 }
 
-export default function* maybeInterpolateSegmentationLayer(
-  drawnBoundingBoxMag1: BoundingBox | null,
-  isDrawing: boolean,
-  activeTool: AnnotationTool,
-): Saga<void> {
+export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  if (!ToolsWithInterpolationCapabilities.includes(activeTool) || !isDrawing) {
+  const activeTool = yield* select((state) => state.uiInformation.activeTool);
+  if (!ToolsWithInterpolationCapabilities.includes(activeTool)) {
     return;
   }
 
@@ -177,9 +174,7 @@ export default function* maybeInterpolateSegmentationLayer(
   }
 
   const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
-  if (drawnBoundingBoxMag1 == null) {
-    drawnBoundingBoxMag1 = viewportBoxMag1;
-  }
+  const drawnBoundingBoxMag1 = viewportBoxMag1;
 
   const transpose = (vector: Vector3) => Dimensions.transDim(vector, activeViewport);
 

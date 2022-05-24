@@ -7,7 +7,7 @@ import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
 import {
-  copySegmentationLayerAction,
+  interpolateSegmentationLayerAction,
   createCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
@@ -244,7 +244,7 @@ function VolumeInterpolationButton() {
   );
 
   const onClick = () => {
-    dispatch(copySegmentationLayerAction());
+    dispatch(interpolateSegmentationLayerAction());
   };
 
   const volumeTracing = useSelector((state: OxalisState) => getActiveSegmentationTracing(state));

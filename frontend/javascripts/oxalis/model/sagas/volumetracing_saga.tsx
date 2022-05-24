@@ -97,9 +97,9 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
   yield* takeEveryUnlessBusy(
-    "COPY_SEGMENTATION_LAYER",
-    copySegmentationLayer,
-    "Copying from neighbor slice",
+    "INTERPOLATE_SEGMENTATION_LAYER",
+    maybeInterpolateSegmentationLayer,
+    "Interpolating segment",
   );
   yield* fork(warnOfTooLowOpacity);
 }
@@ -315,10 +315,6 @@ function* getBoundingBoxForFloodFill(
     min: clippedMin,
     max: clippedMax,
   };
-}
-
-function* copySegmentationLayer(_action: Action): Saga<void> {
-  yield* call(maybeInterpolateSegmentationLayer, null, true, AnnotationToolEnum.TRACE);
 }
 
 const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";

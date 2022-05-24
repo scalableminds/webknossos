@@ -244,7 +244,7 @@ function VolumeInterpolationButton() {
 
   return (
     <Tooltip title={tooltipTitle}>
-      <Button
+      <ButtonComponent
         disabled={isDisabled}
         icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
         onClick={onClick}

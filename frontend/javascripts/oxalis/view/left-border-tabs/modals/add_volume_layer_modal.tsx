@@ -1,6 +1,6 @@
 import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import _ from "lodash";
 import type { APIDataset } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -33,6 +33,13 @@ export default function AddVolumeLayerModal({
 
   const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
   const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
+
+  useEffect(() => {
+    setResolutionIndices([
+      datasetResolutionInfo.getClosestExistingIndex(0),
+      datasetResolutionInfo.getHighestResolutionIndex(),
+    ]);
+  }, []);
 
   const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setNewLayerName(evt.target.value);

@@ -1,7 +1,7 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
 import {
   doesSupportVolumeWithFallback,
@@ -89,6 +89,10 @@ export function RestrictResolutionSlider({
 
   const highResolutionIndex = Math.min(highestResolutionIndex, resolutionIndices[1]);
   const lowResolutionIndex = Math.max(lowestResolutionIndex, resolutionIndices[0]);
+
+  useEffect(() => {
+    setResolutionIndices([lowestResolutionIndex, highestResolutionIndex]);
+  }, [lowestResolutionIndex, highestResolutionIndex]);
 
   return lowestResolutionIndex < highestResolutionIndex ? (
     <React.Fragment>

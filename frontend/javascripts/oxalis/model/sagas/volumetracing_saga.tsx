@@ -279,13 +279,6 @@ export function* editVolumeLayerAsync(): Saga<any> {
       ),
     );
 
-    // yield* call(
-    //   maybeInterpolateSegmentationLayer,
-    //   currentLayer.getLabeledBoundingBox(),
-    //   isDrawing,
-    //   activeTool,
-    // );
-
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   }
 }

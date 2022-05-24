@@ -145,6 +145,7 @@ export default function* maybeInterpolateSegmentationLayer(
   );
   const mostRecentLabelAction = volumeTracing != null ? getLastLabelAction(volumeTracing) : null;
   const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
+
   const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
@@ -178,7 +179,6 @@ export default function* maybeInterpolateSegmentationLayer(
   const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
   if (drawnBoundingBoxMag1 == null) {
     drawnBoundingBoxMag1 = viewportBoxMag1;
-    // return;
   }
 
   const transpose = (vector: Vector3) => Dimensions.transDim(vector, activeViewport);
@@ -259,6 +259,7 @@ export default function* maybeInterpolateSegmentationLayer(
       ContourModeEnum.DRAW,
       overwriteMode,
       labeledZoomStep,
+      activeViewport,
     );
   }
 }

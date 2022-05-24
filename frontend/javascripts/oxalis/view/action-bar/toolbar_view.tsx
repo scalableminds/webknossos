@@ -277,7 +277,7 @@ function VolumeInterpolationButton() {
       tooltipAddendum = "Not available for the 3D viewport";
     } else if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
       isPossible = false;
-      tooltipAddendum = `Not available since the last label action is too many slices away (the maximum distance is ${MAXIMUM_INTERPOLATION_DEPTH})`;
+      tooltipAddendum = `Not available since last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH})`;
     }
   }
 
@@ -285,7 +285,7 @@ function VolumeInterpolationButton() {
     <Tooltip
       title={
         isAllowed
-          ? `Interpolate current segment between last annotated and current slice (V) – ${tooltipAddendum}`
+          ? `Interpolate current segment between last labeled and current slice (V) – ${tooltipAddendum}`
           : "Volume Interpolation was disabled for this annotation."
       }
     >

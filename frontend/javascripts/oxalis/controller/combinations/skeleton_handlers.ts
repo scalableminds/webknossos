@@ -132,10 +132,6 @@ export function handleOpenContextMenu(
 ) {
   const { activeViewport } = Store.getState().viewModeData.plane;
 
-  if (activeViewport === OrthoViews.TDView) {
-    return;
-  }
-
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, position);

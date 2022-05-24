@@ -599,6 +599,7 @@ class PlaneController extends React.PureComponent<Props> {
         cameras={this.planeView.getCameras()}
         tracing={this.props.tracing}
         planeView={this.planeView}
+        showContextMenuAt={this.props.showContextMenuAt}
       />
     );
   }

@@ -18,7 +18,7 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import type { AnnotationTool, Vector3, OrthoView } from "oxalis/constants";
+import { AnnotationTool, Vector3, OrthoView, OrthoViews } from "oxalis/constants";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -788,19 +788,16 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   }
 
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
-  let allActions = [];
+  const isTdViewport = viewport === OrthoViews.TDView;
+  let allActions: Array<JSX.Element | null> = [];
 
   if (isSkeletonToolActive) {
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
   } else if (isBoundingBoxToolActive) {
     allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
-  } else {
+  } else if (!isTdViewport) {
     allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
-  }
-
-  if (allActions.length === 0) {
-    return null;
   }
 
   return (

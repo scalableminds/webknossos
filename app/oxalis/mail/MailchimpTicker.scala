@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.user.{MultiUser, MultiUserDAO}
 import play.api.inject.ApplicationLifecycle
@@ -16,7 +17,8 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
                                 multiUserDAO: MultiUserDAO,
                                 userDAO: MultiUserDAO,
                                 mailchimpClient: MailchimpClient)(implicit ec: ExecutionContext)
-    extends IntervalScheduler {
+    extends IntervalScheduler
+    with LazyLogging {
 
   implicit val ctx: DBAccessContext = GlobalAccessContext
 
@@ -47,8 +49,10 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
           if (alreadyTagged) ()
           else {
             if (lastActivity < now - (14 days).toMillis) {
+              logger.info(s"Tagging user ${multiUser._id} as ${MailchimpTag.WasInactiveInWeeksTwoAndThree}...")
               mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasInactiveInWeeksTwoAndThree)
             } else {
+              logger.info(s"Tagging user ${multiUser._id} as ${MailchimpTag.WasActiveInWeeksTwoOrThree}...")
               mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasActiveInWeeksTwoOrThree)
             }
           }

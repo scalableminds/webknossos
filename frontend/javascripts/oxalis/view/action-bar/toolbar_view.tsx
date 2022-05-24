@@ -238,7 +238,9 @@ function VolumeInterpolationButton() {
     dispatch(interpolateSegmentationLayerAction());
   };
 
-  const { tooltipTitle, isDisabled } = useSelector(getInterpolationInfo);
+  const { tooltipTitle, isDisabled } = useSelector((state: OxalisState) =>
+    getInterpolationInfo(state, "Not available since"),
+  );
 
   return (
     <Tooltip title={tooltipTitle}>

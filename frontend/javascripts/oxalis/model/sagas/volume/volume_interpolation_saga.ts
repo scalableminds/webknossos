@@ -32,7 +32,7 @@ import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } 
 
 export const MAXIMUM_INTERPOLATION_DEPTH = 8;
 
-export function getInterpolationInfo(state: OxalisState) {
+export function getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
   const volumeTracing = getActiveSegmentationTracing(state);
   const mostRecentLabelAction = volumeTracing != null ? getLastLabelAction(volumeTracing) : null;
@@ -52,13 +52,10 @@ export function getInterpolationInfo(state: OxalisState) {
   if (previousCentroid != null) {
     const interpolationDepth = Math.abs(V3.floor(V3.sub(previousCentroid, position))[thirdDim]);
 
-    if (activeViewport === OrthoViews.TDView) {
-      disabledExplanation = "Not available for the 3D viewport";
-    } else if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
-      disabledExplanation = `Not available since last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH})`;
+    if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
+      disabledExplanation = `${explanationPrefix} last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH})`;
     } else if (interpolationDepth < 2) {
-      disabledExplanation =
-        "Not available since last labeled slice should be at least 2 slices away";
+      disabledExplanation = `${explanationPrefix} last labeled slice should be at least 2 slices away`;
     } else {
       tooltipAddendum = `Labels ${interpolationDepth - 1} ${pluralize(
         "slice",
@@ -66,11 +63,10 @@ export function getInterpolationInfo(state: OxalisState) {
       )} along ${Dimensions.dimensionNameForIndex(thirdDim)}`;
     }
   } else {
-    disabledExplanation =
-      "Not available because all recent label actions were performed on the current slice.";
+    disabledExplanation = `${explanationPrefix} all recent label actions were performed on the current slice.`;
   }
 
-  const isPossible = disabledExplanation != null;
+  const isPossible = disabledExplanation == null;
   tooltipAddendum = disabledExplanation || tooltipAddendum;
 
   const tooltipTitle = isAllowed
@@ -96,7 +92,10 @@ const isNonZero = cwise({
     if (a > 0) {
       return true;
     }
-    return false;
+    // cwise compiles uses this function content to build
+    // the target function. Adding a return here would not
+    // yield the desired behavior for isNonZero.
+    // eslint-disable-next-line consistent-return
   },
   // The following function is parsed by cwise which is why
   // the shorthand syntax is not supported.
@@ -203,8 +202,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
 
-  const { activeViewport, previousCentroid, disabledExplanation } = yield* select(
-    getInterpolationInfo,
+  const { activeViewport, previousCentroid, disabledExplanation } = yield* select((state) =>
+    getInterpolationInfo(state, "Could not interpolate segment because"),
   );
 
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
@@ -233,7 +232,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     // A disabledExplanation should always exist if previousCentroid is null,
     // but this logic is inferred by TS.
     if (disabledExplanation) {
-      Toast.warning(`Could not interpolate segment: ${disabledExplanation}`);
+      Toast.warning(disabledExplanation);
     }
     return;
   }

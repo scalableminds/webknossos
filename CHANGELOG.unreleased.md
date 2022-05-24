@@ -16,6 +16,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a long-running job that applies the merging done via a merger mode tracing to a new output dataset. The job is accessible via a button next to the merger mode button once the merger mode is active. [#6086](https://github.com/scalableminds/webknossos/pull/6086)
 - Added support to stream zarr files using the corresponding [zarr spec](https://zarr.readthedocs.io/en/stable/spec/v2.html#storage). [#6144](https://github.com/scalableminds/webknossos/pull/6144)
 - Added support for segment interpolation with depths > 2. Also, the feature was changed to work on an explicit trigger (either via the button in the toolbar or via the shortcut V). When triggering the interpolation, the current segment id is interpolated between the current slice and the least-recently annotated slice. [#6235](https://github.com/scalableminds/webknossos/pull/6235)
+- Added segmentation layers to the functionality catching the case that more layers are active that the hardware allows. This prevents rendering issue with more than one segmentation layer and multiple color layers. [#6211](https://github.com/scalableminds/webknossos/pull/6211)
+- Selecting "Download" from the tracing actions now opens a new modal, which lets the user select data for download, start TIFF export jobs or copy code snippets to get started quickly with the webKonossos Python Client. [#6171](https://github.com/scalableminds/webknossos/pull/6171)
+- Adding a New Volume Layer via the left border tab now gives the option to restrict resolutions for the new layer. [#6229](https://github.com/scalableminds/webknossos/pull/6229)
 
 ### Changed
 - When creating a new annotation with a volume layer (without fallback) for a dataset which has an existing segmentation layer, the original segmentation layer is still listed (and viewable) in the left sidebar. Earlier versions simply hid the original segmentation layer. [#6186](https://github.com/scalableminds/webknossos/pull/6186)
@@ -28,7 +31,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a bug in the task creation, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)
-- Fixed a bug in the task cration, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)
 - Fixed a rendering bug which could cause an incorrect magnification to be rendered in rare scenarios. [#6029](https://github.com/scalableminds/webknossos/pull/6029)
 - Fixed a bug which could cause a segmentation layer's "ID mapping" dropdown to disappear. [#6215](https://github.com/scalableminds/webknossos/pull/6215)
 

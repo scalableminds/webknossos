@@ -163,7 +163,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
       ]),
     ),
     activeCellId: 0,
-    lastCentroids: [],
+    lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,
     contourList: [],
     maxCellId,

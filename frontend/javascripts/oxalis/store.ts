@@ -39,6 +39,7 @@ import type {
   Vector3,
   AnnotationTool,
   MappingStatus,
+  OrthoViewWithoutTD,
 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -210,6 +211,12 @@ export type Segment = {
   creationTime: number | null | undefined;
 };
 export type SegmentMap = DiffableMap<number, Segment>;
+
+export type LabelAction = {
+  centroid: Vector3; // centroid of the label action
+  plane: OrthoViewWithoutTD; // plane that labeled
+};
+
 export type VolumeTracing = TracingBase & {
   readonly type: "volume";
   // Note that there are also SegmentMaps in `state.localSegmentationData`
@@ -217,7 +224,8 @@ export type VolumeTracing = TracingBase & {
   readonly segments: SegmentMap;
   readonly maxCellId: number;
   readonly activeCellId: number;
-  readonly lastCentroids: Vector3[]; // lastCentroids[0] is the newest
+  // lastLabelActions[0] is the most recent one
+  readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
   // Stores points of the currently drawn region in global coordinates
   readonly contourList: Array<Vector3>;

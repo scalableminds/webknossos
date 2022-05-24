@@ -11,6 +11,7 @@ import type {
 import type {
   ActiveMappingInfo,
   HybridTracing,
+  LabelAction,
   OxalisState,
   SegmentMap,
   Tracing,
@@ -414,12 +415,16 @@ export function getMappingInfoForVolumeTracing(
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
 }
 
-export function getPreviousCentroidInDim(
+export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | undefined {
+  return volumeTracing.lastLabelActions[0];
+}
+
+export function getLabelActionFromPreviousSlice(
   state: OxalisState,
   volumeTracing: VolumeTracing,
   dim: 0 | 1 | 2,
-): Vector3 | undefined {
+): LabelAction | undefined {
   const position = getFlooredPosition(state.flycam);
 
-  return volumeTracing.lastCentroids.find((el) => Math.floor(el[dim]) != position[dim]);
+  return volumeTracing.lastLabelActions.find((el) => Math.floor(el.centroid[dim]) != position[dim]);
 }

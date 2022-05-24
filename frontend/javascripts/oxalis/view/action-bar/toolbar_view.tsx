@@ -19,8 +19,9 @@ import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
-  getPreviousCentroidInDim,
+  getLabelActionFromPreviousSlice,
   getRenderableResolutionForActiveSegmentationTracing,
+  getLastLabelAction,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -242,22 +243,21 @@ function VolumeInterpolationButton() {
     (state: OxalisState) => state.tracing.restrictions.volumeInterpolationAllowed,
   );
 
-  const activeViewport = useSelector(
-    (state: OxalisState) => state.viewModeData.plane.activeViewport,
-  );
-
   const onClick = () => {
     dispatch(copySegmentationLayerAction());
   };
 
-  const thirdDim =
-    activeViewport !== OrthoViews.TDView ? Dimensions.thirdDimensionForPlane(activeViewport) : 2;
+  const volumeTracing = useSelector((state: OxalisState) => getActiveSegmentationTracing(state));
+  const mostRecentLabelAction = volumeTracing != null ? getLastLabelAction(volumeTracing) : null;
+
+  const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
+
+  const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
   const previousCentroid = useSelector((state: OxalisState) => {
-    const volumeTracing = getActiveSegmentationTracing(state);
     if (!volumeTracing) {
       return null;
     }
-    return getPreviousCentroidInDim(state, volumeTracing, thirdDim);
+    return getLabelActionFromPreviousSlice(state, volumeTracing, thirdDim)?.centroid;
   });
   let isPossible = false;
   let tooltipAddendum =

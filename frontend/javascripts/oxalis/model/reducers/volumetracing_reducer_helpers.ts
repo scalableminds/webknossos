@@ -1,6 +1,6 @@
 import update from "immutability-helper";
-import type { ContourMode, Vector3 } from "oxalis/constants";
-import type { OxalisState, VolumeTracing } from "oxalis/store";
+import { ContourMode, OrthoViews, OrthoViewWithoutTD, Vector3 } from "oxalis/constants";
+import type { LabelAction, OxalisState, VolumeTracing } from "oxalis/store";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
@@ -52,7 +52,7 @@ export function updateDirectionReducer(
 ) {
   let newState = state;
 
-  const lastCentroid = volumeTracing.lastCentroids[0];
+  const lastCentroid = volumeTracing.lastLabelActions[0]?.centroid;
   if (lastCentroid != null) {
     newState = setDirectionReducer(state, [
       centroid[0] - lastCentroid[0],
@@ -61,8 +61,17 @@ export function updateDirectionReducer(
     ]);
   }
 
+  const plane: OrthoViewWithoutTD =
+    state.viewModeData.plane.activeViewport != OrthoViews.TDView
+      ? state.viewModeData.plane.activeViewport
+      : OrthoViews.PLANE_XY;
+
+  const labelAction: LabelAction = { centroid, plane };
+
   return updateVolumeTracing(newState, volumeTracing.tracingId, {
-    lastCentroids: [centroid].concat(volumeTracing.lastCentroids).slice(0, MAXIMUM_CENTROID_COUNT),
+    lastLabelActions: [labelAction]
+      .concat(volumeTracing.lastLabelActions)
+      .slice(0, MAXIMUM_CENTROID_COUNT),
   });
 }
 export function addToLayerReducer(

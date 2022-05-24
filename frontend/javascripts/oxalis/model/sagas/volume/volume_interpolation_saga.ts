@@ -7,6 +7,7 @@ import api from "oxalis/api/internal_api";
 import {
   AnnotationTool,
   ContourModeEnum,
+  OrthoViews,
   ToolsWithInterpolationCapabilities,
   Vector3,
 } from "oxalis/constants";
@@ -16,7 +17,8 @@ import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessor
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
-  getPreviousCentroidInDim,
+  getLabelActionFromPreviousSlice,
+  getLastLabelAction,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -122,7 +124,6 @@ export default function* maybeInterpolateSegmentationLayer(
     return;
   }
 
-  const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   // Disable copy-segmentation for the same zoom steps where the brush/trace tool is forbidden, too.
@@ -142,6 +143,8 @@ export default function* maybeInterpolateSegmentationLayer(
     [Model, Model.getSegmentationTracingLayer],
     volumeTracing.tracingId,
   );
+  const mostRecentLabelAction = volumeTracing != null ? getLastLabelAction(volumeTracing) : null;
+  const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
   const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
@@ -158,8 +161,8 @@ export default function* maybeInterpolateSegmentationLayer(
     return;
   }
 
-  const previousCentroid = yield* select((store) =>
-    getPreviousCentroidInDim(store, volumeTracing, thirdDim),
+  const previousCentroid = yield* select(
+    (store) => getLabelActionFromPreviousSlice(store, volumeTracing, thirdDim)?.centroid,
   );
   if (previousCentroid == null) {
     console.warn("no last centroid");

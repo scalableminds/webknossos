@@ -155,14 +155,14 @@ test("VolumeTracing should cycle trace/view/brush tool", (t) => {
   newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.MOVE);
 });
-test("VolumeTracing should update its lastCentroids", (t) => {
+test("VolumeTracing should update its lastLabelActions", (t) => {
   const direction = [4, 6, 9];
   const updateDirectionAction = VolumeTracingActions.updateDirectionAction(direction);
   // Update direction
   const newState = VolumeTracingReducer(initialState, updateDirectionAction);
   t.not(newState, initialState);
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
-    t.deepEqual(tracing.lastCentroids[0], direction);
+    t.deepEqual(tracing.lastLabelActions[0].centroid, direction);
   });
 });
 

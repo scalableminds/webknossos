@@ -9,11 +9,15 @@ trait UpdateAction[T <: GeneratedMessage] {
 
   def actionTimestamp: Option[Long]
 
+  def actionAuthorId: Option[String]
+
   def applyOn(tracing: T): T = tracing
 
   def addTimestamp(timestamp: Long): UpdateAction[T] = this
 
   def addInfo(info: Option[String]): UpdateAction[T] = this
+
+  def addAuthorId(authorId: String): UpdateAction[T] = this
 
   def transformToCompact: UpdateAction[T] = this
 
@@ -30,6 +34,7 @@ object UpdateAction {
 case class UpdateActionGroup[T <: GeneratedMessage](
     version: Long,
     timestamp: Long,
+    authorId: Option[String],
     actions: List[UpdateAction[T]],
     stats: Option[JsObject],
     info: Option[String],
@@ -49,6 +54,7 @@ object UpdateActionGroup {
       for {
         version <- json.validate((JsPath \ "version").read[Long])
         timestamp <- json.validate((JsPath \ "timestamp").read[Long])
+        authorId <- json.validate((JsPath \ "authorId").readNullable[String])
         actions <- json.validate((JsPath \ "actions").read[List[UpdateAction[T]]])
         stats <- json.validate((JsPath \ "stats").readNullable[JsObject])
         info <- json.validate((JsPath \ "info").readNullable[String])
@@ -58,6 +64,7 @@ object UpdateActionGroup {
       } yield {
         UpdateActionGroup[T](version,
                              timestamp,
+                             authorId,
                              actions,
                              stats,
                              info,
@@ -72,6 +79,7 @@ object UpdateActionGroup {
       Json.obj(
         "version" -> value.version,
         "timestamp" -> value.timestamp,
+        "authorId" -> value.authorId,
         "actions" -> Json.toJson(value.actions),
         "stats" -> value.stats,
         "info" -> value.info,

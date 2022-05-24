@@ -70,9 +70,10 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
       override def allowUpdate(user: Option[User]): Fox[Boolean] =
         for {
           accessAllowed <- allowAccess(user)
-        } yield user.exists { user =>
-          (annotation._user == user._id || accessAllowed && annotation.othersMayEdit) && !(annotation.state == Finished)
-        }
+        } yield
+          user.exists { user =>
+            (annotation._user == user._id || accessAllowed && annotation.othersMayEdit) && !(annotation.state == Finished)
+          }
 
       override def allowFinish(userOption: Option[User]): Fox[Boolean] =
         (for {

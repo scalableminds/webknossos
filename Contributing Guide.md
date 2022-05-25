@@ -92,7 +92,19 @@ The specific coding styles, test frameworks and documentation setup of webKnosso
 in the following sections:
 
 
+### Development
 
+The [webknossos repository](https://github.com/scalableminds/webknossos) is structured in frontend and backend parts with different tooling.
+
+* **Frontend Tooling** We enforce coding styles and require all unit and integration tests to pass:
+    * `yarn pretty`: Code formatting with prettier
+    * `yarn lint`: Code linting with eslint
+    * `yarn test`: Unit tests with ava
+    * `yarn test-e2e`: End-to-end, integration tests
+
+    See `package.json` for more `yarn <command>` shortcuts.
+
+* **CI** We use continuous integration with [GitHub actions](https://github.com/scalableminds/webknossos/actions), please see the `CI` workflow for details.
 
 
 ### Documentation

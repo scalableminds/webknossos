@@ -915,3 +915,13 @@ export function coalesce<T>(obj: { [key: string]: T }, field: T): T | null {
   }
   return null;
 }
+
+export function pluralize(str: string, count: number, optPluralForm: string | null = null): string {
+  if (count < 2) {
+    return str;
+  }
+  if (optPluralForm != null) {
+    return optPluralForm;
+  }
+  return `${str}s`;
+}

@@ -160,6 +160,7 @@ export function* labelWithVoxelBuffer2D(
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
+  viewport: OrthoView,
 ): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
@@ -172,8 +173,7 @@ export function* labelWithVoxelBuffer2D(
   );
   const { cube } = segmentationLayer;
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
-  const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
-  const dimensionIndices = Dimensions.getIndices(activeViewport);
+  const dimensionIndices = Dimensions.getIndices(viewport);
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 

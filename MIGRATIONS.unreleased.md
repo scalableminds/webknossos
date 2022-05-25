@@ -12,3 +12,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [082-annotationsettings-volumeInterpolationAllowed.sql](conf/evolutions/082-annotationsettings-volumeInterpolationAllowed.sql)
+- [083-annotation-contributors.sql](conf/evolutions/083-annotation-contributors.sql)

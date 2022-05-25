@@ -1,8 +1,6 @@
 DROP SCHEMA IF EXISTS webknossos CASCADE;
 CREATE SCHEMA webknossos;
 
--- CREATE EXTENSION pgcrypto;
-
 CREATE TYPE webknossos.VECTOR3 AS (
   x DOUBLE PRECISION,
   y DOUBLE PRECISION,
@@ -21,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(82);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(83);
 COMMIT TRANSACTION;
 
 

@@ -397,9 +397,9 @@ class AnnotationController @Inject()(
 
   @ApiOperation(hidden = true, value = "")
   def readableAnnotations(isFinished: Option[Boolean],
-                           limit: Option[Int],
-                           pageNumber: Option[Int] = None,
-                           includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+                          limit: Option[Int],
+                          pageNumber: Option[Int] = None,
+                          includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         readableAnnotations <- annotationDAO.findAllReadableExplorationalsFor(

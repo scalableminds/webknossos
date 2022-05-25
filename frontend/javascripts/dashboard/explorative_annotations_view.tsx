@@ -17,7 +17,12 @@ import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
 import { AsyncLink } from "components/async_clickables";
-import { annotationToCompact, APIAnnotationCompact, APIUser } from "types/api_flow_types";
+import {
+  annotationToCompact,
+  APIAnnotation,
+  APIAnnotationCompact,
+  APIUser,
+} from "types/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
 import {
   finishAllAnnotations,
@@ -476,10 +481,48 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
     const renderOwner = (owner: APIUser) => {
       if (!this.props.isAdminView && owner.id == this.props.activeUser.id) {
-        return <i>me</i>;
+        return (
+          <span>
+            {formatUserName(owner)} <span style={{ color: "#7c7c7c" }}>(you)</span>
+          </span>
+        );
       }
       return formatUserName(owner);
     };
+
+    const ownerFilters = _.uniqBy(
+      // Prepend user's name to the front so that this is listed at the top
+      [
+        { formattedName: formatUserName(this.props.activeUser), id: this.props.activeUser.id },
+      ].concat(
+        _.compact(
+          filteredAndSortedTracings.map((tracing) =>
+            tracing.owner != null
+              ? { formattedName: formatUserName(tracing.owner), id: tracing.owner.id }
+              : null,
+          ),
+        ),
+      ),
+      "id",
+    ).map(({ formattedName, id }) => ({ text: formattedName, value: id }));
+    const teamFilters = _.uniqBy(
+      _.flatMap(filteredAndSortedTracings, (tracing) => tracing.teams),
+      "id",
+    ).map((team) => ({ text: team.name, value: team.id }));
+
+    const ownerAndTeamsFilters = [
+      {
+        text: "Owners",
+        value: "OwnersFilter",
+        children: ownerFilters,
+      },
+      {
+        text: "Teams",
+        value: "TeamsFilter",
+        children: teamFilters,
+      },
+    ];
+
     return (
       <Table
         dataSource={filteredAndSortedTracings}
@@ -531,6 +574,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Owner & Teams"
           dataIndex="owner"
           width={200}
+          filters={ownerAndTeamsFilters}
+          filterMode="tree"
+          onFilter={(value: string | number | boolean, tracing: APIAnnotationCompact) =>
+            (tracing.owner != null && tracing.owner.id == value.toString()) ||
+            tracing.teams.some((team) => team.id === value)
+          }
           sorter={Utils.localeCompareBy(
             typeHint,
             (annotation) => annotation.owner?.firstName || "",

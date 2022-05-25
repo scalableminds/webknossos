@@ -156,7 +156,7 @@
     "@scalableminds/prop-types": "^15.6.1",
     "@types/file-saver": "^2.0.5",
     "@use-it/interval": "^1.0.0",
-    "antd": "^4.15.0",
+    "antd": "^4.20.6",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",
     "beautiful-react-hooks": "^0.30.5",

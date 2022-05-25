@@ -35,6 +35,7 @@ export const MAXIMUM_INTERPOLATION_DEPTH = 8;
 export function getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
   const volumeTracing = getActiveSegmentationTracing(state);
+  let interpolationDepth = 0;
   if (!volumeTracing) {
     // Return dummy values, since the feature should be disabled, anyway
     return {
@@ -45,6 +46,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
       previousCentroid: null,
       labeledResolution: [1, 1, 1] as Vector3,
       labeledZoomStep: 0,
+      interpolationDepth,
     };
   }
   const mostRecentLabelAction = getLastLabelAction(volumeTracing);
@@ -75,7 +77,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
     // For example, in mag 8-8-2, the z distance needs to be divided by two, since it is measured
     // in global coordinates.
     const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, labeledResolution, thirdDim);
-    const interpolationDepth = Math.floor(
+    interpolationDepth = Math.floor(
       Math.abs(
         V3.sub(adapt(previousCentroid), adapt(position))[thirdDim] / labeledResolution[thirdDim],
       ),
@@ -110,6 +112,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
     previousCentroid,
     labeledResolution,
     labeledZoomStep,
+    interpolationDepth,
   };
 }
 
@@ -244,6 +247,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     disabledExplanation,
     labeledResolution,
     labeledZoomStep,
+    interpolationDepth,
   } = yield* select((state) =>
     getInterpolationInfo(state, "Could not interpolate segment because"),
   );
@@ -270,7 +274,6 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     }
     return;
   }
-  const interpolationDepth = Math.abs(V3.floor(V3.sub(previousCentroid, position))[thirdDim]);
 
   const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
 

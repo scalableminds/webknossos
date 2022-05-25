@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import java.nio.file.Paths
 import java.util.UUID
 
 import akka.http.caching.LfuCache
@@ -13,7 +14,13 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.Elemen
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
-import com.scalableminds.webknossos.datastore.services.{IsosurfaceRequest, IsosurfaceService, IsosurfaceServiceHolder}
+import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
+import com.scalableminds.webknossos.datastore.services.{
+  BinaryDataService,
+  IsosurfaceRequest,
+  IsosurfaceService,
+  IsosurfaceServiceHolder
+}
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -55,6 +62,8 @@ class EditableMappingService @Inject()(
   private def generateId: String = UUID.randomUUID.toString
 
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
+
+  val binaryDataService = new BinaryDataService(Paths.get(""), 100, null)
 
   private lazy val materializedEditableMappingCache: Cache[EditableMappingKey, Box[EditableMapping]] = {
     val maxEntries = 20
@@ -414,14 +423,11 @@ class EditableMappingService @Inject()(
                  userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
     for {
       editableMappingId <- tracing.mappingName.toFox
-      remoteFallbackLayer <- remoteFallbackLayer(tracing)
-      editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
-      (unmappedData, indices) <- getUnmappedDataFromDatastore(remoteFallbackLayer, dataRequests, userToken)
-      unmappedDataTyped <- bytesToUnsignedInt(unmappedData, tracing.elementClass)
-      segmentIds = collectSegmentIds(unmappedDataTyped)
-      relevantMapping <- generateCombinedMappingSubset(segmentIds, editableMapping, remoteFallbackLayer, userToken)
-      mappedData <- mapData(unmappedDataTyped, relevantMapping, tracing.elementClass)
-    } yield (mappedData, indices)
+      dataLayer = editableMappingLayer(editableMappingId, tracing, userToken)
+      requests = dataRequests.map(r =>
+        DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
+      data <- binaryDataService.handleDataRequests(requests)
+    } yield data
 
   def generateCombinedMappingSubset(segmentIds: Set[Long],
                                     editableMapping: EditableMapping,
@@ -505,19 +511,16 @@ class EditableMappingService @Inject()(
   }
 
   def getUnmappedDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer,
-                                   dataRequests: DataRequestCollection,
-                                   userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
+                                   dataRequests: List[WebKnossosDataRequest],
+                                   userToken: Option[String]): Fox[(Array[Byte], List[Int])] = {
+    val key = UnmappedRemoteDataKey(remoteFallbackLayer, dataRequests, userToken)
     for {
-      dataRequestsTyped: List[WebKnossosDataRequest] <- Fox.serialCombined(dataRequests) {
-        case r: WebKnossosDataRequest => Fox.successful(r.copy(applyAgglomerate = None))
-        case _                        => Fox.failure("Editable Mappings currently only work for webKnossos data requests")
-      }
-      key = UnmappedRemoteDataKey(remoteFallbackLayer, dataRequestsTyped, userToken)
       resultBox <- unmappedRemoteDataCache.getOrLoad(
         key,
         k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests, k.userToken))
       (data, indices) <- resultBox.toFox
     } yield (data, indices)
+  }
 
   def collectSegmentIds(data: Array[UnsignedInteger]): Set[Long] =
     data.toSet.map { u: UnsignedInteger =>
@@ -559,22 +562,26 @@ class EditableMappingService @Inject()(
       bytes = UnsignedIntegerArray.toByteArray(unsignedIntArray, elementClass)
     } yield bytes
 
+  private def editableMappingLayer(mappingName: String,
+                                   tracing: VolumeTracing,
+                                   userToken: Option[String]): EditableMappingLayer =
+    EditableMappingLayer(
+      mappingName,
+      tracing.boundingBox,
+      resolutions = tracing.resolutions.map(vec3IntFromProto).toList,
+      largestSegmentId = 0L,
+      elementClass = tracing.elementClass,
+      userToken,
+      tracing = tracing,
+      editableMappingService = this
+    )
+
   def createIsosurface(tracing: VolumeTracing,
                        request: WebKnossosIsosurfaceRequest,
-                       token: Option[String]): Fox[(Array[Float], List[Int])] =
+                       userToken: Option[String]): Fox[(Array[Float], List[Int])] =
     for {
       mappingName <- tracing.mappingName.toFox
-      segmentationLayer = EditableMappingLayer(
-        mappingName,
-        tracing.boundingBox,
-        resolutions = tracing.resolutions.map(vec3IntFromProto).toList,
-        largestSegmentId = 0L,
-        elementClass = tracing.elementClass,
-        token,
-        tracing = tracing,
-        editableMappingService = this
-      )
-
+      segmentationLayer = editableMappingLayer(mappingName, tracing, userToken)
       isosurfaceRequest = IsosurfaceRequest(
         dataSource = None,
         dataLayer = segmentationLayer,

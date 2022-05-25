@@ -32,9 +32,8 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         applyAgglomerate = None,
         version = None
       )
-      dataRequestCollection = List(dataRequest)
       (unmappedData, indices) <- layer.editableMappingService.getUnmappedDataFromDatastore(remoteFallbackLayer,
-                                                                                           dataRequestCollection,
+                                                                                           List(dataRequest),
                                                                                            layer.token)
       afterGetUnmapped = System.currentTimeMillis()
       _ <- bool2Fox(indices.isEmpty)

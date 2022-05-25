@@ -2,7 +2,13 @@ import { connect } from "react-redux";
 import * as React from "react";
 import * as THREE from "three";
 import { InputMouse } from "libs/input";
-import type { OrthoView, OrthoViewMap, Point2, Vector3 } from "oxalis/constants";
+import type {
+  OrthoView,
+  OrthoViewMap,
+  Point2,
+  ShowContextMenuFunction,
+  Vector3,
+} from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -28,6 +34,7 @@ import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 import { SkeletonTool } from "oxalis/controller/combinations/tool_controls";
+import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
@@ -68,6 +75,7 @@ type OwnProps = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   planeView?: PlaneView;
   tracing?: Tracing;
+  showContextMenuAt?: ShowContextMenuFunction;
 };
 type StateProps = {
   flycam: Flycam;
@@ -224,6 +232,18 @@ class TDController extends React.PureComponent<Props> {
 
           Store.dispatch(removeIsosurfaceAction(segmentationLayer.name, hoveredSegmentId));
         }
+      },
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        if (this.props.planeView == null || this.props.showContextMenuAt == null) return;
+
+        handleOpenContextMenu(
+          this.props.planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          this.props.showContextMenuAt,
+        );
       },
     };
     return controls;

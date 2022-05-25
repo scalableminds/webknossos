@@ -4,7 +4,7 @@ import sbt._
 
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "2.12.15"
-ThisBuild / scapegoatVersion := "1.3.8"
+ThisBuild / scapegoatVersion := "1.4.10"
 ThisBuild / scalacOptions ++= Seq(
   "-Xmax-classfile-name",
   "100",
@@ -28,7 +28,7 @@ scapegoatIgnoredFiles := Seq(".*/Tables.scala",
                              ".*/ReverseRoutes.scala",
                              ".*/JavaScriptReverseRoutes.scala",
                              ".*/.*mail.*template\\.scala")
-scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter")
+scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
 lazy val commonSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,

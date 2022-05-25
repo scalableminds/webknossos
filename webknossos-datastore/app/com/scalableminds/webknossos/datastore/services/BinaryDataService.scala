@@ -34,11 +34,11 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
         handleBucketRequest(request, bucket)
       }
     } else {
-      Fox
-        .serialSequence(bucketQueue.toList) { bucket =>
+      Fox.sequence {
+        bucketQueue.toList.map { bucket =>
           handleBucketRequest(request, bucket).map(r => bucket -> r)
         }
-        .map(buckets => cutOutCuboid(request, buckets.flatten))
+      }.map(buckets => cutOutCuboid(request, buckets.flatten))
     }
   }
 

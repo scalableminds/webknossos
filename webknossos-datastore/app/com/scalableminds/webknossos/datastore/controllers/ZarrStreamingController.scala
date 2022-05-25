@@ -166,7 +166,7 @@ class ZarrStreamingController @Inject()(
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      getTokenFromHeader(token, request)) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,

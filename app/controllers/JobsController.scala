@@ -236,11 +236,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            organizationName)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)

@@ -23,7 +23,7 @@ import {
   finishAnnotation,
   resetAnnotation,
   deleteAnnotation,
-  downloadNml,
+  downloadAnnotation,
 } from "admin/admin_rest_api";
 import FormattedDate from "components/formatted_date";
 import Toast from "libs/toast";
@@ -143,7 +143,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             href="#"
             onClick={() => {
               const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
-              return downloadNml(annotation.id, "Task", isVolumeIncluded);
+              return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
             }}
             icon={<DownloadOutlined />}
           >

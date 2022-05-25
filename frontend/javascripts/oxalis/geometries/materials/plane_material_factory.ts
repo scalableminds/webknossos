@@ -88,14 +88,14 @@ class PlaneMaterialFactory {
   attributes: Record<string, any>;
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
-  leastRecentlyVisibleColorLayers: Array<string>;
+  leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
   oldShaderCode: string | null | undefined;
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
-    this.leastRecentlyVisibleColorLayers = [];
+    this.leastRecentlyVisibleLayers = [];
   }
 
   setup() {
@@ -417,11 +417,12 @@ class PlaneMaterialFactory {
         true,
       ),
     );
-    const oldVisibilityPerLayer = {};
+    const oldVisibilityPerLayer: Record<string, boolean> = {};
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (state) => state.datasetConfiguration.layers,
         (layerSettings) => {
+          let updatedLayerVisibility = false;
           for (const dataLayer of Model.getAllLayers()) {
             const { elementClass } = dataLayer.cube;
             const settings = layerSettings[dataLayer.name];
@@ -431,26 +432,25 @@ class PlaneMaterialFactory {
               const isSegmentationLayer = dataLayer.isSegmentation;
 
               if (
-                !isSegmentationLayer &&
-                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 oldVisibilityPerLayer[dataLayer.name] != null &&
-                // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
                 oldVisibilityPerLayer[dataLayer.name] !== isLayerEnabled
               ) {
                 if (settings.isDisabled) {
-                  this.onDisableColorLayer(dataLayer.name);
+                  this.onDisableLayer(dataLayer.name, isSegmentationLayer);
                 } else {
-                  this.onEnableColorLayer(dataLayer.name);
+                  this.onEnableLayer(dataLayer.name);
                 }
+                updatedLayerVisibility = true;
               }
 
-              // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
               oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
               const name = sanitizeName(dataLayer.name);
               this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
             }
           }
-
+          if (updatedLayerVisibility) {
+            this.recomputeFragmentShader();
+          }
           // TODO: Needed?
           app.vent.trigger("rerender");
         },
@@ -623,77 +623,84 @@ class PlaneMaterialFactory {
     window.needsRerender = true;
   }, RECOMPILATION_THROTTLE_TIME);
 
-  getLayersToRender(maximumLayerCountToRender: number): Array<string> {
+  getLayersToRender(maximumLayerCountToRender: number): [Array<string>, Array<string>] {
     // This function determines for which layers
     // the shader code should be compiled. If the GPU supports
     // all layers, we can simply return all layers here.
     // Otherwise, we prioritize layers to render by taking
     // into account (a) which layers are activated and (b) which
     // layers were least-recently activated (but are now disabled).
+    // The first array contains the color layer names and the second the segmentation layer names.
     if (maximumLayerCountToRender <= 0) {
-      return [];
+      return [[], []];
     }
 
     const colorLayerNames = getSanitizedColorLayerNames();
+    const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>
+      sanitizeName(layer.name),
+    );
 
-    if (maximumLayerCountToRender >= colorLayerNames.length) {
+    if (maximumLayerCountToRender >= colorLayerNames.length + segmentationLayerNames.length) {
       // We can simply render all available layers.
-      return colorLayerNames;
+      return [colorLayerNames, segmentationLayerNames];
     }
 
     const state = Store.getState();
-    const enabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
-      onlyColorLayers: true,
-    }).map((layer) => layer.name);
-    const disabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
+    const enabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration, {}).map(
+      ({ name, category }) => ({ name, isSegmentationLayer: category === "segmentation" }),
+    );
+    const disabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration, {
       invert: true,
-      onlyColorLayers: true,
-    }).map((layer) => layer.name);
-    // In case, this.leastRecentlyVisibleColorLayers does not contain all disabled layers
+    }).map(({ name, category }) => ({ name, isSegmentationLayer: category === "segmentation" }));
+    // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers
     // because they were already disabled on page load), append the disabled layers
     // which are not already in that array.
     // Note that the order of this array is important (earlier elements are more "recently used")
     // which is why it is important how this operation is done.
-    this.leastRecentlyVisibleColorLayers = [
-      ...this.leastRecentlyVisibleColorLayers,
-      ..._.without(disabledLayerNames, ...this.leastRecentlyVisibleColorLayers),
+    this.leastRecentlyVisibleLayers = [
+      ...this.leastRecentlyVisibleLayers,
+      ...disabledLayers.filter(
+        ({ name }) =>
+          !this.leastRecentlyVisibleLayers.some((otherLayer) => otherLayer.name === name),
+      ),
     ];
-    const names = enabledLayerNames
-      .concat(this.leastRecentlyVisibleColorLayers)
+
+    const names = enabledLayers
+      .concat(this.leastRecentlyVisibleLayers)
       .slice(0, maximumLayerCountToRender)
       .sort();
-    return names.map(sanitizeName);
+
+    const [sanitizedColorLayerNames, sanitizedSegmentationLayerNames] = _.partition(
+      names,
+      ({ isSegmentationLayer }) => !isSegmentationLayer,
+    ).map((layers) => layers.map(({ name }) => sanitizeName(name)));
+
+    return [sanitizedColorLayerNames, sanitizedSegmentationLayerNames];
   }
 
-  onDisableColorLayer = (layerName: string) => {
-    this.leastRecentlyVisibleColorLayers = _.without(
-      this.leastRecentlyVisibleColorLayers,
-      layerName,
+  onDisableLayer = (layerName: string, isSegmentationLayer: boolean) => {
+    this.leastRecentlyVisibleLayers = this.leastRecentlyVisibleLayers.filter(
+      (entry) => entry.name !== layerName,
     );
-    this.leastRecentlyVisibleColorLayers = [layerName, ...this.leastRecentlyVisibleColorLayers];
-    this.recomputeFragmentShader();
+    this.leastRecentlyVisibleLayers = [
+      { name: layerName, isSegmentationLayer },
+      ...this.leastRecentlyVisibleLayers,
+    ];
   };
 
-  onEnableColorLayer = (layerName: string) => {
-    this.leastRecentlyVisibleColorLayers = _.without(
-      this.leastRecentlyVisibleColorLayers,
-      layerName,
+  onEnableLayer = (layerName: string) => {
+    this.leastRecentlyVisibleLayers = this.leastRecentlyVisibleLayers.filter(
+      (entry) => entry.name !== layerName,
     );
-    this.recomputeFragmentShader();
   };
 
   getFragmentShader(): string {
     const { initializedGpuFactor, maximumLayerCountToRender } =
       Store.getState().temporaryConfiguration.gpuSetup;
     // Don't compile code for segmentation in arbitrary mode
-    const shouldRenderSegmentation = this.isOrthogonal && Model.hasSegmentationLayer();
-    const colorLayerNames = this.getLayersToRender(
-      maximumLayerCountToRender - (shouldRenderSegmentation ? 1 : 0),
-    );
+    const [colorLayerNames, segmentationLayerNames] =
+      this.getLayersToRender(maximumLayerCountToRender);
     const packingDegreeLookup = getPackingDegreeLookup();
-    const segmentationLayerNames = shouldRenderSegmentation
-      ? Model.getSegmentationLayers().map((layer) => sanitizeName(layer.name))
-      : [];
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
     const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);

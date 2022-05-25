@@ -156,6 +156,7 @@ class DataSetController @Inject()(userService: UserService,
         dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
         js <- listGrouped(filtered, request.identity) ?~> "dataSet.list.failed"
+        _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
       } yield {
         addRemoteOriginHeaders(Ok(Json.toJson(js)))
       }
@@ -235,6 +236,7 @@ class DataSetController @Inject()(userService: UserService,
             if (dataSet.isPublic) {
               mailchimpClient.tagUser(user, MailchimpTag.HasViewedPublishedDataset)
             }
+            userDAO.updateLastActivity(user._id)
           }
         } yield {
           Ok(Json.toJson(js))

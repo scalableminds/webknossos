@@ -30,6 +30,7 @@ import {
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
+import { V3 } from "libs/mjs";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -422,9 +423,16 @@ export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | 
 export function getLabelActionFromPreviousSlice(
   state: OxalisState,
   volumeTracing: VolumeTracing,
+  resolution: Vector3,
   dim: 0 | 1 | 2,
 ): LabelAction | undefined {
-  const position = getFlooredPosition(state.flycam);
+  // Gets the last label action which was performed on a different slice.
+  // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
+  // is done while respecting how the coordinates are clipped due to that resolution.
+  const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, resolution, dim);
+  const position = adapt(getFlooredPosition(state.flycam));
 
-  return volumeTracing.lastLabelActions.find((el) => Math.floor(el.centroid[dim]) != position[dim]);
+  return volumeTracing.lastLabelActions.find(
+    (el) => Math.floor(adapt(el.centroid)[dim]) != position[dim],
+  );
 }

@@ -35,21 +35,51 @@ export const MAXIMUM_INTERPOLATION_DEPTH = 8;
 export function getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
   const volumeTracing = getActiveSegmentationTracing(state);
-  const mostRecentLabelAction = volumeTracing != null ? getLastLabelAction(volumeTracing) : null;
+  if (!volumeTracing) {
+    // Return dummy values, since the feature should be disabled, anyway
+    return {
+      tooltipTitle: "Volume Interpolation",
+      disabledExplanation: "Only available when a volume annotation exists.",
+      isDisabled: true,
+      activeViewport: OrthoViews.PLANE_XY,
+      previousCentroid: null,
+      labeledResolution: [1, 1, 1] as Vector3,
+      labeledZoomStep: 0,
+    };
+  }
+  const mostRecentLabelAction = getLastLabelAction(volumeTracing);
 
   const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
-
   const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
-  const previousCentroid = volumeTracing
-    ? getLabelActionFromPreviousSlice(state, volumeTracing, thirdDim)?.centroid
-    : null;
+
+  const requestedZoomStep = getRequestLogZoomStep(state);
+  const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
+  const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+
+  const previousCentroid = getLabelActionFromPreviousSlice(
+    state,
+    volumeTracing,
+    labeledResolution,
+    thirdDim,
+  )?.centroid;
 
   let disabledExplanation = null;
   let tooltipAddendum = "";
 
   if (previousCentroid != null) {
     const position = getFlooredPosition(state.flycam);
-    const interpolationDepth = Math.abs(V3.floor(V3.sub(previousCentroid, position))[thirdDim]);
+    // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
+    // is done while respecting how the coordinates are clipped due to that resolution.
+    // For example, in mag 8-8-2, the z distance needs to be divided by two, since it is measured
+    // in global coordinates.
+    const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, labeledResolution, thirdDim);
+    const interpolationDepth = Math.floor(
+      Math.abs(
+        V3.sub(adapt(previousCentroid), adapt(position))[thirdDim] / labeledResolution[thirdDim],
+      ),
+    );
 
     if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
       disabledExplanation = `${explanationPrefix} last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH}).`;
@@ -72,7 +102,15 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
     ? `Interpolate current segment between last labeled and current slice (V) – ${tooltipAddendum}`
     : "Volume Interpolation was disabled for this annotation.";
   const isDisabled = !(isAllowed && isPossible);
-  return { tooltipTitle, disabledExplanation, isDisabled, activeViewport, previousCentroid };
+  return {
+    tooltipTitle,
+    disabledExplanation,
+    isDisabled,
+    activeViewport,
+    previousCentroid,
+    labeledResolution,
+    labeledZoomStep,
+  };
 }
 
 const isEqual = cwise({
@@ -200,24 +238,22 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
 
-  const { activeViewport, previousCentroid, disabledExplanation } = yield* select((state) =>
+  const {
+    activeViewport,
+    previousCentroid,
+    disabledExplanation,
+    labeledResolution,
+    labeledZoomStep,
+  } = yield* select((state) =>
     getInterpolationInfo(state, "Could not interpolate segment because"),
   );
 
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
-  const segmentationLayer = yield* call(
-    [Model, Model.getSegmentationTracingLayer],
-    volumeTracing.tracingId,
-  );
 
-  const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
-  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   const activeCellId = volumeTracing.activeCellId;
 
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
   const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
   const directionFactor = spaceDirectionOrtho[thirdDim];
 

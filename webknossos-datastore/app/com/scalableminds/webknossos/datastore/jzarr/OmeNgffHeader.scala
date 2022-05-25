@@ -3,40 +3,13 @@ package com.scalableminds.webknossos.datastore.jzarr;
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import play.api.libs.json.{Json, OFormat}
 
-//dataSets = existingMags.map(
-//mag =>
-//Map(
-//"path" -> mag,
-//"coordinateTranformations" -> List(
-//Map("type" -> "scale", "scale" -> dataSource.scale * Vec3Double(mag))
-//)
-//))
-//header = Map(
-//"multiscales" -> List(
-//Map(
-//"version" -> "0.4",
-//"name" -> dataLayerName,
-//"axes" -> List(
-//Map("name" -> "c", "type" -> "channel"),
-//Map("name" -> "x", "type" -> "space", "unit" -> "nanometer"),
-//Map("name" -> "y", "type" -> "space", "unit" -> "nanometer"),
-//Map("name" -> "z", "type" -> "space", "unit" -> "nanometer")
-//),
-//"datasets" -> dataSets
-//)
-//))
-
-case class OmeNgffCoordinateTransformation(`type`: String = "scale", // has to be type
-                                           scale: List[Double])
+case class OmeNgffCoordinateTransformation(`type`: String = "scale", scale: List[Double])
 
 object OmeNgffCoordinateTransformation {
   implicit val jsonFormat: OFormat[OmeNgffCoordinateTransformation] = Json.format[OmeNgffCoordinateTransformation]
 }
 
-case class OmeNgffDataset(
-    path: String,
-    coordinateTranformations: List[OmeNgffCoordinateTransformation],
-)
+case class OmeNgffDataset(path: String, coordinateTranformations: List[OmeNgffCoordinateTransformation])
 
 object OmeNgffDataset {
   implicit val jsonFormat: OFormat[OmeNgffDataset] = Json.format[OmeNgffDataset]

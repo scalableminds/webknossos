@@ -319,20 +319,20 @@ Groups can be freely nested inside each other.
 
 
 ### ID Mapping Files
-webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerate" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
+webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "mapping" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
 
 webKnossos supports two formats for these agglomerates:
 
 - JSON -> `mappings` directory
 - HDF5 -> `agglomerates` directory
- (JSON-format) or `agglomerates` directory (HDF5-format) :
 
+E.g.:
 ```
-great_dataset                   # Dataset root
-├─ segmentation                 # Dataset layer (^, color, segmentation)
-│  ├─ mappings                  # Magnification step (1, 2, 4, 8, 16 etc.)
-│  │  ├─ my_mapping_file.json   # one or more agglomerate files
-│  │  ├─ different_mapping.json # one agglomerate file per mapping
+my_dataset                      # Dataset root
+├─ segmentation                 # Dataset layer name (e.g., color, segmentation)
+│  ├─ mappings                  # parent directory for all mappings
+│  │  ├─ my_mapping_file.json   # one or more mapping files
+│  │  ├─ different_mapping.json # one mapping file per pre-computed mapping strategy
 ```
 
 

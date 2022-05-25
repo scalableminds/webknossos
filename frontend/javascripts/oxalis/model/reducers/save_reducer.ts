@@ -95,7 +95,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
             transactionGroupCount,
             transactionGroupIndex,
             timestamp: Date.now(),
-            authorId: "from save_reducer",
+            authorId: "DummyAnnotationUpdateAuthorId",
             actions,
             stats,
             // Redux Action Log context for debugging purposes.

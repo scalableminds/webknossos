@@ -17,7 +17,7 @@ trait UpdateAction[T <: GeneratedMessage] {
 
   def addInfo(info: Option[String]): UpdateAction[T] = this
 
-  def addAuthorId(authorId: String): UpdateAction[T] = this
+  def addAuthorId(authorId: Option[String]): UpdateAction[T] = this
 
   def transformToCompact: UpdateAction[T] = this
 

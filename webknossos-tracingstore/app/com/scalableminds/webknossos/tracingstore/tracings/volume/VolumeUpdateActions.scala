@@ -33,8 +33,8 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
   lazy val data: Array[Byte] = Base64.getDecoder.decode(base64Data)
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateBucket", actionTimestamp, actionAuthorId, Json.obj())
@@ -55,8 +55,8 @@ case class UpdateTracingVolumeAction(
     info: Option[String] = None
 ) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateTracing", actionTimestamp, actionAuthorId, Json.obj())
@@ -74,8 +74,8 @@ case class RevertToVersionVolumeAction(sourceVersion: Long,
                                        info: Option[String] = None)
     extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("revertToVersion",
@@ -95,8 +95,8 @@ case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateUserBoundingBoxes", actionTimestamp, actionAuthorId, Json.obj())
@@ -116,8 +116,8 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
                                            info: Option[String] = None)
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateUserBoundingBoxVisibility",
@@ -149,8 +149,8 @@ case class RemoveFallbackLayer(actionTimestamp: Option[Long] = None,
                                info: Option[String] = None)
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("removeFallbackLayer", actionTimestamp, actionAuthorId, Json.obj())
@@ -169,8 +169,8 @@ case class ImportVolumeData(largestSegmentId: Long,
                             info: Option[String] = None)
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("importVolumeTracing",
@@ -193,8 +193,8 @@ case class UpdateTdCamera(actionTimestamp: Option[Long] = None,
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateTdCamera", actionTimestamp, actionAuthorId, Json.obj())
@@ -217,8 +217,8 @@ case class CreateSegmentVolumeAction(id: Long,
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: UpdateAction[VolumeTracing] =
     CompactVolumeUpdateAction("createSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))
@@ -245,8 +245,8 @@ case class UpdateSegmentVolumeAction(id: Long,
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: UpdateAction[VolumeTracing] =
     CompactVolumeUpdateAction("updateSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))
@@ -273,8 +273,8 @@ case class DeleteSegmentVolumeAction(id: Long,
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: String): VolumeUpdateAction =
-    this.copy(actionAuthorId = Some(authorId))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
 
   override def transformToCompact: UpdateAction[VolumeTracing] =
     CompactVolumeUpdateAction("deleteSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))

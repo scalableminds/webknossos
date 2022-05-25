@@ -203,6 +203,11 @@ trait ValidationHelpers {
 
 }
 
+trait RequestTokenHelper {
+  protected def urlOrHeaderToken(token: Option[String], request: Request[AnyContent]): Option[String] =
+    token.orElse(request.headers.get("X-Auth-Token"))
+}
+
 trait ExtendedController
     extends JsonResults
     with BoxImplicits
@@ -214,3 +219,4 @@ trait ExtendedController
     with InjectedController
     with ValidationHelpers
     with LazyLogging
+    with RequestTokenHelper

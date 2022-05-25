@@ -40,9 +40,9 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
   const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
 
   const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
-  const previousCentroid = !volumeTracing
-    ? null
-    : getLabelActionFromPreviousSlice(state, volumeTracing, thirdDim)?.centroid;
+  const previousCentroid = volumeTracing
+    ? getLabelActionFromPreviousSlice(state, volumeTracing, thirdDim)?.centroid
+    : null;
 
   let disabledExplanation = null;
   let tooltipAddendum = "";
@@ -52,9 +52,9 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
     const interpolationDepth = Math.abs(V3.floor(V3.sub(previousCentroid, position))[thirdDim]);
 
     if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
-      disabledExplanation = `${explanationPrefix} last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH})`;
+      disabledExplanation = `${explanationPrefix} last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH}).`;
     } else if (interpolationDepth < 2) {
-      disabledExplanation = `${explanationPrefix} last labeled slice should be at least 2 slices away`;
+      disabledExplanation = `${explanationPrefix} last labeled slice should be at least 2 slices away.`;
     } else {
       tooltipAddendum = `Labels ${interpolationDepth - 1} ${pluralize(
         "slice",

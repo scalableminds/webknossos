@@ -70,7 +70,13 @@ const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 6;
  *
  */
 const isosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
-const cubeSize: Vector3 = [256, 256, 256];
+function cubeSizeInMag1(): Vector3 {
+  // @ts-ignore
+  return window.__cubeSizeInMag1 != null
+    ? // @ts-ignore
+      window.__cubeSizeInMag1
+    : [128, 128, 128];
+}
 const modifiedCells: Set<number> = new Set();
 export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
   const dataView = new DataView(buffer);
@@ -106,22 +112,17 @@ function removeMapForSegment(layerName: string, segmentId: number): void {
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
   const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
-    [...cubeSize, zoomStep],
+    [...cubeSizeInMag1(), 0],
     resolutionInfo,
-    0,
+    zoomStep,
   );
   // Drop the last element of the Vector4;
   return [x, y, z];
 }
 
-function clipPositionToCubeBoundary(
-  position: Vector3,
-  zoomStep: number,
-  resolutionInfo: ResolutionInfo,
-): Vector3 {
-  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
-  const currentCube = Utils.map3((el, idx) => Math.floor(el / zoomedCubeSize[idx]), position);
-  const clippedPosition = Utils.map3((el, idx) => el * zoomedCubeSize[idx], currentCube);
+function clipPositionToCubeBoundary(position: Vector3): Vector3 {
+  const currentCube = Utils.map3((el, idx) => Math.floor(el / cubeSizeInMag1()[idx]), position);
+  const clippedPosition = Utils.map3((el, idx) => el * cubeSizeInMag1()[idx], currentCube);
   return clippedPosition;
 }
 
@@ -135,18 +136,12 @@ const NEIGHBOR_LOOKUP = [
   [1, 0, 0],
 ];
 
-function getNeighborPosition(
-  clippedPosition: Vector3,
-  neighborId: number,
-  zoomStep: number,
-  resolutionInfo: ResolutionInfo,
-): Vector3 {
-  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
+function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
   const neighboringPosition = [
-    clippedPosition[0] + neighborMultiplier[0] * zoomedCubeSize[0],
-    clippedPosition[1] + neighborMultiplier[1] * zoomedCubeSize[1],
-    clippedPosition[2] + neighborMultiplier[2] * zoomedCubeSize[2],
+    clippedPosition[0] + neighborMultiplier[0] * cubeSizeInMag1()[0],
+    clippedPosition[1] + neighborMultiplier[1] * cubeSizeInMag1()[1],
+    clippedPosition[2] + neighborMultiplier[2] * cubeSizeInMag1()[2],
   ];
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return neighboringPosition;
@@ -271,7 +266,7 @@ function* loadIsosurfaceWithNeighbors(
 ): Saga<void> {
   let isInitialRequest = true;
   const { mappingName, mappingType } = isosurfaceMappingInfo;
-  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
+  const clippedPosition = clipPositionToCubeBoundary(position);
   let positionsToRequest = [clippedPosition];
   const hasIsosurface = yield* select(
     (state) =>
@@ -394,7 +389,7 @@ function* maybeLoadIsosurface(
           mag,
           segmentId,
           subsamplingStrides,
-          cubeSize,
+          cubeSize: getZoomedCubeSize(zoomStep, resolutionInfo),
           scale,
           ...isosurfaceMappingInfo,
         },
@@ -410,9 +405,7 @@ function* maybeLoadIsosurface(
         segmentId,
         isosurfaceMappingInfo.passive || false,
       );
-      return neighbors.map((neighbor) =>
-        getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
-      );
+      return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
       retryCount++;
       // @ts-ignore

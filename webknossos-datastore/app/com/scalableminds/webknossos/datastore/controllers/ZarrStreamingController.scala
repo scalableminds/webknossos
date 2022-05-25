@@ -1,23 +1,20 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Vec3Int
-
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{
-  Cuboid,
-  DataServiceDataRequest,
-  DataServiceRequestSettings
-}
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.services._
 import io.swagger.annotations._
 import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.libs.json.JsonConfiguration.Aux
+import play.api.libs.json.{Json, JsonConfiguration, OptionHandlers}
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -109,6 +106,7 @@ class ZarrStreamingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       getTokenFromHeader(token, request)) {
+//      implicit val config: Aux[Json.MacroOptions] = JsonConfiguration(optionHandlers = OptionHandlers.WritesNull)
       for {
         (_, dataLayer) <- dataSourceRepository
           .getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages("dataSource.notFound") ~> 404
@@ -118,25 +116,44 @@ class ZarrStreamingController @Inject()(
         (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
         // data request method always decompresses before sending
         compressor = None
+
+        shape = Array(
+          channels,
+          // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+          (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / magParsed.x,
+          (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / magParsed.y,
+          (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / magParsed.z
+        )
+
+        chunks = Array(channels, cubeLength, cubeLength, cubeLength)
+
+        zarrHeader = ZarrHeader(zarr_format = 2,
+                                shape = shape,
+                                chunks = chunks,
+                                compressor = compressor,
+                                dtype = dtype,
+                                order = ArrayOrder.F)
+        _ = println(zarrHeader)
       } yield
-        Ok(
-          Json.obj(
-            "dtype" -> dtype,
-            "fill_value" -> 0,
-            "zarr_format" -> 2,
-            "order" -> "F",
-            "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
-            "compressor" -> compressor,
-            "filters" -> None,
-            "shape" -> List(
-              channels,
-              // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
-              (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / magParsed.x,
-              (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / magParsed.y,
-              (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / magParsed.z
-            ),
-            "dimension_seperator" -> "."
-          ))
+        Ok(Json.toJson(zarrHeader))
+//        Ok(
+//          Json.obj(
+//            "dtype" -> dtype,
+//            "fill_value" -> 0,
+//            "zarr_format" -> 2,
+//            "order" -> "F",
+//            "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
+//            "compressor" -> compressor,
+//            "filters" -> None,
+//            "shape" -> List(
+//              channels,
+//              // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+//              (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / magParsed.x,
+//              (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / magParsed.y,
+//              (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / magParsed.z
+//            ),
+//            "dimension_seperator" -> "."
+//          ))
     }
   }
 
@@ -165,7 +182,7 @@ class ZarrStreamingController @Inject()(
             Map(
               "path" -> mag,
               "coordinateTranformations" -> List(
-                Map("type" -> "scale", "scale" -> dataSource.scale * mag)
+                Map("type" -> "scale", "scale" -> dataSource.scale * Vec3Double(mag))
               )
           ))
         header = Map(
@@ -184,8 +201,8 @@ class ZarrStreamingController @Inject()(
           ))
       } yield
         Ok(
-          Json.obj(
-            header
+          Json.obj("hello" -> "world"
+//            Json.toJson(existingMags)
           ))
     }
   }

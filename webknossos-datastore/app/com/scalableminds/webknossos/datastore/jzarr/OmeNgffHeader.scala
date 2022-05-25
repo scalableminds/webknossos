@@ -1,24 +1,63 @@
-package com.scalableminds.webknossos.datastore.jzarr
+package com.scalableminds.webknossos.datastore.jzarr;
 
+import java.io.IOException
 import java.nio.ByteOrder
-import com.scalableminds.webknossos.datastore.jzarr.ArrayOrder.ArrayOrder
-import com.scalableminds.webknossos.datastore.jzarr.BytesConverter.bytesPerElementFor
-import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
-import net.liftweb.common.Box.tryo
-import play.api.libs.json._
+import java.nio.file.Path
+import java.util
+import akka.http.caching.LfuCache
+import akka.http.caching.scaladsl.{Cache, CachingSettings}
+import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.util.Helpers.tryo
+import play.api.libs.json.{Format, JsError, JsNumber, JsResult, JsSuccess, JsValue, Json, OFormat}
+import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
-case class ZarrHeader(
-    zarr_format: Int, // format version number
-    shape: Array[Int], // shape of the entire array
-    chunks: Array[Int], // shape of each chunk
-    compressor: Option[Map[String, Either[String, Int]]] = None, // specifies compressor to use, with parameters
-    filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
-    dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
-    dtype: String,
-    fill_value: Either[String, Number] = Right(0),
-    order: ArrayOrder
-) {
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.io.Source
+
+//dataSets = existingMags.map(
+//mag =>
+//Map(
+//"path" -> mag,
+//"coordinateTranformations" -> List(
+//Map("type" -> "scale", "scale" -> dataSource.scale * Vec3Double(mag))
+//)
+//))
+//header = Map(
+//"multiscales" -> List(
+//Map(
+//"version" -> "0.4",
+//"name" -> dataLayerName,
+//"axes" -> List(
+//Map("name" -> "c", "type" -> "channel"),
+//Map("name" -> "x", "type" -> "space", "unit" -> "nanometer"),
+//Map("name" -> "y", "type" -> "space", "unit" -> "nanometer"),
+//Map("name" -> "z", "type" -> "space", "unit" -> "nanometer")
+//),
+//"datasets" -> dataSets
+//)
+//))
+
+case class OmeNgffCoordinateTransformation(
+    type: String,
+    scale: Optional[Vec3Double]) {}
+
+case class OmeNgffDataset(
+    path: String,
+    coordinateTranformations: List[OmeNgffCoordinateTransformation],
+                         ) {}
+
+case class OmeNgffHeader(
+                       zarr_format: Int, // format version number
+                       shape: Array[Int], // shape of the entire array
+                       chunks: Array[Int], // shape of each chunk
+                       compressor: Option[Map[String, Either[String, Int]]] = None, // specifies compressor to use, with parameters
+                       filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
+                       dtype: String,
+                       fill_value: Either[String, Number] = Right(0),
+                     ) {
 
   lazy val byteOrder: ByteOrder =
     if (dtype.startsWith(">")) ByteOrder.BIG_ENDIAN
@@ -29,25 +68,15 @@ case class ZarrHeader(
   lazy val compressorImpl: Compressor =
     compressor.map(CompressorFactory.create).getOrElse(CompressorFactory.nullCompressor)
 
-  lazy val dataType: ZarrDataType =
-    ZarrDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
-
-  lazy val bytesPerChunk: Int = chunks.toList.product * bytesPerElementFor(dataType)
-
   lazy val fillValueNumber: Number =
     fill_value match {
       case Right(n) => n
       case Left(_)  => 0 // parsing fill value from string not currently supported
     }
 
-  lazy val chunkShapeOrdered: Array[Int] =
-    if (order == ArrayOrder.C) {
-      chunks
-    } else chunks.reverse
-
 }
 
-object ZarrHeader {
+object OmeNgffHeader {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
   implicit object NumberFormat extends Format[Number] {

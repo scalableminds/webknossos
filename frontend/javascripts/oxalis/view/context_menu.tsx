@@ -18,8 +18,14 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import { AnnotationTool, Vector3, OrthoView, OrthoViews } from "oxalis/constants";
-import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
+import {
+  AnnotationTool,
+  Vector3,
+  OrthoView,
+  OrthoViews,
+  AnnotationToolEnum,
+  VolumeTools,
+} from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
   loadAdHocMeshAction,

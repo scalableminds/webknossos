@@ -478,6 +478,13 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         viewConfigurationStr.map(sanitize))} where _id = ${id.id}")
     } yield ()
   }
+
+  def addContributor(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(
+        sqlu"insert into webknossos.annotation_contributors (_annotation, _user) values($id, $userId) on conflict do nothing")
+    } yield ()
 }
 
 class SharedAnnotationsDAO @Inject()(annotationDAO: AnnotationDAO, sqlClient: SQLClient)(implicit ec: ExecutionContext)

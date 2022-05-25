@@ -790,6 +790,8 @@ class AnnotationService @Inject()(
       meshesJs <- Fox.serialCombined(meshes)(meshService.publicWrites)
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+      contributors <- userDAO.findContributorsForAnnotation(annotation._id)
+      contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, requestingUser, Some(c)))
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -814,17 +816,20 @@ class AnnotationService @Inject()(
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "user" -> userJson,
         "meshes" -> meshesJs,
-        "othersMayEdit" -> annotation.othersMayEdit
+        "othersMayEdit" -> annotation.othersMayEdit,
+        "contributors" -> contributorsJs
       )
     }
   }
 
-  private def userJsonForAnnotation(userId: ObjectId, requestingUser: Option[User]): Fox[Option[JsObject]] =
+  private def userJsonForAnnotation(userId: ObjectId,
+                                    requestingUser: Option[User],
+                                    userOpt: Option[User] = None): Fox[Option[JsObject]] =
     if (userId == ObjectId.dummyId) {
       Fox.successful(None)
     } else {
       for {
-        user <- userService.findOneById(userId, useCache = true)(GlobalAccessContext)
+        user <- Fox.fillOption(userOpt)(userService.findOneById(userId, useCache = true)(GlobalAccessContext))
         isTeamManagerOrAdminOfOwner <- Fox.runOptional(requestingUser)(requester =>
           userService.isTeamManagerOrAdminOf(requester, user))
         userJson <- if (isTeamManagerOrAdminOfOwner.getOrElse(false)) userService.compactWrites(user).map(Some(_))

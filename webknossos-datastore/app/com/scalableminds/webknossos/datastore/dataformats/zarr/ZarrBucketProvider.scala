@@ -20,7 +20,7 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
 
   def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val shape = Vec3Int.full(bucket.bucketLength)
-    val offset = Vec3Int(bucket.globalXInMag, bucket.globalYInMag, bucket.globalZInMag)
+    val offset = Vec3Int(bucket.voxelXInMag, bucket.voxelYInMag, bucket.voxelZInMag)
     zarrArray.readBytesXYZ(shape, offset).recover {
       case t: Throwable => logError(t); return Failure(t.getMessage, Full(t), Empty)
     }

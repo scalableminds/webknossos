@@ -190,7 +190,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
       math.ceil(cuboid.depth / subsamplingStrides.z).toInt
     )
 
-    val offset = Vec3Double(cuboid.topLeft.x, cuboid.topLeft.y, cuboid.topLeft.z)
+    val offset = Vec3Double(cuboid.topLeft.voxelXInMag, cuboid.topLeft.voxelYInMag, cuboid.topLeft.voxelZInMag)
     val scale = Vec3Double(cuboid.topLeft.mag) * request.scale
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
@@ -203,6 +203,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
       agglomerateMappedData = applyAgglomerate(data)
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
+      agglomerateIds: Set[T] = mappedData.toSet
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
       neighbors = findNeighbors(mappedData, dataDimensions, mappedSegmentId)
       afterPreprocessing = System.currentTimeMillis()
@@ -229,7 +230,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
       }
       val afterMarchingCubes = System.currentTimeMillis()
       logger.info(
-        s"Isosurface generation timing - loading: ${afterLoading - before} ms, preprocessing: ${afterPreprocessing - afterLoading}, marchingCubes: ${afterMarchingCubes - afterPreprocessing}")
+        s"Isosurface generation timing - loading: ${afterLoading - before} ms, preprocessing: ${afterPreprocessing - afterLoading}, marchingCubes: ${afterMarchingCubes - afterPreprocessing}. ${agglomerateIds.size} agglomerates in data, ${typedData.length} voxels.")
       (vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray, neighbors)
     }
   }

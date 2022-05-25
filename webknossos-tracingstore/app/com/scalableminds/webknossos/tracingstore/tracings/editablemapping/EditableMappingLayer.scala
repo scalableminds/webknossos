@@ -25,7 +25,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       editableMapping <- layer.editableMappingService.get(editableMappingId, remoteFallbackLayer, layer.token)
       afterGet = System.currentTimeMillis()
       dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
-        position = Vec3Int(bucket.topLeft.x, bucket.topLeft.y, bucket.topLeft.z),
+        position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
         cubeSize = layer.lengthOfUnderlyingCubes(bucket.mag),
         fourBit = None,
@@ -50,8 +50,11 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
                                                                       relevantMapping,
                                                                       layer.elementClass)
       afterMapData = System.currentTimeMillis()
+      /*
+      _ = logger.info(s"load bucket $bucket")
       _ = logger.info(
         s"load bucket timing: getMapping: ${afterGet - beforeGet} ms, getUnmapped: ${afterGetUnmapped - afterGet} ms, collectSegments: ${afterCollectSegmentIds - afterGet} ms, combine: ${afterCombineMapping - afterCollectSegmentIds}, mapData: ${afterMapData - afterCombineMapping}. Total ${afterMapData - beforeGet}. ${mappedData.length} bytes, ${segmentIds.size} segments")
+     */
     } yield mappedData
   }
 }

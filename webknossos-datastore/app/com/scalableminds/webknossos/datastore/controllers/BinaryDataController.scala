@@ -119,7 +119,7 @@ class BinaryDataController @Inject()(
         magParsedOpt <- Fox.runOptional(mag)(Vec3Int.fromMagLiteral(_).toFox)
         magParsed <- magParsedOpt.orElse(magFromZoomStep).toFox ?~> "No mag supplied"
         request = DataRequest(
-          new VoxelPosition(x, y, z, magParsed),
+          VoxelPosition(x, y, z, magParsed),
           width,
           height,
           depth,
@@ -150,10 +150,10 @@ class BinaryDataController @Inject()(
                                                                                   dataSetName,
                                                                                   dataLayerName) ~> 404
         request = DataRequest(
-          new VoxelPosition(x * cubeSize * resolution,
-                            y * cubeSize * resolution,
-                            z * cubeSize * resolution,
-                            Vec3Int(resolution, resolution, resolution)),
+          VoxelPosition(x * cubeSize * resolution,
+                        y * cubeSize * resolution,
+                        z * cubeSize * resolution,
+                        Vec3Int(resolution, resolution, resolution)),
           cubeSize,
           cubeSize,
           cubeSize

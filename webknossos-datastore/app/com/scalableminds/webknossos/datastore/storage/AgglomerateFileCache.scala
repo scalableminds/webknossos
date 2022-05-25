@@ -101,9 +101,9 @@ case class BoundingBoxFinder(
     zCoordinates: util.TreeSet[Long],
     minBoundingBox: (Long, Long, Long)) {
   def findInitialBoundingBox(cuboid: Cuboid): (Long, Long, Long) = {
-    val x = Option(xCoordinates.floor(cuboid.topLeft.x))
-    val y = Option(yCoordinates.floor(cuboid.topLeft.y))
-    val z = Option(zCoordinates.floor(cuboid.topLeft.z))
+    val x = Option(xCoordinates.floor(cuboid.topLeft.voxelXInMag))
+    val y = Option(yCoordinates.floor(cuboid.topLeft.voxelYInMag))
+    val z = Option(zCoordinates.floor(cuboid.topLeft.voxelZInMag))
     (x.getOrElse(minBoundingBox._1), y.getOrElse(minBoundingBox._2), z.getOrElse(minBoundingBox._3)) // if the request is outside the layer box, use the minimal bb as start point
   }
 }
@@ -121,10 +121,12 @@ class BoundingBoxCache(
   private def getGlobalCuboid(cuboid: Cuboid): Cuboid = {
     val res = cuboid.resolution
     val tl = cuboid.topLeft
-    Cuboid(new VoxelPosition(tl.x * res.x, tl.y * res.y, tl.z * res.z, Vec3Int(1, 1, 1)),
-           cuboid.width * res.x,
-           cuboid.height * res.y,
-           cuboid.depth * res.z)
+    Cuboid(
+      VoxelPosition(tl.voxelXInMag * res.x, tl.voxelYInMag * res.y, tl.voxelZInMag * res.z, Vec3Int(1, 1, 1)),
+      cuboid.width * res.x,
+      cuboid.height * res.y,
+      cuboid.depth * res.z
+    )
   }
 
   // get the segment ID range for one cuboid
@@ -149,11 +151,11 @@ class BoundingBoxCache(
     var z = initialBoundingBox._3
 
     // step through each bb, but save starting coordinates to reset iteration once the outer bound is reached
-    while (x < requestedCuboid.x && x < dataLayerBox.x) {
+    while (x < requestedCuboid.voxelXInMag && x < dataLayerBox.x) {
       val nextBBinX = (x + currDimensions._1, y, z)
-      while (y < requestedCuboid.y && y < dataLayerBox.y) {
+      while (y < requestedCuboid.voxelYInMag && y < dataLayerBox.y) {
         val nextBBinY = (x, y + currDimensions._2, z)
-        while (z < requestedCuboid.z && z < dataLayerBox.z) {
+        while (z < requestedCuboid.voxelZInMag && z < dataLayerBox.z) {
           // get cached values for current bb and update the reader range by extending if necessary
           cache.get((x, y, z)).foreach { value =>
             range = (min(range._1, value.idRange._1), max(range._2, value.idRange._2))

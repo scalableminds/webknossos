@@ -366,7 +366,7 @@ class VolumeTracingService @Inject()(
         val bucket = bucketStream.next()
         val bucketPos = bucket._1
         getPositionOfNonZeroData(bucket._2,
-                                 Vec3Int(bucketPos.globalX, bucketPos.globalY, bucketPos.globalZ),
+                                 Vec3Int(bucketPos.voxelMag1X, bucketPos.voxelMag1Y, bucketPos.voxelMag1Z),
                                  volumeLayer.bytesPerElement)
       } else None
     } yield bucketPosOpt

@@ -132,7 +132,7 @@ trait DataLayer extends DataLayerLike {
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 
   def doesContainBucket(bucket: BucketPosition): Boolean =
-    boundingBox.intersects(bucket.toHighestResBoundingBox)
+    boundingBox.intersects(bucket.toMag1BoundingBox)
 
   lazy val bytesPerElement: Int =
     ElementClass.bytesPerElement(elementClass)

@@ -28,11 +28,11 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     val minBucket = topLeft.toBucket
     var bucketList: List[BucketPosition] = Nil
     var bucket = minBucket
-    while (bucket.topLeft.x < bottomRight.x) {
+    while (bucket.topLeft.voxelXInMag < bottomRight.voxelXInMag) {
       val prevX = bucket
-      while (bucket.topLeft.y < bottomRight.y) {
+      while (bucket.topLeft.voxelYInMag < bottomRight.voxelYInMag) {
         val prevY = bucket
-        while (bucket.topLeft.z < bottomRight.z) {
+        while (bucket.topLeft.voxelZInMag < bottomRight.voxelZInMag) {
           bucketList ::= bucket
           bucket = bucket.nextBucketInZ
         }

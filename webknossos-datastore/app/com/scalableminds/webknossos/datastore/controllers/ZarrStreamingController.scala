@@ -2,10 +2,9 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-
-import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -40,7 +39,7 @@ class ZarrStreamingController @Inject()(
                                dataSetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        getTokenFromHeader(token, request)) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
             "dataSource.notFound") ~> 404
@@ -63,7 +62,7 @@ class ZarrStreamingController @Inject()(
                               dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        getTokenFromHeader(token, request)) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
             "dataSource.notFound") ~> 404
@@ -87,7 +86,7 @@ class ZarrStreamingController @Inject()(
                                  mag: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        getTokenFromHeader(token, request)) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ~> 404
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
@@ -108,14 +107,14 @@ class ZarrStreamingController @Inject()(
   def zArray(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String, mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      getTokenFromHeader(token, request)) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (_, dataLayer) <- dataSourceRepository
           .getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages("dataSource.notFound") ~> 404
         magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
         _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
         cubeLength = DataLayer.bucketLength
-        (channels, dtype) = zarrDtypeFromElementClass(dataLayer.elementClass)
+        (channels, dtype) = ElementClass.toChannelAndZarrString(dataLayer.elementClass)
         // data request method always decompresses before sending
         compressor = None
       } yield
@@ -152,7 +151,7 @@ class ZarrStreamingController @Inject()(
       cxyz: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      getTokenFromHeader(token, request)) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
@@ -182,18 +181,6 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  private def parseDotCoordinates(
-      cxyz: String,
-  ): Fox[(Int, Int, Int, Int)] = {
-    val singleRx = "\\s*([0-9]+).([0-9]+).([0-9]+).([0-9]+)\\s*".r
-
-    cxyz match {
-      case singleRx(c, x, y, z) =>
-        Fox.successful(Integer.parseInt(c), Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
-      case _ => Fox.failure("Coordinates not valid")
-    }
-  }
-
   /**
     * Zarr-specific datasource-properties.json file for a datasource. Note that the result here is not necessarily equal to the file used in the underlying storage.
     */
@@ -203,7 +190,7 @@ class ZarrStreamingController @Inject()(
       dataSetName: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      getTokenFromHeader(token, request)) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ~> 404
         dataLayers = dataSource.dataLayers
@@ -259,25 +246,8 @@ class ZarrStreamingController @Inject()(
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      getTokenFromHeader(token, request)) {
+                                      urlOrHeaderToken(token, request)) {
       Future(Ok(Json.obj("zarr_format" -> 2)))
     }
-  }
-
-  private def getTokenFromHeader(token: Option[String], request: Request[AnyContent]) =
-    token.orElse(request.headers.get("X-Auth-Token"))
-
-  private def zarrDtypeFromElementClass(elementClass: ElementClass.Value): (Int, String) = elementClass match {
-    case ElementClass.uint8  => (1, "|u1")
-    case ElementClass.uint16 => (1, "<u2")
-    case ElementClass.uint24 => (3, "|u1")
-    case ElementClass.uint32 => (1, "<u4")
-    case ElementClass.uint64 => (1, "<u8")
-    case ElementClass.float  => (1, "<f4")
-    case ElementClass.double => (1, "<f8")
-    case ElementClass.int8   => (1, "|i1")
-    case ElementClass.int16  => (1, "<i2")
-    case ElementClass.int32  => (1, "<i4")
-    case ElementClass.int64  => (1, "<i8")
   }
 }

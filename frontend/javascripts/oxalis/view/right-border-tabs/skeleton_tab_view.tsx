@@ -537,7 +537,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       return;
     }
 
-    await this.setState({
+    this.setState({
       isDownloading: true,
     });
     // Wait 1 second for the Modal to render
@@ -685,7 +685,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       ? "sortByName"
       : "sortByTime";
     return (
-      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       <Menu selectedKeys={[activeMenuKey]} onClick={this.handleDropdownClick}>
         <Menu.Item key="sortByName">by name</Menu.Item>
         <Menu.Item key="sortByTime">by creation time</Menu.Item>

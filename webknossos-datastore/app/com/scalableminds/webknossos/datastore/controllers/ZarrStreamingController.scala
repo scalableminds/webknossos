@@ -6,9 +6,13 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, ZarrHeader}
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.models.requests.{
+  Cuboid,
+  DataServiceDataRequest,
+  DataServiceRequestSettings
+}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.services._
 import io.swagger.annotations._
@@ -106,7 +110,6 @@ class ZarrStreamingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       getTokenFromHeader(token, request)) {
-//      implicit val config: Aux[Json.MacroOptions] = JsonConfiguration(optionHandlers = OptionHandlers.WritesNull)
       for {
         (_, dataLayer) <- dataSourceRepository
           .getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages("dataSource.notFound") ~> 404
@@ -133,27 +136,20 @@ class ZarrStreamingController @Inject()(
                                 compressor = compressor,
                                 dtype = dtype,
                                 order = ArrayOrder.F)
-        _ = println(zarrHeader)
       } yield
-        Ok(Json.toJson(zarrHeader))
-//        Ok(
-//          Json.obj(
-//            "dtype" -> dtype,
-//            "fill_value" -> 0,
-//            "zarr_format" -> 2,
-//            "order" -> "F",
-//            "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
-//            "compressor" -> compressor,
-//            "filters" -> None,
-//            "shape" -> List(
-//              channels,
-//              // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
-//              (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / magParsed.x,
-//              (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / magParsed.y,
-//              (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / magParsed.z
-//            ),
-//            "dimension_seperator" -> "."
-//          ))
+        Ok(
+          // Json.toJson doesn't work on zarrHeader at the moment, because it doesn't write None values in Options
+          Json.obj(
+            "dtype" -> zarrHeader.dtype,
+            "fill_value" -> 0,
+            "zarr_format" -> zarrHeader.zarr_format,
+            "order" -> zarrHeader.order,
+            "chunks" -> zarrHeader.chunks,
+            "compressor" -> compressor,
+            "filters" -> None,
+            "shape" -> zarrHeader.shape,
+            "dimension_seperator" -> zarrHeader.dimension_separator
+          ))
     }
   }
 
@@ -177,33 +173,10 @@ class ZarrStreamingController @Inject()(
           "dataSource.notFound") ~> 404
         existingMags = dataLayer.resolutions
 
-        dataSets = existingMags.map(
-          mag =>
-            Map(
-              "path" -> mag,
-              "coordinateTranformations" -> List(
-                Map("type" -> "scale", "scale" -> dataSource.scale * Vec3Double(mag))
-              )
-          ))
-        header = Map(
-          "multiscales" -> List(
-            Map(
-              "version" -> "0.4",
-              "name" -> dataLayerName,
-              "axes" -> List(
-                Map("name" -> "c", "type" -> "channel"),
-                Map("name" -> "x", "type" -> "space", "unit" -> "nanometer"),
-                Map("name" -> "y", "type" -> "space", "unit" -> "nanometer"),
-                Map("name" -> "z", "type" -> "space", "unit" -> "nanometer")
-              ),
-              "datasets" -> dataSets
-            )
-          ))
-      } yield
-        Ok(
-          Json.obj("hello" -> "world"
-//            Json.toJson(existingMags)
-          ))
+        omeNgffHeader = OmeNgffHeader.createFromDataLayerName(dataLayerName,
+                                                              dataSourceScale = dataSource.scale,
+                                                              mags = existingMags)
+      } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
 

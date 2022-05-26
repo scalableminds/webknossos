@@ -9,7 +9,7 @@ object OmeNgffCoordinateTransformation {
   implicit val jsonFormat: OFormat[OmeNgffCoordinateTransformation] = Json.format[OmeNgffCoordinateTransformation]
 }
 
-case class OmeNgffDataset(path: String, coordinateTranformations: List[OmeNgffCoordinateTransformation])
+case class OmeNgffDataset(path: String, coordinateTransformations: List[OmeNgffCoordinateTransformation])
 
 object OmeNgffDataset {
   implicit val jsonFormat: OFormat[OmeNgffDataset] = Json.format[OmeNgffDataset]

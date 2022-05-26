@@ -312,7 +312,7 @@ class VolumeTracingController @Inject()(
   }
 
   /**
-    * Handles a request for .zattrs file for a wkw dataset via a HTTP GET.
+    * Handles a request for .zattrs file for a Volume Tracing via a HTTP GET.
     * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
     * Used by zarr-streaming.
     */

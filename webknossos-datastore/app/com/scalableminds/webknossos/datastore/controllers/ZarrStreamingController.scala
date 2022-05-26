@@ -175,8 +175,8 @@ class ZarrStreamingController @Inject()(
         existingMags = dataLayer.resolutions
 
         omeNgffHeader = OmeNgffHeader.fromDataLayerName(dataLayerName,
-                                                              dataSourceScale = dataSource.scale,
-                                                              mags = existingMags)
+                                                        dataSourceScale = dataSource.scale,
+                                                        mags = existingMags)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }

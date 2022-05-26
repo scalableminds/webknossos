@@ -9,11 +9,7 @@ import {
   OrthoViews,
   OverwriteModeEnum,
 } from "oxalis/constants";
-import {
-  __setupOxalis,
-  createBucketResponseFunction,
-  getFirstVolumeTracingOrFail,
-} from "test/helpers/apiHelpers";
+import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -28,7 +24,6 @@ const {
   setActiveCellAction,
   addToLayerAction,
   dispatchFloodfillAsync,
-  copySegmentationLayerAction,
   startEditingAction,
   finishEditingAction,
   setContourTracingModeAction,
@@ -324,18 +319,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
   t.context.api.data.reloadAllBuckets();
   await assertInitialState();
 });
-test.serial(
-  "Executing copySegmentationLayer with a new segment id should update the maxCellId",
-  async (t) => {
-    const newCellId = 13371338;
-    Store.dispatch(setActiveCellAction(newCellId));
-    Store.dispatch(copySegmentationLayerAction());
-    // maxCellId should be updated after copySegmentationLayer
-    getFirstVolumeTracingOrFail(Store.getState().tracing).map((tracing) => {
-      t.is(tracing.maxCellId, newCellId);
-    });
-  },
-);
+
 test.serial("Brushing/Tracing with a new segment id should update the bucket data", async (t) => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,

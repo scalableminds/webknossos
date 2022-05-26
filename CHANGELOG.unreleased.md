@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added segmentation layers to the functionality catching the case that more layers are active that the hardware allows. This prevents rendering issue with more than one segmentation layer and multiple color layers. [#6211](https://github.com/scalableminds/webknossos/pull/6211)
 - Selecting "Download" from the tracing actions now opens a new modal, which lets the user select data for download, start TIFF export jobs or copy code snippets to get started quickly with the webKonossos Python Client. [#6171](https://github.com/scalableminds/webknossos/pull/6171)
 - Adding a New Volume Layer via the left border tab now gives the option to restrict resolutions for the new layer. [#6229](https://github.com/scalableminds/webknossos/pull/6229)
+- Added support for segment interpolation with depths > 2. Also, the feature was changed to work on an explicit trigger (either via the button in the toolbar or via the shortcut V). When triggering the interpolation, the current segment id is interpolated between the current slice and the least-recently annotated slice. [#6235](https://github.com/scalableminds/webknossos/pull/6235)
 - Added Route to get OME-NGFF Headers for a data layer (.zattrs file) following the corresponding [spec](https://ngff.openmicroscopy.org/latest/). [#6226](https://github.com/scalableminds/webknossos/pull/6226)
 
 ### Changed
@@ -36,5 +37,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug which could cause a segmentation layer's "ID mapping" dropdown to disappear. [#6215](https://github.com/scalableminds/webknossos/pull/6215)
 
 ### Removed
+- Removed the feature to copy a segment from the previous/next slice with the V shortcut. Use the new volume interpolation feature instead (also bound to V and available via the toolbar). [#6235](https://github.com/scalableminds/webknossos/pull/6235)
 
 ### Breaking Changes

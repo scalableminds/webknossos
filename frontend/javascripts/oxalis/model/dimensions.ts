@@ -1,5 +1,5 @@
-import type { OrthoView, Vector3 } from "oxalis/constants";
-import { OrthoViews } from "oxalis/constants";
+import { OrthoView, OrthoViews, Vector3 } from "oxalis/constants";
+
 export type DimensionIndices = 0 | 1 | 2;
 export type DimensionMap = [DimensionIndices, DimensionIndices, DimensionIndices];
 // This is a class with static methods dealing with dimensions and
@@ -66,6 +66,22 @@ const Dimensions = {
 
       default:
         throw new Error(`Unrecognized plane ID: ${planeID}`);
+    }
+  },
+
+  dimensionNameForIndex(dim: DimensionIndices): string {
+    switch (dim) {
+      case 2:
+        return "Z";
+
+      case 0:
+        return "X";
+
+      case 1:
+        return "Y";
+
+      default:
+        throw new Error(`Unrecognized dimension: ${dim}`);
     }
   },
 

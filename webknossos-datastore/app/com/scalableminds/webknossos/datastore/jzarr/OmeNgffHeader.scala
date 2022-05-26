@@ -40,9 +40,9 @@ object OmeNgffOneHeader {
 case class OmeNgffHeader(multiscales: List[OmeNgffOneHeader])
 
 object OmeNgffHeader {
-  def createFromDataLayerName(dataLayerName: String,
-                              dataSourceScale: Vec3Double,
-                              mags: List[Vec3Int]): OmeNgffHeader = {
+  def fromDataLayerName(dataLayerName: String,
+                        dataSourceScale: Vec3Double,
+                        mags: List[Vec3Int]): OmeNgffHeader = {
     val datasets = mags.map(
       mag =>
         OmeNgffDataset(

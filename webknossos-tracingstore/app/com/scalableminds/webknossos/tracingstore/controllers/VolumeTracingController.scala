@@ -7,15 +7,16 @@ import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
@@ -270,24 +271,36 @@ class VolumeTracingController @Inject()(
           (channels, dtype) = ElementClass.toChannelAndZarrString(tracing.elementClass)
           // data request method always decompresses before sending
           compressor = None
+
+          shape = Array(
+            channels,
+            // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+            (tracing.boundingBox.width + tracing.boundingBox.topLeft.x) / magParsed.x,
+            (tracing.boundingBox.height + tracing.boundingBox.topLeft.y) / magParsed.y,
+            (tracing.boundingBox.depth + tracing.boundingBox.topLeft.z) / magParsed.z
+          )
+
+          chunks = Array(channels, cubeLength, cubeLength, cubeLength)
+
+          zarrHeader = ZarrHeader(zarr_format = 2,
+                                  shape = shape,
+                                  chunks = chunks,
+                                  compressor = compressor,
+                                  dtype = dtype,
+                                  order = ArrayOrder.F)
         } yield
           Ok(
+            // Json.toJson doesn't work on zarrHeader at the moment, because it doesn't write None values in Options
             Json.obj(
-              "dtype" -> dtype,
+              "dtype" -> zarrHeader.dtype,
               "fill_value" -> 0,
-              "zarr_format" -> 2,
-              "order" -> "F",
-              "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
+              "zarr_format" -> zarrHeader.zarr_format,
+              "order" -> zarrHeader.order,
+              "chunks" -> zarrHeader.chunks,
               "compressor" -> compressor,
               "filters" -> None,
-              "shape" -> List(
-                channels,
-                // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
-                (tracing.boundingBox.width + tracing.boundingBox.topLeft.x) / magParsed.x,
-                (tracing.boundingBox.height + tracing.boundingBox.topLeft.y) / magParsed.y,
-                (tracing.boundingBox.depth + tracing.boundingBox.topLeft.z) / magParsed.z
-              ),
-              "dimension_seperator" -> "."
+              "shape" -> zarrHeader.shape,
+              "dimension_seperator" -> zarrHeader.dimension_separator
             ))
       }
   }
@@ -295,6 +308,28 @@ class VolumeTracingController @Inject()(
   def zGroup(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       Future(Ok(Json.obj("zarr_format" -> 2)))
+    }
+  }
+
+  /**
+    * Handles a request for .zattrs file for a wkw dataset via a HTTP GET.
+    * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
+    * Used by zarr-streaming.
+    */
+  def zAttrs(
+      token: Option[String],
+      tracingId: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+      for {
+        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+
+        existingMags = tracing.resolutions.map(vec3IntFromProto)
+
+        omeNgffHeader = OmeNgffHeader.fromDataLayerName(tracing.dataSetName,
+                                                              dataSourceScale = Vec3Double(1.0, 1.0, 1.0),
+                                                              mags = existingMags.toList)
+      } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
 

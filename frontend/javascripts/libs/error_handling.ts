@@ -163,7 +163,11 @@ class ErrorHandling {
     };
   }
 
-  notify(maybeError: Record<string, any> | Error, optParams: Record<string, any> = {}) {
+  notify(
+    maybeError: Record<string, any> | Error,
+    optParams: Record<string, any> = {},
+    severity: "error" | "warning" = "error",
+  ) {
     if (process.env.BABEL_ENV === "test") {
       return;
     }
@@ -173,6 +177,7 @@ class ErrorHandling {
     this.airbrake.notify({
       error,
       params: { ...optParams, actionLog, sessionStartTime: this.sessionStartTime },
+      context: { severity },
     });
   }
 

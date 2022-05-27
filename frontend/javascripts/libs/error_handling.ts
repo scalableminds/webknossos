@@ -57,7 +57,7 @@ class ErrorHandling {
   throwAssertions: boolean;
   commitHash: string | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'airbrake' has no initializer and is not ... Remove this comment to see the full error message
-  airbrake: typeof Notifier;
+  airbrake: Notifier;
   numberOfErrors: number = 0;
   sessionStartTime: Date = new Date();
 
@@ -84,13 +84,11 @@ class ErrorHandling {
     const projectId = scriptTag.dataset.airbrakeProjectId;
     const projectKey = scriptTag.dataset.airbrakeProjectKey;
     const envName = scriptTag.dataset.airbrakeEnvironmentName;
-    // @ts-expect-error ts-migrate(2741) FIXME: Property 'prototype' is missing in type 'Notifier'... Remove this comment to see the full error message
     this.airbrake = new Notifier({
       projectId,
       projectKey,
       remoteConfig: false,
     });
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
       notice.context = notice.context || {};
       notice.context.environment = envName;
@@ -102,7 +100,6 @@ class ErrorHandling {
       return notice;
     });
     // Do not report more than MAX_NUM_ERRORS to airbrake
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
       this.numberOfErrors++;
 
@@ -112,7 +109,6 @@ class ErrorHandling {
 
       return null;
     });
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
       if (
         LOG_LOCAL_ERRORS ||
@@ -174,7 +170,6 @@ class ErrorHandling {
 
     const actionLog = getActionLog();
     const error = maybeError instanceof Error ? maybeError : new Error(JSON.stringify(maybeError));
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'notify' does not exist on type 'typeof N... Remove this comment to see the full error message
     this.airbrake.notify({
       error,
       params: { ...optParams, actionLog, sessionStartTime: this.sessionStartTime },
@@ -182,7 +177,6 @@ class ErrorHandling {
   }
 
   assertExtendContext(additionalContext: Record<string, any>) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'error' implicitly has an 'any' type.
       notice.errors.forEach((error) => {
@@ -218,7 +212,6 @@ class ErrorHandling {
       throw error;
     } else {
       console.error(error);
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'notify' does not exist on type 'typeof N... Remove this comment to see the full error message
       this.airbrake.notify(error);
     }
   };
@@ -240,7 +233,6 @@ class ErrorHandling {
   }
 
   setCurrentUser(user: APIUser) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'addFilter' does not exist on type 'typeo... Remove this comment to see the full error message
     this.airbrake.addFilter((notice) => {
       notice.context = notice.context || {};
       notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);

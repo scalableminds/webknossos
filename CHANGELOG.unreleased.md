@@ -8,36 +8,14 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/22.05.1...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/22.06.0...HEAD)
 
 ### Added
-- Added Volume Interpolation feature. When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices. This feature is disabled by default. Note that the feature is even forbidden for tasks by default, but can be enabled/recommended. [#6162](https://github.com/scalableminds/webknossos/pull/6162)
-- Added a batching mechanism to the task creation via NML to support uploading more than 100 NMLs at a time. [#6216](https://github.com/scalableminds/webknossos/pull/6216)
-- Added a long-running job that applies the merging done via a merger mode tracing to a new output dataset. The job is accessible via a button next to the merger mode button once the merger mode is active. [#6086](https://github.com/scalableminds/webknossos/pull/6086)
-- Added support to stream zarr files using the corresponding [zarr spec](https://zarr.readthedocs.io/en/stable/spec/v2.html#storage). [#6144](https://github.com/scalableminds/webknossos/pull/6144)
-- Added support to stream volume annotations as a zarr data set. [#6203](https://github.com/scalableminds/webknossos/pull/6203)
-- Added segmentation layers to the functionality catching the case that more layers are active that the hardware allows. This prevents rendering issue with more than one segmentation layer and multiple color layers. [#6211](https://github.com/scalableminds/webknossos/pull/6211)
-- Selecting "Download" from the tracing actions now opens a new modal, which lets the user select data for download, start TIFF export jobs or copy code snippets to get started quickly with the webKonossos Python Client. [#6171](https://github.com/scalableminds/webknossos/pull/6171)
-- Adding a New Volume Layer via the left border tab now gives the option to restrict resolutions for the new layer. [#6229](https://github.com/scalableminds/webknossos/pull/6229)
-- Added support for segment interpolation with depths > 2. Also, the feature was changed to work on an explicit trigger (either via the button in the toolbar or via the shortcut V). When triggering the interpolation, the current segment id is interpolated between the current slice and the least-recently annotated slice. [#6235](https://github.com/scalableminds/webknossos/pull/6235)
-- Added Route to get OME-NGFF Headers for a data layer (.zattrs file) following the corresponding [spec](https://ngff.openmicroscopy.org/latest/). [#6226](https://github.com/scalableminds/webknossos/pull/6226)
-- Added Route to get OME-NGFF Headers for Volume annotation. [#6242](https://github.com/scalableminds/webknossos/pull/6242)
 
 ### Changed
-- When creating a new annotation with a volume layer (without fallback) for a dataset which has an existing segmentation layer, the original segmentation layer is still listed (and viewable) in the left sidebar. Earlier versions simply hid the original segmentation layer. [#6186](https://github.com/scalableminds/webknossos/pull/6186)
-- Changing the visibility of a layer within an annotation does not change the visibility of the layer when viewing the corresponding dataset. [#6186](https://github.com/scalableminds/webknossos/pull/6186)
-- While viewing tracings in read-only mode, the options to manipulate the tracing are now disabled. This leads to less confusion as previously the input was silently discarded. [#6140](https://github.com/scalableminds/webknossos/pull/6140).
-- Changed default of `dynamicSpaceDirection` property to false to avoid confusion. [#6162](https://github.com/scalableminds/webknossos/pull/6162)
-- Changed the internal protocol for requesting image data. The zoomStep parameter has been replaced by mag. This increases the datastore API version to 2.0 [#6159](https://github.com/scalableminds/webknossos/pull/6159)
-- In annotation list in dashboard, replaced the non-standard word “Trace” by “Open”. [#6191](https://github.com/scalableminds/webknossos/pull/6191)
-- Tiff export via webknossos-worker is now allowed for all datasets that a (logged-in) user can see, no longer only for datasets of their own organization. [#6219](https://github.com/scalableminds/webknossos/pull/6219)
 
 ### Fixed
-- Fixed a bug in the task creation, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)
-- Fixed a rendering bug which could cause an incorrect magnification to be rendered in rare scenarios. [#6029](https://github.com/scalableminds/webknossos/pull/6029)
-- Fixed a bug which could cause a segmentation layer's "ID mapping" dropdown to disappear. [#6215](https://github.com/scalableminds/webknossos/pull/6215)
 
 ### Removed
-- Removed the feature to copy a segment from the previous/next slice with the V shortcut. Use the new volume interpolation feature instead (also bound to V and available via the toolbar). [#6235](https://github.com/scalableminds/webknossos/pull/6235)
 
 ### Breaking Changes

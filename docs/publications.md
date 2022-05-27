@@ -90,8 +90,7 @@ The following publications used webKnossos for exploring large 3D electron-micro
   [Humboldt-Universität zu Berlin (2018) DOI: 10.18452/19197.](https://doi.org/10.18452/19197)
 
 * Philip Alex Michael Laserstein.
-  Connectomic analysis of the input to the principal cells of the mammalian cerebral  
-cortex.  
+  Connectomic analysis of the input to the principal cells of the mammalian cerebral cortex.  
   [Ludwig Maximilians University (LMU) (2018) DOI: 10.5282/edoc.21980.](https://doi.org/10.5282/edoc.21980)
 
 * Eliot Dow, Adrian Jacobo, Sajjad Hossain, Kimberly Siletti & A. J. Hudspeth.  

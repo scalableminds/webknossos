@@ -79,7 +79,7 @@ Now, you can click the "Interpolate" button (or use the shortcut V) to interpola
 
 Note that it is recommended to proof-read the interpolated slices afterwards, since the interpolation is a heuristic.
 
-![Video: Volume Interpolation](https://www.youtube.com/watch?v=-nYv0hA1k4A)
+![Video: Volume Interpolation](https://www.youtube.com/watch?v=QqU72vHRR2I)
 
 ### Mappings / On-Demand Agglomeration
 With webKnossos it is possible to apply a precomputed agglomeration file to re-map/combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation. 

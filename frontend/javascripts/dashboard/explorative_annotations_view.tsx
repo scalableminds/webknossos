@@ -568,7 +568,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Owner & Teams"
           dataIndex="owner"
-          width={200}
+          width={300}
           filters={ownerAndTeamsFilters}
           filterMode="tree"
           onFilter={(value: string | number | boolean, tracing: APIAnnotationCompact) =>
@@ -593,8 +593,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   <UserOutlined />
                   {ownerName}
                 </div>
-                {teamTags.length > 0 ? <TeamOutlined /> : null}
-                {teamTags}
+                <div className="flex-container">
+                  <div className="flex-item" style={{ flexGrow: 0 }}>
+                    {teamTags.length > 0 ? <TeamOutlined /> : null}
+                  </div>
+                  <div className="flex-item">{teamTags}</div>
+                </div>
               </>
             );
           }}

@@ -45,7 +45,8 @@ export const urlTokenToTabKeyMap = {
   datasets: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
-  shared: "sharedAnnotations",
+  // For backwards compatibility
+  shared: "explorativeAnnotations",
 };
 
 class DashboardView extends PureComponent<PropsWithRouter, State> {

@@ -606,7 +606,6 @@ export function determineAllowedModes(
 
   return {
     preferredMode,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string[]' is not assignable to type 'APIAllo... Remove this comment to see the full error message
     allowedModes,
   };
 }
@@ -782,14 +781,9 @@ export function getEnabledLayers(
   datasetConfiguration: DatasetConfiguration,
   options: {
     invert?: boolean;
-    onlyColorLayers: boolean;
-  } = {
-    onlyColorLayers: false,
-  },
+  } = {},
 ): Array<DataLayerType> {
-  const dataLayers = options.onlyColorLayers
-    ? getColorLayers(dataset)
-    : dataset.dataSource.dataLayers;
+  const dataLayers = dataset.dataSource.dataLayers;
   const layerSettings = datasetConfiguration.layers;
   return dataLayers.filter((layer) => {
     const settings = layerSettings[layer.name];

@@ -27,7 +27,7 @@ import type {
   TaskCreationResponse,
   TaskCreationResponseContainer,
 } from "admin/task/task_create_bulk_view";
-import { normFile } from "admin/task/task_create_bulk_view";
+import { normFile, NUM_TASKS_PER_BATCH } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import type { Vector6 } from "oxalis/constants";
 import {
@@ -338,7 +338,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         isUploading: true,
       });
       // or create a new one either from the form values or with an NML file
-      let response;
+      let taskResponses: Array<TaskCreationResponse> = [];
+      let warnings: Array<string> = [];
 
       try {
         if (this.state.specificationType === SpecificationEnum.Nml) {
@@ -346,8 +347,15 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           // The original file object is contained in the originFileObj property
           // This is most likely not intentional and may change in a future Antd version
           // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'wrapperFile' implicitly has an 'any' ty... Remove this comment to see the full error message
-          formValues.nmlFiles = formValues.nmlFiles.map((wrapperFile) => wrapperFile.originFileObj);
-          response = await createTaskFromNML(formValues);
+          const nmlFiles = formValues.nmlFiles.map((wrapperFile) => wrapperFile.originFileObj);
+          for (let i = 0; i < nmlFiles.length; i += NUM_TASKS_PER_BATCH) {
+            const batchOfNmls = nmlFiles.slice(i, i + NUM_TASKS_PER_BATCH);
+            formValues.nmlFiles = batchOfNmls;
+            // eslint-disable-next-line no-await-in-loop
+            const response = await createTaskFromNML(formValues);
+            taskResponses = taskResponses.concat(response.tasks);
+            warnings = warnings.concat(response.warnings);
+          }
         } else {
           if (this.state.specificationType !== SpecificationEnum.BaseAnnotation) {
             // Ensure that the base annotation field is null, if the specification mode
@@ -355,10 +363,13 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
             formValues.baseAnnotation = null;
           }
 
-          response = await createTasks([formValues]);
+          ({ tasks: taskResponses, warnings } = await createTasks([formValues]));
         }
 
-        handleTaskCreationResponse(response);
+        handleTaskCreationResponse({
+          tasks: taskResponses,
+          warnings: _.uniq(warnings),
+        });
       } finally {
         this.setState({
           isUploading: false,

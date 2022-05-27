@@ -66,6 +66,7 @@ import type {
   AnnotationType,
   MappingType,
   VolumeTracing,
+  UserConfiguration,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -882,11 +883,12 @@ export function convertToHybridTracing(
   });
 }
 
-export async function downloadNml(
+export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
   versions: Versions = {},
+  includeVolumeData: boolean = true,
 ) {
   const possibleVersionString = Object.entries(versions)
     .map(([key, val]) => `${key}Version=${val}`)
@@ -897,11 +899,14 @@ export async function downloadNml(
       timeout: 12000,
     });
   }
+  const skipVolumeDataString = includeVolumeData ? "" : "skipVolumeData=true";
+  const maybeAmpersand = possibleVersionString === "" && !includeVolumeData ? "" : "&";
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}${maybeAmpersand}${skipVolumeDataString}`;
   const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
     extractHeaders: true,
   });
+
   // Using headers to determine the name and type of the file.
   const contentDispositionHeader = headers["content-disposition"];
   const filenameStartingPart = 'filename="';
@@ -1245,7 +1250,7 @@ export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
   datasetConfig: PartialDatasetConfiguration,
   options: RequestOptions = {},
-): Record<string, any> {
+): Promise<Record<string, any>> {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     { ...options, method: "PUT", data: datasetConfig },
@@ -1618,13 +1623,13 @@ export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
 }
 
-export function getUserConfiguration(): Record<string, any> {
+export function getUserConfiguration(): Promise<UserConfiguration> {
   return Request.receiveJSON("/api/user/userConfiguration");
 }
 
 export function updateUserConfiguration(
   userConfiguration: Record<string, any>,
-): Record<string, any> {
+): Promise<Record<string, any>> {
   return Request.sendJSONReceiveJSON("/api/user/userConfiguration", {
     method: "PUT",
     data: userConfiguration,

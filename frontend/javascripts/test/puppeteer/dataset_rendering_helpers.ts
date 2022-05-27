@@ -6,14 +6,12 @@ import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'pixe... Remove this comment to see the full error message
 import pixelmatch from "pixelmatch";
+import { RequestOptions } from "libs/request";
+import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
-import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
-export const { WK_AUTH_TOKEN } = process.env;
 
-if (!WK_AUTH_TOKEN) {
-  throw new Error("No WK_AUTH_TOKEN specified.");
-}
+export const { WK_AUTH_TOKEN } = process.env;
 
 type Screenshot = {
   screenshot: Buffer;
@@ -21,7 +19,10 @@ type Screenshot = {
   height: number;
 };
 
-function getDefaultRequestOptions(baseUrl: string) {
+function getDefaultRequestOptions(baseUrl: string): RequestOptions {
+  if (!WK_AUTH_TOKEN) {
+    throw new Error("No WK_AUTH_TOKEN specified.");
+  }
   return {
     host: baseUrl,
     doNotInvestigate: true,
@@ -35,27 +36,65 @@ export async function screenshotDataset(
   page: Page,
   baseUrl: string,
   datasetId: APIDatasetId,
-  optionalViewOverride: string | null | undefined,
-  optionalDatasetConfigOverride: PartialDatasetConfiguration | null | undefined,
+  optionalViewOverride?: string | null | undefined,
+  optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
+): Promise<Screenshot> {
+  return _screenshotAnnotationHelper(
+    page,
+    baseUrl,
+    datasetId,
+    "skeleton",
+    null,
+    optionalViewOverride,
+    optionalDatasetConfigOverride,
+  );
+}
+
+export async function screenshotAnnotation(
+  page: Page,
+  baseUrl: string,
+  datasetId: APIDatasetId,
+  fallbackLayerName: string | null,
+  optionalViewOverride?: string | null | undefined,
+  optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
+): Promise<Screenshot> {
+  return _screenshotAnnotationHelper(
+    page,
+    baseUrl,
+    datasetId,
+    "hybrid",
+    fallbackLayerName,
+    optionalViewOverride,
+    optionalDatasetConfigOverride,
+  );
+}
+
+async function _screenshotAnnotationHelper(
+  page: Page,
+  baseUrl: string,
+  datasetId: APIDatasetId,
+  typ: "skeleton" | "volume" | "hybrid",
+  fallbackLayerName: string | null,
+  optionalViewOverride?: string | null | undefined,
+  optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(
     datasetId,
-    "skeleton",
+    typ,
+    fallbackLayerName,
     null,
-    null,
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ host: string; doNotInvestigate... Remove this comment to see the full error message
     options,
   );
 
   if (optionalDatasetConfigOverride != null) {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ host: string; doNotInvestigate... Remove this comment to see the full error message
     await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
   }
 
   await openTracingView(page, baseUrl, createdExplorational.id, optionalViewOverride);
   return screenshotTracingView(page);
 }
+
 export async function screenshotDatasetWithMapping(
   page: Page,
   baseUrl: string,
@@ -68,10 +107,8 @@ export async function screenshotDatasetWithMapping(
     "skeleton",
     null,
     null,
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ host: string; doNotInvestigate... Remove this comment to see the full error message
     options,
   );
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 4 arguments, but got 3.
   await openTracingView(page, baseUrl, createdExplorational.id);
   await page.evaluate(
     `webknossos.apiReady().then(async api => api.data.activateMapping("${mappingName}"))`,
@@ -91,7 +128,6 @@ export async function screenshotDatasetWithMappingLink(
     "skeleton",
     null,
     null,
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ host: string; doNotInvestigate... Remove this comment to see the full error message
     options,
   );
   await openTracingView(page, baseUrl, createdExplorational.id, optionalViewOverride);
@@ -175,7 +211,7 @@ async function openTracingView(
   page: Page,
   baseUrl: string,
   annotationId: string,
-  optionalViewOverride: string | null | undefined,
+  optionalViewOverride?: string | null | undefined,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
   const url = urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`);

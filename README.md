@@ -46,7 +46,20 @@ webKnossos is open-source, so you can install it on your own server.
 
 [Check out the documentation](https://docs.webknossos.org/webknossos/installation.html) for a tutorial on how to install webKnossos on your own server.
 
-For installations on localhost, please see below.
+For development installations, please see below.
+
+## Contributions, Contact and Support
+We welcome community feedback and contributions! We are happy to have
+
+* [general feedback, observations and questions](#feedback-observations-and-questions) on the [image.sc forum](https://forum.image.sc/tag/webknossos),
+* [feature suggestions and bug reports](#issues-feature-suggestions-and-bug-reports) as [issues on GitHub](https://github.com/scalableminds/webknossos/issues/new),
+* [documentation, examples and code contributions](#pull-requests-docs-and-code-contributions) as [pull requests on GitHub](https://github.com/scalableminds/webknossos/compare).
+
+For details on community contributions, please refer to our [Contributing guide](./Contributing_Guide.md).
+
+Contact us at [hello@webknossos.org](mailto:hello@webknossos.org).
+
+[scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for webKnossos.
 
 ## Development installation
 ### Docker
@@ -205,12 +218,6 @@ docker-compose run e2e-tests
 ```
 
 
-## Contact and support
-Ask for help in the [image.sc community forum](https://forum.image.sc/tag/webknossos).
-
-Contact us at [hello@webknossos.org](mailto:hello@webknossos.org).
-
-[scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for webKnossos.
 
 ## Credits
 * scalable minds - https://scalableminds.com/
@@ -219,7 +226,7 @@ Contact us at [hello@webknossos.org](mailto:hello@webknossos.org).
 webKnossos was inspired by [KNOSSOS](https://knossos.app).
 
 ### Thanks
-* [Browser Stack](https://www.browserstack.com/) for letting us test WebKnossos on a variety of different devices
+* [Browser Stack](https://www.browserstack.com/) for letting us test webKnossos on a variety of different devices
   <a href="https://www.browserstack.com/"><img src="https://avatars.githubusercontent.com/u/1119453?s=200&v=4" width=100 alt="Browserstack Logo" align="right"></a>
 * [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 

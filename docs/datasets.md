@@ -13,7 +13,7 @@ Working with 3D (and 2D) image datasets is at the heart of webKnossos.
 ### Uploading through the web browser
 The easiest way to get started with working on your datasets is through the webKnossos web interface. You can directly upload your dataset through the browser.
 
-1. From the *My dataset* tab in the user dashboard, click the *Add Dataset* button.
+1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Provide some metadata information:
   - a *name* 
   - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
@@ -27,7 +27,7 @@ If your data is already in WKW you can simply drag your folder (or zip archive o
 
 If your data is not in WKW, you can either:
 
-- upload the data in a supported file format and webKnossos will automatically convert it to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset, the conversion will take some time. You can check the progress at the "Jobs" page or the "My Datasets" page in the dashboard (both will update automatically).
+- upload the data in a supported file format and webKnossos will automatically convert it to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset, the conversion will take some time. You can check the progress at the "Jobs" page or the "Datasets" tab in the dashboard (both will update automatically).
 - [Convert](#converting-datasets) your data manually to WKW.
 
 In particular, the following file formats are supported for uploading (and conversion):
@@ -49,7 +49,7 @@ On webKnossos.org you can work directly with
 
 To import these datasets:
 
-1. From the *My dataset* tab in the user dashboard, click the *Add Dataset* button.
+1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Neuroglancer Dataset* or *Add BossDB Dataset* tab
 3. Provide some metadata information:
   - a *name* 
@@ -124,7 +124,7 @@ You can configure the metadata, permission, and other properties of a dataset at
 
 Note, any changes made to a dataset may influence the user experience of all users in your organization working with that dataset, e.g., removing access rights working, adding/removing layers, or setting default values for rendering the data.
 
-To make changes, click on the "Settings" action next to a dataset in the "My Datasets" tab of your dashboard.
+To make changes, click on the "Settings" action next to a dataset in the "Datasets" tab of your dashboard.
 Editing these settings requires your account to have enough access rights and permissions. [Read more about this.](./users.md)
 
 ### Data Tab

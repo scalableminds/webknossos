@@ -315,11 +315,15 @@ class DataCube {
 
         if (this.buckets.length % 100 === 0) {
           console.warn(warnMessage);
-          ErrorHandling.notify(new Error(warnMessage), {
-            elementClass: this.elementClass,
-            isSegmentation: this.isSegmentation,
-            resolutionInfo: this.resolutionInfo,
-          });
+          ErrorHandling.notify(
+            new Error(warnMessage),
+            {
+              elementClass: this.elementClass,
+              isSegmentation: this.isSegmentation,
+              resolutionInfo: this.resolutionInfo,
+            },
+            "warning",
+          );
         }
 
         if (this.buckets.length > 2 * this.BUCKET_COUNT_SOFT_LIMIT) {
@@ -576,7 +580,7 @@ class DataCube {
         const dataArray = currentLabeledVoxelMap.get(thirdCoord);
 
         if (!dataArray) {
-          // Satisfy flow
+          // Satisfy typescript
           throw new Error("Map entry does not exist, even though it was just set.");
         }
 

@@ -29,7 +29,7 @@ import {
   deleteProject,
   pauseProject,
   resumeProject,
-  downloadNml,
+  downloadAnnotation,
   getTasks,
   getTaskType,
 } from "admin/admin_rest_api";
@@ -409,7 +409,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                       href="#"
                       onClick={async () => {
                         this.maybeShowNoFallbackDataInfo(project.id);
-                        await downloadNml(project.id, "CompoundProject");
+                        await downloadAnnotation(project.id, "CompoundProject");
                       }}
                       title="Download all Finished Annotations"
                       icon={<DownloadOutlined key="download-icon" />}

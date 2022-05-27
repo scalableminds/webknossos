@@ -1,4 +1,4 @@
-export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
   Orthogonal: 0,

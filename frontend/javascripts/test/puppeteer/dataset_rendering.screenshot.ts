@@ -8,6 +8,7 @@ import type { Browser } from "puppeteer";
 import puppeteer from "puppeteer";
 import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import {
+  screenshotAnnotation,
   screenshotDataset,
   screenshotDatasetWithMapping,
   screenshotDatasetWithMappingLink,
@@ -39,8 +40,8 @@ if (!process.env.URL) {
 }
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
-// Ava's recommendation for Flow types
-// https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
 const test: TestInterface<{
   browser: Browser;
 }> = anyTest as any;
@@ -89,6 +90,14 @@ const datasetNames = [
   "Multi-Channel-Test",
   "connectome_file_test_dataset",
 ];
+
+type DatasetName = string;
+type FallbackLayerName = string | null;
+const annotationSpecs: Array<[DatasetName, FallbackLayerName]> = [
+  ["ROI2017_wkw_fallback", "segmentation"],
+  ["ROI2017_wkw_fallback", null],
+];
+
 const viewOverrides: Record<string, string> = {
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso": "4608,4543,386,0,4.00",
   ROI2017_wkw_fallback: "535,536,600,0,1.18",
@@ -182,6 +191,51 @@ datasetNames.map(async (datasetName) => {
     );
   });
 });
+
+annotationSpecs.map(async (annotationSpec) => {
+  const [datasetName, fallbackLayerName] = annotationSpec;
+
+  test.serial.only(
+    `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
+    async (t) => {
+      console.log(
+        `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
+      );
+      await withRetry(
+        3,
+        async () => {
+          const datasetId = {
+            name: datasetName,
+            owningOrganization: "sample_organization",
+          };
+          const { screenshot, width, height } = await screenshotAnnotation(
+            await getNewPage(t.context.browser),
+            URL,
+            datasetId,
+            fallbackLayerName,
+            viewOverrides[datasetName],
+            datasetConfigOverrides[datasetName],
+          );
+          const changedPixels = await compareScreenshot(
+            screenshot,
+            width,
+            height,
+            BASE_PATH,
+            `annotation_${datasetName}_${fallbackLayerName}`,
+          );
+          return isPixelEquivalent(changedPixels, width, height);
+        },
+        (condition) => {
+          t.true(
+            condition,
+            `Annotation for dataset with name: "${datasetName}" does not look the same, see annotation_${datasetName}_${fallbackLayerName}.diff.png for the difference and annotation_${datasetName}_${fallbackLayerName}.new.png for the new screenshot.`,
+          );
+        },
+      );
+    },
+  );
+});
+
 test.serial("it should render a dataset with mappings correctly", async (t) => {
   const datasetName = "ROI2017_wkw";
   const mappingName = "astrocyte";
@@ -299,7 +353,6 @@ test.serial(
           name: datasetName,
           owningOrganization: "sample_organization",
         };
-        // @ts-expect-error ts-migrate(2554) FIXME: Expected 5 arguments, but got 4.
         const { screenshot, width, height } = await screenshotDataset(
           await getNewPage(t.context.browser),
           URL,

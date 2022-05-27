@@ -175,6 +175,20 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
+      job.type === "infer_neurons" &&
+      job.organizationName &&
+      job.datasetName &&
+      job.layerName
+    ) {
+      return (
+        <span>
+          Neuron inferral for layer {job.layerName} of{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
+    } else if (
       job.type === "materialize_volume_annotation" &&
       job.organizationName &&
       job.datasetName

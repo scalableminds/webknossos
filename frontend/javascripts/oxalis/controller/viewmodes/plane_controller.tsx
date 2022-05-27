@@ -30,7 +30,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import {
   createCellAction,
-  copySegmentationLayerAction,
+  interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { cycleToolAction } from "oxalis/model/actions/ui_actions";
 import {
@@ -130,10 +130,7 @@ class VolumeKeybindings {
     return {
       c: () => Store.dispatch(createCellAction()),
       v: () => {
-        Store.dispatch(copySegmentationLayerAction());
-      },
-      "shift + v": () => {
-        Store.dispatch(copySegmentationLayerAction(true));
+        Store.dispatch(interpolateSegmentationLayerAction());
       },
     };
   }

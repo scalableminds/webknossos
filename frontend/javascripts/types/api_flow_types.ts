@@ -46,7 +46,7 @@ export type APISegmentationLayer = APIDataLayerBase & {
   readonly mappings?: Array<string>;
   readonly agglomerates?: Array<string>;
   readonly fallbackLayer?: string | null | undefined;
-  readonly fallbackLayerInfo?: APIDataLayer;
+  readonly fallbackLayerInfo?: APIDataLayer | null;
   readonly tracingId?: string;
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;

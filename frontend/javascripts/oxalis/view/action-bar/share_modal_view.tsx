@@ -209,7 +209,7 @@ export default function ShareModalView(props: Props) {
   const url = getUrl(sharingToken, includeToken);
   return (
     <Modal
-      title="Share this Annotation"
+      title="Share this annotation"
       visible={isVisible}
       width={800}
       okText={hasUpdatePermissions ? "Save" : "Ok"}
@@ -341,7 +341,7 @@ export default function ShareModalView(props: Props) {
             }}
           >
             Choose the teams to share your annotation with. Members of these teams can see this
-            annotation in their shared annotations tab.
+            annotation in their Annotations tab.
           </Hint>
         </Col>
       </Row>

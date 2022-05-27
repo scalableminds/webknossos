@@ -24,7 +24,7 @@ import {
   editAnnotation,
   finishAnnotation,
   reOpenAnnotation,
-  downloadNml,
+  downloadAnnotation,
   getCompactAnnotationsForUser,
   getReadableAnnotations,
 } from "admin/admin_rest_api";
@@ -257,7 +257,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <br />
           <AsyncLink
             href="#"
-            onClick={() => downloadNml(id, typ, hasVolumeTracing)}
+            onClick={() => downloadAnnotation(id, typ, hasVolumeTracing)}
             icon={<DownloadOutlined key="download" />}
           >
             Download

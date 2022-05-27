@@ -537,7 +537,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       return;
     }
 
-    await this.setState({
+    this.setState({
       isDownloading: true,
     });
     // Wait 1 second for the Modal to render

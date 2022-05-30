@@ -113,8 +113,8 @@ object AssetCompilation {
     Def task {
       val streamsValue = streams.value
       val baseDirectoryValue = baseDirectory.value
-      val dependencyClasspathValue = (dependencyClasspath in Compile).value
-      val runnerValue = (runner in Compile).value
+      val dependencyClasspathValue = (Compile / dependencyClasspath).value
+      val runnerValue = (Compile / runner).value
       val sourceManagedValue = sourceManaged.value
 
       val schemaPath = baseDirectoryValue / "tools" / "postgres" / "schema.sql"
@@ -157,7 +157,7 @@ object AssetCompilation {
     AssetCompilation.SettingsKeys.yarnPath := "yarn",
     stage := (stage dependsOn assetsGenerationTask).value,
     dist := (dist dependsOn assetsGenerationTask).value,
-    sourceGenerators in Compile += slickClassesFromDBSchemaTask,
-    managedSourceDirectories in Compile += sourceManaged.value
+    Compile / sourceGenerators += slickClassesFromDBSchemaTask,
+    Compile / managedSourceDirectories += sourceManaged.value
   )
 }

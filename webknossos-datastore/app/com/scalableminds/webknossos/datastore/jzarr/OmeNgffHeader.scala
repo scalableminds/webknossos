@@ -9,7 +9,7 @@ object OmeNgffCoordinateTransformation {
   implicit val jsonFormat: OFormat[OmeNgffCoordinateTransformation] = Json.format[OmeNgffCoordinateTransformation]
 }
 
-case class OmeNgffDataset(path: String, coordinateTranformations: List[OmeNgffCoordinateTransformation])
+case class OmeNgffDataset(path: String, coordinateTransformations: List[OmeNgffCoordinateTransformation])
 
 object OmeNgffDataset {
   implicit val jsonFormat: OFormat[OmeNgffDataset] = Json.format[OmeNgffDataset]
@@ -40,9 +40,7 @@ object OmeNgffOneHeader {
 case class OmeNgffHeader(multiscales: List[OmeNgffOneHeader])
 
 object OmeNgffHeader {
-  def createFromDataLayerName(dataLayerName: String,
-                              dataSourceScale: Vec3Double,
-                              mags: List[Vec3Int]): OmeNgffHeader = {
+  def fromDataLayerName(dataLayerName: String, dataSourceScale: Vec3Double, mags: List[Vec3Int]): OmeNgffHeader = {
     val datasets = mags.map(
       mag =>
         OmeNgffDataset(

@@ -174,9 +174,9 @@ class ZarrStreamingController @Inject()(
           "dataSource.notFound") ~> 404
         existingMags = dataLayer.resolutions
 
-        omeNgffHeader = OmeNgffHeader.createFromDataLayerName(dataLayerName,
-                                                              dataSourceScale = dataSource.scale,
-                                                              mags = existingMags)
+        omeNgffHeader = OmeNgffHeader.fromDataLayerName(dataLayerName,
+                                                        dataSourceScale = dataSource.scale,
+                                                        mags = existingMags)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }

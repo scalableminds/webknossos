@@ -135,12 +135,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     location.reload();
   }
 
-  onStatusLoaded = (newStatus: ControllerStatus) => {
+  setControllerStatus = (newStatus: ControllerStatus) => {
     this.setState({
       status: newStatus,
     });
     if (newStatus == "loaded") {
-      console.log("onStatusLoaded");
       // After the data is loaded recalculate the layout type and the active layout.
       const { initialCommandType, viewMode, is2d } = this.props;
       const layoutType = determineLayout(initialCommandType.type, viewMode, is2d);
@@ -305,7 +304,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             initialAnnotationType={this.props.initialAnnotationType}
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
-            setControllerStatus={this.onStatusLoaded}
+            setControllerStatus={this.setControllerStatus}
             showContextMenuAt={this.showContextMenuAt}
           />
           <CrossOriginApi />

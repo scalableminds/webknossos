@@ -34,6 +34,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a bug in the task creation, where creation for some tasks with initial volume data would fail. [#6178](https://github.com/scalableminds/webknossos/pull/6178)
+- Fixed the 3d viewport for datasets with low voxel resolution by making the camera far clipping adaptive to the dataset extent. [#6221](https://github.com/scalableminds/webknossos/pull/6221).
 - Fixed a rendering bug which could cause an incorrect magnification to be rendered in rare scenarios. [#6029](https://github.com/scalableminds/webknossos/pull/6029)
 - Fixed a bug which could cause a segmentation layer's "ID mapping" dropdown to disappear. [#6215](https://github.com/scalableminds/webknossos/pull/6215)
 - Fixed a non-critical error message when resizing the browser window while webKnossos loaded a dataset or annotation. [#6247](https://github.com/scalableminds/webknossos/pull/6247)

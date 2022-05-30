@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.jzarr
 
 import java.nio.ByteOrder
-
 import com.scalableminds.webknossos.datastore.jzarr.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.jzarr.BytesConverter.bytesPerElementFor
 import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.DimensionSeparator
@@ -14,6 +13,7 @@ case class ZarrHeader(
     shape: Array[Int], // shape of the entire array
     chunks: Array[Int], // shape of each chunk
     compressor: Option[Map[String, Either[String, Int]]] = None, // specifies compressor to use, with parameters
+    filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
     dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
     dtype: String,
     fill_value: Either[String, Number] = Right(0),

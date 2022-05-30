@@ -1,11 +1,13 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
@@ -16,7 +18,8 @@ import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.services._
 import io.swagger.annotations._
 import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.libs.json.JsonConfiguration.Aux
+import play.api.libs.json.{Json, JsonConfiguration, OptionHandlers}
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -117,25 +120,64 @@ class ZarrStreamingController @Inject()(
         (channels, dtype) = ElementClass.toChannelAndZarrString(dataLayer.elementClass)
         // data request method always decompresses before sending
         compressor = None
+
+        shape = Array(
+          channels,
+          // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+          (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / magParsed.x,
+          (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / magParsed.y,
+          (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / magParsed.z
+        )
+
+        chunks = Array(channels, cubeLength, cubeLength, cubeLength)
+
+        zarrHeader = ZarrHeader(zarr_format = 2,
+                                shape = shape,
+                                chunks = chunks,
+                                compressor = compressor,
+                                dtype = dtype,
+                                order = ArrayOrder.F)
       } yield
         Ok(
+          // Json.toJson doesn't work on zarrHeader at the moment, because it doesn't write None values in Options
           Json.obj(
-            "dtype" -> dtype,
+            "dtype" -> zarrHeader.dtype,
             "fill_value" -> 0,
-            "zarr_format" -> 2,
-            "order" -> "F",
-            "chunks" -> List(channels, cubeLength, cubeLength, cubeLength),
+            "zarr_format" -> zarrHeader.zarr_format,
+            "order" -> zarrHeader.order,
+            "chunks" -> zarrHeader.chunks,
             "compressor" -> compressor,
             "filters" -> None,
-            "shape" -> List(
-              channels,
-              // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
-              (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / magParsed.x,
-              (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / magParsed.y,
-              (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / magParsed.z
-            ),
-            "dimension_seperator" -> "."
+            "shape" -> zarrHeader.shape,
+            "dimension_seperator" -> zarrHeader.dimension_separator
           ))
+    }
+  }
+
+  /**
+    * Handles a request for .zattrs file for a wkw dataset via a HTTP GET.
+    * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
+    * Used by zarr-streaming.
+    */
+  def zAttrs(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String = "",
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      urlOrHeaderToken(token, request)) {
+      for {
+        (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+                                                                                  dataSetName,
+                                                                                  dataLayerName) ?~> Messages(
+          "dataSource.notFound") ~> 404
+        existingMags = dataLayer.resolutions
+
+        omeNgffHeader = OmeNgffHeader.fromDataLayerName(dataLayerName,
+                                                        dataSourceScale = dataSource.scale,
+                                                        mags = existingMags)
+      } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
 

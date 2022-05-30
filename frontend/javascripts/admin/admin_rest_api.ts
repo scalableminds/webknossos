@@ -1200,12 +1200,11 @@ export async function getActiveDatasets(): Promise<Array<APIDataset>> {
   return datasets;
 }
 
-export async function getDataset(
+export function getDataset(
   datasetId: APIDatasetId,
   sharingToken?: string | null | undefined,
 ): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  await Utils.sleep(5000);
   return Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
   );

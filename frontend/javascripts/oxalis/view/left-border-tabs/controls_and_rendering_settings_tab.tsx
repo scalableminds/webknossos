@@ -21,7 +21,7 @@ import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import messages, { settingsTooltips, settings as settingsLabels } from "messages";
 import { userSettings } from "types/schemas/user_settings.schema";
-import type { ViewMode, Vector2 } from "oxalis/constants";
+import type { ViewMode } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";

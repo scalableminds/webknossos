@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 
@@ -27,6 +27,20 @@ object Category extends ExtendedEnumeration {
 
 object ElementClass extends ExtendedEnumeration {
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
+
+  def primitiveType(elementClass: ElementClass.Value) = elementClass match {
+    case ElementClass.uint8  => Byte
+    case ElementClass.uint16 => Short
+    case ElementClass.uint24 => Byte
+    case ElementClass.uint32 => Int
+    case ElementClass.uint64 => Long
+    case ElementClass.float  => Float
+    case ElementClass.double => Double
+    case ElementClass.int8   => Byte
+    case ElementClass.int16  => Short
+    case ElementClass.int32  => Int
+    case ElementClass.int64  => Long
+  }
 
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1

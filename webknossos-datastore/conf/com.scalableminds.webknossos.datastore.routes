@@ -3,13 +3,13 @@
 
 # Health endpoint
 GET           /health                                                                                                               @com.scalableminds.webknossos.datastore.controllers.Application.health
+GET /testByteConversions @com.scalableminds.webknossos.datastore.controllers.Application.testByteConversions
 
 # Read image data
 POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/data                                                   @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaWebKnossos(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
 GET           /datasets/:organizationName/:dataSetName/layers/:dataLayerName/data                                                   @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestRawCuboid(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String, x: Int, y: Int, z: Int, width: Int, height: Int, depth: Int, mag: Option[String], resolution: Option[Int], halfByte: Boolean ?= false)
 GET           /datasets/:organizationName/:dataSetName/layers/:dataLayerName/thumbnail.jpg                                          @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.thumbnailJpeg(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String, width: Int, height: Int, centerX: Option[Int], centerY: Option[Int], centerZ: Option[Int], zoom: Option[Double])
 GET           /datasets/:organizationName/:dataSetName/layers/:dataLayerName/findData                                               @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.findData(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
-GET           /datasets/:organizationName/:dataSetName/layers/:dataLayerName/colorStatistics                                        @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.colorStatistics(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
 GET           /datasets/:organizationName/:dataSetName/layers/:dataLayerName/histogram                                              @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.histogram(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
 
 # Knossos compatible routes

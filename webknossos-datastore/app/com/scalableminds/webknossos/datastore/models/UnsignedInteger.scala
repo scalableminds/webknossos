@@ -41,6 +41,17 @@ object UnsignedInteger {
       case ElementClass.uint64 => UInt64(long)
       case _                   => wrongElementClass(elementClass)
     }
+
+  def fromTypedUnderlying[U >: Byte with Short with Int with Long with Float](
+      typed: U,
+      elementClass: ElementClass.Value): UnsignedInteger =
+    typed match {
+      case t: Byte  => UInt8(t)
+      case t: Short => UInt16(t)
+      case t: Int   => UInt32(t)
+      case t: Long  => UInt64(t)
+      case _        => wrongElementClass(elementClass)
+    }
 }
 
 class UInt8(val signed: Byte) extends UnsignedInteger {

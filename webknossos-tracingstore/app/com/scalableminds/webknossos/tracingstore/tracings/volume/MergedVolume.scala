@@ -4,21 +4,20 @@ import java.io.File
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{ByteUtils, Fox}
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
-import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.arrays.NumericArray
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger}
 import net.liftweb.common.Box
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0)
-    extends DataConverter
-    with ByteUtils
+    extends ByteUtils
     with VolumeDataZipHelper
     with ProtoGeometryImplicits {
-  private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[UnsignedInteger]]
+  private val mergedVolume = mutable.HashMap.empty[BucketPosition, NumericArray]
   private val labelSets = mutable.ListBuffer[mutable.Set[UnsignedInteger]]()
   private val labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
   var largestSegmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
@@ -26,9 +25,8 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
   def addLabelSetFromDataZip(zipFile: File): Box[Unit] = {
     val importLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
     val unzipResult = withBucketsFromZip(zipFile) { (_, bytes) =>
-      val dataTyped =
-        UnsignedIntegerArray.fromByteArray(bytes, elementClass)
-      val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
+      val dataTyped = NumericArray.fromBytes(bytes, elementClass)
+      val nonZeroData = dataTyped.filterNonZero
       importLabelSet ++= nonZeroData
     }
     for {
@@ -43,8 +41,8 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
     bucketStream.foreach {
       case (bucketPosition, data) =>
         if (allowedResolutions.contains(bucketPosition.mag)) {
-          val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
-          val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
+          val dataTyped = NumericArray.fromBytes(data, elementClass)
+          val nonZeroData = dataTyped.filterNonZero
           labelSet ++= nonZeroData
         }
     }
@@ -89,7 +87,9 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
     }
 
   def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
-    val dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, elementClass)
+    val dataTyped: NumericArray = NumericArray.fromBytes(data, elementClass)
+    val anArray: Array[Int] = List(1, 2, 3).toArray
+    anArray(1) = 8
     prepareLabelMaps()
     if (mergedVolume.contains(bucketPosition)) {
       val mutableBucketData = mergedVolume(bucketPosition)
@@ -107,12 +107,16 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
       if (labelMaps.isEmpty) {
         mergedVolume += ((bucketPosition, dataTyped))
       } else {
-        val dataMapped = dataTyped.map { byteValue =>
-          if (byteValue.isZero || initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
-            byteValue
-          else
-            labelMaps(sourceVolumeIndex)(byteValue)
-        }
+        val dataMapped: NumericArray =
+          if (initialLargestSegmentId > 0 && sourceVolumeIndex == 0) dataTyped
+          else {
+            NumericArray.fromUnsignedIntegers(dataTyped.map { byteValue =>
+              if (byteValue.isZero)
+                byteValue
+              else
+                labelMaps(sourceVolumeIndex)(byteValue)
+            }, dataTyped.elementClass)
+          }
         mergedVolume += ((bucketPosition, dataMapped))
       }
     }
@@ -122,7 +126,7 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
     for {
       _ <- Fox.combined(mergedVolume.map {
         case (bucketPosition, bucketData) =>
-          block(bucketPosition, UnsignedIntegerArray.toByteArray(bucketData, elementClass))
+          block(bucketPosition, bucketData.toBytes)
       }.toList)
     } yield ()
 

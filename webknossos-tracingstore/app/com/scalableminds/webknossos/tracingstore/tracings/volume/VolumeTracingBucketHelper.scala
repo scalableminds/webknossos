@@ -5,21 +5,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-import com.scalableminds.webknossos.datastore.services.DataConverter
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  FossilDBClient,
-  KeyValueStoreImplicits,
-  TemporaryVolumeDataStore,
-  VersionedKey,
-  VersionedKeyValuePair
-}
+import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
-
-import scala.concurrent.duration._
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 
 trait VolumeBucketReversionHelper {
   def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
@@ -113,7 +105,6 @@ trait VolumeTracingBucketHelper
     extends KeyValueStoreImplicits
     with FoxImplicits
     with VolumeBucketCompression
-    with DataConverter
     with BucketKeys
     with VolumeBucketReversionHelper {
 

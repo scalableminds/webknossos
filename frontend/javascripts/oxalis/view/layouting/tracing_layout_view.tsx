@@ -113,10 +113,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     };
   }
 
-  componentDidMount() {
-    window.addEventListener("resize", this.debouncedOnLayoutChange);
-  }
-
   componentDidCatch(error: Error) {
     ErrorHandling.notify(error);
     Toast.error(messages["react.rendering_error"]);
@@ -143,16 +139,20 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     this.setState({
       status: newStatus,
     });
-    // After the data is loaded recalculate the layout type and the active layout.
-    const { initialCommandType, viewMode, is2d } = this.props;
-    const layoutType = determineLayout(initialCommandType.type, viewMode, is2d);
-    const lastActiveLayoutName = getLastActiveLayout(layoutType);
-    const layout = getLayoutConfig(layoutType, lastActiveLayoutName);
-    this.setState({
-      activeLayoutName: lastActiveLayoutName,
-      model: layout,
-    });
-    initializeInputCatcherSizes();
+    if (newStatus == "loaded") {
+      console.log("onStatusLoaded");
+      // After the data is loaded recalculate the layout type and the active layout.
+      const { initialCommandType, viewMode, is2d } = this.props;
+      const layoutType = determineLayout(initialCommandType.type, viewMode, is2d);
+      const lastActiveLayoutName = getLastActiveLayout(layoutType);
+      const layout = getLayoutConfig(layoutType, lastActiveLayoutName);
+      this.setState({
+        activeLayoutName: lastActiveLayoutName,
+        model: layout,
+      });
+      initializeInputCatcherSizes();
+      window.addEventListener("resize", this.debouncedOnLayoutChange);
+    }
   };
 
   showContextMenuAt = (
@@ -208,6 +208,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   // eslint-disable-next-line react/sort-comp
   debouncedOnLayoutChange = _.debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
+
   saveCurrentLayout = (layoutName?: string) => {
     const layoutKey = determineLayout(
       this.props.initialCommandType.type,

@@ -37,6 +37,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the 3d viewport for datasets with low voxel resolution by making the camera far clipping adaptive to the dataset extent. [#6221](https://github.com/scalableminds/webknossos/pull/6221).
 - Fixed a rendering bug which could cause an incorrect magnification to be rendered in rare scenarios. [#6029](https://github.com/scalableminds/webknossos/pull/6029)
 - Fixed a bug which could cause a segmentation layer's "ID mapping" dropdown to disappear. [#6215](https://github.com/scalableminds/webknossos/pull/6215)
+- Fixed a non-critical error message when resizing the browser window while webKnossos loaded a dataset or annotation. [#6247](https://github.com/scalableminds/webknossos/pull/6247)
 
 ### Removed
 - Removed the feature to copy a segment from the previous/next slice with the V shortcut. Use the new volume interpolation feature instead (also bound to V and available via the toolbar). [#6235](https://github.com/scalableminds/webknossos/pull/6235)

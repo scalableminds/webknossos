@@ -29,6 +29,7 @@ import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import * as scaleInfo from "oxalis/model/scaleinfo";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
@@ -246,12 +247,14 @@ export function getRequestLogZoomStep(state: OxalisState): number {
 
   return Math.min(zoomStep, maxLogZoomStep);
 }
+
 export function getCurrentResolution(state: OxalisState): Vector3 {
   const resolutions = getResolutions(state.dataset);
   const logZoomStep = getRequestLogZoomStep(state);
   return resolutions[logZoomStep] || [1, 1, 1];
 }
-export function getValidZoomRangeForUser(state: OxalisState): [number, number] {
+
+function _getValidZoomRangeForUser(state: OxalisState): [number, number] {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
 
   const lastZoomStep = _.last(maximumZoomSteps);
@@ -260,6 +263,9 @@ export function getValidZoomRangeForUser(state: OxalisState): [number, number] {
   const max = lastZoomStep != null ? Math.min(taskAwareMax, lastZoomStep) : 1;
   return [min, max];
 }
+
+export const getValidZoomRangeForUser = reuseInstanceOnEquality(_getValidZoomRangeForUser);
+
 export function getMaxZoomValueForResolution(
   state: OxalisState,
   targetResolution: Vector3,

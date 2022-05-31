@@ -9,7 +9,6 @@ import play.api.inject.ApplicationLifecycle
 
 class TSRemoteDataStoreClient @Inject()(
     rpc: RPC,
-    config: TracingStoreConfig,
     val lifecycle: ApplicationLifecycle
 ) extends LazyLogging {
   def fallbackLayerBucket(dataStoreURI: String,

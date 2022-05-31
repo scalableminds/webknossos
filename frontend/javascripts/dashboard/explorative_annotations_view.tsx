@@ -207,7 +207,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       Toast.success(messages["annotation.was_re_opened"]);
     }
 
-    const newTracings = this.getCurrentOwnTracings().filter((t) => t.id !== tracing.id);
+    const newTracings = this.getCurrentTracings().filter((t) => t.id !== tracing.id);
     const { shouldShowArchivedTracings } = this.state;
 
     this.setModeState(
@@ -291,7 +291,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getCurrentOwnTracings(): Array<APIAnnotationCompact> {
+  getCurrentTracings(): Array<APIAnnotationCompact> {
     return this.getCurrentModeState().tracings;
   }
 
@@ -303,7 +303,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   renameTracing(tracing: APIAnnotationCompact, name: string) {
-    const tracings = this.getCurrentOwnTracings();
+    const tracings = this.getCurrentTracings();
     const newTracings = tracings.map((currentTracing) => {
       if (currentTracing.id !== tracing.id) {
         return currentTracing;
@@ -329,7 +329,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   archiveAll = () => {
-    const selectedAnnotations = this.getAllFilteredTracings().filter(
+    const selectedAnnotations = this.getFilteredTracings().filter(
       (annotation: APIAnnotationCompact) => annotation.owner?.id == this.props.activeUser.id,
     );
 
@@ -433,10 +433,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getAllFilteredTracings() {
-    const allTracings = _.uniqBy(this.getCurrentOwnTracings(), (annotation) => annotation.id);
+  getFilteredTracings() {
     return Utils.filterWithSearchQueryAND(
-      allTracings,
+      this.getCurrentTracings(),
       ["id", "name", "modified", "tags"],
       `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
     );
@@ -485,7 +484,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   renderTable() {
-    const filteredAndSortedTracings = this.getAllFilteredTracings().sort(
+    const filteredAndSortedTracings = this.getFilteredTracings().sort(
       Utils.compareBy(typeHint, (annotation) => annotation.modified, false),
     );
     const renderOwner = (owner: APIUser) => {

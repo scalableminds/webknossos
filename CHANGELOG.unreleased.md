@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 ### Changed
+- Merged the "Shared Annotations" tab into the "Annotations" tab in the user's dashboard. If annotations are shared with you, you can see them in your dashboard. The table can be filtered by owner if you prefer to see only your own annotations. [#6230](https://github.com/scalableminds/webknossos/pull/6230)
 
 ### Fixed
 

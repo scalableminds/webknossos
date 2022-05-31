@@ -162,7 +162,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
       const tracings =
         this.props.userId != null
-          ? // todo: also implement pendant for getCompactAnnotationsForUser ?
+          ? // If an administrator views the dashboard of a specific user, we only fetch the annotations of that user.
             await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings, pageNumber)
           : await getReadableAnnotations(showArchivedTracings, pageNumber);
 

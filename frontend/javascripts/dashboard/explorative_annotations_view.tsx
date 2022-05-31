@@ -232,12 +232,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   _updateAnnotationWithArchiveAction = (
     annotation: APIAnnotationCompact,
     type: "finish" | "reopen",
-  ): APIAnnotationCompact => {
-    return {
-      ...annotation,
-      state: type == "reopen" ? "Active" : "Finished",
-    };
-  };
+  ): APIAnnotationCompact => ({
+    ...annotation,
+    state: type == "reopen" ? "Active" : "Finished",
+  });
 
   renderActions = (tracing: APIAnnotationCompact) => {
     if (tracing.typ !== "Explorational") {

@@ -331,9 +331,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   archiveAll = () => {
     const selectedAnnotations = this.getAllFilteredTracings();
     Modal.confirm({
-      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags?`,
+      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that this only affects the annotation for which you are the owner.`,
       onOk: async () => {
-        const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
+        const selectedAnnotationIds = selectedAnnotations
+          .filter(
+            (annotation: APIAnnotationCompact) => annotation.owner?.id == this.props.activeUser.id,
+          )
+          .map((t) => t.id);
         const data = await finishAllAnnotations(selectedAnnotationIds);
         Toast.messages(data.messages);
         this.setState((prevState) => ({

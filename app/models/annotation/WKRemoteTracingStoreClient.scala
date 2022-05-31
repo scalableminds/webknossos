@@ -2,7 +2,7 @@ package models.annotation
 
 import java.io.File
 
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
@@ -78,11 +78,17 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
 
   def duplicateSkeletonTracing(skeletonTracingId: String,
                                versionString: Option[String] = None,
-                               isFromTask: Boolean = false): Fox[String] = {
+                               isFromTask: Boolean = false,
+                               editPosition: Option[Vec3Int],
+                               editRotation: Option[Vec3Int],
+                               boundingBox: Option[BoundingBox]): Fox[String] = {
     logger.debug("Called to duplicate SkeletonTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .addQueryStringOptional("version", versionString)
+      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
+      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
+      .addQueryStringOptional("boundingBox", boundingBox.map(_.toUriLiteral))
       .addQueryString("fromTask" -> isFromTask.toString)
       .postWithJsonResponse[String]
   }

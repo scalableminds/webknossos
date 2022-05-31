@@ -41,20 +41,21 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def dimensions: Vec3Int =
     Vec3Int(width, height, depth)
 
+  def toUriLiteral: String =
 }
 
 object BoundingBox {
 
   import play.api.libs.json._
 
-  private val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
+  private val literalPattern = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
 
   def empty: BoundingBox =
     BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
 
-  def createFrom(s: String): Box[BoundingBox] =
+  def fromLiteral(s: String): Box[BoundingBox] =
     s match {
-      case formRx(minX, minY, minZ, width, height, depth) =>
+      case literalPattern(minX, minY, minZ, width, height, depth) =>
         try {
           Full(
             BoundingBox(
@@ -70,6 +71,12 @@ object BoundingBox {
         Empty
     }
 
+  def fromSQL(ints: List[Int]): Option[BoundingBox] =
+    if (ints.length == 6)
+      Some(BoundingBox(Vec3Int(ints(0), ints(1), ints(2)), ints(3), ints(4), ints(5)))
+    else
+      None
+
   def combine(bbs: List[BoundingBox]): BoundingBox =
     bbs match {
       case head :: tail =>
@@ -78,27 +85,5 @@ object BoundingBox {
         BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
     }
 
-  def createFrom(bbox: List[List[Int]]): Box[BoundingBox] =
-    if (bbox.size < 3 || bbox(0).size < 2 || bbox(1).size < 2 || bbox(2).size < 2)
-      Empty
-    else
-      Full(
-        BoundingBox(Vec3Int(bbox(0)(0), bbox(1)(0), bbox(2)(0)),
-                    bbox(0)(1) - bbox(0)(0),
-                    bbox(1)(1) - bbox(1)(0),
-                    bbox(2)(1) - bbox(2)(0)))
-
-  def createFrom(topLeft: Vec3Int, bottomRight: Vec3Int): Box[BoundingBox] =
-    if (topLeft <= bottomRight)
-      Full(BoundingBox(topLeft, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y, bottomRight.z - topLeft.z))
-    else
-      Empty
-
-  def fromSQL(ints: List[Int]): Option[BoundingBox] =
-    if (ints.length == 6)
-      Some(BoundingBox(Vec3Int(ints(0), ints(1), ints(2)), ints(3), ints(4), ints(5)))
-    else
-      None
-
-  implicit val boundingBoxFormat: OFormat[BoundingBox] = Json.format[BoundingBox]
+  implicit val jsonFormat: OFormat[BoundingBox] = Json.format[BoundingBox]
 }

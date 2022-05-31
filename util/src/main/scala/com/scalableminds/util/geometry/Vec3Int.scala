@@ -1,6 +1,7 @@
 package com.scalableminds.util.geometry
 
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import net.liftweb.common.Empty
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
@@ -22,20 +23,22 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def toMagLiteral(allowScalar: Boolean = false): String =
     if (allowScalar && isIsotropic) s"$x" else s"$x-$y-$z"
 
-  def toList = List(x, y, z)
+  def toUriLiteral: String = s"$x,$y,$z"
 
-  def move(dx: Int, dy: Int, dz: Int) =
+  def toList: List[Int] = List(x, y, z)
+
+  def move(dx: Int, dy: Int, dz: Int): Vec3Int =
     Vec3Int(x + dx, y + dy, z + dz)
 
   def move(other: Vec3Int): Vec3Int =
     move(other.x, other.y, other.z)
 
-  def negate = Vec3Int(-x, -y, -z)
+  def negate: Vec3Int = Vec3Int(-x, -y, -z)
 
-  def to(bottomRight: Vec3Int) =
+  def to(bottomRight: Vec3Int): Seq[Vec3Int] =
     range(bottomRight, _ to _)
 
-  def until(bottomRight: Vec3Int) =
+  def until(bottomRight: Vec3Int): Seq[Vec3Int] =
     range(bottomRight, _ until _)
 
   def maxDim: Int = Math.max(Math.max(x, y), z)
@@ -52,6 +55,7 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
 object Vec3Int {
   private val magLiteralRegex = """(\d+)-(\d+)-(\d+)""".r
+  private val uriLiteralRegex = """(\d+),(\d+),(\d+)""".r
 
   def fromMagLiteral(s: String, allowScalar: Boolean = false): Option[Vec3Int] =
     s.toIntOpt match {
@@ -59,20 +63,31 @@ object Vec3Int {
       case _ =>
         s match {
           case magLiteralRegex(x, y, z) =>
-            Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
+            try {
+              Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
+            } catch {
+              case _: NumberFormatException => Empty
+            }
           case _ =>
             None
         }
     }
 
-  def fromArray[T <% Int](array: Array[T]) =
-    if (array.size >= 3)
-      Some(Vec3Int(array(0), array(1), array(2)))
+  def fromUriLiteral(s: String): Option[Vec3Int] = s match {
+    case uriLiteralRegex(x, y, z) =>
+      try {
+        Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
+      } catch {
+        case _: NumberFormatException => Empty
+      }
+    case _ => None
+  }
+
+  def fromList(l: List[Int]): Option[Vec3Int] =
+    if (l.length >= 3)
+      Some(Vec3Int(l.head, l(1), l(2)))
     else
       None
-
-  def fromList(l: List[Int]) =
-    fromArray(l.toArray)
 
   def full(i: Int): Vec3Int = Vec3Int(i, i, i)
 

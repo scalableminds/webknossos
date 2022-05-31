@@ -50,7 +50,7 @@ const { Search } = Input;
 const typeHint: APIAnnotationCompact[] = [];
 const pageLength: number = 1000;
 
-export type TracingModeState = {
+type TracingModeState = {
   tracings: Array<APIAnnotationCompact>;
   lastLoadedPage: number;
   loadedAllTracings: boolean;

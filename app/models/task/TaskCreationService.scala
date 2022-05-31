@@ -123,7 +123,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     for {
       baseSkeletonTracingIdOpt <- baseAnnotation.skeletonTracingId
       newTracingId <- baseSkeletonTracingIdOpt
-        .map(id => tracingStoreClient.duplicateSkeletonTracing(id, Some(params.editPosition), Some(params.editRotation), Some(params.boundingBox)))
+        .map(
+          id =>
+            tracingStoreClient.duplicateSkeletonTracing(id,
+                                                        editPosition = Some(params.editPosition),
+                                                        editRotation = Some(params.editRotation),
+                                                        boundingBox = params.boundingBox))
         .getOrElse(
           tracingStoreClient.saveSkeletonTracing(
             annotationService.createSkeletonTracingBase(

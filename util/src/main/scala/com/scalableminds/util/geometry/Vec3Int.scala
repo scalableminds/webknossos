@@ -1,7 +1,6 @@
 package com.scalableminds.util.geometry
 
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import net.liftweb.common.Empty
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
@@ -66,7 +65,7 @@ object Vec3Int {
             try {
               Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
             } catch {
-              case _: NumberFormatException => Empty
+              case _: NumberFormatException => None
             }
           case _ =>
             None
@@ -78,7 +77,7 @@ object Vec3Int {
       try {
         Some(Vec3Int(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)))
       } catch {
-        case _: NumberFormatException => Empty
+        case _: NumberFormatException => None
       }
     case _ => None
   }

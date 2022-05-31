@@ -1,6 +1,6 @@
 package com.scalableminds.util.geometry
 
-import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.Full
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
 
@@ -41,7 +41,7 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def dimensions: Vec3Int =
     Vec3Int(width, height, depth)
 
-  def toUriLiteral: String =
+  def toLiteral: String = f"${topLeft.x},${topLeft.y},${topLeft.z},$width,$height,$depth"
 }
 
 object BoundingBox {
@@ -53,7 +53,7 @@ object BoundingBox {
   def empty: BoundingBox =
     BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
 
-  def fromLiteral(s: String): Box[BoundingBox] =
+  def fromLiteral(s: String): Option[BoundingBox] =
     s match {
       case literalPattern(minX, minY, minZ, width, height, depth) =>
         try {
@@ -65,10 +65,10 @@ object BoundingBox {
               Integer.parseInt(depth)
             ))
         } catch {
-          case _: NumberFormatException => Empty
+          case _: NumberFormatException => None
         }
       case _ =>
-        Empty
+        None
     }
 
   def fromSQL(ints: List[Int]): Option[BoundingBox] =

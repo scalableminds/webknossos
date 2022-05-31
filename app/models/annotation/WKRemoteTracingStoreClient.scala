@@ -2,7 +2,7 @@ package models.annotation
 
 import java.io.File
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
@@ -79,31 +79,37 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
   def duplicateSkeletonTracing(skeletonTracingId: String,
                                versionString: Option[String] = None,
                                isFromTask: Boolean = false,
-                               editPosition: Option[Vec3Int],
-                               editRotation: Option[Vec3Int],
-                               boundingBox: Option[BoundingBox]): Fox[String] = {
+                               editPosition: Option[Vec3Int] = None,
+                               editRotation: Option[Vec3Double] = None,
+                               boundingBox: Option[BoundingBox] = None): Fox[String] = {
     logger.debug("Called to duplicate SkeletonTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .addQueryStringOptional("version", versionString)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
-      .addQueryStringOptional("boundingBox", boundingBox.map(_.toUriLiteral))
+      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
       .addQueryString("fromTask" -> isFromTask.toString)
       .postWithJsonResponse[String]
   }
 
   def duplicateVolumeTracing(volumeTracingId: String,
-                             fromTask: Boolean = false,
+                             isFromTask: Boolean = false,
                              dataSetBoundingBox: Option[BoundingBox] = None,
                              resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty,
-                             downsample: Boolean = false): Fox[String] = {
+                             downsample: Boolean = false,
+                             editPosition: Option[Vec3Int] = None,
+                             editRotation: Option[Vec3Double] = None,
+                             boundingBox: Option[BoundingBox] = None): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-      .addQueryString("fromTask" -> fromTask.toString)
+      .addQueryString("fromTask" -> isFromTask.toString)
       .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
       .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
+      .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
+      .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
+      .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
       .addQueryString("downsample" -> downsample.toString)
       .postJsonWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }

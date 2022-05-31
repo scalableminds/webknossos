@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
@@ -135,7 +136,11 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  def duplicate(tracing: SkeletonTracing, fromTask: Boolean): Fox[String] = {
+  def duplicate(tracing: SkeletonTracing,
+                fromTask: Boolean,
+                editPosition: Option[Vec3Int],
+                editRotation: Option[Vec3Double],
+                boundingBox: Option[BoundingBox]): Fox[String] = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
@@ -144,7 +149,15 @@ class SkeletonTracingService @Inject()(
     } else None
 
     val newTracing =
-      tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0).addAllUserBoundingBoxes(taskBoundingBox)
+      tracing
+        .copy(
+          createdTimestamp = System.currentTimeMillis(),
+          editPosition = editPosition.map(vec3IntToProto).getOrElse(tracing.editPosition),
+          editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracing.editRotation),
+          boundingBox = boundingBoxOptToProto(boundingBox).orElse(tracing.boundingBox),
+          version = 0
+        )
+        .addAllUserBoundingBoxes(taskBoundingBox)
     val finalTracing = if (fromTask) newTracing.clearBoundingBox else newTracing
     save(finalTracing, None, finalTracing.version)
   }

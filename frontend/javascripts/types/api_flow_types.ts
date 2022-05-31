@@ -352,6 +352,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     tags,
     tracingTime,
     typ,
+    user,
     owner,
     teams,
   } = annotation;
@@ -371,7 +372,9 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     tags,
     tracingTime,
     typ,
-    owner,
+    // todo: clean up when user and owner are unified
+    // @ts-ignore
+    owner: owner || user,
     teams,
   };
 }

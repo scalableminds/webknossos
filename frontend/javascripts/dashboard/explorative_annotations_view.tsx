@@ -194,7 +194,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   };
 
-  finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationCompact) => {
+  finishOrReopenAnnotation = async (type: "finish" | "reopen", tracing: APIAnnotationCompact) => {
     const newTracing = annotationToCompact(
       type === "finish"
         ? await finishAnnotation(tracing.id, tracing.typ)
@@ -210,33 +210,33 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     const newTracings = this.getCurrentOwnTracings().filter((t) => t.id !== tracing.id);
     const { shouldShowArchivedTracings } = this.state;
 
-    if (type === "finish") {
-      this.setModeState(
-        {
-          tracings: newTracings,
-        },
-        shouldShowArchivedTracings,
-      );
-      this.setOppositeModeState(
-        {
-          tracings: [newTracing].concat(this.state.archivedModeState.tracings),
-        },
-        shouldShowArchivedTracings,
-      );
-    } else {
-      this.setModeState(
-        {
-          tracings: newTracings,
-        },
-        shouldShowArchivedTracings,
-      );
-      this.setOppositeModeState(
-        {
-          tracings: [newTracing].concat(this.state.unarchivedModeState.tracings),
-        },
-        shouldShowArchivedTracings,
-      );
-    }
+    this.setModeState(
+      {
+        tracings: newTracings,
+      },
+      shouldShowArchivedTracings,
+    );
+
+    const existingTracings =
+      type === "finish"
+        ? this.state.archivedModeState.tracings
+        : this.state.unarchivedModeState.tracings;
+    this.setOppositeModeState(
+      {
+        tracings: [newTracing].concat(existingTracings),
+      },
+      shouldShowArchivedTracings,
+    );
+  };
+
+  _updateAnnotationWithArchiveAction = (
+    annotation: APIAnnotationCompact,
+    type: "finish" | "reopen",
+  ): APIAnnotationCompact => {
+    return {
+      ...annotation,
+      state: type == "reopen" ? "Active" : "Finished",
+    };
   };
 
   renderActions = (tracing: APIAnnotationCompact) => {
@@ -266,7 +266,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           {this.isTracingEditable(tracing) ? (
             <AsyncLink
               href="#"
-              onClick={() => this.finishOrReopenTracing("finish", tracing)}
+              onClick={() => this.finishOrReopenAnnotation("finish", tracing)}
               icon={<InboxOutlined key="inbox" />}
             >
               Archive
@@ -280,7 +280,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <div>
           <AsyncLink
             href="#"
-            onClick={() => this.finishOrReopenTracing("reopen", tracing)}
+            onClick={() => this.finishOrReopenAnnotation("reopen", tracing)}
             icon={<FolderOpenOutlined key="folder" />}
           >
             Reopen
@@ -329,21 +329,31 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   archiveAll = () => {
-    const selectedAnnotations = this.getAllFilteredTracings();
+    const selectedAnnotations = this.getAllFilteredTracings().filter(
+      (annotation: APIAnnotationCompact) => annotation.owner?.id == this.props.activeUser.id,
+    );
+
+    if (selectedAnnotations.length === 0) {
+      Toast.info(
+        "No annotations available to archive. Note that you can only archive annotations that you own.",
+      );
+      return;
+    }
+
     Modal.confirm({
       content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that this only affects the annotation for which you are the owner.`,
       onOk: async () => {
-        const selectedAnnotationIds = selectedAnnotations
-          .filter(
-            (annotation: APIAnnotationCompact) => annotation.owner?.id == this.props.activeUser.id,
-          )
-          .map((t) => t.id);
+        const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
         const data = await finishAllAnnotations(selectedAnnotationIds);
         Toast.messages(data.messages);
         this.setState((prevState) => ({
           archivedModeState: {
             ...prevState.archivedModeState,
-            tracings: prevState.archivedModeState.tracings.concat(selectedAnnotations),
+            tracings: prevState.archivedModeState.tracings.concat(
+              selectedAnnotations.map((annotation) =>
+                this._updateAnnotationWithArchiveAction(annotation, "finish"),
+              ),
+            ),
           },
           unarchivedModeState: {
             ...prevState.unarchivedModeState,

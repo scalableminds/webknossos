@@ -21,7 +21,7 @@ import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import messages, { settingsTooltips, settings as settingsLabels } from "messages";
 import { userSettings } from "types/schemas/user_settings.schema";
-import type { ViewMode, Vector2 } from "oxalis/constants";
+import type { ViewMode } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
@@ -318,29 +318,12 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       </Collapse>
     );
   }
-} // Reuse last range if it's equal to the current one to avoid unnecessary
-// render() executions
-
-let lastValidZoomRange: Vector2 | null = null;
-
-function _getValidZoomRangeForUser(state: OxalisState) {
-  const newRange = getValidZoomRangeForUser(state);
-
-  if (
-    !lastValidZoomRange ||
-    newRange[0] !== lastValidZoomRange[0] ||
-    newRange[1] !== lastValidZoomRange[1]
-  ) {
-    lastValidZoomRange = newRange;
-  }
-
-  return lastValidZoomRange;
 }
 
 const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   zoomStep: state.flycam.zoomStep,
-  validZoomRange: _getValidZoomRangeForUser(state),
+  validZoomRange: getValidZoomRangeForUser(state),
   viewMode: state.temporaryConfiguration.viewMode,
   datasetConfiguration: state.datasetConfiguration,
   dataset: state.dataset,

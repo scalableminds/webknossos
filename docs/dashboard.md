@@ -44,9 +44,6 @@ The annotations tab also shows all annotations that were shared by other collabo
 
 You can view the linked annotations (read-only) or copy them to your account for modification.
 
-todo: update image
-![Annotations shared with any of your teams are listed on your dashboard too.](./images/shared_annotations_tab.jpeg)
-
 ## Featured Publications
 
 This screen lists a number of featured public community datasets and their respective publications hosted by the webKnossos team. Feel free to explore these datasets or to build upon them.

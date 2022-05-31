@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import java.nio.ByteOrder
+import java.lang.reflect.Method
+import java.nio.{ByteBuffer, ByteOrder}
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.arrays.NumericArray
@@ -11,10 +12,12 @@ import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import javax.imageio.stream.{MemoryCacheImageInputStream, MemoryCacheImageOutputStream}
 import javax.inject.Inject
+import org.platanios.tensorflow.api.{Shape, Tensor, UInt}
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Using
+import org.platanios.tensorflow.jni.{Tensor => NativeTensor}
 
 class Application @Inject()(redisClient: DataStoreRedisStore)(implicit ec: ExecutionContext)
     extends Controller
@@ -44,7 +47,9 @@ class Application @Inject()(redisClient: DataStoreRedisStore)(implicit ec: Execu
     //testOneMethod("spire", elementClass, iterations, convertAndBackSpire)
     testOneMethod("imageio", elementClass, iterations, convertAndBackImageIO)
     //testOneMethod("hybrid", elementClass, iterations, convertAndBackHybrid)
-    testOneMethod("NumericArray", elementClass, iterations, convertAndBackNumericArray)
+    //testOneMethod("NumericArray", elementClass, iterations, convertAndBackNumericArray)
+    testOneMethod("TensorflowScala", elementClass, iterations, convertAndBackTensorflowScala)
+
 
     Ok
   }
@@ -129,6 +134,21 @@ class Application @Inject()(redisClient: DataStoreRedisStore)(implicit ec: Execu
     val afterTyped = System.currentTimeMillis()
 
     val bytesOut = typed.toBytes
+
+    (afterTyped, bytesOut)
+  }
+
+  def convertAndBackTensorflowScala(elementClass: ElementClass.Value): (Long, Array[Byte]) = {
+    val typed: Tensor[UInt] = Tensor.fromBuffer[UInt](Shape(bytesIn.length / ElementClass.bytesPerElement(elementClass)), bytesIn.length, ByteBuffer.wrap(bytesIn))
+
+    val afterTyped = System.currentTimeMillis()
+
+    val method: Method = classOf[Tensor[UInt]].getDeclaredMethod("resolve")
+    method.setAccessible(true)
+    val resolved: Long = method.invoke(typed).asInstanceOf[Long]
+    val buffer = NativeTensor.buffer(resolved).order(ByteOrder.nativeOrder)
+    val bytesOut = new Array[Byte](bytesIn.length)
+    buffer.get(bytesOut)
 
     (afterTyped, bytesOut)
   }

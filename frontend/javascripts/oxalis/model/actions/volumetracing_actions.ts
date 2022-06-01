@@ -258,8 +258,7 @@ export const dispatchFloodfillAsync = async (
   planeId: OrthoView,
 ): Promise<void> => {
   const readyDeferred = new Deferred();
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
-  const action = floodFillAction(position, planeId, () => readyDeferred.resolve());
+  const action = floodFillAction(position, planeId, () => readyDeferred.resolve(null));
   dispatch(action);
   await readyDeferred.promise();
 };

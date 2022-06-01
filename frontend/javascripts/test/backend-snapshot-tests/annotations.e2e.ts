@@ -125,20 +125,15 @@ test.serial("finishAllAnnotations()", async (t) => {
   );
 });
 test.serial("createExplorational() and finishAnnotation()", async (t) => {
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
   t.snapshot(replaceVolatileValues(createdExplorational), {
     id: "annotations-createExplorational",
   });
   await api.finishAnnotation(createdExplorational.id, APIAnnotationTypeEnum.Explorational);
-  const finishedAnnotation = await api.getAnnotationInformation(
-    createdExplorational.id,
-    APIAnnotationTypeEnum.Explorational,
-  );
+  const finishedAnnotation = await api.getAnnotationInformation(createdExplorational.id);
   t.is(finishedAnnotation.state, "Finished");
 });
 test.serial("getTracingsForAnnotation()", async (t) => {
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   writeTypeCheckingFile(tracings[0], "tracing", "ServerSkeletonTracing");
@@ -147,7 +142,6 @@ test.serial("getTracingsForAnnotation()", async (t) => {
   });
 });
 test.serial("getTracingsForAnnotation() for volume", async (t) => {
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
   const createdExplorational = await api.createExplorational(dataSetId, "volume", null);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   writeTypeCheckingFile(tracings[0], "tracing-volume", "ServerVolumeTracing");
@@ -156,7 +150,6 @@ test.serial("getTracingsForAnnotation() for volume", async (t) => {
   });
 });
 test.serial("getTracingsForAnnotation() for hybrid", async (t) => {
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
   const createdExplorational = await api.createExplorational(dataSetId, "hybrid", null);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   writeTypeCheckingFile(tracings, "tracing-hybrid", "ServerTracing", {
@@ -189,7 +182,6 @@ async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue)
 }
 
 test.serial("Send update actions and compare resulting tracing", async (t) => {
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
   const initialSkeleton = {
     activeNodeId: undefined,
@@ -212,7 +204,6 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
   });
 });
 test("Send complex update actions and compare resulting tracing", async (t) => {
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
   const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
   const treeGroups = [

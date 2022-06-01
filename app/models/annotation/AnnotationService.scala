@@ -837,7 +837,6 @@ class AnnotationService @Inject()(
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      userBox <- userDAO.findOne(annotation._user).futureBox
       user <- userDAO.findOne(annotation._user)(GlobalAccessContext)
       userJson = Json.obj(
         "id" -> user._id.toString,

@@ -104,8 +104,8 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
   getDropdownMenu(annotation: APIAnnotation) {
     let doesAnnotationNotBelongToActiveUser = true;
 
-    if (annotation.user && this.props.activeUser) {
-      doesAnnotationNotBelongToActiveUser = annotation.user.id !== this.props.activeUser.id;
+    if (annotation.owner && this.props.activeUser) {
+      doesAnnotationNotBelongToActiveUser = annotation.owner.id !== this.props.activeUser.id;
     }
 
     const label =
@@ -183,8 +183,8 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         <table>
           <tbody>
             {this.state.annotations.map((annotation: APIAnnotation) => {
-              const userString = annotation.user
-                ? `${annotation.user.firstName} ${annotation.user.lastName} ( ${annotation.user.email} )`
+              const userString = annotation.owner
+                ? `${annotation.owner.firstName} ${annotation.owner.lastName} ( ${annotation.owner.email} )`
                 : "<no user>";
               return (
                 <tr key={`${annotation.id}-tr`}>
@@ -217,7 +217,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             })}
           </tbody>
         </table>
-        {this.state.currentAnnotation && this.state.currentAnnotation.user ? (
+        {this.state.currentAnnotation && this.state.currentAnnotation.owner ? (
           <TransferTaskModal
             visible={this.state.isTransferModalVisible}
             annotationId={this.state.currentAnnotation.id}
@@ -227,8 +227,6 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
               })
             }
             onChange={this.updateAnnotationState}
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-            userId={this.state.currentAnnotation.user.id}
           />
         ) : null}
       </div>

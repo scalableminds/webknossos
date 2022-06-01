@@ -332,7 +332,7 @@ export type APIAnnotationCompact = {
   readonly tags: Array<string>;
   readonly tracingTime: number | null | undefined;
   readonly typ: APIAnnotationType;
-  readonly owner?: string;
+  readonly owner?: APIUserBase;
 };
 export type LocalMeshMetaData = {
   isVisible?: boolean;
@@ -360,7 +360,7 @@ type APIAnnotationBase = APIAnnotationCompact & {
   readonly restrictions: APIRestrictions;
   readonly viewConfiguration?: AnnotationViewConfiguration | null | undefined;
   readonly settings: APISettings;
-  readonly user?: APIUserBase;
+  readonly owner?: APIUserBase;
   readonly meshes: Array<MeshMetaData>;
 };
 export type APIAnnotation = APIAnnotationBase & {

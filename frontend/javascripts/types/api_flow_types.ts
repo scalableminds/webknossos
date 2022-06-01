@@ -361,6 +361,8 @@ type APIAnnotationBase = APIAnnotationCompact & {
   readonly viewConfiguration?: AnnotationViewConfiguration | null | undefined;
   readonly settings: APISettings;
   readonly owner?: APIUserBase;
+  // This attribute is deprecated and should not be used, anymore.
+  readonly user?: APIUserBase;
   readonly meshes: Array<MeshMetaData>;
 };
 export type APIAnnotation = APIAnnotationBase & {

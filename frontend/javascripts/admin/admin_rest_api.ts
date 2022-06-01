@@ -704,11 +704,25 @@ export function copyAnnotationToUserAccount(
 
 export async function getAnnotationInformation(
   annotationId: string,
+  options: RequestOptions = {},
+): Promise<APIAnnotation> {
+  const infoUrl = `/api/annotations/${annotationId}/info?timestamp=${Date.now()}`;
+  const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+
+  // Extract the potential messages property before returning the task to avoid
+  // failing e2e tests in annotations.e2e.ts
+  const { messages: _messages, ...annotation } = annotationWithMessages;
+  return annotation;
+}
+
+export async function getAnnotationCompoundInformation(
+  annotationId: string,
   annotationType: APIAnnotationType,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
   const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+
   // Extract the potential messages property before returning the task to avoid
   // failing e2e tests in annotations.e2e.ts
   const { messages: _messages, ...annotation } = annotationWithMessages;
@@ -729,8 +743,8 @@ export function getEmptySandboxAnnotationInformation(
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
-  fallbackLayerName: string | null | undefined,
-  resolutionRestrictions: APIResolutionRestrictions | null | undefined,
+  fallbackLayerName?: string | null | undefined,
+  resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;

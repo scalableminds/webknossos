@@ -7,7 +7,11 @@ import type { APIAnnotation } from "types/api_flow_types";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
+import {
+  getAnnotationInformation,
+  getAnnotationCompoundInformation,
+  getTracingForAnnotationType,
+} from "admin/admin_rest_api";
 import { location } from "libs/window";
 import InputComponent from "oxalis/view/components/input_component";
 import Request from "libs/request";
@@ -143,7 +147,10 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
     if (selectedProject != null) {
       if (isLocalMerge) {
-        const annotation = await getAnnotationInformation(selectedProject, "CompoundProject");
+        const annotation = await getAnnotationCompoundInformation(
+          selectedProject,
+          "CompoundProject",
+        );
         this.mergeAnnotationIntoActiveTracing(annotation);
       } else {
         const url =
@@ -160,10 +167,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
     if (selectedExplorativeAnnotation != null) {
       if (isLocalMerge) {
-        const annotation = await getAnnotationInformation(
-          selectedExplorativeAnnotation,
-          "Explorational",
-        );
+        const annotation = await getAnnotationInformation(selectedExplorativeAnnotation);
         this.mergeAnnotationIntoActiveTracing(annotation);
       } else {
         const url =

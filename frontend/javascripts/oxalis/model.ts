@@ -38,7 +38,6 @@ export class OxalisModel {
   ) {
     try {
       const initializationInformation = await initialize(
-        annotationType,
         initialCommandType,
         initialFetch,
         versions,
@@ -61,6 +60,7 @@ export class OxalisModel {
     } catch (error) {
       try {
         const maybeOrganizationToSwitchTo = await isDatasetAccessibleBySwitching(
+          // todo: should not be required here
           annotationType,
           initialCommandType,
         );

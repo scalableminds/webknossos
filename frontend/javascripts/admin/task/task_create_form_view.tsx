@@ -418,12 +418,12 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
                     const annotationResponse =
                       (await tryToAwaitPromise(
-                        getAnnotationInformation(value, "Task", {
+                        getAnnotationInformation(value, {
                           showErrorToast: false,
                         }),
                       )) ||
                       (await tryToAwaitPromise(
-                        getAnnotationInformation(value, "Explorational", {
+                        getAnnotationInformation(value, {
                           showErrorToast: false,
                         }),
                       ));

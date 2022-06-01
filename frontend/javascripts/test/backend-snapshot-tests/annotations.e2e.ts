@@ -33,10 +33,7 @@ test.before("Reset database", async () => {
 });
 test("getAnnotationInformation()", async (t) => {
   const annotationId = "570ba0092a7c0e980056fe9b";
-  const annotation = await api.getAnnotationInformation(
-    annotationId,
-    APIAnnotationTypeEnum.Explorational,
-  );
+  const annotation = await api.getAnnotationInformation(annotationId);
   t.is(annotation.id, annotationId);
   writeTypeCheckingFile(annotation, "annotation", "APIAnnotation");
   t.snapshot(annotation, {
@@ -46,10 +43,7 @@ test("getAnnotationInformation()", async (t) => {
 test("getAnnotationInformation() for public annotation while logged out", async (t) => {
   setCurrToken("invalidToken");
   const annotationId = "88135c192faeb34c0081c05d";
-  const annotation = await api.getAnnotationInformation(
-    annotationId,
-    APIAnnotationTypeEnum.Explorational,
-  );
+  const annotation = await api.getAnnotationInformation(annotationId);
   t.is(annotation.id, annotationId);
   t.snapshot(annotation, {
     id: "annotations-getAnnotationInformation-public",
@@ -90,10 +84,7 @@ test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async
 });
 test.serial("editAnnotation()", async (t) => {
   const annotationId = "68135c192faeb34c0081c05d";
-  const originalAnnotation = await api.getAnnotationInformation(
-    annotationId,
-    APIAnnotationTypeEnum.Explorational,
-  );
+  const originalAnnotation = await api.getAnnotationInformation(annotationId);
   const { name, visibility, description } = originalAnnotation;
   const newName = "new name";
   const newVisibility = "Public";
@@ -103,10 +94,7 @@ test.serial("editAnnotation()", async (t) => {
     visibility: newVisibility,
     description: newDescription,
   });
-  const editedAnnotation = await api.getAnnotationInformation(
-    annotationId,
-    APIAnnotationTypeEnum.Explorational,
-  );
+  const editedAnnotation = await api.getAnnotationInformation(annotationId);
   t.is(editedAnnotation.name, newName);
   t.is(editedAnnotation.visibility, newVisibility);
   t.is(editedAnnotation.description, newDescription);
@@ -126,9 +114,7 @@ test.serial("finishAllAnnotations()", async (t) => {
   const annotationIds = ["78135c192faeb34c0081c05d", "78135c192faeb34c0081c05e"];
   await api.finishAllAnnotations(annotationIds);
   const finishedAnnotations = await Promise.all(
-    annotationIds.map((id) =>
-      api.getAnnotationInformation(id, APIAnnotationTypeEnum.Explorational),
-    ),
+    annotationIds.map((id) => api.getAnnotationInformation(id)),
   );
   t.is(finishedAnnotations.length, 2);
   finishedAnnotations.forEach((annotation) => {

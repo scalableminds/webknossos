@@ -313,8 +313,6 @@ class ReactRouter extends React.Component<Props> {
                   try {
                     const annotationInformation = await getAnnotationInformation(
                       match.params.id || "",
-                      coalesce(APIAnnotationTypeEnum, match.params.type) ||
-                        APIAnnotationTypeEnum.Explorational,
                     );
                     return annotationInformation.visibility === "Public";
                   } catch (ex) {

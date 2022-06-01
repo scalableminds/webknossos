@@ -74,7 +74,6 @@ import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import type {
-  AnnotationType,
   DatasetConfiguration,
   DatasetLayerConfiguration,
   TraceOrViewCommand,
@@ -95,7 +94,6 @@ import {
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
 export async function initialize(
-  annotationType: AnnotationType,
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
   versions?: Versions,
@@ -115,7 +113,7 @@ export async function initialize(
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
-    annotation = await getAnnotationInformation(annotationId, annotationType);
+    annotation = await getAnnotationInformation(annotationId);
     datasetId = {
       name: annotation.dataSetName,
       owningOrganization: annotation.organization,

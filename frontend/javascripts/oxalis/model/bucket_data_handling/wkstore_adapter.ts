@@ -23,6 +23,7 @@ import WorkerPool from "libs/worker_pool";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
+import { getGlobalDataConnectionInfo } from "../data_connection_info";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const COMPRESSION_WORKER_COUNT = 2;
@@ -170,13 +171,24 @@ export async function requestFromStore(
 
   try {
     return await doWithToken(async (token) => {
+      const startingTime = performance.now();
       const { buffer: responseBuffer, headers } =
         await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
           data: bucketInfo,
           timeout: REQUEST_TIMEOUT,
           showErrorToast: false,
         });
+      const roundTripTime = performance.now() - startingTime;
       const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
+      const receivedBucketsCount = batch.length - missingBuckets.length;
+      const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
+      getGlobalDataConnectionInfo().log(
+        startingTime,
+        roundTripTime,
+        receivedBucketsCount,
+        receivedBucketsCount * BUCKET_BYTE_LENGTH,
+        missingBuckets.length,
+      );
       let resultBuffer = responseBuffer;
 
       if (fourBit) {

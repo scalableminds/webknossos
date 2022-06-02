@@ -527,7 +527,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   maybePrintOwner() {
     const { activeUser } = this.props;
-    const owner = this.props.tracing.user;
+    const { owner } = this.props.tracing;
 
     if (!owner) {
       return null;

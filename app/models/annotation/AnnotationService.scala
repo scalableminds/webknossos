@@ -819,6 +819,7 @@ class AnnotationService @Inject()(
         "teams" -> teamsJson,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "user" -> userJson,
+        "owner" -> userJson,
         "meshes" -> meshesJs
       )
     }

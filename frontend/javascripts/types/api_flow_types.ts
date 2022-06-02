@@ -151,11 +151,14 @@ export type APITeamMembership = {
 };
 export type ExperienceMap = Readonly<Record<string, number>>;
 export type ExperienceDomainList = Array<string>;
-export type APIUserBase = {
-  readonly email: string;
+
+export type APIUserCompact = {
   readonly firstName: string;
   readonly lastName: string;
   readonly id: string;
+};
+export type APIUserBase = APIUserCompact & {
+  readonly email: string;
   readonly isAnonymous: boolean;
   readonly teams: Array<APITeamMembership>;
   readonly isAdmin: boolean;
@@ -332,7 +335,9 @@ export type APIAnnotationCompact = {
   readonly tags: Array<string>;
   readonly tracingTime: number | null | undefined;
   readonly typ: APIAnnotationType;
-  readonly owner?: APIUser;
+  // The owner can be null (e.g., for a sandbox annotation
+  // or due to missing permissions).
+  readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
 };
 
@@ -405,6 +410,8 @@ type APIAnnotationBase = APIAnnotationCompact & {
   readonly restrictions: APIRestrictions;
   readonly viewConfiguration?: AnnotationViewConfiguration | null | undefined;
   readonly settings: APISettings;
+  readonly owner?: APIUserBase;
+  // This `user` attribute is deprecated and should not be used, anymore. It only exists to satisfy e2e type checks
   readonly user?: APIUserBase;
   readonly meshes: Array<MeshMetaData>;
 };

@@ -33,26 +33,40 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
   yield* takeEvery(["WK_READY", "UPDATE_LAYER_SETTING", "UPDATE_DATASET_SETTING"], warnMaybe);
 }
 
-let downsamplingWarningDidShow = false;
+let userClosedWarning = false;
 export function* watchZ1Downsampling(): Saga<void> {
   function* maybeShowWarning(): Saga<void> {
     const currentRes = yield* select((state) => getCurrentResolution(state));
     const currentZoomStep = yield* select((state) => state.flycam.zoomStep);
-    const minVoxelPerPixel = 0.5;
-
-    if (!downsamplingWarningDidShow) {
-      // checking the downsampled dimensions x and y
+    if (currentZoomStep < 1) {
+      // If the user has zoomed into the data,
+      // the rendering quality is expected to be relatively low.
+      // Don't show any warnings in that case.
+      return;
+    }
+    const minVoxelPerPixel = 0.2;
+    const setUserClosedWarningTrue = () => {
+      userClosedWarning = true;
+    };
+    if (!userClosedWarning) {
+      // checking only the downsampled dimensions x and y
       for (let i = 0; i < 2; i++) {
         const voxelPerPixelXY = currentZoomStep / currentRes[i];
         if (voxelPerPixelXY < minVoxelPerPixel) {
-          Toast.warning(messages["dataset.z1_downsampling_hint"]);
-          downsamplingWarningDidShow = false;
+          Toast.warning(messages["dataset.z1_downsampling_hint"], {
+            sticky: true,
+            key: "DOWNSAMPLING_CAUSES_BAD_QUALITY",
+            onClose: setUserClosedWarningTrue,
+          });
+        } else {
+          Toast.close("DOWNSAMPLING_CAUSES_BAD_QUALITY");
         }
       }
     }
   }
   yield* takeEvery("WK_READY", maybeShowWarning);
   yield* call(sleep, 2000);
+  yield* call(maybeShowWarning);
   yield* takeEvery(
     ["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"],
     maybeShowWarning,

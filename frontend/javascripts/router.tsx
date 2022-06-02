@@ -7,8 +7,7 @@ import React from "react";
 import { createBrowserHistory } from "history";
 import _ from "lodash";
 import AcceptInviteView from "admin/auth/accept_invite_view";
-import { APICompoundTypeEnum, APIUser } from "types/api_flow_types";
-import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
+import { TracingTypeEnum, APICompoundTypeEnum, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
@@ -147,6 +146,17 @@ class ReactRouter extends React.Component<Props> {
       }}
     />
   );
+
+  serverAuthenticationCallback = async ({ match }: ContextRouter) => {
+    try {
+      const annotationInformation = await getAnnotationInformation(match.params.id || "");
+      return annotationInformation.visibility === "Public";
+    } catch (ex) {
+      // Annotation could not be found
+    }
+
+    return false;
+  };
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;
@@ -590,17 +600,6 @@ class ReactRouter extends React.Component<Props> {
       </Router>
     );
   }
-
-  serverAuthenticationCallback = async ({ match }: ContextRouter) => {
-    try {
-      const annotationInformation = await getAnnotationInformation(match.params.id || "");
-      return annotationInformation.visibility === "Public";
-    } catch (ex) {
-      // Annotation could not be found
-    }
-
-    return false;
-  };
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

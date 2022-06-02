@@ -1,10 +1,10 @@
 import { Button, Modal, Alert } from "antd";
 import { useSelector } from "react-redux";
 import React, { useState } from "react";
-import type { APIDataset, APIDataLayer } from "types/api_flow_types";
+import type { APIDataset, APIDataLayer, APIAnnotationType } from "types/api_flow_types";
 import type { BoundingBoxType } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
-import type { OxalisState, Tracing, AnnotationType, HybridTracing } from "oxalis/store";
+import type { OxalisState, Tracing, HybridTracing } from "oxalis/store";
 import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { startExportTiffJob } from "admin/admin_rest_api";
@@ -23,7 +23,7 @@ type LayerInfos = {
   layerName: string | null | undefined;
   tracingId: string | null | undefined;
   annotationId: string | null | undefined;
-  annotationType: AnnotationType | null | undefined;
+  annotationType: APIAnnotationType | null | undefined;
   tracingVersion: number | null | undefined;
   hasMag1: boolean;
   mappingName: string | null | undefined;

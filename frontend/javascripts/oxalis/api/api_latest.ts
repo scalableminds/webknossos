@@ -4,8 +4,7 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
-import { APICompoundType } from "types/api_flow_types";
+import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
 import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
@@ -125,7 +124,6 @@ import type { OxalisModel } from "oxalis/model";
 import Model from "oxalis/model";
 import Request from "libs/request";
 import type {
-  AnnotationType,
   MappingType,
   DatasetConfiguration,
   Mapping,

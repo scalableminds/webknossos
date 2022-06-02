@@ -24,7 +24,7 @@ import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controlle
 import BrainSpinner from "components/brain_spinner";
 import Model from "oxalis/model";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import type { OxalisState, TraceOrViewCommand, AnnotationType } from "oxalis/store";
+import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";

@@ -29,14 +29,7 @@ import {
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
-import type {
-  Node,
-  UserConfiguration,
-  DatasetConfiguration,
-  TreeMap,
-  AnnotationType,
-  Mapping,
-} from "oxalis/store";
+import type { Node, UserConfiguration, DatasetConfiguration, TreeMap, Mapping } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import window, { location } from "libs/window";
@@ -63,9 +56,10 @@ import messages from "messages";
 import type { ToastStyle } from "libs/toast";
 import update from "immutability-helper";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 import { APICompoundType, APICompoundTypeEnum } from "types/api_flow_types";
 import { coalesce } from "libs/utils";
+
+import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {

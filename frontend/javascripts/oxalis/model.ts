@@ -18,11 +18,13 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import DataLayer from "oxalis/model/data_layer";
 import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import type { TraceOrViewCommand, AnnotationType } from "oxalis/store";
+import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import { initialize } from "./model_initialization";
 import { APICompoundType } from "types/api_flow_types";
+
+import { initialize } from "./model_initialization";
+
 // TODO: Non-reactive
 export class OxalisModel {
   connectionInfo: ConnectionInfo | null = null;

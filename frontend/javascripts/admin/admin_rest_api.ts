@@ -64,7 +64,6 @@ import type {
   PartialDatasetConfiguration,
   Tracing,
   TraceOrViewCommand,
-  AnnotationType,
   MappingType,
   VolumeTracing,
   UserConfiguration,

@@ -48,22 +48,21 @@ export function* watchZ1Downsampling(): Saga<void> {
       return;
     }
     const minVoxelPerPixel = 0.1;
-    const setUserClosedWarningTrue = () => {
-      userClosedWarning = true;
-    };
     if (!userClosedWarning) {
       // checking only the downsampled dimensions x and y
-      for (let i = 0; i < 2; i++) {
-        const voxelPerPixelXY = currentZoomStep / currentRes[i];
-        if (voxelPerPixelXY < minVoxelPerPixel) {
-          Toast.warning(messages["dataset.z1_downsampling_hint"], {
-            sticky: true,
-            key: "DOWNSAMPLING_CAUSES_BAD_QUALITY",
-            onClose: setUserClosedWarningTrue,
-          });
-        } else {
-          Toast.close("DOWNSAMPLING_CAUSES_BAD_QUALITY");
-        }
+      const showWarning =
+        currentZoomStep / currentRes[0] < minVoxelPerPixel ||
+        currentZoomStep / currentRes[1] < minVoxelPerPixel;
+      if (showWarning) {
+        Toast.warning(messages["dataset.z1_downsampling_hint"], {
+          sticky: true,
+          key: "DOWNSAMPLING_CAUSES_BAD_QUALITY",
+          onClose: () => {
+            userClosedWarning = true;
+          },
+        });
+      } else {
+        Toast.close("DOWNSAMPLING_CAUSES_BAD_QUALITY");
       }
     }
   }

@@ -2,11 +2,12 @@ import cwise from "cwise";
 import distanceTransform from "distance-transform";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import ndarray from "ndarray";
+import { pluralize } from "libs/utils";
+import ndarray, { NdArray } from "ndarray";
 import api from "oxalis/api/internal_api";
 import {
-  AnnotationTool,
   ContourModeEnum,
+  OrthoViews,
   ToolsWithInterpolationCapabilities,
   Vector3,
 } from "oxalis/constants";
@@ -15,15 +16,105 @@ import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
+  getLabelActionFromPreviousSlice,
+  getLastLabelAction,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import { OxalisState } from "oxalis/store";
 import { call } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+
+export const MAXIMUM_INTERPOLATION_DEPTH = 8;
+
+export function getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
+  const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
+  const volumeTracing = getActiveSegmentationTracing(state);
+  let interpolationDepth = 0;
+  if (!volumeTracing) {
+    // Return dummy values, since the feature should be disabled, anyway
+    return {
+      tooltipTitle: "Volume Interpolation",
+      disabledExplanation: "Only available when a volume annotation exists.",
+      isDisabled: true,
+      activeViewport: OrthoViews.PLANE_XY,
+      previousCentroid: null,
+      labeledResolution: [1, 1, 1] as Vector3,
+      labeledZoomStep: 0,
+      interpolationDepth,
+    };
+  }
+  const mostRecentLabelAction = getLastLabelAction(volumeTracing);
+
+  const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
+  const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
+
+  const requestedZoomStep = getRequestLogZoomStep(state);
+  const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
+  const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+
+  const previousCentroid = getLabelActionFromPreviousSlice(
+    state,
+    volumeTracing,
+    labeledResolution,
+    thirdDim,
+  )?.centroid;
+
+  let disabledExplanation = null;
+  let tooltipAddendum = "";
+
+  if (previousCentroid != null) {
+    const position = getFlooredPosition(state.flycam);
+    // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
+    // is done while respecting how the coordinates are clipped due to that resolution.
+    // For example, in mag 8-8-2, the z distance needs to be divided by two, since it is measured
+    // in global coordinates.
+    const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, labeledResolution, thirdDim);
+    interpolationDepth = Math.floor(
+      Math.abs(
+        V3.sub(adapt(previousCentroid), adapt(position))[thirdDim] / labeledResolution[thirdDim],
+      ),
+    );
+
+    if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
+      disabledExplanation = `${explanationPrefix} last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH}).`;
+    } else if (interpolationDepth < 2) {
+      disabledExplanation = `${explanationPrefix} last labeled slice should be at least 2 slices away.`;
+    } else {
+      tooltipAddendum = `Labels ${interpolationDepth - 1} ${pluralize(
+        "slice",
+        interpolationDepth - 1,
+      )} along ${Dimensions.dimensionNameForIndex(thirdDim)}`;
+    }
+  } else {
+    disabledExplanation = `${explanationPrefix} all recent label actions were performed on the current slice.`;
+  }
+
+  const isPossible = disabledExplanation == null;
+  tooltipAddendum = disabledExplanation || tooltipAddendum;
+
+  const tooltipTitle = isAllowed
+    ? `Interpolate current segment between last labeled and current slice (V) – ${tooltipAddendum}`
+    : "Volume Interpolation was disabled for this annotation.";
+  const isDisabled = !(isAllowed && isPossible);
+  return {
+    tooltipTitle,
+    disabledExplanation,
+    isDisabled,
+    activeViewport,
+    previousCentroid,
+    labeledResolution,
+    labeledZoomStep,
+    interpolationDepth,
+  };
+}
 
 const isEqual = cwise({
   args: ["array", "scalar"],
@@ -31,6 +122,27 @@ const isEqual = cwise({
     a = a === b ? 1 : 0;
   },
 });
+
+const isNonZero = cwise({
+  args: ["array"],
+  // The following function is parsed by cwise which is why
+  // the shorthand syntax is not supported.
+  // Also, cwise uses this function content to build
+  // the target function. Adding a return here would not
+  // yield the desired behavior for isNonZero.
+  // eslint-disable-next-line consistent-return, object-shorthand
+  body: function (a) {
+    if (a > 0) {
+      return true;
+    }
+  },
+  // The following function is parsed by cwise which is why
+  // the shorthand syntax is not supported.
+  // eslint-disable-next-line object-shorthand
+  post: function () {
+    return false;
+  },
+}) as (arr: NdArray) => boolean;
 
 const mul = cwise({
   args: ["array", "scalar"],
@@ -98,29 +210,23 @@ function signedDist(arr: ndarray.NdArray) {
   return arr;
 }
 
-export default function* maybeInterpolateSegmentationLayer(
-  layer: VolumeLayer,
-  isDrawing: boolean,
-  activeTool: AnnotationTool,
-): Saga<void> {
+export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  if (!ToolsWithInterpolationCapabilities.includes(activeTool) || !isDrawing) {
+  const activeTool = yield* select((state) => state.uiInformation.activeTool);
+  if (!ToolsWithInterpolationCapabilities.includes(activeTool)) {
     return;
   }
 
-  const isVolumeInterpolationEnabled = yield* select(
-    (state) =>
-      state.userConfiguration.isVolumeInterpolationEnabled &&
-      state.tracing.restrictions.volumeInterpolationAllowed,
+  const isVolumeInterpolationAllowed = yield* select(
+    (state) => state.tracing.restrictions.volumeInterpolationAllowed,
   );
 
-  if (!isVolumeInterpolationEnabled) {
+  if (!isVolumeInterpolationAllowed) {
     return;
   }
 
-  const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   // Disable copy-segmentation for the same zoom steps where the brush/trace tool is forbidden, too.
@@ -135,19 +241,23 @@ export default function* maybeInterpolateSegmentationLayer(
     return;
   }
 
-  const volumeTracing = yield* select(enforceActiveVolumeTracing);
-  const segmentationLayer = yield* call(
-    [Model, Model.getSegmentationTracingLayer],
-    volumeTracing.tracingId,
+  const {
+    activeViewport,
+    previousCentroid,
+    disabledExplanation,
+    labeledResolution,
+    labeledZoomStep,
+    interpolationDepth,
+  } = yield* select((state) =>
+    getInterpolationInfo(state, "Could not interpolate segment because"),
   );
-  const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
-  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+
+  const volumeTracing = yield* select(enforceActiveVolumeTracing);
+
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   const activeCellId = volumeTracing.activeCellId;
 
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
   const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
   const directionFactor = spaceDirectionOrtho[thirdDim];
 
@@ -156,26 +266,21 @@ export default function* maybeInterpolateSegmentationLayer(
     return;
   }
 
-  // Annotate only every n-th slice while the remaining ones are interpolated automatically.
-  const interpolationDepth = yield* select(
-    (store) => store.userConfiguration.volumeInterpolationDepth,
-  );
-
-  const drawnBoundingBoxMag1 = layer.getLabeledBoundingBox();
-  if (drawnBoundingBoxMag1 == null) {
+  if (disabledExplanation != null || previousCentroid == null) {
+    // A disabledExplanation should always exist if previousCentroid is null,
+    // but this logic is not inferred by TS.
+    if (disabledExplanation) {
+      Toast.warning(disabledExplanation);
+    }
     return;
   }
 
+  const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
+
   const transpose = (vector: Vector3) => Dimensions.transDim(vector, activeViewport);
 
-  const uvSize = V3.scale3(drawnBoundingBoxMag1.getSize(), transpose([1, 1, 0]));
-  const viewportBoxMag1 = yield* call(getBoundingBoxForViewport, position, activeViewport);
-  const relevantBoxMag1 = drawnBoundingBoxMag1
-    // Increase the drawn region by a factor of 2 (use half the size as a padding on each size)
-    .paddedWithMargins(V3.scale(uvSize, 0.5))
-    // Intersect with the viewport
-    .intersectedWith(viewportBoxMag1)
-    // Also consider the n previous/next slices
+  const relevantBoxMag1 = viewportBoxMag1
+    // Consider the n previous/next slices
     .paddedWithSignedMargins(
       transpose([0, 0, -directionFactor * interpolationDepth * labeledResolution[thirdDim]]),
     )
@@ -220,6 +325,13 @@ export default function* maybeInterpolateSegmentationLayer(
   isEqual(firstSlice, activeCellId);
   isEqual(lastSlice, activeCellId);
 
+  if (!isNonZero(firstSlice) || !isNonZero(lastSlice)) {
+    Toast.warning(
+      `Could not interpolate segment, because id ${activeCellId} was not found in source/target slice.`,
+    );
+    return;
+  }
+
   const firstSliceDists = signedDist(firstSlice);
   const lastSliceDists = signedDist(lastSlice);
 
@@ -245,6 +357,7 @@ export default function* maybeInterpolateSegmentationLayer(
       ContourModeEnum.DRAW,
       overwriteMode,
       labeledZoomStep,
+      activeViewport,
     );
   }
 }

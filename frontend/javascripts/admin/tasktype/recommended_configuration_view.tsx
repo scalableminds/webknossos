@@ -49,7 +49,6 @@ function getRecommendedConfigByCategory() {
     },
     volume: {
       brushSize: 50,
-      isVolumeInterpolationEnabled: false,
     },
   };
 }

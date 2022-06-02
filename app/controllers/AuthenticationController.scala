@@ -14,7 +14,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.annotation.AnnotationState.Cancelled
-import models.annotation.{AnnotationDAO, AnnotationInformationProvider}
+import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider}
 import models.binary.DataSetDAO
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
@@ -198,19 +198,14 @@ class AuthenticationController @Inject()(
 
   def accessibleBySwitching(organizationName: Option[String],
                             dataSetName: Option[String],
-                            annotationTyp: Option[String],
                             annotationId: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         isSuperuser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
         selectedOrganization <- if (isSuperuser)
-          accessibleBySwitchingForSuperUser(organizationName, dataSetName, annotationTyp, annotationId)
+          accessibleBySwitchingForSuperUser(organizationName, dataSetName, annotationId)
         else
-          accessibleBySwitchingForMultiUser(request.identity._multiUser,
-                                            organizationName,
-                                            dataSetName,
-                                            annotationTyp,
-                                            annotationId)
+          accessibleBySwitchingForMultiUser(request.identity._multiUser, organizationName, dataSetName, annotationId)
         _ <- bool2Fox(selectedOrganization._id != request.identity._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
         selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)
       } yield Ok(selectedOrganizationJs)
@@ -218,19 +213,18 @@ class AuthenticationController @Inject()(
 
   private def accessibleBySwitchingForSuperUser(organizationNameOpt: Option[String],
                                                 dataSetNameOpt: Option[String],
-                                                annotationTypOpt: Option[String],
                                                 annotationIdOpt: Option[String]): Fox[Organization] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
-    (organizationNameOpt, dataSetNameOpt, annotationTypOpt, annotationIdOpt) match {
-      case (Some(organizationName), Some(dataSetName), None, None) =>
+    (organizationNameOpt, dataSetNameOpt, annotationIdOpt) match {
+      case (Some(organizationName), Some(dataSetName), None) =>
         for {
           organization <- organizationDAO.findOneByName(organizationName)
           _ <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)
         } yield organization
-      case (None, None, Some(_), Some(annotationId)) =>
+      case (None, None, Some(annotationId)) =>
         for {
           annotationObjectId <- ObjectId.parse(annotationId)
-          annotation <- annotationDAO.findOne(annotationObjectId) // Note: this does not work for compound annotations. Future work.
+          annotation <- annotationDAO.findOne(annotationObjectId) // Note: this does not work for compound annotations.
           user <- userDAO.findOne(annotation._user)
           organization <- organizationDAO.findOne(user._organization)
         } yield organization
@@ -241,26 +235,24 @@ class AuthenticationController @Inject()(
   private def accessibleBySwitchingForMultiUser(multiUserId: ObjectId,
                                                 organizationName: Option[String],
                                                 dataSetName: Option[String],
-                                                annotationTyp: Option[String],
                                                 annotationId: Option[String]): Fox[Organization] =
     for {
       identities <- userDAO.findAllByMultiUser(multiUserId)
       selectedIdentity <- Fox.find(identities)(identity =>
-        canAccessDatasetOrAnnotation(identity, organizationName, dataSetName, annotationTyp, annotationId))
+        canAccessDatasetOrAnnotation(identity, organizationName, dataSetName, annotationId))
       selectedOrganization <- organizationDAO.findOne(selectedIdentity._organization)(GlobalAccessContext)
     } yield selectedOrganization
 
   private def canAccessDatasetOrAnnotation(user: User,
                                            organizationNameOpt: Option[String],
                                            dataSetNameOpt: Option[String],
-                                           annotationTypOpt: Option[String],
                                            annotationIdOpt: Option[String]): Fox[Boolean] = {
     val ctx = AuthorizedAccessContext(user)
-    (organizationNameOpt, dataSetNameOpt, annotationTypOpt, annotationIdOpt) match {
-      case (Some(organizationName), Some(dataSetName), None, None) =>
+    (organizationNameOpt, dataSetNameOpt, annotationIdOpt) match {
+      case (Some(organizationName), Some(dataSetName), None) =>
         canAccessDataset(ctx, organizationName, dataSetName)
-      case (None, None, Some(annotationTyp), Some(annotationId)) =>
-        canAccessAnnotation(user, ctx, annotationTyp, annotationId)
+      case (None, None, Some(annotationId)) =>
+        canAccessAnnotation(user, ctx, annotationId)
       case _ => Fox.failure("Can either test access for dataset or annotation, not both")
     }
   }
@@ -273,14 +265,12 @@ class AuthenticationController @Inject()(
     foundFox.futureBox.map(_.isDefined)
   }
 
-  private def canAccessAnnotation(user: User,
-                                  ctx: DBAccessContext,
-                                  annotationTyp: String,
-                                  annotationId: String): Fox[Boolean] = {
+  private def canAccessAnnotation(user: User, ctx: DBAccessContext, annotationId: String): Fox[Boolean] = {
     val foundFox = for {
-      annotation <- annotationProvider.provideAnnotation(annotationTyp, annotationId, user)(ctx)
+      annotationIdParsed <- ObjectId.parse(annotationId)
+      annotation <- annotationDAO.findOne(annotationIdParsed)(GlobalAccessContext)
       _ <- bool2Fox(annotation.state != Cancelled)
-      restrictions <- annotationProvider.restrictionsFor(annotationTyp, annotationId)(ctx)
+      restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationIdParsed))(ctx)
       _ <- restrictions.allowAccess(user)
     } yield ()
     foundFox.futureBox.map(_.isDefined)

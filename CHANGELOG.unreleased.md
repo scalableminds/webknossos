@@ -15,7 +15,7 @@ Added a warning for when the resolution in the XY viewport on z=1-downsampled da
 
 ### Changed
 - For the api routes that return annotation info objects, the user field was renamed to owner. User still exists as an alias, but will be removed in a future release. [#6250](https://github.com/scalableminds/webknossos/pull/6250)
-
+- Slimmed the URLs for annotations by removing `Explorational` and `Task`. The old URLs are still supported, but will be redirected to the new format. [#6208](https://github.com/scalableminds/webknossos/pull/6208)
 
 ### Fixed
 

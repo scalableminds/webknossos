@@ -214,7 +214,7 @@ async function openTracingView(
   optionalViewOverride?: string | null | undefined,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
-  const url = urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`);
+  const url = urljoin(baseUrl, `/annotations/${annotationId}${urlSlug}`);
   console.log(`Opening tracing view at ${url}`);
   await page.goto(url, {
     timeout: 0,

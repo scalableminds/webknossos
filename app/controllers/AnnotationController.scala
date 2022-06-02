@@ -15,7 +15,7 @@ import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.time._
-import models.user.{User, UserService}
+import models.user.{User, UserDAO, UserService}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
@@ -43,6 +43,7 @@ class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
     annotationLayerDAO: AnnotationLayerDAO,
     taskDAO: TaskDAO,
+    userDAO: UserDAO,
     organizationDAO: OrganizationDAO,
     dataSetDAO: DataSetDAO,
     dataSetService: DataSetService,
@@ -96,6 +97,7 @@ class AnnotationController @Inject()(
             timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
           } else Fox.successful(())
         }
+        _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
         _ = request.identity.foreach { user =>
           analyticsService.track(OpenAnnotationEvent(user, annotation))
         }

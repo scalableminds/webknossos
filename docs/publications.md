@@ -1,6 +1,24 @@
 ## Publications
 The following publications used webKnossos for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
 
+## 2022
+* Carles Bosch, Tobias Ackels, Alexandra Pacureanu, Yuxin Zhang, Christopher J. Peddie, Manuel Berning, Norman Rzepka, Marie-Christine Zdora, Isabell Whiteley, Malte Storm, Anne Bonnin, Christoph Rau, Troy Margrie, Lucy Collinson & Andreas T. Schaefer.  
+  Functional and multiscale 3D structural investigation of brain tissue through correlative in vivo physiology, synchrotron micro-tomography and volume electron microscopy.  
+  [Nature Communications (2022) DOI: 10.1038/s41467-022-30199-6.](http://doi.org/10.1038/s41467-022-30199-6)
+
+* Vijayan Gangadharan, Hongwei Zheng, Francisco J. Taberner, Jonathan Landry, Timo A. Nees, Jelena Pistolic, Nitin Agarwal, Deepitha Männich, Vladimir Benes, Moritz Helmstaedter, Björn Ommer, Stefan G. Lechner, Thomas Kuner & Rohini Kuner.  
+  Neuropathic pain caused by miswiring and abnormal end organ targeting.  
+  [Nature (2022). DOI: 10.1038/s41586-022-04777-z.](https://doi.org/10.1038/s41586-022-04777-z)
+
+* Jialei Zhou, Haibin Sheng, Haoyu Wang, Yan Lu, Fangfang Wang, Hao Wu, Yunfeng Hua.  
+  Application of three-dimensional electron microscopy to morphological study of neurons in brainstem cochlear nucleus.  
+  [Journal of Shanghai Jiaotong university (Medical Sience) (2022). DOI: 10.3969/j.issn.1674-8115.2022.02.002](https://doi.org/10.3969/j.issn.1674-8115.2022.02.002)
+
+* Yuxin Zhang, Tobias Ackels, Alexandra Pacureanu, Marie-Christine Zdora, Anne Bonnin, Andreas T. Schaefer, Carles Bosch.  
+  Sample preparation and warping accuracy for correlative multimodal imaging in the mouse olfactory bulb using 2-photon, synchrotron X-ray and volume electron microscopy.  
+  [bioRxiv (2022) DOI: 10.1101/2022.02.18.481045](https://doi.org/10.1101/2022.02.18.481045)
+
+
 ## 2021
 * Anjali Gour, Kevin M. Boergens, Natalie Heike, Yunfeng Hua, Philip Laserstein,Kun Song & Moritz Helmstaedter.  
   Postnatal connectomic development of inhibition in mouse barrel cortex.  
@@ -14,9 +32,10 @@ The following publications used webKnossos for exploring large 3D electron-micro
   Cytoarchitecture and innervation of the mouse cochlear amplifier revealed by large‐scale volume electron microscopy.  
   [J Comp Neurol. (2021) DOI: 10.1002/cne.25137.](http://dx.doi.org/10.1002/cne.25137)
 
-* Carles Bosch, Tobias Ackels, Alexandra Pacureanu, Yuxin Zhang, Christopher J. Peddie, Manuel Berning, Norman Rzepka, Marie-Christine Zdora, Isabell Whiteley, Malte Storm, Anne Bonnin, Christoph Rau, Troy Margrie, Lucy Collinson & Andreas T. Schaefer.  
-  Functional and multiscale 3D structural investigation of brain tissue through correlative in vivo physiology, synchrotron micro-tomography and volume electron microscopy.  
-  [bioRxiv (2021) DOI: 10.1101/2021.01.13.426503.](http://dx.doi.org/10.1101/2021.01.13.426503)
+* Vandana Sampathkumar, Andrew Miller-Hansen, S. Murray Sherman, Narayanan Kasthuri.  
+  Integration of signals from different cortical areas in higher order thalamic neurons.  
+  [Proceedings of the National Academy of Sciences (2021). DOI: 10.1073/pnas.2104137118](https://doi.org/10.1073/pnas.2104137118)
+
 
 ## 2020
 * Rafael Vescovi, Hanyu Li, Jeffery Kinnison, Murat Keceli, Misha Salim, Narayanan Kasthuri, Thomas D. Uram & Nicola Ferrier.  
@@ -26,6 +45,10 @@ The following publications used webKnossos for exploring large 3D electron-micro
 * Ali Karimi.  
   Connectomic analysis of apical dendrite innervation in pyramidal neurons of mouse cerebral cortex.  
   [Johann Wolfgang Goethe University (2020) urn:nbn:de:hebis:30:3-548308.](http://nbn-resolving.de/urn/resolver.pl?urn:nbn:de:hebis:30:3-548308)
+
+* Vandana Sampathkumar, Andrew Miller-Hansen, S. Murray Sherman, Narayanan Kasthuri.  
+  An ultrastructural connectomic analysis of a higher-order thalamocortical circuit in the mouse.  
+  [European Journal of Neuroscience (2020). DOI: 10.1111/ejn.15092](https://doi.org/10.1111/ejn.15092)
 
 ## 2019
 * Alessandro Motta, Manuel Berning, Kevin M. Boergens, Benedikt Staffler, Marcel Beining, Sahil Loomba, Philipp Hennig, Heiko Wissler, Moritz Helmstaedter.
@@ -67,8 +90,7 @@ The following publications used webKnossos for exploring large 3D electron-micro
   [Humboldt-Universität zu Berlin (2018) DOI: 10.18452/19197.](https://doi.org/10.18452/19197)
 
 * Philip Alex Michael Laserstein.
-  Connectomic analysis of the input to the principal cells of the mammalian cerebral  
-cortex.  
+  Connectomic analysis of the input to the principal cells of the mammalian cerebral cortex.  
   [Ludwig Maximilians University (LMU) (2018) DOI: 10.5282/edoc.21980.](https://doi.org/10.5282/edoc.21980)
 
 * Eliot Dow, Adrian Jacobo, Sajjad Hossain, Kimberly Siletti & A. J. Hudspeth.  
@@ -76,7 +98,7 @@ cortex.
   [eLife (2018) DOI: 10.7554/eLife.33988.001.](https://doi.org/10.7554/eLife.33988.001)
 
 ## 2017
-* Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and     Helmstaedter.    
+* Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler & Helmstaedter.    
   webKnossos: efficient online 3D data annotation for connectomics.  
   [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 

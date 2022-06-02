@@ -26,12 +26,20 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
 
   render() {
     const { children, faIcon, title, ...restProps } = this.props;
-    const button = (
-      <Button {...restProps} onClick={this.handleClick}>
-        {faIcon != null && !this.props.loading ? <i className={faIcon} /> : null}
-        {children}
-      </Button>
-    );
+    const iconEl = faIcon != null && !this.props.loading ? <i className={faIcon} /> : null;
+    const button =
+      // Differentiate via children != null, since antd uses a different styling for buttons
+      // with a single icon child (.ant-btn-icon-only will be assigned)
+      children != null ? (
+        <Button {...restProps} onClick={this.handleClick}>
+          {iconEl}
+          {children}
+        </Button>
+      ) : (
+        <Button {...restProps} onClick={this.handleClick}>
+          {iconEl}
+        </Button>
+      );
     return title != null ? <Tooltip title={title}>{button}</Tooltip> : button;
   }
 }

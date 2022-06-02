@@ -23,11 +23,12 @@ mkdir binaryData
 # The binaryData folder needs to be readable/writable by user id=1000,gid=1000
 chown -R 1000:1000 binaryData
 
-# Start webKnossos and supply the PUBLIC_HOST and LETSENCRYPT_EMAIL variables
+# Start webKnossos and supply the DOCKER_TAG, PUBLIC_HOST and LETSENCRYPT_EMAIL variables
 # In addition to webKnossos, we also start an nginx proxy with automatic 
 # SSL certificate management via letsencrypt
 # Note that PUBLIC_HOST does not include http:// or https:// prefixes
-PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
+# Please look up the latest webKnossos version number at https://github.com/scalableminds/webknossos/releases
+DOCKER_TAG=xx.yy.z PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
 docker-compose up webknossos nginx nginx-letsencrypt
 
 # Wait a couple of minutes for webKnossos to become available under your domain
@@ -35,7 +36,7 @@ docker-compose up webknossos nginx nginx-letsencrypt
 # Set up your organization and admin account using the onboarding screens (see below)
 
 # After the initial run, you can start webKnossos in the background
-PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
+DOCKER_TAG=xx.yy.z PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
 docker-compose up -d webknossos nginx nginx-letsencrypt
 
 # Congratulations! Your webKnossos is now up and running.

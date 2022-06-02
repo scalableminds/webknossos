@@ -9,6 +9,7 @@ import models.annotation.AnnotationState._
 import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
 import models.organization.OrganizationDAO
+import models.user.UserDAO
 import models.user.time.TimeSpanService
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
@@ -23,6 +24,7 @@ class WKRemoteTracingStoreController @Inject()(
     timeSpanService: TimeSpanService,
     dataSetService: DataSetService,
     organizationDAO: OrganizationDAO,
+    userDAO: UserDAO,
     analyticsService: AnalyticsService,
     dataSetDAO: DataSetDAO,
     annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
@@ -47,6 +49,7 @@ class WKRemoteTracingStoreController @Inject()(
           _ <- Fox.runOptional(userBox)(user =>
             timeSpanService.logUserInteraction(report.timestamps, user, annotation)(GlobalAccessContext))
           _ = userBox.map { user =>
+            userDAO.updateLastActivity(user._id)(GlobalAccessContext)
             if (report.significantChangesCount > 0) {
               analyticsService.track(UpdateAnnotationEvent(user, annotation, report.significantChangesCount))
             }
@@ -78,6 +81,28 @@ class WKRemoteTracingStoreController @Inject()(
             dataSetName) ~> FORBIDDEN
           dataSource <- dataSetService.dataSourceFor(dataSet)
         } yield Ok(Json.toJson(dataSource))
+      }
+    }
+
+  def dataStoreURIForDataSet(name: String,
+                             key: String,
+                             organizationName: Option[String],
+                             dataSetName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        for {
+          organizationIdOpt <- Fox.runOptional(organizationName) {
+            organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
+          } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
+          organizationId <- Fox.fillOption(organizationIdOpt) {
+            dataSetDAO.getOrganizationForDataSet(dataSetName)(GlobalAccessContext)
+          } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
+            "dataSet.noAccess",
+            dataSetName) ~> FORBIDDEN
+          dataStore <- dataSetService.dataStoreFor(dataSet)
+        } yield Ok(Json.toJson(dataStore.url))
       }
     }
 }

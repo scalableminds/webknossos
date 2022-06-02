@@ -1,6 +1,5 @@
 package utils
 
-import com.github.ghik.silencer.silent
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -17,6 +16,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
@@ -249,7 +249,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
   def parseAll(rowSeq: Seq[X#TableElementType]): Fox[List[C]] =
     Fox.combined(rowSeq.toList.map(parse)) ?~> s"Parsing failed for a row in $collectionName during list query"
 
-  @silent // suppress warning about unused implicit ctx, as it is used in subclasses
+  @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
     run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {
       case Some(r) =>
@@ -258,7 +258,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
         Fox.failure("sql: could not find object " + id)
     }.flatten
 
-  @silent // suppress warning about unused implicit ctx, as it is used in subclasses
+  @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
   def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
     for {
       r <- run(collection.filter(row => notdel(row)).result)

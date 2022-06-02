@@ -220,6 +220,7 @@ role.added=Added role to {0}
 
 tracing=Annotation
 tracing.notFound=Tracing couldn’t be found
+tracing.wrongMag=Tracing “{0}” does not have mag “{1}”
 
 annotation.create.failed=Failed to create annotation.
 annotation.create.forbidden=You do not have permission to create annotations for this dataset.

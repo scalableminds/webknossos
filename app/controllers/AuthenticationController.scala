@@ -145,6 +145,7 @@ class AuthenticationController @Inject()(
                     value <- combinedAuthenticatorService.init(authenticator)
                     result <- combinedAuthenticatorService.embed(value, Ok)
                     _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+                    _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
                   } yield result
                 case None =>
                   Future.successful(BadRequest(Messages("error.noUser")))

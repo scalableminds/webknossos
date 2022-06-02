@@ -49,9 +49,8 @@ export type ClickSegmentAction = {
   cellId: number;
   somePosition: Vector3;
 };
-export type CopySegmentationLayerAction = {
-  type: "COPY_SEGMENTATION_LAYER";
-  source: "previousLayer" | "nextLayer";
+export type InterpolateSegmentationLayerAction = {
+  type: "INTERPOLATE_SEGMENTATION_LAYER";
 };
 export type MaybeUnmergedBucketLoadedPromise = null | Promise<BucketDataArray>;
 export type AddBucketToUndoAction = {
@@ -118,7 +117,7 @@ export type VolumeTracingAction =
   | FinishAnnotationStrokeAction
   | SetMousePositionAction
   | HideBrushAction
-  | CopySegmentationLayerAction
+  | InterpolateSegmentationLayerAction
   | SetContourTracingModeAction
   | SetSegmentsAction
   | UpdateSegmentAction
@@ -203,9 +202,8 @@ export const updateSegmentAction = (
   layerName,
   timestamp,
 });
-export const copySegmentationLayerAction = (fromNext?: boolean): CopySegmentationLayerAction => ({
-  type: "COPY_SEGMENTATION_LAYER",
-  source: fromNext ? "nextLayer" : "previousLayer",
+export const interpolateSegmentationLayerAction = (): InterpolateSegmentationLayerAction => ({
+  type: "INTERPOLATE_SEGMENTATION_LAYER",
 });
 export const updateDirectionAction = (centroid: Vector3): UpdateDirectionAction => ({
   type: "UPDATE_DIRECTION",

@@ -102,8 +102,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | C                                 | Create New Segment                                             |
 | W                                 | Toggle Modes (Move / Skeleton / Trace / Brush / ...)        |
 | SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                             |
-| V                                 | Copy Segmentation of Current Segment From Previous Slice       |
-| SHIFT + V                         | Copy Segmentation of Current Segment From Next Slice           |
+| V                                 | Interpolate current segment between last labeled and current slice |
 
 Note that you can enable *Classic Controls* which won't open a context menu on right-click, but instead erases when the brush/trace tool is activated.
 

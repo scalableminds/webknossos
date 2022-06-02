@@ -4,7 +4,8 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import type { ElementClass } from "types/api_flow_types";
+import { APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
+import { APICompoundType } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
 import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
@@ -146,6 +147,8 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { coalesce } from "libs/utils";
+
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 export function assertExists<T>(value: any, message: string): asserts value is NonNullable<T> {
   if (value == null) {
@@ -575,7 +578,7 @@ class TracingApi {
       ) {
         location.href = newTaskUrl;
       } else {
-        await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
+        await this.restart(null, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
@@ -595,7 +598,8 @@ class TracingApi {
    *
    */
   async restart(
-    newAnnotationType: AnnotationType,
+    // Earlier versions used newAnnotationType here.
+    newMaybeCompoundType: APICompoundType | null,
     newAnnotationId: string,
     newControlMode: ControlMode,
     versions?: Versions,
@@ -605,8 +609,12 @@ class TracingApi {
       throw new Error("Restarting with view option is not supported");
     Store.dispatch(restartSagaAction());
     UrlManager.reset(keepUrlState);
+
+    newMaybeCompoundType =
+      newMaybeCompoundType != null ? coalesce(APICompoundTypeEnum, newMaybeCompoundType) : null;
+
     await Model.fetch(
-      newAnnotationType,
+      newMaybeCompoundType,
       {
         annotationId: newAnnotationId,
         // @ts-ignore

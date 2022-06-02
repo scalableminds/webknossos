@@ -3,7 +3,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import type { Dispatch } from "redux";
-import type { APIAnnotation } from "types/api_flow_types";
+import { APIAnnotation, APIAnnotationTypeEnum } from "types/api_flow_types";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -149,7 +149,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       if (isLocalMerge) {
         const annotation = await getAnnotationCompoundInformation(
           selectedProject,
-          "CompoundProject",
+          APIAnnotationTypeEnum.CompoundProject,
         );
         this.mergeAnnotationIntoActiveTracing(annotation);
       } else {

@@ -54,6 +54,7 @@ import type {
   ServerTracing,
   TracingType,
   WkConnectDatasetConfig,
+  APICompoundType,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -717,7 +718,7 @@ export async function getAnnotationInformation(
 
 export async function getAnnotationCompoundInformation(
   annotationId: string,
-  annotationType: APIAnnotationType,
+  annotationType: APICompoundType,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
@@ -1762,12 +1763,11 @@ export async function updateOrganization(
 }
 
 export async function isDatasetAccessibleBySwitching(
-  annotationType: AnnotationType,
   commandType: TraceOrViewCommand,
 ): Promise<APIOrganization | null | undefined> {
   if (commandType.type === ControlModeEnum.TRACE) {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?annotationTyp=${annotationType}&annotationId=${commandType.annotationId}`,
+      `/api/auth/accessibleBySwitching?annotationId=${commandType.annotationId}`,
     );
   } else {
     return Request.receiveJSON(

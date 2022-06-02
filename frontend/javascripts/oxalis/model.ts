@@ -22,6 +22,7 @@ import type { TraceOrViewCommand, AnnotationType } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import { initialize } from "./model_initialization";
+import { APICompoundType } from "types/api_flow_types";
 // TODO: Non-reactive
 export class OxalisModel {
   connectionInfo: ConnectionInfo | null = null;
@@ -31,13 +32,14 @@ export class OxalisModel {
   maximumTextureCountForLayer: number = 0;
 
   async fetch(
-    annotationType: AnnotationType,
+    initialMaybeCompoundType: APICompoundType | null,
     initialCommandType: TraceOrViewCommand,
     initialFetch: boolean,
     versions?: Versions,
   ) {
     try {
       const initializationInformation = await initialize(
+        initialMaybeCompoundType,
         initialCommandType,
         initialFetch,
         versions,
@@ -60,8 +62,6 @@ export class OxalisModel {
     } catch (error) {
       try {
         const maybeOrganizationToSwitchTo = await isDatasetAccessibleBySwitching(
-          // todo: should not be required here
-          annotationType,
           initialCommandType,
         );
 

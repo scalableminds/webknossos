@@ -8,7 +8,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
 import { Button, Col, Row } from "antd";
-import { APIAnnotationTypeEnum } from "types/api_flow_types";
+import { APIAnnotationTypeEnum, APICompoundType } from "types/api_flow_types";
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import { InputKeyboardNoLoop } from "libs/input";
 import { fetchGistContent } from "libs/gist";
@@ -38,7 +38,7 @@ import window, { document, location } from "libs/window";
 import DataLayer from "./model/data_layer";
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
-  initialAnnotationType: AnnotationType;
+  initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
   controllerStatus: ControllerStatus;
   setControllerStatus: (arg0: ControllerStatus) => void;
@@ -108,14 +108,14 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           skeleton: 1,
         }
       : undefined;
-    Model.fetch(this.props.initialAnnotationType, this.props.initialCommandType, true, versions)
+    Model.fetch(this.props.initialMaybeCompoundType, this.props.initialCommandType, true, versions)
       .then(() => this.modelFetchDone())
       .catch((error) => {
         this.props.setControllerStatus("failedLoading");
         const isNotFoundError = error.status === 404;
 
         if (
-          this.props.initialAnnotationType === APIAnnotationTypeEnum.CompoundProject &&
+          this.props.initialMaybeCompoundType === APIAnnotationTypeEnum.CompoundProject &&
           isNotFoundError
         ) {
           Toast.error(messages["tracing.compound_project_not_found"], {

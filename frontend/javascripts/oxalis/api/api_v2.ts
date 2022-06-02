@@ -64,6 +64,8 @@ import type { ToastStyle } from "libs/toast";
 import update from "immutability-helper";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
+import { APICompoundType, APICompoundTypeEnum } from "types/api_flow_types";
+import { coalesce } from "libs/utils";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {
@@ -275,7 +277,7 @@ class TracingApi {
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
         location.href = newTaskUrl;
       } else {
-        await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
+        await this.restart(null, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
@@ -293,7 +295,8 @@ class TracingApi {
    *
    */
   async restart(
-    newAnnotationType: AnnotationType,
+    // Earlier versions used newAnnotationType here.
+    newMaybeCompoundType: APICompoundType | null,
     newAnnotationId: string,
     newControlMode: ControlMode,
   ) {
@@ -301,8 +304,12 @@ class TracingApi {
       throw new Error("Restarting with view option is not supported");
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
+
+    newMaybeCompoundType =
+      newMaybeCompoundType != null ? coalesce(APICompoundTypeEnum, newMaybeCompoundType) : null;
+
     await Model.fetch(
-      newAnnotationType,
+      newMaybeCompoundType,
       {
         annotationId: newAnnotationId,
         // @ts-ignore

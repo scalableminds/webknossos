@@ -43,9 +43,12 @@ import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { determineLayout } from "./default_layout_configs";
+import { APICompoundType } from "types/api_flow_types";
+
 const { Sider } = Layout;
+
 type OwnProps = {
-  initialAnnotationType: AnnotationType;
+  initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
 };
 type StateProps = {
@@ -302,7 +305,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         >
           <TabTitle title={this.getTabTitle()} />
           <OxalisController
-            initialAnnotationType={this.props.initialAnnotationType}
+            initialMaybeCompoundType={this.props.initialMaybeCompoundType}
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
             setControllerStatus={this.setControllerStatus}

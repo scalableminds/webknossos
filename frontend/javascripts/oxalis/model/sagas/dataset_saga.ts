@@ -1,6 +1,6 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { call, takeEvery } from "typed-redux-saga";
+import { call, take, takeEvery, takeLatest } from "typed-redux-saga";
 import { sleep } from "libs/utils";
 import { getEnabledLayers } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
@@ -36,6 +36,9 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
 let userClosedWarning = false;
 export function* watchZ1Downsampling(): Saga<void> {
   function* maybeShowWarning(): Saga<void> {
+    // In combination with `takeLatest` sleeping here at the beginning of the saga
+    // effectively debounces the saga to avoid that it is executed unnecessarily often.
+    yield* call(sleep, 200);
     const currentRes = yield* select((state) => getCurrentResolution(state));
     const currentZoomStep = yield* select((state) => state.flycam.zoomStep);
     if (currentZoomStep < 1) {
@@ -44,7 +47,7 @@ export function* watchZ1Downsampling(): Saga<void> {
       // Don't show any warnings in that case.
       return;
     }
-    const minVoxelPerPixel = 0.2;
+    const minVoxelPerPixel = 0.1;
     const setUserClosedWarningTrue = () => {
       userClosedWarning = true;
     };
@@ -64,10 +67,9 @@ export function* watchZ1Downsampling(): Saga<void> {
       }
     }
   }
-  yield* takeEvery("WK_READY", maybeShowWarning);
-  yield* call(sleep, 2000);
+  yield* take("WK_READY");
   yield* call(maybeShowWarning);
-  yield* takeEvery(
+  yield* takeLatest(
     ["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"],
     maybeShowWarning,
   );

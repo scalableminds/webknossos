@@ -6,7 +6,7 @@ import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
-import type { APIDataset, APIUser, APIUserBase } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";

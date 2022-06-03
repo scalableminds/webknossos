@@ -77,7 +77,7 @@ import {
 } from "oxalis/model/helpers/bucket_compression";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
-import { doWithToken } from "admin/admin_rest_api";
+import { doWithToken, getUpdateActionLog } from "admin/admin_rest_api";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getVolumeTracingById,
@@ -103,6 +103,8 @@ import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
+import _ from "lodash";
+import { sleep } from "libs/utils";
 
 // This function is needed so that Flow is satisfied
 // with how a mere promise is awaited within a saga.
@@ -1057,4 +1059,86 @@ export function* saveTracingTypeAsync(
     prevTdCamera = tdCamera;
   }
 }
-export default [saveTracingAsync, collectUndoStates];
+
+const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
+const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
+const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
+
+function* watchForSaveConflicts() {
+  function* checkForNewVersion() {
+    const allowSave = yield* select((state) => state.tracing.restrictions.allowSave);
+
+    const maybeSkeletonTracing = yield* select((state) => state.tracing.skeleton);
+    const volumeTracings = yield* select((state) => state.tracing.volumes);
+    const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+
+    const tracings: Array<SkeletonTracing | VolumeTracing> = _.compact([
+      ...volumeTracings,
+      maybeSkeletonTracing,
+    ]);
+
+    for (const tracing of tracings) {
+      // todo: use an optimized route here to avoid fetching the entire log
+      const actionLog = yield* call(
+        getUpdateActionLog,
+        tracingStoreUrl,
+        tracing.tracingId,
+        tracing.type,
+      );
+      const latestEntry = actionLog[0];
+      if (latestEntry == null) {
+        continue;
+      }
+
+      if (latestEntry.version > tracing.version) {
+        // The latest version on the server is greater than the most-recently
+        // stored version.
+
+        const saveQueue = yield* select((state) =>
+          selectQueue(state, tracing.type, tracing.tracingId),
+        );
+
+        let msg = "";
+        if (!allowSave) {
+          msg =
+            "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
+        } else if (saveQueue.length > 0) {
+          msg =
+            "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved, anymore.";
+        } else {
+          msg =
+            "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved, anymore.";
+        }
+        Toast.warning(msg, {
+          sticky: true,
+        });
+      }
+    }
+  }
+
+  function* getPollInterval(): Saga<number> {
+    const allowSave = yield* select((state) => state.tracing.restrictions.allowSave);
+    if (!allowSave) {
+      // The current user may not edit/save the annotation.
+      return VERSION_POLL_INTERVAL_READ_ONLY;
+    }
+
+    const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
+    if (othersMayEdit) {
+      // Other users may edit the annotation.
+      return VERSION_POLL_INTERVAL_COLLAB;
+    }
+
+    // The current user is the only one who can edit the annotation.
+    return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
+  }
+
+  while (true) {
+    // todo: make tracing read only if conflict was recognized?
+    const interval = yield* call(getPollInterval);
+    yield* call(sleep, interval);
+    yield* call(checkForNewVersion);
+  }
+}
+
+export default [saveTracingAsync, collectUndoStates, watchForSaveConflicts];

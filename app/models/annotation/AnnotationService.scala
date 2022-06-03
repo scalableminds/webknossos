@@ -817,7 +817,8 @@ class AnnotationService @Inject()(
         "user" -> userJson,
         "owner" -> userJson,
         "meshes" -> meshesJs,
-        "contributors" -> contributorsJs
+        "contributors" -> contributorsJs,
+        "othersMayEdit" -> annotation.othersMayEdit
       )
     }
   }

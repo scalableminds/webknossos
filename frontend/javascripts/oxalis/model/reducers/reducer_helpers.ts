@@ -103,6 +103,8 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tracingStore,
     meshes,
     owner,
+    contributors,
+    othersMayEdit,
     annotationLayers,
   } = annotation;
   const restrictions = { ...annotation.restrictions, ...annotation.settings };
@@ -117,6 +119,8 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tracingStore,
     meshes,
     owner,
+    contributors,
+    othersMayEdit,
     annotationLayers,
   };
 }

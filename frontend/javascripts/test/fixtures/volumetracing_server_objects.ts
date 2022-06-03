@@ -113,4 +113,6 @@ export const annotation: APIAnnotation = {
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,
   meshes: [],
+  contributors: [],
+  othersMayEdit: false,
 };

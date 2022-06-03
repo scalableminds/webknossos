@@ -1,5 +1,8 @@
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser, APIUserBase } from "types/api_flow_types";
 import messages from "messages";
+import _ from "lodash";
+import memoizeOne from "memoize-one";
+
 export function enforceActiveUser(activeUser: APIUser | null | undefined): APIUser {
   if (activeUser) {
     return activeUser;
@@ -7,4 +10,25 @@ export function enforceActiveUser(activeUser: APIUser | null | undefined): APIUs
     throw new Error(messages["auth.error_no_user"]);
   }
 }
+
+export function formatUserName(
+  activeUser: APIUserBase | null | undefined,
+  user: APIUserBase | undefined | null,
+) {
+  if (!user) {
+    return "Unknown";
+  }
+  const maybeYouHint = activeUser?.id == user.id ? " (you)" : "";
+  return `${user.firstName} ${user.lastName}${maybeYouHint}`;
+}
+
+const keyContributors = memoizeOne((contributors: APIUserBase[]) => _.keyBy(contributors, "id"));
+
+export function getContributorById(
+  userId: string,
+  contributors: APIUserBase[],
+): APIUserBase | null {
+  return keyContributors(contributors)[userId];
+}
+
 export default {};

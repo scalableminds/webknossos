@@ -200,4 +200,6 @@ export const annotation: APIAnnotation = {
   tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,
   meshes: [],
+  contributors: [],
+  othersMayEdit: false,
 };

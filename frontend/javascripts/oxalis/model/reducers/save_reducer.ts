@@ -82,6 +82,11 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       const { items, transactionId } = action;
 
       if (items.length > 0) {
+        const { activeUser } = state;
+        if (activeUser == null) {
+          throw new Error("Tried to save something even though user is not logged in.");
+        }
+
         const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
 
         const transactionGroupCount = updateActionChunks.length;
@@ -95,7 +100,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
             transactionGroupCount,
             transactionGroupIndex,
             timestamp: Date.now(),
-            authorId: "DummyAnnotationUpdateAuthorId",
+            authorId: activeUser.id,
             actions,
             stats,
             // Redux Action Log context for debugging purposes.

@@ -402,6 +402,7 @@ export async function increaseProjectTaskInstances(
   );
   return transformProject(project);
 }
+
 export function deleteProject(projectId: string): Promise<void> {
   return Request.receiveJSON(`/api/projects/${projectId}`, {
     method: "DELETE",
@@ -606,6 +607,19 @@ export function editAnnotation(
     data,
     method: "PATCH",
   });
+}
+
+export function setOthersMayEditForAnnotation(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  othersMayEdit: boolean,
+): Promise<void> {
+  return Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/othersMayEdit?othersMayEdit=${othersMayEdit}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 export function updateAnnotationLayer(

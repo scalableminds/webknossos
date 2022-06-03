@@ -6,11 +6,11 @@ import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser, APIUserBase } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
-import { convertToHybridTracing } from "admin/admin_rest_api";
+import { convertToHybridTracing, setOthersMayEditForAnnotation } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import {
@@ -35,6 +35,7 @@ import {
   NucleiInferralModal,
   NeuronInferralModal,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -525,21 +526,31 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     }
   }
 
-  maybePrintOwner() {
+  maybePrintOwnerAndContributors() {
     const { activeUser } = this.props;
-    const { owner } = this.props.tracing;
+    const { owner, contributors, annotationId, annotationType, othersMayEdit } = this.props.tracing;
 
     if (!owner) {
       return null;
     }
 
-    if (!activeUser || owner.id !== activeUser.id) {
-      return (
-        <span>
-          Owner: {owner.firstName} {owner.lastName}
-        </span>
-      );
-    }
+    return (
+      <div>
+        <div>Owner: {formatUserName(activeUser, owner)}</div>
+        <div>
+          Contributors: {contributors.map((user) => formatUserName(activeUser, user)).join(", ")}
+        </div>
+        {activeUser && owner.id == activeUser.id ? (
+          <ButtonComponent
+            onClick={() =>
+              setOthersMayEditForAnnotation(annotationId, annotationType, !othersMayEdit)
+            }
+          >
+            {othersMayEdit ? "Disable editing for other users" : "Allow editing for other users"}
+          </ButtonComponent>
+        ) : null}
+      </div>
+    );
 
     // Active user is owner
     return null;
@@ -616,7 +627,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           {this.getTracingName(isDatasetViewMode)}
           {this.getTracingType(isDatasetViewMode)}
           {this.getDatasetName(isDatasetViewMode)}
-          {this.maybePrintOwner()}
+          {this.maybePrintOwnerAndContributors()}
         </div>
 
         <div className="info-tab-block">

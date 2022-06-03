@@ -76,8 +76,6 @@ const defaultState: OxalisState = {
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
     useLegacyBindings: false,
-    isVolumeInterpolationEnabled: false,
-    volumeInterpolationDepth: 2,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -147,7 +145,7 @@ const defaultState: OxalisState = {
     },
     volumes: [],
     skeleton: null,
-    user: null,
+    owner: null,
     annotationLayers: [],
   },
   save: {

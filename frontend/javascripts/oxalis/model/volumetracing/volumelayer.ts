@@ -544,6 +544,10 @@ class VolumeLayer {
     }
 
     const area = sumArea / 2;
+    if (area == 0) {
+      return zoomedPositionToGlobalPosition(contourList[0], this.activeResolution);
+    }
+
     const cx = sumCx / 6 / area;
     const cy = sumCy / 6 / area;
     const zoomedPosition = this.get3DCoordinate([cx, cy]);

@@ -815,8 +815,8 @@ class AnnotationService @Inject()(
         "tracingTime" -> annotation.tracingTime,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "user" -> userJson,
+        "owner" -> userJson,
         "meshes" -> meshesJs,
-        "othersMayEdit" -> annotation.othersMayEdit,
         "contributors" -> contributorsJs
       )
     }
@@ -842,7 +842,12 @@ class AnnotationService @Inject()(
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      userBox <- userDAO.findOne(annotation._user).futureBox
+      user <- userDAO.findOne(annotation._user)(GlobalAccessContext)
+      userJson = Json.obj(
+        "id" -> user._id.toString,
+        "firstName" -> user.firstName,
+        "lastName" -> user.lastName
+      )
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -859,9 +864,7 @@ class AnnotationService @Inject()(
         "visibility" -> annotation.visibility,
         "tracingTime" -> annotation.tracingTime,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "owner" -> userBox.toOption.map { user =>
-          s"${user.firstName} ${user.lastName}"
-        }
+        "owner" -> userJson
       )
     }
 }

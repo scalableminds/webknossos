@@ -162,6 +162,8 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            hasEditableMapping: Option[Boolean] <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
+            _ <- bool2Fox(!hasEditableMapping.getOrElse(false)) ?~> "Duplicate is not yet implemented for editable mapping annotations"
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             (newId, newTracing) <- tracingService.duplicate(tracingId,

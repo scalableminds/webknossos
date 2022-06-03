@@ -20,6 +20,7 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[VolumeTracingService]).asEagerSingleton()
     bind(classOf[TracingStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[TSRemoteWebKnossosClient]).asEagerSingleton()
+    bind(classOf[TSRemoteDatastoreClient]).asEagerSingleton()
     bind(classOf[EditableMappingService]).asEagerSingleton()
     bind(classOf[TSSlackNotificationService]).asEagerSingleton()
   }

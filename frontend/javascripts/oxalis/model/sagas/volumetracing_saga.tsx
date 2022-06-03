@@ -26,7 +26,6 @@ import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/co
 import Model from "oxalis/model";
 import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getFlooredPosition,
   getPosition,
   getRequestLogZoomStep,
   getRotation,
@@ -69,13 +68,11 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
-import DataLayer from "oxalis/model/data_layer";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
-import { getHalfViewportExtents } from "oxalis/model/sagas/saga_selectors";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import {
   createSegmentVolumeAction,
@@ -86,8 +83,7 @@ import {
   updateVolumeTracing,
   updateMappingName,
 } from "oxalis/model/sagas/update_actions";
-import VolumeLayer, { getFast3DCoordinateHelper } from "oxalis/model/volumetracing/volumelayer";
-import { applyVoxelMap } from "oxalis/model/volumetracing/volume_annotation_sampling";
+import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import { getBBoxNameForPartialFloodfill } from "oxalis/view/right-border-tabs/bounding_box_tab";
 import React from "react";
@@ -102,9 +98,9 @@ import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_sag
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
   yield* takeEveryUnlessBusy(
-    "COPY_SEGMENTATION_LAYER",
-    copySegmentationLayer,
-    "Copying from neighbor slice",
+    "INTERPOLATE_SEGMENTATION_LAYER",
+    maybeInterpolateSegmentationLayer,
+    "Interpolating segment",
   );
   yield* fork(warnOfTooLowOpacity);
 }
@@ -206,6 +202,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         contourTracingMode,
         overwriteMode,
         labeledZoomStep,
+        initialViewport,
       );
     }
 
@@ -250,6 +247,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
             contourTracingMode,
             overwriteMode,
             labeledZoomStep,
+            activeViewport,
           );
         }
 
@@ -259,6 +257,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
           contourTracingMode,
           overwriteMode,
           labeledZoomStep,
+          activeViewport,
         );
       }
 
@@ -272,6 +271,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,
+      initialViewport,
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
@@ -283,8 +283,6 @@ export function* editVolumeLayerAsync(): Saga<any> {
         volumeTracing.tracingId,
       ),
     );
-
-    yield* call(maybeInterpolateSegmentationLayer, currentLayer, isDrawing, activeTool);
 
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   }
@@ -322,142 +320,6 @@ function* getBoundingBoxForFloodFill(
     min: clippedMin,
     max: clippedMax,
   };
-}
-
-function* copySegmentationLayer(action: Action): Saga<void> {
-  if (action.type !== "COPY_SEGMENTATION_LAYER") {
-    throw new Error("Satisfy typescript");
-  }
-
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
-  const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
-
-  if (activeViewport === "TDView") {
-    // Cannot copy labels from 3D view
-    return;
-  }
-
-  // Disable copy-segmentation for the same zoom steps where the trace tool is forbidden, too,
-  // to avoid large performance lags.
-  const isResolutionTooLow = yield* select((state) =>
-    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
-  );
-
-  if (isResolutionTooLow) {
-    Toast.warning(
-      'The "copy segmentation"-feature is not supported at this zoom level. Please zoom in further.',
-    );
-    return;
-  }
-
-  const volumeTracing = yield* select(enforceActiveVolumeTracing);
-  const segmentationLayer: DataLayer = yield* call(
-    [Model, Model.getSegmentationTracingLayer],
-    volumeTracing.tracingId,
-  );
-  const { cube } = segmentationLayer;
-  const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
-  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-  const dimensionIndices = Dimensions.getIndices(activeViewport);
-  const position = yield* select((state) => getFlooredPosition(state.flycam));
-  const [halfViewportExtentX, halfViewportExtentY] = yield* call(
-    getHalfViewportExtents,
-    activeViewport,
-  );
-  const activeCellId = volumeTracing.activeCellId;
-  const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
-
-  function copyVoxelLabel(voxelTemplateAddress: Vector3, voxelTargetAddress: Vector3) {
-    const templateLabelValue = cube.getDataValue(voxelTemplateAddress, null, labeledZoomStep);
-
-    // Only copy voxels from the previous layer which belong to the current cell
-    if (templateLabelValue === activeCellId) {
-      const currentLabelValue = cube.getDataValue(voxelTargetAddress, null, labeledZoomStep);
-
-      // Do not overwrite already labeled voxels
-      if (currentLabelValue === 0) {
-        const bucket = cube.getOrCreateBucket(
-          cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
-        );
-
-        if (bucket.type === "null") {
-          return;
-        }
-
-        const labeledVoxelInBucket = cube.getVoxelOffset(voxelTargetAddress, labeledZoomStep);
-        const labelMapOfBucket =
-          labeledVoxelMapOfCopiedVoxel.get(bucket.zoomedAddress) ||
-          new Uint8Array(Constants.BUCKET_WIDTH ** 2).fill(0);
-        const labeledVoxel2D = [
-          labeledVoxelInBucket[dimensionIndices[0]],
-          labeledVoxelInBucket[dimensionIndices[1]],
-        ];
-        labelMapOfBucket[labeledVoxel2D[0] * Constants.BUCKET_WIDTH + labeledVoxel2D[1]] = 1;
-        labeledVoxelMapOfCopiedVoxel.set(bucket.zoomedAddress, labelMapOfBucket);
-      }
-    }
-  }
-
-  const thirdDim = dimensionIndices[2];
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-  const directionInverter = action.source === "nextLayer" ? 1 : -1;
-  let direction = 1;
-  const useDynamicSpaceDirection = yield* select(
-    (state) => state.userConfiguration.dynamicSpaceDirection,
-  );
-
-  if (useDynamicSpaceDirection) {
-    const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
-    direction = spaceDirectionOrtho[thirdDim];
-  }
-
-  const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
-  const z = tz;
-  // When using this tool in more coarse resolutions, the distance to the previous/next slice might be larger than 1
-  const previousZ = z + direction * directionInverter * labeledResolution[thirdDim];
-  for (let x = tx - halfViewportExtentX; x < tx + halfViewportExtentX; x++) {
-    for (let y = ty - halfViewportExtentY; y < ty + halfViewportExtentY; y++) {
-      copyVoxelLabel(
-        Dimensions.transDim([x, y, previousZ], activeViewport),
-        Dimensions.transDim([x, y, z], activeViewport),
-      );
-    }
-  }
-
-  if (labeledVoxelMapOfCopiedVoxel.size === 0) {
-    const dimensionLabels = ["x", "y", "z"];
-    Toast.warning(
-      `Did not copy any voxels from slice ${dimensionLabels[thirdDim]}=${previousZ}.` +
-        ` Either no voxels with cell id ${activeCellId} were found or all of the respective voxels were already labeled in the current slice.`,
-    );
-  }
-
-  // applyVoxelMap assumes get3DAddress to be local to the corresponding bucket (so in the labeled resolution as well)
-  const zInLabeledResolution =
-    Math.floor(tz / labeledResolution[thirdDim]) % Constants.BUCKET_WIDTH;
-  applyVoxelMap(
-    labeledVoxelMapOfCopiedVoxel,
-    cube,
-    activeCellId,
-    getFast3DCoordinateHelper(activeViewport, zInLabeledResolution),
-    1,
-    thirdDim,
-    false,
-    0,
-  );
-  applyLabeledVoxelMapToAllMissingResolutions(
-    labeledVoxelMapOfCopiedVoxel,
-    labeledZoomStep,
-    dimensionIndices,
-    resolutionInfo,
-    cube,
-    activeCellId,
-    z,
-    false,
-  );
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 }
 
 const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";
@@ -606,6 +468,7 @@ export function* finishLayer(
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
+  activeViewport: OrthoView,
 ): Saga<void> {
   if (layer == null || layer.isEmpty()) {
     return;
@@ -618,6 +481,7 @@ export function* finishLayer(
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,
+      activeViewport,
     );
   }
 

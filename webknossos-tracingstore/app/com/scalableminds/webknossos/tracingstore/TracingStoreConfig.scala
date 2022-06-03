@@ -17,9 +17,6 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
     object WebKnossos {
       val uri: String = get[String]("tracingstore.webKnossos.uri")
     }
-    object Datastore {
-      val uri: String = get[String]("tracingstore.datastore.uri")
-    }
     object Fossildb {
       val address: String = get[String]("tracingstore.fossildb.address")
       val port: Int = get[Int]("tracingstore.fossildb.port")

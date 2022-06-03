@@ -9,20 +9,18 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateActionGroup
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  EditableMappingService,
-  EditableMappingUpdateActionGroup
-}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ResolutionRestrictions,
-  UpdateMappingNameAction,
-  VolumeTracingService
-}
-import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreAccessTokenService}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, EditableMappingUpdateActionGroup, RemoteFallbackLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, UpdateMappingNameAction, VolumeTracingService}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient, TracingStoreAccessTokenService, TracingStoreConfig}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -30,16 +28,19 @@ import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
-class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
-                                        val remoteWebKnossosClient: TSRemoteWebKnossosClient,
-                                        editableMappingService: EditableMappingService,
-                                        val accessTokenService: TracingStoreAccessTokenService,
-                                        val slackNotificationService: TSSlackNotificationService)(
-    implicit val ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
-    extends TracingController[VolumeTracing, VolumeTracings] {
+class VolumeTracingController @Inject()(
+    val tracingService: VolumeTracingService,
+    val config: TracingStoreConfig,
+    val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+    val remoteDataStoreClient: TSRemoteDatastoreClient,
+    val accessTokenService: TracingStoreAccessTokenService,
+    editableMappingService: EditableMappingService,
+    val slackNotificationService: TSSlackNotificationService,
+    val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+    extends TracingController[VolumeTracing, VolumeTracings]
+    with ProtoGeometryImplicits {
 
   implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
 
@@ -219,6 +220,187 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
         }
       }
     }
+
+  def volumeTracingFolderContent(token: Option[String], tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          existingMags = tracing.resolutions.map(vec3IntFromProto)
+        } yield
+          Ok(
+            views.html.datastoreZarrDatasourceDir(
+              "Tracingstore",
+              "%s".format(tracingId),
+              Map(tracingId -> ".") ++ existingMags.map { mag =>
+                (mag.toMagLiteral(allowScalar = true), mag.toMagLiteral(allowScalar = true))
+              }.toMap
+            )).withHeaders()
+      }
+    }
+
+  def volumeTracingMagFolderContent(token: Option[String], tracingId: String, mag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+
+          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
+        } yield
+          Ok(
+            views.html.datastoreZarrDatasourceDir(
+              "Tracingstore",
+              "%s".format(tracingId),
+              Map(mag -> ".")
+            )).withHeaders()
+      }
+    }
+
+  def zArray(token: Option[String], tracingId: String, mag: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+
+          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
+
+          cubeLength = DataLayer.bucketLength
+          (channels, dtype) = ElementClass.toChannelAndZarrString(tracing.elementClass)
+          // data request method always decompresses before sending
+          compressor = None
+
+          shape = Array(
+            channels,
+            // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+            (tracing.boundingBox.width + tracing.boundingBox.topLeft.x) / magParsed.x,
+            (tracing.boundingBox.height + tracing.boundingBox.topLeft.y) / magParsed.y,
+            (tracing.boundingBox.depth + tracing.boundingBox.topLeft.z) / magParsed.z
+          )
+
+          chunks = Array(channels, cubeLength, cubeLength, cubeLength)
+
+          zarrHeader = ZarrHeader(zarr_format = 2,
+                                  shape = shape,
+                                  chunks = chunks,
+                                  compressor = compressor,
+                                  dtype = dtype,
+                                  order = ArrayOrder.F)
+        } yield
+          Ok(
+            // Json.toJson doesn't work on zarrHeader at the moment, because it doesn't write None values in Options
+            Json.obj(
+              "dtype" -> zarrHeader.dtype,
+              "fill_value" -> 0,
+              "zarr_format" -> zarrHeader.zarr_format,
+              "order" -> zarrHeader.order,
+              "chunks" -> zarrHeader.chunks,
+              "compressor" -> compressor,
+              "filters" -> None,
+              "shape" -> zarrHeader.shape,
+              "dimension_seperator" -> zarrHeader.dimension_separator
+            ))
+      }
+  }
+
+  def zGroup(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+      Future(Ok(Json.obj("zarr_format" -> 2)))
+    }
+  }
+
+  /**
+    * Handles a request for .zattrs file for a Volume Tracing via a HTTP GET.
+    * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
+    * Used by zarr-streaming.
+    */
+  def zAttrs(
+      token: Option[String],
+      tracingId: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+      for {
+        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+
+        existingMags = tracing.resolutions.map(vec3IntFromProto)
+        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName)
+
+        omeNgffHeader = OmeNgffHeader.fromDataLayerName(tracingId,
+                                                        dataSourceScale = dataSource.scale,
+                                                        mags = existingMags.toList)
+      } yield Ok(Json.toJson(omeNgffHeader))
+    }
+  }
+
+  def rawZarrCube(token: Option[String], tracingId: String, mag: String, cxyz: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      {
+        val combinedToken = urlOrHeaderToken(token, request)
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), combinedToken) {
+          for {
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+
+            existingMags = tracing.resolutions.map(vec3IntFromProto)
+            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+            _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
+
+            (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404
+            _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
+            cubeSize = DataLayer.bucketLength
+            request = WebKnossosDataRequest(
+              position = Vec3Int(x * cubeSize * magParsed.x, y * cubeSize * magParsed.y, z * cubeSize * magParsed.z),
+              mag = magParsed,
+              cubeSize = cubeSize,
+              fourBit = Some(false),
+              applyAgglomerate = None,
+              version = None
+            )
+            (data, missingBucketIndices) <- tracingService.data(tracingId, tracing, List(request))
+            dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
+                                                            data,
+                                                            missingBucketIndices,
+                                                            mag,
+                                                            cxyz,
+                                                            combinedToken) ?~> "Getting fallback layer failed" ~> 400
+          } yield Ok(dataWithFallback).withHeaders()
+        }
+      }
+    }
+
+  private def getFallbackLayerDataIfEmpty(tracing: VolumeTracing,
+                                          data: Array[Byte],
+                                          missingBucketIndices: List[Int],
+                                          mag: String,
+                                          cxyz: String,
+                                          urlToken: Option[String]): Fox[Array[Byte]] = {
+
+    def fallbackLayerData(): Fox[Array[Byte]] = {
+      val organizationName = tracing.organizationName
+      val dataSetName = tracing.dataSetName
+      val dataLayerName = tracing.getFallbackLayer
+
+      organizationName match {
+        case Some(orgName) =>
+          for {
+            fallbackData <- remoteDataStoreClient.fallbackLayerBucket(
+              RemoteFallbackLayer(orgName, dataSetName, dataLayerName, tracing.elementClass),
+              mag,
+              cxyz,
+              urlToken)
+          } yield fallbackData
+        case None => Fox.failure("Organization Name is not set (Consider creating a new annotation).")
+      }
+    }
+
+    if (missingBucketIndices.nonEmpty && tracing.fallbackLayer.isDefined) {
+      fallbackLayerData()
+    } else {
+      Fox.successful(data)
+    }
+  }
 
   private def getNeighborIndices(neighbors: List[Int]) =
     List("NEIGHBORS" -> formatNeighborList(neighbors), "Access-Control-Expose-Headers" -> "NEIGHBORS")

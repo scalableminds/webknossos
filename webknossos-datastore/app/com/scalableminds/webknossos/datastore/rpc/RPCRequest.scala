@@ -25,6 +25,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     this
   }
 
+  def addHttpHeaders(hdrs: (String, String)*): RPCRequest = {
+    request = request.addHttpHeaders(hdrs: _*)
+    this
+  }
+
   def withBasicAuth(username: String, password: String): RPCRequest = {
     request = request.withAuth(username, password, WSAuthScheme.BASIC)
     this

@@ -39,6 +39,7 @@ import type {
   Vector3,
   AnnotationTool,
   MappingStatus,
+  OrthoViewWithoutTD,
 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -180,7 +181,7 @@ export type Annotation = {
   // This property contains back-end stored mesh objects for which
   // the support is about to end. See webknossos/#5633.
   readonly meshes: Array<MeshMetaData>;
-  readonly user: APIUserBase | null | undefined;
+  readonly owner: APIUserBase | null | undefined;
 };
 type TracingBase = {
   readonly createdTimestamp: number;
@@ -211,6 +212,12 @@ export type Segment = {
   creationTime: number | null | undefined;
 };
 export type SegmentMap = DiffableMap<number, Segment>;
+
+export type LabelAction = {
+  centroid: Vector3; // centroid of the label action
+  plane: OrthoViewWithoutTD; // plane that labeled
+};
+
 export type VolumeTracing = TracingBase & {
   readonly type: "volume";
   // Note that there are also SegmentMaps in `state.localSegmentationData`
@@ -218,7 +225,8 @@ export type VolumeTracing = TracingBase & {
   readonly segments: SegmentMap;
   readonly maxCellId: number;
   readonly activeCellId: number;
-  readonly lastCentroid: Vector3 | null | undefined;
+  // lastLabelActions[0] is the most recent one
+  readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
   // Stores points of the currently drawn region in global coordinates
   readonly contourList: Array<Vector3>;
@@ -315,8 +323,6 @@ export type UserConfiguration = {
   readonly overwriteMode: OverwriteMode;
   readonly fillMode: FillMode;
   readonly useLegacyBindings: boolean;
-  readonly isVolumeInterpolationEnabled: boolean;
-  readonly volumeInterpolationDepth: number;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

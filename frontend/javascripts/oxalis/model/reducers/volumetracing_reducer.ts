@@ -130,12 +130,13 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     // If oldSegment exists, its creationTime will be
     // used by ...oldSegment
     creationTime: action.timestamp,
+    name: null,
     ...oldSegment,
     ...segment,
     somePosition,
     id: segmentId,
   };
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ somePosition: Vector3; id: num... Remove this comment to see the full error message
+
   const newSegmentMap = segments.set(segmentId, newSegment);
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
@@ -157,7 +158,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
   const volumeTracing = {
     createdTimestamp: tracing.createdTimestamp,
-    type: "volume",
+    type: "volume" as "volume",
     segments: new DiffableMap(
       tracing.segments.map((segment) => [
         segment.segmentId,
@@ -169,7 +170,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
       ]),
     ),
     activeCellId: 0,
-    lastCentroid: null,
+    lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,
     contourList: [],
     maxCellId,
@@ -181,7 +182,6 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     mappingName: tracing.mappingName,
     mappingIsEditable: tracing.mappingIsEditable,
   };
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ createdTimestamp: number; type: string; se... Remove this comment to see the full error message
   return volumeTracing;
 }
 

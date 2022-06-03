@@ -77,6 +77,14 @@ class CameraController extends React.PureComponent<Props> {
       cam.near = 0;
       cam.far = far;
     }
+    // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
+    // This is used as an indication to set the far plane. This needs to be multiplied by 2
+    // as the dataset planes in the 3d viewport are offset by the maximum of width, height and extent to ensure the dataset is visible.
+    const datasetExtent = getDatasetExtentInLength(Store.getState().dataset);
+    const diagonalDatasetExtent = Math.sqrt(
+      datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
+    );
+    this.props.cameras[OrthoViews.TDView].far = diagonalDatasetExtent * 2;
 
     const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();

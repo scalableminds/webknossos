@@ -1,12 +1,15 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Button } from "antd";
-import { CaretDownOutlined, CaretUpOutlined, ExportOutlined } from "@ant-design/icons";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent } from "antd";
+import { ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useState } from "react";
 
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
-import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  interpolateSegmentationLayerAction,
+  createCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   createTreeAction,
   setMergerModeEnabledAction,
@@ -40,13 +43,12 @@ import Constants, {
   AnnotationTool,
   OverwriteMode,
   ToolsWithInterpolationCapabilities,
-  OrthoViews,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
-import Dimensions from "oxalis/model/dimensions";
 
 import features from "features";
+import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -230,57 +232,24 @@ function OverwriteModeSwitch({
 }
 
 function VolumeInterpolationButton() {
-  const isAllowed = useSelector(
-    (state: OxalisState) => state.tracing.restrictions.volumeInterpolationAllowed,
-  );
+  const dispatch = useDispatch();
 
-  const isEnabled = useSelector(
-    (state: OxalisState) => state.userConfiguration.isVolumeInterpolationEnabled,
-  );
-  const spaceDirectionOrtho = useSelector((state: OxalisState) => state.flycam.spaceDirectionOrtho);
-  const activeViewport = useSelector(
-    (state: OxalisState) => state.viewModeData.plane.activeViewport,
-  );
-
-  const onChange = () => {
-    Store.dispatch(updateUserSettingAction("isVolumeInterpolationEnabled", !isEnabled));
+  const onClick = () => {
+    dispatch(interpolateSegmentationLayerAction());
   };
 
-  let directionIcon = null;
-  if (isEnabled && isAllowed && activeViewport !== OrthoViews.TDView) {
-    const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
-    directionIcon =
-      spaceDirectionOrtho[thirdDim] > 0 ? (
-        <CaretUpOutlined style={{ color: "#f1f1f1" }} />
-      ) : (
-        <CaretDownOutlined style={{ color: "#f1f1f1" }} />
-      );
-  }
+  const { tooltipTitle, isDisabled } = useSelector((state: OxalisState) =>
+    getInterpolationInfo(state, "Not available since"),
+  );
 
   return (
-    <Badge
-      count={directionIcon}
-      style={{
-        boxShadow: "none",
-        zIndex: 1000,
-      }}
-    >
-      <Tooltip
-        title={
-          isAllowed
-            ? "When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices. The little arrow indicates whether you are currently labeling with increasing or decreasing X/Y/Z."
-            : "Volume Interpolation was disabled for this annotation."
-        }
-      >
-        <Button
-          disabled={!isAllowed}
-          type={isEnabled ? "primary" : "default"}
-          icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
-          onClick={onChange}
-          style={{ marginLeft: 12 }}
-        />
-      </Tooltip>
-    </Badge>
+    <ButtonComponent
+      disabled={isDisabled}
+      title={tooltipTitle}
+      icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
+      onClick={onClick}
+      style={{ marginLeft: 12 }}
+    />
   );
 }
 
@@ -382,7 +351,7 @@ function CreateCellButton() {
       }}
     >
       <Tooltip
-        title={`Create a new Segment ID (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
+        title={`Create a new segment id (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
       >
         <ButtonComponent
           onClick={handleCreateCell}

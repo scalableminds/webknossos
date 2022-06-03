@@ -527,9 +527,9 @@ class VolumeTracingController @Inject()(
     val mapping = EditableMapping.createDummy(50000, 500)
     for (_ <- 1 to 10) {
       val before = System.currentTimeMillis()
-      val bytes = asJson(mapping)
+      val bytes = toJsonBytes(mapping)
       val afterTo = System.currentTimeMillis()
-      val back = fromJson(bytes)
+      val back = fromJsonBytes(bytes)
       val afterBack = System.currentTimeMillis()
 
       val durationTo = afterTo - before
@@ -539,9 +539,9 @@ class VolumeTracingController @Inject()(
     }
     for (_ <- 1 to 10) {
       val before = System.currentTimeMillis()
-      val bytes = asProto(mapping.toProto)
+      val bytes = toProtoBytes(mapping.toProto)
       val afterTo = System.currentTimeMillis()
-      val back = EditableMapping.fromProto(fromProto[EditableMappingProto](bytes).openOrThrowException("yolo"))
+      val back = EditableMapping.fromProto(fromProtoBytes[EditableMappingProto](bytes).openOrThrowException("yolo"))
       val afterBack = System.currentTimeMillis()
 
       val durationTo = afterTo - before

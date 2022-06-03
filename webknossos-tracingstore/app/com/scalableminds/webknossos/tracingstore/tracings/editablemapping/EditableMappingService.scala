@@ -118,7 +118,7 @@ class EditableMappingService @Inject()(
       agglomerateToGraph = Map()
     )
     for {
-      _ <- tracingDataStore.editableMappings.put(newId, 0L, asJsonWithTimeLogging(newEditableMapping))
+      _ <- tracingDataStore.editableMappings.put(newId, 0L, newEditableMapping)
     } yield newId
   }
 
@@ -139,7 +139,7 @@ class EditableMappingService @Inject()(
 
     for {
       updates <- tracingDataStore.editableMappingUpdates.getMultipleVersionsAsVersionValueTuple(editableMappingId)(
-        fromJson[List[EditableMappingUpdateAction]])
+        fromJsonBytes[List[EditableMappingUpdateAction]])
       updateActionGroupsJs = updates.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
@@ -175,7 +175,7 @@ class EditableMappingService @Inject()(
   ): Fox[EditableMapping] =
     for {
       closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
-        .get(editableMappingId, Some(desiredVersion))(fromJsonWithTimeLogging[EditableMapping])
+        .get(editableMappingId, Some(desiredVersion))(fromJsonBytes[EditableMapping])
       _ = logger.info(
         f"Loading mapping version $desiredVersion, closest materialized is version ${closestMaterializedVersion.version} (${closestMaterializedVersion.value})")
       materialized <- applyPendingUpdates(
@@ -188,7 +188,7 @@ class EditableMappingService @Inject()(
       )
       _ = logger.info(s"Materialized mapping: $materialized")
       _ <- Fox.runIf(shouldPersistMaterialized(closestMaterializedVersion.version, desiredVersion)) {
-        tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, asJsonWithTimeLogging(materialized))
+        tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized)
       }
     } yield materialized
 
@@ -406,7 +406,7 @@ class EditableMappingService @Inject()(
           editableMappingId,
           Some(desiredVersion),
           Some(existingVersion + 1)
-        )(fromJson[List[EditableMappingUpdateAction]])
+        )(fromJsonBytes[List[EditableMappingUpdateAction]])
       } yield updates.reverse.flatten
     }
 

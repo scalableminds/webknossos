@@ -316,7 +316,7 @@ class VolumeTracingService @Inject()(
 
     for {
       volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJson[List[CompactVolumeUpdateAction]])
+        fromJsonBytes[List[CompactVolumeUpdateAction]])
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }

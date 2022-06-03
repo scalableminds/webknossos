@@ -22,30 +22,15 @@ trait KeyValueStoreImplicits extends BoxImplicits with LazyLogging {
 
   implicit def toBox[T](x: T): Box[T] = Full(x)
 
-  implicit def asJson[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
+  implicit def toJsonBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
-  def asJsonWithTimeLogging[T](o: T)(implicit w: Writes[T]): Array[Byte] = {
-    val before = System.currentTimeMillis()
-    val res = w.writes(o).toString.getBytes("UTF-8")
-    val durationMs = System.currentTimeMillis() - before
-    logger.info(s"Editable Mapping Json writing took ${durationMs} ms")
-    res
-  }
+  implicit def fromJsonBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
 
-  implicit def fromJson[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
+  implicit def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  def fromJsonWithTimeLogging[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box {
-    val before = System.currentTimeMillis()
-    val res = Json.parse(a).validate
-    val durationMs = System.currentTimeMillis() - before
-    logger.info(s"Editable Mapping Json parsing took ${durationMs} ms")
-    res
-  }
-
-  implicit def asProto[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
-
-  implicit def fromProto[T <: GeneratedMessage](a: Array[Byte])(
+  implicit def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(
       implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
+
 }
 
 case class KeyValuePair[T](key: String, value: T)

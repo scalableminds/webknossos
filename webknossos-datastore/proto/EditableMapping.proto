@@ -13,7 +13,7 @@ message AgglomerateGraph {
   repeated int64 segments = 1;
   repeated AgglomerateEdge edges = 2;
   repeated Vec3IntProto positions = 3;
-  repeated double affinities = 4;
+  repeated float affinities = 4;
 }
 
 message AgglomerateToGraphPair {

@@ -27,6 +27,7 @@ POST        /volume/mergedFromIds                               @com.scalablemin
 POST        /volume/mergedFromContents                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromContents(token: Option[String], persist: Boolean)
 
 # Editable Mappings
+GET         /mapping/test                                       @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.test
 POST        /mapping/:tracingId/update                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateEditableMapping(token: Option[String], tracingId: String)
 GET         /mapping/:tracingId/updateActionLog                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingUpdateActionLog(token: Option[String], tracingId: String)
 GET         /mapping/:tracingId                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingInfo(token: Option[String], tracingId: String)

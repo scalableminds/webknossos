@@ -229,8 +229,8 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
         }
       }
       val afterMarchingCubes = System.currentTimeMillis()
-      logger.info(
-        s"Isosurface generation timing - loading: ${afterLoading - before} ms, preprocessing: ${afterPreprocessing - afterLoading}, marchingCubes: ${afterMarchingCubes - afterPreprocessing}. ${agglomerateIds.size} agglomerates in data, ${typedData.length} voxels.")
+      /*logger.info(
+        s"Isosurface generation timing - loading: ${afterLoading - before} ms, preprocessing: ${afterPreprocessing - afterLoading}, marchingCubes: ${afterMarchingCubes - afterPreprocessing}. ${agglomerateIds.size} agglomerates in data, ${typedData.length} voxels.")*/
       (vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray, neighbors)
     }
   }

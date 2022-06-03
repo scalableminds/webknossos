@@ -118,7 +118,7 @@ class EditableMappingService @Inject()(
       agglomerateToGraph = Map()
     )
     for {
-      _ <- tracingDataStore.editableMappings.put(newId, 0L, newEditableMapping)
+      _ <- tracingDataStore.editableMappings.put(newId, 0L, asJsonWithTimeLogging(newEditableMapping))
     } yield newId
   }
 
@@ -172,11 +172,10 @@ class EditableMappingService @Inject()(
                            remoteFallbackLayer: RemoteFallbackLayer,
                            userToken: Option[String],
                            desiredVersion: Long,
-  ): Fox[EditableMapping] = {
-    logger.info("cache miss")
+  ): Fox[EditableMapping] =
     for {
       closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
-        .get(editableMappingId, Some(desiredVersion))(fromJson[EditableMapping])
+        .get(editableMappingId, Some(desiredVersion))(fromJsonWithTimeLogging[EditableMapping])
       _ = logger.info(
         f"Loading mapping version $desiredVersion, closest materialized is version ${closestMaterializedVersion.version} (${closestMaterializedVersion.value})")
       materialized <- applyPendingUpdates(
@@ -189,10 +188,9 @@ class EditableMappingService @Inject()(
       )
       _ = logger.info(s"Materialized mapping: $materialized")
       _ <- Fox.runIf(shouldPersistMaterialized(closestMaterializedVersion.version, desiredVersion)) {
-        tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized)
+        tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, asJsonWithTimeLogging(materialized))
       }
     } yield materialized
-  }
 
   private def shouldPersistMaterialized(previouslyMaterializedVersion: Long, newVersion: Long): Boolean =
     newVersion > previouslyMaterializedVersion && newVersion % 10 == 5

@@ -16,7 +16,7 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait KeyValueStoreImplicits extends BoxImplicits {
+trait KeyValueStoreImplicits extends BoxImplicits with LazyLogging {
 
   implicit def stringToByteArray(s: String): Array[Byte] = s.toCharArray.map(_.toByte)
 
@@ -24,7 +24,23 @@ trait KeyValueStoreImplicits extends BoxImplicits {
 
   implicit def asJson[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
+  def asJsonWithTimeLogging[T](o: T)(implicit w: Writes[T]): Array[Byte] = {
+    val before = System.currentTimeMillis()
+    val res = w.writes(o).toString.getBytes("UTF-8")
+    val durationMs = System.currentTimeMillis() - before
+    logger.info(s"Editable Mapping Json writing took ${durationMs} ms")
+    res
+  }
+
   implicit def fromJson[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
+
+  def fromJsonWithTimeLogging[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box {
+    val before = System.currentTimeMillis()
+    val res = Json.parse(a).validate
+    val durationMs = System.currentTimeMillis() - before
+    logger.info(s"Editable Mapping Json parsing took ${durationMs} ms")
+    res
+  }
 
   implicit def asProto[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 

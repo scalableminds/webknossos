@@ -17,7 +17,12 @@ import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
 import { AsyncLink } from "components/async_clickables";
-import { annotationToCompact, APIAnnotationCompact, APIUser } from "types/api_flow_types";
+import {
+  annotationToCompact,
+  APIAnnotationCompact,
+  APIUser,
+  APIUserCompact,
+} from "types/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
 import {
   finishAllAnnotations,
@@ -85,7 +90,7 @@ const READ_ONLY_ICON = (
   </span>
 );
 
-function formatUserName(user: APIUser) {
+function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
 }
 

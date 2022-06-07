@@ -452,28 +452,31 @@ class VolumeTracingController @Inject()(
 
   def makeMappingEditable(token: Option[String], tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-        for {
-          tracing <- tracingService.find(tracingId)
-          tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
-          editableMappingId <- editableMappingService.create(baseMappingName = tracingMappingName)
-          volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
-                                                 isEditable = Some(true),
-                                                 actionTimestamp = Some(System.currentTimeMillis()))
-          _ <- tracingService.handleUpdateGroup(
-            tracingId,
-            UpdateActionGroup[VolumeTracing](tracing.version + 1,
-                                             System.currentTimeMillis(),
-                                             List(volumeUpdate),
-                                             None,
-                                             None,
-                                             None,
-                                             None,
-                                             None),
-            tracing.version
-          )
-          infoJson <- editableMappingService.infoJson(tracingId = tracingId, editableMappingId = editableMappingId)
-        } yield Ok(infoJson)
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
+            _ <- Fox.assertTrue(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
+            editableMappingId <- editableMappingService.create(baseMappingName = tracingMappingName)
+            volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
+                                                   isEditable = Some(true),
+                                                   actionTimestamp = Some(System.currentTimeMillis()))
+            _ <- tracingService.handleUpdateGroup(
+              tracingId,
+              UpdateActionGroup[VolumeTracing](tracing.version + 1,
+                                               System.currentTimeMillis(),
+                                               List(volumeUpdate),
+                                               None,
+                                               None,
+                                               None,
+                                               None,
+                                               None),
+              tracing.version
+            )
+            infoJson <- editableMappingService.infoJson(tracingId = tracingId, editableMappingId = editableMappingId)
+          } yield Ok(infoJson)
+        }
       }
     }
 

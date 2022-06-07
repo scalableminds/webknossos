@@ -578,49 +578,48 @@ export default function ToolbarView() {
         </RadioButtonWithTooltip>
 
         {hasSkeleton ? (
-          <>
-            <RadioButtonWithTooltip
-              title={skeletonToolDescription}
-              disabledTitle=""
-              disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
-              style={narrowButtonStyle}
-              value={AnnotationToolEnum.SKELETON}
-            >
-              {/*
+          <RadioButtonWithTooltip
+            title={skeletonToolDescription}
+            disabledTitle=""
+            disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
+            style={narrowButtonStyle}
+            value={AnnotationToolEnum.SKELETON}
+          >
+            {/*
            When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
            will be null, too, which means the tooltip text would immediately change to an empty string.
            To avoid this, we fallback to previousSkeletonToolHint.
           */}
-              <Tooltip
-                title={skeletonToolHint || previousSkeletonToolHint}
-                visible={skeletonToolHint != null}
-              >
-                <i
-                  style={{
-                    paddingLeft: 4,
-                    opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled
-                      ? 0.5
-                      : 1,
-                  }}
-                  className="fas fa-project-diagram"
-                />
-              </Tooltip>
-            </RadioButtonWithTooltip>
-            <RadioButtonWithTooltip
-              title="Proofreading Tool - Modify an agglomerated segmentation."
-              disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
-              disabled={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled}
-              style={narrowButtonStyle}
-              value={AnnotationToolEnum.PROOFREAD}
+            <Tooltip
+              title={skeletonToolHint || previousSkeletonToolHint}
+              visible={skeletonToolHint != null}
             >
               <i
-                className="fas fa-clipboard-check"
                 style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
+                  paddingLeft: 4,
+                  opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
                 }}
+                className="fas fa-project-diagram"
               />
-            </RadioButtonWithTooltip>
-          </>
+            </Tooltip>
+          </RadioButtonWithTooltip>
+        ) : null}
+
+        {hasSkeleton && isVolumeSupported ? (
+          <RadioButtonWithTooltip
+            title="Proofreading Tool - Modify an agglomerated segmentation."
+            disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
+            disabled={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled}
+            style={narrowButtonStyle}
+            value={AnnotationToolEnum.PROOFREAD}
+          >
+            <i
+              className="fas fa-clipboard-check"
+              style={{
+                opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
+              }}
+            />
+          </RadioButtonWithTooltip>
         ) : null}
 
         {isVolumeSupported ? (

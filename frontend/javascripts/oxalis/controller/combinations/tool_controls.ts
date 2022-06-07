@@ -22,13 +22,17 @@ import {
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store from "oxalis/store";
+import Store, { SkeletonTracing } from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
 import { proofreadAtPosition } from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getNodeAndTree,
+  getSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -622,13 +626,37 @@ export class BoundingBoxTool {
 export class ProofreadTool {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
-      leftClick: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
-        SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
-
-        const globalPosition = calculateGlobalPos(Store.getState(), pos);
-        Store.dispatch(proofreadAtPosition(globalPosition));
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        this.onLeftClick(planeView, pos, plane, event, isTouch);
       },
     };
+  }
+
+  static onLeftClick(
+    planeView: PlaneView,
+    pos: Point2,
+    plane: OrthoView,
+    _event: MouseEvent,
+    isTouch: boolean,
+  ) {
+    const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
+
+    let globalPosition;
+    if (plane === OrthoViews.TDView) {
+      if (didSelectNode) {
+        getSkeletonTracing(Store.getState().tracing).map((skeletonTracing: SkeletonTracing) =>
+          getNodeAndTree(skeletonTracing).map(([_activeTree, activeNode]) => {
+            globalPosition = activeNode.position;
+          }),
+        );
+      }
+    } else {
+      globalPosition = calculateGlobalPos(Store.getState(), pos);
+    }
+
+    if (globalPosition == null) return;
+
+    Store.dispatch(proofreadAtPosition(globalPosition));
   }
 
   static getActionDescriptors(

@@ -70,11 +70,11 @@ const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 6;
  *
  */
 const isosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
-function cubeSizeInMag1(): Vector3 {
+function marchingCubeSizeInMag1(): Vector3 {
   // @ts-ignore
-  return window.__cubeSizeInMag1 != null
+  return window.__marchingCubeSizeInMag1 != null
     ? // @ts-ignore
-      window.__cubeSizeInMag1
+      window.__marchingCubeSizeInMag1
     : [128, 128, 128];
 }
 const modifiedCells: Set<number> = new Set();
@@ -112,7 +112,7 @@ function removeMapForSegment(layerName: string, segmentId: number): void {
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
   const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
-    [...cubeSizeInMag1(), 0],
+    [...marchingCubeSizeInMag1(), 0],
     resolutionInfo,
     zoomStep,
   );
@@ -121,8 +121,11 @@ function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Ve
 }
 
 function clipPositionToCubeBoundary(position: Vector3): Vector3 {
-  const currentCube = Utils.map3((el, idx) => Math.floor(el / cubeSizeInMag1()[idx]), position);
-  const clippedPosition = Utils.map3((el, idx) => el * cubeSizeInMag1()[idx], currentCube);
+  const currentCube = Utils.map3(
+    (el, idx) => Math.floor(el / marchingCubeSizeInMag1()[idx]),
+    position,
+  );
+  const clippedPosition = Utils.map3((el, idx) => el * marchingCubeSizeInMag1()[idx], currentCube);
   return clippedPosition;
 }
 
@@ -139,9 +142,9 @@ const NEIGHBOR_LOOKUP = [
 function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
   const neighboringPosition = [
-    clippedPosition[0] + neighborMultiplier[0] * cubeSizeInMag1()[0],
-    clippedPosition[1] + neighborMultiplier[1] * cubeSizeInMag1()[1],
-    clippedPosition[2] + neighborMultiplier[2] * cubeSizeInMag1()[2],
+    clippedPosition[0] + neighborMultiplier[0] * marchingCubeSizeInMag1()[0],
+    clippedPosition[1] + neighborMultiplier[1] * marchingCubeSizeInMag1()[1],
+    clippedPosition[2] + neighborMultiplier[2] * marchingCubeSizeInMag1()[2],
   ];
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return neighboringPosition;
@@ -349,8 +352,12 @@ function* maybeLoadIsosurface(
 
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(clippedPosition, true);
+  // In general, it is more performant to compute meshes in a more coarse resolution instead of using subsampling strides
+  // since in the coarse resolution less data needs to be loaded. Another possibility to increase performance is
+  // window.__marchingCubeSizeInMag1 which affects the cube size the marching cube algorithm will work on. If the cube is significantly larger than the
+  // segments, computations are wasted.
   // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceSubsamplingStrides' does not... Remove this comment to see the full error message
-  const subsamplingStrides = window.__isosurfaceSubsamplingStrides || [4, 4, 4];
+  const subsamplingStrides = window.__isosurfaceSubsamplingStrides || [1, 1, 1];
   const scale = yield* select((state) => state.dataset.dataSource.scale);
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);

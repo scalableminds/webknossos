@@ -121,5 +121,5 @@ class CubePosition(
     new BoundingBox(Vec3Int(mag1X, mag1Y, mag1Z), cubeLength * mag.x, cubeLength * mag.y, cubeLength * mag.z)
 
   override def toString: String =
-    s"CubePos($x,$y,$z,res=$mag)"
+    s"CubePos($x,$y,$z,mag=$mag)"
 }

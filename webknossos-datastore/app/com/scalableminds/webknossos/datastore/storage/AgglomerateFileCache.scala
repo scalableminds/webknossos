@@ -119,7 +119,7 @@ class BoundingBoxCache(
     val maxReaderRange: ULong) // config value for maximum amount of elements that are allowed to be read as once
     extends LazyLogging {
   private def getGlobalCuboid(cuboid: Cuboid): Cuboid = {
-    val res = cuboid.resolution
+    val res = cuboid.mag
     val tl = cuboid.topLeft
     Cuboid(
       VoxelPosition(tl.voxelXInMag * res.x, tl.voxelYInMag * res.y, tl.voxelZInMag * res.z, Vec3Int(1, 1, 1)),

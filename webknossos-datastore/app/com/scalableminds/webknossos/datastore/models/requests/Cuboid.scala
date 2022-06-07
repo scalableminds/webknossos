@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, VoxelPosition}
 
 /**
-  * A cuboid represents a generic cuboid at a specified position.
+  * Mag-aware BoundingBox
   */
 case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
 
@@ -43,5 +43,5 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     bucketList
   }
 
-  def resolution: Vec3Int = topLeft.mag
+  def mag: Vec3Int = topLeft.mag
 }

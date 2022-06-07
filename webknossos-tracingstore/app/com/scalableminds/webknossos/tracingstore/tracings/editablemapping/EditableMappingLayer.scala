@@ -67,7 +67,7 @@ case class EditableMappingLayer(name: String,
                                 tracing: VolumeTracing,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {
-  override def dataFormat: DataFormat.Value = DataFormat.editableMapping
+  override def dataFormat: DataFormat.Value = DataFormat.wkw
 
   override def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 

@@ -54,7 +54,7 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
         for {
           data <- handleDataRequest(request)
           mappedData = convertIfNecessary(
-            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.resolution.maxDim <= MaxMagForAgglomerateMapping,
+            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
             data,
             agglomerateService.applyAgglomerate(request)
           )

@@ -18,6 +18,7 @@ Added a warning for when the resolution in the XY viewport on z=1-downsampled da
 
 
 ### Fixed
+- Fixed that the context menu broke webKnossos when opening it in dataset-view-mode while no segmentation layer was visible. [#6259](https://github.com/scalableminds/webknossos/pull/6259)
 
 ### Removed
 

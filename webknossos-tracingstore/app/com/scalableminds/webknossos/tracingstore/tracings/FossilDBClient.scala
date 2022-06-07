@@ -163,6 +163,16 @@ class FossilDBClient(collection: String,
         Fox.failure("could not save to FossilDB: " + e.getMessage)
     }
 
+  def listKeys(limit: Option[Int], startAfterKey: Option[String]): Fox[Seq[String]] =
+    try {
+      val reply = blockingStub.listKeys(ListKeysRequest(collection, limit, startAfterKey))
+      if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
+      Fox.successful(reply.keys)
+    } catch {
+      case e: Exception =>
+        Fox.failure("could not list keys from FossilDB: " + e.getMessage)
+    }
+
   def shutdown(): Boolean = {
     channel.shutdownNow()
     channel.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)

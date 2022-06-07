@@ -53,11 +53,13 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
       case (request, index) =>
         for {
           data <- handleDataRequest(request)
-          mappedData = convertIfNecessary(
-            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
-            data,
-            agglomerateService.applyAgglomerate(request)
-          )
+          mappedData = if (agglomerateService == null) data
+          else
+            convertIfNecessary(
+              request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
+              data,
+              agglomerateService.applyAgglomerate(request)
+            )
           convertedData = convertIfNecessary(
             request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation,
             mappedData,

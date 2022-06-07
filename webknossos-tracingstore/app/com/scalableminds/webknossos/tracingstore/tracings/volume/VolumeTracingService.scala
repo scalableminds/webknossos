@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossos
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreRedisStore}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
@@ -41,7 +42,8 @@ class VolumeTracingService @Inject()(
     val handledGroupIdStore: TracingStoreRedisStore,
     val uncommittedUpdatesStore: TracingStoreRedisStore,
     val temporaryTracingIdStore: TracingStoreRedisStore,
-    val temporaryFileCreator: TemporaryFileCreator
+    val temporaryFileCreator: TemporaryFileCreator,
+    editableMappingService: EditableMappingService
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with VolumeTracingDownsampling
@@ -81,12 +83,16 @@ class VolumeTracingService @Inject()(
                         updateGroup: UpdateActionGroup[VolumeTracing],
                         previousVersion: Long): Fox[Unit] =
     for {
-      updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
+      tracing <- find(tracingId)
+      hasEditableMapping <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
+      updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(Fox.successful(tracing)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
           case Full(tracing) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                updateBucket(tracingId, tracing, a, updateGroup.version)
+                if (hasEditableMapping.getOrElse(false)) {
+                  Fox.failure("Cannot mutate buckets in annotation with editable mapping.")
+                } else updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
                   tracing.copy(
@@ -339,6 +345,12 @@ class VolumeTracingService @Inject()(
       resultingResolutions <- downsampleWithLayer(tracingId, tracing, volumeTracingLayer(tracingId, tracing))
       _ <- updateResolutionList(tracingId, tracing, resultingResolutions.toSet)
     } yield ()
+
+  def volumeBucketsAreEmpty(tracingId: String): Fox[Boolean] =
+    for {
+      keyList <- volumeDataStore.listKeys(limit = Some(1), startAfterKey = Some(tracingId))
+      filtered = keyList.filter(_.startsWith(tracingId))
+    } yield filtered.isEmpty
 
   def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
     for {

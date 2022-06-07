@@ -350,11 +350,13 @@ function NodeContextMenuOptions({
   volumeTracing,
   infoRows,
   allowUpdate,
-}: NodeContextMenuOptionsProps) {
+}: NodeContextMenuOptionsProps): JSX.Element {
   const dispatch = useDispatch();
 
   if (skeletonTracing == null) {
-    return null;
+    throw new Error(
+      "NodeContextMenuOptions should not have been called without existing skeleton tracing.",
+    );
   }
 
   const { userBoundingBoxes } = skeletonTracing;
@@ -613,7 +615,7 @@ function getBoundingBoxMenuOptions({
   ];
 }
 
-function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
+function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const {
     skeletonTracing,
     volumeTracing,
@@ -797,10 +799,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
   } else {
     allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
-  }
-
-  if (allActions.length === 0) {
-    return null;
   }
 
   return (
@@ -1000,7 +998,6 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     // for the following two expressions, since this breaks
     // antd's internal population of the correct class names
     // for the menu.
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'Element | null' is not assignable to type 'E... Remove this comment to see the full error message
     overlay =
       maybeClickedNodeId != null
         ? NodeContextMenuOptions({
@@ -1010,8 +1007,6 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
             ...props,
           })
         : NoNodeContextMenuOptions({
-            // @ts-expect-error ts-migrate(2783) FIXME: 'activeTool' is specified more than once, so this ... Remove this comment to see the full error message
-            activeTool,
             segmentIdAtPosition,
             infoRows,
             viewport: maybeViewport,

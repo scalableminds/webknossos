@@ -16,7 +16,7 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait KeyValueStoreImplicits extends BoxImplicits with LazyLogging {
+trait KeyValueStoreImplicits extends BoxImplicits {
 
   implicit def stringToByteArray(s: String): Array[Byte] = s.toCharArray.map(_.toByte)
 

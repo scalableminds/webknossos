@@ -40,16 +40,7 @@ object AlfuFoxCache {
   def apply[K, V](maxEntries: Int = 1000,
                   timeToLive: FiniteDuration = 2 hours,
                   timeToIdle: FiniteDuration = 1 hour): AlfuFoxCache[K, V] = {
-    val defaultCachingSettings = CachingSettings("")
-    val lfuCacheSettings =
-      defaultCachingSettings.lfuCacheSettings
-        .withInitialCapacity(maxEntries)
-        .withMaxCapacity(maxEntries)
-        .withTimeToLive(timeToLive)
-        .withTimeToIdle(timeToIdle)
-    val cachingSettings =
-      defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
-    val lfuCache: Cache[K, Box[V]] = LfuCache(cachingSettings)
+    val lfuCache: Cache[K, Box[V]] = AlfuCache(maxEntries, timeToLive, timeToIdle)
     new AlfuFoxCache(lfuCache)
   }
 }

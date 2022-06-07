@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import com.scalableminds.webknossos.datastore.EditableMapping._
-import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 
 case class EditableMapping(
     baseMappingName: String,
@@ -29,6 +28,7 @@ object EditableMapping {
         editableMappignProto.agglomerateToGraph.map(pair => pair.agglomerateId -> pair.agglomerateGraph).toMap
     )
 
+  /*
   def createDummy(numSegments: Long, numAgglomerates: Long): EditableMapping =
     EditableMapping(
       baseMappingName = "dummyBaseMapping",
@@ -44,5 +44,6 @@ object EditableMapping {
         ))
         .toMap
     )
+ */
 
 }

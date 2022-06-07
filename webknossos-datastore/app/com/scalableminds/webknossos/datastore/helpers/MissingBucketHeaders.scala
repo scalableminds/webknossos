@@ -13,7 +13,7 @@ trait MissingBucketHeaders extends FoxImplicits {
     List(missingBucketsHeader -> formatMissingBucketList(indices),
          "Access-Control-Expose-Headers" -> missingBucketsHeader)
 
-  protected def formatMissingBucketList(indices: List[Int]): String =
+  private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
   protected def parseMissingBucketHeader(headerLiteralOpt: Option[String])(

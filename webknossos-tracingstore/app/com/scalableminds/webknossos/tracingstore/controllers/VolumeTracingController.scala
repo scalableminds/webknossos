@@ -8,7 +8,6 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.EditableMapping.EditableMappingProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -18,9 +17,7 @@ import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, Web
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  EditableMapping,
   EditableMappingService,
   EditableMappingUpdateActionGroup,
   RemoteFallbackLayer
@@ -30,6 +27,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   UpdateMappingNameAction,
   VolumeTracingService
 }
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebKnossosClient,
@@ -523,32 +521,4 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def test: Action[AnyContent] = Action {
-    val mapping = EditableMapping.createDummy(50000, 500)
-    for (_ <- 1 to 10) {
-      val before = System.currentTimeMillis()
-      val bytes = toJsonBytes(mapping)
-      val afterTo = System.currentTimeMillis()
-      val back = fromJsonBytes(bytes)
-      val afterBack = System.currentTimeMillis()
-
-      val durationTo = afterTo - before
-      val durationBack = afterBack - afterTo
-
-      println(f"to json: $durationTo ms, from json: $durationBack ms")
-    }
-    for (_ <- 1 to 10) {
-      val before = System.currentTimeMillis()
-      val bytes = toProtoBytes(mapping.toProto)
-      val afterTo = System.currentTimeMillis()
-      val back = EditableMapping.fromProto(fromProtoBytes[EditableMappingProto](bytes).openOrThrowException("yolo"))
-      val afterBack = System.currentTimeMillis()
-
-      val durationTo = afterTo - before
-      val durationBack = afterBack - afterTo
-
-      println(f"to proto: $durationTo ms, from proto: $durationBack ms")
-    }
-    Ok
-  }
 }

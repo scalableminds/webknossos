@@ -200,7 +200,7 @@ class BinaryDataController @Inject()(
         firstSheet <- spriteSheet.pages.headOption ?~> "image.page.failed"
         outputStream = new ByteArrayOutputStream()
         _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
-      } yield Ok(outputStream.toByteArray).as("image/jpeg")
+      } yield Ok(outputStream.toByteArray).as(jpegMimeType)
     }
   }
   @ApiOperation(hidden = true, value = "")

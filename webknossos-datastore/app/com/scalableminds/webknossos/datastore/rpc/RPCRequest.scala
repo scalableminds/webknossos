@@ -4,6 +4,7 @@ import java.io.File
 
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
@@ -15,7 +16,10 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxImplicits with LazyLogging {
+class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
+    extends FoxImplicits
+    with LazyLogging
+    with MimeTypes {
 
   var request: WSRequest = wsClient.url(url)
   private var verbose: Boolean = true
@@ -104,59 +108,45 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   }
 
   def post[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {
-    request = request
-      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
-      .withBody(Json.toJson(body))
-      .withMethod("POST")
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
     performRequest
   }
 
   def put[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {
-    request = request
-      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
-      .withBody(Json.toJson(body))
-      .withMethod("PUT")
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("PUT")
     performRequest
   }
 
   def patch[T: Writes](body: T = Json.obj()): Fox[WSResponse] = {
-    request = request
-      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
-      .withBody(Json.toJson(body))
-      .withMethod("PATCH")
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("PATCH")
     performRequest
   }
 
   def postJsonWithJsonResponse[T: Writes, U: Reads](body: T = Json.obj()): Fox[U] = {
-    request = request
-      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
-      .withBody(Json.toJson(body))
-      .withMethod("POST")
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
     parseJsonResponse(performRequest)
   }
 
   def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage](body: J = Json.obj())(
       companion: GeneratedMessageCompanion[T]): Fox[T] = {
-    request = request
-      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
-      .withBody(Json.toJson(body))
-      .withMethod("POST")
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
     parseProtoResponse(performRequest)(companion)
   }
 
   def postJson[J: Writes](body: J = Json.obj()): Unit = {
-    request = request
-      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
-      .withBody(Json.toJson(body))
-      .withMethod("POST")
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
     performRequest
   }
 
   def postProtoWithJsonResponse[T <: GeneratedMessage, J: Reads](body: T): Fox[J] = {
-    request = request
-      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/x-protobuf")
-      .withBody(body.toByteArray)
-      .withMethod("POST")
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
     parseJsonResponse(performRequest)
   }
 
@@ -272,7 +262,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   private def requestBodyPreview: String =
     request.body match {
       case body: InMemoryBody
-          if request.headers.getOrElse(HeaderNames.CONTENT_TYPE, List()).contains("application/x-protobuf") =>
+          if request.headers.getOrElse(HeaderNames.CONTENT_TYPE, List()).contains(protobufMimeType) =>
         s"<${body.bytes.length} bytes of protobuf data>"
       case body: InMemoryBody =>
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"

@@ -1,14 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
-import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.AdditionalJsonFormats
-import com.scalableminds.webknossos.datastore.EditableMapping.{
-  AgglomerateToGraphPair,
-  EditableMappingProto,
-  SegmentToAgglomeratePair
-}
-import com.scalableminds.webknossos.datastore.models.AgglomerateGraph
-import play.api.libs.json.{Json, OFormat}
+import com.scalableminds.webknossos.datastore.EditableMapping._
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 
 case class EditableMapping(
     baseMappingName: String,
@@ -21,21 +14,19 @@ case class EditableMapping(
     EditableMappingProto(
       baseMappingName = baseMappingName,
       segmentToAgglomerate = segmentToAgglomerate.map(tuple => SegmentToAgglomeratePair(tuple._1, tuple._2)).toSeq,
-      agglomerateToGraph = agglomerateToGraph.map(tuple => AgglomerateToGraphPair(tuple._1, tuple._2.toProto)).toSeq,
+      agglomerateToGraph = agglomerateToGraph.map(tuple => AgglomerateToGraphPair(tuple._1, tuple._2)).toSeq,
     )
 }
 
-object EditableMapping extends AdditionalJsonFormats {
-  implicit val jsonFormat: OFormat[EditableMapping] = Json.format[EditableMapping]
+object EditableMapping {
 
   def fromProto(editableMappignProto: EditableMappingProto): EditableMapping =
     EditableMapping(
       baseMappingName = editableMappignProto.baseMappingName,
       segmentToAgglomerate =
         editableMappignProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId).toMap,
-      agglomerateToGraph = editableMappignProto.agglomerateToGraph
-        .map(pair => pair.agglomerateId -> AgglomerateGraph.fromProto(pair.agglomerateGraph))
-        .toMap
+      agglomerateToGraph =
+        editableMappignProto.agglomerateToGraph.map(pair => pair.agglomerateId -> pair.agglomerateGraph).toMap
     )
 
   def createDummy(numSegments: Long, numAgglomerates: Long): EditableMapping =
@@ -46,10 +37,10 @@ object EditableMapping extends AdditionalJsonFormats {
         .to(numAgglomerates)
         .map(a =>
           a -> AgglomerateGraph(
-            segments = 1L.to(numSegments / numAgglomerates).toList,
-            edges = 1L.to(numSegments / numAgglomerates).map(s => s -> s).toList,
-            positions = 1L.to(numSegments / numAgglomerates).map(s => Vec3Int.full(s.toInt)).toList,
-            affinities = 1L.to(numSegments / numAgglomerates).map(s => s.toFloat).toList
+            segments = 1L.to(numSegments / numAgglomerates),
+            edges = 1L.to(numSegments / numAgglomerates).map(s => AgglomerateEdge(s, s)),
+            positions = 1L.to(numSegments / numAgglomerates).map(s => Vec3IntProto(s.toInt, s.toInt, s.toInt)),
+            affinities = 1L.to(numSegments / numAgglomerates).map(s => s.toFloat)
         ))
         .toMap
     )

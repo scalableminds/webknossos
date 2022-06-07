@@ -4,13 +4,12 @@ import java.nio._
 import java.nio.file.{Files, Paths}
 
 import ch.systemsx.cisd.hdf5._
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.EditableMapping.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
@@ -228,7 +227,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       val edgesRange: Array[Long] =
         reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
 
-      logger.info(s"positionsRange: ${positionsRange(0)} to ${positionsRange(1)}, agglomerateId: ${agglomerateId}")
+      logger.info(s"positionsRange: ${positionsRange(0)} to ${positionsRange(1)}, agglomerateId: $agglomerateId")
 
       val nodeCount = positionsRange(1) - positionsRange(0)
       val edgeCount = edgesRange(1) - edgesRange(0)
@@ -259,10 +258,10 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
           reader.float32().readArrayBlockWithOffset("/agglomerate_to_affinities", edgeCount.toInt, edgesRange(0))
 
       AgglomerateGraph(
-        segments = segmentIds.toList,
-        edges = edges.toList.map(e => (segmentIds(e(0).toInt), segmentIds(e(1).toInt))),
-        positions = positions.toList.map(pos => Vec3Int(pos(0).toInt, pos(1).toInt, pos(2).toInt)),
-        affinities = affinities.toList
+        segments = segmentIds,
+        edges = edges.map(e => AgglomerateEdge(source = segmentIds(e(0).toInt), target = segmentIds(e(1).toInt))),
+        positions = positions.map(pos => Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt)),
+        affinities = affinities
       )
     }
 

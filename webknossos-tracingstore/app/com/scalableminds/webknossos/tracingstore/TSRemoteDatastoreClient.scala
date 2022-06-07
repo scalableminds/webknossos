@@ -5,8 +5,9 @@ import akka.http.caching.scaladsl.{Cache, CachingSettings}
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.EditableMapping.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
-import com.scalableminds.webknossos.datastore.models.{AgglomerateGraph, WebKnossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
 import com.typesafe.scalalogging.LazyLogging
@@ -110,7 +111,7 @@ class TSRemoteDatastoreClient @Inject()(
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId")
         .addQueryStringOptional("token", userToken)
-        .getWithJsonResponse[AgglomerateGraph]
+        .getWithProtoResponse[AgglomerateGraph](AgglomerateGraph)
     } yield result
 
   def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer,

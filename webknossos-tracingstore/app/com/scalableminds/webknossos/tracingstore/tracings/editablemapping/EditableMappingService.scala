@@ -8,6 +8,7 @@ import akka.http.caching.scaladsl.{Cache, CachingSettings}
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.EditableMapping.{AgglomerateEdge, AgglomerateGraph, EditableMappingProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
@@ -118,7 +119,7 @@ class EditableMappingService @Inject()(
       agglomerateToGraph = Map()
     )
     for {
-      _ <- tracingDataStore.editableMappings.put(newId, 0L, newEditableMapping)
+      _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(newEditableMapping.toProto))
     } yield newId
   }
 
@@ -175,7 +176,8 @@ class EditableMappingService @Inject()(
   ): Fox[EditableMapping] =
     for {
       closestMaterializedVersion: VersionedKeyValuePair[EditableMapping] <- tracingDataStore.editableMappings
-        .get(editableMappingId, Some(desiredVersion))(fromJsonBytes[EditableMapping])
+        .get(editableMappingId, Some(desiredVersion))(bytes =>
+          fromProtoBytes[EditableMappingProto](bytes).map(EditableMapping.fromProto))
       _ = logger.info(
         f"Loading mapping version $desiredVersion, closest materialized is version ${closestMaterializedVersion.version} (${closestMaterializedVersion.value})")
       materialized <- applyPendingUpdates(
@@ -188,7 +190,7 @@ class EditableMappingService @Inject()(
       )
       _ = logger.info(s"Materialized mapping: $materialized")
       _ <- Fox.runIf(shouldPersistMaterialized(closestMaterializedVersion.version, desiredVersion)) {
-        tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized)
+        tracingDataStore.editableMappings.put(editableMappingId, desiredVersion, materialized.toProto)
       }
     } yield materialized
 
@@ -254,15 +256,14 @@ class EditableMappingService @Inject()(
                                userToken: Option[String]): Fox[EditableMapping] =
     for {
       agglomerateGraph <- agglomerateGraphForId(mapping, update.agglomerateId, remoteFallbackLayer, userToken)
-      _ = logger.info(
-        s"Applying one split action on agglomerate ${update.agglomerateId} (previously $agglomerateGraph)...")
+      _ = logger.info(s"Applying one split action on agglomerate ${update.agglomerateId}...")
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition1, update.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, update.segmentPosition2, update.mag, userToken)
       largestExistingAgglomerateId <- largestAgglomerateId(mapping, remoteFallbackLayer, userToken)
       agglomerateId2 = largestExistingAgglomerateId + 1L
       (graph1, graph2) = splitGraph(agglomerateGraph, segmentId1, segmentId2)
       _ = logger.info(
-        s"Graphs after split: Agglomerate ${update.agglomerateId}: $graph1, Aggloemrate $agglomerateId2: $graph2")
+        s"Graphs after split: Agglomerate ${update.agglomerateId}: AgglomerateGraph(${graph1.segments.length} segments, ${graph1.edges.length} edges), Aggloemrate $agglomerateId2: AgglomerateGraph(${graph2.segments.length} segments, ${graph2.edges.length} edges)")
       splitSegmentToAgglomerate = graph2.segments.map(_ -> agglomerateId2).toMap
     } yield
       EditableMapping(
@@ -274,9 +275,9 @@ class EditableMappingService @Inject()(
   private def splitGraph(agglomerateGraph: AgglomerateGraph,
                          segmentId1: Long,
                          segmentId2: Long): (AgglomerateGraph, AgglomerateGraph) = {
-    val edgesAndAffinitiesMinusOne: List[((Long, Long), Float)] =
+    val edgesAndAffinitiesMinusOne: Seq[(AgglomerateEdge, Float)] =
       agglomerateGraph.edges.zip(agglomerateGraph.affinities).filterNot {
-        case ((from, to), _) =>
+        case (AgglomerateEdge(from, to, _), _) =>
           (from == segmentId1 && to == segmentId2) || (from == segmentId2 && to == segmentId1)
       }
     val graph1Nodes: Set[Long] = computeConnectedComponent(startNode = segmentId1, edgesAndAffinitiesMinusOne.map(_._1))
@@ -284,7 +285,7 @@ class EditableMappingService @Inject()(
       case (seg, _) => graph1Nodes.contains(seg)
     }
     val graph1EdgesWithAffinities = edgesAndAffinitiesMinusOne.filter {
-      case (e, _) => graph1Nodes.contains(e._1) && graph1Nodes.contains(e._2)
+      case (e, _) => graph1Nodes.contains(e.source) && graph1Nodes.contains(e.target)
     }
     val graph1 = AgglomerateGraph(
       segments = graph1NodesWithPositions.map(_._1),
@@ -298,7 +299,7 @@ class EditableMappingService @Inject()(
       case (seg, _) => graph2Nodes.contains(seg)
     }
     val graph2EdgesWithAffinities = edgesAndAffinitiesMinusOne.filter {
-      case (e, _) => graph2Nodes.contains(e._1) && graph2Nodes.contains(e._2)
+      case (e, _) => graph2Nodes.contains(e.source) && graph2Nodes.contains(e.target)
     }
     val graph2 = AgglomerateGraph(
       segments = graph2NodesWithPositions.map(_._1),
@@ -309,13 +310,12 @@ class EditableMappingService @Inject()(
     (graph1, graph2)
   }
 
-  private def computeConnectedComponent(startNode: Long, edges: List[(Long, Long)]): Set[Long] = {
+  private def computeConnectedComponent(startNode: Long, edges: Seq[AgglomerateEdge]): Set[Long] = {
     val neighborsByNode =
       mutable.HashMap[Long, List[Long]]().withDefaultValue(List[Long]())
-    edges.foreach {
-      case (from, to) =>
-        neighborsByNode(from) = to :: neighborsByNode(from)
-        neighborsByNode(to) = from :: neighborsByNode(to)
+    edges.foreach { e =>
+      neighborsByNode(e.source) = e.target :: neighborsByNode(e.source)
+      neighborsByNode(e.target) = e.source :: neighborsByNode(e.target)
     }
     val nodesToVisit = mutable.HashSet[Long](startNode)
     val visitedNodes = mutable.HashSet[Long]()
@@ -358,20 +358,21 @@ class EditableMappingService @Inject()(
       EditableMapping(
         baseMappingName = mapping.baseMappingName,
         segmentToAgglomerate = mapping.segmentToAgglomerate ++ mergedSegmentToAgglomerate,
-        agglomerateToGraph = mapping.agglomerateToGraph ++ Map(update.agglomerateId1 -> mergedGraph,
-                                                               update.agglomerateId2 -> AgglomerateGraph.empty)
+        agglomerateToGraph = mapping.agglomerateToGraph ++ Map(
+          update.agglomerateId1 -> mergedGraph,
+          update.agglomerateId2 -> AgglomerateGraph(List.empty, List.empty, List.empty, List.empty))
       )
 
   private def mergeGraph(agglomerateGraph1: AgglomerateGraph,
                          agglomerateGraph2: AgglomerateGraph,
                          segmentId1: Long,
                          segmentId2: Long): AgglomerateGraph = {
-    val newEdge = (segmentId1, segmentId2)
-    val newEdgeAffinity = 255L
+    val newEdge = AgglomerateEdge(segmentId1, segmentId2)
+    val newEdgeAffinity = 255.0f
     AgglomerateGraph(
       segments = agglomerateGraph1.segments ++ agglomerateGraph2.segments,
-      edges = newEdge :: (agglomerateGraph1.edges ++ agglomerateGraph2.edges),
-      affinities = newEdgeAffinity :: (agglomerateGraph1.affinities ++ agglomerateGraph2.affinities),
+      edges = newEdge +: (agglomerateGraph1.edges ++ agglomerateGraph2.edges),
+      affinities = newEdgeAffinity +: (agglomerateGraph1.affinities ++ agglomerateGraph2.affinities),
       positions = agglomerateGraph1.positions ++ agglomerateGraph2.positions
     )
   }
@@ -475,8 +476,8 @@ class EditableMappingService @Inject()(
       }
       segmentIdToNodeIdMinusOne: Map[Long, Int] = graph.segments.zipWithIndex.toMap
       skeletonEdges = graph.edges.map { e =>
-        Edge(source = segmentIdToNodeIdMinusOne(e._1) + nodeIdStartAtOneOffset,
-             target = segmentIdToNodeIdMinusOne(e._2) + nodeIdStartAtOneOffset)
+        Edge(source = segmentIdToNodeIdMinusOne(e.source) + nodeIdStartAtOneOffset,
+             target = segmentIdToNodeIdMinusOne(e.target) + nodeIdStartAtOneOffset)
       }
 
       trees = Seq(

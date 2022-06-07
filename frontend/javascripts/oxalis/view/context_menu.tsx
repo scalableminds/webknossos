@@ -886,7 +886,6 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
   const { inputRef, ...props } = propsWithInputRef;
   const {
     skeletonTracing,
-    activeTool,
     maybeClickedNodeId,
     contextMenuPosition,
     hideContextMenu,

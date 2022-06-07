@@ -55,11 +55,13 @@ class TSRemoteWebKnossosClient @Inject()(
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[DataSourceLike]
 
-  def getDataStoreUriForDataSource(organizationNameOpt: Option[String], dataSetName: String): Fox[String] =
+  def getDataStoreUriForDataSource(organizationName: String, dataSetName: String): Fox[String] = {
+    logger.error(s"get uri for data source $organizationName, $dataSetName")
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataStoreURI/$dataSetName")
-      .addQueryStringOptional("organizationName", organizationNameOpt)
+      .addQueryString("organizationName" -> organizationName)
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[String]
+  }
 
   override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/validateUserAccess")

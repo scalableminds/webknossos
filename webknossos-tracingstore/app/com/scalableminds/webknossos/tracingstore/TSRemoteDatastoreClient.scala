@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.tracingstore
 
-import akka.http.caching.LfuCache
-import akka.http.caching.scaladsl.{Cache, CachingSettings}
 import com.google.inject.Inject
+import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.EditableMapping.AgglomerateGraph
@@ -11,12 +10,10 @@ import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
 import play.api.http.Status
 import play.api.inject.ApplicationLifecycle
 
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class TSRemoteDatastoreClient @Inject()(
     rpc: RPC,
@@ -26,20 +23,9 @@ class TSRemoteDatastoreClient @Inject()(
     extends LazyLogging
     with MissingBucketHeaders {
 
-  private lazy val dataStoreUriCache: Cache[(Option[String], String), Box[String]] = {
-    val defaultCachingSettings = CachingSettings("")
-    val maxEntries = 1000
-    val lfuCacheSettings =
-      defaultCachingSettings.lfuCacheSettings
-        .withInitialCapacity(maxEntries)
-        .withMaxCapacity(maxEntries)
-        .withTimeToLive(2 hours)
-        .withTimeToIdle(1 hour)
-    val cachingSettings =
-      defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
-    val lfuCache: Cache[(Option[String], String), Box[String]] = LfuCache(cachingSettings)
-    lfuCache
-  }
+  private lazy val dataStoreUriCache: AlfuFoxCache[(String, String), String] = AlfuFoxCache()
+  private lazy val largestAgglomerateIdCache: AlfuFoxCache[(RemoteFallbackLayer, String, Option[String]), Long] =
+    AlfuFoxCache()
 
   def fallbackLayerBucket(remoteFallbackLayer: RemoteFallbackLayer,
                           mag: String,
@@ -116,29 +102,35 @@ class TSRemoteDatastoreClient @Inject()(
 
   def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer,
                               mappingName: String,
-                              userToken: Option[String]): Fox[Long] =
-    for {
-      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/largestAgglomerateId")
-        .addQueryStringOptional("token", userToken)
-        .getWithJsonResponse[Long]
-    } yield result
+                              userToken: Option[String]): Fox[Long] = {
+    val cacheKey = (remoteFallbackLayer, mappingName, userToken)
+    largestAgglomerateIdCache.getOrLoad(
+      cacheKey,
+      k =>
+        for {
+          remoteLayerUri <- getRemoteLayerUri(k._1)
+          result <- rpc(s"$remoteLayerUri/agglomerates/${k._2}/largestAgglomerateId")
+            .addQueryStringOptional("token", k._3)
+            .getWithJsonResponse[Long]
+        } yield result
+    )
+  }
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {
-      datastoreUri <- dataStoreUriFromCache(remoteLayer.organizationName, remoteLayer.dataSetName).toFox
+      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.dataSetName)
     } yield
       s"$datastoreUri/data/datasets/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/layers/${remoteLayer.layerName}"
 
   private def getRemoteLayerUriZarr(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {
-      datastoreUri <- dataStoreUriFromCache(remoteLayer.organizationName, remoteLayer.dataSetName).toFox
+      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.dataSetName)
     } yield
       s"$datastoreUri/data/datasets/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/layers/${remoteLayer.layerName}"
 
-  private def dataStoreUriFromCache(organizationName: String, dataSetName: String): Future[Box[String]] =
+  private def dataStoreUriWithCache(organizationName: String, dataSetName: String): Fox[String] =
     dataStoreUriCache.getOrLoad(
-      (Some(organizationName), dataSetName),
-      keyTuple => remoteWebKnossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2)
-    )
+      (organizationName, dataSetName),
+      keyTuple => remoteWebKnossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2))
+
 }

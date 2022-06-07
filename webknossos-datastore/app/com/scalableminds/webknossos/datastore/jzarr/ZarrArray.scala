@@ -5,15 +5,14 @@ import java.nio.ByteOrder
 import java.nio.file.Path
 import java.util
 
-import akka.http.caching.LfuCache
-import akka.http.caching.scaladsl.{Cache, CachingSettings}
+import akka.http.caching.scaladsl.Cache
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
 
@@ -56,19 +55,8 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   // cache currently limited to 100 MB per array
   private lazy val chunkContentsCache: Cache[String, MultiArray] = {
     val maxSizeBytes = 1000 * 1000 * 100
-
     val maxEntries = maxSizeBytes / header.bytesPerChunk
-    val defaultCachingSettings = CachingSettings("")
-    val lfuCacheSettings =
-      defaultCachingSettings.lfuCacheSettings
-        .withInitialCapacity(maxEntries)
-        .withMaxCapacity(maxEntries)
-        .withTimeToLive(2.hours)
-        .withTimeToIdle(1.hour)
-    val cachingSettings =
-      defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
-    val lfuCache: Cache[String, MultiArray] = LfuCache(cachingSettings)
-    lfuCache
+    AlfuCache(maxEntries)
   }
 
   // @return Byte array in fortran-order with little-endian values

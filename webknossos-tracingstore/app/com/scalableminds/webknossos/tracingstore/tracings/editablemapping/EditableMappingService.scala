@@ -3,9 +3,8 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import java.nio.file.Paths
 import java.util.UUID
 
-import akka.http.caching.LfuCache
-import akka.http.caching.scaladsl.{Cache, CachingSettings}
 import com.google.inject.Inject
+import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.EditableMapping.{AgglomerateEdge, AgglomerateGraph, EditableMappingProto}
@@ -30,12 +29,11 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 case class EditableMappingKey(
     editableMappingId: String,
@@ -66,35 +64,11 @@ class EditableMappingService @Inject()(
 
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, null)
 
-  private lazy val materializedEditableMappingCache: Cache[EditableMappingKey, Box[EditableMapping]] = {
-    val maxEntries = 20
-    val defaultCachingSettings = CachingSettings("")
-    val lfuCacheSettings =
-      defaultCachingSettings.lfuCacheSettings
-        .withInitialCapacity(maxEntries)
-        .withMaxCapacity(maxEntries)
-        .withTimeToLive(2 hours)
-        .withTimeToIdle(1 hour)
-    val cachingSettings =
-      defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
-    val lfuCache: Cache[EditableMappingKey, Box[EditableMapping]] = LfuCache(cachingSettings)
-    lfuCache
-  }
+  private lazy val materializedEditableMappingCache: AlfuFoxCache[EditableMappingKey, EditableMapping] = AlfuFoxCache(
+    maxEntries = 50)
 
-  private lazy val unmappedRemoteDataCache: Cache[UnmappedRemoteDataKey, Box[(Array[Byte], List[Int])]] = {
-    val maxEntries = 3000
-    val defaultCachingSettings = CachingSettings("")
-    val lfuCacheSettings =
-      defaultCachingSettings.lfuCacheSettings
-        .withInitialCapacity(maxEntries)
-        .withMaxCapacity(maxEntries)
-        .withTimeToLive(2 hours)
-        .withTimeToIdle(1 hour)
-    val cachingSettings =
-      defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
-    val lfuCache: Cache[UnmappedRemoteDataKey, Box[(Array[Byte], List[Int])]] = LfuCache(cachingSettings)
-    lfuCache
-  }
+  private lazy val unmappedRemoteDataCache: AlfuFoxCache[UnmappedRemoteDataKey, (Array[Byte], List[Int])] =
+    AlfuFoxCache(maxEntries = 3000)
 
   def newestMaterializableVersion(editableMappingId: String): Fox[Long] =
     tracingDataStore.editableMappingUpdates.getVersion(editableMappingId,
@@ -160,13 +134,9 @@ class EditableMappingService @Inject()(
                            desiredVersion: Long,
   ): Fox[EditableMapping] = {
     val key = EditableMappingKey(editableMappingId, remoteFallbackLayer, userToken, desiredVersion)
-    for {
-      materializedBox <- materializedEditableMappingCache.getOrLoad(
-        key,
-        key =>
-          getVersioned(key.editableMappingId, key.remoteFallbackLayer, key.userToken, key.desiredVersion).futureBox)
-      materialized <- materializedBox.toFox
-    } yield materialized
+    materializedEditableMappingCache.getOrLoad(
+      key,
+      key => getVersioned(key.editableMappingId, key.remoteFallbackLayer, key.userToken, key.desiredVersion))
   }
 
   private def getVersioned(editableMappingId: String,
@@ -511,15 +481,10 @@ class EditableMappingService @Inject()(
 
   def getUnmappedDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer,
                                    dataRequests: List[WebKnossosDataRequest],
-                                   userToken: Option[String]): Fox[(Array[Byte], List[Int])] = {
-    val key = UnmappedRemoteDataKey(remoteFallbackLayer, dataRequests, userToken)
-    for {
-      resultBox <- unmappedRemoteDataCache.getOrLoad(
-        key,
-        k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests, k.userToken))
-      (data, indices) <- resultBox.toFox
-    } yield (data, indices)
-  }
+                                   userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
+    unmappedRemoteDataCache.getOrLoad(
+      UnmappedRemoteDataKey(remoteFallbackLayer, dataRequests, userToken),
+      k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests, k.userToken))
 
   def collectSegmentIds(data: Array[UnsignedInteger]): Set[Long] =
     data.toSet.map { u: UnsignedInteger =>

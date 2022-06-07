@@ -8,4 +8,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/22.06.0...HEAD)
 
+ - Note that this upgrade can not be trivially rolled back, since new rocksDB column families are added and it is not easy to remove them again from an existing database. [#6195](https://github.com/scalableminds/webknossos/pull/6195)
+
 ### Postgres Evolutions:

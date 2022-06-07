@@ -34,7 +34,7 @@ import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
-import Constants, {
+import {
   ToolsWithOverwriteCapabilities,
   AnnotationToolEnum,
   OverwriteModeEnum,

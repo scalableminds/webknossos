@@ -180,15 +180,19 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const segmentIdsInSurround = segmentIdsArrayBuffers.map((buffer) => new Uint32Array(buffer)[0]);
 
   if (oldSegmentIdsInSurround != null) {
+    const segmentIdsInSurroundSet = new Set(segmentIdsInSurround);
     // Remove old meshes in oversegmentation
     yield* all(
       oldSegmentIdsInSurround.map((nodeSegmentId) =>
-        put(removeIsosurfaceAction(layerName, nodeSegmentId)),
+        // Only remove meshes that are not part of the new segment surround
+        segmentIdsInSurroundSet.has(nodeSegmentId)
+          ? null
+          : put(removeIsosurfaceAction(layerName, nodeSegmentId)),
       ),
     );
   }
 
-  oldSegmentIdsInSurround = segmentIdsInSurround;
+  oldSegmentIdsInSurround = [...segmentIdsInSurround];
 
   // Load meshes in oversegmentation in fine resolution
   const noMappingInfo = {

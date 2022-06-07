@@ -20,6 +20,7 @@ import {
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
+  hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -503,8 +504,9 @@ function ChangeBrushSizeButton() {
 export default function ToolbarView() {
   const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
-  const viewMode = useSelector((state: OxalisState) => state.temporaryConfiguration.viewMode);
-  const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
+  const isVolumeModificationAllowed = useSelector(
+    (state: OxalisState) => !hasEditableMapping(state),
+  );
   const useLegacyBindings = useSelector(
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
@@ -605,7 +607,7 @@ export default function ToolbarView() {
           </RadioButtonWithTooltip>
         ) : null}
 
-        {hasSkeleton && isVolumeSupported ? (
+        {hasSkeleton && hasVolume ? (
           <RadioButtonWithTooltip
             title="Proofreading Tool - Modify an agglomerated segmentation."
             disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
@@ -622,7 +624,7 @@ export default function ToolbarView() {
           </RadioButtonWithTooltip>
         ) : null}
 
-        {isVolumeSupported ? (
+        {hasVolume && isVolumeModificationAllowed ? (
           <React.Fragment>
             <RadioButtonWithTooltip
               title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
@@ -762,7 +764,7 @@ export default function ToolbarView() {
       <ToolSpecificSettings
         hasSkeleton={hasSkeleton}
         adaptedActiveTool={adaptedActiveTool}
-        isVolumeSupported={isVolumeSupported}
+        hasVolume={hasVolume}
         isControlPressed={isControlPressed}
         isShiftPressed={isShiftPressed}
       />
@@ -773,19 +775,19 @@ export default function ToolbarView() {
 function ToolSpecificSettings({
   hasSkeleton,
   adaptedActiveTool,
-  isVolumeSupported,
+  hasVolume,
   isControlPressed,
   isShiftPressed,
 }: {
   hasSkeleton: boolean;
   adaptedActiveTool: AnnotationTool;
-  isVolumeSupported: boolean;
+  hasVolume: boolean;
   isControlPressed: boolean;
   isShiftPressed: boolean;
 }) {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationToolEnum.BOUNDING_BOX;
-  const showCreateCellButton = isVolumeSupported && VolumeTools.includes(adaptedActiveTool);
+  const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
     showCreateCellButton &&
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||

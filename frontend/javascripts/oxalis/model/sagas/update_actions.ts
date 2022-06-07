@@ -535,7 +535,7 @@ export function updateTdCamera(): UpdateTdCameraUpdateAction {
     value: {},
   };
 }
-export function serverCreateTracing(timestamp: number) {
+export function serverCreateTracing(timestamp: number): AsServerAction<CreateTracingUpdateAction> {
   return {
     name: "createTracing",
     value: {

@@ -133,7 +133,10 @@ class VersionView extends React.Component<Props, State> {
             ))}
             {this.props.tracing.mappings.map((mapping) => (
               <TabPane
-                tab={getReadableNameByVolumeTracingId(this.props.tracing, mapping.tracingId)}
+                tab={`${getReadableNameByVolumeTracingId(
+                  this.props.tracing,
+                  mapping.tracingId,
+                )} (Editable Mapping)`}
                 key={`${mapping.tracingId}-${mapping.mappingName}`}
               >
                 <VersionList

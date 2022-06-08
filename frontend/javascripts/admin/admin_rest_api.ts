@@ -1011,14 +1011,12 @@ export async function startExportTiffJob(
   mappingName: string | null | undefined,
   mappingType: string | null | undefined,
   hideUnmappedIds: boolean | null | undefined,
-  tracingVersion: number | null | undefined = null,
 ): Promise<Array<APIJob>> {
   const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
   const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
   const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
   const annotationLayerNameSuffix =
     annotationLayerName != null ? `&annotationLayerName=${annotationLayerName}` : "";
-  const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
   const mappingNameSuffix = mappingName != null ? `&mappingName=${mappingName}` : "";
   const mappingTypeSuffix = mappingType != null ? `&mappingType=${mappingType}` : "";
   const hideUnmappedIdsSuffix =
@@ -1026,7 +1024,7 @@ export async function startExportTiffJob(
   return Request.receiveJSON(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}${layerNameSuffix}${annotationIdSuffix}${annotationTypeSuffix}${tracingVersionSuffix}${annotationLayerNameSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
+    )}${layerNameSuffix}${annotationIdSuffix}${annotationTypeSuffix}${annotationLayerNameSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
     {
       method: "POST",
     },

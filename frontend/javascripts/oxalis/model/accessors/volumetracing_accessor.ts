@@ -416,6 +416,34 @@ export function getMappingInfoForVolumeTracing(
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
 }
 
+export function hasEditableMapping(state: OxalisState): boolean {
+  const volumeTracing = getActiveSegmentationTracing(state);
+
+  if (volumeTracing == null) return false;
+
+  return !!volumeTracing.mappingIsEditable;
+}
+
+export function isMappingActivationAllowed(
+  state: OxalisState,
+  mappingName: string | null | undefined,
+): boolean {
+  const isEditableMappingActive = hasEditableMapping(state);
+
+  if (isEditableMappingActive) {
+    const volumeTracing = getActiveSegmentationTracing(state);
+
+    // This should never be the case, since editable mappings can only be active for volume tracings
+    if (volumeTracing == null) return false;
+
+    // Only allow mapping activations of the editable mapping itself if an editable mapping is saved
+    // in the volume tracing. Editable mappings cannot be disabled or switched for now.
+    return mappingName === volumeTracing.mappingName;
+  }
+
+  return true;
+}
+
 export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | undefined {
   return volumeTracing.lastLabelActions[0];
 }

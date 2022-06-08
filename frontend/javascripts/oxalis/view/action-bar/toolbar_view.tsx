@@ -20,6 +20,7 @@ import {
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
+  hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -33,7 +34,7 @@ import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
-import Constants, {
+import {
   ToolsWithOverwriteCapabilities,
   AnnotationToolEnum,
   OverwriteModeEnum,
@@ -503,8 +504,9 @@ function ChangeBrushSizeButton() {
 export default function ToolbarView() {
   const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
-  const viewMode = useSelector((state: OxalisState) => state.temporaryConfiguration.viewMode);
-  const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
+  const isVolumeModificationAllowed = useSelector(
+    (state: OxalisState) => !hasEditableMapping(state),
+  );
   const useLegacyBindings = useSelector(
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
@@ -578,52 +580,51 @@ export default function ToolbarView() {
         </RadioButtonWithTooltip>
 
         {hasSkeleton ? (
-          <>
-            <RadioButtonWithTooltip
-              title={skeletonToolDescription}
-              disabledTitle=""
-              disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
-              style={narrowButtonStyle}
-              value={AnnotationToolEnum.SKELETON}
-            >
-              {/*
+          <RadioButtonWithTooltip
+            title={skeletonToolDescription}
+            disabledTitle=""
+            disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
+            style={narrowButtonStyle}
+            value={AnnotationToolEnum.SKELETON}
+          >
+            {/*
            When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
            will be null, too, which means the tooltip text would immediately change to an empty string.
            To avoid this, we fallback to previousSkeletonToolHint.
           */}
-              <Tooltip
-                title={skeletonToolHint || previousSkeletonToolHint}
-                visible={skeletonToolHint != null}
-              >
-                <i
-                  style={{
-                    paddingLeft: 4,
-                    opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled
-                      ? 0.5
-                      : 1,
-                  }}
-                  className="fas fa-project-diagram"
-                />
-              </Tooltip>
-            </RadioButtonWithTooltip>
-            <RadioButtonWithTooltip
-              title="Proofreading Tool - Modify an agglomerated segmentation."
-              disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
-              disabled={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled}
-              style={narrowButtonStyle}
-              value={AnnotationToolEnum.PROOFREAD}
+            <Tooltip
+              title={skeletonToolHint || previousSkeletonToolHint}
+              visible={skeletonToolHint != null}
             >
               <i
-                className="fas fa-clipboard-check"
                 style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
+                  paddingLeft: 4,
+                  opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
                 }}
+                className="fas fa-project-diagram"
               />
-            </RadioButtonWithTooltip>
-          </>
+            </Tooltip>
+          </RadioButtonWithTooltip>
         ) : null}
 
-        {isVolumeSupported ? (
+        {hasSkeleton && hasVolume ? (
+          <RadioButtonWithTooltip
+            title="Proofreading Tool - Modify an agglomerated segmentation."
+            disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
+            disabled={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled}
+            style={narrowButtonStyle}
+            value={AnnotationToolEnum.PROOFREAD}
+          >
+            <i
+              className="fas fa-clipboard-check"
+              style={{
+                opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
+              }}
+            />
+          </RadioButtonWithTooltip>
+        ) : null}
+
+        {hasVolume && isVolumeModificationAllowed ? (
           <React.Fragment>
             <RadioButtonWithTooltip
               title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
@@ -763,7 +764,7 @@ export default function ToolbarView() {
       <ToolSpecificSettings
         hasSkeleton={hasSkeleton}
         adaptedActiveTool={adaptedActiveTool}
-        isVolumeSupported={isVolumeSupported}
+        hasVolume={hasVolume}
         isControlPressed={isControlPressed}
         isShiftPressed={isShiftPressed}
       />
@@ -774,19 +775,19 @@ export default function ToolbarView() {
 function ToolSpecificSettings({
   hasSkeleton,
   adaptedActiveTool,
-  isVolumeSupported,
+  hasVolume,
   isControlPressed,
   isShiftPressed,
 }: {
   hasSkeleton: boolean;
   adaptedActiveTool: AnnotationTool;
-  isVolumeSupported: boolean;
+  hasVolume: boolean;
   isControlPressed: boolean;
   isShiftPressed: boolean;
 }) {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationToolEnum.BOUNDING_BOX;
-  const showCreateCellButton = isVolumeSupported && VolumeTools.includes(adaptedActiveTool);
+  const showCreateCellButton = hasVolume && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
     showCreateCellButton &&
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||

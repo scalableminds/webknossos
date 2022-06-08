@@ -307,6 +307,9 @@ function VolumeTracingReducer(
     }
 
     case "SET_MAPPING_NAME": {
+      // Editable mappings cannot be disabled or switched for now
+      if (volumeTracing.mappingIsEditable) return state;
+
       const { mappingName } = action;
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingName,
@@ -314,6 +317,9 @@ function VolumeTracingReducer(
     }
 
     case "SET_MAPPING_IS_EDITABLE": {
+      // Editable mappings cannot be disabled or switched for now
+      if (volumeTracing.mappingIsEditable) return state;
+
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsEditable: true,
       });

@@ -20,6 +20,7 @@ import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
 import api from "oxalis/api/internal_api";
 import { MappingStatusEnum } from "oxalis/constants";
+import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
 type APIMappings = Record<string, APIMapping>;
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {
@@ -83,9 +84,13 @@ function* maybeFetchMapping(
     showLoadingIndicator,
   } = action;
 
-  if (mappingName == null || existingMapping != null) {
-    return;
-  }
+  // Editable mappings cannot be disabled or switched for now
+  const isEditableMappingActivationAllowed = yield* select((state) =>
+    isMappingActivationAllowed(state, mappingName),
+  );
+  if (!isEditableMappingActivationAllowed) return;
+
+  if (mappingName == null || existingMapping != null) return;
 
   if (showLoadingIndicator) {
     message.loading({

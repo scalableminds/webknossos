@@ -6,6 +6,7 @@ case class EditableMapping(
     baseMappingName: String,
     segmentToAgglomerate: Map[Long, Long],
     agglomerateToGraph: Map[Long, AgglomerateGraph],
+    createdTimestamp: Long,
 ) {
   override def toString: String = f"EditableMapping(agglomerates:${agglomerateToGraph.keySet})"
 
@@ -14,6 +15,7 @@ case class EditableMapping(
       baseMappingName = baseMappingName,
       segmentToAgglomerate = segmentToAgglomerate.map(tuple => SegmentToAgglomeratePair(tuple._1, tuple._2)).toSeq,
       agglomerateToGraph = agglomerateToGraph.map(tuple => AgglomerateToGraphPair(tuple._1, tuple._2)).toSeq,
+      createdTimestamp = createdTimestamp
     )
 }
 
@@ -25,7 +27,8 @@ object EditableMapping {
       segmentToAgglomerate =
         editableMappignProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId).toMap,
       agglomerateToGraph =
-        editableMappignProto.agglomerateToGraph.map(pair => pair.agglomerateId -> pair.agglomerateGraph).toMap
+        editableMappignProto.agglomerateToGraph.map(pair => pair.agglomerateId -> pair.agglomerateGraph).toMap,
+      createdTimestamp = editableMappignProto.createdTimestamp
     )
 
   /*

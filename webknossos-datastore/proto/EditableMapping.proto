@@ -30,4 +30,5 @@ message EditableMappingProto {
   required string baseMappingName = 1;
   repeated SegmentToAgglomeratePair segmentToAgglomerate = 2;
   repeated AgglomerateToGraphPair agglomerateToGraph = 3;
+  required int64 createdTimestamp = 4;
 }

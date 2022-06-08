@@ -348,6 +348,7 @@ class VolumeTracingService @Inject()(
 
   def volumeBucketsAreEmpty(tracingId: String): Fox[Boolean] =
     for {
+      keyListAll <- volumeDataStore.listKeys(None, None)
       keyList <- volumeDataStore.listKeys(limit = Some(1), startAfterKey = Some(tracingId))
       filtered = keyList.filter(_.startsWith(tracingId))
     } yield filtered.isEmpty

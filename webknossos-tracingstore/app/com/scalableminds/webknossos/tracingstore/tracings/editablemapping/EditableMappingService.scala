@@ -90,7 +90,8 @@ class EditableMappingService @Inject()(
     val newEditableMapping = EditableMapping(
       baseMappingName = baseMappingName,
       segmentToAgglomerate = Map(),
-      agglomerateToGraph = Map()
+      agglomerateToGraph = Map(),
+      createdTimestamp = System.currentTimeMillis()
     )
     for {
       _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(newEditableMapping.toProto))
@@ -239,7 +240,9 @@ class EditableMappingService @Inject()(
       EditableMapping(
         mapping.baseMappingName,
         segmentToAgglomerate = mapping.segmentToAgglomerate ++ splitSegmentToAgglomerate,
-        agglomerateToGraph = mapping.agglomerateToGraph ++ Map(update.agglomerateId -> graph1, agglomerateId2 -> graph2)
+        agglomerateToGraph = mapping.agglomerateToGraph ++ Map(update.agglomerateId -> graph1,
+                                                               agglomerateId2 -> graph2),
+        createdTimestamp = mapping.createdTimestamp
       )
 
   private def splitGraph(agglomerateGraph: AgglomerateGraph,
@@ -330,7 +333,8 @@ class EditableMappingService @Inject()(
         segmentToAgglomerate = mapping.segmentToAgglomerate ++ mergedSegmentToAgglomerate,
         agglomerateToGraph = mapping.agglomerateToGraph ++ Map(
           update.agglomerateId1 -> mergedGraph,
-          update.agglomerateId2 -> AgglomerateGraph(List.empty, List.empty, List.empty, List.empty))
+          update.agglomerateId2 -> AgglomerateGraph(List.empty, List.empty, List.empty, List.empty)),
+        createdTimestamp = mapping.createdTimestamp
       )
 
   private def mergeGraph(agglomerateGraph1: AgglomerateGraph,

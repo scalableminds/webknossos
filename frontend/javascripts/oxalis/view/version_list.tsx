@@ -97,13 +97,11 @@ class VersionList extends React.Component<Props, State> {
         tracingId,
         this.props.versionedObjectType,
       );
-      if (this.props.tracing.type !== "mapping") {
-        // Insert version 0
-        updateActionLog.push({
-          version: 0,
-          value: [serverCreateTracing(this.props.tracing.createdTimestamp)],
-        });
-      }
+      // Insert version 0
+      updateActionLog.push({
+        version: 0,
+        value: [serverCreateTracing(this.props.tracing.createdTimestamp)],
+      });
       this.setState({
         versions: updateActionLog,
       });

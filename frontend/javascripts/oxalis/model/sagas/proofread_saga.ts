@@ -226,6 +226,24 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   );
 }
 
+function* createEditableMapping(): Saga<void> {
+  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  // Save before making the mapping editable to make sure the correct mapping is activated in the backend
+  yield* call([Model, Model.ensureSavedState]);
+  // Get volume tracing again to make sure the version is up to date
+  const upToDateVolumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
+  if (upToDateVolumeTracing == null) return;
+
+  const volumeTracingId = upToDateVolumeTracing.tracingId;
+  const layerName = volumeTracingId;
+  const serverEditableMapping = yield* call(makeMappingEditable, tracingStoreUrl, volumeTracingId);
+  // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
+  yield* put(setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId));
+  yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName));
+  yield* put(setMappingisEditableAction());
+  yield* put(initializeEditableMappingAction(serverEditableMapping));
+}
+
 function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
@@ -239,7 +257,7 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   if (volumeTracing == null) return;
   const { tracingId: volumeTracingId } = volumeTracing;
 
-  const layerName = volumeTracingLayer.name;
+  const layerName = volumeTracingId;
   const activeMappingByLayer = yield* select(
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
@@ -251,28 +269,11 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
     mappingStatus === MappingStatusEnum.DISABLED
   ) {
     Toast.error("An HDF5 mapping needs to be enabled to use the proofreading tool.");
+    return;
   }
 
   if (!volumeTracing.mappingIsEditable) {
-    const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
-    // Save before making the mapping editable to make sure the correct mapping is activated in the backend
-    yield* call([Model, Model.ensureSavedState]);
-    // Get volume tracing again to make sure the version is up to date
-    const upToDateVolumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-    if (upToDateVolumeTracing == null) return;
-
-    const serverEditableMapping = yield* call(
-      makeMappingEditable,
-      tracingStoreUrl,
-      volumeTracingId,
-    );
-    // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
-    yield* put(
-      setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId),
-    );
-    yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName));
-    yield* put(setMappingisEditableAction());
-    yield* put(initializeEditableMappingAction(serverEditableMapping));
+    yield* call(createEditableMapping);
   }
 
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
@@ -349,8 +350,9 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   if (
     volumeTracingWithEditableMapping == null ||
     volumeTracingWithEditableMapping.mappingName == null
-  )
+  ) {
     return;
+  }
 
   const newSourceNodeAgglomerateId = yield* call(
     [api.data, api.data.getDataValue],

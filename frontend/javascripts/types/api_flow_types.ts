@@ -615,6 +615,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {
+  createdTimestamp: number;
   version: number;
   mappingName: string;
   // The id of the volume tracing the editable mapping belongs to

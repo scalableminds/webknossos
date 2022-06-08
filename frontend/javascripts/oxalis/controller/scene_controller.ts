@@ -213,7 +213,7 @@ class SceneController {
     tweenAnimation
       .to(
         {
-          opacity: passive ? 0.2 : 0.7,
+          opacity: passive ? 0.2 : 0.6,
         },
         500,
       )
@@ -248,6 +248,9 @@ class SceneController {
   addIsosurfaceFromVertices(
     vertices: Float32Array,
     segmentationId: number,
+    // Passive isosurfaces are ignored during picking, are shown more transparently, and are rendered
+    // last so that all non-passive isosurfaces are rendered before them. This makes sure that non-passive
+    // isosurfaces are not skipped during rendering if they are overlapped by passive ones.
     passive: boolean,
   ): void {
     let bufferGeometry = new THREE.BufferGeometry();

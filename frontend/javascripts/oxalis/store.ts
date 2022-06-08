@@ -239,6 +239,7 @@ export type ReadOnlyTracing = TracingBase & {
 };
 export type EditableMapping = {
   readonly type: "mapping";
+  readonly createdTimestamp: number;
   readonly version: number;
   readonly mappingName: string;
   // The id of the volume tracing the editable mapping belongs to

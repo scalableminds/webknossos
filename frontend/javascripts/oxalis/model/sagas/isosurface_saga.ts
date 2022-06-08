@@ -14,7 +14,7 @@ import {
 import type {
   LoadAdHocMeshAction,
   LoadPrecomputedMeshAction,
-  IsosurfaceMappingInfo,
+  AdHocIsosurfaceInfo,
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
@@ -163,7 +163,7 @@ function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void>
     action.cellId,
     false,
     action.layerName,
-    action.mappingInfo,
+    action.extraInfo,
   );
 }
 
@@ -172,7 +172,7 @@ function* loadAdHocIsosurface(
   cellId: number,
   removeExistingIsosurface: boolean = false,
   layerName?: string | null | undefined,
-  maybeMappingInfo?: IsosurfaceMappingInfo,
+  maybeExtraInfo?: AdHocIsosurfaceInfo,
 ): Saga<void> {
   const layer =
     layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
@@ -181,25 +181,25 @@ function* loadAdHocIsosurface(
     return;
   }
 
-  const isosurfaceMappingInfo = yield* call(getIsosurfaceMappingInfo, layer.name, maybeMappingInfo);
+  const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
   yield* call(
     loadIsosurfaceForSegmentId,
     cellId,
     seedPosition,
-    isosurfaceMappingInfo,
+    isosurfaceExtraInfo,
     removeExistingIsosurface,
     layer,
   );
 }
 
-function* getIsosurfaceMappingInfo(
+function* getIsosurfaceExtraInfo(
   layerName: string,
-  maybeMappingInfo: IsosurfaceMappingInfo | null | undefined,
-): Saga<IsosurfaceMappingInfo> {
+  maybeExtraInfo: AdHocIsosurfaceInfo | null | undefined,
+): Saga<AdHocIsosurfaceInfo> {
   const activeMappingByLayer = yield* select(
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
-  if (maybeMappingInfo != null) return maybeMappingInfo;
+  if (maybeExtraInfo != null) return maybeExtraInfo;
   const mappingInfo = getMappingInfo(activeMappingByLayer, layerName);
   const isMappingActive = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
   const mappingName = isMappingActive ? mappingInfo.mappingName : null;
@@ -228,7 +228,7 @@ function* getInfoForIsosurfaceLoading(layer: DataLayer): Saga<{
 function* loadIsosurfaceForSegmentId(
   segmentId: number,
   seedPosition: Vector3,
-  isosurfaceMappingInfo: IsosurfaceMappingInfo,
+  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
   removeExistingIsosurface: boolean,
   layer: DataLayer,
 ): Saga<void> {
@@ -245,7 +245,7 @@ function* loadIsosurfaceForSegmentId(
       segmentId,
       seedPosition,
       zoomStep,
-      isosurfaceMappingInfo,
+      isosurfaceExtraInfo,
       resolutionInfo,
       removeExistingIsosurface,
     ),
@@ -263,12 +263,12 @@ function* loadIsosurfaceWithNeighbors(
   segmentId: number,
   position: Vector3,
   zoomStep: number,
-  isosurfaceMappingInfo: IsosurfaceMappingInfo,
+  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
   resolutionInfo: ResolutionInfo,
   removeExistingIsosurface: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
-  const { mappingName, mappingType } = isosurfaceMappingInfo;
+  const { mappingName, mappingType } = isosurfaceExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position);
   let positionsToRequest = [clippedPosition];
   const hasIsosurface = yield* select(
@@ -295,7 +295,7 @@ function* loadIsosurfaceWithNeighbors(
       segmentId,
       currentPosition,
       zoomStep,
-      isosurfaceMappingInfo,
+      isosurfaceExtraInfo,
       resolutionInfo,
       isInitialRequest,
       removeExistingIsosurface && isInitialRequest,
@@ -334,7 +334,7 @@ function* maybeLoadIsosurface(
   segmentId: number,
   clippedPosition: Vector3,
   zoomStep: number,
-  isosurfaceMappingInfo: IsosurfaceMappingInfo,
+  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
   resolutionInfo: ResolutionInfo,
   isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
@@ -370,8 +370,8 @@ function* maybeLoadIsosurface(
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   // Fetch from datastore if no volumetracing exists
   const useDataStore =
-    isosurfaceMappingInfo.useDataStore != null
-      ? isosurfaceMappingInfo.useDataStore
+    isosurfaceExtraInfo.useDataStore != null
+      ? isosurfaceExtraInfo.useDataStore
       : volumeTracing == null;
   const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
@@ -398,7 +398,7 @@ function* maybeLoadIsosurface(
           subsamplingStrides,
           cubeSize: getZoomedCubeSize(zoomStep, resolutionInfo),
           scale,
-          ...isosurfaceMappingInfo,
+          ...isosurfaceExtraInfo,
         },
       );
       const vertices = new Float32Array(responseBuffer);
@@ -410,7 +410,7 @@ function* maybeLoadIsosurface(
       getSceneController().addIsosurfaceFromVertices(
         vertices,
         segmentId,
-        isosurfaceMappingInfo.passive || false,
+        isosurfaceExtraInfo.passive || false,
       );
       return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {

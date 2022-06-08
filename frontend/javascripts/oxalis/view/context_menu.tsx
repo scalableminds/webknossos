@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Menu, notification, Tooltip, Popover, Input } from "antd";
+import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import React, { useEffect } from "react";
 import type {
@@ -806,6 +806,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
   }
 
+  const empty = (
+    <Empty description="&nbsp;No actions available&nbsp;" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+  );
+
   return (
     <Menu
       onClick={hideContextMenu}
@@ -815,7 +819,8 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
       mode="vertical"
     >
       {allActions}
-      {infoRows}
+      {/* In the TD viewport the info rows are not usable since the click position cannot be computed */}
+      {isTdViewport ? empty : infoRows}
     </Menu>
   );
 }

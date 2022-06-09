@@ -83,6 +83,9 @@ function* loadCoarseAdHocMesh(
   segmentId: number,
   position: Vector3,
 ): Saga<void> {
+  // Since it is currently not possible to specify the quality in the loadAdHocMeshAction
+  // this method sets the preferredQualityForMeshAdHocComputation, then requests the mesh
+  // and then resets preferredQualityForMeshAdHocComputation to the previous value.
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracing == null) return;
 
@@ -135,12 +138,16 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   if (mappingName == null) return;
 
+  /* Load agglomerate skeleton of the agglomerate at the click position */
+
   const treeName = yield* call(
     loadAgglomerateSkeletonWithId,
     loadAgglomerateSkeletonAction(layerName, mappingName, segmentId),
   );
 
   if (!proofreadUsingMeshes()) return;
+
+  /* Load a coarse ad hoc mesh of the agglomerate at the click position */
 
   yield* call(loadCoarseAdHocMesh, layerName, resolutionInfo, segmentId, position);
 
@@ -152,7 +159,9 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   if (tree == null) return;
 
-  // Find all segments (nodes) that are within x µm to load meshes in oversegmentation
+  /* Find all segments (nodes) of the agglomerate skeleton within proofreadSegmentSurroundNm (graph distance)
+     and request the segment IDs in the oversegmentation at the node positions */
+
   const nodePositions = tree.nodes.map((node) => node.position);
   const distanceSquared = proofreadSegmentSurroundNm() ** 2;
   const scale = yield* select((state) => state.dataset.dataSource.scale);
@@ -176,7 +185,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
       ),
     ),
   );
-  // HACK: This only works for uint32 segmentations
+  // TODO HACK: This only works for uint32 segmentations
   const segmentIdsInSurround = segmentIdsArrayBuffers.map((buffer) => new Uint32Array(buffer)[0]);
 
   if (oldSegmentIdsInSurround != null) {
@@ -194,7 +203,8 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   oldSegmentIdsInSurround = [...segmentIdsInSurround];
 
-  // Load meshes in oversegmentation in fine resolution
+  /* Load fine ad hoc meshes of the segments in the oversegmentation in the click position surround */
+
   const noMappingInfo = {
     mappingName: null,
     mappingType: null,
@@ -276,6 +286,8 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
     yield* call(createEditableMapping);
   }
 
+  /* Find out the agglomerate IDs at the two node positions */
+
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
   // The mag the agglomerate skeleton corresponds to should be the finest available mag of the volume tracing layer
   const agglomerateFileMag = resolutionInfo.getLowestResolution();
@@ -306,6 +318,9 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
     targetNodePosition,
     agglomerateFileZoomstep,
   );
+
+  /* Send the respective split/merge update action to the backend (by pushing to the save queue
+     and saving immediately) */
 
   const items = [];
   if (action.type === "MERGE_TREES") {
@@ -342,6 +357,8 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
 
+  /* Reload the segmentation */
+
   yield* call([api.data, api.data.reloadBuckets], layerName);
 
   const volumeTracingWithEditableMapping = yield* select((state) =>
@@ -368,7 +385,8 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
     agglomerateFileZoomstep,
   );
 
-  // Remove old agglomerate skeleton(s) and load new agglomerate skeleton(s)
+  /* Remove old agglomerate skeleton(s) and load updated agglomerate skeleton(s) */
+
   yield* put(deleteTreeAction(sourceTree.treeId));
   if (sourceTree !== targetTree) {
     yield* put(deleteTreeAction(targetTree.treeId));
@@ -393,6 +411,8 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
     );
   }
 
+  /* Remove old meshes and load updated meshes */
+
   if (proofreadUsingMeshes()) {
     // Remove old over segmentation meshes
     if (oldSegmentIdsInSurround != null) {
@@ -405,7 +425,7 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
       oldSegmentIdsInSurround = null;
     }
 
-    // Remove old agglomerate mesh(es) and load new agglomerate mesh(es)
+    // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     yield* put(removeIsosurfaceAction(layerName, sourceNodeAgglomerateId));
     if (targetNodeAgglomerateId !== sourceNodeAgglomerateId) {
       yield* put(removeIsosurfaceAction(layerName, targetNodeAgglomerateId));

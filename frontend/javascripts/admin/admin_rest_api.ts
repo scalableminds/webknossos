@@ -1880,10 +1880,12 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 // These parameters are bundled into an object to avoid that the computeIsosurface function
 // receives too many parameters, since this doesn't play well with the saga typings.
 type IsosurfaceRequest = {
+  // The position is in voxels in mag 1
   position: Vector3;
   mag: Vector3;
   segmentId: number;
   subsamplingStrides: Vector3;
+  // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scale: Vector3;
   mappingName: string | null | undefined;

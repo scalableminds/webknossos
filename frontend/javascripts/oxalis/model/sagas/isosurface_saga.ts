@@ -111,6 +111,7 @@ function removeMapForSegment(layerName: string, segmentId: number): void {
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
+  // Convert marchingCubeSizeInMag1 to another resolution (zoomStep)
   const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
     [...marchingCubeSizeInMag1(), 0],
     resolutionInfo,

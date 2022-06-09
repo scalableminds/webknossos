@@ -95,7 +95,7 @@ A webKnossos dataset can contain several `color` and `segmentation` layers which
 ### Magnification Steps and Downsampling
 
 To enable zooming within huge datasets in webKnossos, dataset layers usually contain multiple magnification steps (also called mipmaps or image pyramids or resolutions).
-`1` is the magnification step with the highest resolution, i.e. the original data.
+`1` is the magnification step with the finest resolution, i.e. the original data.
 `2` is downsampled by a factor of two in all dimensions and therefore only is an eighth of the file size of the original data.
 Downsampling is done in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, …`
 

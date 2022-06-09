@@ -31,22 +31,4 @@ object EditableMapping {
       createdTimestamp = editableMappignProto.createdTimestamp
     )
 
-  /*
-  def createDummy(numSegments: Long, numAgglomerates: Long): EditableMapping =
-    EditableMapping(
-      baseMappingName = "dummyBaseMapping",
-      segmentToAgglomerate = 1L.to(numSegments).map(s => s -> s % numAgglomerates).toMap,
-      agglomerateToGraph = 1L
-        .to(numAgglomerates)
-        .map(a =>
-          a -> AgglomerateGraph(
-            segments = 1L.to(numSegments / numAgglomerates),
-            edges = 1L.to(numSegments / numAgglomerates).map(s => AgglomerateEdge(s, s)),
-            positions = 1L.to(numSegments / numAgglomerates).map(s => Vec3IntProto(s.toInt, s.toInt, s.toInt)),
-            affinities = 1L.to(numSegments / numAgglomerates).map(s => s.toFloat)
-        ))
-        .toMap
-    )
- */
-
 }

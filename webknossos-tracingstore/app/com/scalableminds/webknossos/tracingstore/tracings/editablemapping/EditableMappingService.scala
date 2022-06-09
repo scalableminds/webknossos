@@ -77,17 +77,18 @@ class EditableMappingService @Inject()(
                                                        mayBeEmpty = Some(true),
                                                        emptyFallback = Some(0L))
 
-  def infoJson(tracingId: String, editableMappingId: String): Fox[JsObject] =
+  def infoJson(tracingId: String, editableMapping: EditableMapping, editableMappingId: String): Fox[JsObject] =
     for {
       version <- newestMaterializableVersion(editableMappingId)
     } yield
       Json.obj(
         "mappingName" -> editableMappingId,
         "version" -> version,
-        "tracingId" -> tracingId
+        "tracingId" -> tracingId,
+        "createdTimestamp" -> editableMapping.createdTimestamp
       )
 
-  def create(baseMappingName: String): Fox[String] = {
+  def create(baseMappingName: String): Fox[(String, EditableMapping)] = {
     val newId = generateId
     val newEditableMapping = EditableMapping(
       baseMappingName = baseMappingName,
@@ -97,7 +98,7 @@ class EditableMappingService @Inject()(
     )
     for {
       _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(newEditableMapping.toProto))
-    } yield newId
+    } yield (newId, newEditableMapping)
   }
 
   def exists(editableMappingId: String): Fox[Boolean] =
@@ -411,7 +412,7 @@ class EditableMappingService @Inject()(
     val segmentIdsInEditableMapping: Set[Long] = segmentIds.intersect(editableMapping.segmentToAgglomerate.keySet)
     val segmentIdsInBaseMapping: Set[Long] = segmentIds.diff(segmentIdsInEditableMapping)
     val editableMappingSubset =
-      editableMapping.segmentToAgglomerate.filterKeys(key => segmentIdsInEditableMapping.contains(key))
+      segmentIdsInEditableMapping.map(segmentId => segmentId -> editableMapping.segmentToAgglomerate(segmentId)).toMap
     for {
       baseMappingSubset <- getBaseSegmentToAgglomeate(editableMapping.baseMappingName,
                                                       segmentIdsInBaseMapping,
@@ -506,8 +507,7 @@ class EditableMappingService @Inject()(
   def mapData(unmappedData: Array[UnsignedInteger],
               relevantMapping: Map[Long, Long],
               elementClass: ElementClass): Fox[Array[Byte]] = {
-    val unmappedDataLongs = unmappedData.map(_.toPositiveLong)
-    val mappedDataLongs = unmappedDataLongs.map(relevantMapping)
+    val mappedDataLongs = unmappedData.map(element => relevantMapping(element.toPositiveLong))
     for {
       bytes <- longsToBytes(mappedDataLongs, elementClass)
     } yield bytes

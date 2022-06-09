@@ -30,8 +30,6 @@ trait KeyValueStoreImplicits extends BoxImplicits {
 
   implicit def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(
       implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
-
-  implicit def bytesIdentity(a: Array[Byte]): Box[Array[Byte]] = Full(a)
 }
 
 case class KeyValuePair[T](key: String, value: T)
@@ -162,16 +160,6 @@ class FossilDBClient(collection: String,
       case e: Exception =>
         slackNotificationService.reportFossilWriteError("put", e)
         Fox.failure("could not save to FossilDB: " + e.getMessage)
-    }
-
-  def listKeys(limit: Option[Int], startAfterKey: Option[String]): Fox[Seq[String]] =
-    try {
-      val reply = blockingStub.listKeys(ListKeysRequest(collection, limit, startAfterKey))
-      if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-      Fox.successful(reply.keys)
-    } catch {
-      case e: Exception =>
-        Fox.failure("could not list keys from FossilDB: " + e.getMessage)
     }
 
   def shutdown(): Boolean = {

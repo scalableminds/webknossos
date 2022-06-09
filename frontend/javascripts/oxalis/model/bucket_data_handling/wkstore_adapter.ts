@@ -171,23 +171,24 @@ export async function requestFromStore(
 
   try {
     return await doWithToken(async (token) => {
-      const startingTime = performance.now();
+      const startingTime = window.performance.now();
       const { buffer: responseBuffer, headers } =
         await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
           data: bucketInfo,
           timeout: REQUEST_TIMEOUT,
           showErrorToast: false,
         });
-      const roundTripTime = performance.now() - startingTime;
+      const endTime = window.performance.now();
+      const roundTripTime = endTime - startingTime;
       const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
       const receivedBucketsCount = batch.length - missingBuckets.length;
       const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
+      // TODO: figure out when store adapater and when pullqueue is used
+      console.log("logging via wkstore_adapter");
       getGlobalDataConnectionInfo().log(
-        startingTime,
+        endTime,
         roundTripTime,
-        receivedBucketsCount,
         receivedBucketsCount * BUCKET_BYTE_LENGTH,
-        missingBuckets.length,
       );
       let resultBuffer = responseBuffer;
 

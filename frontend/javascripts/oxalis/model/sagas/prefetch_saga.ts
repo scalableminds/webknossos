@@ -125,8 +125,8 @@ export function* prefetchForPlaneMode(
     for (const strategy of prefetchStrategiesPlane) {
       if (
         strategy.forContentType(tracingTypes) &&
-        strategy.inVelocityRange(layer.connectionInfo.bandwidth) &&
-        strategy.inRoundTripTimeRange(layer.connectionInfo.roundTripTime)
+        strategy.inVelocityRange(layer.connectionInfo.lastStats.avgDownloadSpeedInMBperS) &&
+        strategy.inRoundTripTimeRange(layer.connectionInfo.lastStats.avgRoundTripTime)
       ) {
         const buckets = strategy.prefetch(
           layer.cube,
@@ -186,8 +186,8 @@ export function* prefetchForArbitraryMode(
     for (const strategy of prefetchStrategiesArbitrary) {
       if (
         strategy.forContentType(tracingTypes) &&
-        strategy.inVelocityRange(connectionInfo.bandwidth) &&
-        strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
+        strategy.inVelocityRange(connectionInfo.lastStats.avgDownloadSpeedInMBperS) &&
+        strategy.inRoundTripTimeRange(connectionInfo.lastStats.avgRoundTripTime)
       ) {
         const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions, resolutionInfo);
 

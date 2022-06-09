@@ -1,7 +1,7 @@
 import { Tooltip } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import React from "react";
-import { WarningOutlined, MoreOutlined } from "@ant-design/icons";
+import React, { useState, useEffect } from "react";
+import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
@@ -27,6 +27,8 @@ import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 import { OxalisState } from "oxalis/store";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
+import { roundTo } from "libs/utils";
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
@@ -279,6 +281,13 @@ function Infos() {
   const activeVolumeTracing = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
   );
+  const [currentBucketDownloadSpeed, setCurrentBucketDownloadSpeed] = useState<number>(0);
+  useEffect(() => {
+    const unsubscribeFunction = getGlobalDataConnectionInfo().onStatisticUpdates(
+      ({ avgDownloadSpeedInMBperS }) => setCurrentBucketDownloadSpeed(avgDownloadSpeedInMBperS),
+    );
+    return unsubscribeFunction;
+  }, []);
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useSelector((state: OxalisState) =>
     state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
@@ -322,13 +331,16 @@ function Infos() {
         />{" "}
         {activeResolution.join("-")}{" "}
       </span>
+      <span className="info-element">
+        <DownloadOutlined />
+        {roundTo(currentBucketDownloadSpeed, 2)} MB/s
+      </span>
       {isPlaneMode ? (
         <span className="info-element">
           Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
         </span>
       ) : null}
       {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
-
       {activeVolumeTracing != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting

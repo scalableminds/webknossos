@@ -14,6 +14,8 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.Elemen
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
+
+import scala.concurrent.duration._
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataService,
@@ -60,9 +62,9 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
-
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, null)
+  isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
+  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
   private lazy val materializedEditableMappingCache: AlfuFoxCache[EditableMappingKey, EditableMapping] = AlfuFoxCache(
     maxEntries = 50)

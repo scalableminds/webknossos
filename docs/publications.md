@@ -12,7 +12,7 @@ The following publications used webKnossos for exploring large 3D electron-micro
 
 * Jialei Zhou, Haibin Sheng, Haoyu Wang, Yan Lu, Fangfang Wang, Hao Wu, Yunfeng Hua.  
   Application of three-dimensional electron microscopy to morphological study of neurons in brainstem cochlear nucleus.  
-  [Journal of Shanghai Jiaotong university (Medical Sience) (2022). DOI: 10.3969/j.issn.1674-8115.2022.02.002](https://doi.org/10.3969/j.issn.1674-8115.2022.02.002)
+  [Journal of Shanghai Jiaotong university (Medical Science) (2022). DOI: 10.3969/j.issn.1674-8115.2022.02.002](https://doi.org/10.3969/j.issn.1674-8115.2022.02.002)
 
 * Yuxin Zhang, Tobias Ackels, Alexandra Pacureanu, Marie-Christine Zdora, Anne Bonnin, Andreas T. Schaefer, Carles Bosch.  
   Sample preparation and warping accuracy for correlative multimodal imaging in the mouse olfactory bulb using 2-photon, synchrotron X-ray and volume electron microscopy.  

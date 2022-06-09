@@ -207,7 +207,7 @@ This is an example:
   "scale" : [ 11.24, 11.24, 28 ]
 }
 ```
-
+TODO: terminology resolution vs magnification
 Note that the `resolutions` property within the elements of `wkwResolutions` can be an array of length 3.
 The three components within such a resolution denote the scaling factor for x, y, and z.
 At the moment, WebKnossos guarantees correct rendering of data with non-uniform resolution factors only if the z-component between two resolutions changes by a factor of 1 or 2.

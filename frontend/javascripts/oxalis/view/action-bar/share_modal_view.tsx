@@ -30,7 +30,6 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ControlModeEnum } from "oxalis/constants";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
 type Props = {
@@ -139,7 +138,7 @@ export default function ShareModalView(props: Props) {
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
 
-  const { owner, contributors, othersMayEdit, restrictions } = tracing;
+  const { owner, othersMayEdit, restrictions } = tracing;
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
 
   const hasUpdatePermissions =
@@ -394,7 +393,7 @@ export default function ShareModalView(props: Props) {
               Only you can edit the content of this annotation.
             </Hint>
 
-            <Radio style={radioStyle} value={true} disabled={!hasUpdatePermissions}>
+            <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
               Yes, allow editing
             </Radio>
             <Hint

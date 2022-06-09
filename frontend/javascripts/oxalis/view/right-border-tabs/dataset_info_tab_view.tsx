@@ -528,17 +528,29 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   maybePrintOwnerAndContributors() {
     const { activeUser } = this.props;
-    const { owner, contributors, annotationId, annotationType, othersMayEdit } = this.props.tracing;
+    const { owner, contributors } = this.props.tracing;
 
     if (!owner) {
       return null;
     }
 
+    const contributorsString =
+      contributors.length > 0
+        ? contributors.map((user) => formatUserName(activeUser, user)).join(", ")
+        : "none";
+
     return (
       <div>
         <div>Owner: {formatUserName(activeUser, owner)}</div>
         <div>
-          Contributors: {contributors.map((user) => formatUserName(activeUser, user)).join(", ")}
+          Contributors: {contributorsString}
+          <Tooltip title='If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.'>
+            <InfoCircleOutlined
+              style={{
+                marginLeft: 6,
+              }}
+            />
+          </Tooltip>
         </div>
       </div>
     );

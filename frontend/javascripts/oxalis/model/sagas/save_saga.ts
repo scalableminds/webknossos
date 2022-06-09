@@ -102,7 +102,7 @@ import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update
 import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
-import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import _ from "lodash";
 import { sleep } from "libs/utils";
 

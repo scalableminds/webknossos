@@ -107,15 +107,14 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
     }
 
-  def newestVersion(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        for {
-          newestVersion <- tracingService.currentVersion(tracingId)
-        } yield {
-          JsonOk(Json.obj("version" -> newestVersion))
-        }
+  def newestVersion(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    log() {
+      for {
+        newestVersion <- tracingService.currentVersion(tracingId)
+      } yield {
+        JsonOk(Json.obj("version" -> newestVersion))
       }
+    }
   }
 
   def update(token: Option[String], tracingId: String): Action[List[UpdateActionGroup[T]]] =

@@ -13,6 +13,7 @@ import {
   setActiveNodeAction,
   setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import message from "messages";
 import {
   ActionDescriptor,
@@ -282,9 +283,13 @@ function Infos() {
     getActiveSegmentationTracing(state),
   );
   const [currentBucketDownloadSpeed, setCurrentBucketDownloadSpeed] = useState<number>(0);
+  const [totalDownloadedByteCount, setTotalDownloadedByteCount] = useState<number>(0);
   useEffect(() => {
     const unsubscribeFunction = getGlobalDataConnectionInfo().onStatisticUpdates(
-      ({ avgDownloadSpeedInMBperS }) => setCurrentBucketDownloadSpeed(avgDownloadSpeedInMBperS),
+      ({ avgDownloadSpeedInMBperS, accumulatedDownloadedBytes }) => {
+        setCurrentBucketDownloadSpeed(avgDownloadSpeedInMBperS);
+        setTotalDownloadedByteCount(accumulatedDownloadedBytes);
+      },
     );
     return unsubscribeFunction;
   }, []);
@@ -332,8 +337,14 @@ function Infos() {
         {activeResolution.join("-")}{" "}
       </span>
       <span className="info-element">
-        <DownloadOutlined />
-        {roundTo(currentBucketDownloadSpeed, 2)} MB/s
+        <Tooltip
+          title={`Downloaded ${formatCountToDataAmountUnit(
+            totalDownloadedByteCount,
+          )} Bytes of Shard Data`}
+        >
+          <DownloadOutlined />
+          {roundTo(currentBucketDownloadSpeed, 2)} MB/s
+        </Tooltip>
       </span>
       {isPlaneMode ? (
         <span className="info-element">

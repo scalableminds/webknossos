@@ -1,6 +1,4 @@
 import PriorityQueue from "js-priority-queue";
-import _ from "lodash";
-import window from "libs/window";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import DataConnectionInfo, { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
@@ -84,7 +82,6 @@ class PullQueue {
     this.batchCount++;
     const { dataset } = Store.getState();
     // Measuring the time until response arrives to select appropriate preloading strategy
-    const startTime = new Date().getTime();
     const layerInfo = getLayerByName(dataset, this.layerName);
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
@@ -94,13 +91,6 @@ class PullQueue {
         this.abortController.signal,
         PULL_ABORTION_ERROR,
       );
-      console.log("logging via pullqueue");
-      const endTime = window.performance.now();
-      const roundTripTime = endTime - startTime;
-      const receivedByteCount = _.sum(
-        bucketBuffers.map((buffer) => (buffer != null ? buffer.length : 0)),
-      );
-      this.connectionInfo.log(endTime, roundTripTime, receivedByteCount);
 
       for (const [index, bucketAddress] of batch.entries()) {
         const bucketBuffer = bucketBuffers[index];

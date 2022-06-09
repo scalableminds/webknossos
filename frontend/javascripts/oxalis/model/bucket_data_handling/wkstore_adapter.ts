@@ -183,8 +183,6 @@ export async function requestFromStore(
       const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
       const receivedBucketsCount = batch.length - missingBuckets.length;
       const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
-      // TODO: figure out when store adapater and when pullqueue is used
-      console.log("logging via wkstore_adapter");
       getGlobalDataConnectionInfo().log(
         endTime,
         roundTripTime,

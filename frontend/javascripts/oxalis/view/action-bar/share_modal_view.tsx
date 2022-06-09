@@ -15,6 +15,7 @@ import {
   updateTeamsForSharedAnnotation,
   editAnnotation,
   sendAnalyticsEvent,
+  setOthersMayEditForAnnotation,
 } from "admin/admin_rest_api";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
@@ -23,9 +24,13 @@ import _ from "lodash";
 import messages from "messages";
 import Store, { OxalisState } from "oxalis/store";
 import UrlManager from "oxalis/controller/url_manager";
-import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
+import {
+  setAnnotationVisibilityAction,
+  setOthersMayEditForAnnotationAction,
+} from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ControlModeEnum } from "oxalis/constants";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
 type Props = {
@@ -126,12 +131,19 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 export default function ShareModalView(props: Props) {
   const { isVisible, onOk, annotationType, annotationId } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
-  const restrictions = useSelector((state: OxalisState) => state.tracing.restrictions);
+  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+
+  const annotationVisibility = tracing.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
-  const hasUpdatePermissions = restrictions.allowUpdate && restrictions.allowSave;
+
+  const { owner, contributors, othersMayEdit, restrictions } = tracing;
+  const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
+
+  const hasUpdatePermissions =
+    restrictions.allowUpdate && restrictions.allowSave && activeUser && owner?.id == activeUser.id;
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
@@ -149,6 +161,15 @@ export default function ShareModalView(props: Props) {
     setVisibility(event.target.value as any as APIAnnotationVisibility);
   };
 
+  const handleOthersMayEditCheckboxChange = (event: RadioChangeEvent) => {
+    const value = event.target.value;
+    if (typeof value !== "boolean") {
+      throw new Error("Form element should return boolean value.");
+    }
+
+    setNewOthersMayEdit(value);
+  };
+
   const handleOk = async () => {
     await editAnnotation(annotationId, annotationType, {
       visibility,
@@ -162,6 +183,11 @@ export default function ShareModalView(props: Props) {
         sharedTeams.map((team) => team.id),
       );
       Toast.success(messages["annotation.shared_teams_edited"]);
+    }
+
+    if (newOthersMayEdit != othersMayEdit) {
+      await setOthersMayEditForAnnotation(annotationId, annotationType, newOthersMayEdit);
+      Store.dispatch(setOthersMayEditForAnnotationAction(newOthersMayEdit));
     }
 
     sendAnalyticsEvent("share_annotation", {
@@ -343,6 +369,44 @@ export default function ShareModalView(props: Props) {
             Choose the teams to share your annotation with. Members of these teams can see this
             annotation in their shared annotations tab.
           </Hint>
+        </Col>
+      </Row>
+
+      <Row>
+        <Col
+          span={6}
+          style={{
+            lineHeight: "22px",
+          }}
+        >
+          Are other users allowed to edit this annotation?
+        </Col>
+        <Col span={18}>
+          <RadioGroup onChange={handleOthersMayEditCheckboxChange} value={newOthersMayEdit}>
+            <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
+              No
+            </Radio>
+            <Hint
+              style={{
+                marginLeft: 24,
+              }}
+            >
+              Only you can edit the content of this annotation.
+            </Hint>
+
+            <Radio style={radioStyle} value={true} disabled={!hasUpdatePermissions}>
+              Yes
+            </Radio>
+            <Hint
+              style={{
+                marginLeft: 24,
+              }}
+            >
+              All registered users that can view this annotation can edit it. Note that you should
+              coordinate the collaboration, because parallel changes to this annotation will result
+              in a conflict.
+            </Hint>
+          </RadioGroup>
         </Col>
       </Row>
     </Modal>

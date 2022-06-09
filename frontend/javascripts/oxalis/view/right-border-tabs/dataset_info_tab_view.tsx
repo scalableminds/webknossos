@@ -10,7 +10,7 @@ import type { APIDataset, APIUser } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
-import { convertToHybridTracing, setOthersMayEditForAnnotation } from "admin/admin_rest_api";
+import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import {
@@ -540,20 +540,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         <div>
           Contributors: {contributors.map((user) => formatUserName(activeUser, user)).join(", ")}
         </div>
-        {activeUser && owner.id == activeUser.id ? (
-          <ButtonComponent
-            onClick={() =>
-              setOthersMayEditForAnnotation(annotationId, annotationType, !othersMayEdit)
-            }
-          >
-            {othersMayEdit ? "Disable editing for other users" : "Allow editing for other users"}
-          </ButtonComponent>
-        ) : null}
       </div>
     );
-
-    // Active user is owner
-    return null;
   }
 
   renderSelectedStartingJobsModal() {

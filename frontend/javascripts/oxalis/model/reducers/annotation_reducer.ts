@@ -335,6 +335,12 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION": {
+      return updateKey(state, "tracing", {
+        othersMayEdit: action.othersMayEdit,
+      });
+    }
+
     default:
       return state;
   }

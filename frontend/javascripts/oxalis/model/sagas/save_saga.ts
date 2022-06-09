@@ -1130,7 +1130,6 @@ function* watchForSaveConflicts() {
   }
 
   while (true) {
-    // todo: make tracing read only if conflict was recognized?
     const interval = yield* call(getPollInterval);
     yield* call(sleep, interval);
     yield* call(checkForNewVersion);

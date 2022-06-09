@@ -77,7 +77,7 @@ import {
 } from "oxalis/model/helpers/bucket_compression";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
-import { doWithToken, getUpdateActionLog } from "admin/admin_rest_api";
+import { doWithToken, getNewestVersionForTracing } from "admin/admin_rest_api";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getVolumeTracingById,
@@ -1078,19 +1078,14 @@ function* watchForSaveConflicts() {
     ]);
 
     for (const tracing of tracings) {
-      // todo: use an optimized route here to avoid fetching the entire log
-      const actionLog = yield* call(
-        getUpdateActionLog,
+      const version = yield* call(
+        getNewestVersionForTracing,
         tracingStoreUrl,
         tracing.tracingId,
         tracing.type,
       );
-      const latestEntry = actionLog[0];
-      if (latestEntry == null) {
-        continue;
-      }
 
-      if (latestEntry.version > tracing.version) {
+      if (version > tracing.version) {
         // The latest version on the server is greater than the most-recently
         // stored version.
 
@@ -1111,6 +1106,7 @@ function* watchForSaveConflicts() {
         }
         Toast.warning(msg, {
           sticky: true,
+          key: "save_conflicts_warning",
         });
       }
     }

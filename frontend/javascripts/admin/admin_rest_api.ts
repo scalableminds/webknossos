@@ -859,6 +859,18 @@ export function getUpdateActionLog(
   );
 }
 
+export function getNewestVersionForTracing(
+  tracingStoreUrl: string,
+  tracingId: string,
+  tracingType: "skeleton" | "volume",
+): Promise<number> {
+  return doWithToken((token) =>
+    Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
+    ).then((obj) => obj.version),
+  );
+}
+
 export async function importVolumeTracing(
   tracing: Tracing,
   volumeTracing: VolumeTracing,

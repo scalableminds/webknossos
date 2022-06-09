@@ -21,9 +21,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       editableMappingId <- Fox.successful(layer.name)
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService.remoteFallbackLayer(layer.tracing)
-      beforeGet = System.currentTimeMillis()
       editableMapping <- layer.editableMappingService.get(editableMappingId, remoteFallbackLayer, layer.token)
-      afterGet = System.currentTimeMillis()
       dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -35,25 +33,16 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       (unmappedData, indices) <- layer.editableMappingService.getUnmappedDataFromDatastore(remoteFallbackLayer,
                                                                                            List(dataRequest),
                                                                                            layer.token)
-      afterGetUnmapped = System.currentTimeMillis()
       _ <- bool2Fox(indices.isEmpty)
       unmappedDataTyped <- layer.editableMappingService.bytesToUnsignedInt(unmappedData, layer.tracing.elementClass)
       segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
-      afterCollectSegmentIds = System.currentTimeMillis()
       relevantMapping <- layer.editableMappingService.generateCombinedMappingSubset(segmentIds,
                                                                                     editableMapping,
                                                                                     remoteFallbackLayer,
                                                                                     layer.token)
-      afterCombineMapping = System.currentTimeMillis()
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,
                                                                       layer.elementClass)
-      afterMapData = System.currentTimeMillis()
-      /*
-      _ = logger.info(s"load bucket $bucket")
-      _ = logger.info(
-        s"load bucket timing: getMapping: ${afterGet - beforeGet} ms, getUnmapped: ${afterGetUnmapped - afterGet} ms, collectSegments: ${afterCollectSegmentIds - afterGet} ms, combine: ${afterCombineMapping - afterCollectSegmentIds}, mapData: ${afterMapData - afterCombineMapping}. Total ${afterMapData - beforeGet}. ${mappedData.length} bytes, ${segmentIds.size} segments")
-     */
     } yield mappedData
   }
 }

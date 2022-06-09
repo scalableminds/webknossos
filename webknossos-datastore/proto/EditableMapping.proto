@@ -4,7 +4,7 @@ package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
 
-message AgglomerateEdge {
+message AgglomerateEdge { // Note that the edges are stored directed but semantically undirected. When testing for an edge, check both directions.
   required int64 source = 1;
   required int64 target = 2;
 }

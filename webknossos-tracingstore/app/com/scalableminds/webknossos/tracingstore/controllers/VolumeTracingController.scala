@@ -457,8 +457,8 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
-            _ <- Fox.assertTrue(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
-            editableMappingId <- editableMappingService.create(baseMappingName = tracingMappingName)
+            _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
+            (editableMappingId, editableMapping) <- editableMappingService.create(baseMappingName = tracingMappingName)
             volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
                                                    isEditable = Some(true),
                                                    actionTimestamp = Some(System.currentTimeMillis()))
@@ -474,7 +474,9 @@ class VolumeTracingController @Inject()(
                                                None),
               tracing.version
             )
-            infoJson <- editableMappingService.infoJson(tracingId = tracingId, editableMappingId = editableMappingId)
+            infoJson <- editableMappingService.infoJson(tracingId = tracingId,
+                                                        editableMappingId = editableMappingId,
+                                                        editableMapping = editableMapping)
           } yield Ok(infoJson)
         }
       }
@@ -518,7 +520,11 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
-            infoJson <- editableMappingService.infoJson(tracingId = tracingId, editableMappingId = mappingName)
+            remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
+            editableMapping <- editableMappingService.get(mappingName, remoteFallbackLayer, token)
+            infoJson <- editableMappingService.infoJson(tracingId = tracingId,
+                                                        editableMappingId = mappingName,
+                                                        editableMapping = editableMapping)
           } yield Ok(infoJson)
         }
       }

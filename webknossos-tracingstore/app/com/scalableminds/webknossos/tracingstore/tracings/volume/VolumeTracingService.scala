@@ -346,12 +346,8 @@ class VolumeTracingService @Inject()(
       _ <- updateResolutionList(tracingId, tracing, resultingResolutions.toSet)
     } yield ()
 
-  def volumeBucketsAreEmpty(tracingId: String): Fox[Boolean] =
-    for {
-      keyListAll <- volumeDataStore.listKeys(None, None)
-      keyList <- volumeDataStore.listKeys(limit = Some(1), startAfterKey = Some(tracingId))
-      filtered = keyList.filter(_.startsWith(tracingId))
-    } yield filtered.isEmpty
+  def volumeBucketsAreEmpty(tracingId: String): Boolean =
+    volumeDataStore.getMultipleKeys(tracingId, Some(tracingId), limit = Some(1))(toBox).isEmpty
 
   def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
     for {

@@ -18,6 +18,7 @@ Added a warning for when the resolution in the XY viewport on z=1-downsampled da
 - Slimmed the URLs for annotations by removing `Explorational` and `Task`. The old URLs are still supported, but will be redirected to the new format. [#6208](https://github.com/scalableminds/webknossos/pull/6208)
 
 ### Fixed
+- Fixed that the context menu broke webKnossos when opening it in dataset-view-mode while no segmentation layer was visible. [#6259](https://github.com/scalableminds/webknossos/pull/6259)
 
 ### Removed
 

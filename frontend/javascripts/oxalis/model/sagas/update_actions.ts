@@ -202,7 +202,7 @@ type CreateTracingUpdateAction = {
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   value: T["value"] & {
     actionTimestamp: number;
-    actionAuthorId: string;
+    actionAuthorId?: string;
   };
 };
 

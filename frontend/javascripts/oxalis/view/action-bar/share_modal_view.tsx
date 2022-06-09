@@ -384,7 +384,7 @@ export default function ShareModalView(props: Props) {
         <Col span={18}>
           <RadioGroup onChange={handleOthersMayEditCheckboxChange} value={newOthersMayEdit}>
             <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
-              No
+              No, keep it read-only
             </Radio>
             <Hint
               style={{
@@ -395,7 +395,7 @@ export default function ShareModalView(props: Props) {
             </Hint>
 
             <Radio style={radioStyle} value={true} disabled={!hasUpdatePermissions}>
-              Yes
+              Yes, allow editing
             </Radio>
             <Hint
               style={{

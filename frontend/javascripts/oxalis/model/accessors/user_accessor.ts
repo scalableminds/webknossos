@@ -25,9 +25,12 @@ export function formatUserName(
 const keyContributors = memoizeOne((contributors: APIUserBase[]) => _.keyBy(contributors, "id"));
 
 export function getContributorById(
-  userId: string,
+  userId: string | undefined,
   contributors: APIUserBase[],
 ): APIUserBase | null {
+  if (!userId) {
+    return null;
+  }
   return keyContributors(contributors)[userId];
 }
 

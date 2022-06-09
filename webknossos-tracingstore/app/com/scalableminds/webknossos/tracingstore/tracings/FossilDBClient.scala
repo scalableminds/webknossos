@@ -31,6 +31,7 @@ trait KeyValueStoreImplicits extends BoxImplicits {
   implicit def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(
       implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
 
+  implicit def bytesIdentity(a: Array[Byte]): Box[Array[Byte]] = Full(a)
 }
 
 case class KeyValuePair[T](key: String, value: T)

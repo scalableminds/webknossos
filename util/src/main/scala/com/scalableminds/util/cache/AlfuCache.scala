@@ -40,7 +40,7 @@ object AlfuFoxCache {
   def apply[K, V](maxEntries: Int = 1000,
                   timeToLive: FiniteDuration = 2 hours,
                   timeToIdle: FiniteDuration = 1 hour): AlfuFoxCache[K, V] = {
-    val lfuCache: Cache[K, Box[V]] = AlfuCache(maxEntries, timeToLive, timeToIdle)
-    new AlfuFoxCache(lfuCache)
+    val alfuCache: Cache[K, Box[V]] = AlfuCache(maxEntries, timeToLive, timeToIdle)
+    new AlfuFoxCache(alfuCache)
   }
 }

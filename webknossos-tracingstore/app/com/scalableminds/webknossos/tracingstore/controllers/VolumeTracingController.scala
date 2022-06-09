@@ -457,7 +457,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
-            _ <- Fox.assertTrue(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
+            _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
             editableMappingId <- editableMappingService.create(baseMappingName = tracingMappingName)
             volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
                                                    isEditable = Some(true),

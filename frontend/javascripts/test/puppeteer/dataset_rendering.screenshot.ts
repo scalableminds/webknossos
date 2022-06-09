@@ -270,7 +270,7 @@ test.serial("it should render a dataset with mappings correctly", async (t) => {
   );
 });
 test.serial(
-  "it should render a dataset linked to with an active mapping and agglomerate skeletons correctly",
+  "it should render a dataset linked to with an active mapping and agglomerate skeleton correctly",
   async (t) => {
     const datasetName = "test-agglomerate-file";
     const viewOverride = viewOverrides[datasetName];
@@ -299,14 +299,14 @@ test.serial(
       (condition) => {
         t.true(
           condition,
-          `Dataset with name: "${datasetName}", mapping link and loaded agglomerate skeletons does not look the same.`,
+          `Dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
         );
       },
     );
   },
 );
 test.serial(
-  "it should render a dataset sandbox linked to with an active mapping and agglomerate skeletons correctly",
+  "it should render a dataset sandbox linked to with an active mapping and agglomerate skeleton correctly",
   async (t) => {
     const datasetName = "test-agglomerate-file";
     const viewOverride = viewOverrides[datasetName];
@@ -335,7 +335,7 @@ test.serial(
       (condition) => {
         t.true(
           condition,
-          `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeletons does not look the same.`,
+          `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
         );
       },
     );

@@ -191,7 +191,7 @@ test.serial("getTracingsForAnnotation() for hybrid", async (t) => {
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'queue' implicitly has an 'any' type.
 async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue) {
   const skeletonTracing = getSkeletonDescriptor(explorational);
-  if (skeletonTracing == null) throw new Error("No skeleton tracing present.");
+  if (skeletonTracing == null) throw new Error("No skeleton annotation present.");
   return sendRequestWithToken(
     `${explorational.tracingStore.url}/tracings/skeleton/${skeletonTracing.tracingId}/update?token=`,
     {

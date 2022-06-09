@@ -75,7 +75,7 @@ function makeTreeBackwardsCompatible(tree: TreeMap) {
   });
 }
 /**
- * All tracing related API methods. This is the newest version of the API (version 2).
+ * All annotation related API methods. This is the newest version of the API (version 2).
  * @version 2
  * @class
  */
@@ -316,7 +316,7 @@ class TracingApi {
   }
 
   /**
-   * Reload tracing by reloading the entire page.
+   * Reload annotation by reloading the entire page.
    *
    * @example
    * api.tracing.hardReload()
@@ -326,7 +326,7 @@ class TracingApi {
     location.reload();
   }
 
-  //  SKELETONTRACING API
+  //  SKELETONANNOTATION API
 
   /**
    * Increases the node radius of the given node by multiplying it with 1.05^delta.
@@ -458,11 +458,11 @@ class TracingApi {
     return getPosition(Store.getState().flycam);
   }
 
-  //  VOLUMETRACING API
+  //  VOLUMEANNOTATION API
 
   /**
    * Returns the id of the current active segment.
-   * _Volume tracing only!_
+   * _Volume annotation only!_
    */
   getActiveCellId(): number {
     const tracing = assertVolume(Store.getState());
@@ -472,7 +472,7 @@ class TracingApi {
   /**
    * Sets the active segment given a segment id.
    * If a segment with the given id doesn't exist, it is created.
-   * _Volume tracing only!_
+   * _Volume annotation only!_
    */
   setActiveCell(id: number) {
     assertVolume(Store.getState());
@@ -530,15 +530,15 @@ class DataApi {
   }
 
   /**
-   * Returns the names of all available layers of the current tracing.
+   * Returns the names of all available layers of the current annotation.
    */
   getLayerNames(): Array<string> {
     return _.map(this.model.dataLayers, "name");
   }
 
   /**
-   * Returns the name of the volume tracing layer.
-   * _Volume tracing only!_
+   * Returns the name of the volume annotation layer.
+   * _Volume annotation only!_
    */
   getVolumeTracingLayerName(): string {
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
@@ -631,7 +631,7 @@ class DataApi {
   }
 
   /**
-   * Downloads a cuboid of raw data from a dataset (not tracing) layer. A new window is opened for the download -
+   * Downloads a cuboid of raw data from a dataset (not annotation) layer. A new window is opened for the download -
    * if that is not the case, please check your pop-up blocker.
    *
    * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.
@@ -663,7 +663,7 @@ class DataApi {
    * the data immediately, but instead returns a promise (since the data might
    * have to be downloaded first).
    *
-   * _Volume tracing only!_
+   * _Volume annotation only!_
    *
    * @example // Set the segmentation id for some voxels to 1337
    * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
@@ -680,7 +680,7 @@ class DataApi {
   }
 
   /**
-   * Returns the dataset's setting for the tracing view.
+   * Returns the dataset's setting for the annotation view.
    * @param key - One of the following keys:
      - segmentationOpacity
      - fourBit
@@ -698,7 +698,7 @@ class DataApi {
   }
 
   /**
-   * Set the dataset's setting for the tracing view.
+   * Set the dataset's setting for the annotation view.
    * @param key - Same keys as for getConfiguration()
    *
    * @example
@@ -720,7 +720,7 @@ class UserApi {
   }
 
   /**
-  * Returns the user's setting for the tracing view.
+  * Returns the user's setting for the annotation view.
   * @param key - One of the following keys:
     - moveValue
     - moveValue3d
@@ -759,7 +759,7 @@ class UserApi {
   }
 
   /**
-   * Set the user's setting for the tracing view.
+   * Set the user's setting for the annotation view.
    * @param key - Same keys as for getConfiguration()
    *
    * @example

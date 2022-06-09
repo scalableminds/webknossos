@@ -215,14 +215,14 @@ async function openTracingView(
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
   const url = urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`);
-  console.log(`Opening tracing view at ${url}`);
+  console.log(`Opening annotation view at ${url}`);
   await page.goto(url, {
     timeout: 0,
   });
   await waitForTracingViewLoad(page);
-  console.log("Loaded tracing view");
+  console.log("Loaded annotation view");
   await waitForRenderingFinish(page);
-  console.log("Finished rendering tracing view");
+  console.log("Finished rendering annotation view");
 }
 
 async function openSandboxView(
@@ -236,18 +236,18 @@ async function openSandboxView(
     baseUrl,
     `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
   );
-  console.log(`Opening sandbox tracing view at ${url}`);
+  console.log(`Opening sandbox annotation view at ${url}`);
   await page.goto(url, {
     timeout: 0,
   });
   await waitForTracingViewLoad(page);
-  console.log("Loaded tracing view");
+  console.log("Loaded annotation view");
   await waitForRenderingFinish(page);
-  console.log("Finished rendering tracing view");
+  console.log("Finished rendering annotation view");
 }
 
 async function screenshotTracingView(page: Page): Promise<Screenshot> {
-  console.log("Screenshot tracing view");
+  console.log("Screenshot annotation view");
   // Take screenshots of the other rendered planes
   const PLANE_IDS = [
     "#inputcatcher_TDView",

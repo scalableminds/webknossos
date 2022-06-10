@@ -339,13 +339,17 @@ export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promi
 
 // ### Teams
 export async function getTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams");
+  const teams = await Request.receiveJSON("/api/teams", {
+    doNotInvestigate: true,
+  });
   assertResponseLimit(teams);
   return teams;
 }
 
 export async function getEditableTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams?isEditable=true");
+  const teams = await Request.receiveJSON("/api/teams?isEditable=true", {
+    doNotInvestigate: true,
+  });
   assertResponseLimit(teams);
   return teams;
 }

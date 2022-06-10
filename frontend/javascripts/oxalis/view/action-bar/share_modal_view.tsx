@@ -26,6 +26,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ControlModeEnum } from "oxalis/constants";
+import { makeModalLazy } from "libs/react_helpers";
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
 type Props = {
@@ -123,7 +124,7 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
     />
   );
 }
-export default function ShareModalView(props: Props) {
+function _ShareModalView(props: Props) {
   const { isVisible, onOk, annotationType, annotationId } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
@@ -348,3 +349,6 @@ export default function ShareModalView(props: Props) {
     </Modal>
   );
 }
+
+const ShareModalView = makeModalLazy(_ShareModalView);
+export default ShareModalView;

@@ -1,7 +1,7 @@
 import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
-import { useFetch } from "libs/react_helpers";
+import { makeModalLazy, useFetch } from "libs/react_helpers";
 import type { APIAnnotationType } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -117,7 +117,7 @@ function Footer({
   ) : null;
 }
 
-export default function DownloadModalView(props: Props): JSX.Element {
+function _DownloadModalView(props: Props): JSX.Element {
   const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
 
   const [activeTabKey, setActiveTabKey] = useState("download");
@@ -127,6 +127,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
   const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
   const [selectedBoundingBoxID, setSelectedBoundingBoxId] = useState(-1);
 
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const userBoundingBoxes = useSelector((state: OxalisState) =>
@@ -209,7 +210,9 @@ export default function DownloadModalView(props: Props): JSX.Element {
             }}
             type="warning"
           >
-            {messages["annotation.python_do_not_share"]}
+            {activeUser != null
+              ? messages["annotation.python_do_not_share"]
+              : messages["annotation.register_for_token"]}
           </Text>
         </Row>
       );
@@ -253,11 +256,20 @@ export default function DownloadModalView(props: Props): JSX.Element {
     lineHeight: "30px",
   };
 
-  const authToken = useFetch(getAuthToken, "loading...", []);
+  const authToken = useFetch(
+    async () => {
+      if (activeUser != null) {
+        return getAuthToken();
+      }
+      return null;
+    },
+    "loading...",
+    [activeUser],
+  );
   const wkInitSnippet = `import webknossos as wk
 
 with wk.webknossos_context(
-    token="${authToken}",
+    token="${authToken || "<insert token here>"}",
     url="${window.location.origin}"
 ):
     annotation = wk.Annotation.download(
@@ -494,3 +506,6 @@ with wk.webknossos_context(
     </Modal>
   );
 }
+
+const DownloadModalView = makeModalLazy(_DownloadModalView);
+export default DownloadModalView;

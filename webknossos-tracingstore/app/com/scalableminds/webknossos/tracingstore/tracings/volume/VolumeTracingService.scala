@@ -83,14 +83,12 @@ class VolumeTracingService @Inject()(
                         updateGroup: UpdateActionGroup[VolumeTracing],
                         previousVersion: Long): Fox[Unit] =
     for {
-      tracing <- find(tracingId)
-      hasEditableMapping <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
-      updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(Fox.successful(tracing)) { (tracingFox, action) =>
+      updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
           case Full(tracing) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                if (hasEditableMapping.getOrElse(false)) {
+                if (tracing.mappingIsEditable.getOrElse(false)) {
                   Fox.failure("Cannot mutate buckets in annotation with editable mapping.")
                 } else updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>

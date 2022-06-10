@@ -227,8 +227,6 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       val edgesRange: Array[Long] =
         reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
 
-      logger.info(s"positionsRange: ${positionsRange(0)} to ${positionsRange(1)}, agglomerateId: $agglomerateId")
-
       val nodeCount = positionsRange(1) - positionsRange(0)
       val edgeCount = edgesRange(1) - edgesRange(0)
       val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges

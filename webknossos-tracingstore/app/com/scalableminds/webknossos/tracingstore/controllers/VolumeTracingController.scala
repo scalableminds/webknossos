@@ -150,8 +150,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            hasEditableMapping <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
-            (data, indices) <- if (hasEditableMapping.getOrElse(false))
+            (data, indices) <- if (tracing.mappingIsEditable.getOrElse(false))
               editableMappingService.volumeData(tracing, request.body, token)
             else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
@@ -176,8 +175,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            hasEditableMapping: Option[Boolean] <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
-            _ <- bool2Fox(!hasEditableMapping.getOrElse(false)) ?~> "Duplicate is not yet implemented for editable mapping annotations"
+            _ <- bool2Fox(!tracing.mappingIsEditable.getOrElse(false)) ?~> "Duplicate is not yet implemented for editable mapping annotations"
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             (newId, newTracing) <- tracingService.duplicate(tracingId,
@@ -224,8 +222,7 @@ class VolumeTracingController @Inject()(
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          hasEditableMapping <- Fox.runOptional(tracing.mappingName)(editableMappingService.exists)
-          (vertices, neighbors) <- if (hasEditableMapping.getOrElse(false))
+          (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
             editableMappingService.createIsosurface(tracing, request.body, token)
           else tracingService.createIsosurface(tracingId, request.body)
         } yield {
@@ -439,9 +436,9 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
         for {
           tracing <- tracingService.find(tracingId)
+          _ <- bool2Fox(tracing.mappingIsEditable.getOrElse(false)) ?~> "Cannot query agglomerate skeleton for volume annotation"
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
           remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
-          _ <- Fox.assertTrue(editableMappingService.exists(mappingName)) ?~> "Cannot query agglomerate skeleton for volume annotation"
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(mappingName,
                                                                                                 remoteFallbackLayer,
                                                                                                 agglomerateId,
@@ -488,7 +485,7 @@ class VolumeTracingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName.toFox
-          _ <- Fox.assertTrue(editableMappingService.exists(mappingName))
+          _ <- bool2Fox(tracing.mappingIsEditable.getOrElse(false)) ?~> "Mapping is not editable"
           currentVersion <- editableMappingService.newestMaterializableVersion(mappingName)
           _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update group must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
@@ -506,7 +503,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
-            _ <- Fox.assertTrue(editableMappingService.exists(mappingName))
+            _ <- bool2Fox(tracing.mappingIsEditable.getOrElse(false)) ?~> "Mapping is not editable"
             updateLog <- editableMappingService.updateActionLog(mappingName)
           } yield Ok(updateLog)
         }

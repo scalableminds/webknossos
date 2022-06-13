@@ -621,14 +621,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       );
     }
 
-    if (restrictions.allowSave) {
-      elements.push(
-        <Menu.Item key="restore-button" onClick={this.handleRestore}>
-          <BarsOutlined />
-          Restore Older Version
-        </Menu.Item>,
-      );
-    }
+    elements.push(
+      <Menu.Item key="restore-button" onClick={this.handleRestore}>
+        <BarsOutlined />
+        Restore Older Version
+      </Menu.Item>,
+    );
 
     elements.push(layoutMenu);
 

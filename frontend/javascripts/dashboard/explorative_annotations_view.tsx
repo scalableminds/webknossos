@@ -73,6 +73,7 @@ type State = {
   searchQuery: string;
   tags: Array<string>;
   isLoading: boolean;
+  filteredAnnotations: APIAnnotationCompact[];
 };
 type PartialState = Pick<State, "searchQuery" | "shouldShowArchivedTracings">;
 const persistence = new Persistence<PartialState>(
@@ -109,6 +110,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     },
     searchQuery: "",
     tags: [],
+    filteredAnnotations: [],
     isLoading: false,
   };
 
@@ -332,7 +334,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   archiveAll = () => {
-    const selectedAnnotations = this.getFilteredTracings().filter(
+    const selectedAnnotations = this.state.filteredAnnotations.filter(
       (annotation: APIAnnotationCompact) => annotation.owner?.id === this.props.activeUser.id,
     );
 
@@ -436,7 +438,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getFilteredTracings() {
+  _getSearchFilteredTracings() {
+    // Note, this method should only be used to pass tracings
+    // to the antd table. Antd itself can apply additional filters
+    // (e.g., filtering by owner in the column header).
+    // Use `this.state.filteredAnnotations` if you need all displayed
+    // items.
     return Utils.filterWithSearchQueryAND(
       this.getCurrentTracings(),
       ["id", "name", "modified", "tags"],
@@ -487,7 +494,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   renderTable() {
-    const filteredAndSortedTracings = this.getFilteredTracings().sort(
+    const filteredAndSortedTracings = this._getSearchFilteredTracings().sort(
       Utils.compareBy(typeHint, (annotation) => annotation.modified, false),
     );
     const renderOwner = (owner: APIUser) => {
@@ -544,6 +551,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         className="large-table"
         scroll={{
           x: "max-content",
+        }}
+        onChange={(_pagination, _filters, _sorter, extra) => {
+          this.setState({ filteredAnnotations: extra.currentDataSource });
         }}
         locale={{
           emptyText: (

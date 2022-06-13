@@ -45,13 +45,12 @@ function Hint({ children, style }: { children: React.ReactNode; style: React.CSS
 }
 
 export function useDatasetSharingToken(dataset: APIDataset) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [datasetToken, setDatasetToken] = useState("");
 
   const fetchAndSetToken = async () => {
     try {
-      const sharingToken = await getDatasetSharingToken(dataset, {
-        showErrorToast: false,
-      });
+      const sharingToken = await getDatasetSharingToken(dataset);
       setDatasetToken(sharingToken);
     } catch (error) {
       console.error(error);
@@ -59,8 +58,11 @@ export function useDatasetSharingToken(dataset: APIDataset) {
   };
 
   useEffect(() => {
+    if (!activeUser) {
+      return;
+    }
     fetchAndSetToken();
-  }, [dataset]);
+  }, [dataset, activeUser]);
   return datasetToken;
 }
 export function getUrl(sharingToken: string, includeToken: boolean) {
@@ -133,19 +135,21 @@ function _ShareModalView(props: Props) {
   const [visibility, setVisibility] = useState(annotationVisibility);
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const hasUpdatePermissions = restrictions.allowUpdate && restrictions.allowSave;
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
-    const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId, {
-      showErrorToast: false,
-    });
+    if (!activeUser) {
+      return;
+    }
+    const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId);
     setSharedTeams(fetchedSharedTeams);
   };
 
   useEffect(() => {
     fetchAndSetSharedTeams();
-  }, [annotationType, annotationId]);
+  }, [annotationType, annotationId, activeUser]);
 
   const handleCheckboxChange = (event: RadioChangeEvent) => {
     setVisibility(event.target.value as any as APIAnnotationVisibility);

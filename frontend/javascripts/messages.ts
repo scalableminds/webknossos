@@ -284,6 +284,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.resolution_mismatch":
     "This dataset contains multiple layers which differ in their resolution. Please convert the layers to make their resolutions match. Otherwise, rendering errors cannot be avoided.",
+  "dataset.z1_downsampling_hint":
+    "The currently rendered quality is not optimal due to the available magnifications and the viewport arrangement. To improve the quality try to increase the size of the XY viewport (e.g. by maximizing it).",
   "annotation.finish": "Are you sure you want to permanently finish this annotation?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.no_fallback_data_included":
@@ -299,6 +301,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This webKnossos instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
   "annotation.python_do_not_share":
     "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
+  "annotation.register_for_token": "Please log in to get an access token for the script below.",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",

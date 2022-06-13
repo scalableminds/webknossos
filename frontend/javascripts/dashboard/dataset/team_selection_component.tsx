@@ -41,16 +41,20 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     this.setState({
       isFetchingData: true,
     });
-    const possibleTeams = this.props.allowNonEditableTeams
-      ? await getTeams()
-      : await getEditableTeams();
-    this.setState({
-      possibleTeams,
-      isFetchingData: false,
-    });
+    try {
+      const possibleTeams = this.props.allowNonEditableTeams
+        ? await getTeams()
+        : await getEditableTeams();
+      this.setState({
+        possibleTeams,
+        isFetchingData: false,
+      });
 
-    if (this.props.afterFetchedTeams != null) {
-      this.props.afterFetchedTeams(possibleTeams);
+      if (this.props.afterFetchedTeams != null) {
+        this.props.afterFetchedTeams(possibleTeams);
+      }
+    } catch (exception) {
+      console.error("Could not load teams.");
     }
   }
 

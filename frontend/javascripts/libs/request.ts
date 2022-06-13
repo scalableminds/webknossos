@@ -21,6 +21,7 @@ export type RequestOptionsBase<T> = {
   headers?: T;
   host?: string;
   method?: method;
+  mode?: RequestMode;
   params?: string | Record<string, any>;
   showErrorToast?: boolean;
   timeout?: number;

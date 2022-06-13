@@ -29,10 +29,7 @@ const warningColors = {
   color: "rgb(255, 155, 85)",
   borderColor: "rgb(241, 122, 39)",
 };
-const copyPositionDefaultStyle = {
-  padding: "0 10px",
-};
-const copyPositionErrorStyle = { ...copyPositionDefaultStyle, ...warningColors };
+const iconErrorStyle = { ...warningColors };
 const positionInputDefaultStyle = {
   textAlign: "center",
 };
@@ -94,8 +91,7 @@ class DatasetPositionView extends PureComponent<Props> {
   render() {
     const position = V3.floor(getPosition(this.props.flycam));
     const { isOutOfDatasetBounds, isOutOfTaskBounds } = this.isPositionOutOfBounds(position);
-    const copyPositionStyle =
-      isOutOfDatasetBounds || isOutOfTaskBounds ? copyPositionErrorStyle : copyPositionDefaultStyle;
+    const iconColoringStyle = isOutOfDatasetBounds || isOutOfTaskBounds ? iconErrorStyle : {};
     const positionInputStyle =
       isOutOfDatasetBounds || isOutOfTaskBounds
         ? positionInputErrorStyle
@@ -125,7 +121,7 @@ class DatasetPositionView extends PureComponent<Props> {
           <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
             <ButtonComponent
               onClick={this.copyPositionToClipboard}
-              style={copyPositionStyle}
+              style={{ padding: "0 10px", ...iconColoringStyle }}
               className="hide-on-small-screen"
             >
               <PushpinOutlined style={positionIconStyle} />
@@ -140,7 +136,7 @@ class DatasetPositionView extends PureComponent<Props> {
             style={positionInputStyle}
             allowDecimals
           />
-          <ShareButton dataset={this.props.dataset} style={copyPositionStyle} />
+          <ShareButton dataset={this.props.dataset} style={iconColoringStyle} />
         </Input.Group>
         {isArbitraryMode ? (
           <Input.Group

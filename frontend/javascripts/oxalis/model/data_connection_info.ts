@@ -12,11 +12,13 @@ type DataConnectionInfoEntry = {
 };
 
 type Stats = {
+  avgRoundTripTime: number;
   avgDownloadSpeedInMBperS: number;
   accumulatedDownloadedBytes: number;
 };
 
 const defaultStats: Stats = {
+  avgRoundTripTime: 0,
   avgDownloadSpeedInMBperS: 0,
   accumulatedDownloadedBytes: 0,
 };
@@ -88,12 +90,15 @@ class DataConnectionInfo {
       return { ...defaultStats, accumulatedDownloadedBytes: this.accumulatedDownloadedBytes };
     }
     const sumOfDownloadMBytes = _.sum(this.data.map((entry) => entry.loadedBytesInMb));
+    const avgRoundTripTime =
+      _.sum(this.data.map((entry) => entry.endTime - entry.startTime)) / this.data.length;
     const startingTime = _.min(this.data.map((entry) => entry.startTime)) || 1;
     const endTime = _.max(this.data.map((entry) => entry.endTime)) || 1;
     const roundTripTimeInSec = (endTime - startingTime) / 1000;
     const avgDownloadSpeedInMBperS = sumOfDownloadMBytes / roundTripTimeInSec;
     return {
       avgDownloadSpeedInMBperS,
+      avgRoundTripTime,
       accumulatedDownloadedBytes: this.accumulatedDownloadedBytes,
     };
   }

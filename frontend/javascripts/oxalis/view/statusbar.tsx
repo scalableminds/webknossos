@@ -328,14 +328,12 @@ function Infos() {
   });
   return (
     <React.Fragment>
-      <span className="info-element">
-        <img
-          src="/assets/images/icon-statusbar-downsampling.svg"
-          className="resolution-status-bar-icon"
-          alt="Resolution"
-        />{" "}
-        {activeResolution.join("-")}{" "}
-      </span>
+      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
+      {isPlaneMode ? (
+        <span className="info-element">
+          Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
+        </span>
+      ) : null}
       <span className="info-element">
         <Tooltip
           title={`Downloaded ${formatCountToDataAmountUnit(
@@ -346,12 +344,6 @@ function Infos() {
           {roundTo(currentBucketDownloadSpeed, 2)} MB/s
         </Tooltip>
       </span>
-      {isPlaneMode ? (
-        <span className="info-element">
-          Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
-        </span>
-      ) : null}
-      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
       {activeVolumeTracing != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting
@@ -385,6 +377,14 @@ function Infos() {
           />
         </span>
       ) : null}
+      <span className="info-element">
+        <img
+          src="/assets/images/icon-statusbar-downsampling.svg"
+          className="resolution-status-bar-icon"
+          alt="Resolution"
+        />{" "}
+        {activeResolution.join("-")}{" "}
+      </span>
     </React.Fragment>
   );
 }

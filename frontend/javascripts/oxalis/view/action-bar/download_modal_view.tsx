@@ -1,7 +1,7 @@
 import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
-import { makeModalLazy, useFetch } from "libs/react_helpers";
+import { makeComponentLazy, useFetch } from "libs/react_helpers";
 import type { APIAnnotationType } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -507,5 +507,5 @@ with wk.webknossos_context(
   );
 }
 
-const DownloadModalView = makeModalLazy(_DownloadModalView);
+const DownloadModalView = makeComponentLazy(_DownloadModalView);
 export default DownloadModalView;

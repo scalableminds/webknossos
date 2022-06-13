@@ -179,13 +179,12 @@ export async function requestFromStore(
           showErrorToast: false,
         });
       const endTime = window.performance.now();
-      const roundTripTime = endTime - startingTime;
       const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
       const receivedBucketsCount = batch.length - missingBuckets.length;
       const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
       getGlobalDataConnectionInfo().log(
+        startingTime,
         endTime,
-        roundTripTime,
         receivedBucketsCount * BUCKET_BYTE_LENGTH,
       );
       let resultBuffer = responseBuffer;

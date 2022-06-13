@@ -7,18 +7,16 @@ import window from "libs/window";
 type CallableStatsUpdate = (stats: Stats) => void;
 type DataConnectionInfoEntry = {
   endTime: number;
-  roundTripTime: number;
-  downloadSpeedInMBperS: number;
+  startTime: number;
+  loadedBytesInMb: number;
 };
 
 type Stats = {
-  avgRoundTripTime: number;
   avgDownloadSpeedInMBperS: number;
   accumulatedDownloadedBytes: number;
 };
 
 const defaultStats: Stats = {
-  avgRoundTripTime: 0,
   avgDownloadSpeedInMBperS: 0,
   accumulatedDownloadedBytes: 0,
 };
@@ -67,7 +65,7 @@ class DataConnectionInfo {
     this.data = this.data.filter((entry) => currentTime - entry.endTime < 5000);
   }
 
-  log(endTime: number, roundTripTime: number, loadedBytes: number): void {
+  log(startTime: number, endTime: number, loadedBytes: number): void {
     // TODO: stalling of requests is included in the round trip time :/. try not to measure this. maybe overkill.
     // TODO: consider saving all failed buckets for ever and not only those within the last 5 secs.
     // Filter out requests that have 0 loaded bytes.
@@ -76,12 +74,10 @@ class DataConnectionInfo {
     }
     this.accumulatedDownloadedBytes += loadedBytes;
     const loadedBytesInMb = loadedBytes / 10 ** 6;
-    const roundTripTimeInSec = roundTripTime / 1000;
-    const downloadSpeedInMBperS = loadedBytesInMb / roundTripTimeInSec;
     const dataEntry = {
+      startTime,
       endTime,
-      roundTripTime,
-      downloadSpeedInMBperS,
+      loadedBytesInMb,
     };
     this.data.push(dataEntry);
   }
@@ -91,12 +87,12 @@ class DataConnectionInfo {
     if (this.data.length === 0) {
       return { ...defaultStats, accumulatedDownloadedBytes: this.accumulatedDownloadedBytes };
     }
-    const sumOfDownloadSpeed = _.sum(this.data.map((entry) => entry.downloadSpeedInMBperS));
-    const sumOfRoundTripTime = _.sum(this.data.map((entry) => entry.roundTripTime));
-    const avgDownloadSpeedInMBperS = sumOfDownloadSpeed / this.data.length;
-    const avgRoundTripTime = sumOfRoundTripTime / this.data.length;
+    const sumOfDownloadMBytes = _.sum(this.data.map((entry) => entry.loadedBytesInMb));
+    const startingTime = _.min(this.data.map((entry) => entry.startTime)) || 1;
+    const endTime = _.max(this.data.map((entry) => entry.endTime)) || 1;
+    const roundTripTimeInSec = (endTime - startingTime) / 1000;
+    const avgDownloadSpeedInMBperS = sumOfDownloadMBytes / roundTripTimeInSec;
     return {
-      avgRoundTripTime,
       avgDownloadSpeedInMBperS,
       accumulatedDownloadedBytes: this.accumulatedDownloadedBytes,
     };

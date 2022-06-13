@@ -71,7 +71,7 @@ export class VoxelBuffer2D {
   }
 
   isEmpty(): boolean {
-    return this.width == 0 || this.height == 0;
+    return this.width === 0 || this.height === 0;
   }
 }
 export class VoxelNeighborQueue3D {
@@ -544,7 +544,7 @@ class VolumeLayer {
     }
 
     const area = sumArea / 2;
-    if (area == 0) {
+    if (area === 0) {
       return zoomedPositionToGlobalPosition(contourList[0], this.activeResolution);
     }
 

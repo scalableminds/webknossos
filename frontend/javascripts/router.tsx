@@ -180,9 +180,10 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
-                  const { tab } = match.params;
-                  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-                  const initialTabKey = tab ? urlTokenToTabKeyMap[tab] : null;
+                  const tab: string = match.params.tab;
+                  const initialTabKey =
+                    // @ts-ignore If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
+                    tab ? urlTokenToTabKeyMap[tab] : null;
                   return (
                     <DashboardView
                       userId={null}

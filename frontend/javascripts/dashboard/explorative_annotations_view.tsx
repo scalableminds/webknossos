@@ -239,7 +239,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     type: "finish" | "reopen",
   ): APIAnnotationCompact => ({
     ...annotation,
-    state: type == "reopen" ? "Active" : "Finished",
+    state: type === "reopen" ? "Active" : "Finished",
   });
 
   renderActions = (tracing: APIAnnotationCompact) => {
@@ -333,7 +333,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   archiveAll = () => {
     const selectedAnnotations = this.getFilteredTracings().filter(
-      (annotation: APIAnnotationCompact) => annotation.owner?.id == this.props.activeUser.id,
+      (annotation: APIAnnotationCompact) => annotation.owner?.id === this.props.activeUser.id,
     );
 
     if (selectedAnnotations.length === 0) {
@@ -483,7 +483,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   isTracingEditable(tracing: APIAnnotationCompact): boolean {
-    return tracing.owner?.id == this.props.activeUser.id;
+    return tracing.owner?.id === this.props.activeUser.id;
   }
 
   renderTable() {
@@ -491,7 +491,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       Utils.compareBy(typeHint, (annotation) => annotation.modified, false),
     );
     const renderOwner = (owner: APIUser) => {
-      if (!this.props.isAdminView && owner.id == this.props.activeUser.id) {
+      if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
         return (
           <span>
             {formatUserName(owner)} <span style={{ color: "#7c7c7c" }}>(you)</span>
@@ -588,7 +588,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           filters={ownerAndTeamsFilters}
           filterMode="tree"
           onFilter={(value: string | number | boolean, tracing: APIAnnotationCompact) =>
-            (tracing.owner != null && tracing.owner.id == value.toString()) ||
+            (tracing.owner != null && tracing.owner.id === value.toString()) ||
             tracing.teams.some((team) => team.id === value)
           }
           sorter={Utils.localeCompareBy(

@@ -45,8 +45,6 @@ export const urlTokenToTabKeyMap = {
   datasets: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
-  // For backwards compatibility
-  shared: "explorativeAnnotations",
 };
 
 class DashboardView extends PureComponent<PropsWithRouter, State> {
@@ -65,10 +63,8 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
     // Flow doesn't allow validTabKeys[key] where key may be null, so check that first
     const activeTabKey =
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      (initialTabKey && validTabKeys[initialTabKey] && initialTabKey) ||
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      (lastUsedTabKey && validTabKeys[lastUsedTabKey] && lastUsedTabKey) ||
+      (initialTabKey && initialTabKey in validTabKeys && initialTabKey) ||
+      (lastUsedTabKey && lastUsedTabKey in validTabKeys && lastUsedTabKey) ||
       defaultTabKey;
     this.state = {
       activeTabKey,
@@ -113,7 +109,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
-      sharedAnnotations: true,
     };
   }
 
@@ -172,8 +167,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       );
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTabKey' implicitly has an 'any' t... Remove this comment to see the full error message
-    const onTabChange = (activeTabKey) => {
+    const onTabChange = (activeTabKey: string) => {
       const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
 
       const url = tabKeyToURLMap[activeTabKey];

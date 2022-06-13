@@ -49,7 +49,6 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
       const healthEndpoint = `${url}/${path}/health`;
       Request.triggerRequest(healthEndpoint, {
         doNotInvestigate: true,
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ doNotInvestigate: true; mode: ... Remove this comment to see the full error message
         mode: "cors",
         timeout: 5000,
       }).then(

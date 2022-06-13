@@ -88,6 +88,7 @@ export type SetMappingAction = {
 export type SetMappingNameAction = {
   type: "SET_MAPPING_NAME";
   mappingName: string;
+  mappingType: MappingType;
   layerName: string;
 };
 type SetHideUnmappedIdsAction = {
@@ -242,10 +243,12 @@ export const setMappingAction = (
 export const setMappingNameAction = (
   layerName: string,
   mappingName: string,
+  mappingType: MappingType,
 ): SetMappingNameAction => ({
   type: "SET_MAPPING_NAME",
   layerName,
   mappingName,
+  mappingType,
 });
 export const setHideUnmappedIdsAction = (
   layerName: string,

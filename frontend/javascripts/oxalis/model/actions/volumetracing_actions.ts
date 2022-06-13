@@ -279,6 +279,6 @@ export const dispatchFloodfillAsync = async (
   dispatch(action);
   await readyDeferred.promise();
 };
-export const setMappingisEditableAction = (): SetMappingIsEditableAction => ({
+export const setMappingIsEditableAction = (): SetMappingIsEditableAction => ({
   type: "SET_MAPPING_IS_EDITABLE",
 });

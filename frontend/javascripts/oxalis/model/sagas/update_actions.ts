@@ -242,37 +242,14 @@ type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
 };
 
 type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
-// Since typescript does not provide ways to perform type transformations on the
-// single parts of a union, we need to write this out manually.
-export type ServerUpdateAction =
-  | AsServerAction<UpdateTreeUpdateAction>
-  | AsServerAction<DeleteTreeUpdateAction>
-  | AsServerAction<MergeTreeUpdateAction>
-  | AsServerAction<MoveTreeComponentUpdateAction>
-  | AsServerAction<CreateNodeUpdateAction>
-  | AsServerAction<UpdateNodeUpdateAction>
-  | AsServerAction<DeleteNodeUpdateAction>
-  | AsServerAction<CreateEdgeUpdateAction>
-  | AsServerAction<DeleteEdgeUpdateAction>
-  | AsServerAction<UpdateSkeletonTracingUpdateAction>
-  | AsServerAction<UpdateVolumeTracingUpdateAction>
-  | AsServerAction<UpdateUserBoundingBoxesUpdateAction>
-  | AsServerAction<CreateSegmentUpdateAction>
-  | AsServerAction<UpdateSegmentUpdateAction>
-  | AsServerAction<DeleteSegmentUpdateAction>
-  | AsServerAction<UpdateBucketUpdateAction>
-  | AsServerAction<UpdateTreeVisibilityUpdateAction>
-  | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
-  | AsServerAction<RevertToVersionUpdateAction>
-  | AsServerAction<UpdateTreeGroupsUpdateAction>
-  | AsServerAction<RemoveFallbackLayerUpdateAction>
-  | AsServerAction<UpdateTdCameraUpdateAction>
-  | AsServerAction<UpdateMappingNameUpdateAction>
-  | AsServerAction<SplitAgglomerateUpdateAction>
-  | AsServerAction<MergeAgglomerateUpdateAction>
+
+export type ServerUpdateAction = AsServerAction<
+  | UpdateAction
   // These two actions are never sent by the frontend and, therefore, don't exist in the UpdateAction type
-  | AsServerAction<ImportVolumeTracingUpdateAction>
-  | AsServerAction<CreateTracingUpdateAction>;
+  | ImportVolumeTracingUpdateAction
+  | CreateTracingUpdateAction
+>;
+
 export function createTree(tree: Tree): UpdateTreeUpdateAction {
   return {
     name: "createTree",

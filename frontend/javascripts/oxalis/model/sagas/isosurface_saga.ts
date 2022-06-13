@@ -49,7 +49,6 @@ import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/pos
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
 import ThreeDMap from "libs/ThreeDMap";
-import * as Utils from "libs/utils";
 import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
@@ -122,11 +121,8 @@ function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Ve
 }
 
 function clipPositionToCubeBoundary(position: Vector3): Vector3 {
-  const currentCube = Utils.map3(
-    (el, idx) => Math.floor(el / marchingCubeSizeInMag1()[idx]),
-    position,
-  );
-  const clippedPosition = Utils.map3((el, idx) => el * marchingCubeSizeInMag1()[idx], currentCube);
+  const currentCube = V3.floor(V3.divide3(position, marchingCubeSizeInMag1()));
+  const clippedPosition = V3.scale3(currentCube, marchingCubeSizeInMag1());
   return clippedPosition;
 }
 

@@ -86,7 +86,7 @@ function* maybeFetchMapping(
 
   // Editable mappings cannot be disabled or switched for now
   const isEditableMappingActivationAllowed = yield* select((state) =>
-    isMappingActivationAllowed(state, mappingName),
+    isMappingActivationAllowed(state, mappingName, layerName),
   );
   if (!isEditableMappingActivationAllowed) return;
 

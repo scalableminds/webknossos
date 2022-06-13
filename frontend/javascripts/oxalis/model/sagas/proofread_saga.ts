@@ -11,7 +11,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   initializeEditableMappingAction,
-  setMappingisEditableAction,
+  setMappingIsEditableAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { ProofreadAtPositionAction } from "oxalis/model/actions/proofread_actions";
 import {
@@ -71,11 +71,11 @@ function proofreadUsingMeshes(): boolean {
   // @ts-ignore
   return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
 }
-function proofreadSegmentSurroundNm(): number {
+function proofreadSegmentProximityNm(): number {
   // @ts-ignore
-  return window.__proofreadSurroundNm != null ? window.__proofreadSurroundNm : 2000;
+  return window.__proofreadProximityNm != null ? window.__proofreadProximityNm : 2000;
 }
-let oldSegmentIdsInSurround: number[] | null = null;
+let oldSegmentIdsInProximity: number[] | null = null;
 
 function* loadCoarseAdHocMesh(
   layerName: string,
@@ -89,10 +89,9 @@ function* loadCoarseAdHocMesh(
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracing == null) return;
 
-  const activeMappingByLayer = yield* select(
-    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  const mappingInfo = yield* select((state) =>
+    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
   );
-  const mappingInfo = getMappingInfo(activeMappingByLayer, layerName);
   const { mappingName, mappingType } = mappingInfo;
 
   // Load the whole agglomerate mesh in a coarse resolution for performance reasons
@@ -100,9 +99,9 @@ function* loadCoarseAdHocMesh(
     (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
   );
 
-  const resolutionIndices = resolutionInfo.getAllIndices();
-  const coarseResolutionIndex =
-    resolutionIndices[Math.min(proofreadCoarseResolutionIndex(), resolutionIndices.length - 1)];
+  const coarseResolutionIndex = resolutionInfo.getClosestExistingIndex(
+    proofreadCoarseResolutionIndex(),
+  );
   yield* put(
     updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", coarseResolutionIndex),
   );
@@ -159,15 +158,16 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   if (tree == null) return;
 
-  /* Find all segments (nodes) of the agglomerate skeleton within proofreadSegmentSurroundNm (graph distance)
+  /* Find all segments (nodes) of the agglomerate skeleton within proofreadSegmentProximityNm (graph distance)
      and request the segment IDs in the oversegmentation at the node positions */
 
   const nodePositions = tree.nodes.map((node) => node.position);
-  const distanceSquared = proofreadSegmentSurroundNm() ** 2;
+  const proximityDistanceSquared = proofreadSegmentProximityNm() ** 2;
   const scale = yield* select((state) => state.dataset.dataSource.scale);
 
-  const nodePositionsInSurround = nodePositions.filter(
-    (nodePosition) => V3.scaledSquaredDist(nodePosition, position, scale) <= distanceSquared,
+  const nodePositionsInProximity = nodePositions.filter(
+    (nodePosition) =>
+      V3.scaledSquaredDist(nodePosition, position, scale) <= proximityDistanceSquared,
   );
   const mag = resolutionInfo.getLowestResolution();
 
@@ -176,7 +176,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   // Request unmapped segmentation ids
   const segmentIdsArrayBuffers: ArrayBuffer[] = yield* all(
-    nodePositionsInSurround.map((nodePosition) =>
+    nodePositionsInProximity.map((nodePosition) =>
       call(
         [api.data, api.data.getRawDataCuboid],
         fallbackLayerName,
@@ -186,24 +186,24 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
     ),
   );
   // TODO HACK: This only works for uint32 segmentations
-  const segmentIdsInSurround = segmentIdsArrayBuffers.map((buffer) => new Uint32Array(buffer)[0]);
+  const segmentIdsInProximity = segmentIdsArrayBuffers.map((buffer) => new Uint32Array(buffer)[0]);
 
-  if (oldSegmentIdsInSurround != null) {
-    const segmentIdsInSurroundSet = new Set(segmentIdsInSurround);
+  if (oldSegmentIdsInProximity != null) {
+    const segmentIdsInProximitySet = new Set(segmentIdsInProximity);
     // Remove old meshes in oversegmentation
     yield* all(
-      oldSegmentIdsInSurround.map((nodeSegmentId) =>
-        // Only remove meshes that are not part of the new segment surround
-        segmentIdsInSurroundSet.has(nodeSegmentId)
+      oldSegmentIdsInProximity.map((nodeSegmentId) =>
+        // Only remove meshes that are not part of the new proximity set
+        segmentIdsInProximitySet.has(nodeSegmentId)
           ? null
           : put(removeIsosurfaceAction(layerName, nodeSegmentId)),
       ),
     );
   }
 
-  oldSegmentIdsInSurround = [...segmentIdsInSurround];
+  oldSegmentIdsInProximity = [...segmentIdsInProximity];
 
-  /* Load fine ad hoc meshes of the segments in the oversegmentation in the click position surround */
+  /* Load fine ad hoc meshes of the segments in the oversegmentation in the proximity of the click position */
 
   const noMappingInfo = {
     mappingName: null,
@@ -213,18 +213,19 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const oldPreferredQuality = yield* select(
     (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
   );
+
+  const fineResolutionIndex = resolutionInfo.getClosestExistingIndex(
+    proofreadFineResolutionIndex(),
+  );
   yield* put(
-    updateTemporarySettingAction(
-      "preferredQualityForMeshAdHocComputation",
-      proofreadFineResolutionIndex(),
-    ),
+    updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", fineResolutionIndex),
   );
   yield* all(
-    segmentIdsInSurround.map((nodeSegmentId, index) =>
+    segmentIdsInProximity.map((nodeSegmentId, index) =>
       put(
         loadAdHocMeshAction(
           nodeSegmentId,
-          nodePositionsInSurround[index],
+          nodePositionsInProximity[index],
           noMappingInfo,
           layerName,
         ),
@@ -249,8 +250,8 @@ function* createEditableMapping(): Saga<void> {
   const serverEditableMapping = yield* call(makeMappingEditable, tracingStoreUrl, volumeTracingId);
   // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
   yield* put(setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId));
-  yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName));
-  yield* put(setMappingisEditableAction());
+  yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName, "HDF5"));
+  yield* put(setMappingIsEditableAction());
   yield* put(initializeEditableMappingAction(serverEditableMapping));
 }
 
@@ -268,10 +269,9 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   const { tracingId: volumeTracingId } = volumeTracing;
 
   const layerName = volumeTracingId;
-  const activeMappingByLayer = yield* select(
-    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  const mappingInfo = yield* select((state) =>
+    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
   );
-  const mappingInfo = getMappingInfo(activeMappingByLayer, layerName);
   const { mappingName, mappingType, mappingStatus } = mappingInfo;
   if (
     mappingName == null ||
@@ -415,14 +415,14 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
 
   if (proofreadUsingMeshes()) {
     // Remove old over segmentation meshes
-    if (oldSegmentIdsInSurround != null) {
+    if (oldSegmentIdsInProximity != null) {
       // Remove old meshes in oversegmentation
       yield* all(
-        oldSegmentIdsInSurround.map((nodeSegmentId) =>
+        oldSegmentIdsInProximity.map((nodeSegmentId) =>
           put(removeIsosurfaceAction(layerName, nodeSegmentId)),
         ),
       );
-      oldSegmentIdsInSurround = null;
+      oldSegmentIdsInProximity = null;
     }
 
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)

@@ -643,6 +643,9 @@ export class ProofreadTool {
 
     let globalPosition;
     if (plane === OrthoViews.TDView) {
+      // In the 3D viewport the click position cannot be uniquely determined, because the position on the
+      // third axis is ambiguous. However, if the user clicked on a node, we can determine the position
+      // by looking up the position of the selected node.
       if (didSelectNode) {
         getSkeletonTracing(Store.getState().tracing).map((skeletonTracing: SkeletonTracing) =>
           getNodeAndTree(skeletonTracing).map(([_activeTree, activeNode]) => {

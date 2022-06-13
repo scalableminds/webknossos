@@ -1949,7 +1949,8 @@ export function getAgglomerateSkeleton(
   return doWithToken((token) =>
     Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
-      // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
         useWebworkerForArrayBuffer: false,
         showErrorToast: false,
@@ -1967,7 +1968,7 @@ export function getEditableAgglomerateSkeleton(
     Request.receiveArraybuffer(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
-      // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
         useWebworkerForArrayBuffer: false,
         showErrorToast: false,

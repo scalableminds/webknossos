@@ -416,8 +416,11 @@ export function getMappingInfoForVolumeTracing(
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
 }
 
-export function hasEditableMapping(state: OxalisState): boolean {
-  const volumeTracing = getActiveSegmentationTracing(state);
+export function hasEditableMapping(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
   if (volumeTracing == null) return false;
 
@@ -427,21 +430,20 @@ export function hasEditableMapping(state: OxalisState): boolean {
 export function isMappingActivationAllowed(
   state: OxalisState,
   mappingName: string | null | undefined,
+  layerName?: string | null | undefined,
 ): boolean {
-  const isEditableMappingActive = hasEditableMapping(state);
+  const isEditableMappingActive = hasEditableMapping(state, layerName);
 
-  if (isEditableMappingActive) {
-    const volumeTracing = getActiveSegmentationTracing(state);
+  if (!isEditableMappingActive) return true;
 
-    // This should never be the case, since editable mappings can only be active for volume tracings
-    if (volumeTracing == null) return false;
+  const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
-    // Only allow mapping activations of the editable mapping itself if an editable mapping is saved
-    // in the volume tracing. Editable mappings cannot be disabled or switched for now.
-    return mappingName === volumeTracing.mappingName;
-  }
+  // This should never be the case, since editable mappings can only be active for volume tracings
+  if (volumeTracing == null) return false;
 
-  return true;
+  // Only allow mapping activations of the editable mapping itself if an editable mapping is saved
+  // in the volume tracing. Editable mappings cannot be disabled or switched for now.
+  return mappingName === volumeTracing.mappingName;
 }
 
 export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | undefined {

@@ -104,7 +104,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 
     case "INITIALIZE_EDITABLE_MAPPING": {
       // Set up empty save queue array for editable mapping
-      const newMappingsQueue = { ...state.save.queue.volumes, [action.mapping.tracingId]: [] };
+      const newMappingsQueue = { ...state.save.queue.mappings, [action.mapping.tracingId]: [] };
       return updateKey2(state, "save", "queue", {
         mappings: newMappingsQueue,
       });

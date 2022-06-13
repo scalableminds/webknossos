@@ -23,6 +23,7 @@ import type {
   MeshMetaData,
   TracingType,
   APIMeshFile,
+  ServerEditableMapping,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
@@ -237,13 +238,8 @@ export type VolumeTracing = TracingBase & {
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
 };
-export type EditableMapping = {
+export type EditableMapping = Readonly<ServerEditableMapping> & {
   readonly type: "mapping";
-  readonly createdTimestamp: number;
-  readonly version: number;
-  readonly mappingName: string;
-  // The id of the volume tracing the editable mapping belongs to
-  readonly tracingId: string;
 };
 export type HybridTracing = Annotation & {
   readonly skeleton: SkeletonTracing | null | undefined;

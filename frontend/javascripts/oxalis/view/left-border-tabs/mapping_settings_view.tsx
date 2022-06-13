@@ -293,7 +293,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     segmentationLayer: getSegmentationLayerByName(state.dataset, ownProps.layerName),
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
     allowUpdate: state.tracing.restrictions.allowUpdate,
-    isEditableMappingActive: hasEditableMapping(state),
+    isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
   };
 }
 

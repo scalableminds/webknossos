@@ -211,11 +211,12 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_MAPPING_ENABLED": {
+      const { isMappingEnabled, layerName } = action;
+
       // Editable mappings cannot be disabled or switched for now
-      const isEditableMappingActive = hasEditableMapping(state);
+      const isEditableMappingActive = hasEditableMapping(state, layerName);
       if (isEditableMappingActive && !action.isMappingEnabled) return state;
 
-      const { isMappingEnabled, layerName } = action;
       return updateActiveMapping(
         state,
         {
@@ -240,7 +241,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const { mappingName, mapping, mappingKeys, mappingColors, mappingType, layerName } = action;
 
       // Editable mappings cannot be disabled or switched for now
-      if (!isMappingActivationAllowed(state, mappingName)) return state;
+      if (!isMappingActivationAllowed(state, mappingName, layerName)) return state;
 
       const hideUnmappedIds =
         action.hideUnmappedIds != null
@@ -268,7 +269,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const { mappingName, layerName } = action;
 
       // Editable mappings cannot be disabled or switched for now
-      if (!isMappingActivationAllowed(state, mappingName)) return state;
+      if (!isMappingActivationAllowed(state, mappingName, layerName)) return state;
 
       return updateActiveMapping(state, { mappingName }, layerName);
     }

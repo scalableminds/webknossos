@@ -344,7 +344,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
 
     Modal.confirm({
-      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that this only affects the annotation for which you are the owner.`,
+      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that this only affects the annotations for which you are the owner.`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
         const data = await finishAllAnnotations(selectedAnnotationIds);

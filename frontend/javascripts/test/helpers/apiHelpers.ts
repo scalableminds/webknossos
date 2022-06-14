@@ -9,6 +9,7 @@ import { sleep } from "libs/utils";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import window from "libs/window";
+import dummyUser from "test/fixtures/dummy_user";
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
@@ -22,7 +23,6 @@ import {
   annotation as VOLUME_ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
-import { dummyUser } from "test/fixtures/dummy_user";
 
 const Request = {
   receiveJSON: sinon.stub(),

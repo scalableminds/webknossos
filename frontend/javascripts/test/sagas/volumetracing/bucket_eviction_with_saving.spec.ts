@@ -6,9 +6,9 @@ import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHel
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
-import { testLabelingManyBuckets } from "./bucket_eviction_helper";
-import { dummyUser } from "test/fixtures/dummy_user";
+import dummyUser from "test/fixtures/dummy_user";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { testLabelingManyBuckets } from "./bucket_eviction_helper";
 
 const { discardSaveQueuesAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
 

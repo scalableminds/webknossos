@@ -11,7 +11,7 @@ import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { dummyUser } from "test/fixtures/dummy_user";
+import dummyUser from "test/fixtures/dummy_user";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 
 const {

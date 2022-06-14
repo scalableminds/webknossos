@@ -2,8 +2,8 @@ import Maybe from "data.maybe";
 import mockRequire from "mock-require";
 import test from "ava";
 import "test/reducers/save_reducer.mock";
+import dummyUser from "test/fixtures/dummy_user";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import { dummyUser } from "test/fixtures/dummy_user";
 const TIMESTAMP = 1494695001688;
 const DateMock = {
   now: () => TIMESTAMP,

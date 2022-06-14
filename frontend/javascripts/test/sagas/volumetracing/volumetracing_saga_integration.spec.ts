@@ -17,7 +17,7 @@ import Store from "oxalis/store";
 import mockRequire from "mock-require";
 import test from "ava";
 import { V3 } from "libs/mjs";
-import { dummyUser } from "test/fixtures/dummy_user";
+import dummyUser from "test/fixtures/dummy_user";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(

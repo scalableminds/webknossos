@@ -1,6 +1,6 @@
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { SaveQueueEntry } from "oxalis/store";
-import { dummyUser } from "test/fixtures/dummy_user";
+import dummyUser from "test/fixtures/dummy_user";
 
 export function createSaveQueueFromUpdateActions(
   updateActions: UpdateAction[][],

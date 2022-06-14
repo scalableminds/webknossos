@@ -186,6 +186,8 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
   const isVolumeDisabled =
     !hasVolume ||
     !isSegmentationTracingVisible ||
+    // isSegmentationTracingVisibleForMag is false if isZoomInvalidForTracing is true which is why
+    // this condition doesn't need to be checked here
     !isSegmentationTracingVisibleForMag ||
     isInMergerMode;
 

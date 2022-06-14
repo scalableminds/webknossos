@@ -265,6 +265,15 @@ function AdditionalSkeletonModesButtons() {
     (state: OxalisState) => state.userConfiguration.newNodeNewTree,
   );
 
+  const segmentationTracingLayer = useSelector((state: OxalisState) =>
+    getActiveSegmentationTracing(state),
+  );
+  const isEditableMappingActive =
+    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
+  const mergerModeTooltipText = isEditableMappingActive
+    ? "Merger mode cannot be enabled while an editable mapping is active."
+    : "Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.";
+
   const toggleNewNodeNewTreeMode = () =>
     dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
 
@@ -278,37 +287,40 @@ function AdditionalSkeletonModesButtons() {
   const mergerModeButtonStyle = isMergerModeEnabled ? activeButtonStyle : narrowButtonStyle;
   return (
     <React.Fragment>
-      <Tooltip title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree.">
-        <ButtonComponent
-          style={newNodeNewTreeModeButtonStyle}
-          value="active"
-          onClick={toggleNewNodeNewTreeMode}
-        >
-          <img
-            style={imgStyleForSpaceyIcons}
-            src="/assets/images/soma-clicking-icon.svg"
-            alt="Single Node Tree Mode"
-          />
-        </ButtonComponent>
-      </Tooltip>
-      <Tooltip title="Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.">
-        <ButtonComponent style={mergerModeButtonStyle} value="active" onClick={toggleMergerMode}>
-          <img
-            style={imgStyleForSpaceyIcons}
-            src="/assets/images/merger-mode-icon.svg"
-            alt="Merger Mode"
-          />
-        </ButtonComponent>
-      </Tooltip>
+      <ButtonComponent
+        style={newNodeNewTreeModeButtonStyle}
+        onClick={toggleNewNodeNewTreeMode}
+        title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
+      >
+        <img
+          style={imgStyleForSpaceyIcons}
+          src="/assets/images/soma-clicking-icon.svg"
+          alt="Single Node Tree Mode"
+        />
+      </ButtonComponent>
+      <ButtonComponent
+        style={{
+          ...mergerModeButtonStyle,
+          opacity: isEditableMappingActive ? 0.5 : 1,
+        }}
+        onClick={toggleMergerMode}
+        disabled={isEditableMappingActive}
+        title={mergerModeTooltipText}
+      >
+        <img
+          style={imgStyleForSpaceyIcons}
+          src="/assets/images/merger-mode-icon.svg"
+          alt="Merger Mode"
+        />
+      </ButtonComponent>
       {features().jobsEnabled && isMergerModeEnabled && (
-        <Tooltip title="Materialize this merger mode annotation into a new dataset.">
-          <ButtonComponent
-            style={narrowButtonStyle}
-            onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
-          >
-            <ExportOutlined />
-          </ButtonComponent>
-        </Tooltip>
+        <ButtonComponent
+          style={narrowButtonStyle}
+          onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
+          title="Materialize this merger mode annotation into a new dataset."
+        >
+          <ExportOutlined />
+        </ButtonComponent>
       )}
       {features().jobsEnabled && showMaterializeVolumeAnnotationModal && (
         <MaterializeVolumeAnnotationModal
@@ -351,40 +363,36 @@ function CreateCellButton() {
         zIndex: 1000,
       }}
     >
-      <Tooltip
+      <ButtonComponent
+        onClick={handleCreateCell}
+        style={{
+          width: 36,
+          paddingLeft: 10,
+        }}
         title={`Create a new segment id (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
       >
-        <ButtonComponent
-          onClick={handleCreateCell}
-          style={{
-            width: 36,
-            paddingLeft: 10,
-          }}
-        >
-          <img src="/assets/images/new-cell.svg" alt="New Segment Icon" />
-        </ButtonComponent>
-      </Tooltip>
+        <img src="/assets/images/new-cell.svg" alt="New Segment Icon" />
+      </ButtonComponent>
     </Badge>
   );
 }
 
 function CreateNewBoundingBoxButton() {
   return (
-    <Tooltip title="Create a new bounding box centered around the current position.">
-      <ButtonComponent
-        onClick={handleAddNewUserBoundingBox}
-        style={{
-          paddingLeft: 9,
-          paddingRight: 9,
-        }}
-      >
-        <img
-          src="/assets/images/new-bounding-box.svg"
-          alt="New Bounding Box Icon"
-          style={imgStyleForSpaceyIcons}
-        />
-      </ButtonComponent>
-    </Tooltip>
+    <ButtonComponent
+      onClick={handleAddNewUserBoundingBox}
+      style={{
+        paddingLeft: 9,
+        paddingRight: 9,
+      }}
+      title="Create a new bounding box centered around the current position."
+    >
+      <img
+        src="/assets/images/new-bounding-box.svg"
+        alt="New Bounding Box Icon"
+        style={imgStyleForSpaceyIcons}
+      />
+    </ButtonComponent>
   );
 }
 
@@ -414,30 +422,29 @@ function CreateTreeButton() {
         zIndex: 1000,
       }}
     >
-      <Tooltip title={`Create a new Tree (C) – ${activeTreeHint}`}>
-        <ButtonComponent
-          onClick={handleCreateTree}
-          style={{ ...narrowButtonStyle, paddingRight: 5 }}
-        >
-          <i
-            style={{
-              opacity: 0.9,
-              transform: "scale(0.9) translate(-2px, -1px)",
-              marginRight: 3,
-            }}
-            className="fas fa-project-diagram"
-          />
-          <i
-            className="fas fa-plus"
-            style={{
-              position: "absolute",
-              top: 13,
-              left: 21,
-              fontSize: 11,
-            }}
-          />
-        </ButtonComponent>
-      </Tooltip>
+      <ButtonComponent
+        onClick={handleCreateTree}
+        style={{ ...narrowButtonStyle, paddingRight: 5 }}
+        title={`Create a new Tree (C) – ${activeTreeHint}`}
+      >
+        <i
+          style={{
+            opacity: 0.9,
+            transform: "scale(0.9) translate(-2px, -1px)",
+            marginRight: 3,
+          }}
+          className="fas fa-project-diagram"
+        />
+        <i
+          className="fas fa-plus"
+          style={{
+            position: "absolute",
+            top: 13,
+            left: 21,
+            fontSize: 11,
+          }}
+        />
+      </ButtonComponent>
     </Badge>
   );
 }
@@ -485,11 +492,10 @@ function ChangeBrushSizeButton() {
             width: 36,
             padding: 0,
           }}
-          value="active"
         >
           <img
             src="/assets/images/brush-size-icon.svg"
-            alt="Merger Mode"
+            alt="Brush Size"
             style={{
               width: 20,
               height: 20,

@@ -158,7 +158,9 @@ class VersionList extends React.Component<Props, State> {
         },
       });
     } else {
-      Toast.warning(`Version preview for ${this.props.versionedObjectType}s is not supported yet.`);
+      Toast.warning(
+        `Version preview and restoring for ${this.props.versionedObjectType}s is not supported yet.`,
+      );
       return Promise.resolve();
     }
   };

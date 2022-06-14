@@ -287,7 +287,6 @@ function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<Ser
         ...annotation,
         restrictions: {
           ...annotation.restrictions,
-          // todo: is this just an alias? can this be removed?
           allowSave: annotation.restrictions.allowUpdate,
         },
       };

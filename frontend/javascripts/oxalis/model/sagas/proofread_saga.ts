@@ -82,16 +82,11 @@ function proofreadSegmentProximityNm(): number {
 let oldSegmentIdsInProximity: number[] | null = null;
 
 function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
-  const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  if (volumeTracing == null) return;
-
   const mappingInfo = yield* select((state) =>
     getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
   );
   const { mappingName, mappingType } = mappingInfo;
 
-  // Use the data store if the mapping is not editable yet. If it, is request the mesh from the tracing store.
-  const useDataStore = !volumeTracing.mappingIsEditable;
   // Load the whole agglomerate mesh in a coarse resolution for performance reasons
   const preferredQuality = proofreadCoarseResolutionIndex();
   yield* put(
@@ -99,7 +94,6 @@ function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Ve
       mappingName,
       mappingType,
       passive: true,
-      useDataStore,
       preferredQuality,
     }),
   );

@@ -8,14 +8,20 @@ import Store from "oxalis/store";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { testLabelingManyBuckets } from "./bucket_eviction_helper";
 const { discardSaveQueuesAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
+import { dummyUser } from "test/fixtures/dummy_user";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
+  Store.dispatch(setActiveUserAction(dummyUser));
+
   await __setupOxalis(t, "volume");
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
 });
+
 test.serial(
   "Brushing/Tracing should not crash when a lot of buckets are labeled at once without saving inbetween",
   async (t) => {

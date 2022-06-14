@@ -17,6 +17,9 @@ import Store from "oxalis/store";
 import mockRequire from "mock-require";
 import test from "ava";
 import { V3 } from "libs/mjs";
+import { dummyUser } from "test/fixtures/dummy_user";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
 );
@@ -36,6 +39,7 @@ test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
+  Store.dispatch(setActiveUserAction(dummyUser));
   await __setupOxalis(t, "volume");
   // Ensure the slow compression is disabled by default. Tests may change
   // this individually.

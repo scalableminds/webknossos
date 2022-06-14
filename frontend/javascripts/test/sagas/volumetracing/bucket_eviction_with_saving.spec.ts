@@ -7,11 +7,16 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { testLabelingManyBuckets } from "./bucket_eviction_helper";
+import { dummyUser } from "test/fixtures/dummy_user";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+
 const { discardSaveQueuesAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
+
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
+  Store.dispatch(setActiveUserAction(dummyUser));
   await __setupOxalis(t, "volume");
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());

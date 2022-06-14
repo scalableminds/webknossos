@@ -1,0 +1,22 @@
+import { APIUser } from "types/api_flow_types";
+
+export const dummyUser: APIUser = {
+  email: "dummy@email.com",
+  firstName: "First Name",
+  lastName: "Last Name",
+  id: "dummy-user-id",
+  isAnonymous: false,
+  teams: [],
+  isAdmin: false,
+  isDatasetManager: false,
+  created: 1,
+  experiences: {},
+  isSuperUser: false,
+  isActive: true,
+  isEditable: true,
+  lastActivity: 1,
+  lastTaskTypeId: null,
+  organization: "sample_organization",
+  novelUserExperienceInfos: {},
+  selectedTheme: "auto",
+};

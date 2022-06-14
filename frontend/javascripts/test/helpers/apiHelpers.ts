@@ -22,6 +22,7 @@ import {
   annotation as VOLUME_ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
+import { dummyUser } from "test/fixtures/dummy_user";
 
 const Request = {
   receiveJSON: sinon.stub(),
@@ -193,6 +194,10 @@ export function __setupOxalis(
     );
   Request.receiveJSON.returns(Promise.resolve({}));
   Request.sendJSONReceiveJSON.returns(Promise.resolve({}));
+  Request.sendJSONReceiveJSON
+    .withArgs(sinon.match((arg) => arg == `/api/users/${dummyUser.id}/taskTypeId`))
+    .returns(Promise.resolve(dummyUser));
+
   return Model.fetch(
     ANNOTATION_TYPE,
     {

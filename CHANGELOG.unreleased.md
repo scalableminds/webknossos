@@ -17,10 +17,12 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - For the api routes that return annotation info objects, the user field was renamed to owner. User still exists as an alias, but will be removed in a future release. [#6250](https://github.com/scalableminds/webknossos/pull/6250)
-
+- Slimmed the URLs for annotations by removing `Explorational` and `Task`. The old URLs are still supported, but will be redirected to the new format. [#6208](https://github.com/scalableminds/webknossos/pull/6208)
+- When creating a task from a base annotation, the starting position/rotation and bounding box as specified during task creation are now used and overwrite the ones from the original base annotation. [#6249](https://github.com/scalableminds/webknossos/pull/6249)
 
 ### Fixed
 - Fixed that the context menu broke webKnossos when opening it in dataset-view-mode while no segmentation layer was visible. [#6259](https://github.com/scalableminds/webknossos/pull/6259)
+- Fixed benign error toast when viewing a public annotation without being logged in. [#6271](https://github.com/scalableminds/webknossos/pull/6271)
 
 ### Removed
 

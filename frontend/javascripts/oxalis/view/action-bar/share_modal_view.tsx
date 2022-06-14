@@ -30,6 +30,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ControlModeEnum } from "oxalis/constants";
+import { makeComponentLazy } from "libs/react_helpers";
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
 type Props = {
@@ -48,13 +49,12 @@ function Hint({ children, style }: { children: React.ReactNode; style: React.CSS
 }
 
 export function useDatasetSharingToken(dataset: APIDataset) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [datasetToken, setDatasetToken] = useState("");
 
   const fetchAndSetToken = async () => {
     try {
-      const sharingToken = await getDatasetSharingToken(dataset, {
-        showErrorToast: false,
-      });
+      const sharingToken = await getDatasetSharingToken(dataset);
       setDatasetToken(sharingToken);
     } catch (error) {
       console.error(error);
@@ -62,8 +62,11 @@ export function useDatasetSharingToken(dataset: APIDataset) {
   };
 
   useEffect(() => {
+    if (!activeUser) {
+      return;
+    }
     fetchAndSetToken();
-  }, [dataset]);
+  }, [dataset, activeUser]);
   return datasetToken;
 }
 export function getUrl(sharingToken: string, includeToken: boolean) {
@@ -127,7 +130,8 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
     />
   );
 }
-export default function ShareModalView(props: Props) {
+
+function _ShareModalView(props: Props) {
   const { isVisible, onOk, annotationType, annotationId } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
@@ -146,15 +150,16 @@ export default function ShareModalView(props: Props) {
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
-    const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId, {
-      showErrorToast: false,
-    });
+    if (!activeUser) {
+      return;
+    }
+    const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId);
     setSharedTeams(fetchedSharedTeams);
   };
 
   useEffect(() => {
     fetchAndSetSharedTeams();
-  }, [annotationType, annotationId]);
+  }, [annotationType, annotationId, activeUser]);
 
   const handleCheckboxChange = (event: RadioChangeEvent) => {
     setVisibility(event.target.value as any as APIAnnotationVisibility);
@@ -411,3 +416,6 @@ export default function ShareModalView(props: Props) {
     </Modal>
   );
 }
+
+const ShareModalView = makeComponentLazy(_ShareModalView);
+export default ShareModalView;

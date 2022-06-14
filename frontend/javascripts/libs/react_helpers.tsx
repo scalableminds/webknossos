@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "react-redux";
 import type { OxalisState } from "oxalis/store";
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
@@ -67,4 +67,22 @@ export function usePolledState(callback: (arg0: OxalisState) => void, interval: 
     callback(state);
   }, interval);
 }
+
+export function makeComponentLazy<T extends { isVisible: boolean }>(
+  ComponentFn: React.ComponentType<T>,
+): React.ComponentType<T> {
+  return function LazyModalWrapper(props: T) {
+    const [hasBeenInitialized, setHasBeenInitialized] = useState(false);
+    const isVisible = props.isVisible;
+    useEffect(() => {
+      setHasBeenInitialized(hasBeenInitialized || isVisible);
+    }, [isVisible]);
+
+    if (isVisible || hasBeenInitialized) {
+      return <ComponentFn {...props} />;
+    }
+    return null;
+  };
+}
+
 export default {};

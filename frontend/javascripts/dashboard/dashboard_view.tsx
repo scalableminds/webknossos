@@ -104,7 +104,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         createGroupForEachFile,
       },
     });
-    this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
+    this.props.history.push(`/annotations/${response.annotation.id}`);
   };
 
   getValidTabKeys() {

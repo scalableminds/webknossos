@@ -31,20 +31,19 @@ import {
   getActiveSegmentationTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
+  getLayerByName,
   getMappingInfo,
   getResolutionInfo,
   ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { makeMappingEditable } from "admin/admin_rest_api";
-import {
-  setMappingNameAction,
-  updateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
+import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 import { loadAgglomerateSkeletonWithId } from "oxalis/model/sagas/skeletontracing_saga";
+import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 
 export default function* proofreadMapping(): Saga<any> {
   yield* take("INITIALIZE_SKELETONTRACING");
@@ -83,9 +82,6 @@ function* loadCoarseAdHocMesh(
   segmentId: number,
   position: Vector3,
 ): Saga<void> {
-  // Since it is currently not possible to specify the quality in the loadAdHocMeshAction
-  // this method sets the preferredQualityForMeshAdHocComputation, then requests the mesh
-  // and then resets preferredQualityForMeshAdHocComputation to the previous value.
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracing == null) return;
 
@@ -94,30 +90,18 @@ function* loadCoarseAdHocMesh(
   );
   const { mappingName, mappingType } = mappingInfo;
 
-  // Load the whole agglomerate mesh in a coarse resolution for performance reasons
-  const oldPreferredQuality = yield* select(
-    (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-  );
-
-  const coarseResolutionIndex = resolutionInfo.getClosestExistingIndex(
-    proofreadCoarseResolutionIndex(),
-  );
-  yield* put(
-    updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", coarseResolutionIndex),
-  );
-
   // Use the data store if the mapping is not editable yet. If it, is request the mesh from the tracing store.
   const useDataStore = !volumeTracing.mappingIsEditable;
+  // Load the whole agglomerate mesh in a coarse resolution for performance reasons
+  const preferredQuality = proofreadCoarseResolutionIndex();
   yield* put(
     loadAdHocMeshAction(segmentId, position, {
       mappingName,
       mappingType,
       passive: true,
       useDataStore,
+      preferredQuality,
     }),
-  );
-  yield* put(
-    updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", oldPreferredQuality),
   );
 }
 
@@ -185,8 +169,12 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
       ),
     ),
   );
-  // TODO HACK: This only works for uint32 segmentations
-  const segmentIdsInProximity = segmentIdsArrayBuffers.map((buffer) => new Uint32Array(buffer)[0]);
+
+  const { elementClass } = yield* select((state) => getLayerByName(state.dataset, layerName));
+  const [TypedArrayClass] = getConstructorForElementClass(elementClass);
+  const segmentIdsInProximity = segmentIdsArrayBuffers.map(
+    (buffer) => new TypedArrayClass(buffer)[0],
+  );
 
   if (oldSegmentIdsInProximity != null) {
     const segmentIdsInProximitySet = new Set(segmentIdsInProximity);
@@ -209,17 +197,8 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
     mappingName: null,
     mappingType: null,
     useDataStore: true,
+    preferredQuality: proofreadFineResolutionIndex(),
   };
-  const oldPreferredQuality = yield* select(
-    (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-  );
-
-  const fineResolutionIndex = resolutionInfo.getClosestExistingIndex(
-    proofreadFineResolutionIndex(),
-  );
-  yield* put(
-    updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", fineResolutionIndex),
-  );
   yield* all(
     segmentIdsInProximity.map((nodeSegmentId, index) =>
       put(
@@ -231,9 +210,6 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
         ),
       ),
     ),
-  );
-  yield* put(
-    updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", oldPreferredQuality),
   );
 }
 

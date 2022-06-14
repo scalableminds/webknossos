@@ -258,7 +258,7 @@ export type ShowContextMenuFunction = (
   arg1: number,
   arg2: number | null | undefined,
   arg3: number | null | undefined,
-  arg4: Vector3,
+  arg4: Vector3 | null | undefined,
   arg5: OrthoView,
 ) => void;
 const Constants = {

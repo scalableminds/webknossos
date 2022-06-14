@@ -103,7 +103,8 @@ import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update
 import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
-import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
 
 // This function is needed so that Flow is satisfied
 // with how a mere promise is awaited within a saga.
@@ -714,12 +715,8 @@ function* applyAndGetRevertingVolumeBatch(
   };
 }
 
-export function* pushSaveQueueAsync(
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-  isWkReady: boolean = false,
-): Saga<void> {
-  if (!isWkReady) yield* take("WK_READY");
+export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: string): Saga<void> {
+  yield* call(ensureWkReady);
 
   yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
   let loopCounter = 0;
@@ -991,13 +988,7 @@ export function performDiffTracing(
   return actions;
 }
 
-let isWkReady = false;
-
-function setWkReady() {
-  isWkReady = true;
-}
 export function* saveTracingAsync(): Saga<void> {
-  yield* takeEvery("WK_READY", setWkReady);
   yield* takeEvery("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
   yield* takeEvery("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
   yield* takeEvery("INITIALIZE_EDITABLE_MAPPING", setupSavingForEditableMapping);
@@ -1009,7 +1000,7 @@ export function* setupSavingForEditableMapping(
   // No diffing needs to be done for editable mappings as the saga pushes update actions
   // to the respective save queues, itself
   const volumeTracingId = initializeAction.mapping.tracingId;
-  yield* fork(pushSaveQueueAsync, "mapping", volumeTracingId, isWkReady);
+  yield* fork(pushSaveQueueAsync, "mapping", volumeTracingId);
 }
 export function* setupSavingForTracingType(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,

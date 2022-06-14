@@ -76,7 +76,7 @@ type State = {
   contextMenuPosition: [number, number] | null | undefined;
   clickedNodeId: number | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
-  contextMenuGlobalPosition: Vector3;
+  contextMenuGlobalPosition: Vector3 | null | undefined;
   contextMenuViewport: OrthoView | null | undefined;
   model: Record<string, any>;
 };
@@ -107,7 +107,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       contextMenuPosition: null,
       clickedNodeId: null,
       clickedBoundingBoxId: null,
-      contextMenuGlobalPosition: [0, 0, 0],
+      contextMenuGlobalPosition: null,
       contextMenuViewport: null,
       model: layout,
     };
@@ -160,7 +160,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     yPos: number,
     nodeId: number | null | undefined,
     boundingBoxId: number | null | undefined,
-    globalPosition: Vector3,
+    globalPosition: Vector3 | null | undefined,
     viewport: OrthoView,
   ) => {
     // On Windows the right click to open the context menu is also triggered for the overlay
@@ -185,7 +185,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       contextMenuPosition: null,
       clickedNodeId: null,
       clickedBoundingBoxId: null,
-      contextMenuGlobalPosition: [0, 0, 0],
+      contextMenuGlobalPosition: null,
       contextMenuViewport: null,
     });
   };

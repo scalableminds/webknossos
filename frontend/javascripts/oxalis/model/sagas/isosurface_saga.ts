@@ -207,14 +207,20 @@ function* getIsosurfaceExtraInfo(
   };
 }
 
-function* getInfoForIsosurfaceLoading(layer: DataLayer): Saga<{
+function* getInfoForIsosurfaceLoading(
+  layer: DataLayer,
+  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
+): Saga<{
   zoomStep: number;
   resolutionInfo: ResolutionInfo;
 }> {
   const resolutionInfo = getResolutionInfo(layer.resolutions);
-  const preferredZoomStep = yield* select(
-    (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-  );
+  const preferredZoomStep =
+    isosurfaceExtraInfo.preferredQuality != null
+      ? isosurfaceExtraInfo.preferredQuality
+      : yield* select(
+          (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
+        );
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
   return {
     zoomStep,
@@ -229,7 +235,11 @@ function* loadIsosurfaceForSegmentId(
   removeExistingIsosurface: boolean,
   layer: DataLayer,
 ): Saga<void> {
-  const { zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading, layer);
+  const { zoomStep, resolutionInfo } = yield* call(
+    getInfoForIsosurfaceLoading,
+    layer,
+    isosurfaceExtraInfo,
+  );
   batchCounterPerSegment[segmentId] = 0;
   // If a REMOVE_ISOSURFACE action is dispatched and consumed
   // here before loadIsosurfaceWithNeighbors is finished, the latter saga

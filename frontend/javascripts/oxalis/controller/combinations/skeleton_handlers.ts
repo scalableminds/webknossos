@@ -17,7 +17,11 @@ import {
   getNodeAndTree,
   getNodeAndTreeOrNull,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getInputCatcherRect, calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getInputCatcherRect,
+  calculateGlobalPos,
+  calculateMaybeGlobalPos,
+} from "oxalis/model/accessors/view_mode_accessor";
 import {
   getPosition,
   getRotationOrtho,
@@ -134,7 +138,9 @@ export function handleOpenContextMenu(
 
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
   const state = Store.getState();
-  const globalPosition = calculateGlobalPos(state, position);
+  // Use calculateMaybeGlobalPos instead of calculateGlobalPos, since calculateGlobalPos
+  // only works for the data viewports, but this function is also called for the 3d viewport.
+  const globalPosition = calculateMaybeGlobalPos(state, position);
   const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, plane);
   const clickedBoundingBoxId = hoveredEdgesInfo != null ? hoveredEdgesInfo[0].boxId : null;
   showNodeContextMenuAt(

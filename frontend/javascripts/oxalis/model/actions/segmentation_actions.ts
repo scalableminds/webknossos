@@ -5,6 +5,7 @@ export type AdHocIsosurfaceInfo = {
   mappingType: MappingType | null | undefined;
   useDataStore?: boolean | null | undefined;
   passive?: boolean | null | undefined;
+  preferredQuality?: number | null | undefined;
 };
 export type LoadAdHocMeshAction = {
   type: "LOAD_AD_HOC_MESH_ACTION";

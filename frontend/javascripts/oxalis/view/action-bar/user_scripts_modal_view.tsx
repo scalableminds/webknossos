@@ -7,7 +7,10 @@ import { fetchGistContent } from "libs/gist";
 import { handleGenericError } from "libs/error_handling";
 import Request from "libs/request";
 import messages from "messages";
+import { makeComponentLazy } from "libs/react_helpers";
+
 const { TextArea } = Input;
+
 type UserScriptsModalViewProps = {
   onOK: (...args: Array<any>) => any;
   isVisible: boolean;
@@ -20,7 +23,7 @@ type State = {
   isLoading: boolean;
 };
 
-class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps, State> {
+class _UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps, State> {
   state: State = {
     code: "",
     isCodeChanged: false,
@@ -145,5 +148,7 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
     );
   }
 }
+
+const UserScriptsModalView = makeComponentLazy(_UserScriptsModalView);
 
 export default UserScriptsModalView;

@@ -213,7 +213,7 @@ class SceneController {
     tweenAnimation
       .to(
         {
-          opacity: passive ? 0.2 : 0.6,
+          opacity: passive ? 0.4 : 0.9,
         },
         500,
       )

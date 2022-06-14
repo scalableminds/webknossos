@@ -420,6 +420,15 @@ export function hasEditableMapping(
   state: OxalisState,
   layerName?: string | null | undefined,
 ): boolean {
+  if (layerName != null) {
+    // This needs to be checked before calling getRequestedOrDefaultSegmentationTracingLayer,
+    // as the function will throw an error if layerName is given but not a tracing layer
+    const layer = getSegmentationLayerByName(state.dataset, layerName);
+    const tracing = getTracingForSegmentationLayer(state, layer);
+
+    if (tracing == null) return false;
+  }
+
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
   if (volumeTracing == null) return false;

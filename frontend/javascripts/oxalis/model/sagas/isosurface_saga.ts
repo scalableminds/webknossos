@@ -375,11 +375,11 @@ function* maybeLoadIsosurface(
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  // Fetch from datastore if no volumetracing exists
+  // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore =
     isosurfaceExtraInfo.useDataStore != null
       ? isosurfaceExtraInfo.useDataStore
-      : volumeTracing == null;
+      : volumeTracing == null || volumeTracing.fallbackLayer != null;
   const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
   if (isInitialRequest) {

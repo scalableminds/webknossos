@@ -112,16 +112,16 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   if (volumeTracing == null) return;
 
   const layerName = volumeTracingLayer.tracingId;
-  const segmentId = getSegmentIdForPosition(position);
-  const { mappingName } = volumeTracing;
+  const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
+  if (!isHdf5MappingEnabled || volumeTracing.mappingName == null) return;
 
-  if (mappingName == null) return;
+  const segmentId = getSegmentIdForPosition(position);
 
   /* Load agglomerate skeleton of the agglomerate at the click position */
 
   const treeName = yield* call(
     loadAgglomerateSkeletonWithId,
-    loadAgglomerateSkeletonAction(layerName, mappingName, segmentId),
+    loadAgglomerateSkeletonAction(layerName, volumeTracing.mappingName, segmentId),
   );
 
   if (!proofreadUsingMeshes()) return;
@@ -238,6 +238,23 @@ function* createEditableMapping(): Saga<void> {
   yield* put(initializeEditableMappingAction(serverEditableMapping));
 }
 
+function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
+  const mappingInfo = yield* select((state) =>
+    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+  );
+  const { mappingName, mappingType, mappingStatus } = mappingInfo;
+  if (
+    mappingName == null ||
+    mappingType !== "HDF5" ||
+    mappingStatus === MappingStatusEnum.DISABLED
+  ) {
+    Toast.error("An HDF5 mapping needs to be enabled to use the proofreading tool.");
+    return false;
+  }
+
+  return true;
+}
+
 function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
@@ -252,18 +269,8 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   const { tracingId: volumeTracingId } = volumeTracing;
 
   const layerName = volumeTracingId;
-  const mappingInfo = yield* select((state) =>
-    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
-  );
-  const { mappingName, mappingType, mappingStatus } = mappingInfo;
-  if (
-    mappingName == null ||
-    mappingType !== "HDF5" ||
-    mappingStatus === MappingStatusEnum.DISABLED
-  ) {
-    Toast.error("An HDF5 mapping needs to be enabled to use the proofreading tool.");
-    return;
-  }
+  const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
+  if (!isHdf5MappingEnabled) return;
 
   if (!volumeTracing.mappingIsEditable) {
     try {

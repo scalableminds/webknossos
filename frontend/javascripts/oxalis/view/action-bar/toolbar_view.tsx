@@ -607,23 +607,6 @@ export default function ToolbarView() {
           </RadioButtonWithTooltip>
         ) : null}
 
-        {hasSkeleton && hasVolume ? (
-          <RadioButtonWithTooltip
-            title="Proofreading Tool - Modify an agglomerated segmentation."
-            disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
-            disabled={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled}
-            style={narrowButtonStyle}
-            value={AnnotationToolEnum.PROOFREAD}
-          >
-            <i
-              className="fas fa-clipboard-check"
-              style={{
-                opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
-              }}
-            />
-          </RadioButtonWithTooltip>
-        ) : null}
-
         {hasVolume && isVolumeModificationAllowed ? (
           <React.Fragment>
             <RadioButtonWithTooltip
@@ -759,6 +742,23 @@ export default function ToolbarView() {
             }}
           />
         </RadioButtonWithTooltip>
+
+        {hasSkeleton && hasVolume ? (
+          <RadioButtonWithTooltip
+            title="Proofreading Tool - Modify an agglomerated segmentation."
+            disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
+            disabled={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled}
+            style={narrowButtonStyle}
+            value={AnnotationToolEnum.PROOFREAD}
+          >
+            <i
+              className="fas fa-clipboard-check"
+              style={{
+                opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
+              }}
+            />
+          </RadioButtonWithTooltip>
+        ) : null}
       </Radio.Group>
 
       <ToolSpecificSettings

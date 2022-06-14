@@ -1,5 +1,5 @@
 import test from "ava";
-import { AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationToolEnum, AnnotationTool } from "oxalis/constants";
 import mockRequire from "mock-require";
 import { initialState } from "test/fixtures/volumetracing_object";
 import sinon from "sinon";
@@ -88,8 +88,7 @@ test.serial("Selecting another tool should trigger a deselection of the previous
   saga.next(wkReadyAction());
   saga.next(newState.uiInformation.activeTool);
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'nextTool' implicitly has an 'any' type.
-  const cycleTool = (nextTool) => {
+  const cycleTool = (nextTool: AnnotationTool) => {
     const action = setToolAction(nextTool);
     newState = UiReducer(newState, action);
     saga.next(action);

@@ -20,6 +20,7 @@ const getExplanationForDisabledVolume = (
   isInMergerMode: boolean,
   isSegmentationTracingVisibleForMag: boolean,
   isZoomInvalidForTracing: boolean,
+  isEditableMappingActive: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
     return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable it in the left settings sidebar.";
@@ -35,6 +36,10 @@ const getExplanationForDisabledVolume = (
 
   if (!isSegmentationTracingVisibleForMag) {
     return "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
+  }
+
+  if (isEditableMappingActive) {
+    return "Volume annotation is disabled while an editable mapping is active.";
   }
 
   return "Volume annotation is currently disabled.";
@@ -60,6 +65,7 @@ const disabledSkeletonExplanation =
 function _getDisabledInfoWhenVolumeIsDisabled(
   genericDisabledExplanation: string,
   hasSkeleton: boolean,
+  isVolumeDisabled: boolean,
 ) {
   const disabledInfo = {
     isDisabled: true,
@@ -82,7 +88,10 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     [AnnotationToolEnum.FILL_CELL]: disabledInfo,
     [AnnotationToolEnum.PICK_CELL]: disabledInfo,
     [AnnotationToolEnum.BOUNDING_BOX]: notDisabledInfo,
-    [AnnotationToolEnum.PROOFREAD]: disabledInfo,
+    [AnnotationToolEnum.PROOFREAD]: {
+      isDisabled: isVolumeDisabled,
+      explanation: genericDisabledExplanation,
+    },
   };
 }
 
@@ -164,21 +173,29 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     segmentationTracingLayer != null &&
     visibleSegmentationLayer != null &&
     visibleSegmentationLayer.name === segmentationTracingLayer.tracingId;
+  const isEditableMappingActive =
+    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
   const genericDisabledExplanation = getExplanationForDisabledVolume(
     isSegmentationTracingVisible,
     isInMergerMode,
     isSegmentationTracingVisibleForMag,
     isZoomInvalidForTracing,
+    isEditableMappingActive,
   );
 
-  if (
+  const isVolumeDisabled =
     !hasVolume ||
     !isSegmentationTracingVisible ||
     !isSegmentationTracingVisibleForMag ||
-    isInMergerMode
-  ) {
+    isInMergerMode;
+
+  if (isVolumeDisabled || isEditableMappingActive) {
     // All segmentation-related tools are disabled.
-    return getDisabledInfoWhenVolumeIsDisabled(genericDisabledExplanation, hasSkeleton);
+    return getDisabledInfoWhenVolumeIsDisabled(
+      genericDisabledExplanation,
+      hasSkeleton,
+      isVolumeDisabled,
+    );
   }
 
   const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(state, AnnotationToolEnum.BRUSH);

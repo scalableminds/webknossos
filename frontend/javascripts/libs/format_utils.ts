@@ -3,6 +3,7 @@ import { presetPalettes } from "@ant-design/colors";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import type { BoundingBoxObject } from "oxalis/store";
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 const COLOR_MAP: Array<string> = [
@@ -113,8 +114,12 @@ export function formatCountToDataAmountUnit(count: number): string {
   return formatNumberToUnit(count, byteFactorToUnit);
 }
 
+const getSortedFactors = _.memoize((unitMap: Map<number, string>) =>
+  Array.from(unitMap.keys()).sort((a, b) => a - b),
+);
+
 export function findClosestToUnitFactor(number: number, unitMap: Map<number, string>): number {
-  const sortedFactors = Array.from(unitMap.keys()).sort((a, b) => a - b);
+  const sortedFactors = getSortedFactors(unitMap);
   let closestFactor = sortedFactors[0];
 
   for (const factor of sortedFactors) {

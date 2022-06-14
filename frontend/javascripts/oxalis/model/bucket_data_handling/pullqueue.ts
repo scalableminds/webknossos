@@ -1,7 +1,6 @@
 import PriorityQueue from "js-priority-queue";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import DataConnectionInfo, { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import type { Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DataStoreInfo } from "oxalis/store";
@@ -25,19 +24,12 @@ class PullQueue {
   priorityQueue: PriorityQueue<PullQueueItem>;
   batchCount: number;
   layerName: string;
-  connectionInfo: DataConnectionInfo;
   datastoreInfo: DataStoreInfo;
   abortController: AbortController;
 
-  constructor(
-    cube: DataCube,
-    layerName: string,
-    connectionInfo: DataConnectionInfo,
-    datastoreInfo: DataStoreInfo,
-  ) {
+  constructor(cube: DataCube, layerName: string, datastoreInfo: DataStoreInfo) {
     this.cube = cube;
     this.layerName = layerName;
-    this.connectionInfo = getGlobalDataConnectionInfo();
     this.datastoreInfo = datastoreInfo;
     this.priorityQueue = new PriorityQueue({
       // small priorities take precedence

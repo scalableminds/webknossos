@@ -29,7 +29,6 @@ import Model from "oxalis/model";
 import { OxalisState } from "oxalis/store";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
-import { roundTo } from "libs/utils";
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
@@ -285,13 +284,17 @@ function Infos() {
   const [currentBucketDownloadSpeed, setCurrentBucketDownloadSpeed] = useState<number>(0);
   const [totalDownloadedByteCount, setTotalDownloadedByteCount] = useState<number>(0);
   useEffect(() => {
-    const unsubscribeFunction = getGlobalDataConnectionInfo().onStatisticUpdates(
-      ({ avgDownloadSpeedInMBperS, accumulatedDownloadedBytes }) => {
-        setCurrentBucketDownloadSpeed(avgDownloadSpeedInMBperS);
-        setTotalDownloadedByteCount(accumulatedDownloadedBytes);
-      },
-    );
-    return unsubscribeFunction;
+    const intervalId = setInterval(() => {
+      const { avgDownloadSpeedInBytesPerS, accumulatedDownloadedBytes } =
+        getGlobalDataConnectionInfo().getStatistics();
+      console.log("updating stats", avgDownloadSpeedInBytesPerS);
+      setCurrentBucketDownloadSpeed(avgDownloadSpeedInBytesPerS);
+      setTotalDownloadedByteCount(accumulatedDownloadedBytes);
+    }, 1500);
+    return () => {
+      clearInterval(intervalId);
+      console.log("cleared interval");
+    };
   }, []);
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useSelector((state: OxalisState) =>
@@ -338,10 +341,10 @@ function Infos() {
         <Tooltip
           title={`Downloaded ${formatCountToDataAmountUnit(
             totalDownloadedByteCount,
-          )} Bytes of Shard Data`}
+          )} of Image Data (after decompression)`}
         >
           <DownloadOutlined />
-          {roundTo(currentBucketDownloadSpeed, 2)} MB/s
+          {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
         </Tooltip>
       </span>
       {activeVolumeTracing != null ? (

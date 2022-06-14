@@ -1,6 +1,5 @@
 import type { Vector3 } from "oxalis/constants";
 import { getLayerBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
 import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
@@ -13,7 +12,6 @@ import Store from "oxalis/store"; // TODO: Non-reactive
 class DataLayer {
   cube: DataCube;
   name: string;
-  connectionInfo: ConnectionInfo;
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   mappings: Mappings | null | undefined;
@@ -23,13 +21,7 @@ class DataLayer {
   fallbackLayerInfo: DataLayerType | null | undefined;
   isSegmentation: boolean;
 
-  constructor(
-    layerInfo: DataLayerType,
-    connectionInfo: ConnectionInfo,
-    textureWidth: number,
-    dataTextureCount: number,
-  ) {
-    this.connectionInfo = connectionInfo;
+  constructor(layerInfo: DataLayerType, textureWidth: number, dataTextureCount: number) {
     this.name = layerInfo.name;
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
     this.fallbackLayer = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
@@ -47,12 +39,7 @@ class DataLayer {
       this.isSegmentation,
       this.name,
     );
-    this.pullQueue = new PullQueue(
-      this.cube,
-      layerInfo.name,
-      this.connectionInfo,
-      dataset.dataStore,
-    );
+    this.pullQueue = new PullQueue(this.cube, layerInfo.name, dataset.dataStore);
     this.pushQueue = new PushQueue(this.cube);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     if (this.isSegmentation) this.mappings = new Mappings(layerInfo.name);

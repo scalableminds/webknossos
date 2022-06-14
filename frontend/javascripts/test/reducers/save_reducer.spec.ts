@@ -3,6 +3,7 @@ import mockRequire from "mock-require";
 import test from "ava";
 import "test/reducers/save_reducer.mock";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import { dummyUser } from "test/fixtures/dummy_user";
 const TIMESTAMP = 1494695001688;
 const DateMock = {
   now: () => TIMESTAMP,
@@ -16,6 +17,7 @@ const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer").default;
 const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const initialState = {
+  activeUser: dummyUser,
   save: {
     isBusy: false,
     queue: {
@@ -58,7 +60,7 @@ test("Save should add zero update actions to the queue", (t) => {
 test("Save should remove one update actions from the queue", (t) => {
   const firstItem = [createEdge(0, 1, 2)];
   const secondItem = [createEdge(1, 2, 3)];
-  const saveQueue = createSaveQueueFromUpdateActions(secondItem, TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions([secondItem], TIMESTAMP);
   const firstPushAction = SaveActions.pushSaveQueueTransaction(firstItem, "skeleton");
   const secondPushAction = SaveActions.pushSaveQueueTransaction(secondItem, "skeleton");
   const popAction = SaveActions.shiftSaveQueueAction(1, "skeleton");

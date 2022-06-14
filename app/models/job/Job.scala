@@ -361,7 +361,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   def assertTiffExportBoundingBoxLimits(bbox: String): Fox[Unit] =
     for {
-      boundingBox <- BoundingBox.createFrom(bbox).toFox ?~> "job.export.tiff.invalidBoundingBox"
+      boundingBox <- BoundingBox.fromLiteral(bbox).toFox ?~> "job.export.tiff.invalidBoundingBox"
       _ <- bool2Fox(boundingBox.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
       _ <- bool2Fox(boundingBox.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
     } yield ()

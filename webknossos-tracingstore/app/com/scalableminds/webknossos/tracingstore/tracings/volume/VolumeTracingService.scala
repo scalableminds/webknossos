@@ -5,7 +5,7 @@ import java.nio.file.Paths
 import java.util.zip.Deflater
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -251,10 +251,19 @@ class VolumeTracingService @Inject()(
                 sourceTracing: VolumeTracing,
                 fromTask: Boolean,
                 dataSetBoundingBox: Option[BoundingBox],
-                resolutionRestrictions: ResolutionRestrictions): Fox[(String, VolumeTracing)] = {
+                resolutionRestrictions: ResolutionRestrictions,
+                editPosition: Option[Vec3Int],
+                editRotation: Option[Vec3Double],
+                boundingBox: Option[BoundingBox]): Fox[(String, VolumeTracing)] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
     val tracingWithResolutionRestrictions = restrictMagList(tracingWithBB, resolutionRestrictions)
-    val newTracing = tracingWithResolutionRestrictions.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
+    val newTracing = tracingWithResolutionRestrictions.copy(
+      createdTimestamp = System.currentTimeMillis(),
+      editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithResolutionRestrictions.editPosition),
+      editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithResolutionRestrictions.editRotation),
+      boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
+      version = 0
+    )
     for {
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
       newId <- save(newTracing, None, newTracing.version)

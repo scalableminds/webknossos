@@ -21,6 +21,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
+import { makeComponentLazy } from "libs/react_helpers";
 type ProjectInfo = {
   id: string;
   label: string;
@@ -87,7 +88,7 @@ class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWi
   }
 }
 
-class MergeModalView extends PureComponent<Props, MergeModalViewState> {
+class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
   state: MergeModalViewState = {
     projects: [],
     selectedProject: null,
@@ -310,6 +311,8 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     );
   }
 }
+
+const MergeModalView = makeComponentLazy(_MergeModalView);
 
 function mapStateToProps(state: OxalisState): StateProps {
   return {

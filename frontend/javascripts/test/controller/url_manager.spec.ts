@@ -6,21 +6,32 @@ import Constants, { ViewModeValues } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import update from "immutability-helper";
 test("UrlManager should replace tracing in url", (t) => {
+  // Without annotationType (Explorational and Task don't appear in the URL)
+  t.is(
+    updateTypeAndId("abc/def/annotations/annotationId", "Explorational", "newAnnotationId"),
+    "abc/def/annotations/newAnnotationId",
+  );
+  t.is(
+    updateTypeAndId("abc/def/annotations/annotationId/readOnly", "Task", "newAnnotationId"),
+    "abc/def/annotations/newAnnotationId/readOnly",
+  );
+
+  // With annotationType (CompoundTask / CompoundProject)
   t.is(
     updateTypeAndId(
-      "abc/def/annotations/annotationType/annotationId",
-      "newAnnotationType",
+      "abc/def/annotations/CompoundTask/annotationId",
+      "CompoundProject",
       "newAnnotationId",
     ),
-    "abc/def/annotations/newAnnotationType/newAnnotationId",
+    "abc/def/annotations/CompoundProject/newAnnotationId",
   );
   t.is(
     updateTypeAndId(
-      "abc/def/annotations/annotationType/annotationId/readOnly",
-      "newAnnotationType",
+      "abc/def/annotations/CompoundTask/annotationId/readOnly",
+      "CompoundProject",
       "newAnnotationId",
     ),
-    "abc/def/annotations/newAnnotationType/newAnnotationId/readOnly",
+    "abc/def/annotations/CompoundProject/newAnnotationId/readOnly",
   );
 });
 test("UrlManager should parse full csv url hash", (t) => {

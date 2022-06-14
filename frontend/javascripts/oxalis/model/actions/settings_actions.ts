@@ -182,8 +182,7 @@ export const dispatchClipHistogramAsync = async (
 ): Promise<void> => {
   const readyDeferred = new Deferred();
   const action = clipHistogramAction(layerName, shouldAdjustClipRange, () =>
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
-    readyDeferred.resolve(),
+    readyDeferred.resolve(null),
   );
   dispatch(action);
   await readyDeferred.promise();

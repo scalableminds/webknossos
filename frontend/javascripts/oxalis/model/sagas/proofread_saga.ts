@@ -5,9 +5,9 @@ import { AnnotationToolEnum, MappingStatusEnum, Vector3 } from "oxalis/constants
 import Toast from "libs/toast";
 import {
   DeleteEdgeAction,
-  deleteTreeAction,
   loadAgglomerateSkeletonAction,
   MergeTreesAction,
+  setTreeNameAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   initializeEditableMappingAction,
@@ -18,6 +18,7 @@ import {
   enforceSkeletonTracing,
   findTreeByName,
   findTreeByNodeId,
+  getTreeNameForAgglomerateSkeleton,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   pushSaveQueueTransaction,
@@ -383,28 +384,25 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
     agglomerateFileZoomstep,
   );
 
-  /* Remove old agglomerate skeleton(s) and load updated agglomerate skeleton(s) */
+  /* Rename agglomerate skeleton(s) according to their new id and mapping name */
 
-  yield* put(deleteTreeAction(sourceTree.treeId));
-  if (sourceTree !== targetTree) {
-    yield* put(deleteTreeAction(targetTree.treeId));
-  }
-
-  yield* call(
-    loadAgglomerateSkeletonWithId,
-    loadAgglomerateSkeletonAction(
-      layerName,
-      volumeTracingWithEditableMapping.mappingName,
-      newSourceNodeAgglomerateId,
+  yield* put(
+    setTreeNameAction(
+      getTreeNameForAgglomerateSkeleton(
+        newSourceNodeAgglomerateId,
+        volumeTracingWithEditableMapping.mappingName,
+      ),
+      sourceTree.treeId,
     ),
   );
-  if (newTargetNodeAgglomerateId !== newSourceNodeAgglomerateId) {
-    yield* call(
-      loadAgglomerateSkeletonWithId,
-      loadAgglomerateSkeletonAction(
-        layerName,
-        volumeTracingWithEditableMapping.mappingName,
-        newTargetNodeAgglomerateId,
+  if (sourceTree !== targetTree) {
+    yield* put(
+      setTreeNameAction(
+        getTreeNameForAgglomerateSkeleton(
+          newTargetNodeAgglomerateId,
+          volumeTracingWithEditableMapping.mappingName,
+        ),
+        targetTree.treeId,
       ),
     );
   }

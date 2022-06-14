@@ -34,7 +34,6 @@ import {
   getLayerByName,
   getMappingInfo,
   getResolutionInfo,
-  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { makeMappingEditable } from "admin/admin_rest_api";
 import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
@@ -44,6 +43,8 @@ import { V3 } from "libs/mjs";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 import { loadAgglomerateSkeletonWithId } from "oxalis/model/sagas/skeletontracing_saga";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
+import { Tree } from "oxalis/store";
+import { APISegmentationLayer } from "types/api_flow_types";
 
 export default function* proofreadMapping(): Saga<any> {
   yield* take("INITIALIZE_SKELETONTRACING");
@@ -70,18 +71,15 @@ function proofreadUsingMeshes(): boolean {
   // @ts-ignore
   return window.__proofreadUsingMeshes != null ? window.__proofreadUsingMeshes : true;
 }
+// The default of 0 effectively disables the loading of the high-quality meshes of
+// the oversegmentation by default
 function proofreadSegmentProximityNm(): number {
   // @ts-ignore
-  return window.__proofreadProximityNm != null ? window.__proofreadProximityNm : 2000;
+  return window.__proofreadProximityNm != null ? window.__proofreadProximityNm : 0;
 }
 let oldSegmentIdsInProximity: number[] | null = null;
 
-function* loadCoarseAdHocMesh(
-  layerName: string,
-  resolutionInfo: ResolutionInfo,
-  segmentId: number,
-  position: Vector3,
-): Saga<void> {
+function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracing == null) return;
 
@@ -113,8 +111,6 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracing == null) return;
 
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-
   const layerName = volumeTracingLayer.tracingId;
   const segmentId = getSegmentIdForPosition(position);
   const { mappingName } = volumeTracing;
@@ -132,18 +128,28 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   /* Load a coarse ad hoc mesh of the agglomerate at the click position */
 
-  yield* call(loadCoarseAdHocMesh, layerName, resolutionInfo, segmentId, position);
+  yield* call(loadCoarseAdHocMesh, layerName, segmentId, position);
 
   if (treeName == null) return;
 
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
   const { trees } = skeletonTracing;
   const tree = findTreeByName(trees, treeName).getOrElse(null);
-
   if (tree == null) return;
 
+  yield* call(loadFineAdHocMeshesInProximity, layerName, volumeTracingLayer, tree, position);
+}
+
+function* loadFineAdHocMeshesInProximity(
+  layerName: string,
+  volumeTracingLayer: APISegmentationLayer,
+  tree: Tree,
+  position: Vector3,
+): Saga<void> {
   /* Find all segments (nodes) of the agglomerate skeleton within proofreadSegmentProximityNm (graph distance)
      and request the segment IDs in the oversegmentation at the node positions */
+
+  if (proofreadSegmentProximityNm() <= 0) return;
 
   const nodePositions = tree.nodes.map((node) => node.position);
   const proximityDistanceSquared = proofreadSegmentProximityNm() ** 2;
@@ -153,6 +159,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
     (nodePosition) =>
       V3.scaledSquaredDist(nodePosition, position, scale) <= proximityDistanceSquared,
   );
+  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
   const mag = resolutionInfo.getLowestResolution();
 
   const fallbackLayerName = volumeTracingLayer.fallbackLayer;
@@ -259,7 +266,12 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   }
 
   if (!volumeTracing.mappingIsEditable) {
-    yield* call(createEditableMapping);
+    try {
+      yield* call(createEditableMapping);
+    } catch (e) {
+      console.error(e);
+      return;
+    }
   }
 
   /* Find out the agglomerate IDs at the two node positions */
@@ -407,21 +419,9 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
       yield* put(removeIsosurfaceAction(layerName, targetNodeAgglomerateId));
     }
 
-    yield* call(
-      loadCoarseAdHocMesh,
-      layerName,
-      resolutionInfo,
-      newSourceNodeAgglomerateId,
-      sourceNodePosition,
-    );
+    yield* call(loadCoarseAdHocMesh, layerName, newSourceNodeAgglomerateId, sourceNodePosition);
     if (newTargetNodeAgglomerateId !== newSourceNodeAgglomerateId) {
-      yield* call(
-        loadCoarseAdHocMesh,
-        layerName,
-        resolutionInfo,
-        newTargetNodeAgglomerateId,
-        targetNodePosition,
-      );
+      yield* call(loadCoarseAdHocMesh, layerName, newTargetNodeAgglomerateId, targetNodePosition);
     }
   }
 }

@@ -63,7 +63,6 @@ const initialState = {
     },
   },
 };
-const INIT_ACTION = "WK_READY";
 const LAST_VERSION = 2;
 const TRACINGSTORE_URL = "test.webknossos.xyz";
 const TRACING_TYPE = "skeleton";

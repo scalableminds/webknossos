@@ -2,6 +2,7 @@ import { alert } from "libs/window";
 import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
 import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
+import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
 import mockRequire from "mock-require";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
@@ -80,7 +81,7 @@ test("SaveSaga should send update actions", (t) => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
   const saga = pushSaveQueueAsync(TRACING_TYPE, tracingId);
-  expectValueDeepEqual(t, saga.next(), take(INIT_ACTION));
+  expectValueDeepEqual(t, saga.next(), call(ensureWkReady));
   saga.next(); // setLastSaveTimestampAction
 
   saga.next(); // select state
@@ -195,7 +196,7 @@ test("SaveSaga should send update actions right away and try to reach a state wh
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
   const saga = pushSaveQueueAsync(TRACING_TYPE, tracingId);
-  expectValueDeepEqual(t, saga.next(), take(INIT_ACTION));
+  expectValueDeepEqual(t, saga.next(), call(ensureWkReady));
   saga.next();
   saga.next(); // select state
 
@@ -218,7 +219,7 @@ test("SaveSaga should not try to reach state with all actions being saved when s
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
   const saga = pushSaveQueueAsync(TRACING_TYPE, tracingId);
-  expectValueDeepEqual(t, saga.next(), take(INIT_ACTION));
+  expectValueDeepEqual(t, saga.next(), call(ensureWkReady));
   saga.next();
   saga.next(); // select state
 

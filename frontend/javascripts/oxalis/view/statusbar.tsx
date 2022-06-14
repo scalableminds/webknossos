@@ -1,6 +1,6 @@
 import { Tooltip } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
@@ -29,6 +29,7 @@ import Model from "oxalis/model";
 import { OxalisState } from "oxalis/store";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
+import { useInterval } from "libs/react_helpers";
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
@@ -283,19 +284,13 @@ function Infos() {
   );
   const [currentBucketDownloadSpeed, setCurrentBucketDownloadSpeed] = useState<number>(0);
   const [totalDownloadedByteCount, setTotalDownloadedByteCount] = useState<number>(0);
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      const { avgDownloadSpeedInBytesPerS, accumulatedDownloadedBytes } =
-        getGlobalDataConnectionInfo().getStatistics();
-      console.log("updating stats", avgDownloadSpeedInBytesPerS);
-      setCurrentBucketDownloadSpeed(avgDownloadSpeedInBytesPerS);
-      setTotalDownloadedByteCount(accumulatedDownloadedBytes);
-    }, 1500);
-    return () => {
-      clearInterval(intervalId);
-      console.log("cleared interval");
-    };
-  }, []);
+  useInterval(() => {
+    const { avgDownloadSpeedInBytesPerS, accumulatedDownloadedBytes } =
+      getGlobalDataConnectionInfo().getStatistics();
+    console.log("updating stats", avgDownloadSpeedInBytesPerS);
+    setCurrentBucketDownloadSpeed(avgDownloadSpeedInBytesPerS);
+    setTotalDownloadedByteCount(accumulatedDownloadedBytes);
+  }, 1500);
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useSelector((state: OxalisState) =>
     state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,

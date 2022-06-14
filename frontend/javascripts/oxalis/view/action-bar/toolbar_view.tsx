@@ -751,7 +751,7 @@ export default function ToolbarView() {
 
         {hasSkeleton && hasVolume ? (
           <RadioButtonWithTooltip
-            title="Proofreading Tool - Modify an agglomerated segmentation."
+            title="Proofreading Tool - Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
             disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
             disabled={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled}
             style={narrowButtonStyle}

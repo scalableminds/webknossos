@@ -22,6 +22,7 @@ import {
 import {
   pushSaveQueueTransaction,
   setVersionNumberAction,
+  undoAction,
 } from "oxalis/model/actions/save_actions";
 import { splitAgglomerate, mergeAgglomerate } from "oxalis/model/sagas/update_actions";
 import Model from "oxalis/model";
@@ -277,6 +278,8 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
       yield* call(createEditableMapping);
     } catch (e) {
       console.error(e);
+      // Undo the last splitting/merging action since the proofreading action did not succeed
+      yield* put(undoAction());
       return;
     }
   }

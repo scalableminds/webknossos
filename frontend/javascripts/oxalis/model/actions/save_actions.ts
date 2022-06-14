@@ -130,16 +130,14 @@ export const disableSavingAction = (): DisableSavingAction => ({
 // Unfortunately, using type Dispatch produces countless Flow errors.
 export const dispatchUndoAsync = async (dispatch: (arg0: any) => any): Promise<void> => {
   const readyDeferred = new Deferred();
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
-  const action = undoAction(() => readyDeferred.resolve());
+  const action = undoAction(() => readyDeferred.resolve(null));
   dispatch(action);
   await readyDeferred.promise();
 };
 // Unfortunately, using type Dispatch produces countless Flow errors.
 export const dispatchRedoAsync = async (dispatch: (arg0: any) => any): Promise<void> => {
   const readyDeferred = new Deferred();
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
-  const action = redoAction(() => readyDeferred.resolve());
+  const action = redoAction(() => readyDeferred.resolve(null));
   dispatch(action);
   await readyDeferred.promise();
 };

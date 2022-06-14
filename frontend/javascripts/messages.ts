@@ -301,6 +301,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This webKnossos instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
   "annotation.python_do_not_share":
     "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
+  "annotation.register_for_token": "Please log in to get an access token for the script below.",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",

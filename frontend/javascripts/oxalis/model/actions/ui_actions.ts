@@ -1,6 +1,35 @@
 import type { AnnotationTool } from "oxalis/constants";
 import type { BorderOpenStatus, Theme } from "oxalis/store";
 
+type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
+type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
+type SetStoredLayoutsAction = ReturnType<typeof setStoredLayoutsAction>;
+type SetBorderOpenStatusAction = ReturnType<typeof setBorderOpenStatusAction>;
+type SetImportingMeshStateAction = ReturnType<typeof setImportingMeshStateAction>;
+type SetIsInAnnotationViewAction = ReturnType<typeof setIsInAnnotationViewAction>;
+type SetHasOrganizationsAction = ReturnType<typeof setHasOrganizationsAction>;
+export type SetToolAction = ReturnType<typeof setToolAction>;
+export type CycleToolAction = ReturnType<typeof cycleToolAction>;
+type SetThemeAction = ReturnType<typeof setThemeAction>;
+type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
+type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
+type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
+
+export type UiAction = 
+  | SetDropzoneModalVisibilityAction
+  | SetVersionRestoreVisibilityAction
+  | SetImportingMeshStateAction
+  | SetBorderOpenStatusAction
+  | SetStoredLayoutsAction
+  | SetIsInAnnotationViewAction
+  | SetHasOrganizationsAction
+  | SetToolAction
+  | CycleToolAction
+  | SetThemeAction
+  | SetDownloadModalVisibilityAction
+  | SetShareModalVisibilityAction
+  | SetBusyBlockingInfoAction;
+
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_DROPZONE_MODAL_VISIBILITY",
@@ -68,32 +97,3 @@ export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
       reason,
     },
   } as const);
-
-type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
-type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
-type SetStoredLayoutsAction = ReturnType<typeof setStoredLayoutsAction>;
-type SetBorderOpenStatusAction = ReturnType<typeof setBorderOpenStatusAction>;
-type SetImportingMeshStateAction = ReturnType<typeof setImportingMeshStateAction>;
-type SetIsInAnnotationViewAction = ReturnType<typeof setIsInAnnotationViewAction>;
-type SetHasOrganizationsAction = ReturnType<typeof setHasOrganizationsAction>;
-export type SetToolAction = ReturnType<typeof setToolAction>;
-export type CycleToolAction = ReturnType<typeof cycleToolAction>;
-type SetThemeAction = ReturnType<typeof setThemeAction>;
-type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
-type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
-type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
-
-export type UiAction =
-  | SetDropzoneModalVisibilityAction
-  | SetVersionRestoreVisibilityAction
-  | SetImportingMeshStateAction
-  | SetBorderOpenStatusAction
-  | SetStoredLayoutsAction
-  | SetIsInAnnotationViewAction
-  | SetHasOrganizationsAction
-  | SetToolAction
-  | CycleToolAction
-  | SetThemeAction
-  | SetDownloadModalVisibilityAction
-  | SetShareModalVisibilityAction
-  | SetBusyBlockingInfoAction;

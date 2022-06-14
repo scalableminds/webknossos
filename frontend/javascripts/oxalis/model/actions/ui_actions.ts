@@ -15,7 +15,7 @@ type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibi
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
 
-export type UiAction = 
+export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
   | SetImportingMeshStateAction

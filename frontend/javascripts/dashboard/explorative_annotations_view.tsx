@@ -128,26 +128,28 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   }
 
-  getCurrentModeState = () =>
-    this.state.shouldShowArchivedTracings
-      ? this.state.archivedModeState
-      : this.state.unarchivedModeState;
+  getCurrentModeState = () => this.getModeState(this.state.shouldShowArchivedTracings);
 
-  setModeState = (modeShape: Partial<TracingModeState>, addToArchivedTracings: boolean) =>
-    this.addToShownTracings(modeShape, addToArchivedTracings);
+  getModeState = (useArchivedTracings: boolean) => {
+    if (useArchivedTracings) {
+      return this.state.archivedModeState;
+    } else {
+      return this.state.unarchivedModeState;
+    }
+  };
 
-  setOppositeModeState = (modeShape: Partial<TracingModeState>, addToArchivedTracings: boolean) =>
-    this.addToShownTracings(modeShape, !addToArchivedTracings);
+  setModeState = (modeShape: Partial<TracingModeState>, useArchivedTracings: boolean) =>
+    this.addToShownTracings(modeShape, useArchivedTracings);
 
-  addToShownTracings = (modeShape: Partial<TracingModeState>, addToArchivedTracings: boolean) => {
-    const mode = addToArchivedTracings ? "archivedModeState" : "unarchivedModeState";
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(prevState: Readonly<State>) => ... Remove this comment to see the full error message
+  addToShownTracings = (modeShape: Partial<TracingModeState>, useArchivedTracings: boolean) => {
+    const mode = useArchivedTracings ? "archivedModeState" : "unarchivedModeState";
     this.setState((prevState) => {
       const newSubState = {
         ...prevState[mode],
         ...modeShape,
       };
       return {
+        ...prevState,
         [mode]: newSubState,
       };
     });
@@ -156,9 +158,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   fetchNextPage = async (pageNumber: number) => {
     // this does not refer to the pagination of antd but to the pagination of querying data from SQL
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
-    const previousTracings = this.getCurrentModeState().tracings;
+    const currentModeState = this.getCurrentModeState();
+    const previousTracings = currentModeState.tracings;
 
-    if (this.getCurrentModeState().loadedAllTracings) {
+    if (currentModeState.loadedAllTracings || pageNumber <= currentModeState.lastLoadedPage) {
       return;
     }
 
@@ -175,7 +178,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
       this.setModeState(
         {
-          tracings: previousTracings.concat(tracings),
+          // If the user archives a tracing, the tracing is already moved to the archived
+          // state. Switching to the archived tab for the first time, will download the annotation
+          // again which is why we need to deduplicate here.
+          tracings: _.uniqBy(previousTracings.concat(tracings), (tracing) => tracing.id),
           lastLoadedPage: pageNumber,
           loadedAllTracings: tracings.length !== pageLength || tracings.length === 0,
         },
@@ -202,37 +208,39 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   finishOrReopenAnnotation = async (type: "finish" | "reopen", tracing: APIAnnotationCompact) => {
+    const shouldFinish = type === "finish";
     const newTracing = annotationToCompact(
-      type === "finish"
+      shouldFinish
         ? await finishAnnotation(tracing.id, tracing.typ)
         : await reOpenAnnotation(tracing.id, tracing.typ),
     );
 
-    if (type === "finish") {
+    if (shouldFinish) {
       Toast.success(messages["annotation.was_finished"]);
     } else {
       Toast.success(messages["annotation.was_re_opened"]);
     }
 
-    const newTracings = this.getCurrentTracings().filter((t) => t.id !== tracing.id);
-    const { shouldShowArchivedTracings } = this.state;
-
+    // If the annotation was finished, update the not finished list
+    // (and vice versa).
+    const newTracings = this.getModeState(!shouldFinish).tracings.filter(
+      (t) => t.id !== tracing.id,
+    );
     this.setModeState(
       {
         tracings: newTracings,
       },
-      shouldShowArchivedTracings,
+      !shouldFinish,
     );
 
-    const existingTracings =
-      type === "finish"
-        ? this.state.archivedModeState.tracings
-        : this.state.unarchivedModeState.tracings;
-    this.setOppositeModeState(
+    // If the annotation was finished, add it to the finished list
+    // (and vice versa).
+    const existingTracings = this.getModeState(shouldFinish).tracings;
+    this.setModeState(
       {
         tracings: [newTracing].concat(existingTracings),
       },
-      shouldShowArchivedTracings,
+      shouldFinish,
     );
   };
 

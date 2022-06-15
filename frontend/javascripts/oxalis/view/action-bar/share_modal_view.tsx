@@ -50,7 +50,9 @@ export function useDatasetSharingToken(dataset: APIDataset) {
 
   const fetchAndSetToken = async () => {
     try {
-      const sharingToken = await getDatasetSharingToken(dataset);
+      const sharingToken = await getDatasetSharingToken(dataset, {
+        doNotInvestigate: true,
+      });
       setDatasetToken(sharingToken);
     } catch (error) {
       console.error(error);

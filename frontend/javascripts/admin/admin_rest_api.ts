@@ -54,6 +54,7 @@ import type {
   ServerTracing,
   TracingType,
   WkConnectDatasetConfig,
+  APICompoundType,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -63,7 +64,6 @@ import type {
   PartialDatasetConfiguration,
   Tracing,
   TraceOrViewCommand,
-  AnnotationType,
   MappingType,
   VolumeTracing,
   UserConfiguration,
@@ -339,13 +339,17 @@ export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promi
 
 // ### Teams
 export async function getTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams");
+  const teams = await Request.receiveJSON("/api/teams", {
+    doNotInvestigate: true,
+  });
   assertResponseLimit(teams);
   return teams;
 }
 
 export async function getEditableTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams?isEditable=true");
+  const teams = await Request.receiveJSON("/api/teams?isEditable=true", {
+    doNotInvestigate: true,
+  });
   assertResponseLimit(teams);
   return teams;
 }
@@ -704,11 +708,25 @@ export function copyAnnotationToUserAccount(
 
 export async function getAnnotationInformation(
   annotationId: string,
-  annotationType: APIAnnotationType,
+  options: RequestOptions = {},
+): Promise<APIAnnotation> {
+  const infoUrl = `/api/annotations/${annotationId}/info?timestamp=${Date.now()}`;
+  const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+
+  // Extract the potential messages property before returning the task to avoid
+  // failing e2e tests in annotations.e2e.ts
+  const { messages: _messages, ...annotation } = annotationWithMessages;
+  return annotation;
+}
+
+export async function getAnnotationCompoundInformation(
+  annotationId: string,
+  annotationType: APICompoundType,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
   const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+
   // Extract the potential messages property before returning the task to avoid
   // failing e2e tests in annotations.e2e.ts
   const { messages: _messages, ...annotation } = annotationWithMessages;
@@ -729,8 +747,8 @@ export function getEmptySandboxAnnotationInformation(
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
-  fallbackLayerName: string | null | undefined,
-  resolutionRestrictions: APIResolutionRestrictions | null | undefined,
+  fallbackLayerName?: string | null | undefined,
+  resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
@@ -1005,19 +1023,18 @@ export async function startExportTiffJob(
   organizationName: string,
   bbox: Vector6,
   layerName: string | null | undefined,
-  tracingId: string | null | undefined,
   annotationId: string | null | undefined,
   annotationType: APIAnnotationType | null | undefined,
+  annotationLayerName: string | null | undefined,
   mappingName: string | null | undefined,
   mappingType: string | null | undefined,
   hideUnmappedIds: boolean | null | undefined,
-  tracingVersion: number | null | undefined = null,
 ): Promise<Array<APIJob>> {
   const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
-  const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
   const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
   const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
-  const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
+  const annotationLayerNameSuffix =
+    annotationLayerName != null ? `&annotationLayerName=${annotationLayerName}` : "";
   const mappingNameSuffix = mappingName != null ? `&mappingName=${mappingName}` : "";
   const mappingTypeSuffix = mappingType != null ? `&mappingType=${mappingType}` : "";
   const hideUnmappedIdsSuffix =
@@ -1025,7 +1042,7 @@ export async function startExportTiffJob(
   return Request.receiveJSON(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
+    )}${layerNameSuffix}${annotationIdSuffix}${annotationTypeSuffix}${annotationLayerNameSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
     {
       method: "POST",
     },
@@ -1748,12 +1765,11 @@ export async function updateOrganization(
 }
 
 export async function isDatasetAccessibleBySwitching(
-  annotationType: AnnotationType,
   commandType: TraceOrViewCommand,
 ): Promise<APIOrganization | null | undefined> {
   if (commandType.type === ControlModeEnum.TRACE) {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?annotationTyp=${annotationType}&annotationId=${commandType.annotationId}`,
+      `/api/auth/accessibleBySwitching?annotationId=${commandType.annotationId}`,
     );
   } else {
     return Request.receiveJSON(

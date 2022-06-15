@@ -29,14 +29,7 @@ import {
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
-import type {
-  Node,
-  UserConfiguration,
-  DatasetConfiguration,
-  TreeMap,
-  AnnotationType,
-  Mapping,
-} from "oxalis/store";
+import type { Node, UserConfiguration, DatasetConfiguration, TreeMap, Mapping } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import window, { location } from "libs/window";
@@ -63,6 +56,9 @@ import messages from "messages";
 import type { ToastStyle } from "libs/toast";
 import update from "immutability-helper";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import { APICompoundType, APICompoundTypeEnum } from "types/api_flow_types";
+import { coalesce } from "libs/utils";
+
 import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
@@ -275,7 +271,7 @@ class TracingApi {
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
         location.href = newTaskUrl;
       } else {
-        await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
+        await this.restart(null, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
@@ -293,7 +289,8 @@ class TracingApi {
    *
    */
   async restart(
-    newAnnotationType: AnnotationType,
+    // Earlier versions used newAnnotationType here.
+    newMaybeCompoundType: APICompoundType | null,
     newAnnotationId: string,
     newControlMode: ControlMode,
   ) {
@@ -301,8 +298,12 @@ class TracingApi {
       throw new Error("Restarting with view option is not supported");
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
+
+    newMaybeCompoundType =
+      newMaybeCompoundType != null ? coalesce(APICompoundTypeEnum, newMaybeCompoundType) : null;
+
     await Model.fetch(
-      newAnnotationType,
+      newMaybeCompoundType,
       {
         annotationId: newAnnotationId,
         // @ts-ignore

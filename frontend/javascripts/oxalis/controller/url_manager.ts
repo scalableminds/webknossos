@@ -13,6 +13,8 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import { validateUrlStateJSON } from "types/validation";
+import { APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
+import { coalesce } from "libs/utils";
 const MAX_UPDATE_INTERVAL = 1000;
 type BaseMeshUrlDescriptor = {
   readonly segmentId: number;
@@ -298,17 +300,32 @@ class UrlManager {
 
 export function updateTypeAndId(
   baseUrl: string,
-  annotationType: string,
+  annotationType: APIAnnotationType,
   annotationId: string,
 ): string {
   // Update the baseUrl with a potentially new annotation id and or tracing type.
   // There are two possible routes (/annotations or /datasets), but the annotation id
   // will only ever be updated for the annotations route as the other route is for
-  // dataset viewing only
-  return baseUrl.replace(
-    /^(.*\/annotations)\/(.*?)\/([^/?]*)(\/?.*)$/,
-    (all, base, type, id, rest) => `${base}/${annotationType}/${annotationId}${rest}`,
+  // dataset viewing only.
+  // Note that for non-compounds (i.e., Explorationals and Tasks), these types won't
+  // appear in the URL. For backwards compatibility old URLs containing Explorational/Task
+  // still work, but they are immediately redirected to the URL version without that part.
+
+  const maybeCompoundType = coalesce(
+    APICompoundTypeEnum,
+    annotationType as unknown as APICompoundTypeEnum,
   );
+  if (maybeCompoundType == null) {
+    return baseUrl.replace(
+      /^(.*\/annotations)\/([^/?]*)(\/?.*)$/,
+      (all, base, id, rest) => `${base}/${annotationId}${rest}`,
+    );
+  } else {
+    return baseUrl.replace(
+      /^(.*\/annotations)\/(.*?)\/([^/?]*)(\/?.*)$/,
+      (all, base, type, id, rest) => `${base}/${maybeCompoundType}/${annotationId}${rest}`,
+    );
+  }
 }
 // encodeURIComponent encodes all characters except [A-Za-z0-9] - _ . ! ~ * ' ( )
 // see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent

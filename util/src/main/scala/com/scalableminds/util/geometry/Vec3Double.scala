@@ -67,6 +67,8 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
   def isStrictlyPositive: Boolean = x > 0 && y > 0 && z > 0
 
   override def toString = s"($x, $y, $z)"
+
+  def toUriLiteral: String = s"$x,$y,$z"
 }
 
 object Vec3Double {
@@ -87,6 +89,13 @@ object Vec3Double {
 
   def fromList(l: List[Double]): Option[Vec3Double] =
     fromArray(l.toArray)
+
+  def fromUriLiteral(s: String): Option[Vec3Double] =
+    try {
+      fromArray(s.trim.split(",").map(java.lang.Double.parseDouble))
+    } catch {
+      case _: NumberFormatException => None
+    }
 
   implicit object Vector3DReads extends Format[Vec3Double] {
     def reads(json: JsValue): JsResult[Vec3Double] = json match {

@@ -233,7 +233,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     if (state === "Active") {
       return (
         <div>
-          <Link to={`/annotations/${typ}/${id}`}>
+          <Link to={`/annotations/${id}`}>
             <PlayCircleOutlined />
             Open
           </Link>

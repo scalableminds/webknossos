@@ -226,8 +226,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
                        dataSetName: String,
                        bbox: String,
                        layerName: Option[String],
-                       tracingId: Option[String],
-                       tracingVersion: Option[String],
+                       annotationLayerName: Option[String],
                        annotationId: Option[String],
                        annotationType: Option[String],
                        hideUnmappedIds: Option[Boolean],
@@ -240,17 +239,18 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
+          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
+            request.identity.loginInfo)
           command = "export_tiff"
-          exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${tracingId.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
+          exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "bbox" -> bbox,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
             "export_file_name" -> exportFileName,
             "layer_name" -> layerName,
-            "volume_tracing_id" -> tracingId,
-            "volume_tracing_version" -> tracingVersion,
+            "user_auth_token" -> userAuthToken.id,
+            "annotation_layer_name" -> annotationLayerName,
             "annotation_id" -> annotationId,
             "annotation_type" -> annotationType,
             "mapping_name" -> mappingName,

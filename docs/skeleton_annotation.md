@@ -18,7 +18,7 @@ webKnossos supports several modes for displaying your dataset & interacting with
 
 #### Orthogonal Mode
 Orthogonal mode displays a dataset with the camera oriented orthogonally to each of the three main axis x, y, z.
-Additionally, a fourth viewport shows the data and skeletons from a 3D perspective.
+Additionally, a fourth viewport shows the data and skeleton from a 3D perspective.
 All camera movements happen along the respective main axis.
 This view is especially useful for viewing your data in the highest possible quality alongside its main imaging axis, typically XY.
 Every single slice of the raw data can be viewed.
@@ -191,7 +191,7 @@ There are two ways for downloading your annotations:
 
 ![Download of skeeleton annotations via ´Download´button in the toolbar.](images/tracing_ui_download_tooolbar.jpeg)
 
-2. If you need more fine-grained control over which trees to download, use the `Download Selected Trees` option. From the `Skeletons` Tab, click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
+2. If you need more fine-grained control over which trees to download, use the `Download Selected Trees` option. From the `Skeleton` Tab, click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
 
 ![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](images/tracing_ui_download.jpeg)
 

@@ -255,7 +255,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
       </div>
     ) : (
       <div>
-        <Link to={`/annotations/Task/${annotation.id}`}>{label}</Link>
+        <Link to={`/annotations/${annotation.id}`}>{label}</Link>
         <br />
         {isAdmin || this.props.isAdminView ? (
           <div>

@@ -63,11 +63,11 @@ const EdgeBufferHelperType = {
   supportsPicking: false,
 };
 /**
- * Creates and manages the WebGL buffers for drawing skeletons (nodes, edges).
- * Skeletons are not recreated on every store change in spite of the functional
+ * Creates and manages the WebGL buffers for drawing trees (nodes, edges).
+ * Trees are not recreated on every store change in spite of the functional
  * react paradigm for performance reasons. Instead we identify more fine granular
  * actions like node creation/deletion/update etc.
- * Skeletons are stored in single, large buffers regardless of which tree they belong to.
+ * Trees are stored in single, large buffers regardless of which skeleton they belong to.
  * Nodes are never deleted but marked as type "INVALID" and not drawn by the shader.
  * @class
  */

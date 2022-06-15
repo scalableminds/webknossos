@@ -227,7 +227,14 @@ export enum APIAnnotationTypeEnum {
   CompoundProject = "CompoundProject",
   CompoundTaskType = "CompoundTaskType",
 }
+export enum APICompoundTypeEnum {
+  CompoundTask = "CompoundTask",
+  CompoundProject = "CompoundProject",
+  CompoundTaskType = "CompoundTaskType",
+}
+
 export type APIAnnotationType = keyof typeof APIAnnotationTypeEnum;
+export type APICompoundType = keyof typeof APICompoundTypeEnum;
 export type APIAnnotationVisibility = "Private" | "Internal" | "Public";
 export enum TracingTypeEnum {
   skeleton = "skeleton",

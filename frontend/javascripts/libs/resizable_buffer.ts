@@ -60,7 +60,6 @@ class ResizableBuffer<T extends TypedArray> {
   }
 
   push(element: Array<number> | TypedArray): void {
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
     this.ensureCapacity();
     const { buffer, elementLength, length } = this;
     buffer.set(element, length);
@@ -126,7 +125,7 @@ class ResizableBuffer<T extends TypedArray> {
     return r;
   }
 
-  ensureCapacity(newCapacity: number | null | undefined): void {
+  ensureCapacity(newCapacity: number | null | undefined = null): void {
     if (newCapacity == null) {
       newCapacity = this.length + this.elementLength;
     }

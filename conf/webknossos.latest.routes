@@ -19,7 +19,7 @@ GET           /auth/token                                                       
 DELETE        /auth/token                                                               controllers.AuthenticationController.deleteToken
 GET           /auth/switch                                                              controllers.AuthenticationController.switchMultiUser(to: String)
 POST          /auth/switchOrganization/:organizationName                                controllers.AuthenticationController.switchOrganization(organizationName: String)
-GET           /auth/accessibleBySwitching                                               controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], dataSetName: Option[String], annotationTyp: Option[String], annotationId: Option[String])
+GET           /auth/accessibleBySwitching                                               controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], dataSetName: Option[String], annotationId: Option[String])
 POST          /auth/sendInvites                                                         controllers.AuthenticationController.sendInvites
 POST          /auth/startResetPassword                                                  controllers.AuthenticationController.handleStartResetPassword
 POST          /auth/changePassword                                                      controllers.AuthenticationController.changePassword
@@ -117,6 +117,7 @@ PATCH         /annotations/:typ/:id/reopen                                      
 PUT           /annotations/:typ/:id/reset                                               controllers.AnnotationController.reset(typ: String, id: String)
 PATCH         /annotations/:typ/:id/transfer                                            controllers.AnnotationController.transfer(typ: String, id: String)
 
+GET           /annotations/:id/info                                                     controllers.AnnotationController.infoWithoutType(id: String, timestamp: Long)
 GET           /annotations/:typ/:id/info                                                controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                          controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
 PATCH         /annotations/:typ/:id/downsample                                          controllers.AnnotationController.downsample(typ: String, id: String, tracingId: String)
@@ -206,7 +207,7 @@ GET           /jobs                                                             
 GET           /jobs/status                                                              controllers.JobsController.status
 POST          /jobs/run/convertToWkw/:organizationName/:dataSetName                     controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String, dataStoreName: String)
 POST          /jobs/run/computeMeshFile/:organizationName/:dataSetName                  controllers.JobsController.runComputeMeshFileJob(organizationName: String, dataSetName: String, layerName: String, mag: String, agglomerateView: Option[String])
-POST          /jobs/run/exportTiff/:organizationName/:dataSetName                       controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
+POST          /jobs/run/exportTiff/:organizationName/:dataSetName                       controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], annotationLayerName: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
 POST          /jobs/run/inferNuclei/:organizationName/:dataSetName                      controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: String, newDatasetName: String)
 POST          /jobs/run/inferNeurons/:organizationName/:dataSetName                     controllers.JobsController.runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: String, bbox: String, newDatasetName: String)
 POST          /jobs/run/globalizeFloodfills/:organizationName/:dataSetName              controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, volumeLayerName: Option[String])

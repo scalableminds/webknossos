@@ -95,7 +95,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
       maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
         ? maybeSegmentationLayer.name
         : null;
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
     const annotation = await createExplorational(dataset, "hybrid", fallbackLayerName);
     trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;

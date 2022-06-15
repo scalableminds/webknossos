@@ -265,7 +265,7 @@ export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
   const tracing = getActiveSegmentationTracing(state);
 
   if (tracing == null) {
-    throw new Error("No volume tracing is available or enabled.");
+    throw new Error("No volume annotation is available or enabled.");
   }
 
   return tracing;

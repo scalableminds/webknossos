@@ -129,7 +129,7 @@ export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTraci
     return Maybe.Just(tracing.volumes[0]);
   }
 
-  throw new Error("Tracing is not of type volume!");
+  throw new Error("Annotation is not of type volume!");
 }
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
@@ -161,7 +161,8 @@ export function __setupOxalis(
           arg, // Match against the URL while ignoring further GET parameters (such as timestamps)
         ) =>
           typeof arg === "string" &&
-          arg.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`),
+          (arg.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`) ||
+            arg.startsWith(`/api/annotations/${ANNOTATION_ID}/info`)),
       ),
     )
     .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));

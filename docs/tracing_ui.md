@@ -80,7 +80,7 @@ In addition to the general layer properties mentioned above, `color` and `segmen
 ![Video: Visualize Machine-Learning Predictions](https://www.youtube.com/watch?v=JZLKB9GfMgQ)
 
 #### Skeleton Annotation Layer
-The skeleton annotation layer contains any skeletons/trees that you add to your dataset. You can quickly toggle the visibility of all skeletons by enabling/disabling this layer.
+The skeleton annotation layer contains any trees that you add to your dataset. You can quickly toggle the visibility of all skeleton annotations by enabling/disabling this layer.
 
 - `Node Radius`: Controls the size property of each node. Large values will render big nodes, small values create tiny nodes. Each node can have a different size. This is useful for annotations where node sizes encode a meaning.
 - `Particle Size`: Controls the minimum node size for all nodes. This will globally override nodes falling below this node radius threshold. Used together with the `Override Node Radius` below. 

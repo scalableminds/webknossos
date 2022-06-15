@@ -151,7 +151,7 @@ function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vect
 // In order to avoid, that too many chunks are computed for one user interaction,
 // we store the amount of requests in a batch per segment.
 const batchCounterPerSegment: Record<number, number> = {};
-const MAXIMUM_BATCH_SIZE = 50;
+const MAXIMUM_BATCH_SIZE = 400;
 
 function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void> {
   yield* call(

@@ -313,9 +313,9 @@ Update an existing tracingstore
 ### `GET  /annotations/:typ/:id/info`
 
 #### Expects
- - In the url: `:typ` – one of `Task`, `Explorative`, `CompoundTask`, `CompoundProject`, `CompoundTaskType`
+ - In the url: `:typ` – one of `Task`, `Explorational`, `CompoundTask`, `CompoundProject`, `CompoundTaskType`
  - In the url: `id`
-   - for `Task` and `Explorative` annotations, `:id` is an annotation id
+   - for `Task` and `Explorational` annotations, `:id` is an annotation id
    - for `CompoundTask` `:id` is a task id
    - for `CompoundProject` `:id` is a project id
    - for `CompoundTaskType` `:id` is a task type id
@@ -386,7 +386,7 @@ Duplicate an annotation (“copy to my account”)
 Edit metadata of an annotation
 
 #### Expects
- - In the url: `:typ` – one of `Task`, `Explorative`
+ - In the url: `:typ` – one of `Task`, `Explorational`
  - In the url: `:id` an annotation id
  - JSON object with optional fields
    - `"name"` `[STRING]` new name for the annotation
@@ -404,7 +404,7 @@ Edit metadata of an annotation
 ### `PATCH /annotations/:typ/:id/finish`
 
 #### Expects
- - In the url: `:typ` – one of `Task`, `Explorative`
+ - In the url: `:typ` – one of `Task`, `Explorational`
  - In the url: `:id` an annotation id
  - GET parameter `timestamp=[INT]` timestamp in milliseconds (time the request is sent)
 
@@ -422,7 +422,7 @@ Edit metadata of an annotation
 ### `PATCH /annotations/:typ/:id/reopen`
 
 #### Expects
- - In the url: `:typ` – one of `Task`, `Explorative`
+ - In the url: `:typ` – one of `Task`, `Explorational`
  - In the url: `:id` an annotation id
 
 #### Returns

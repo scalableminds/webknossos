@@ -284,10 +284,16 @@ function* getAgglomerateSkeletonTracing(
     // @ts-ignore
     if (e.messages != null) {
       // Enhance the error message for agglomerates that are too large
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'message' implicitly has an 'any' type.
-      const agglomerateTooLargeMessages = e.messages.filter((message) =>
-        message.chain != null ? message.chain.includes("too many") : false,
-      );
+      // @ts-ignore
+      const agglomerateTooLargeMessages = e.messages
+        .filter(
+          (message: Message) =>
+            (message.chain != null && message.chain.includes("too many")) ||
+            (message.error != null && message.error.includes("too many")),
+        )
+        // Demote error message to chain message so that it is shown in conjunction with the newly
+        // introduced error (as the chain). Otherwise there would be two toasts.
+        .map((message: Message) => (message.error != null ? { chain: message.error } : message));
 
       if (agglomerateTooLargeMessages.length > 0) {
         throw {

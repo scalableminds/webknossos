@@ -3,11 +3,15 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import type { Dispatch } from "redux";
-import type { APIAnnotation } from "types/api_flow_types";
+import { APIAnnotation, APIAnnotationTypeEnum } from "types/api_flow_types";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
+import {
+  getAnnotationInformation,
+  getAnnotationCompoundInformation,
+  getTracingForAnnotationType,
+} from "admin/admin_rest_api";
 import { location } from "libs/window";
 import InputComponent from "oxalis/view/components/input_component";
 import Request from "libs/request";
@@ -144,7 +148,10 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
     if (selectedProject != null) {
       if (isLocalMerge) {
-        const annotation = await getAnnotationInformation(selectedProject, "CompoundProject");
+        const annotation = await getAnnotationCompoundInformation(
+          selectedProject,
+          APIAnnotationTypeEnum.CompoundProject,
+        );
         this.mergeAnnotationIntoActiveTracing(annotation);
       } else {
         const url =
@@ -161,10 +168,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
     if (selectedExplorativeAnnotation != null) {
       if (isLocalMerge) {
-        const annotation = await getAnnotationInformation(
-          selectedExplorativeAnnotation,
-          "Explorational",
-        );
+        const annotation = await getAnnotationInformation(selectedExplorativeAnnotation);
         this.mergeAnnotationIntoActiveTracing(annotation);
       } else {
         const url =

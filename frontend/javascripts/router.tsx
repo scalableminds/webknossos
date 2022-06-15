@@ -7,8 +7,7 @@ import React from "react";
 import { createBrowserHistory } from "history";
 import _ from "lodash";
 import AcceptInviteView from "admin/auth/accept_invite_view";
-import type { APIUser } from "types/api_flow_types";
-import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
+import { TracingTypeEnum, APICompoundTypeEnum, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
@@ -103,21 +102,18 @@ function PageNotFoundView() {
 
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ContextRouter) => {
-    const annotationType = coalesce(APIAnnotationTypeEnum, match.params.type);
+    const initialMaybeCompoundType =
+      match.params.type != null ? coalesce(APICompoundTypeEnum, match.params.type) : null;
 
-    if (annotationType != null) {
-      return (
-        <TracingLayoutView
-          initialAnnotationType={annotationType}
-          initialCommandType={{
-            type: ControlModeEnum.TRACE,
-            annotationId: match.params.id || "",
-          }}
-        />
-      );
-    }
-
-    return <h3>Invalid annotation URL.</h3>;
+    return (
+      <TracingLayoutView
+        initialMaybeCompoundType={initialMaybeCompoundType}
+        initialCommandType={{
+          type: ControlModeEnum.TRACE,
+          annotationId: match.params.id || "",
+        }}
+      />
+    );
   };
 
   tracingSandbox = ({ match }: ContextRouter) => {
@@ -126,7 +122,7 @@ class ReactRouter extends React.Component<Props> {
     if (tracingType != null) {
       return (
         <TracingLayoutView
-          initialAnnotationType={APIAnnotationTypeEnum.Explorational}
+          initialMaybeCompoundType={null}
           initialCommandType={{
             type: ControlModeEnum.SANDBOX,
             tracingType,
@@ -142,7 +138,7 @@ class ReactRouter extends React.Component<Props> {
 
   tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
-      initialAnnotationType={APIAnnotationTypeEnum.View}
+      initialMaybeCompoundType={null}
       initialCommandType={{
         type: ControlModeEnum.VIEW,
         name: match.params.datasetName || "",
@@ -150,6 +146,17 @@ class ReactRouter extends React.Component<Props> {
       }}
     />
   );
+
+  serverAuthenticationCallback = async ({ match }: ContextRouter) => {
+    try {
+      const annotationInformation = await getAnnotationInformation(match.params.id || "");
+      return annotationInformation.visibility === "Public";
+    } catch (ex) {
+      // Annotation could not be found
+    }
+
+    return false;
+  };
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;
@@ -308,21 +315,25 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/annotations/:type/:id"
-                render={this.tracingView}
-                serverAuthenticationCallback={async ({ match }: ContextRouter) => {
-                  try {
-                    const annotationInformation = await getAnnotationInformation(
-                      match.params.id || "",
-                      coalesce(APIAnnotationTypeEnum, match.params.type) ||
-                        APIAnnotationTypeEnum.Explorational,
-                    );
-                    return annotationInformation.visibility === "Public";
-                  } catch (ex) {
-                    // Annotation could not be found
+                render={({ match }: ContextRouter) => {
+                  const initialMaybeCompoundType =
+                    match.params.type != null
+                      ? coalesce(APICompoundTypeEnum, match.params.type)
+                      : null;
+
+                  if (initialMaybeCompoundType == null) {
+                    return <Redirect to={`/annotations/${match.params.id}`} />;
                   }
 
-                  return false;
+                  return this.tracingView({ match });
                 }}
+                serverAuthenticationCallback={this.serverAuthenticationCallback}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/annotations/:id"
+                render={this.tracingView}
+                serverAuthenticationCallback={this.serverAuthenticationCallback}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}

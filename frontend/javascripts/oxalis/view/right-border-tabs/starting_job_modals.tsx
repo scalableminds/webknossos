@@ -67,7 +67,10 @@ type LayerSelectionProps = {
   fixedLayerName?: string;
 };
 
-function getReadableNameOfVolumeLayer(layer: APIDataLayer, tracing: HybridTracing): string | null {
+export function getReadableNameOfVolumeLayer(
+  layer: APIDataLayer,
+  tracing: HybridTracing,
+): string | null {
   return "tracingId" in layer && layer.tracingId != null
     ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
     : null;

@@ -265,10 +265,19 @@ function* getAgglomerateSkeletonTracing(
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
     if (!("trees" in parsedTracing)) {
-      // This check is only for flow to realize that we have a skeleton tracing
+      // This check is only for typescript to realize that we have a skeleton tracing
       // on our hands.
       throw new Error("Skeleton tracing doesn't contain trees");
     }
+
+    if (parsedTracing.trees.length !== 1) {
+      throw new Error(
+        `Agglomerate skeleton response does not contain exactly one tree, but ${parsedTracing.trees.length} instead.`,
+      );
+    }
+
+    // Make sure the tree is named as expected
+    parsedTracing.trees[0].name = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
 
     return parsedTracing;
   } catch (e) {

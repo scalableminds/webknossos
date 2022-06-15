@@ -61,6 +61,7 @@ export function isTraceTool(activeTool: AnnotationTool): boolean {
 }
 const disabledSkeletonExplanation =
   "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
+const disabledAgglomerateMappingsExplanation = "This dataset does not have agglomerate mappings.";
 
 function _getDisabledInfoWhenVolumeIsDisabled(
   genericDisabledExplanation: string,
@@ -102,6 +103,7 @@ function _getDisabledInfoFromArgs(
   isZoomStepTooHighForBrushing: boolean,
   isZoomStepTooHighForTracing: boolean,
   isZoomStepTooHighForFilling: boolean,
+  hasAgglomerateMappings: boolean,
   genericDisabledExplanation: string,
 ) {
   return {
@@ -142,8 +144,10 @@ function _getDisabledInfoFromArgs(
       explanation: disabledSkeletonExplanation,
     },
     [AnnotationToolEnum.PROOFREAD]: {
-      isDisabled: !hasSkeleton,
-      explanation: disabledSkeletonExplanation,
+      isDisabled: !hasSkeleton || !hasAgglomerateMappings,
+      explanation: !hasSkeleton
+        ? disabledSkeletonExplanation
+        : disabledAgglomerateMappingsExplanation,
     },
   };
 }
@@ -203,11 +207,15 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
   const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(state, AnnotationToolEnum.BRUSH);
   const isZoomStepTooHighForTracing = isZoomStepTooHighFor(state, AnnotationToolEnum.TRACE);
   const isZoomStepTooHighForFilling = isZoomStepTooHighFor(state, AnnotationToolEnum.FILL_CELL);
+  const hasAgglomerateMappings =
+    visibleSegmentationLayer.agglomerates != null &&
+    visibleSegmentationLayer.agglomerates.length > 0;
   return getDisabledInfoFromArgs(
     hasSkeleton,
     isZoomStepTooHighForBrushing,
     isZoomStepTooHighForTracing,
     isZoomStepTooHighForFilling,
+    hasAgglomerateMappings,
     genericDisabledExplanation,
   );
 }

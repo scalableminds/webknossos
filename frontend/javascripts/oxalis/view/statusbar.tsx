@@ -287,7 +287,6 @@ function Infos() {
   useInterval(() => {
     const { avgDownloadSpeedInBytesPerS, accumulatedDownloadedBytes } =
       getGlobalDataConnectionInfo().getStatistics();
-    console.log("updating stats", avgDownloadSpeedInBytesPerS);
     setCurrentBucketDownloadSpeed(avgDownloadSpeedInBytesPerS);
     setTotalDownloadedByteCount(accumulatedDownloadedBytes);
   }, 1500);

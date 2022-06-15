@@ -55,7 +55,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   renderMissingDataBlack:
     "If disabled, missing data will be rendered by using downsampled magnifications.",
   gpuMemoryFactor:
-    "Controls which data magnification is displayed, depending on zoom step and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.",
+    "Controls which data magnification is displayed, depending on zoom value and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.",
   useLegacyBindings:
     "When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.",
   dynamicSpaceDirection:

@@ -489,7 +489,6 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               <DeleteOutlined
                 onClick={allowUpdate ? onDelete : () => {}}
                 style={allowUpdate ? iconStyle : disabledIconStyle}
-                disabled={!allowUpdate}
               />
             </Tooltip>
           </Col>

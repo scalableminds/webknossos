@@ -51,8 +51,8 @@ const VERSION_LIST_PLACEHOLDER = {
 export async function previewVersion(versions?: Versions) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
-  const { annotationType, annotationId } = state.tracing;
-  await api.tracing.restart(annotationType, annotationId, controlMode, versions);
+  const { annotationId } = state.tracing;
+  await api.tracing.restart(null, annotationId, controlMode, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
   const segmentationLayersToReload = [];
 

@@ -8,6 +8,7 @@ import type {
   ServerVolumeTracing,
   ServerTracing,
   ServerEditableMapping,
+  APICompoundType,
 } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import {
@@ -41,6 +42,7 @@ import {
   getUserConfiguration,
   getDatasetViewConfiguration,
   getEditableMapping,
+  getAnnotationCompoundInformation,
 } from "admin/admin_rest_api";
 import {
   initializeAnnotationAction,
@@ -79,7 +81,6 @@ import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import type {
-  AnnotationType,
   DatasetConfiguration,
   DatasetLayerConfiguration,
   TraceOrViewCommand,
@@ -97,10 +98,12 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
+
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
+
 export async function initialize(
-  annotationType: AnnotationType,
+  initialMaybeCompoundType: APICompoundType | null,
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
   versions?: Versions,
@@ -120,7 +123,10 @@ export async function initialize(
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
-    annotation = await getAnnotationInformation(annotationId, annotationType);
+    annotation =
+      initialMaybeCompoundType != null
+        ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
+        : await getAnnotationInformation(annotationId);
     datasetId = {
       name: annotation.dataSetName,
       owningOrganization: annotation.organization,

@@ -169,7 +169,10 @@ class VolumeTracingController @Inject()(
                 fromTask: Option[Boolean],
                 minResolution: Option[Int],
                 maxResolution: Option[Int],
-                downsample: Option[Boolean]): Action[AnyContent] = Action.async { implicit request =>
+                downsample: Option[Boolean],
+                editPosition: Option[String],
+                editRotation: Option[String],
+                boundingBox: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
@@ -178,11 +181,17 @@ class VolumeTracingController @Inject()(
             _ <- bool2Fox(!tracing.mappingIsEditable.getOrElse(false)) ?~> "Duplicate is not yet implemented for editable mapping annotations"
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
+            editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
+            editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
+            boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
             (newId, newTracing) <- tracingService.duplicate(tracingId,
                                                             tracing,
                                                             fromTask.getOrElse(false),
                                                             dataSetBoundingBox,
-                                                            resolutionRestrictions)
+                                                            resolutionRestrictions,
+                                                            editPositionParsed,
+                                                            editRotationParsed,
+                                                            boundingBoxParsed)
             _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
           } yield Ok(Json.toJson(newId))
         }
@@ -238,7 +247,7 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
           existingMags = tracing.resolutions.map(vec3IntFromProto)
         } yield
           Ok(
@@ -256,10 +265,10 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
         } yield
           Ok(
@@ -275,10 +284,10 @@ class VolumeTracingController @Inject()(
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
           cubeLength = DataLayer.bucketLength
@@ -336,10 +345,10 @@ class VolumeTracingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       for {
-        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
-        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName)
+        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName) ~> 404
 
         omeNgffHeader = OmeNgffHeader.fromDataLayerName(tracingId,
                                                         dataSourceScale = dataSource.scale,
@@ -354,10 +363,10 @@ class VolumeTracingController @Inject()(
         val combinedToken = urlOrHeaderToken(token, request)
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), combinedToken) {
           for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
             existingMags = tracing.resolutions.map(vec3IntFromProto)
-            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
             _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
             (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404

@@ -203,6 +203,7 @@ const defaultState: OxalisState = {
     showDropzoneModal: false,
     showVersionRestore: false,
     showDownloadModal: false,
+    showPythonClientModal: false,
     showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,

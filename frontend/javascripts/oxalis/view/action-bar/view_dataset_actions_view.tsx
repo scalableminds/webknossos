@@ -4,7 +4,10 @@ import { ShareAltOutlined, DownOutlined, CameraOutlined } from "@ant-design/icon
 import ButtonComponent from "oxalis/view/components/button_component";
 import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import {
+  setPythonClientModalVisibilityAction,
+  setShareModalVisibilityAction,
+} from "oxalis/model/actions/ui_actions";
 import Store from "oxalis/store";
 
 type Props = {

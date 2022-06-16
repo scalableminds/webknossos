@@ -22,11 +22,15 @@ export const screenshotMenuItem = (
   </Menu.Item>
 );
 export default function ViewDatasetActionsView(props: Props) {
+  const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
   const isPythonClientModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showPythonClientModal,
   );
   const shareDatasetModal = (
-    <ShareViewDatasetModalView onOk={() => Store.dispatch(setShareModalVisibilityAction(false))} />
+    <ShareViewDatasetModalView
+      isVisible={isShareModalOpen}
+      onOk={() => Store.dispatch(setShareModalVisibilityAction(false))}
+    />
   );
   const pythonClientModal = (
     <PythonClientModalView

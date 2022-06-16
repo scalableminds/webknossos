@@ -2,6 +2,7 @@ import { CopyOutlined } from "@ant-design/icons";
 import { Modal, Input, Button, Row, Col } from "antd";
 import { useSelector } from "react-redux";
 import React from "react";
+import { makeComponentLazy } from "libs/react_helpers";
 import messages from "messages";
 import { OxalisState } from "oxalis/store";
 import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_modal_view";
@@ -9,19 +10,19 @@ import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_moda
 const sharingActiveNode = false;
 
 type Props = {
+  isVisible: boolean;
   onOk: () => any;
 };
 
-export default function ShareViewDatasetModalView(props: Props) {
-  const { onOk } = props;
+function _ShareViewDatasetModalView(props: Props) {
+  const { isVisible, onOk } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
   const sharingToken = useDatasetSharingToken(dataset);
   const url = getUrl(sharingToken, !dataset.isPublic);
   return (
     <Modal
       title="Share this Dataset"
-      visible={isShareModalOpen}
+      visible={isVisible}
       width={800}
       okText="Ok"
       onOk={onOk}
@@ -71,3 +72,6 @@ export default function ShareViewDatasetModalView(props: Props) {
     </Modal>
   );
 }
+
+const ShareViewDatasetModalView = makeComponentLazy(_ShareViewDatasetModalView);
+export default ShareViewDatasetModalView;

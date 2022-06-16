@@ -207,8 +207,7 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
   const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(state, AnnotationToolEnum.BRUSH);
   const isZoomStepTooHighForTracing = isZoomStepTooHighFor(state, AnnotationToolEnum.TRACE);
   const isZoomStepTooHighForFilling = isZoomStepTooHighFor(state, AnnotationToolEnum.FILL_CELL);
-  const hasAgglomerateMappings =
-    visibleSegmentationLayer.agglomerates?.length > 0;
+  const hasAgglomerateMappings = visibleSegmentationLayer.agglomerates?.length > 0;
   return getDisabledInfoFromArgs(
     hasSkeleton,
     isZoomStepTooHighForBrushing,

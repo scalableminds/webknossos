@@ -288,8 +288,7 @@ function* getAgglomerateSkeletonTracing(
       const agglomerateTooLargeMessages = e.messages
         .filter(
           (message: Message) =>
-            (message.chain?.includes("too many")) ||
-            (message.error?.includes("too many")),
+            message.chain?.includes("too many") || message.error?.includes("too many"),
         )
         // Demote error message to chain message so that it is shown in conjunction with the newly
         // introduced error (as the chain). Otherwise there would be two toasts.

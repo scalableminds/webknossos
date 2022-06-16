@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 - Added a warning for when the resolution in the XY viewport on z=1-downsampled datasets becomes too low, explaining the problem and how to mitigate it. [#6255](https://github.com/scalableminds/webknossos/pull/6255)
+- Added a proofreading tool which can be used to edit agglomerate mappings. After activating an agglomerate mapping the proofreading tool can be selected. While the tool is active, agglomerates can be clicked to load their agglomerate skeletons. Use the context menu to delete or create edges for those agglomerate skeletons to split or merge agglomerates. The changes will immediately reflect in the segmentation and meshes. [#6195](https://github.com/scalableminds/webknossos/pull/6195)
 
 ### Changed
 

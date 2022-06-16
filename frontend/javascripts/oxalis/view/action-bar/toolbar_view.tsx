@@ -514,9 +514,7 @@ export default function ToolbarView() {
   const hasAgglomerateMappings = useSelector((state: OxalisState) => {
     const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
     return (
-      visibleSegmentationLayer != null &&
-      visibleSegmentationLayer.agglomerates != null &&
-      visibleSegmentationLayer.agglomerates.length > 0
+      visibleSegmentationLayer?.agglomerates?.length > 0
     );
   });
   const isVolumeModificationAllowed = useSelector(

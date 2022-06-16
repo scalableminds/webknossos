@@ -380,7 +380,7 @@ function* maybeLoadIsosurface(
   if (isosurfaceExtraInfo.useDataStore != null) {
     // ... except if the caller specified whether to use the data store ...
     useDataStore = isosurfaceExtraInfo.useDataStore;
-  } else if (volumeTracing != null && volumeTracing.mappingIsEditable) {
+  } else if (volumeTracing?.mappingIsEditable) {
     // ... or if an editable mapping is active.
     useDataStore = false;
   }

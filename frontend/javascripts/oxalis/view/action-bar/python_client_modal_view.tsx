@@ -1,6 +1,6 @@
 import { Divider, Modal, Row, Typography } from "antd";
 import React from "react";
-import { useFetch } from "libs/react_helpers";
+import { useFetch, makeComponentLazy } from "libs/react_helpers";
 import Toast from "libs/toast";
 import messages from "messages";
 import { getAuthToken } from "admin/admin_rest_api";
@@ -9,14 +9,12 @@ import type { OxalisState } from "oxalis/store";
 import { CopyableCodeSnippet, MoreInfoHint } from "./download_modal_view";
 const { Paragraph, Text } = Typography;
 type Props = {
+  isVisible: boolean;
   onClose: () => void;
 };
 
-export default function PythonClientModalView(props: Props): JSX.Element {
-  const { onClose } = props;
-  const isPythonClientModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showPythonClientModal,
-  );
+function _PythonClientModalView(props: Props): JSX.Element {
+  const { isVisible, onClose } = props;
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
@@ -64,7 +62,7 @@ dataset = wk.Dataset.download(
   return (
     <Modal
       title="Python Client"
-      visible={isPythonClientModalOpen}
+      visible={isVisible}
       width={600}
       footer={null}
       onCancel={onClose}
@@ -105,3 +103,6 @@ dataset = wk.Dataset.download(
     </Modal>
   );
 }
+
+const PythonClientModalView = makeComponentLazy(_PythonClientModalView);
+export default PythonClientModalView;

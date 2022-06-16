@@ -15,7 +15,7 @@ type Props = {
 export default function PythonClientModalView(props: Props): JSX.Element {
   const { onClose } = props;
   const isPythonClientModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showPythonClientModal
+    (state: OxalisState) => state.uiInformation.showPythonClientModal,
   );
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const dataset = useSelector((state: OxalisState) => state.dataset);

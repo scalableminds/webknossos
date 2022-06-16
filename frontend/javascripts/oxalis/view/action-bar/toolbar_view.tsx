@@ -513,7 +513,7 @@ export default function ToolbarView() {
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const hasAgglomerateMappings = useSelector((state: OxalisState) => {
     const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-    return visibleSegmentationLayer?.agglomerates?.length > 0;
+    return (visibleSegmentationLayer?.agglomerates?.length ?? 0) > 0;
   });
   const isVolumeModificationAllowed = useSelector(
     (state: OxalisState) => !hasEditableMapping(state),

@@ -164,7 +164,6 @@ export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
 export type MutableTreeMap = Record<number, MutableTree>;
 export type TreeMap = Record<number, Tree>;
-export type AnnotationType = APIAnnotationType;
 export type AnnotationVisibility = APIAnnotationVisibility;
 export type RestrictionsAndSettings = Restrictions & Settings;
 export type Annotation = {
@@ -176,11 +175,11 @@ export type Annotation = {
   readonly description: string;
   readonly name: string;
   readonly tracingStore: APITracingStore;
-  readonly annotationType: AnnotationType;
+  readonly annotationType: APIAnnotationType;
   // This property contains back-end stored mesh objects for which
   // the support is about to end. See webknossos/#5633.
   readonly meshes: Array<MeshMetaData>;
-  readonly user: APIUserBase | null | undefined;
+  readonly owner: APIUserBase | null | undefined;
 };
 type TracingBase = {
   readonly createdTimestamp: number;

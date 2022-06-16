@@ -29,14 +29,7 @@ import {
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
-import type {
-  Node,
-  UserConfiguration,
-  DatasetConfiguration,
-  TreeMap,
-  AnnotationType,
-  Mapping,
-} from "oxalis/store";
+import type { Node, UserConfiguration, DatasetConfiguration, TreeMap, Mapping } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import window, { location } from "libs/window";
@@ -63,6 +56,9 @@ import messages from "messages";
 import type { ToastStyle } from "libs/toast";
 import update from "immutability-helper";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import { APICompoundType, APICompoundTypeEnum } from "types/api_flow_types";
+import { coalesce } from "libs/utils";
+
 import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
@@ -75,7 +71,7 @@ function makeTreeBackwardsCompatible(tree: TreeMap) {
   });
 }
 /**
- * All tracing related API methods. This is the newest version of the API (version 2).
+ * All annotation related API methods. This is the newest version of the API (version 2).
  * @version 2
  * @class
  */
@@ -275,7 +271,7 @@ class TracingApi {
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
         location.href = newTaskUrl;
       } else {
-        await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
+        await this.restart(null, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
@@ -293,7 +289,8 @@ class TracingApi {
    *
    */
   async restart(
-    newAnnotationType: AnnotationType,
+    // Earlier versions used newAnnotationType here.
+    newMaybeCompoundType: APICompoundType | null,
     newAnnotationId: string,
     newControlMode: ControlMode,
   ) {
@@ -301,8 +298,12 @@ class TracingApi {
       throw new Error("Restarting with view option is not supported");
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
+
+    newMaybeCompoundType =
+      newMaybeCompoundType != null ? coalesce(APICompoundTypeEnum, newMaybeCompoundType) : null;
+
     await Model.fetch(
-      newAnnotationType,
+      newMaybeCompoundType,
       {
         annotationId: newAnnotationId,
         // @ts-ignore
@@ -316,7 +317,7 @@ class TracingApi {
   }
 
   /**
-   * Reload tracing by reloading the entire page.
+   * Reload annotation by reloading the entire page.
    *
    * @example
    * api.tracing.hardReload()
@@ -326,7 +327,7 @@ class TracingApi {
     location.reload();
   }
 
-  //  SKELETONTRACING API
+  //  SKELETONANNOTATION API
 
   /**
    * Increases the node radius of the given node by multiplying it with 1.05^delta.
@@ -458,11 +459,11 @@ class TracingApi {
     return getPosition(Store.getState().flycam);
   }
 
-  //  VOLUMETRACING API
+  //  VOLUMEANNOTATION API
 
   /**
    * Returns the id of the current active segment.
-   * _Volume tracing only!_
+   * _Volume annotation only!_
    */
   getActiveCellId(): number {
     const tracing = assertVolume(Store.getState());
@@ -472,7 +473,7 @@ class TracingApi {
   /**
    * Sets the active segment given a segment id.
    * If a segment with the given id doesn't exist, it is created.
-   * _Volume tracing only!_
+   * _Volume annotation only!_
    */
   setActiveCell(id: number) {
     assertVolume(Store.getState());
@@ -530,15 +531,15 @@ class DataApi {
   }
 
   /**
-   * Returns the names of all available layers of the current tracing.
+   * Returns the names of all available layers of the current annotation.
    */
   getLayerNames(): Array<string> {
     return _.map(this.model.dataLayers, "name");
   }
 
   /**
-   * Returns the name of the volume tracing layer.
-   * _Volume tracing only!_
+   * Returns the name of the volume annotation layer.
+   * _Volume annotation only!_
    */
   getVolumeTracingLayerName(): string {
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
@@ -631,7 +632,7 @@ class DataApi {
   }
 
   /**
-   * Downloads a cuboid of raw data from a dataset (not tracing) layer. A new window is opened for the download -
+   * Downloads a cuboid of raw data from a dataset (not annotation) layer. A new window is opened for the download -
    * if that is not the case, please check your pop-up blocker.
    *
    * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.
@@ -663,7 +664,7 @@ class DataApi {
    * the data immediately, but instead returns a promise (since the data might
    * have to be downloaded first).
    *
-   * _Volume tracing only!_
+   * _Volume annotation only!_
    *
    * @example // Set the segmentation id for some voxels to 1337
    * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
@@ -680,7 +681,7 @@ class DataApi {
   }
 
   /**
-   * Returns the dataset's setting for the tracing view.
+   * Returns the dataset's setting for the annotation view.
    * @param key - One of the following keys:
      - segmentationOpacity
      - fourBit
@@ -698,7 +699,7 @@ class DataApi {
   }
 
   /**
-   * Set the dataset's setting for the tracing view.
+   * Set the dataset's setting for the annotation view.
    * @param key - Same keys as for getConfiguration()
    *
    * @example
@@ -720,7 +721,7 @@ class UserApi {
   }
 
   /**
-  * Returns the user's setting for the tracing view.
+  * Returns the user's setting for the annotation view.
   * @param key - One of the following keys:
     - moveValue
     - moveValue3d
@@ -759,7 +760,7 @@ class UserApi {
   }
 
   /**
-   * Set the user's setting for the tracing view.
+   * Set the user's setting for the annotation view.
    * @param key - Same keys as for getConfiguration()
    *
    * @example

@@ -323,16 +323,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     // volume tracings
     const fallbackLayer =
       sandboxTracing.volumes.length > 0 ? sandboxTracing.volumes[0].fallbackLayer : null;
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 4-5 arguments, but got 3.
     const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
     UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
-    await api.tracing.restart(
-      newAnnotation.typ,
-      newAnnotation.id,
-      ControlModeEnum.TRACE,
-      undefined,
-      true,
-    );
+    await api.tracing.restart(null, newAnnotation.id, ControlModeEnum.TRACE, undefined, true);
     const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxTracing);
     const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
     // Update the sandbox tracing with the new tracingId and createdTimestamp

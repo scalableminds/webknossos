@@ -189,7 +189,10 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
 
   const alertEffect = saga.next().value;
   t.is(alertEffect.payload.fn, alert);
-  t.true(saga.next().done);
+
+  saga.next(); // sleep
+
+  t.throws(() => saga.next());
 });
 test("SaveSaga should send update actions right away and try to reach a state where all updates are saved", (t) => {
   const updateActions = [[UpdateActions.createEdge(1, 0, 1)], [UpdateActions.createEdge(1, 1, 2)]];

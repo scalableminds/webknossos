@@ -73,7 +73,6 @@ type State = {
   searchQuery: string;
   tags: Array<string>;
   isLoading: boolean;
-  filteredAnnotations: APIAnnotationCompact[];
 };
 type PartialState = Pick<State, "searchQuery" | "shouldShowArchivedTracings">;
 const persistence = new Persistence<PartialState>(
@@ -110,9 +109,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     },
     searchQuery: "",
     tags: [],
-    filteredAnnotations: [],
     isLoading: false,
   };
+
+  // This attribute is not part of the state, since it is only set in the
+  // summary-prop of <Table /> which is called by antd on render.
+  // Other than that, the value should not be changed. It can be used to
+  // retrieve the items of the currently rendered page (while respecting
+  // the active search and filters).
+  currentPageData: Readonly<APIAnnotationCompact[]> = [];
 
   componentDidMount() {
     this.setState(persistence.load(this.props.history) as PartialState, () => {
@@ -342,7 +347,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   archiveAll = () => {
-    const selectedAnnotations = this.state.filteredAnnotations.filter(
+    const selectedAnnotations = this.currentPageData.filter(
       (annotation: APIAnnotationCompact) => annotation.owner?.id === this.props.activeUser.id,
     );
 
@@ -354,7 +359,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
 
     Modal.confirm({
-      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that this only affects the annotations for which you are the owner.`,
+      content: `Are you sure you want to archive ${selectedAnnotations.length} explorative annotations matching the current search query / tags? Note that annotations that you don't own are ignored.`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map((t) => t.id);
         const data = await finishAllAnnotations(selectedAnnotationIds);
@@ -450,11 +455,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // Note, this method should only be used to pass tracings
     // to the antd table. Antd itself can apply additional filters
     // (e.g., filtering by owner in the column header).
-    // Use `this.state.filteredAnnotations` if you need all displayed
-    // items.
+    // Use `this.currentPageData` if you need all currently visible
+    // items of the active page.
     return Utils.filterWithSearchQueryAND(
       this.getCurrentTracings(),
-      ["id", "name", "modified", "tags"],
+      ["id", "name", "modified", "tags", "owner"],
       `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
     );
   }
@@ -560,8 +565,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         scroll={{
           x: "max-content",
         }}
-        onChange={(_pagination, _filters, _sorter, extra) => {
-          this.setState({ filteredAnnotations: extra.currentDataSource });
+        summary={(currentPageData) => {
+          // See this issue for context:
+          // https://github.com/ant-design/ant-design/issues/24022#issuecomment-1050070509
+          // Currently, there is no other way to easily get the items which are rendered by
+          // the table (while respecting the active filters).
+          // Using <Table onChange={...} /> is not a solution. See this explanation:
+          // https://github.com/ant-design/ant-design/issues/24022#issuecomment-691842572
+          this.currentPageData = currentPageData;
+          return null;
         }}
         locale={{
           emptyText: (

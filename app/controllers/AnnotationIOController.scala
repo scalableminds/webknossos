@@ -286,9 +286,6 @@ Expects:
       new ApiResponse(code = 400, message = badRequestLabel)
     ))
   def download(
-      @ApiParam(value =
-                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
-                example = "Explorational") typ: String,
       @ApiParam(
         value =
           "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
@@ -297,9 +294,11 @@ Expects:
       volumeVersion: Option[Long],
       skipVolumeData: Option[Boolean]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      logger.trace(s"Requested download for annotation: $typ/$id")
+      logger.trace(s"Requested download for annotation: $id")
       for {
-        identifier <- AnnotationIdentifier.parse(typ, id)
+        annotation <- provider.provideAnnotation(id, request.identity)
+        identifier <- AnnotationIdentifier.fromAnnotation(annotation)
+        typ = identifier.annotationType.toString     
         _ = request.identity.foreach(user => analyticsService.track(DownloadAnnotationEvent(user, id, typ)))
         result <- identifier.annotationType match {
           case AnnotationType.View            => Fox.failure("Cannot download View annotation")
@@ -315,6 +314,34 @@ Expects:
                                   volumeVersion,
                                   skipVolumeData.getOrElse(false))
         }
+      } yield result
+    }
+
+  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownload")
+  @ApiResponses(
+    Array(
+      new ApiResponse(
+        code = 200,
+        message =
+          "NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip"
+      ),
+      new ApiResponse(code = 400, message = badRequestLabel)
+    ))
+  def downloadDeprecated(
+      @ApiParam(value =
+                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
+                example = "Explorational") typ: String,
+      @ApiParam(
+        value =
+          "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
+      id: String,
+      skeletonVersion: Option[Long],
+      volumeVersion: Option[Long],
+      skipVolumeData: Option[Boolean]): Action[AnyContent] =
+    sil.UserAwareAction.async { implicit request =>
+      logger.trace(s"Requested download for annotation: $typ/$id")
+      for {
+        result <- download(id, skeletonVersion, volumeVersion, skipVolumeData)(request)
       } yield result
     }
 

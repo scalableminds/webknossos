@@ -21,4 +21,9 @@ object AnnotationIdentifier extends FoxImplicits {
       typ <- AnnotationType.fromString(typ) ?~> ("Invalid AnnotationType: " + typ)
     } yield AnnotationIdentifier(typ, identifier)
 
+  def fromAnnotation(annotation: Annotation)(implicit ec: ExecutionContext): Fox[AnnotationIdentifier] =
+    for {
+      typ <- AnnotationType.fromString(annotation.typ.toString)
+      id = annotation._id
+    } yield AnnotationIdentifier(typ, id)
 }

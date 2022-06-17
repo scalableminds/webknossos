@@ -72,9 +72,6 @@ class AnnotationController @Inject()(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
           new ApiResponse(code = 400, message = badRequestLabel)))
   def info(
-      @ApiParam(value =
-                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
-                example = "Explorational") typ: String,
       @ApiParam(
         value =
           "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
@@ -85,11 +82,11 @@ class AnnotationController @Inject()(
       val notFoundMessage =
         if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
       for {
-        annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> notFoundMessage ~> NOT_FOUND
+        annotation <- provider.provideAnnotation(id, request.identity) ?~> notFoundMessage ~> NOT_FOUND
         _ <- bool2Fox(annotation.state != Cancelled) ?~> "annotation.cancelled"
-        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        restrictions <- provider.restrictionsFor(annotation.typ.toString, id) ?~> "restrictions.notFound" ~> NOT_FOUND
         _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        typedTyp <- AnnotationType.fromString(typ).toFox ?~> "annotationType.notFound" ~> NOT_FOUND
+        typedTyp = annotation.typ
         js <- annotationService
           .publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
         _ <- Fox.runOptional(request.identity) { user =>
@@ -105,24 +102,27 @@ class AnnotationController @Inject()(
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
-  def infoWithoutType(annotationId: String, timestamp: Long): Action[AnyContent] =
-    sil.UserAwareAction.async { implicit request =>
+  @ApiOperation(value = "Information about an annotation", nickname = "annotationInfo")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
+          new ApiResponse(code = 400, message = badRequestLabel)))
+  def infoDeprecated(
+      @ApiParam(value =
+                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
+                example = "Explorational") typ: String,
+      @ApiParam(
+        value =
+          "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
+      id: String,
+      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)", required = true) timestamp: Long)
+    : Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    log() {
       for {
-        annotationIdValidated <- ObjectId.parse(annotationId)
-        annotation <- annotationDAO.findOne(annotationIdValidated) ?~> "annotation.notFound"
-        typ = if (annotation._task.isEmpty) AnnotationType.Explorational else AnnotationType.Task
-        restrictions <- provider.restrictionsFor(typ.toString, annotationId) ?~> "restrictions.notFound" ~> NOT_FOUND
-        _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        js <- annotationService.publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
-        _ <- Fox.runOptional(request.identity) { user =>
-          timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
-        }
-        _ = request.identity.foreach { user =>
-          analyticsService.track(OpenAnnotationEvent(user, annotation))
-        }
-      } yield Ok(js)
+        result <- info(id, timestamp)(request)
+      } yield result
+      
     }
+  }
 
   @ApiOperation(hidden = true, value = "")
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =

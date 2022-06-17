@@ -50,7 +50,7 @@ test.beforeEach(async (t) => {
 test.afterEach(async (t) => {
   // Saving after each test and checking that the root saga didn't crash,
   // ensures that each test is cleanly exited. Without it weird output can
-  // occur (e.g., a promise gets resolved which interferes with the next text).
+  // occur (e.g., a promise gets resolved which interferes with the next test).
   await t.context.api.tracing.save();
   t.false(hasRootSagaCrashed());
 });

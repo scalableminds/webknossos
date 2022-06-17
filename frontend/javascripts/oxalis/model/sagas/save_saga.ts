@@ -106,6 +106,8 @@ import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_a
 import _ from "lodash";
 import { sleep } from "libs/utils";
 
+const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
+
 // This function is needed so that Flow is satisfied
 // with how a mere promise is awaited within a saga.
 function unpackPromise<T>(p: Promise<T>): Promise<T> {
@@ -899,20 +901,22 @@ export function* sendRequestToServer(
           [ErrorHandling, ErrorHandling.notify],
           new Error("Saving failed due to '409' status code"),
         );
-        if (didShowFailedSimultaneousTracingError) {
+        if (!didShowFailedSimultaneousTracingError) {
           // If the saving fails for one tracing (e.g., skeleton), it can also
           // fail for another tracing (e.g., volume). The message simply tells the
           // user that the saving in general failed. So, there is no sense in showing
           // the message multiple times.
-          // Also, there is a bug (which is hard to reproduce) where infinite error
-          // toasts appear here, even though the control flow should abort the saga.
-          // For both reasons, this boolean checks is in place.
-          return;
+          yield* call(alert, messages["save.failed_simultaneous_tracing"]);
+          location.reload();
+          didShowFailedSimultaneousTracingError = true;
         }
-        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
-        location.reload();
-        didShowFailedSimultaneousTracingError = true;
-        return;
+
+        // Wait "forever" to avoid that the caller initiates other save calls afterwards (e.g.,
+        // can happen if the caller tries to force-flush the save queue).
+        // The reason we don't throw an error immediately is that this would immediately
+        // crash all sagas (including saving other tracings).
+        yield* call(sleep, ONE_YEAR_MS);
+        throw new Error("Saving failed due to conflict.");
       }
 
       yield* race({

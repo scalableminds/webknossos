@@ -194,6 +194,8 @@ export function __setupOxalis(
     );
   Request.receiveJSON.returns(Promise.resolve({}));
   Request.sendJSONReceiveJSON.returns(Promise.resolve({}));
+
+  // Make calls to updateLastTaskTypeIdOfUser() pass.
   Request.sendJSONReceiveJSON
     .withArgs(sinon.match((arg) => arg == `/api/users/${dummyUser.id}/taskTypeId`))
     .returns(Promise.resolve(dummyUser));

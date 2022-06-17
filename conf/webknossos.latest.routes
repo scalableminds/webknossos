@@ -118,19 +118,18 @@ PUT           /annotations/:typ/:id/reset                                       
 PATCH         /annotations/:typ/:id/transfer                                            controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:id/info                                                     controllers.AnnotationController.info(id: String, timestamp: Long)
-# PATCH         /annotations/:id/makeHybrid                                               controllers.AnnotationController.makeHybrid(id: String, fallbackLayerName: Option[String])
-# PATCH         /annotations/:id/downsample                                               controllers.AnnotationController.downsample(id: String, tracingId: String)
-# PATCH         /annotations/:id/addAnnotationLayer                                       controllers.AnnotationController.addAnnotationLayer(id: String)
-# DELETE        /annotations/:id                                                          controllers.AnnotationController.cancel(id: String)
-# POST          /annotations/:id/merge/:mergedTyp/:mergedId                               controllers.AnnotationController.merge(id: String, mergedTyp: String, mergedId: String)
+PATCH         /annotations/:id/makeHybrid                                               controllers.AnnotationController.makeHybrid(id: String, fallbackLayerName: Option[String])
+PATCH         /annotations/:id/downsample                                               controllers.AnnotationController.downsample(id: String, tracingId: String)
+PATCH         /annotations/:id/addAnnotationLayer                                       controllers.AnnotationController.addAnnotationLayer(id: String)
+DELETE        /annotations/:id                                                          controllers.AnnotationController.cancel(id: String)
+POST          /annotations/:id/merge/:mergedTyp/:mergedId                               controllers.AnnotationController.merge(id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:id/download                                                 controllers.AnnotationIOController.download(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
 
 GET           /annotations/:typ/:id/info                                                controllers.AnnotationController.infoDeprecated(typ: String, id: String, timestamp: Long)
-# PATCH         /annotations/:typ/:id/makeHybrid                                          controllers.AnnotationController.makeHybridDeprecated(typ: String, id: String, fallbackLayerName: Option[String])
-# PATCH         /annotations/:typ/:id/downsample                                          controllers.AnnotationController.downsampleDeprecated(typ: String, id: String, tracingId: String)
-# PATCH         /annotations/:typ/:id/addAnnotationLayer                                  controllers.AnnotationController.addAnnotationLayerDeprecated(typ: String, id: String)
-# DELETE        /annotations/:typ/:id                                                     controllers.AnnotationController.cancelDeprecated(typ: String, id: String)
-# POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                          controllers.AnnotationController.mergeDeprecated(typ: String, id: String, mergedTyp: String, mergedId: String)
+PATCH         /annotations/:typ/:id/makeHybrid                                          controllers.AnnotationController.makeHybridDeprecated(typ: String, id: String, fallbackLayerName: Option[String])
+PATCH         /annotations/:typ/:id/downsample                                          controllers.AnnotationController.downsampleDeprecated(typ: String, id: String, tracingId: String)
+PATCH         /annotations/:typ/:id/addAnnotationLayer                                  controllers.AnnotationController.addAnnotationLayerDeprecated(typ: String, id: String)
+POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                          controllers.AnnotationController.mergeDeprecated(typ: String, id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:typ/:id/download                                            controllers.AnnotationIOController.downloadDeprecated(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
 
 

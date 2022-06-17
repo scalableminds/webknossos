@@ -68,7 +68,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
+        result <- annotationController.merge(id, mergedTyp, mergedId)(request)
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
     }
@@ -321,7 +321,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.makeHybrid(typ, id, None)(request)
+        result <- annotationController.makeHybrid(id, None)(request)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
   }
@@ -330,7 +330,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
+        result <- annotationController.merge(id, mergedTyp, mergedId)(request)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
     }

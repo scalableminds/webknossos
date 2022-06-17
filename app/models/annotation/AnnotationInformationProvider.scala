@@ -27,7 +27,7 @@ class AnnotationInformationProvider @Inject()(
       annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
     } yield annotation
 
-    def provideAnnotation(id: String, userOpt: Option[User])(
+  def provideAnnotation(id: String, userOpt: Option[User])(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationIdValidated <- ObjectId.parse(id)
@@ -36,6 +36,9 @@ class AnnotationInformationProvider @Inject()(
       annotationIdentifier = AnnotationIdentifier(typ, annotationIdValidated)
       annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
     } yield annotation
+  
+  def provideAnnotation(id: String, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
+    provideAnnotation(id, Some(user))
 
   def provideAnnotation(annotationIdentifier: AnnotationIdentifier, userOpt: Option[User])(
       implicit ctx: DBAccessContext): Fox[Annotation] =

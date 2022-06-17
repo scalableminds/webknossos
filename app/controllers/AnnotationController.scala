@@ -125,10 +125,10 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def merge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
+  def merge(id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        annotationA <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
+        annotationA <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
         annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity) ~> NOT_FOUND
         mergedAnnotation <- annotationMerger.mergeTwo(annotationA, annotationB, persistTracing = true, request.identity) ?~> "annotation.merge.failed"
         restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
@@ -136,6 +136,14 @@ class AnnotationController @Inject()(
         _ <- annotationDAO.insertOne(mergedAnnotation)
         js <- annotationService.publicWrites(mergedAnnotation, Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"
       } yield JsonOk(js, Messages("annotation.merge.success"))
+    }
+  
+  @ApiOperation(hidden = true, value = "")
+  def mergeDeprecated(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        result <- merge(id, mergedTyp, mergedId)(request)
+      } yield result
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -189,17 +197,24 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reopened"))
   }
 
-  def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
+  def addAnnotationLayer(id: String): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
-        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        annotation <- provider.provideAnnotation(id, request.identity)
+        _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.makeHybrid.explorationalsOnly"
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.addAnnotationLayer(annotation, organization.name, request.body)
-        updated <- provider.provideAnnotation(typ, id, request.identity)
+        updated <- provider.provideAnnotation(id, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }
+
+  def addAnnotationLayerDeprecated(typ: String, id: String): Action[AnnotationLayerParameters] =
+    sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
+      for {
+        result <- addAnnotationLayer(id)(request)
+      } yield result
+    }    
 
   @ApiOperation(hidden = true, value = "")
   def createExplorational(organizationName: String, dataSetName: String): Action[List[AnnotationLayerParameters]] =
@@ -251,31 +266,47 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
+  def makeHybrid(id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
-        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        annotation <- provider.provideAnnotation(id, request.identity)
+        _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.makeHybrid.explorationalsOnly"
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.makeAnnotationHybrid(annotation, organization.name, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
-        updated <- provider.provideAnnotation(typ, id, request.identity)
+        updated <- provider.provideAnnotation(id, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }
+  
+  @ApiOperation(hidden = true, value = "")
+  def makeHybridDeprecated(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        result <- makeHybrid(id, fallbackLayerName)(request)
+      } yield result
+    }
 
   @ApiOperation(hidden = true, value = "")
-  def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
+  def downsample(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
-        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        annotation <- provider.provideAnnotation(id, request.identity)
+        _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.downsample.explorationalsOnly"
         annotationLayer <- annotation.annotationLayers
           .find(_.tracingId == tracingId)
           .toFox ?~> "annotation.downsample.layerNotFound"
         _ <- annotationService.downsampleAnnotation(annotation, annotationLayer) ?~> "annotation.downsample.failed"
-        updated <- provider.provideAnnotation(typ, id, request.identity)
+        updated <- provider.provideAnnotation(id, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def downsampleDeprecated(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- downsample(id, tracingId)(request)
+      } yield result
   }
 
   private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Long)(
@@ -373,7 +404,7 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def cancel(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def cancel(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def tryToCancel(annotation: Annotation) =
       annotation match {
         case t if t.typ == AnnotationType.Task =>
@@ -387,9 +418,16 @@ class AnnotationController @Inject()(
       }
 
     for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
+      annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
       result <- tryToCancel(annotation)
+    } yield result
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def cancelDeprecated(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      result <- cancel(id)(request)
     } yield result
   }
 

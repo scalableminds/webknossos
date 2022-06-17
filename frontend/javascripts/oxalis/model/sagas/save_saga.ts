@@ -806,6 +806,10 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
+// The value for this boolean does not need to be restored to false
+// at any time, because the browser page is reloaded after the message is shown, anyway.
+let didShowFailedSimultaneousTracingError = false;
+
 export function* sendRequestToServer(
   tracingType: "skeleton" | "volume",
   tracingId: string,
@@ -895,8 +899,19 @@ export function* sendRequestToServer(
           [ErrorHandling, ErrorHandling.notify],
           new Error("Saving failed due to '409' status code"),
         );
+        if (didShowFailedSimultaneousTracingError) {
+          // If the saving fails for one tracing (e.g., skeleton), it can also
+          // fail for another tracing (e.g., volume). The message simply tells the
+          // user that the saving in general failed. So, there is no sense in showing
+          // the message multiple times.
+          // Also, there is a bug (which is hard to reproduce) where infinite error
+          // toasts appear here, even though the control flow should abort the saga.
+          // For both reasons, this boolean checks is in place.
+          return;
+        }
         yield* call(alert, messages["save.failed_simultaneous_tracing"]);
         location.reload();
+        didShowFailedSimultaneousTracingError = true;
         return;
       }
 
@@ -1132,7 +1147,13 @@ function* watchForSaveConflicts() {
   while (true) {
     const interval = yield* call(getPollInterval);
     yield* call(sleep, interval);
-    yield* call(checkForNewVersion);
+    try {
+      yield* call(checkForNewVersion);
+    } catch (exception) {
+      // If the version check fails for some reason, we don't want to crash the entire
+      // saga.
+      console.warn(exception);
+    }
   }
 }
 

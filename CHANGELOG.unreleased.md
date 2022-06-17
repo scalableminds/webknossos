@@ -11,9 +11,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/22.06.0...HEAD)
 
 ### Added
-- It is now possible to allow other users, who may see your annotation, to also edit it. [#6236](https://github.com/scalableminds/webknossos/pull/6236)
 - Added a warning for when the resolution in the XY viewport on z=1-downsampled datasets becomes too low, explaining the problem and how to mitigate it. [#6255](https://github.com/scalableminds/webknossos/pull/6255)
-- The owner of an annotation can configure that other users should be able to edit the annotation, too. Note that parallel writes are not supported and would lead to conflicts. [#6236](https://github.com/scalableminds/webknossos/pull/6236)
+- The owner of an annotation can allow other users, who may see the annotation, to also edit it. Note that parallel writes are not supported and would lead to conflicts. [#6236](https://github.com/scalableminds/webknossos/pull/6236)
 
 ### Changed
 - For the api routes that return annotation info objects, the user field was renamed to owner. User still exists as an alias, but will be removed in a future release. [#6250](https://github.com/scalableminds/webknossos/pull/6250)

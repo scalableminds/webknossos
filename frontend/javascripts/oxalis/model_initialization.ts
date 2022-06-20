@@ -77,7 +77,6 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
-import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import type {
@@ -110,7 +109,6 @@ export async function initialize(
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
-      connectionInfo: ConnectionInfo;
       isMappingSupported: boolean;
       maximumTextureCountForLayer: number;
     }
@@ -452,7 +450,6 @@ function initializeSettings(
 
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   dataLayers: DataLayerCollection;
-  connectionInfo: ConnectionInfo;
   isMappingSupported: boolean;
   maximumTextureCountForLayer: number;
   smallestCommonBucketCapacity: number;
@@ -474,7 +471,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
   }
 
-  const connectionInfo = new ConnectionInfo();
   const layers = dataset.dataSource.dataLayers;
   const dataLayers = {};
 
@@ -488,7 +484,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     dataLayers[layer.name] = new DataLayer(
       layer,
-      connectionInfo,
       textureInformation.textureSize,
       textureInformation.textureCount,
     );
@@ -506,7 +501,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
 
   return {
     dataLayers,
-    connectionInfo,
     isMappingSupported,
     maximumTextureCountForLayer,
     smallestCommonBucketCapacity,

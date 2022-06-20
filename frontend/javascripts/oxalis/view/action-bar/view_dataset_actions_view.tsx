@@ -53,7 +53,7 @@ export default function ViewDatasetActionsView(props: Props) {
         onClick={() => Store.dispatch(setPythonClientModalVisibilityAction(true))}
       >
         <CodeOutlined />
-        Python Client
+        Download
       </Menu.Item>
       {props.layoutMenu}
     </Menu>

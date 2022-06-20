@@ -305,13 +305,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     elementClass: string,
     layerSettings: DatasetLayerConfiguration,
   ) => {
-    const { tracing } = this.props;
+    const { tracing, dataset } = this.props;
     const { intensityRange } = layerSettings;
-    const layer = getLayerByName(this.props.dataset, layerName);
+    const layer = getLayerByName(dataset, layerName);
     const isVolumeTracing = layer.category === "segmentation" ? layer.tracingId != null : false;
     const maybeTracingId = layer.category === "segmentation" ? layer.tracingId : null;
-    const hasDuplicatedName =
-      _.countBy(Object.keys(this.props.datasetConfiguration.layers))[layerName] !== 1;
     const maybeVolumeTracing =
       maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
     const maybeFallbackLayer =
@@ -338,7 +336,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         setSingleLayerVisibility(true);
       }
     };
-
     const hasHistogram = this.props.histogramData[layerName] != null;
     const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
     const volumeDescriptor =
@@ -349,6 +346,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       "tracingId" in layer && layer.tracingId != null
         ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
         : layerName;
+    const hasDuplicatedName =
+      _.countBy(getAllReadableLayerNames(dataset, tracing))[readableName] > 1;
     return (
       <div className="flex-container">
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
@@ -367,35 +366,34 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   : null
               }
             >
-              <EditableTextLabel
-                margin="0 10px 0 0"
-                width={150}
-                value={readableName}
-                isInvalid={hasDuplicatedName}
-                trimValue
-                onChange={(newName) => {
-                  this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, {
-                    name: newName,
-                  });
-                }}
-                rules={{
-                  message: "This name already exists!",
-                  validator: (newLayerName) => {
-                    let countToFindDuplication = 1;
-                    if (newLayerName === readableName) {
-                      countToFindDuplication = 2;
-                    }
-                    const allReadableLayerNames = getAllReadableLayerNames(
-                      this.props.dataset,
-                      tracing,
-                    );
-                    const doesNewNameAlreadyExist =
-                      _.countBy(allReadableLayerNames)[newLayerName] >= countToFindDuplication;
-                    return !doesNewNameAlreadyExist;
-                  },
-                }}
-                label="Volume Layer Name"
-              />
+              <span style={{ display: "inline-block" }}>
+                <EditableTextLabel
+                  margin="0 10px 0 0"
+                  width={150}
+                  value={readableName}
+                  isInvalid={hasDuplicatedName}
+                  trimValue
+                  onChange={(newName) => {
+                    this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, {
+                      name: newName,
+                    });
+                  }}
+                  rules={{
+                    message: "This name already exists!",
+                    validator: (newLayerName) => {
+                      let countToFindDuplication = 1;
+                      if (newLayerName === readableName) {
+                        countToFindDuplication = 2;
+                      }
+                      const allReadableLayerNames = getAllReadableLayerNames(dataset, tracing);
+                      const doesNewNameAlreadyExist =
+                        _.countBy(allReadableLayerNames)[newLayerName] >= countToFindDuplication;
+                      return !doesNewNameAlreadyExist;
+                    },
+                  }}
+                  label="Volume Layer Name"
+                />
+              </span>
             </Tooltip>
           ) : (
             layerName

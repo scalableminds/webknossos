@@ -157,6 +157,7 @@ export const annotation: APIAnnotation = {
   visibility: "Internal",
   modified: 1529066010230,
   name: "",
+  teams: [],
   typ: "Explorational",
   task: null,
   stats: {},

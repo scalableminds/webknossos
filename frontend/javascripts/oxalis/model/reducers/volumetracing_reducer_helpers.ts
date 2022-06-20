@@ -62,7 +62,7 @@ export function updateDirectionReducer(
   }
 
   const plane: OrthoViewWithoutTD =
-    state.viewModeData.plane.activeViewport != OrthoViews.TDView
+    state.viewModeData.plane.activeViewport !== OrthoViews.TDView
       ? state.viewModeData.plane.activeViewport
       : OrthoViews.PLANE_XY;
 

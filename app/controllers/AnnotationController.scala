@@ -417,35 +417,11 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def readableAnnotations(isFinished: Option[Boolean],
-                          limit: Option[Int],
-                          pageNumber: Option[Int] = None,
-                          includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        readableAnnotations <- annotationDAO.findAllReadableExplorationalsFor(
-          request.identity._id,
-          isFinished,
-          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0))
-        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllReadableExplorationalsFor(request.identity._id, isFinished))
-        jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites)
-      } yield {
-        val result = Ok(Json.toJson(jsonList))
-        annotationCount match {
-          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
-          case None        => result
-        }
-      }
-    }
-
-  @ApiOperation(hidden = true, value = "")
   def sharedAnnotations: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       userTeams <- userService.teamIdsFor(request.identity._id)
       sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
-      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites)
+      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites(_))
     } yield Ok(Json.toJson(json))
   }
 

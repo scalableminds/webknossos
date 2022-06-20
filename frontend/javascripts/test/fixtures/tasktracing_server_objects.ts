@@ -163,11 +163,4 @@ export const annotation: APIAnnotation = {
     ],
   },
   meshes: [],
-  teams: [
-    {
-      id: "5b1e45f9a00000a000abc2c3",
-      name: "Connectomics department",
-      organization: "Connectomics department",
-    },
-  ],
 };

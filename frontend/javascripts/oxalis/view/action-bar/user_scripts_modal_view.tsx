@@ -125,6 +125,7 @@ class _UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProp
       >
         <Spin spinning={this.state.isLoading}>
           <Select
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null | undefined' is not assignable... Remove this comment to see the full error message
             value={this.state.isCodeChanged ? "Modified Script" : this.state.selectedScript}
             style={{
               width: 200,

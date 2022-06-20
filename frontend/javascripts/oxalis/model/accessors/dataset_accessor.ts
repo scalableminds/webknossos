@@ -37,7 +37,7 @@ type UnrenderableLayersInfos = {
 
 function maxValue(array: Array<number>): number {
   const value = _.max(array);
-  if (value == undefined) {
+  if (value == null) {
     throw Error(`Max of empty array: ${array}`);
   }
   return value;
@@ -45,7 +45,7 @@ function maxValue(array: Array<number>): number {
 
 function minValue(array: Array<number>): number {
   const value = _.min(array);
-  if (value == undefined) {
+  if (value == null) {
     throw Error(`Min of empty array: ${array}`);
   }
   return value;

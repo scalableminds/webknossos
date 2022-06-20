@@ -151,11 +151,14 @@ export type APITeamMembership = {
 };
 export type ExperienceMap = Readonly<Record<string, number>>;
 export type ExperienceDomainList = Array<string>;
-export type APIUserBase = {
-  readonly email: string;
+
+export type APIUserCompact = {
   readonly firstName: string;
   readonly lastName: string;
   readonly id: string;
+};
+export type APIUserBase = APIUserCompact & {
+  readonly email: string;
   readonly isAnonymous: boolean;
   readonly teams: Array<APITeamMembership>;
   readonly isAdmin: boolean;
@@ -339,8 +342,52 @@ export type APIAnnotationCompact = {
   readonly tags: Array<string>;
   readonly tracingTime: number | null | undefined;
   readonly typ: APIAnnotationType;
-  readonly owner?: APIUserBase;
+  // The owner can be null (e.g., for a sandbox annotation
+  // or due to missing permissions).
+  readonly owner?: APIUserCompact;
+  readonly teams: APITeam[];
 };
+
+export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCompact {
+  const {
+    annotationLayers,
+    dataSetName,
+    organization,
+    description,
+    formattedHash,
+    modified,
+    id,
+    visibility,
+    name,
+    state,
+    stats,
+    tags,
+    tracingTime,
+    typ,
+    owner,
+    teams,
+  } = annotation;
+
+  return {
+    annotationLayers,
+    dataSetName,
+    organization,
+    description,
+    formattedHash,
+    modified,
+    id,
+    visibility,
+    name,
+    state,
+    stats,
+    tags,
+    tracingTime,
+    typ,
+    owner,
+    teams,
+  };
+}
+
 export type LocalMeshMetaData = {
   isVisible?: boolean;
   isLoaded?: boolean;

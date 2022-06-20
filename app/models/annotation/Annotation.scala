@@ -224,30 +224,6 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
-  def findAllReadableExplorationalsFor(userId: ObjectId,
-                                       isFinished: Option[Boolean],
-                                       limit: Int,
-                                       pageNumber: Int = 0): Fox[List[Annotation]] = {
-    val stateQuery = getStateQuery(isFinished)
-    for {
-      r <- run(sql"""select #$columns from #$existingCollectionName
-                     where typ = '#${AnnotationType.Explorational.toString}' and #$stateQuery and #${readAccessQ(userId)}
-                     order by _id desc limit $limit offset ${pageNumber * limit}""".as[AnnotationsRow])
-      parsed <- parseAll(r)
-    } yield parsed
-  }
-
-  def countAllReadableExplorationalsFor(userId: ObjectId, isFinished: Option[Boolean]): Fox[List[Annotation]] = {
-    val stateQuery = getStateQuery(isFinished)
-    for {
-      r <- run(
-        sql"""select count(_id) from #$existingCollectionName
-                     typ = '#${AnnotationType.Explorational.toString}' and #$stateQuery and #${readAccessQ(userId)}"""
-          .as[AnnotationsRow])
-      parsed <- parseAll(r)
-    } yield parsed
-  }
-
   def findActiveTaskIdsForUser(userId: ObjectId): Fox[List[ObjectId]] = {
 
     val stateQuery = getStateQuery(isFinished = Some(false))

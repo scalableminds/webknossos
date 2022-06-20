@@ -55,6 +55,8 @@ const dummyLocation = {
 // @ts-expect-error ts-migrate(2322) FIXME: Type 'Location | { ancestorOrigins: never[]; hash:... Remove this comment to see the full error message
 export const location: Location = typeof window === "undefined" ? dummyLocation : window.location;
 
+let performanceCounterForMocking = 0;
+
 const _window =
   typeof window === "undefined"
     ? {
@@ -72,6 +74,7 @@ const _window =
         addEventListener,
         removeEventListener,
         open: (_url: string) => {},
+        performance: { now: () => ++performanceCounterForMocking },
       }
     : window;
 

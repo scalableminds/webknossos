@@ -1,6 +1,6 @@
 import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import _ from "lodash";
 import type { APIDataset } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -14,9 +14,13 @@ import {
   getDatasetResolutionInfo,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getVolumeTracingLayers } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getAllReadableLayerNames,
+  getVolumeTracingLayers,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
+import Toast from "libs/toast";
 export default function AddVolumeLayerModal({
   dataset,
   onCancel,
@@ -29,7 +33,25 @@ export default function AddVolumeLayerModal({
   const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState<
     number | null | undefined
   >(null);
-  const [newLayerName, setNewLayerName] = useState("Volume");
+  const allReadableLayerNames = useMemo(
+    () => getAllReadableLayerNames(dataset, tracing),
+    [dataset, tracing],
+  );
+  const initialNewLayerName = useMemo(() => {
+    if (allReadableLayerNames.indexOf("Volume") === -1) {
+      return "Volume";
+    } else {
+      let counter = 1;
+      let name = `Volume${counter}`;
+      while (allReadableLayerNames.indexOf(name) >= 0) {
+        // Increase number at the end of name until a valid initial name is found.
+        ++counter;
+        name = `Volume${counter}`;
+      }
+      return name;
+    }
+  }, []);
+  const [newLayerName, setNewLayerName] = useState(initialNewLayerName);
 
   const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
   const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
@@ -44,7 +66,12 @@ export default function AddVolumeLayerModal({
   let selectedSegmentationLayer = null;
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
-
+    if (allReadableLayerNames.indexOf(newLayerName) >= 0) {
+      Toast.error(
+        `A layer with the name "${newLayerName}" already exists. Please use another name.`,
+      );
+      return;
+    }
     const minResolutionAllowed = Math.max(
       ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[0]),
     );

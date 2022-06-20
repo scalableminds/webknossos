@@ -8,6 +8,7 @@ import Toast from "libs/toast";
 type Rule = {
   message?: string;
   type?: string;
+  validator?: (arg0: number | string) => boolean;
 };
 export type EditableTextLabelProp = {
   value: string;
@@ -21,6 +22,9 @@ export type EditableTextLabelProp = {
   disableEditing?: boolean;
   onContextMenu?: () => void;
   width?: string | number;
+  updateOnAllChanges?: boolean;
+  isInvalid?: boolean | null | undefined;
+  trimValue?: boolean | null | undefined;
 };
 type State = {
   isEditing: boolean;
@@ -30,7 +34,11 @@ type State = {
 class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State> {
   static defaultProps = {
     rows: 1,
+    updateOnAllChanges: false,
+    isInvalid: false,
+    trimValue: false,
   };
+
   state: State = {
     isEditing: false,
     value: "",
@@ -56,26 +64,43 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       value: event.target.value,
     });
   };
+
   handleOnChange = () => {
-    if (this.validateFields()) {
-      this.props.onChange(this.state.value);
-      this.setState({
-        isEditing: false,
-      });
+    const validateAndUpdateValue = () => {
+      if (this.validateFields()) {
+        this.props.onChange(this.state.value);
+        this.setState({
+          isEditing: false,
+        });
+      }
+    };
+    if (this.props.trimValue) {
+      this.setState(
+        (prevState) => ({ value: prevState.value.trim() }),
+        // afterwards validate
+        validateAndUpdateValue,
+      );
+    } else {
+      validateAndUpdateValue();
     }
   };
 
   validateFields() {
-    if (this.props.rules && this.props.rules.type === "email") {
-      const re =
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-      const matchesEmail = re.test(this.state.value);
-      if (!matchesEmail && this.props.rules && this.props.rules.message)
-        Toast.error(this.props.rules.message);
-      return matchesEmail;
-    } else {
+    if (!this.props.rules) {
       return true;
     }
+    let isValid = true;
+    if (this.props.rules.type === "email") {
+      const re =
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+      isValid = re.test(this.state.value);
+    } else if (this.props.rules.validator != null) {
+      isValid = this.props.rules.validator(this.state.value);
+    }
+    if (!isValid && this.props.rules && this.props.rules.message) {
+      Toast.error(this.props.rules.message);
+    }
+    return isValid;
   }
 
   render() {
@@ -96,6 +121,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       // @ts-ignore
       rows: this.props.rows,
     };
+    const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-error)" } : {};
 
     if (this.state.isEditing) {
       return (
@@ -148,9 +174,10 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
                   linkify: true,
                 }}
                 container="span"
+                style={isInvalidStyleMaybe}
               />
             ) : (
-              this.props.value
+              <span style={isInvalidStyleMaybe}>{this.props.value}</span>
             )}
             {this.props.disableEditing ? null : (
               <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">

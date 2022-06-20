@@ -45,6 +45,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
+  getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
@@ -309,6 +310,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const layer = getLayerByName(this.props.dataset, layerName);
     const isVolumeTracing = layer.category === "segmentation" ? layer.tracingId != null : false;
     const maybeTracingId = layer.category === "segmentation" ? layer.tracingId : null;
+    const hasDuplicatedName =
+      _.countBy(Object.keys(this.props.datasetConfiguration.layers))[layerName] !== 1;
     const maybeVolumeTracing =
       maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
     const maybeFallbackLayer =
@@ -357,17 +360,43 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }}
         >
           {volumeDescriptor != null ? (
-            <EditableTextLabel
-              margin="0 10px 0 0"
-              width={150}
-              value={readableName}
-              onChange={(newName) => {
-                this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, {
-                  name: newName,
-                });
-              }}
-              label="Volume Layer Name"
-            />
+            <Tooltip
+              title={
+                hasDuplicatedName
+                  ? "This layer name already exists! Please change it to resolve duplicates."
+                  : null
+              }
+            >
+              <EditableTextLabel
+                margin="0 10px 0 0"
+                width={150}
+                value={readableName}
+                isInvalid={hasDuplicatedName}
+                trimValue
+                onChange={(newName) => {
+                  this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, {
+                    name: newName,
+                  });
+                }}
+                rules={{
+                  message: "This name already exists!",
+                  validator: (newLayerName) => {
+                    let countToFindDuplication = 1;
+                    if (newLayerName === readableName) {
+                      countToFindDuplication = 2;
+                    }
+                    const allReadableLayerNames = getAllReadableLayerNames(
+                      this.props.dataset,
+                      tracing,
+                    );
+                    const doesNewNameAlreadyExist =
+                      _.countBy(allReadableLayerNames)[newLayerName] >= countToFindDuplication;
+                    return !doesNewNameAlreadyExist;
+                  },
+                }}
+                label="Volume Layer Name"
+              />
+            </Tooltip>
           ) : (
             layerName
           )}

@@ -429,7 +429,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { viewMode } = Store.getState().temporaryConfiguration;
+    const { viewMode, controlMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const {
       hasTracing,
@@ -613,13 +613,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         />,
       );
     }
-
-    elements.push(
-      <Menu.Item key="restore-button" onClick={this.handleRestore}>
-        <BarsOutlined />
-        Restore Older Version
-      </Menu.Item>,
-    );
+    if (controlMode !== ControlModeEnum.SANDBOX) {
+      elements.push(
+        <Menu.Item key="restore-button" onClick={this.handleRestore}>
+          <BarsOutlined />
+          Restore Older Version
+        </Menu.Item>,
+      );
+    }
 
     elements.push(layoutMenu);
 

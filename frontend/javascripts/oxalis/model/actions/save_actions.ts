@@ -1,3 +1,4 @@
+import type { Dispatch } from "redux";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { getUid } from "libs/uid_generator";
 import Date from "libs/date";
@@ -127,15 +128,13 @@ export const redoAction = (callback?: () => void): RedoAction => ({
 export const disableSavingAction = (): DisableSavingAction => ({
   type: "DISABLE_SAVING",
 });
-// Unfortunately, using type Dispatch produces countless Flow errors.
-export const dispatchUndoAsync = async (dispatch: (arg0: any) => any): Promise<void> => {
+export const dispatchUndoAsync = async (dispatch: Dispatch<any>): Promise<void> => {
   const readyDeferred = new Deferred();
   const action = undoAction(() => readyDeferred.resolve(null));
   dispatch(action);
   await readyDeferred.promise();
 };
-// Unfortunately, using type Dispatch produces countless Flow errors.
-export const dispatchRedoAsync = async (dispatch: (arg0: any) => any): Promise<void> => {
+export const dispatchRedoAsync = async (dispatch: Dispatch<any>): Promise<void> => {
   const readyDeferred = new Deferred();
   const action = redoAction(() => readyDeferred.resolve(null));
   dispatch(action);

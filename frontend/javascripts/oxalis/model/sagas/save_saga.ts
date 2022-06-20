@@ -56,8 +56,7 @@ import {
 } from "oxalis/model/actions/save_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { updateTdCamera } from "oxalis/model/sagas/update_actions";
-import type { Vector4 } from "oxalis/constants";
-import { ControlModeEnum } from "oxalis/constants";
+import { AnnotationToolEnum, type Vector4, ControlModeEnum } from "oxalis/constants";
 import { ViewModeSaveRelevantActions } from "oxalis/model/actions/view_mode_actions";
 import {
   actionChannel,
@@ -526,6 +525,16 @@ function* applyStateOfStack(
     const warningMessage =
       direction === "undo" ? messages["undo.no_undo"] : messages["undo.no_redo"];
     Toast.info(warningMessage);
+    return;
+  }
+
+  const activeTool = yield* select((state) => state.uiInformation.activeTool);
+  if (activeTool === AnnotationToolEnum.PROOFREAD) {
+    const warningMessage =
+      direction === "undo"
+        ? messages["undo.no_undo_during_proofread"]
+        : messages["undo.no_redo_during_proofread"];
+    Toast.warning(warningMessage);
     return;
   }
 

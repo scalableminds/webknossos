@@ -46,11 +46,19 @@ function _PythonClientModalView(props: Props): JSX.Element {
   const wkInitSnippet = `import webknossos as wk
 
 with wk.webknossos_context(token="${authToken || "<insert token here>"}"):
-dataset = wk.Dataset.download(
-    url="${window.location.origin}",
-    dataset="${dataset.name}"
-    organization_id="${dataset.owningOrganization}",
-)
+    # Download the dataset.
+    dataset = wk.Dataset.download(
+        url="${window.location.origin}",
+        dataset="${dataset.name}"
+        organization_id="${dataset.owningOrganization}",
+    )
+    # Alternatively, directly open the dataset. Image data will be
+    # streamed when being accessed.
+    remote_dataset = wk.Dataset.open_remote(
+        url="${window.location.origin}",
+        dataset="${dataset.name}"
+        organization_id="${dataset.owningOrganization}",
+    )
 `;
 
   const alertTokenIsPrivate = () => {
@@ -78,8 +86,8 @@ dataset = wk.Dataset.download(
           <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
             webKnossos Python API
           </a>
-          . To download and use this annotation in your Python project, simply copy and paste the
-          code snippets to your script.
+          . To download and use this dataset in your Python project, simply copy and paste the code
+          snippets to your script.
         </Text>
       </Row>
       <Divider

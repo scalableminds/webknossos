@@ -39,7 +39,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { makeMappingEditable } from "admin/admin_rest_api";
 import { setMappingNameAction } from "oxalis/model/actions/settings_actions";
-import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
+import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
@@ -111,7 +111,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
   if (!isHdf5MappingEnabled || volumeTracing.mappingName == null) return;
 
-  const segmentId = getSegmentIdForPosition(position);
+  const segmentId = yield* call(getSegmentIdForPositionAsync, position);
 
   /* Load agglomerate skeleton of the agglomerate at the click position */
 

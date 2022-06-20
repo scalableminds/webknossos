@@ -201,7 +201,7 @@ class SceneController {
     const meshMaterial = new THREE.MeshLambertMaterial({
       color,
     });
-    meshMaterial.side = THREE.DoubleSide;
+    meshMaterial.side = THREE.FrontSide;
     meshMaterial.transparent = true;
     const mesh = new THREE.Mesh(geometry, meshMaterial);
     mesh.castShadow = true;

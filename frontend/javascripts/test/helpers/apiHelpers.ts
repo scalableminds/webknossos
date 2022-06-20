@@ -129,7 +129,7 @@ export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTraci
     return Maybe.Just(tracing.volumes[0]);
   }
 
-  throw new Error("Tracing is not of type volume!");
+  throw new Error("Annotation is not of type volume!");
 }
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";

@@ -1,7 +1,12 @@
 import React from "react";
 import { useSelector } from "react-redux";
 import { Dropdown, Menu } from "antd";
-import { ShareAltOutlined, DownOutlined, CameraOutlined, CodeOutlined } from "@ant-design/icons";
+import {
+  ShareAltOutlined,
+  DownOutlined,
+  CameraOutlined,
+  DownloadOutlined,
+} from "@ant-design/icons";
 import ButtonComponent from "oxalis/view/components/button_component";
 import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
@@ -52,7 +57,7 @@ export default function ViewDatasetActionsView(props: Props) {
         key="python-client-button"
         onClick={() => Store.dispatch(setPythonClientModalVisibilityAction(true))}
       >
-        <CodeOutlined />
+        <DownloadOutlined />
         Download
       </Menu.Item>
       {props.layoutMenu}

@@ -71,7 +71,7 @@ with wk.webknossos_context(token="${authToken || "<insert token here>"}"):
     <Modal
       title="Python Client"
       visible={isVisible}
-      width={600}
+      width={800}
       footer={null}
       onCancel={onClose}
       style={{ overflow: "visible" }}

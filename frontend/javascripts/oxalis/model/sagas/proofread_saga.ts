@@ -256,13 +256,24 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   if (!allowUpdate) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
-  if (activeTool !== AnnotationToolEnum.PROOFREAD) return;
-
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   if (volumeTracingLayer == null) return;
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracing == null) return;
   const { tracingId: volumeTracingId } = volumeTracing;
+
+  if (activeTool !== AnnotationToolEnum.PROOFREAD) {
+    // Warn the user if an editable mapping is active and an agglomerate skeleton edge was added/deleted,
+    // but the proofreading mode was not active
+    if (volumeTracing.mappingIsEditable) {
+      Toast.warning(
+        "In order to edit the active mapping by deleting or adding edges, the proofreading tool needs to be active." +
+          " If you want your last action to edit the active mapping, undo it (Ctrl + Z), activate the proofreading tool and then manually redo the action.",
+        { timeout: 12000 },
+      );
+    }
+    return;
+  }
 
   const layerName = volumeTracingId;
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);

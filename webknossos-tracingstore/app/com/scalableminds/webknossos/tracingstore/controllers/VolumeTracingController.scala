@@ -233,7 +233,7 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
           existingMags = tracing.resolutions.map(vec3IntFromProto)
         } yield
           Ok(
@@ -251,10 +251,10 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
         } yield
           Ok(
@@ -270,10 +270,10 @@ class VolumeTracingController @Inject()(
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
           cubeLength = DataLayer.bucketLength
@@ -331,10 +331,10 @@ class VolumeTracingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       for {
-        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
-        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName)
+        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName) ~> 404
 
         omeNgffHeader = OmeNgffHeader.fromDataLayerName(tracingId,
                                                         dataSourceScale = dataSource.scale,
@@ -349,10 +349,10 @@ class VolumeTracingController @Inject()(
         val combinedToken = urlOrHeaderToken(token, request)
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), combinedToken) {
           for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
             existingMags = tracing.resolutions.map(vec3IntFromProto)
-            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
             _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
             (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404

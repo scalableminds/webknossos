@@ -316,14 +316,15 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/annotations/:type/:id"
-                render={({ match }: ContextRouter) => {
+                render={({ location, match }: ContextRouter) => {
                   const initialMaybeCompoundType =
                     match.params.type != null
                       ? coalesce(APICompoundTypeEnum, match.params.type)
                       : null;
 
                   if (initialMaybeCompoundType == null) {
-                    return <Redirect to={`/annotations/${match.params.id}`} />;
+                    const { hash, search } = location;
+                    return <Redirect to={`/annotations/${match.params.id}${search}${hash}`} />;
                   }
 
                   return this.tracingView({ match });
@@ -572,7 +573,7 @@ class ReactRouter extends React.Component<Props> {
                         resolutionRestrictions,
                       );
                       trackAction(`Create ${type} tracing`);
-                      return `/annotations/${annotation.typ}/${annotation.id}`;
+                      return `/annotations/${annotation.id}`;
                     }}
                   />
                 )}

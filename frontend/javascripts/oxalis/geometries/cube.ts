@@ -62,7 +62,7 @@ class Cube {
   getLineMaterial() {
     return this.isHighlighted
       ? new THREE.LineBasicMaterial({
-          color: 0xffffff,
+          color: Store.getState().uiInformation.theme === "light" ? 0xeeeeee : 0xffffff,
           linewidth: this.lineWidth,
         })
       : new THREE.LineBasicMaterial({

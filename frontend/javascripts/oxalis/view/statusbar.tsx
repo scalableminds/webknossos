@@ -1,7 +1,7 @@
 import { Tooltip } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import React from "react";
-import { WarningOutlined, MoreOutlined } from "@ant-design/icons";
+import React, { useState } from "react";
+import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
@@ -13,6 +13,7 @@ import {
   setActiveNodeAction,
   setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import message from "messages";
 import {
   ActionDescriptor,
@@ -27,6 +28,8 @@ import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 import { OxalisState } from "oxalis/store";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
+import { useInterval } from "libs/react_helpers";
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
@@ -279,6 +282,14 @@ function Infos() {
   const activeVolumeTracing = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
   );
+  const [currentBucketDownloadSpeed, setCurrentBucketDownloadSpeed] = useState<number>(0);
+  const [totalDownloadedByteCount, setTotalDownloadedByteCount] = useState<number>(0);
+  useInterval(() => {
+    const { avgDownloadSpeedInBytesPerS, accumulatedDownloadedBytes } =
+      getGlobalDataConnectionInfo().getStatistics();
+    setCurrentBucketDownloadSpeed(avgDownloadSpeedInBytesPerS);
+    setTotalDownloadedByteCount(accumulatedDownloadedBytes);
+  }, 1500);
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useSelector((state: OxalisState) =>
     state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
@@ -314,21 +325,22 @@ function Infos() {
   });
   return (
     <React.Fragment>
-      <span className="info-element">
-        <img
-          src="/assets/images/icon-statusbar-downsampling.svg"
-          className="resolution-status-bar-icon"
-          alt="Resolution"
-        />{" "}
-        {activeResolution.join("-")}{" "}
-      </span>
+      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
       {isPlaneMode ? (
         <span className="info-element">
           Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
         </span>
       ) : null}
-      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
-
+      <span className="info-element">
+        <Tooltip
+          title={`Downloaded ${formatCountToDataAmountUnit(
+            totalDownloadedByteCount,
+          )} of Image Data (after decompression)`}
+        >
+          <DownloadOutlined />
+          {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
+        </Tooltip>
+      </span>
       {activeVolumeTracing != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting
@@ -362,6 +374,14 @@ function Infos() {
           />
         </span>
       ) : null}
+      <span className="info-element">
+        <img
+          src="/assets/images/icon-statusbar-downsampling.svg"
+          className="resolution-status-bar-icon"
+          alt="Resolution"
+        />{" "}
+        {activeResolution.join("-")}{" "}
+      </span>
     </React.Fragment>
   );
 }

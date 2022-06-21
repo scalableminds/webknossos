@@ -83,8 +83,8 @@ type StateProps = {
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
   hasTracing: boolean;
-  isShareModalOpen: boolean;
   isDownloadModalOpen: boolean;
+  isShareModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
 };
 type Props = OwnProps & StateProps;

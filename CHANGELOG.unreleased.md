@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added a image data download speed indicator to the statusbar. On hover a tooltip is shown that show the total amount of downloaded shard data. [#6269](https://github.com/scalableminds/webknossos/pull/6269)
+- Added a warning for invalid volume layer names. The layer names must now be unique among all layers in an annotation and must not contain a `/`. [#6289](https://github.com/scalableminds/webknossos/pull/6289)
 - Added a warning for when the resolution in the XY viewport on z=1-downsampled datasets becomes too low, explaining the problem and how to mitigate it. [#6255](https://github.com/scalableminds/webknossos/pull/6255)
 - Added the possibility to view and download older versions of read-only annotations. [#6274](https://github.com/scalableminds/webknossos/pull/6274)
 

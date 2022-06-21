@@ -13,7 +13,7 @@ type Rule = {
 export type EditableTextLabelProp = {
   value: string;
   onChange: (...args: Array<any>) => any;
-  rules?: Rule;
+  rules?: Rule[];
   rows?: number;
   markdown?: boolean;
   label: string;
@@ -37,6 +37,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     updateOnAllChanges: false,
     isInvalid: false,
     trimValue: false,
+    rules: [],
   };
 
   state: State = {
@@ -89,18 +90,21 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     if (!this.props.rules) {
       return true;
     }
-    let isValid = true;
-    if (this.props.rules.type === "email") {
-      const re =
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-      isValid = re.test(this.state.value);
-    } else if (this.props.rules.validator != null) {
-      isValid = this.props.rules.validator(this.state.value);
-    }
-    if (!isValid && this.props.rules && this.props.rules.message) {
-      Toast.error(this.props.rules.message);
-    }
-    return isValid;
+    const allRulesValid = this.props.rules.every((rule) => {
+      let isValid = true;
+      if (rule.type === "email") {
+        const re =
+          /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        isValid = re.test(this.state.value);
+      } else if (rule.validator != null) {
+        isValid = rule.validator(this.state.value);
+      }
+      if (!isValid && rule.message) {
+        Toast.error(rule.message);
+      }
+      return isValid;
+    });
+    return allRulesValid;
   }
 
   render() {

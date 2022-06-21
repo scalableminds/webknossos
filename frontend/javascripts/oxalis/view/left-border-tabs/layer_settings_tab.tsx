@@ -45,10 +45,12 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getAllReadableLayerNames,
+  checkForInvalidCharacters,
+  checkForLayerNameDuplication,
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
+  validateReadableLayerName,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setNodeRadiusAction,
@@ -81,7 +83,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import { settings } from "messages";
+import messages, { settings } from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
@@ -346,8 +348,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       "tracingId" in layer && layer.tracingId != null
         ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
         : layerName;
-    const hasDuplicatedName =
-      _.countBy(getAllReadableLayerNames(dataset, tracing))[readableName] > 1;
+    const isReadableNameValidOrWarning = validateReadableLayerName(
+      readableName,
+      dataset,
+      tracing,
+      true,
+    );
     return (
       <div className="flex-container">
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
@@ -360,37 +366,41 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         >
           {volumeDescriptor != null ? (
             <Tooltip
-              title={
-                hasDuplicatedName
-                  ? "This layer name already exists! Please change it to resolve duplicates."
-                  : null
-              }
+              title={isReadableNameValidOrWarning === true ? null : isReadableNameValidOrWarning}
             >
               <span style={{ display: "inline-block" }}>
                 <EditableTextLabel
                   margin="0 10px 0 0"
                   width={150}
                   value={readableName}
-                  isInvalid={hasDuplicatedName}
+                  isInvalid={isReadableNameValidOrWarning !== true}
                   trimValue
                   onChange={(newName) => {
                     this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, {
                       name: newName,
                     });
                   }}
-                  rules={{
-                    message: "This name already exists!",
-                    validator: (newLayerName) => {
-                      let countToFindDuplication = 1;
-                      if (newLayerName === readableName) {
-                        countToFindDuplication = 2;
-                      }
-                      const allReadableLayerNames = getAllReadableLayerNames(dataset, tracing);
-                      const doesNewNameAlreadyExist =
-                        _.countBy(allReadableLayerNames)[newLayerName] >= countToFindDuplication;
-                      return !doesNewNameAlreadyExist;
+                  rules={[
+                    {
+                      message: messages["tracing.volume_layer_name_duplication"],
+                      validator: (newLayerName) =>
+                        typeof newLayerName === "string"
+                          ? checkForLayerNameDuplication(
+                              newLayerName,
+                              dataset,
+                              tracing,
+                              readableName,
+                            ) === true
+                          : false,
                     },
-                  }}
+                    {
+                      message: messages["tracing.volume_layer_name_includes_slash"],
+                      validator: (newLayerName) =>
+                        typeof newLayerName === "string"
+                          ? checkForInvalidCharacters(newLayerName) === true
+                          : false,
+                    },
+                  ]}
                   label="Volume Layer Name"
                 />
               </span>

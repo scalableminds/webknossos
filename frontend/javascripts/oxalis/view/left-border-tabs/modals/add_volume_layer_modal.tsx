@@ -17,6 +17,7 @@ import {
 import {
   getAllReadableLayerNames,
   getVolumeTracingLayers,
+  validateReadableLayerName,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
@@ -33,11 +34,8 @@ export default function AddVolumeLayerModal({
   const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState<
     number | null | undefined
   >(null);
-  const allReadableLayerNames = useMemo(
-    () => getAllReadableLayerNames(dataset, tracing),
-    [dataset, tracing],
-  );
   const initialNewLayerName = useMemo(() => {
+    const allReadableLayerNames = getAllReadableLayerNames(dataset, tracing);
     if (allReadableLayerNames.indexOf("Volume") === -1) {
       return "Volume";
     } else {
@@ -50,7 +48,7 @@ export default function AddVolumeLayerModal({
       }
       return name;
     }
-  }, []);
+  }, [dataset, tracing]);
   const [newLayerName, setNewLayerName] = useState(initialNewLayerName);
 
   const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
@@ -66,10 +64,9 @@ export default function AddVolumeLayerModal({
   let selectedSegmentationLayer = null;
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
-    if (allReadableLayerNames.indexOf(newLayerName) >= 0) {
-      Toast.error(
-        `A layer with the name "${newLayerName}" already exists. Please use another name.`,
-      );
+    const isNewLayerNameValidOrWarning = validateReadableLayerName(newLayerName, dataset, tracing);
+    if (isNewLayerNameValidOrWarning !== true) {
+      Toast.error(isNewLayerNameValidOrWarning);
       return;
     }
     const minResolutionAllowed = Math.max(

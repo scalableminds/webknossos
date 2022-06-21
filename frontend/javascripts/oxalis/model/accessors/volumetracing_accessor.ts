@@ -28,6 +28,8 @@ import {
   getVisibleSegmentationLayer,
   getDataLayers,
 } from "oxalis/model/accessors/dataset_accessor";
+import _ from "lodash";
+import messages from "messages";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
@@ -105,6 +107,44 @@ export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) 
     allReadableLayerNames.push("Skeletons");
   }
   return allReadableLayerNames;
+}
+
+export function checkForLayerNameDuplication(
+  readableLayerName: string,
+  dataset: APIDataset,
+  tracing: Tracing,
+  currentName?: string | null,
+): string | true {
+  let countToFindDuplication = 1;
+  if (readableLayerName === currentName) {
+    countToFindDuplication = 2;
+  }
+  const allReadableLayerNames = getAllReadableLayerNames(dataset, tracing);
+  const doesNewNameAlreadyExist =
+    _.countBy(allReadableLayerNames)[readableLayerName] >= countToFindDuplication;
+  return doesNewNameAlreadyExist ? messages["tracing.volume_layer_name_duplication"] : true;
+}
+
+export function checkForInvalidCharacters(readableLayerName: string): string | true {
+  return readableLayerName.includes("/")
+    ? messages["tracing.volume_layer_name_includes_slash"]
+    : true;
+}
+
+export function validateReadableLayerName(
+  readableLayerName: string,
+  dataset: APIDataset,
+  tracing: Tracing,
+  dontCountGivenName?: boolean,
+): string | true {
+  const hasDuplicatedName = checkForLayerNameDuplication(
+    readableLayerName,
+    dataset,
+    tracing,
+    dontCountGivenName ? readableLayerName : null,
+  );
+  const nameContainsSlash = checkForInvalidCharacters(readableLayerName);
+  return hasDuplicatedName === true ? nameContainsSlash : hasDuplicatedName;
 }
 
 function getSegmentationLayerForTracing(

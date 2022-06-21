@@ -165,6 +165,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.read_only_mode_notification":
     "This annotation is in read-only mode and cannot be updated.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
+  "tracing.volume_layer_name_duplication":
+    "This layer name already exists! Please change it to resolve duplicates.",
+  "tracing.volume_layer_name_includes_slash":
+    'This layer name includes the disallowed character "/". Please delete it.',
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":

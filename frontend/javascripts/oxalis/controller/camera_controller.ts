@@ -4,7 +4,13 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import * as Utils from "libs/utils";
-import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "oxalis/constants";
+import type {
+  OrthoView,
+  OrthoViewMap,
+  OrthoViewCameraMap,
+  OrthoViewRects,
+  Vector3,
+} from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -23,7 +29,7 @@ import type { CameraData } from "oxalis/store";
 import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
 type Props = {
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  cameras: OrthoViewCameraMap;
   onCameraPositionChanged: () => void;
   onTDCameraChanged: () => void;
   setTargetAndFixPosition: () => void;

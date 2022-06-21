@@ -1,3 +1,4 @@
+import { PerspectiveCamera, OrthographicCamera } from "three";
 export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
@@ -57,8 +58,11 @@ export const enum OrthoViewsToName {
 }
 export type OrthoView = keyof typeof OrthoViews;
 export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, OrthoViews.TDView>;
-
+export type THREE_Camera = PerspectiveCamera | OrthographicCamera;
+export type TDCamera = THREE_Camera;
 export type OrthoViewMap<T> = Record<OrthoView, T>;
+export type OrthoViewMapWithTDExtra<T, S> = Record<OrthoView, T> & { TDView: S };
+export type OrthoViewCameraMap = OrthoViewMapWithTDExtra<THREE.OrthographicCamera, TDCamera>;
 export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
 export type OrthoViewExtents = Readonly<OrthoViewMap<Vector2>>;
 export type OrthoViewRects = Readonly<OrthoViewMap<Rect>>;

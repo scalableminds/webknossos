@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import window, { document } from "libs/window";
+import { TDCamera } from "oxalis/constants";
 
 /**
  * The MIT License
@@ -30,7 +31,7 @@ import window, { document } from "libs/window";
 
 interface ITrackballControls {
   new (
-    object: THREE.OrthographicCamera,
+    object: TDCamera,
     domElement: HTMLElement,
     target: THREE.Vector3,
     updateCallback: (args: any) => void,
@@ -59,7 +60,7 @@ interface ITrackballControls {
 
 const TrackballControls = function (
   this: any,
-  object: THREE.OrthographicCamera,
+  object: TDCamera,
   domElement: HTMLElement,
   target: THREE.Vector3,
   updateCallback: (args: any) => void,

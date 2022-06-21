@@ -11,7 +11,7 @@ import {
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import type { OrthoViewMap } from "oxalis/constants";
+import type { TDCamera, OrthoViewCameraMap } from "oxalis/constants";
 import Constants, { ArbitraryViewport, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
@@ -27,7 +27,7 @@ class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
   trigger: (...args: Array<any>) => any;
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  cameras: OrthoViewCameraMap;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
   animate: () => void;
@@ -40,7 +40,7 @@ class ArbitraryView {
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Perspective... Remove this comment to see the full error message
   camera: THREE.PerspectiveCamera = null;
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Orthographi... Remove this comment to see the full error message
-  tdCamera: THREE.OrthographicCamera = null;
+  tdCamera: TDCamera = null;
   geometries: Array<GeometryLike> = [];
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
   group: THREE.Object3D;
@@ -63,6 +63,7 @@ class ArbitraryView {
     this.camera.name = ArbitraryViewport;
     this.camera.matrixAutoUpdate = false;
     scene.add(this.camera);
+    // TODO: here depending on settings
     const tdCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
     tdCamera.position.copy(new THREE.Vector3(10, 10, -10));
     tdCamera.up = new THREE.Vector3(0, 0, -1);
@@ -91,7 +92,7 @@ class ArbitraryView {
     });
   }
 
-  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
+  getCameras(): OrthoViewCameraMap {
     return this.cameras;
   }
 

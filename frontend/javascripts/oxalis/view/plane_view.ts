@@ -7,7 +7,7 @@ import _ from "lodash";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type { OrthoViewMap, Vector3 } from "oxalis/constants";
+import type { OrthoViewCameraMap, OrthoViewMap, TDCamera, Vector3 } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
@@ -19,7 +19,7 @@ const createDirLight = (
   position: Vector3,
   target: Vector3,
   intensity: number,
-  parent: THREE.OrthographicCamera,
+  parent: TDCamera,
 ) => {
   const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
   dirLight.color.setHSL(0.1, 1, 0.95);
@@ -61,6 +61,7 @@ class PlaneView {
     for (const plane of OrthoViewValues) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
+      // TODO: Maybe set to perspective camera in td if settings say so
       cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
       cameras[plane].name = plane;
@@ -222,7 +223,7 @@ class PlaneView {
     this.draw();
   };
 
-  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
+  getCameras(): OrthoViewCameraMap {
     return this.cameras;
   }
 

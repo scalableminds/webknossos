@@ -2,7 +2,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import * as THREE from "three";
 import { InputMouse } from "libs/input";
-import type { OrthoView, OrthoViewMap, Point2, Vector3 } from "oxalis/constants";
+import type { OrthoView, Point2, Vector3, OrthoViewCameraMap } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -65,7 +65,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
 
 const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  cameras: OrthoViewCameraMap;
   planeView?: PlaneView;
   tracing?: Tracing;
 };

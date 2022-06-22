@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Menu, notification, Tooltip, Popover, Input } from "antd";
+import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import React, { useEffect } from "react";
 import type {
@@ -18,8 +18,13 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import type { AnnotationTool, Vector3, OrthoView } from "oxalis/constants";
-import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
+import {
+  AnnotationTool,
+  Vector3,
+  OrthoView,
+  AnnotationToolEnum,
+  VolumeTools,
+} from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
   loadAdHocMeshAction,
@@ -70,7 +75,6 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import { roundTo, hexToRgb, rgbToHex } from "libs/utils";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
-import Model from "oxalis/model";
 import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import api from "oxalis/api/internal_api";
@@ -83,7 +87,7 @@ type OwnProps = {
   contextMenuPosition: [number, number] | null | undefined;
   maybeClickedNodeId: number | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
-  globalPosition: Vector3;
+  globalPosition: Vector3 | null | undefined;
   maybeViewport: OrthoView | null | undefined;
   hideContextMenu: () => void;
 };
@@ -176,27 +180,6 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string) {
     ),
     icon: <i className="fas fa-ruler" />,
   });
-}
-
-function getMaybeHoveredCellMenuItem(globalPosition: Vector3) {
-  const hoveredCellInfo = Model.getHoveredCellId(globalPosition);
-
-  if (!hoveredCellInfo) {
-    return null;
-  }
-
-  const cellIdAsString = hoveredCellInfo.isMapped
-    ? `${hoveredCellInfo.id} (mapped)`
-    : hoveredCellInfo.id;
-  return (
-    <div key="hovered-info" className="node-context-menu-item">
-      <i className="fas fa-ruler" /> Hovered Segment: {cellIdAsString}
-      {copyIconWithTooltip(
-        hoveredCellInfo.id,
-        `Copy ${hoveredCellInfo.isMapped ? "mapped" : ""} segment id`,
-      )}
-    </div>
-  );
 }
 
 function positionToString(pos: Vector3): string {
@@ -481,6 +464,8 @@ function getBoundingBoxMenuOptions({
   deleteBoundingBox,
   allowUpdate,
 }: NoNodeContextMenuProps) {
+  if (globalPosition == null) return [];
+
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const newBoundingBoxMenuItem = (
     <Menu.Item
@@ -644,7 +629,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   }, [visibleSegmentationLayer, dataset]);
 
   const loadPrecomputedMesh = async () => {
-    if (!currentMeshFile || !visibleSegmentationLayer) return;
+    if (!currentMeshFile || !visibleSegmentationLayer || globalPosition == null) return;
     // Ensure that the segment ID is loaded, since a mapping might have been activated
     // shortly before
     const segmentId = await getSegmentIdForPositionAsync(globalPosition);
@@ -658,7 +643,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   };
 
   const computeMeshAdHoc = () => {
-    if (!visibleSegmentationLayer) {
+    if (!visibleSegmentationLayer || globalPosition == null) {
       return;
     }
 
@@ -675,7 +660,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions =
-    skeletonTracing != null && allowUpdate
+    skeletonTracing != null && globalPosition != null && allowUpdate
       ? [
           <Menu.Item key="create-node" onClick={() => setWaypoint(globalPosition, viewport, false)}>
             Create Node here
@@ -707,29 +692,31 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
       : [];
   const segmentationLayerName =
     visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null;
-  const connectomeFileMappingName =
-    currentConnectomeFile != null ? currentConnectomeFile.mappingName : undefined;
-  const loadSynapsesItem = (
-    <MenuItemWithMappingActivationConfirmation
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string | Element; className: str... Remove this comment to see the full error message
-      className="node-context-menu-item"
-      key="load-synapses"
-      disabled={!isConnectomeMappingEnabled.value}
-      onClick={() => loadSynapsesOfAgglomerateAtPosition(globalPosition)}
-      mappingName={connectomeFileMappingName}
-      descriptor="connectome file"
-      layerName={segmentationLayerName}
-      mappingInfo={mappingInfo}
-    >
-      {isConnectomeMappingEnabled.value ? (
-        "Import Agglomerate and Synapses"
-      ) : (
-        <Tooltip title={isConnectomeMappingEnabled.reason}>Import Agglomerate and Synapses</Tooltip>
-      )}
-    </MenuItemWithMappingActivationConfirmation>
-  );
 
-  if (visibleSegmentationLayer != null) {
+  if (visibleSegmentationLayer != null && globalPosition != null) {
+    const connectomeFileMappingName =
+      currentConnectomeFile != null ? currentConnectomeFile.mappingName : undefined;
+    const loadSynapsesItem = (
+      <MenuItemWithMappingActivationConfirmation
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string | Element; className: str... Remove this comment to see the full error message
+        className="node-context-menu-item"
+        key="load-synapses"
+        disabled={!isConnectomeMappingEnabled.value}
+        onClick={() => loadSynapsesOfAgglomerateAtPosition(globalPosition)}
+        mappingName={connectomeFileMappingName}
+        descriptor="connectome file"
+        layerName={segmentationLayerName}
+        mappingInfo={mappingInfo}
+      >
+        {isConnectomeMappingEnabled.value ? (
+          "Import Agglomerate and Synapses"
+        ) : (
+          <Tooltip title={isConnectomeMappingEnabled.reason}>
+            Import Agglomerate and Synapses
+          </Tooltip>
+        )}
+      </MenuItemWithMappingActivationConfirmation>
+    );
     // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action
     skeletonActions.push(loadSynapsesItem);
   }
@@ -755,7 +742,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     </Menu.Item>
   );
   const nonSkeletonActions =
-    volumeTracing != null
+    volumeTracing != null && globalPosition != null
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
@@ -790,7 +777,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   }
 
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
-  let allActions = [];
+  let allActions: Array<JSX.Element | null> = [];
 
   if (isSkeletonToolActive) {
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
@@ -801,6 +788,12 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
   }
 
+  const empty = (
+    <Menu.Item key="empty">
+      <Empty description="No actions available" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+    </Menu.Item>
+  );
+
   return (
     <Menu
       onClick={hideContextMenu}
@@ -809,8 +802,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
       }}
       mode="vertical"
     >
-      {allActions}
-      {infoRows}
+      {allActions.length + infoRows.length > 0 ? [...allActions, ...infoRows] : [empty]}
     </Menu>
   );
 }
@@ -917,7 +909,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
         ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
         : null;
     const distanceToSelection =
-      activeNode != null
+      activeNode != null && positionToMeasureDistanceTo != null
         ? [
             formatNumberToLength(
               V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
@@ -928,7 +920,8 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
     const nodePositionAsString =
       // @ts-expect-error ts-migrate(2339) FIXME: Property 'position' does not exist on type 'never'... Remove this comment to see the full error message
       nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
-    const segmentIdAtPosition = getSegmentIdForPosition(globalPosition);
+    const segmentIdAtPosition =
+      globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
     const infoRows = [];
 
     if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
@@ -947,7 +940,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
           {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
         </div>,
       );
-    } else {
+    } else if (globalPosition != null) {
       const positionAsString = positionToString(globalPosition);
       infoRows.push(
         <div key="positionInfo" className="node-context-menu-item">
@@ -977,21 +970,18 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
       );
     }
 
-    const maybeHoveredCellMenuItem = getMaybeHoveredCellMenuItem(globalPosition);
-
-    if (!maybeHoveredCellMenuItem) {
-      infoRows.push(maybeHoveredCellMenuItem);
+    if (infoRows.length > 0) {
+      infoRows.unshift(
+        <Menu.Divider
+          key="divider"
+          className="hide-if-first hide-if-last"
+          style={{
+            margin: "4px 0px",
+          }}
+        />,
+      );
     }
 
-    infoRows.unshift(
-      <Menu.Divider
-        key="divider"
-        className="hide-if-first hide-if-last"
-        style={{
-          margin: "4px 0px",
-        }}
-      />,
-    );
     // It's important to not use <NodeContextMenuOptions ...>
     // or <NoNodeContextMenuOptions ... />
     // for the following two expressions, since this breaks

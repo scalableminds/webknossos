@@ -416,6 +416,45 @@ export function getMappingInfoForVolumeTracing(
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
 }
 
+export function hasEditableMapping(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  if (layerName != null) {
+    // This needs to be checked before calling getRequestedOrDefaultSegmentationTracingLayer,
+    // as the function will throw an error if layerName is given but not a tracing layer
+    const layer = getSegmentationLayerByName(state.dataset, layerName);
+    const tracing = getTracingForSegmentationLayer(state, layer);
+
+    if (tracing == null) return false;
+  }
+
+  const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
+
+  if (volumeTracing == null) return false;
+
+  return !!volumeTracing.mappingIsEditable;
+}
+
+export function isMappingActivationAllowed(
+  state: OxalisState,
+  mappingName: string | null | undefined,
+  layerName?: string | null | undefined,
+): boolean {
+  const isEditableMappingActive = hasEditableMapping(state, layerName);
+
+  if (!isEditableMappingActive) return true;
+
+  const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
+
+  // This should never be the case, since editable mappings can only be active for volume tracings
+  if (volumeTracing == null) return false;
+
+  // Only allow mapping activations of the editable mapping itself if an editable mapping is saved
+  // in the volume tracing. Editable mappings cannot be disabled or switched for now.
+  return mappingName === volumeTracing.mappingName;
+}
+
 export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | undefined {
   return volumeTracing.lastLabelActions[0];
 }

@@ -242,6 +242,24 @@ object DeleteSegmentVolumeAction {
   implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]
 }
 
+case class UpdateMappingNameAction(mappingName: Option[String],
+                                   isEditable: Option[Boolean],
+                                   actionTimestamp: Option[Long])
+    extends ApplyableVolumeAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+
+  override def transformToCompact: UpdateAction[VolumeTracing] =
+    CompactVolumeUpdateAction("updateMappingName", actionTimestamp, Json.obj("mappingName" -> mappingName))
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.copy(mappingName = mappingName, mappingIsEditable = Some(isEditable.getOrElse(false)))
+}
+
+object UpdateMappingNameAction {
+  implicit val jsonFormat: OFormat[UpdateMappingNameAction] = Json.format[UpdateMappingNameAction]
+}
+
 case class CompactVolumeUpdateAction(name: String, actionTimestamp: Option[Long], value: JsObject)
     extends VolumeUpdateAction
 
@@ -275,6 +293,7 @@ object VolumeUpdateAction {
         case "createSegment"                   => (json \ "value").validate[CreateSegmentVolumeAction]
         case "updateSegment"                   => (json \ "value").validate[UpdateSegmentVolumeAction]
         case "deleteSegment"                   => (json \ "value").validate[DeleteSegmentVolumeAction]
+        case "updateMappingName"               => (json \ "value").validate[UpdateMappingNameAction]
         case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
       }
 

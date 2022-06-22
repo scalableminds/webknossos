@@ -14,7 +14,7 @@ import {
 import type {
   LoadAdHocMeshAction,
   LoadPrecomputedMeshAction,
-  IsosurfaceMappingInfo,
+  AdHocIsosurfaceInfo,
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
@@ -49,7 +49,6 @@ import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/pos
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
 import ThreeDMap from "libs/ThreeDMap";
-import * as Utils from "libs/utils";
 import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
@@ -70,7 +69,13 @@ const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 6;
  *
  */
 const isosurfacesMapByLayer: Record<string, Map<number, ThreeDMap<boolean>>> = {};
-const cubeSize: Vector3 = [256, 256, 256];
+function marchingCubeSizeInMag1(): Vector3 {
+  // @ts-ignore
+  return window.__marchingCubeSizeInMag1 != null
+    ? // @ts-ignore
+      window.__marchingCubeSizeInMag1
+    : [128, 128, 128];
+}
 const modifiedCells: Set<number> = new Set();
 export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
   const dataView = new DataView(buffer);
@@ -105,23 +110,19 @@ function removeMapForSegment(layerName: string, segmentId: number): void {
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
+  // Convert marchingCubeSizeInMag1 to another resolution (zoomStep)
   const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
-    [...cubeSize, zoomStep],
+    [...marchingCubeSizeInMag1(), 0],
     resolutionInfo,
-    0,
+    zoomStep,
   );
   // Drop the last element of the Vector4;
   return [x, y, z];
 }
 
-function clipPositionToCubeBoundary(
-  position: Vector3,
-  zoomStep: number,
-  resolutionInfo: ResolutionInfo,
-): Vector3 {
-  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
-  const currentCube = Utils.map3((el, idx) => Math.floor(el / zoomedCubeSize[idx]), position);
-  const clippedPosition = Utils.map3((el, idx) => el * zoomedCubeSize[idx], currentCube);
+function clipPositionToCubeBoundary(position: Vector3): Vector3 {
+  const currentCube = V3.floor(V3.divide3(position, marchingCubeSizeInMag1()));
+  const clippedPosition = V3.scale3(currentCube, marchingCubeSizeInMag1());
   return clippedPosition;
 }
 
@@ -135,18 +136,12 @@ const NEIGHBOR_LOOKUP = [
   [1, 0, 0],
 ];
 
-function getNeighborPosition(
-  clippedPosition: Vector3,
-  neighborId: number,
-  zoomStep: number,
-  resolutionInfo: ResolutionInfo,
-): Vector3 {
-  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
+function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
   const neighboringPosition = [
-    clippedPosition[0] + neighborMultiplier[0] * zoomedCubeSize[0],
-    clippedPosition[1] + neighborMultiplier[1] * zoomedCubeSize[1],
-    clippedPosition[2] + neighborMultiplier[2] * zoomedCubeSize[2],
+    clippedPosition[0] + neighborMultiplier[0] * marchingCubeSizeInMag1()[0],
+    clippedPosition[1] + neighborMultiplier[1] * marchingCubeSizeInMag1()[1],
+    clippedPosition[2] + neighborMultiplier[2] * marchingCubeSizeInMag1()[2],
   ];
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return neighboringPosition;
@@ -156,7 +151,7 @@ function getNeighborPosition(
 // In order to avoid, that too many chunks are computed for one user interaction,
 // we store the amount of requests in a batch per segment.
 const batchCounterPerSegment: Record<number, number> = {};
-const MAXIMUM_BATCH_SIZE = 50;
+const MAXIMUM_BATCH_SIZE = 400;
 
 function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void> {
   yield* call(
@@ -165,7 +160,7 @@ function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void>
     action.cellId,
     false,
     action.layerName,
-    action.mappingInfo,
+    action.extraInfo,
   );
 }
 
@@ -174,7 +169,7 @@ function* loadAdHocIsosurface(
   cellId: number,
   removeExistingIsosurface: boolean = false,
   layerName?: string | null | undefined,
-  maybeMappingInfo?: IsosurfaceMappingInfo,
+  maybeExtraInfo?: AdHocIsosurfaceInfo,
 ): Saga<void> {
   const layer =
     layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
@@ -183,25 +178,25 @@ function* loadAdHocIsosurface(
     return;
   }
 
-  const isosurfaceMappingInfo = yield* call(getIsosurfaceMappingInfo, layer.name, maybeMappingInfo);
+  const isosurfaceExtraInfo = yield* call(getIsosurfaceExtraInfo, layer.name, maybeExtraInfo);
   yield* call(
     loadIsosurfaceForSegmentId,
     cellId,
     seedPosition,
-    isosurfaceMappingInfo,
+    isosurfaceExtraInfo,
     removeExistingIsosurface,
     layer,
   );
 }
 
-function* getIsosurfaceMappingInfo(
+function* getIsosurfaceExtraInfo(
   layerName: string,
-  maybeMappingInfo: IsosurfaceMappingInfo | null | undefined,
-): Saga<IsosurfaceMappingInfo> {
+  maybeExtraInfo: AdHocIsosurfaceInfo | null | undefined,
+): Saga<AdHocIsosurfaceInfo> {
   const activeMappingByLayer = yield* select(
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
-  if (maybeMappingInfo != null) return maybeMappingInfo;
+  if (maybeExtraInfo != null) return maybeExtraInfo;
   const mappingInfo = getMappingInfo(activeMappingByLayer, layerName);
   const isMappingActive = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
   const mappingName = isMappingActive ? mappingInfo.mappingName : null;
@@ -212,14 +207,20 @@ function* getIsosurfaceMappingInfo(
   };
 }
 
-function* getInfoForIsosurfaceLoading(layer: DataLayer): Saga<{
+function* getInfoForIsosurfaceLoading(
+  layer: DataLayer,
+  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
+): Saga<{
   zoomStep: number;
   resolutionInfo: ResolutionInfo;
 }> {
   const resolutionInfo = getResolutionInfo(layer.resolutions);
-  const preferredZoomStep = yield* select(
-    (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-  );
+  const preferredZoomStep =
+    isosurfaceExtraInfo.preferredQuality != null
+      ? isosurfaceExtraInfo.preferredQuality
+      : yield* select(
+          (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
+        );
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
   return {
     zoomStep,
@@ -230,11 +231,15 @@ function* getInfoForIsosurfaceLoading(layer: DataLayer): Saga<{
 function* loadIsosurfaceForSegmentId(
   segmentId: number,
   seedPosition: Vector3,
-  isosurfaceMappingInfo: IsosurfaceMappingInfo,
+  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
   removeExistingIsosurface: boolean,
   layer: DataLayer,
 ): Saga<void> {
-  const { zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading, layer);
+  const { zoomStep, resolutionInfo } = yield* call(
+    getInfoForIsosurfaceLoading,
+    layer,
+    isosurfaceExtraInfo,
+  );
   batchCounterPerSegment[segmentId] = 0;
   // If a REMOVE_ISOSURFACE action is dispatched and consumed
   // here before loadIsosurfaceWithNeighbors is finished, the latter saga
@@ -247,7 +252,7 @@ function* loadIsosurfaceForSegmentId(
       segmentId,
       seedPosition,
       zoomStep,
-      isosurfaceMappingInfo,
+      isosurfaceExtraInfo,
       resolutionInfo,
       removeExistingIsosurface,
     ),
@@ -265,13 +270,13 @@ function* loadIsosurfaceWithNeighbors(
   segmentId: number,
   position: Vector3,
   zoomStep: number,
-  isosurfaceMappingInfo: IsosurfaceMappingInfo,
+  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
   resolutionInfo: ResolutionInfo,
   removeExistingIsosurface: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
-  const { mappingName, mappingType } = isosurfaceMappingInfo;
-  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
+  const { mappingName, mappingType } = isosurfaceExtraInfo;
+  const clippedPosition = clipPositionToCubeBoundary(position);
   let positionsToRequest = [clippedPosition];
   const hasIsosurface = yield* select(
     (state) =>
@@ -297,7 +302,7 @@ function* loadIsosurfaceWithNeighbors(
       segmentId,
       currentPosition,
       zoomStep,
-      isosurfaceMappingInfo,
+      isosurfaceExtraInfo,
       resolutionInfo,
       isInitialRequest,
       removeExistingIsosurface && isInitialRequest,
@@ -336,7 +341,7 @@ function* maybeLoadIsosurface(
   segmentId: number,
   clippedPosition: Vector3,
   zoomStep: number,
-  isosurfaceMappingInfo: IsosurfaceMappingInfo,
+  isosurfaceExtraInfo: AdHocIsosurfaceInfo,
   resolutionInfo: ResolutionInfo,
   isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
@@ -354,8 +359,12 @@ function* maybeLoadIsosurface(
 
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(clippedPosition, true);
+  // In general, it is more performant to compute meshes in a more coarse resolution instead of using subsampling strides
+  // since in the coarse resolution less data needs to be loaded. Another possibility to increase performance is
+  // window.__marchingCubeSizeInMag1 which affects the cube size the marching cube algorithm will work on. If the cube is significantly larger than the
+  // segments, computations are wasted.
   // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceSubsamplingStrides' does not... Remove this comment to see the full error message
-  const subsamplingStrides = window.__isosurfaceSubsamplingStrides || [4, 4, 4];
+  const subsamplingStrides = window.__isosurfaceSubsamplingStrides || [1, 1, 1];
   const scale = yield* select((state) => state.dataset.dataSource.scale);
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
@@ -366,8 +375,15 @@ function* maybeLoadIsosurface(
   }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
-  const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
+  // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer ...
+  let useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
+  if (isosurfaceExtraInfo.useDataStore != null) {
+    // ... except if the caller specified whether to use the data store ...
+    useDataStore = isosurfaceExtraInfo.useDataStore;
+  } else if (volumeTracing?.mappingIsEditable) {
+    // ... or if an editable mapping is active.
+    useDataStore = false;
+  }
   const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
   if (isInitialRequest) {
@@ -391,9 +407,9 @@ function* maybeLoadIsosurface(
           mag,
           segmentId,
           subsamplingStrides,
-          cubeSize,
+          cubeSize: getZoomedCubeSize(zoomStep, resolutionInfo),
           scale,
-          ...isosurfaceMappingInfo,
+          ...isosurfaceExtraInfo,
         },
       );
       const vertices = new Float32Array(responseBuffer);
@@ -402,10 +418,12 @@ function* maybeLoadIsosurface(
         getSceneController().removeIsosurfaceById(segmentId);
       }
 
-      getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
-      return neighbors.map((neighbor) =>
-        getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
+      getSceneController().addIsosurfaceFromVertices(
+        vertices,
+        segmentId,
+        isosurfaceExtraInfo.passive || false,
       );
+      return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
     } catch (exception) {
       retryCount++;
       // @ts-ignore

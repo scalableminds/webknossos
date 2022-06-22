@@ -144,6 +144,7 @@ const defaultState: OxalisState = {
       tracingId: "",
     },
     volumes: [],
+    mappings: [],
     skeleton: null,
     owner: null,
     annotationLayers: [],
@@ -152,14 +153,17 @@ const defaultState: OxalisState = {
     queue: {
       skeleton: [],
       volumes: {},
+      mappings: {},
     },
     isBusyInfo: {
       skeleton: false,
       volume: false,
+      mapping: false,
     },
     lastSaveTimestamp: {
       skeleton: 0,
       volumes: {},
+      mappings: {},
     },
     progressInfo: {
       processedActionCount: 0,

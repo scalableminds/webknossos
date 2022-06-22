@@ -22,6 +22,7 @@ import {
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
+import { hasEditableMapping } from "oxalis/model/accessors/volumetracing_accessor";
 const { Option, OptGroup } = Select;
 
 type OwnProps = {
@@ -49,6 +50,7 @@ type StateProps = {
   activeViewport: OrthoView;
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
+  isEditableMappingActive: boolean;
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -225,6 +227,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                   value={shouldMappingBeEnabled}
                   label="ID Mapping"
                   loading={this.state.isRefreshingMappingList}
+                  disabled={this.props.isEditableMappingActive}
                 />
               </div>
 
@@ -243,6 +246,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                   {...selectValueProp}
                   onChange={this.handleChangeMapping}
                   notFoundContent="No mappings found."
+                  disabled={this.props.isEditableMappingActive}
                 >
                   {renderCategoryOptions(availableMappings, "JSON")}
                   {renderCategoryOptions(availableAgglomerates, "HDF5")}
@@ -289,6 +293,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     segmentationLayer: getSegmentationLayerByName(state.dataset, ownProps.layerName),
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
     allowUpdate: state.tracing.restrictions.allowUpdate,
+    isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
   };
 }
 

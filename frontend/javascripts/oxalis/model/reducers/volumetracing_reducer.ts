@@ -1,6 +1,6 @@
 import update from "immutability-helper";
 import { ContourModeEnum } from "oxalis/constants";
-import type { OxalisState, VolumeTracing } from "oxalis/store";
+import type { EditableMapping, OxalisState, VolumeTracing } from "oxalis/store";
 import type {
   VolumeTracingAction,
   UpdateSegmentAction,
@@ -24,11 +24,18 @@ import {
   setContourTracingModeReducer,
   setMaxCellReducer,
   updateVolumeTracing,
+  setMappingNameReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import type { ServerVolumeTracing } from "types/api_flow_types";
+import {
+  SetMappingAction,
+  SetMappingEnabledAction,
+  SetMappingNameAction,
+} from "oxalis/model/actions/settings_actions";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -172,11 +179,16 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
     fallbackLayer: tracing.fallbackLayer,
     userBoundingBoxes,
+    mappingName: tracing.mappingName,
+    mappingIsEditable: tracing.mappingIsEditable,
   };
   return volumeTracing;
 }
 
-function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): OxalisState {
+function VolumeTracingReducer(
+  state: OxalisState,
+  action: VolumeTracingAction | SetMappingAction | SetMappingEnabledAction | SetMappingNameAction,
+): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
@@ -192,6 +204,24 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         },
       });
       return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
+    }
+
+    case "INITIALIZE_EDITABLE_MAPPING": {
+      const mapping: EditableMapping = {
+        type: "mapping",
+        ...action.mapping,
+      };
+      const newMappings = state.tracing.mappings.filter(
+        (tracing) => tracing.tracingId !== mapping.tracingId,
+      );
+      newMappings.push(mapping);
+      return update(state, {
+        tracing: {
+          mappings: {
+            $set: newMappings,
+          },
+        },
+      });
     }
 
     case "SET_SEGMENTS": {
@@ -256,6 +286,41 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
       // Possibly update the maxCellId after volume annotation
       const { activeCellId, maxCellId } = volumeTracing;
       return setMaxCellReducer(state, volumeTracing, Math.max(activeCellId, maxCellId));
+    }
+
+    case "SET_MAPPING": {
+      return setMappingNameReducer(state, volumeTracing, action.mappingName, action.mappingType);
+    }
+
+    case "SET_MAPPING_ENABLED": {
+      const { mappingName, mappingType } = getMappingInfo(
+        state.temporaryConfiguration.activeMappingByLayer,
+        action.layerName,
+      );
+      return setMappingNameReducer(
+        state,
+        volumeTracing,
+        mappingName,
+        mappingType,
+        action.isMappingEnabled,
+      );
+    }
+
+    case "SET_MAPPING_NAME": {
+      // Editable mappings cannot be disabled or switched for now
+      if (volumeTracing.mappingIsEditable) return state;
+
+      const { mappingName, mappingType } = action;
+      return setMappingNameReducer(state, volumeTracing, mappingName, mappingType);
+    }
+
+    case "SET_MAPPING_IS_EDITABLE": {
+      // Editable mappings cannot be disabled or switched for now
+      if (volumeTracing.mappingIsEditable) return state;
+
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        mappingIsEditable: true,
+      });
     }
 
     default:

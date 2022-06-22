@@ -27,7 +27,7 @@ object CachedCube {
       loadInstruction.dataSource.id.team,
       loadInstruction.dataSource.id.name,
       loadInstruction.dataLayer.name,
-      loadInstruction.cube.resolution,
+      loadInstruction.cube.mag,
       loadInstruction.cube.x,
       loadInstruction.cube.y,
       loadInstruction.cube.z

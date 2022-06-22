@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a warning for when the resolution in the XY viewport on z=1-downsampled datasets becomes too low, explaining the problem and how to mitigate it. [#6255](https://github.com/scalableminds/webknossos/pull/6255)
 - Provide a UI to download/export a dataset in view-mode. The UI explains how to access the data with the python library. [#6283](https://github.com/scalableminds/webknossos/pull/6283)
 - Added the possibility to view and download older versions of read-only annotations. [#6274](https://github.com/scalableminds/webknossos/pull/6274)
+- Added a proofreading tool which can be used to edit agglomerate mappings. After activating an agglomerate mapping the proofreading tool can be selected. While the tool is active, agglomerates can be clicked to load their agglomerate skeletons. Use the context menu to delete or create edges for those agglomerate skeletons to split or merge agglomerates. The changes will immediately reflect in the segmentation and meshes. [#6195](https://github.com/scalableminds/webknossos/pull/6195)
 
 ### Changed
 

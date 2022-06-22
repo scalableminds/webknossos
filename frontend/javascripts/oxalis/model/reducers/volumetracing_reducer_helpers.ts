@@ -1,6 +1,12 @@
 import update from "immutability-helper";
 import { ContourMode, OrthoViews, OrthoViewWithoutTD, Vector3 } from "oxalis/constants";
-import type { LabelAction, OxalisState, VolumeTracing } from "oxalis/store";
+import type {
+  EditableMapping,
+  MappingType,
+  LabelAction,
+  OxalisState,
+  VolumeTracing,
+} from "oxalis/store";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
@@ -18,6 +24,22 @@ export function updateVolumeTracing(
   });
   return updateKey(state, "tracing", {
     volumes: newVolumes,
+  });
+}
+export function updateEditableMapping(
+  state: OxalisState,
+  volumeTracingId: string,
+  shape: Partial<EditableMapping>,
+) {
+  const newMappings = state.tracing.mappings.map((mapping) => {
+    if (mapping.tracingId === volumeTracingId) {
+      return { ...mapping, ...shape };
+    } else {
+      return mapping;
+    }
+  });
+  return updateKey(state, "tracing", {
+    mappings: newMappings,
   });
 }
 export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
@@ -116,5 +138,22 @@ export function setContourTracingModeReducer(
 export function setMaxCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     maxCellId: id,
+  });
+}
+export function setMappingNameReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+  mappingName: string | null | undefined,
+  mappingType: MappingType,
+  isMappingEnabled: boolean = true,
+) {
+  // Editable mappings cannot be disabled or switched for now
+  if (volumeTracing.mappingIsEditable) return state;
+  // Only HDF5 mappings are persisted in volume annotations for now
+  if (mappingType !== "HDF5" || !isMappingEnabled) {
+    mappingName = null;
+  }
+  return updateVolumeTracing(state, volumeTracing.tracingId, {
+    mappingName,
   });
 }

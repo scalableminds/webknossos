@@ -451,6 +451,7 @@ type UiInformation = {
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
   readonly showDownloadModal: boolean;
+  readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly storedLayouts: Record<string, any>;

@@ -34,7 +34,13 @@ type Props = {
   hasVolumeFallback: boolean;
 };
 
-function Hint({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
+export function Hint({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style: React.CSSProperties;
+}) {
   return (
     <div style={{ ...style, fontSize: 12, color: "var(--ant-text-secondary)" }}>{children}</div>
   );
@@ -45,7 +51,7 @@ export async function copyToClipboard(code: string) {
   Toast.success("Snippet copied to clipboard.");
 }
 
-function MoreInfoHint() {
+export function MoreInfoHint() {
   return (
     <Hint
       style={{
@@ -65,7 +71,7 @@ function MoreInfoHint() {
   );
 }
 
-function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
+export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
   return (
     <pre>
       <Button

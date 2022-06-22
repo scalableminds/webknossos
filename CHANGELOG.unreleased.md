@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - For the api routes that return annotation info objects, the user field was renamed to owner. User still exists as an alias, but will be removed in a future release. [#6250](https://github.com/scalableminds/webknossos/pull/6250)
 - Slimmed the URLs for annotations by removing `Explorational` and `Task`. The old URLs are still supported, but will be redirected to the new format. [#6208](https://github.com/scalableminds/webknossos/pull/6208)
 - When creating a task from a base annotation, the starting position/rotation and bounding box as specified during task creation are now used and overwrite the ones from the original base annotation. [#6249](https://github.com/scalableminds/webknossos/pull/6249)
+- Increased maximum interpolation depth from 8 to 100. [#6292](https://github.com/scalableminds/webknossos/pull/6292)
 
 ### Fixed
 - Fixed that bounding boxes were deletable in read-only tracings although the delete button was disabled. [#6273](https://github.com/scalableminds/webknossos/pull/6273)

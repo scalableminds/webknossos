@@ -72,6 +72,9 @@ class AnnotationController @Inject()(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
           new ApiResponse(code = 400, message = badRequestLabel)))
   def info(
+      @ApiParam(value =
+                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
+                example = "Explorational") typ: String,
       @ApiParam(
         value =
           "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
@@ -82,11 +85,11 @@ class AnnotationController @Inject()(
       val notFoundMessage =
         if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
       for {
-        annotation <- provider.provideAnnotation(id, request.identity) ?~> notFoundMessage ~> NOT_FOUND
+        annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> notFoundMessage ~> NOT_FOUND
         _ <- bool2Fox(annotation.state != Cancelled) ?~> "annotation.cancelled"
-        restrictions <- provider.restrictionsFor(annotation.typ.toString, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
         _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        typedTyp = annotation.typ
+        typedTyp <- AnnotationType.fromString(typ).toFox ?~> "annotationType.notFound" ~> NOT_FOUND
         js <- annotationService
           .publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
         _ <- Fox.runOptional(request.identity) { user =>
@@ -106,10 +109,7 @@ class AnnotationController @Inject()(
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
           new ApiResponse(code = 400, message = badRequestLabel)))
-  def infoDeprecated(
-      @ApiParam(value =
-                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
-                example = "Explorational") typ: String,
+  def infoWithoutType(
       @ApiParam(
         value =
           "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
@@ -118,17 +118,18 @@ class AnnotationController @Inject()(
     : Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
       for {
-        result <- info(id, timestamp)(request)
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- info(annotation.typ.toString, id, timestamp)(request)
       } yield result
       
     }
   }
 
   @ApiOperation(hidden = true, value = "")
-  def merge(id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
+  def merge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        annotationA <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        annotationA <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
         annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity) ~> NOT_FOUND
         mergedAnnotation <- annotationMerger.mergeTwo(annotationA, annotationB, persistTracing = true, request.identity) ?~> "annotation.merge.failed"
         restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
@@ -139,10 +140,11 @@ class AnnotationController @Inject()(
     }
   
   @ApiOperation(hidden = true, value = "")
-  def mergeDeprecated(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
+  def mergeWithoutType(id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        result <- merge(id, mergedTyp, mergedId)(request)
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- merge(annotation.typ.toString, id, mergedTyp, mergedId)(request)
       } yield result
     }
 
@@ -197,22 +199,23 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reopened"))
   }
 
-  def addAnnotationLayer(id: String): Action[AnnotationLayerParameters] =
+  def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
-        annotation <- provider.provideAnnotation(id, request.identity)
-        _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.addAnnotationLayer(annotation, organization.name, request.body)
-        updated <- provider.provideAnnotation(id, request.identity)
+        updated <- provider.provideAnnotation(typ, id, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }
 
-  def addAnnotationLayerDeprecated(typ: String, id: String): Action[AnnotationLayerParameters] =
+  def addAnnotationLayerWithoutType(id: String): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
-        result <- addAnnotationLayer(id)(request)
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- addAnnotationLayer(annotation.typ.toString, id)(request)
       } yield result
     }    
 
@@ -266,46 +269,48 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def makeHybrid(id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
+  def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        annotation <- provider.provideAnnotation(id, request.identity)
-        _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.makeAnnotationHybrid(annotation, organization.name, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
-        updated <- provider.provideAnnotation(id, request.identity)
+        updated <- provider.provideAnnotation(typ, id, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }
   
   @ApiOperation(hidden = true, value = "")
-  def makeHybridDeprecated(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
+  def makeHybridWithoutType(id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        result <- makeHybrid(id, fallbackLayerName)(request)
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- makeHybrid(annotation.typ.toString, id, fallbackLayerName)(request)
       } yield result
     }
 
   @ApiOperation(hidden = true, value = "")
-  def downsample(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
+  def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        annotation <- provider.provideAnnotation(id, request.identity)
-        _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.downsample.explorationalsOnly"
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
         annotationLayer <- annotation.annotationLayers
           .find(_.tracingId == tracingId)
           .toFox ?~> "annotation.downsample.layerNotFound"
         _ <- annotationService.downsampleAnnotation(annotation, annotationLayer) ?~> "annotation.downsample.failed"
-        updated <- provider.provideAnnotation(id, request.identity)
+        updated <- provider.provideAnnotation(typ, id, request.identity)
         json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
   }
 
   @ApiOperation(hidden = true, value = "")
-  def downsampleDeprecated(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
+  def downsampleWithoutType(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        result <- downsample(id, tracingId)(request)
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- downsample(annotation.typ.toString, id, tracingId)(request)
       } yield result
   }
 
@@ -404,7 +409,7 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def cancel(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def cancel(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def tryToCancel(annotation: Annotation) =
       annotation match {
         case t if t.typ == AnnotationType.Task =>
@@ -418,16 +423,17 @@ class AnnotationController @Inject()(
       }
 
     for {
-      annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+      annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
       result <- tryToCancel(annotation)
     } yield result
   }
 
   @ApiOperation(hidden = true, value = "")
-  def cancelDeprecated(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def cancelWithoutType(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      result <- cancel(id)(request)
+      annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+      result <- cancel(annotation.typ.toString, id)(request)
     } yield result
   }
 

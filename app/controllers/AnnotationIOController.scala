@@ -286,6 +286,9 @@ Expects:
       new ApiResponse(code = 400, message = badRequestLabel)
     ))
   def download(
+      @ApiParam(value =
+                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
+                example = "Explorational") typ: String,
       @ApiParam(
         value =
           "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
@@ -294,11 +297,9 @@ Expects:
       volumeVersion: Option[Long],
       skipVolumeData: Option[Boolean]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      logger.trace(s"Requested download for annotation: $id")
+      logger.trace(s"Requested download for annotation: $typ/$id")
       for {
-        annotation <- provider.provideAnnotation(id, request.identity)
-        identifier <- AnnotationIdentifier.fromAnnotation(annotation)
-        typ = identifier.annotationType.toString     
+        identifier <- AnnotationIdentifier.parse(typ, id)
         _ = request.identity.foreach(user => analyticsService.track(DownloadAnnotationEvent(user, id, typ)))
         result <- identifier.annotationType match {
           case AnnotationType.View            => Fox.failure("Cannot download View annotation")
@@ -327,10 +328,7 @@ Expects:
       ),
       new ApiResponse(code = 400, message = badRequestLabel)
     ))
-  def downloadDeprecated(
-      @ApiParam(value =
-                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
-                example = "Explorational") typ: String,
+  def downloadWithoutType(
       @ApiParam(
         value =
           "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
@@ -339,9 +337,9 @@ Expects:
       volumeVersion: Option[Long],
       skipVolumeData: Option[Boolean]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      logger.trace(s"Requested download for annotation: $typ/$id")
       for {
-        result <- download(id, skeletonVersion, volumeVersion, skipVolumeData)(request)
+        annotation <- provider.provideAnnotation(id, request.identity)
+        result <- download(annotation.typ.toString, id, skeletonVersion, volumeVersion, skipVolumeData)(request)
       } yield result
     }
 

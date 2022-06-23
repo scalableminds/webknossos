@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 - Added a warning for when the resolution in the XY viewport on z=1-downsampled datasets becomes too low, explaining the problem and how to mitigate it. [#6255](https://github.com/scalableminds/webknossos/pull/6255)
+- Add new backend API routes for working with annotations without having to provide a 'type' argument [#6285](https://github.com/scalableminds/webknossos/pull/6285)
 
 ### Changed
 

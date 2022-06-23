@@ -28,6 +28,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - Fixed that bounding boxes were deletable in read-only tracings although the delete button was disabled. [#6273](https://github.com/scalableminds/webknossos/pull/6273)
 - Fixed that (old) sharing links with tokens did not work, because the token was removed during a redirection. [#6281](https://github.com/scalableminds/webknossos/pull/6281)
+- Fixed that zooming out for datasets with very large scale was not possible until the coarsest level. [#6304](https://github.com/scalableminds/webknossos/pull/6304)
 
 ### Removed
 

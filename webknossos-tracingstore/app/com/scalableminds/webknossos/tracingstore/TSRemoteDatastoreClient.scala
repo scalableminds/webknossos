@@ -126,7 +126,7 @@ class TSRemoteDatastoreClient @Inject()(
     for {
       datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.dataSetName)
     } yield
-      s"$datastoreUri/data/datasets/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/layers/${remoteLayer.layerName}"
+      s"$datastoreUri/data/zarr/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/${remoteLayer.layerName}"
 
   private def dataStoreUriWithCache(organizationName: String, dataSetName: String): Fox[String] =
     dataStoreUriCache.getOrLoad(

@@ -150,7 +150,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            (data, indices) <- if (tracing.mappingIsEditable.getOrElse(false))
+            (data, indices) <- if (tracing.getMappingIsEditable)
               editableMappingService.volumeData(tracing, request.body, token)
             else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
@@ -178,7 +178,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            _ <- bool2Fox(!tracing.mappingIsEditable.getOrElse(false)) ?~> "Duplicate is not yet implemented for editable mapping annotations"
+            _ <- bool2Fox(!tracing.getMappingIsEditable) ?~> "Duplicate is not yet implemented for editable mapping annotations"
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
@@ -231,7 +231,7 @@ class VolumeTracingController @Inject()(
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
+          (vertices, neighbors) <- if (tracing.getMappingIsEditable)
             editableMappingService.createIsosurface(tracing, request.body, token)
           else tracingService.createIsosurface(tracingId, request.body)
         } yield {
@@ -380,7 +380,9 @@ class VolumeTracingController @Inject()(
               applyAgglomerate = None,
               version = None
             )
-            (data, missingBucketIndices) <- tracingService.data(tracingId, tracing, List(request))
+            (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
+              editableMappingService.volumeData(tracing, List(request), token)
+            else tracingService.data(tracingId, tracing, List(request))
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
                                                             data,
                                                             missingBucketIndices,
@@ -445,7 +447,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
         for {
           tracing <- tracingService.find(tracingId)
-          _ <- bool2Fox(tracing.mappingIsEditable.getOrElse(false)) ?~> "Cannot query agglomerate skeleton for volume annotation"
+          _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Cannot query agglomerate skeleton for volume annotation"
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
           remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(mappingName,
@@ -494,7 +496,7 @@ class VolumeTracingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName.toFox
-          _ <- bool2Fox(tracing.mappingIsEditable.getOrElse(false)) ?~> "Mapping is not editable"
+          _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
           currentVersion <- editableMappingService.newestMaterializableVersion(mappingName)
           _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update group must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
@@ -512,7 +514,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
-            _ <- bool2Fox(tracing.mappingIsEditable.getOrElse(false)) ?~> "Mapping is not editable"
+            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
             updateLog <- editableMappingService.updateActionLog(mappingName)
           } yield Ok(updateLog)
         }

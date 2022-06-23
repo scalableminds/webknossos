@@ -16,7 +16,6 @@
         }]
       ],
       "plugins": [
-        "istanbul"
       ]
     },
     "production": {

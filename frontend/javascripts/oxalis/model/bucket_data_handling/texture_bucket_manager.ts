@@ -16,7 +16,7 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4, Vector5 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";
@@ -46,12 +46,18 @@ function getSomeValue<T>(set: Set<T>): T {
   return value;
 }
 
-const entriesPerKey = 5;
+const ENTRIES_PER_KEY = 5;
 const tableCount = 2;
 export class CuckooTable {
+  capacity: number;
+  table: Uint16Array;
+
+  seed1: number;
+  seed2: number;
+
   constructor() {
     this.capacity = 4096;
-    this.table = new Uint16Array(entriesPerKey * this.capacity * tableCount);
+    this.table = new Uint16Array(ENTRIES_PER_KEY * this.capacity * tableCount);
     this.seed1 = 17;
     this.seed2 = 21;
   }
@@ -64,7 +70,7 @@ export class CuckooTable {
     //   return;
     // }
 
-    let entryToWrite = [key[0], key[1], key[2], key[3], value];
+    let entryToWrite: Vector5 = [key[0], key[1], key[2], key[3], value];
 
     if (this.isAddressValidForKey(key, hashedAddress1)) {
       console.log("Writing", entryToWrite, "in table 1:", hashedAddress1);
@@ -108,9 +114,14 @@ export class CuckooTable {
         return;
       }
       entryToWrite = displacedEntry;
+      let keyToWrite: Vector4 = [
+        displacedEntry[0],
+        displacedEntry[1],
+        displacedEntry[2],
+        displacedEntry[3],
+      ];
 
-      // todo: displacedEntry[0:5]
-      currentAddress = this._hashKey(this.seed2, entryToWrite, 1);
+      currentAddress = this._hashKey(this.seed2, keyToWrite, 1);
       console.log("Try to evict at", currentAddress, "to make room for", entryToWrite);
       displacedEntry = this.getEntryAtAddress(currentAddress);
       console.log("displacedEntry", displacedEntry);
@@ -128,10 +139,11 @@ export class CuckooTable {
       }
 
       entryToWrite = displacedEntry;
-      currentAddress = this._hashKey(this.seed1, entryToWrite, 0);
+      keyToWrite = [displacedEntry[0], displacedEntry[1], displacedEntry[2], displacedEntry[3]];
+      currentAddress = this._hashKey(this.seed1, keyToWrite, 0);
     }
 
-    throw new Error("couldnt add key. tried", iterationCounter);
+    throw new Error(`couldnt add key. tried ${iterationCounter} iterations`);
   }
 
   getValue(key: Vector4): number {
@@ -145,8 +157,8 @@ export class CuckooTable {
   //   return this.isEntry(key, value, hashedAddress1) || this.isEntry(key, value, hashedAddress2);
   // }
 
-  getEntryAtAddress(hashedAddress: number): Vector4 {
-    const offset = hashedAddress * entriesPerKey;
+  getEntryAtAddress(hashedAddress: number): Vector5 {
+    const offset = hashedAddress * ENTRIES_PER_KEY;
     return [
       this.table[offset + 0],
       this.table[offset + 1],
@@ -169,13 +181,16 @@ export class CuckooTable {
     return -1;
   }
 
-  isAddressValidForKey(key: Vector4, hashedAddress): boolean {
-    const offset = hashedAddress * entriesPerKey;
+  isAddressValidForKey(key: Vector4, hashedAddress: number): boolean {
+    const offset = hashedAddress * ENTRIES_PER_KEY;
     return (
+      // Either, the slot is empty...
+      // todo: What about 0, 0, 0, 0 as a key??
       (this.table[offset] === 0 &&
         this.table[offset + 1] === 0 &&
         this.table[offset + 2] === 0 &&
         this.table[offset + 3] === 0) ||
+      // or the slot already refers to the key
       (this.table[offset] === key[0] &&
         this.table[offset + 1] === key[1] &&
         this.table[offset + 2] === key[2] &&
@@ -183,8 +198,8 @@ export class CuckooTable {
     );
   }
 
-  doesAddressContainKey(key: Vector4, hashedAddress): boolean {
-    const offset = hashedAddress * entriesPerKey;
+  doesAddressContainKey(key: Vector4, hashedAddress: number): boolean {
+    const offset = hashedAddress * ENTRIES_PER_KEY;
     return (
       this.table[offset] === key[0] &&
       this.table[offset + 1] === key[1] &&
@@ -193,8 +208,8 @@ export class CuckooTable {
     );
   }
 
-  getValueAtAddress(key: Vector4, hashedAddress): number {
-    const offset = hashedAddress * entriesPerKey;
+  getValueAtAddress(key: Vector4, hashedAddress: number): number {
+    const offset = hashedAddress * ENTRIES_PER_KEY;
     if (this.doesAddressContainKey(key, hashedAddress)) {
       return this.table[offset + 4];
     } else {
@@ -202,8 +217,8 @@ export class CuckooTable {
     }
   }
 
-  writeEntryAtAddress(keyValue: Vector5, hashedAddress): boolean {
-    const offset = hashedAddress * entriesPerKey;
+  writeEntryAtAddress(keyValue: Vector5, hashedAddress: number): void {
+    const offset = hashedAddress * ENTRIES_PER_KEY;
     // eslint-disable-next-line prefer-destructuring
     this.table[offset] = keyValue[0];
     // eslint-disable-next-line prefer-destructuring

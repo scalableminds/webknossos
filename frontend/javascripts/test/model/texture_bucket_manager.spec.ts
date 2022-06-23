@@ -164,6 +164,7 @@ test("CuckooTable", (t) => {
   console.time("start");
 
   for (const entry of entries) {
+    debugger;
     ct.setEntry(entry[0], entry[1]);
     t.is(entry[1], ct.getValue(entry[0]));
   }

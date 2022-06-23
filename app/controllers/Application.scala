@@ -3,28 +3,34 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.config.ConfigRenderOptions
+import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
-import models.binary.DataStoreRpcClient
 import models.user.{MultiUserDAO, User}
 import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.jdbc.PostgresProfile.api._
-import utils.{SQLClient, SimpleSQLDAO, WkConf}
+import utils.{SQLClient, SimpleSQLDAO, StoreModules, WkConf}
 
 import scala.concurrent.ExecutionContext
 
+@Api
 class Application @Inject()(multiUserDAO: MultiUserDAO,
                             analyticsService: AnalyticsService,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
-                            sil: Silhouette[WkEnv],
-                            rpc: RPC)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                            storeModules: StoreModules,
+                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
+  @ApiOperation(value = "Information about the version of webKnossos")
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200, message = "JSON object containing information about the version of webKnossos"),
+      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
+    ))
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
@@ -35,7 +41,9 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
           "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
           "schemaVersion" -> schemaVersion.toOption,
-          "token" -> token
+          "token" -> token,
+          "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
+          "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
         ))
     }
   }
@@ -45,10 +53,11 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       case Some(user) =>
         for {
           multiUser <- multiUserDAO.findOne(user._multiUser)
-        } yield if (multiUser.isSuperUser) Some(DataStoreRpcClient.webKnossosToken) else None
+        } yield if (multiUser.isSuperUser) Some(RpcTokenHolder.webKnossosToken) else None
       case _ => Fox.successful(None)
     }
 
+  @ApiOperation(hidden = true, value = "")
   def trackAnalyticsEvent(eventType: String): Action[JsObject] = sil.UserAwareAction(validateJson[JsObject]) {
     implicit request =>
       request.identity.foreach { user =>
@@ -57,35 +66,14 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       Ok
   }
 
+  @ApiOperation(hidden = true, value = "")
   def features: Action[AnyContent] = sil.UserAwareAction {
     Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
   }
 
-  def health: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    def checkDatastoreHealthIfEnabled: Fox[Unit] =
-      if (conf.Datastore.enabled) {
-        for {
-          response <- rpc(s"http://localhost:${conf.Http.port}/data/health").get
-          if response.status == 200
-        } yield ()
-      } else {
-        Fox.successful(())
-      }
-
-    def checkTracingstoreHealthIfEnabled: Fox[Unit] =
-      if (conf.Tracingstore.enabled) {
-        for {
-          response <- rpc(s"http://localhost:${conf.Http.port}/tracings/health").get
-          if response.status == 200
-        } yield ()
-      } else {
-        Fox.successful(())
-      }
-
-    for {
-      _ <- checkDatastoreHealthIfEnabled ?~> "dataStore.unavailable"
-      _ <- checkTracingstoreHealthIfEnabled ?~> "tracingStore.unavailable"
-    } yield Ok
+  @ApiOperation(value = "Health endpoint")
+  def health: Action[AnyContent] = Action {
+    Ok
   }
 
 }

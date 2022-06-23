@@ -5,6 +5,179 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [22.06.1](https://github.com/scalableminds/webknossos/releases/tag/22.06.1) - 2022-06-16
+[Commits](https://github.com/scalableminds/webknossos/compare/22.06.0...22.06.1)
+
+### Postgres Evolutions:
+
+
+## [22.06.0](https://github.com/scalableminds/webknossos/releases/tag/22.06.0) - 2022-05-27
+[Commits](https://github.com/scalableminds/webknossos/compare/22.05.1...22.06.0)
+
+ - Note that the datastore API version has changed to 2.0. If you use webknossos-connect alongside your webKnossos instance, you will need to upgrade that one as well, compare [webknossos-connect#129](https://github.com/scalableminds/webknossos-connect/pull/129). [#6159](https://github.com/scalableminds/webknossos/pull/6159)
+
+### Postgres Evolutions:
+- [082-annotationsettings-volumeInterpolationAllowed.sql](conf/evolutions/082-annotationsettings-volumeInterpolationAllowed.sql)
+
+
+## [22.05.1](https://github.com/scalableminds/webknossos/releases/tag/22.05.1) - 2022-04-29
+[Commits](https://github.com/scalableminds/webknossos/compare/22.05.0...22.05.1)
+
+### Postgres Evolutions:
+
+
+## [22.05.0](https://github.com/scalableminds/webknossos/releases/tag/22.05.0) - 2022-04-26
+[Commits](https://github.com/scalableminds/webknossos/compare/22.04.0...22.05.0)
+
+### Postgres Evolutions:
+
+
+## [22.04.0](https://github.com/scalableminds/webknossos/releases/tag/22.04.0) - 2022-03-22
+[Commits](https://github.com/scalableminds/webknossos/compare/22.03.0...22.04.0)
+
+## [22.03.0](https://github.com/scalableminds/webknossos/releases/tag/22.03.0) - 2022-02-21
+[Commits](https://github.com/scalableminds/webknossos/compare/22.02.0...22.03.0)
+- The config field `googleAnalytics.trackingId` needs to be changed to [GA4 measurement id](https://support.google.com/analytics/answer/10089681), if used.
+
+### Postgres Evolutions:
+- [081-annotation-viewconfiguration.sql](conf/evolutions/081-annotation-viewconfiguration.sql)
+
+## [22.02.0](https://github.com/scalableminds/webknossos/releases/tag/22.02.0) - 2022-01-24
+[Commits](https://github.com/scalableminds/webknossos/compare/22.01.0...22.02.0)
+
+### Postgres Evolutions:
+- [080-job-add-cancelled.sql](conf/evolutions/080-job-add-cancelled.sql)
+
+## [22.01.0](https://github.com/scalableminds/webknossos/releases/tag/22.01.0) - 2022-01-04
+[Commits](https://github.com/scalableminds/webknossos/compare/21.11.0...22.01.0)
+- The datastore now also needs access to a Redis database. New config fields `datastore.redis.address` and `datastore.redis.port` are required. Note that this Redis instance may be the same one the tracingstore uses, but does not have to be.
+
+### Postgres Evolutions:
+- [078-annotation-layers.sql](conf/evolutions/078-annotation-layers.sql)
+- [079-add-dataset-tags.sql](conf/evolutions/079-add-dataset-tags.sql)
+
+## [21.11.0](https://github.com/scalableminds/webknossos/releases/tag/21.11.0) - 2021-11-30
+- The docker files now place the webKnossos installation under `/webknossos` instead of `/srv/webknossos`. All mounts, most importantly `/srv/webknossos/binaryData`, need to be changed accordingly.
+- The entrypoint of the docker files have changed. Therefore, any existing `docker-compose.yml` setups need to be adapted. In most cases, only the `entrypoint: bin/webknossos` lines need to be removed (if existant).
+- To receive Slack notifications about slow bucket requests, overwrite `slackNotifications.uri` in the webknossos-datastore config.
+- If your setup includes a webknossos-worker, it needs to be updated to the latest version (PR https://github.com/scalableminds/webknossos-worker/pull/70)
+
+### Postgres Evolutions:
+- [077-workers.sql](conf/evolutions/077-workers.sql)
+
+## [21.10.0](https://github.com/scalableminds/webknossos/releases/tag/21.10.0) - 2021-11-08
+
+### Postgres Evolutions:
+- [076-jobs-enabled-per-datastore.sql](conf/evolutions/076-jobs-enabled-per-datastore.sql)
+
+## [21.09.0](https://github.com/scalableminds/webknossos/releases/tag/21.09.0) - 2021-10-01
+- For webknossos.org: Change `publicDemoDatasetUrl` in the `features`-block within `application.conf` to be an actionable URL. For example, append `/createExplorative/hybrid?fallbackLayerName=segmentation` to the URL so that a new annotation is created if a user clicks on `Open a Demo Dataset` in the dashboard.
+
+### Postgres Evolutions:
+- [075-tasktype-remove-hovered-cell-id.sql](conf/evolutions/075-tasktype-remove-hovered-cell-id.sql)
+
+## [21.08.0](https://github.com/scalableminds/webknossos/releases/tag/21.08.0) - 2021-08-26
+[Commits](https://github.com/scalableminds/webknossos/compare/21.07.0...21.08.0)
+No migrations necessary.
+
+## [21.07.0](https://github.com/scalableminds/webknossos/releases/tag/21.07.0) - 2021-07-21
+
+- Consider setting `defaultToLegacyBindings` to `true` in application.conf if you want that new users use the classic controls by default.
+- To make the classic mouse bindings the default for existing users and task types execute the following (adapt `true` to `false` if you want the opposite):
+```
+-- Activate legacy bindings for all users
+UPDATE webknossos.users
+SET userconfiguration = jsonb_set(
+        userconfiguration,
+        array['useLegacyBindings'],
+        to_jsonb('true'::boolean))
+
+-- Recommend legacy bindings for users when starting a new task
+UPDATE webknossos.tasktypes
+SET recommendedconfiguration = jsonb_set(
+        recommendedconfiguration,
+        array['useLegacyBindings'],
+        to_jsonb('true'::boolean))
+```
+- The health check at api/health does not longer include checking data/health and tracings/health if the respective local modules are enabled. Consider monitoring those routes separately.
+- Run as sql: `UPDATE webknossos.tasktypes SET recommendedconfiguration = recommendedconfiguration - 'highlightHoveredCellId';` to avoid invalid recommended configurations in existing task types. This was added later as evolution 75, but should be run already here (note that it is idempotent).
+
+### Postgres Evolutions:
+- [072-jobs-manually-repaired.sql](conf/evolutions/072-jobs-manually-repaired.sql)
+- [073-modern-controls-user-conf.sql](conf/evolutions/073-modern-controls-user-conf.sql)
+- [074-jobs-owner-foreign-key.sql](conf/evolutions/074-jobs-owner-foreign-key.sql)
+
+
+## [21.06.0](https://github.com/scalableminds/webknossos/releases/tag/21.06.0) - 2021-06-01
+
+### Postgres Evolutions:
+- [071-adapt-td-view-display-planes.sql](conf/evolutions/071-adapt-td-view-display-planes.sql)
+
+
+## [21.05.1](https://github.com/scalableminds/webknossos/releases/tag/21.05.1) - 2021-05-05
+- The config keys in application.conf were restructured. If you overwrite any of them for your config, please adapt to the new structure, according to the table below. If you run any stand-alone datastores or tracingstores, make sure to update their config files as well.
+
+old key | new key | notes
+--------|--------|-------
+`http.address` | removed | used by play, default is 0.0.0.0, you can still overwrite it if necessary
+`actor.defaultTimeout` | removed | was already unused
+`js.defaultTimeout` | removed | was already unused
+`akka.loggers` | removed | was already unused
+`application.name` | removed | was already unused
+`application.branch` | removed | was already unused
+`application.version` | removed | was already unused
+`application.title` | `webKnossos.tabTitle` |
+`application.insertInitialData` | `webKnossos.sampleOrganization.enabled` |
+`application.insertLocalConnectDatastore` | removed | feature removed, insert manually instead
+`application.authentication.defaultuser.email` | `webKnossos.sampleOrganization.user.email` |
+`application.authentication.defaultUser.password` | `webKnossos.sampleOrganization.user.password` |
+`application.authentication.defaultUser.token` | `webKnossos.sampleOrganization.user.token` |
+`application.authentication.defaultUser.isSuperUser` | `webKnossos.sampleOrganization.user.isSuperUser` |
+`application.authentication.ssoKey` | `webKnossos.user.ssoKey` |
+`application.authentication.inviteExpiry` | `webKnossos.user.inviteExpiry` |
+`webKnossos.user.time.tracingPauseInSeconds` | `webKnossos.user.time.tracingPause` | **type changed from Int to FiniteDuration, add ` seconds`**
+`webKnossos.query.maxResults` | removed | was already unused
+`user.cacheTimeoutInMinutes` | `webKnossos.cache.user.timeout` | **type changed from Int to FiniteDuration, add ` minutes`**
+`tracingstore.enabled` | removed | info contained in `play.modules.enabled`
+`datastore.enabled` | removed | info contained in `play.modules.enabled`
+`datastore.webKnossos.pingIntervalMinutes` | `datastore.webKnossos.pingInterval` | **type changed from Int to FiniteDuration, add ` minutes`**
+`braingames.binary.cacheMaxSize` | `datastore.cache.dataCube.maxEntries` |
+`braingames.binary.mappingCacheMaxSize` | `datastore.cache.mapping.maxEntries` |
+`braingames.binary.agglomerateFileCacheMaxSize` | `datastore.cache.agglomerateFile.maxFileHandleEntries` |
+`braingames.binary.agglomerateCacheMaxSize` | `datastore.cache.agglomerateFile.maxSegmentIdEntries` |
+`braingames.binary.agglomerateStandardBlockSize` | `datastore.cache.agglomerateFile.blockSize` |
+`braingames.binary.agglomerateMaxReaderRange` | `datastore.cache.agglomerateFile.cumsumMaxReaderRange` |
+`braingames.binary.loadTimeout` | removed | was already unused
+`braingames.binary.saveTimeout` | removed | was already unused
+`braingames.binary.isosurfaceTimeout` | `datastore.isosurface.timeout` |  **type changed from Int to FiniteDuration, add ` seconds`**
+`braingames.binary.isosurfaceActorPoolSize` | `datastore.isosurface.actorPoolSize` |
+`braingames.binary.baseFolder` | `datastore.baseFolder`
+`braingames.binary.agglomerateSkeletonEdgeLimit` | `datastore.agglomerateSkeleton.maxEdges`
+`braingames.binary.changeHandler.enabled` | `datastore.watchFileSystem.enabled`
+`braingames.binary.tickerInterval` | `datastore.watchFileSystem.interval` |  **type changed from Int to FiniteDuration, add ` minutes`**
+`mail.enabled` | removed | now enabled if `mail.host` is non-empty
+`jobs.username` | `jobs.user` |
+`braintracing.active` | `braintracing.enabled`
+`braintracing.url` | `braintracing.uri`
+`airbrake.apiKey` | removed | was already unused
+`airbrake.ssl` | removed | was already unused
+`airbrake.enabled` | removed | was already unused
+`airbrake.endpoint` | removed | was already unused
+`slackNotifications.url` | `slackNotifications.uri` |
+`google.analytics.trackingId` | `googleAnalytics.trackingId` |
+`operatorData` | `webKnossos.operatorData`
+
+### Postgres Evolutions:
+- [070-dark-theme.sql](conf/evolutions/070-dark-theme.sql)
+
+
+## [21.05.0](https://github.com/scalableminds/webknossos/releases/tag/21.05.0) - 2021-04-22
+- Instances with long-running jobs only: the `tiff_cubing` job was renamed to `convert_to_wkw`. For old jobs to be listed properly, execute sql `update webknossos.jobs set command = 'convert_to_wkw' where command = 'tiff_cubing';`
+
+### Postgres Evolutions:
+- [068-pricing-plan.sql](conf/evolutions/068-pricing-plan.sql)
+- [069-tasktype-project-unique-per-orga.sql](conf/evolutions/069-tasktype-project-unique-per-orga.sql)
+
 ## [21.04.0](https://github.com/scalableminds/webknossos/releases/tag/21.04.0) - 2021-03-22
 
 ### Postgres Evolutions:
@@ -100,8 +273,8 @@ No migrations necessary.
 ## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28
 ### Postgres Evolutions:
 - [046-fix-missing-voxel-type.sql](conf/evolutions/046-fix-missing-voxel-type.sql)
-- [047-add-datastore-publicUrl.sql](conf/evolutions/046-add-datastore-publicUrl.sql)
-- [048-add-tracingstore-publicUrl.sql](conf/evolutions/047-add-tracingstore-publicUrl.sql)
+- [047-add-datastore-publicUrl.sql](conf/evolutions/047-add-datastore-publicUrl.sql)
+- [048-add-tracingstore-publicUrl.sql](conf/evolutions/048-add-tracingstore-publicUrl.sql)
 
 ## [19.10.0](https://github.com/scalableminds/webknossos/releases/tag/19.10.0) - 2019-09-30
 ### Postgres Evolutions:

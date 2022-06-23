@@ -30,13 +30,15 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] =
-    if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
+    if (request.uri.matches("^(/api/|/data/|/tracings/|/swagger).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
       val path = request.path.replaceFirst("^(/assets/)", "")
       Some(assets.at(path = "/public", file = path))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isDemoInstance) {
       Some(sitemapController.getSitemap(conf.Http.uri))
+    } else if (request.uri.matches("^/sw\\.(.*)\\.js$") && conf.Features.isDemoInstance) {
+      Some(Action { Ok("").as("text/javascript") })
     } else if (request.uri == "/favicon.ico") {
       Some(Action { NotFound })
     } else Some(demoProxyController.proxyPageOrMainView)

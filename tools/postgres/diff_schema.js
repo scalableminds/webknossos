@@ -14,6 +14,9 @@ const POSTGRES_URL =
   typeof process.env.POSTGRES_URL !== "undefined"
     ? process.env.POSTGRES_URL
     : "jdbc:postgresql://localhost/webknossos";
+const envWithPostgresPwd = Object.assign({}, process.env, {
+  PGPASSWORD: "postgres",
+});
 const scriptdir = __dirname;
 const scriptName = __filename;
 
@@ -31,9 +34,10 @@ function dump(parameter) {
     const dbName = tmpdb[0];
     const dbHost = tmpdb[1];
     const postgresUrl = tmpdb[2];
+
     console.log("Creating DB " + dbName);
     execSync("psql -U postgres -h " + dbHost + " -c 'CREATE DATABASE " + dbName + ";'", {
-      env: { PGPASSWORD: "postgres" },
+      env: envWithPostgresPwd,
     });
     try {
       loadDataIntoDB(parameter, dbHost, dbName);
@@ -44,25 +48,36 @@ function dump(parameter) {
     } finally {
       console.log("CLEANUP: DROP DATABASE " + dbName);
       execSync("psql -U postgres -h " + dbHost + " -c 'DROP DATABASE " + dbName + ";'", {
-        env: { PGPASSWORD: "postgres" },
+        env: envWithPostgresPwd,
       });
     }
   }
   return null;
 }
 
+function getEnvWithPostgresUrl(postgresUrl) {
+  return Object.assign({}, process.env, {
+    POSTGRES_URL: postgresUrl,
+  });
+}
+
 function initTmpDB() {
   const tempDbName = generateRandomName();
   const postgresDirname = path.dirname(POSTGRES_URL);
   const postgresUrl = postgresDirname + "/" + tempDbName;
-  const dbName = execSync(scriptdir + "/db_name.sh", { env: { POSTGRES_URL: postgresUrl } })
+
+  const dbName = execSync(scriptdir + "/db_name.sh", {
+    env: getEnvWithPostgresUrl(postgresUrl),
+  })
     .toString()
     .trim(); // "trim" to remove the line break
   if (dbName !== tempDbName) {
-    console.log("Wrong dbName");
+    console.log("Wrong temporary dbName, got", dbName, "expected", tempDbName);
     process.exit(1);
   }
-  const dbHost = execSync(scriptdir + "/db_host.sh", { env: { POSTGRES_URL: postgresUrl } })
+  const dbHost = execSync(scriptdir + "/db_host.sh", {
+    env: getEnvWithPostgresUrl(postgresUrl),
+  })
     .toString()
     .trim();
   return [dbName, dbHost, postgresUrl];
@@ -70,20 +85,20 @@ function initTmpDB() {
 
 function loadDataIntoDB(parameter, dbHost, dbName) {
   const fileNames = glob.sync(parameter);
-  const concatenateFileNames = fileNames.map(name => "-f " + name).join(" ");
+  const concatenateFileNames = fileNames.map((name) => "-f " + name).join(" ");
   // prettier-ignore
   execSync(
     "psql -U postgres -h " + dbHost + " --dbname='" + dbName + "' -v ON_ERROR_STOP=ON -q " + concatenateFileNames,
-    { env: { PGPASSWORD: "postgres" } }
+    { env: envWithPostgresPwd }
   );
 }
 
 function dumpToFolder(postgresUrl) {
-  const tmpDir = execSync("mktemp -d")
-    .toString()
-    .trim();
+  const tmpDir = execSync("mktemp -d").toString().trim();
   try {
-    execSync(scriptdir + "/dump_schema.sh " + tmpDir, { env: { POSTGRES_URL: postgresUrl } });
+    execSync(scriptdir + "/dump_schema.sh " + tmpDir, {
+      env: getEnvWithPostgresUrl(postgresUrl),
+    });
   } catch (err) {
     console.log("CLEANUP: remove " + tmpDir);
     rimraf.sync(tmpDir);
@@ -102,7 +117,7 @@ function generateRandomName() {
 }
 
 function sortAndClean(dumpedDir) {
-  glob.sync(dumpedDir + "/**", { nodir: true }).forEach(function(fileName) {
+  glob.sync(dumpedDir + "/**", { nodir: true }).forEach(function (fileName) {
     replace({ files: fileName, replace: /,$/gm, with: "" });
     replace({ files: fileName, replace: /\\r/gm, with: "  " });
     sortFile(fileName);
@@ -124,7 +139,7 @@ function sortFile(fileName) {
 program
   .version("0.1.0", "-v, --version")
   .arguments("<parameter1> <parameter2>")
-  .action(function(parameter1, parameter2) {
+  .action(function (parameter1, parameter2) {
     p1 = parameter1;
     p2 = parameter2;
   });

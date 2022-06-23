@@ -1,0 +1,18 @@
+.olvy-unread-indicator {
+  // Move and shrink the indicator a bit.
+  transform: translate(-10px, 15px) scale(0.8);
+}
+
+li#olvy-target:hover {
+  // Remove default antd background color on hover.
+  background-color: transparent;
+}
+
+
+.olvy-modal {
+  // These properties will also be set by the olvy lib,
+  // but the CSS is added after the modal is created which
+  // can lead to a short flicker which is why
+  display: none;
+  transition: display 0.5s ease-in-out;
+}

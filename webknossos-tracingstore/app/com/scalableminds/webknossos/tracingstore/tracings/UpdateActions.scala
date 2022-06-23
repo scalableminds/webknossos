@@ -2,10 +2,10 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import scalapb.{GeneratedMessage, Message}
 import play.api.libs.json._
+import scalapb.GeneratedMessage
 
-trait UpdateAction[T <: GeneratedMessage with Message[T]] {
+trait UpdateAction[T <: GeneratedMessage] {
 
   def actionTimestamp: Option[Long]
 
@@ -27,7 +27,7 @@ object UpdateAction {
   type VolumeUpdateAction = UpdateAction[VolumeTracing]
 }
 
-case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
+case class UpdateActionGroup[T <: GeneratedMessage](
     version: Long,
     timestamp: Long,
     actions: List[UpdateAction[T]],
@@ -43,7 +43,7 @@ case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
 
 object UpdateActionGroup {
 
-  implicit def updateActionGroupReads[T <: GeneratedMessage with Message[T]](
+  implicit def updateActionGroupReads[T <: GeneratedMessage](
       implicit fmt: Reads[UpdateAction[T]]): Reads[UpdateActionGroup[T]] =
     (json: JsValue) =>
       for {
@@ -66,7 +66,7 @@ object UpdateActionGroup {
                              transactionGroupIndex)
     }
 
-  implicit def updateActionGroupWrites[T <: GeneratedMessage with Message[T]](
+  implicit def updateActionGroupWrites[T <: GeneratedMessage](
       implicit fmt: Writes[UpdateAction[T]]): Writes[UpdateActionGroup[T]] =
     (value: UpdateActionGroup[T]) =>
       Json.obj(

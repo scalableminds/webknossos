@@ -12,6 +12,9 @@ import scala.collection.mutable
 
 object CumsumParser extends LazyLogging {
 
+  // the cumsum json object contains "max_ids" and "cumsum"
+  // the jsonReader can only go through the file in forward direction, but we need max_ids first
+  // if the json contains cumsum first, it is skipped at first and parseImpl will call itself again to read it second
   def parseImpl(f: File,
                 maxReaderRange: ULong,
                 initialBoundingBoxList: List[(Long, Long, Long, Long, Long, Long)],

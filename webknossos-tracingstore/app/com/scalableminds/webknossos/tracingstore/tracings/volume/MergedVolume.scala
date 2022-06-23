@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.File
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.services.DataConverter
@@ -38,11 +38,11 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
   }
 
   def addLabelSetFromBucketStream(bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                                  allowedResolutions: Set[Point3D]): Unit = {
+                                  allowedResolutions: Set[Vec3Int]): Unit = {
     val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
     bucketStream.foreach {
       case (bucketPosition, data) =>
-        if (allowedResolutions.contains(bucketPosition.resolution)) {
+        if (allowedResolutions.contains(bucketPosition.mag)) {
           val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
           val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
           labelSet ++= nonZeroData
@@ -75,10 +75,10 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
 
   def addFromBucketStream(sourceVolumeIndex: Int,
                           bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                          allowedResolutions: Option[Set[Point3D]] = None): Unit =
+                          allowedResolutions: Option[Set[Vec3Int]] = None): Unit =
     bucketStream.foreach {
       case (bucketPosition, bytes) =>
-        if (!isAllZero(bytes) && allowedResolutions.forall(_.contains(bucketPosition.resolution))) {
+        if (!isAllZero(bytes) && allowedResolutions.forall(_.contains(bucketPosition.mag))) {
           add(sourceVolumeIndex, bucketPosition, bytes)
         }
     }
@@ -126,9 +126,9 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
       }.toList)
     } yield ()
 
-  def presentResolutions: Set[Point3D] =
+  def presentResolutions: Set[Vec3Int] =
     mergedVolume.map {
-      case (bucketPosition: BucketPosition, _) => bucketPosition.resolution
+      case (bucketPosition: BucketPosition, _) => bucketPosition.mag
     }.toSet
 
 }

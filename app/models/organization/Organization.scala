@@ -4,6 +4,8 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
+import models.team.PricingPlan
+import models.team.PricingPlan.PricingPlan
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -16,6 +18,7 @@ case class Organization(
     additionalInformation: String,
     logoUrl: String,
     displayName: String,
+    pricingPlan: PricingPlan,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
@@ -32,20 +35,23 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
 
   def parse(r: OrganizationsRow): Fox[Organization] =
-    Fox.successful(
+    for {
+      pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
+    } yield {
       Organization(
         ObjectId(r._Id),
         r.name,
         r.additionalinformation,
         r.logourl,
         r.displayname,
+        pricingPlan,
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
         r.created.getTime,
         r.isdeleted
       )
-    )
+    }
 
   override def readAccessQ(requestingUserId: ObjectId): String =
     s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '$requestingUserId')))" +
@@ -59,17 +65,16 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[OrganizationsRow])
-      parsed <- Fox.serialCombined(rList.toList)(r => parse(r))
+      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[OrganizationsRow])
+      parsed <- parseAll(r)
     } yield parsed
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
+      r <- run(
         sql"select #$columns from #$existingCollectionName where name = $name and #$accessQuery".as[OrganizationsRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
+      parsed <- parseFirst(r, name)
     } yield parsed
 
   def insertOne(o: Organization): Fox[Unit] =
@@ -97,5 +102,14 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
               where a._id = $annotationId""".as[String])
       r <- rList.headOption.toFox
     } yield r
+
+  def updateFields(organizationId: ObjectId, displayName: String, newUserMailingList: String)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(organizationId)
+      _ <- run(sqlu"""update webknossos.organizations
+                      set displayName = $displayName, newUserMailingList = $newUserMailingList
+                      where _id = $organizationId""")
+    } yield ()
 
 }

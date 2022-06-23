@@ -2,32 +2,27 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io._
 import java.nio.file.Paths
+import java.util.zip.Deflater
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
-import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
-import com.scalableminds.webknossos.datastore.services.{
-  BinaryDataService,
-  DataFinder,
-  IsosurfaceRequest,
-  IsosurfaceService,
-  IsosurfaceServiceHolder
-}
-import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
-import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
+import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
+import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
+import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreRedisStore}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.iteratee.Enumerator
@@ -40,14 +35,15 @@ import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
     val tracingDataStore: TracingDataStore,
-    val tracingStoreWkRpcClient: TracingStoreWkRpcClient,
+    val tracingStoreWkRpcClient: TSRemoteWebKnossosClient,
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val volumeDataCache: TemporaryVolumeDataStore,
-    val handledGroupIdStore: RedisTemporaryStore,
-    val uncommittedUpdatesStore: RedisTemporaryStore,
-    val temporaryTracingIdStore: RedisTemporaryStore,
-    val temporaryFileCreator: TemporaryFileCreator
+    val handledGroupIdStore: TracingStoreRedisStore,
+    val uncommittedUpdatesStore: TracingStoreRedisStore,
+    val temporaryTracingIdStore: TracingStoreRedisStore,
+    val temporaryFileCreator: TemporaryFileCreator,
+    editableMappingService: EditableMappingService
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with VolumeTracingDownsampling
@@ -89,13 +85,15 @@ class VolumeTracingService @Inject()(
     for {
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
-          case Full(t) =>
+          case Full(tracing) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                updateBucket(tracingId, t, a, updateGroup.version)
+                if (tracing.mappingIsEditable.getOrElse(false)) {
+                  Fox.failure("Cannot mutate buckets in annotation with editable mapping.")
+                } else updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
-                  t.copy(
+                  tracing.copy(
                     activeSegmentId = Some(a.activeSegmentId),
                     editPosition = a.editPosition,
                     editRotation = a.editRotation,
@@ -103,13 +101,10 @@ class VolumeTracingService @Inject()(
                     zoomLevel = a.zoomLevel
                   ))
               case a: RevertToVersionVolumeAction =>
-                revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
-              case a: UpdateUserBoundingBoxes         => Fox.successful(t.withUserBoundingBoxes(a.boundingBoxes.map(_.toProto)))
-              case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
-              case _: RemoveFallbackLayer             => Fox.successful(t.clearFallbackLayer)
-              case a: ImportVolumeData                => Fox.successful(t.withLargestSegmentId(a.largestSegmentId))
-              case _: UpdateTdCamera                  => Fox.successful(t)
-              case _                                  => Fox.failure("Unknown action.")
+                revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing)
+              case _: UpdateTdCamera        => Fox.successful(tracing)
+              case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
+              case _                        => Fox.failure("Unknown action.")
             }
           case Empty =>
             Fox.empty
@@ -129,20 +124,16 @@ class VolumeTracingService @Inject()(
                            action: UpdateBucketVolumeAction,
                            updateGroupVersion: Long): Fox[VolumeTracing] =
     for {
-      resolution <- lookUpVolumeResolution(volumeTracing, action.zoomStep)
-      bucket = BucketPosition(action.position.x, action.position.y, action.position.z, resolution)
+      _ <- assertMagIsValid(volumeTracing, action.mag)
+      bucket = BucketPosition(action.position.x, action.position.y, action.position.z, action.mag)
       _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucket, action.data, updateGroupVersion)
     } yield volumeTracing
 
-  private def lookUpVolumeResolution(tracing: VolumeTracing, zoomStep: Int): Fox[Point3D] =
+  private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.resolutions.nonEmpty) {
-      tracing.resolutions
-        .find(r => r.maxDim == math.pow(2, zoomStep))
-        .map(point3DFromProto)
-        .toFox ?~> s"Received bucket with zoomStep ($zoomStep), no matching resolution found in tracing (has ${tracing.resolutions})"
-    } else {
-      val isotropicResolution = math.pow(2, zoomStep).toInt
-      Fox.successful(Point3D(isotropicResolution, isotropicResolution, isotropicResolution))
+      bool2Fox(tracing.resolutions.exists(r => vec3IntFromProto(r) == mag))
+    } else { // old volume tracings do not have a mag list, no assert possible. Check compatibility by asserting isotropic mag
+      bool2Fox(mag.isIsotropic)
     }
 
   private def revertToVolumeVersion(tracingId: String,
@@ -165,22 +156,10 @@ class VolumeTracingService @Inject()(
     sourceTracing
   }
 
-  private def updateBoundingBoxVisibility(tracing: VolumeTracing, boundingBoxId: Option[Int], isVisible: Boolean) = {
-    def updateUserBoundingBoxes() =
-      tracing.userBoundingBoxes.map { boundingBox =>
-        if (boundingBoxId.forall(_ == boundingBox.id))
-          boundingBox.copy(isVisible = Some(isVisible))
-        else
-          boundingBox
-      }
-
-    Fox.successful(tracing.withUserBoundingBoxes(updateUserBoundingBoxes()))
-  }
-
-  def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Fox[Set[Point3D]] = {
+  def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Fox[Set[Vec3Int]] = {
     if (tracing.version != 0L) return Failure("Tracing has already been edited.")
 
-    val resolutionSets = new mutable.HashSet[Set[Point3D]]()
+    val resolutionSets = new mutable.HashSet[Set[Vec3Int]]()
     withZipsFromMultiZip(initialData) { (_, dataZip) =>
       val resolutionSet = resolutionSetFromZipfile(dataZip)
       if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
@@ -207,22 +186,25 @@ class VolumeTracingService @Inject()(
   def initializeWithData(tracingId: String,
                          tracing: VolumeTracing,
                          initialData: File,
-                         resolutionRestrictions: ResolutionRestrictions): Box[Set[Point3D]] = {
+                         resolutionRestrictions: ResolutionRestrictions): Fox[Set[Vec3Int]] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
     }
 
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val savedResolutions = new mutable.HashSet[Point3D]()
+    val savedResolutions = new mutable.HashSet[Vec3Int]()
 
     val unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
-      if (resolutionRestrictions.isForbidden(bucketPosition.resolution)) {
+      if (resolutionRestrictions.isForbidden(bucketPosition.mag)) {
         Fox.successful(())
       } else {
-        savedResolutions.add(bucketPosition.resolution)
+        savedResolutions.add(bucketPosition.mag)
         saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
       }
     }
+    // if none of the tracings contained any volume data, use the dataset’s full resolution list
+    if (savedResolutions.isEmpty) return getRequiredMags(tracing).map(_.toSet)
+
     unzipResult.map(_ => savedResolutions.toSet)
   }
 
@@ -242,13 +224,16 @@ class VolumeTracingService @Inject()(
     val buckets: Iterator[NamedStream] =
       new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)))
 
-    val zipResult = ZipIO.zip(buckets, os)
+    val before = System.currentTimeMillis()
+    val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
 
     zipResult.onComplete {
       case failure: scala.util.Failure[Unit] =>
         logger.debug(
           s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
-      case _: scala.util.Success[Unit] => logger.debug(s"Successfully sent zipped volume data for $tracingId")
+      case _: scala.util.Success[Unit] =>
+        val after = System.currentTimeMillis()
+        logger.info(s"Zipping volume data for $tracingId took ${after - before} ms")
     }
     zipResult
   }
@@ -262,27 +247,28 @@ class VolumeTracingService @Inject()(
     for {
       isTemporaryTracing <- isTemporaryTracing(tracingId)
       dataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
-      requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings))
+      requests = dataRequests.map(r =>
+        DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
-
-  def unlinkFallback(tracing: VolumeTracing, dataSource: DataSourceLike): VolumeTracing =
-    tracing.copy(
-      activeSegmentId = None,
-      largestSegmentId = 0L,
-      fallbackLayer = None,
-      version = 0L,
-      resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, None).map(point3DToProto)
-    )
 
   def duplicate(tracingId: String,
                 sourceTracing: VolumeTracing,
                 fromTask: Boolean,
                 dataSetBoundingBox: Option[BoundingBox],
-                resolutionRestrictions: ResolutionRestrictions): Fox[(String, VolumeTracing)] = {
+                resolutionRestrictions: ResolutionRestrictions,
+                editPosition: Option[Vec3Int],
+                editRotation: Option[Vec3Double],
+                boundingBox: Option[BoundingBox]): Fox[(String, VolumeTracing)] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
     val tracingWithResolutionRestrictions = restrictMagList(tracingWithBB, resolutionRestrictions)
-    val newTracing = tracingWithResolutionRestrictions.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
+    val newTracing = tracingWithResolutionRestrictions.copy(
+      createdTimestamp = System.currentTimeMillis(),
+      editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithResolutionRestrictions.editPosition),
+      editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithResolutionRestrictions.editRotation),
+      boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
+      version = 0
+    )
     for {
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
       newId <- save(newTracing, None, newTracing.version)
@@ -298,7 +284,11 @@ class VolumeTracingService @Inject()(
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       tracing
         .addUserBoundingBoxes(
-          NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor), tracing.boundingBox))
+          NamedBoundingBoxProto(newId,
+                                Some("task bounding box"),
+                                Some(true),
+                                Some(getRandomColor),
+                                tracing.boundingBox))
         .withBoundingBox(dataSetBoundingBox.get)
     } else tracing
 
@@ -313,7 +303,7 @@ class VolumeTracingService @Inject()(
       destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       _ <- Fox.combined(buckets.map {
         case (bucketPosition, bucketData) =>
-          if (destinationTracing.resolutions.contains(point3DToProto(bucketPosition.resolution))) {
+          if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.mag))) {
             saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
           } else Fox.successful(())
       }.toList)
@@ -328,7 +318,7 @@ class VolumeTracingService @Inject()(
       tracing.elementClass,
       tracing.largestSegmentId,
       isTemporaryTracing,
-      volumeResolutions = tracing.resolutions.map(point3DFromProto).toList
+      volumeResolutions = tracing.resolutions.map(vec3IntFromProto).toList
     )
 
   def updateActionLog(tracingId: String): Fox[JsValue] = {
@@ -340,19 +330,19 @@ class VolumeTracingService @Inject()(
 
     for {
       volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJson[List[CompactVolumeUpdateAction]])
+        fromJsonBytes[List[CompactVolumeUpdateAction]])
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
 
   def updateResolutionList(tracingId: String,
                            tracing: VolumeTracing,
-                           resolutions: Set[Point3D],
+                           resolutions: Set[Vec3Int],
                            toCache: Boolean = false): Fox[String] =
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(resolutions.nonEmpty) ?~> "Resolution restrictions result in zero resolutions"
-      id <- save(tracing.copy(resolutions = resolutions.toList.sortBy(_.maxDim).map(point3DToProto)),
+      id <- save(tracing.copy(resolutions = resolutions.toList.sortBy(_.maxDim).map(vec3IntToProto)),
                  Some(tracingId),
                  tracing.version,
                  toCache)
@@ -364,6 +354,9 @@ class VolumeTracingService @Inject()(
       _ <- updateResolutionList(tracingId, tracing, resultingResolutions.toSet)
     } yield ()
 
+  def volumeBucketsAreEmpty(tracingId: String): Boolean =
+    volumeDataStore.getMultipleKeys(tracingId, Some(tracingId), limit = Some(1))(toBox).isEmpty
+
   def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"
@@ -373,7 +366,7 @@ class VolumeTracingService @Inject()(
         segmentationLayer,
         request.cuboid(segmentationLayer),
         request.segmentId,
-        request.voxelDimensions,
+        request.subsamplingStrides,
         request.scale,
         request.mapping,
         request.mappingType
@@ -381,7 +374,7 @@ class VolumeTracingService @Inject()(
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result
 
-  def findData(tracingId: String): Fox[Option[Point3D]] =
+  def findData(tracingId: String): Fox[Option[Vec3Int]] =
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"
       volumeLayer = volumeTracingLayer(tracingId, tracing)
@@ -390,7 +383,7 @@ class VolumeTracingService @Inject()(
         val bucket = bucketStream.next()
         val bucketPos = bucket._1
         getPositionOfNonZeroData(bucket._2,
-                                 Point3D(bucketPos.globalX, bucketPos.globalY, bucketPos.globalZ),
+                                 Vec3Int(bucketPos.voxelMag1X, bucketPos.voxelMag1Y, bucketPos.voxelMag1Z),
                                  volumeLayer.bytesPerElement)
       } else None
     } yield bucketPosOpt
@@ -414,8 +407,8 @@ class VolumeTracingService @Inject()(
     tracingA.copy(
       largestSegmentId = largestSegmentId,
       boundingBox = mergedBoundingBox.getOrElse(
-        com.scalableminds.webknossos.datastore.geometry.BoundingBox(
-          com.scalableminds.webknossos.datastore.geometry.Point3D(0, 0, 0),
+        com.scalableminds.webknossos.datastore.geometry.BoundingBoxProto(
+          com.scalableminds.webknossos.datastore.geometry.Vec3IntProto(0, 0, 0),
           0,
           0,
           0)), // should never be empty for volumes
@@ -436,13 +429,13 @@ class VolumeTracingService @Inject()(
                       toCache: Boolean): Fox[Unit] = {
     val elementClass = tracings.headOption.map(_.elementClass).getOrElse(ElementClass.uint8)
 
-    val resolutionSets = new mutable.HashSet[Set[Point3D]]()
+    val resolutionSets = new mutable.HashSet[Set[Vec3Int]]()
     tracingSelectors.zip(tracings).foreach {
       case (selector, tracing) =>
-        val resolutionSet = new mutable.HashSet[Point3D]()
+        val resolutionSet = new mutable.HashSet[Vec3Int]()
         bucketStreamFromSelector(selector, tracing).foreach {
           case (bucketPosition, _) =>
-            resolutionSet.add(bucketPosition.resolution)
+            resolutionSet.add(bucketPosition.mag)
         }
         if (resolutionSet.nonEmpty) { // empty tracings should have no impact in this check
           resolutionSets.add(resolutionSet.toSet)
@@ -452,7 +445,7 @@ class VolumeTracingService @Inject()(
     // If none of the tracings contained any volume data. Do not save buckets, do not touch resolution list
     if (resolutionSets.isEmpty) return Fox.successful(())
 
-    val resolutionsIntersection: Set[Point3D] = resolutionSets.headOption.map { head =>
+    val resolutionsIntersection: Set[Vec3Int] = resolutionSets.headOption.map { head =>
       resolutionSets.foldLeft(head) { (acc, element) =>
         acc.intersect(element)
       }
@@ -486,7 +479,7 @@ class VolumeTracingService @Inject()(
     val resolutionSet = resolutionSetFromZipfile(zipFile)
     val resolutionsDoMatch =
       resolutionSet.isEmpty || resolutionSet == resolveLegacyResolutionList(tracing.resolutions)
-        .map(point3DFromProto)
+        .map(vec3IntFromProto)
         .toSet
 
     if (!resolutionsDoMatch) return Fox.failure("annotation.volume.resolutionsDoNotMatch")
@@ -500,16 +493,19 @@ class VolumeTracingService @Inject()(
       _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
         saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
       }
-      updateGroup = UpdateActionGroup[VolumeTracing](tracing.version + 1,
-                                                     System.currentTimeMillis(),
-                                                     List(ImportVolumeData(mergedVolume.largestSegmentId.toSignedLong)),
-                                                     None,
-                                                     None,
-                                                     None,
-                                                     None,
-                                                     None)
+      updateGroup = UpdateActionGroup[VolumeTracing](
+        tracing.version + 1,
+        System.currentTimeMillis(),
+        List(ImportVolumeData(mergedVolume.largestSegmentId.toPositiveLong)),
+        None,
+        None,
+        None,
+        None,
+        None)
       _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
-    } yield mergedVolume.largestSegmentId.toSignedLong
+    } yield mergedVolume.largestSegmentId.toPositiveLong
   }
+
+  def dummyTracing: VolumeTracing = ???
 
 }

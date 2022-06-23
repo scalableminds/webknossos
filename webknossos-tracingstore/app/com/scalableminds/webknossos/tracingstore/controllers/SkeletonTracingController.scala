@@ -1,11 +1,13 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
+import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreAccessTokenService}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -13,9 +15,9 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scala.concurrent.ExecutionContext
 
 class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
-                                          val webKnossosServer: TracingStoreWkRpcClient,
+                                          val remoteWebKnossosClient: TSRemoteWebKnossosClient,
                                           val accessTokenService: TracingStoreAccessTokenService,
-                                          val slackNotificationService: SlackNotificationService)(
+                                          val slackNotificationService: TSSlackNotificationService)(
     implicit val ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers)
     extends TracingController[SkeletonTracing, SkeletonTracings] {
@@ -31,55 +33,63 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
   implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def mergedFromContents(persist: Boolean): Action[SkeletonTracings] = Action.async(validateProto[SkeletonTracings]) {
-    implicit request =>
-      log {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-          AllowRemoteOrigin {
-            val tracings: List[Option[SkeletonTracing]] = request.body
-            val mergedTracing = tracingService.merge(tracings.flatten)
-            tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
-              Ok(Json.toJson(newId))
-            }
-          }
-        }
-      }
-  }
-
-  def duplicate(tracingId: String, version: Option[Long], fromTask: Option[Boolean]): Action[AnyContent] =
-    Action.async { implicit request =>
-      log {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-          AllowRemoteOrigin {
-            for {
-              tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
-              newId <- tracingService.duplicate(tracing, fromTask.getOrElse(false))
-            } yield {
-              Ok(Json.toJson(newId))
-            }
-          }
-        }
-      }
-    }
-
-  def updateActionLog(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    log {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-        AllowRemoteOrigin {
+  def mergedFromContents(token: Option[String], persist: Boolean): Action[SkeletonTracings] =
+    Action.async(validateProto[SkeletonTracings]) { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
+          val tracings: List[Option[SkeletonTracing]] = request.body
+          val mergedTracing = tracingService.merge(tracings.flatten)
+          val processedTracing = tracingService.remapTooLargeTreeIds(mergedTracing)
           for {
-            updateLog <- tracingService.updateActionLog(tracingId)
+            newId <- tracingService.save(processedTracing, None, processedTracing.version, toCache = !persist)
+          } yield Ok(Json.toJson(newId))
+        }
+      }
+    }
+
+  def duplicate(token: Option[String],
+                tracingId: String,
+                version: Option[Long],
+                fromTask: Option[Boolean],
+                editPosition: Option[String],
+                editRotation: Option[String],
+                boundingBox: Option[String]): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
+          for {
+            tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
+            editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
+            editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
+            boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+            newId <- tracingService.duplicate(tracing,
+                                              fromTask.getOrElse(false),
+                                              editPositionParsed,
+                                              editRotationParsed,
+                                              boundingBoxParsed)
           } yield {
-            Ok(updateLog)
+            Ok(Json.toJson(newId))
           }
+        }
+      }
+    }
+
+  def updateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    log() {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+        for {
+          updateLog <- tracingService.updateActionLog(tracingId)
+        } yield {
+          Ok(updateLog)
         }
       }
     }
   }
 
-  def updateActionStatistics(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    log {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-        AllowRemoteOrigin {
+  def updateActionStatistics(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
           for {
             statistics <- tracingService.updateActionStatistics(tracingId)
           } yield {
@@ -87,6 +97,5 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
           }
         }
       }
-    }
   }
 }

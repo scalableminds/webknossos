@@ -1,10 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.util.datastructures.UnionFind
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import net.liftweb.common.{Box, Failure, Full}
 
-import scala.annotation.tailrec
 import scala.collection.mutable
 
 object TreeValidator {
@@ -117,7 +116,7 @@ object TreeValidator {
     checkAllNodesUsedExist(trees, branchPoints.map(_.nodeId).distinct, "branchPoints")
 
   def checkNoDuplicateTreeGroupIds(treeGroups: Seq[TreeGroup]): Box[Unit] = {
-    val treeGroupIds = getAllTreeGroupIds(treeGroups, Seq[Int]())
+    val treeGroupIds = TreeUtils.getAllTreeGroupIds(treeGroups)
     val distinctTreeGroupIds = treeGroupIds.distinct
     if (treeGroupIds.size == distinctTreeGroupIds.size) {
       Full(())
@@ -127,7 +126,7 @@ object TreeValidator {
   }
 
   def checkAllTreeGroupIdsUsedExist(trees: Seq[Tree], treeGroups: Seq[TreeGroup]): Box[Unit] = {
-    val existingTreeGroups = getAllTreeGroupIds(treeGroups, Seq[Int]())
+    val existingTreeGroups = TreeUtils.getAllTreeGroupIds(treeGroups)
     val treeGroupsInTrees = trees.flatMap(_.groupId).distinct
 
     val treeGroupsOnlyInTrees = treeGroupsInTrees.diff(existingTreeGroups)
@@ -144,13 +143,6 @@ object TreeValidator {
         block(tree)
       case (f, _) =>
         f
-    }
-
-  @tailrec
-  private def getAllTreeGroupIds(treeGroups: Seq[TreeGroup], ids: Seq[Int]): Seq[Int] =
-    treeGroups match {
-      case head :: tail => getAllTreeGroupIds(tail ++ head.children, head.groupId +: ids)
-      case _            => ids
     }
 
   private def checkAllNodesUsedExist(trees: Seq[Tree], usedNodes: Seq[Int], nodeName: String) = {

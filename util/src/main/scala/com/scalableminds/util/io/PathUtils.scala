@@ -60,16 +60,16 @@ trait PathUtils extends LazyLogging {
     } catch {
       case _: AccessDeniedException =>
         val errorMsg = s"Error access denied. Directory: ${directory.toAbsolutePath}"
-        logger.error(errorMsg)
+        logger.warn(errorMsg)
         Failure(errorMsg)
       case _: NoSuchFileException =>
         val errorMsg = s"No such directory. Directory: ${directory.toAbsolutePath}"
-        logger.error(errorMsg)
+        logger.warn(errorMsg)
         Failure(errorMsg)
       case ex: Exception =>
         val errorMsg =
           s"Error: ${ex.getClass.getCanonicalName} - ${ex.getMessage}. Directory: ${directory.toAbsolutePath}"
-        logger.error(ex.getClass.getCanonicalName)
+        logger.warn(ex.getClass.getCanonicalName)
         Failure(errorMsg)
     }
 
@@ -148,11 +148,16 @@ trait PathUtils extends LazyLogging {
     def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Paths.get(fileName).getFileName)
 
     fileNames match {
-      case head :: tl if tl.isEmpty && isFileNameInPrefix(prefix, head) =>
-        prefix.subpath(0, prefix.getNameCount - 1)
+      case head :: tail if tail.isEmpty && isFileNameInPrefix(prefix, head) =>
+        removeOneName(prefix)
       case _ => prefix
     }
   }
+
+  private def removeOneName(path: Path): Path =
+    if (path.getNameCount == 1) {
+      Paths.get("")
+    } else path.subpath(0, path.getNameCount - 1)
 
   def deleteDirectoryRecursively(path: Path): Box[Unit] = {
     val directory = new Directory(new File(path.toString))

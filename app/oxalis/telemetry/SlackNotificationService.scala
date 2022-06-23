@@ -1,7 +1,7 @@
 package oxalis.telemetry
 
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackClient
+import com.scalableminds.webknossos.datastore.slacknotification.SlackClient
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import utils.WkConf
@@ -9,7 +9,7 @@ import utils.WkConf
 class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyLogging {
 
   private lazy val slackClient = new SlackClient(rpc,
-                                                 config.SlackNotifications.url,
+                                                 config.SlackNotifications.uri,
                                                  name = s"webKnossos at ${config.Http.uri}",
                                                  config.SlackNotifications.verboseLoggingEnabled)
 
@@ -22,6 +22,24 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
   def warn(title: String, msg: String): Unit =
     slackClient.warn(
       title = title,
+      msg = msg
+    )
+
+  def info(title: String, msg: String): Unit =
+    slackClient.info(
+      title = title,
+      msg = msg
+    )
+
+  def success(title: String, msg: String): Unit =
+    slackClient.success(
+      title = title,
+      msg = msg
+    )
+
+  def noticeFailedJobRequest(msg: String): Unit =
+    slackClient.warn(
+      title = "Failed job request",
       msg = msg
     )
 

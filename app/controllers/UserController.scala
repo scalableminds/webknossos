@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import io.swagger.annotations._
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.team._
 import models.user._
@@ -17,9 +18,11 @@ import play.api.libs.json._
 import play.api.mvc._
 import utils.ObjectId
 import javax.inject.Inject
+import models.user.Theme.Theme
 
 import scala.concurrent.ExecutionContext
 
+@Api
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                multiUserDAO: MultiUserDAO,
@@ -34,25 +37,31 @@ class UserController @Inject()(userService: UserService,
 
   private val DefaultAnnotationListLimit = 1000
 
+  @ApiOperation(value = "Returns a json with information about the requesting user", nickname = "currentUserInfo")
   def current: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    log {
+    log() {
       for {
         userJs <- userService.publicWrites(request.identity, request.identity)
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield Ok(userJs)
     }
   }
 
-  def user(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    log {
-      for {
-        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
-        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
-        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        js <- userService.publicWrites(user, request.identity)
-      } yield Ok(js)
-    }
+  @ApiOperation(value = "Returns a json with information about the user selected by the passed id",
+                nickname = "userInfoById")
+  def user(@ApiParam(value = "Id of the user to query") userId: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      log() {
+        for {
+          userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+          user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+          _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+          js <- userService.publicWrites(user, request.identity)
+        } yield Ok(js)
+      }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def annotations(isFinished: Option[Boolean],
                   limit: Option[Int],
                   pageNumber: Option[Int] = None,
@@ -67,6 +76,7 @@ class UserController @Inject()(userService: UserService,
         annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
@@ -76,6 +86,7 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def tasks(isFinished: Option[Boolean],
             limit: Option[Int],
             pageNumber: Option[Int] = None,
@@ -90,6 +101,7 @@ class UserController @Inject()(userService: UserService,
         annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
@@ -99,6 +111,9 @@ class UserController @Inject()(userService: UserService,
       }
   }
 
+  @ApiOperation(
+    value =
+      "Get the logged time of the passed user. Only available for admins or team managers of the user in question.")
   def userLoggedTime(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
@@ -118,6 +133,7 @@ class UserController @Inject()(userService: UserService,
   private def groupByAnnotationAndDay(timeSpan: TimeSpan) =
     (timeSpan._annotation.map(_.toString).getOrElse("<none>"), TimeSpan.groupByDay(timeSpan))
 
+  @ApiOperation(hidden = true, value = "")
   def usersLoggedTime: Action[TimeSpanRequest] = sil.SecuredAction.async(validateJson[TimeSpanRequest]) {
     implicit request =>
       Fox
@@ -153,6 +169,7 @@ class UserController @Inject()(userService: UserService,
         .map(loggedTime => Ok(Json.toJson(loggedTime)))
   }
 
+  @ApiOperation(hidden = true, value = "")
   def userAnnotations(userId: String,
                       isFinished: Option[Boolean],
                       limit: Option[Int],
@@ -180,6 +197,7 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def userTasks(userId: String,
                 isFinished: Option[Boolean],
                 limit: Option[Int],
@@ -207,6 +225,7 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def loggedTime: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(request.identity, TimeSpan.groupByMonth)
@@ -220,6 +239,7 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
+  @ApiOperation(value = "List all users of whom the requesting user is admin or team-manager.", nickname = "userList")
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable",
@@ -281,6 +301,14 @@ class UserController @Inject()(userService: UserService,
   private def checkNoSelfDeactivate(user: User, isActive: Boolean)(issuingUser: User): Boolean =
     issuingUser._id != user._id || isActive || user.isDeactivated
 
+  private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean, issuingUser: User): Fox[Unit] =
+    if (!isActive && !issuingUser.isDeactivated) {
+      for {
+        activeTasks: List[ObjectId] <- annotationDAO.findActiveTaskIdsForUser(user._id)
+        _ <- bool2Fox(activeTasks.isEmpty) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks.mkString(";")}"
+      } yield ()
+    } else Fox.successful(())
+
   private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     if (oldEmail == email) Fox.successful(())
@@ -301,6 +329,7 @@ class UserController @Inject()(userService: UserService,
       Fox.successful(())
     }
 
+  @ApiOperation(hidden = true, value = "")
   def update(userId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
@@ -331,6 +360,7 @@ class UserController @Inject()(userService: UserService,
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
+          _ <- checkNoDeactivateWithRemainingTask(user, isActive, issuingUser)
           _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
           _ <- preventZeroAdmins(user, isAdmin)
           teams <- Fox.combined(assignedMemberships.map(t =>
@@ -360,6 +390,7 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def updateLastTaskTypeId(userId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing((__ \ "lastTaskTypeId").readNullable[String]) { lastTaskTypeId =>
@@ -375,12 +406,25 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def updateNovelUserExperienceInfos(userId: String): Action[JsObject] =
     sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
         _ <- bool2Fox(request.identity._id == userIdValidated) ?~> "notAllowed" ~> FORBIDDEN
         _ <- multiUserDAO.updateNovelUserExperienceInfos(request.identity._multiUser, request.body)
+        updatedUser <- userDAO.findOne(userIdValidated)
+        updatedJs <- userService.publicWrites(updatedUser, request.identity)
+      } yield Ok(updatedJs)
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def updateSelectedTheme(userId: String): Action[Theme] =
+    sil.SecuredAction.async(validateJson[Theme]) { implicit request =>
+      for {
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        _ <- bool2Fox(request.identity._id == userIdValidated) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- multiUserDAO.updateSelectedTheme(request.identity._multiUser, request.body)
         updatedUser <- userDAO.findOne(userIdValidated)
         updatedJs <- userService.publicWrites(updatedUser, request.identity)
       } yield Ok(updatedJs)

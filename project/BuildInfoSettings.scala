@@ -1,6 +1,7 @@
 import scala.sys.process._
 import sbt.Keys.{name, sbtVersion, scalaVersion}
 import sbtbuildinfo.BuildInfoPlugin.autoImport._
+import scala.language.postfixOps
 
 object BuildInfoSettings {
 
@@ -17,9 +18,8 @@ object BuildInfoSettings {
 
   def commitHash: String = getStdoutFromCommand("git rev-parse HEAD", "<getting commit hash failed>")
   def commitDate: String = getStdoutFromCommand("git log -1 --format=%cd ", "<getting git date failed>")
-  def gitTag: String = getStdoutFromCommand("git describe --abbrev=0 --tags", "<getting git tag failed>")
 
-  def webKnossosVersion: String = if (ciTag != "") ciTag else gitTag + "-" + (if (ciBuild != "") ciBuild else "dev")
+  def webKnossosVersion: String = if (ciTag != "") ciTag else (if (ciBuild != "") ciBuild else "dev")
 
   lazy val webknossosBuildInfoSettings = Seq(
     buildInfoKeys := Seq[BuildInfoKey](name, scalaVersion, sbtVersion,
@@ -27,9 +27,8 @@ object BuildInfoSettings {
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "gitTag" -> gitTag,
       "version" -> webKnossosVersion,
-      "datastoreApiVersion" -> "1.0",
+      "datastoreApiVersion" -> "2.0"
     ),
     buildInfoPackage := "webknossos",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
@@ -41,9 +40,8 @@ object BuildInfoSettings {
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "gitTag" -> gitTag,
       "version" -> webKnossosVersion,
-      "datastoreApiVersion" -> "1.0"
+      "datastoreApiVersion" -> "2.0"
     ),
     buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
@@ -55,7 +53,6 @@ object BuildInfoSettings {
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "gitTag" -> gitTag,
       "version" -> webKnossosVersion
     ),
     buildInfoPackage := "webknossosTracingstore",

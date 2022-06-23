@@ -14,7 +14,13 @@ The API is subject to frequent changes. However, older versions will be supporte
 
 New versions will be documented here, detailing the changes. Note, however, that some changes are not considered to be breaking the API and will not lead to new versions. Such changes include new optional parameters as well as new fields in the responses. The same goes for error message wording.
 
-### Current api version is `v3`
+### Current api version is `v5`
+
+* New in v5:
+  - The annotation json no longer contains `skeletonTracingId` and `volumeTracingId`, but instead a list of `annotationLayers`, each containing `tracingId: String, typ: AnnotationLayerType, name: Option[String]`.
+  - `createExplorational` now expects a list of layer parameters (`typ: AnnotationLayerType, fallbackLayerName: Option[String], resolutionRestrictions: Option[ResolutionRestrictions], name: Option[String]`)
+
+* New in v4: /projects routes no longer expect `name` but now `id`. The same goes for `POST /tasks/list` when filtering by project.
 
 * New in v3: the info and finish requests of annotations now expect an additional `timestamp` GET parameter that should be set to the time the request is sent (e.g. Date.now()).
 
@@ -199,11 +205,26 @@ To get the actual resolutions, please use `GET /datasets/:organizationName/:data
 ### `GET /datasets/:organizationName/:dataSetName`
 
 #### Expects
- - In the url: `:organizationName` the url-safe name of your organization, e.g. `sample_organization`
+ - In the url: `:organizationName` the url-safe name of your organization, e.g. `sample_organization` or `edbdcad7d2033380`
  - In the url: `:dataSetName` the name of the dataset
 
 #### Returns
  - JSON object containing dataset information
+
+---
+### `POST /datasets/:organizationName/:dataSetName/createExplorational`
+
+#### Expects
+ - In the url: `:organizationName` the url-safe name of your organization, e.g. `sample_organization` or `edbdcad7d2033380`
+ - In the url: `:dataSetName` the name of the dataset
+ - In the JSON body: A list of layer parameter objects (`typ: AnnotationLayerType, fallbackLayerName: Option[String], resolutionRestrictions: Option[ResolutionRestrictions], name: Option[String]`) where the type `ResolutionRestrictions` is an object with `min: Option[Int], max: Option[Int]` and AnnotationLayerType is a string with possible values `Skeleton`, `Volume`.
+
+#### Returns
+ - JSON object containing annotation information about the newly created annotation, including the assigned id
+
+#### Changes Introduced in `v5`
+ - Now expects a List of layer parameters, rather than the old format (a single object containing `typ: String, fallbackLayerName: Option[String], resolutionRestrictions: Option[ResolutionRestrictions]`)
+
 
 ---
 ### `GET /datastores`
@@ -516,14 +537,17 @@ List tasks matching search criteria
 #### Expects
  - JSON object with four optional fields:
    - `"user"` `[STRING]` show only tasks on which the user with this id has worked
-   - `"project"` `[STRING]` show only tasks of the project with this name
+   - `"project"` `[STRING]` show only tasks of the project with this id
    - `"ids"` `[JSON LIST OF STRINGS]` show only tasks with these ids
    - `"tasktype"` `[STRING]` show only tasks matching the task type with this id
-   - `"random"` `[BOOLEAN]` if true, return randomized subset of the results, rather than the first 1000 matches in the database
+   - `"random"` `[BOOLEAN]` if true, return a randomized subset of the results, rather than the first 1000 matches in the database
 
 #### Returns
  - JSON list of objects containing task information
  - Note that a maximum of 1000 results is returned
+
+#### Changes Introduced in `v4`
+ - The `"project"` field in the JSON object is no longer its name but instead its id.
 
 
 ---
@@ -621,27 +645,33 @@ JSON object containing project information about the newly created project, incl
 
 
 ---
-### `GET /projects/:name`
+### `GET /projects/:id`
 
 #### Expects
- - In the url: `:name` name of a project
+ - In the url: `:id` id of a project
 
 #### Returns
  - JSON object containing project information about the selected project
 
+#### Changes Introduced in `v4`
+ - The request no longer expects `name` in the url, but instead `id`
+
 
 ---
-### `DELETE /projects/:name`
+### `DELETE /projects/:id`
 
 Delete a project and all its tasks and annotations
 
 #### Expects
- - In the url: `:name` name of a project
+ - In the url: `:id` id of a project
+
+#### Changes Introduced in `v4`
+ - The request no longer expects `name` in the url, but instead `id`
 
 
 
 ---
-### `PUT /projects/:name`
+### `PUT /projects/:id`
 
 Update a project
 
@@ -651,15 +681,18 @@ Update a project
 #### Returns
  - JSON object containing project information about the updated project
 
+#### Changes Introduced in `v4`
+ - The request no longer expects `name` in the url, but instead `id`
+
 
 
 ---
-### `GET /projects/:name/tasks`
+### `GET /projects/:id/tasks`
 
 List all tasks of a project
 
 #### Expects
- - In the url: `:name` name of a project
+ - In the url: `:id` id of a project
  - Optional GET parameter `limit=[INT]`
    - return only the first x results (defaults to infinity)
  - Optional GET parameter `pageNumber=[INT]`
@@ -674,42 +707,52 @@ List all tasks of a project
 #### Note
  - For smoother backwards compatibility, the limit defaults to infinity. However, to ease server load and improve response time, we suggest using a limit of 1000
 
+#### Changes Introduced in `v4`
+ - The request no longer expects `name` in the url, but instead `id`
+
 
 ---
-### `PATCH /projects/:name/incrementEachTasksInstances`
+### `PATCH /projects/:id/incrementEachTasksInstances`
 
 Increment the open instances for each task of a project.
 
 #### Expects
- - In the url: `name` `[STRING]` name of a project
+ - In the url: `id` `[STRING]` id of a project
  - Optional GET parameter `delta=[INT]` number of additional instances for each task (defaults to 1)
 
 #### Returns
  - JSON object containing project information about the updated project, with additional field `numberOfOpenAssignments`
 
+#### Changes Introduced in `v4`
+ - The request no longer expects `name` in the url, but instead `id`
+
 
 
 ---
-### `PATCH /projects/:name/pause`
+### `PATCH /projects/:id/pause`
 
 Pause a project (no tasks will be assigned until resumed)
 
 #### Expects
- - In the url: `:name` `[STRING]` name of a project
+ - In the url: `:id` `[STRING]` id of a project
 
 #### Returns
  - JSON object containing project information about the updated project
 
+#### Changes Introduced in `v4`
+ - The request no longer expects `name` in the url, but instead `id`
 
 
 ---
-### `PATCH /projects/:name/resume`
+### `PATCH /projects/:id/resume`
 
 Resume a paused project
 
 #### Expects
- - In the url: `:name` `[STRING]` name of a project
+ - In the url: `:id` `[STRING]` id of a project
 
 #### Returns
  - JSON object containing project information about the updated project
 
+#### Changes Introduced in `v4`
+ - The request no longer expects `name` in the url, but instead `id`

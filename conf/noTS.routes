@@ -1,2 +1,4 @@
 -> /api/      webknossos.versioned.Routes
 -> /data/     com.scalableminds.webknossos.datastore.Routes
+
+GET  /swagger.json  controllers.ApiHelpController.getResources

@@ -1,18 +1,21 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
+
 import java.util.UUID
-
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-trait TracingService[T <: GeneratedMessage with Message[T]]
+object TracingIds {
+  val dummyTracingId: String = "dummyTracingId"
+}
+
+trait TracingService[T <: GeneratedMessage]
     extends KeyValueStoreImplicits
     with FoxImplicits
     with LazyLogging
@@ -27,13 +30,15 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
-  def temporaryTracingIdStore: RedisTemporaryStore
+  def temporaryTracingIdStore: TracingStoreRedisStore
 
   def tracingMigrationService: TracingMigrationService[T]
 
-  val handledGroupIdStore: RedisTemporaryStore
+  def dummyTracing: T
 
-  val uncommittedUpdatesStore: RedisTemporaryStore
+  val handledGroupIdStore: TracingStoreRedisStore
+
+  val uncommittedUpdatesStore: TracingStoreRedisStore
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
@@ -116,7 +121,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
            version: Option[Long] = None,
            useCache: Boolean = true,
            applyUpdates: Boolean = false): Fox[T] = {
-    val tracingFox = tracingStore.get(tracingId, version)(fromProto[T]).map(_.value)
+    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(dummyTracing)
+    val tracingFox = tracingStore.get(tracingId, version)(fromProtoBytes[T]).map(_.value)
     tracingFox.flatMap { tracing =>
       val updatedTracing = if (applyUpdates) {
         applyPendingUpdates(tracing, tracingId, version)
@@ -171,6 +177,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
     handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
 
   def merge(tracings: Seq[T]): T
+
+  def remapTooLargeTreeIds(tracing: T): T = tracing
 
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[T],

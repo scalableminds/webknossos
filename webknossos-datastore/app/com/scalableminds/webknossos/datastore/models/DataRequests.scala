@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models
 
-import com.scalableminds.util.geometry.{Point3D, Vector3D, Vector3I}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
 import play.api.libs.json.{Json, OFormat}
@@ -24,8 +24,8 @@ case class DataRequest(
 }
 
 case class WebKnossosDataRequest(
-    position: Point3D,
-    zoomStep: Int,
+    position: Vec3Int,
+    mag: Vec3Int,
     cubeSize: Int,
     fourBit: Option[Boolean],
     applyAgglomerate: Option[String],
@@ -33,10 +33,7 @@ case class WebKnossosDataRequest(
 ) extends AbstractDataRequest {
 
   def cuboid(dataLayer: DataLayer): Cuboid =
-    Cuboid(new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
-           cubeSize,
-           cubeSize,
-           cubeSize)
+    Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize, cubeSize, cubeSize)
 
   def settings: DataServiceRequestSettings =
     DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version)
@@ -47,20 +44,17 @@ object WebKnossosDataRequest {
 }
 
 case class WebKnossosIsosurfaceRequest(
-    position: Point3D,
-    zoomStep: Int,
-    cubeSize: Point3D,
+    position: Vec3Int,
+    mag: Vec3Int,
+    cubeSize: Vec3Int,
     segmentId: Long,
-    voxelDimensions: Vector3I,
-    scale: Vector3D,
+    subsamplingStrides: Vec3Int,
+    scale: Vec3Double,
     mapping: Option[String] = None,
     mappingType: Option[String] = None
 ) {
   def cuboid(dataLayer: DataLayer): Cuboid =
-    Cuboid(new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
-           cubeSize.x,
-           cubeSize.y,
-           cubeSize.z)
+    Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
 }
 
 object WebKnossosIsosurfaceRequest {

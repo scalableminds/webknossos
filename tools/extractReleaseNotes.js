@@ -30,15 +30,15 @@ const RELEASE_NOTES_REGEX = /^Mailable description[^:]*:\r?\n([^]*)/;
 
   const releaseNotes = parsedJSON
     // Filter PRs that were merged into master and have a PR description
-    .filter(pr => pr.merged_at != null && pr.base.ref === "master" && pr.body.length > 0)
+    .filter((pr) => pr.merged_at != null && pr.base.ref === "master" && pr.body.length > 0)
     // Sort PRs by merge date
     .sort((a, b) => Date.parse(b.merged_at) - Date.parse(a.merged_at))
     // Extract the Mailable description
-    .map(pr => {
+    .map((pr) => {
       const sections = pr.body.split("###");
       const possibleMatches = sections
-        .map(section => section.trim().match(RELEASE_NOTES_REGEX))
-        .filter(possibleMatch => possibleMatch != null);
+        .map((section) => section.trim().match(RELEASE_NOTES_REGEX))
+        .filter((possibleMatch) => possibleMatch != null);
       const match = possibleMatches.length ? possibleMatches[0][1].trim() : "";
       return { description: match, url: pr.html_url };
     })
@@ -48,7 +48,7 @@ const RELEASE_NOTES_REGEX = /^Mailable description[^:]*:\r?\n([^]*)/;
     .reduce((result, pr) => `${result}${pr.description}\n(${pr.url})\n\n`, "");
 
   // Write the release notes to a file
-  fs.writeFile("./release_notes.txt", releaseNotes, err => {
+  fs.writeFile("./release_notes.txt", releaseNotes, (err) => {
     if (err) {
       console.log(`Error while saving the release notes: ${err}`);
     }

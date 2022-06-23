@@ -57,8 +57,7 @@ class AnnotationStore @Inject()(
     temporaryAnnotationStore.find(annotationId.toUniqueString).map(Fox.successful(_))
 
   def findCachedByTracingId(tracingId: String): Box[Annotation] = {
-    val annotationOpt = temporaryAnnotationStore.findAll.find(a =>
-      a.skeletonTracingId.contains(tracingId) || a.volumeTracingId.contains(tracingId))
+    val annotationOpt = temporaryAnnotationStore.findAll.find(a => a.annotationLayers.exists(_.tracingId == tracingId))
     annotationOpt match {
       case Some(annotation) => Full(annotation)
       case None             => Empty

@@ -15,7 +15,7 @@ class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[
     val downloadStream = sitemapWriter.toSitemapStream(prefix)
 
     Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
-      .as("application/xml")
+      .as(xmlMimeType)
       .withHeaders(CONTENT_DISPOSITION ->
         """sitemap.xml""")
   }

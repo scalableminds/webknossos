@@ -1,6 +1,9 @@
 # Keyboard & Mouse Shortcuts
 
-Find all available keyboard & mouse shortcuts for webKnossos listed below.
+The most important shortcuts are always shown in the status bar at the bottom of the screen.
+These shortcut hints depend on the active tool and also change when modifiers are pressed to allow easy exploration of available functionality.
+
+A complete listing of all available keyboard & mouse shortcuts for webKnossos can be found below.
 
 ## General
 
@@ -18,6 +21,7 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 | G                             | Decrease the Move Value                     |
 | Q                             | Download Screenshot(s) of Viewport(s)       |
 | .                             | Toggle Viewport Maximization                |
+| K, L                          | Toggle Sidebars                             |
 
 ## Skeleton Annotation Mode
 
@@ -33,25 +37,39 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 
 ### Orthogonal Mode
 
+Note that skeleton-specific mouse actions are usually only available when the skeleton tool is active.
+
 | Key Binding                           | Operation                                   |
 | ------------------------------------- | ------------------------------------------- |
 | Left Mouse Drag or Arrow Keys         | Move In-Plane                               |
 | Alt + Mouse Move                      | Move In-Plane                               |
 | SPACE                                 | Move Forward                                |
 | Scroll Mousewheel (3D View)           | Zoom In And Out                             |
-| Right Click Drag (3D View)            | Rotate 3D View                              |
-| Right Click                           | Create New Node                             |
+| Right-Click Drag (3D View)            | Rotate 3D View                              |
+| Left Click                            | Create New Node                             |
+| Left Click                            | Select Node (Mark as Active Node) under cursor  |
+| Left Drag                             | Move node under cursor                |
+| Right Click (on node)                 | Bring up the context-menu with further actions                |
 | C                                     | Create New Tree                             |
-| SHIFT + Left Click                    | Select Node (Mark as Active Node)           |
-| CTRL + .                              | Navigate to subsequent Node (Mark as Active)|
-| CTRL + ,                              | Navigate to preceding Node (Mark as Active) |
+| CTRL + .                              | Navigate to the next Node (Mark as Active)|
+| CTRL + ,                              | Navigate to previous Node (Mark as Active) |
 | CTRL + Left Click / CTRL + Arrow Keys | Move the Active Node                        |
-| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees                   |
-| SHIFT + CTRL + Left Click     | Delete Edge / Split Trees                           |
 | Del                           | Delete Node / Split Trees                           |
 | B                             | Mark Node as New Branchpoint                        |
 | J                             | Jump To Last Branchpoint                            |
 | S                             | Center Camera on Active Node                        |
+
+
+Note that you can enable *Classic Controls* which will behave slightly different and more explicit for the mouse actions:
+
+| Key Binding                   | Operation                           |
+| ----------------------------- | -------------                       |
+| Right Click                   | Create New Node                     |
+| SHIFT + Left Click            | Select Node (Mark as Active Node)   |
+| SHIFT + Left Click            | Select Node (Mark as Active Node)   |
+| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees   |
+| SHIFT + CTRL + Left Click     | Delete Edge / Split Trees           |
+
 
 ### Flight / Oblique Mode
 
@@ -75,28 +93,30 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 
 | Key Binding                       | Operation                                                   |
 | --------------------------------- | ----------------------------------------------------------- |
-| Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Cell (Trace / Brush Mode) |
-| SHIFT + Left Click                | Select Active Cell                                          |
-| CTRL + Left Mouse Drag            | Add Empty Voxels To Current Cell (in Trace / Brush Mode); i.e., does not overwrite other cells    |
-| Right Mouse Drag                  | Remove Voxels From Current Cell                             |
-| CTRL + Right Mouse Drag           | Remove Voxels From Any Cell                                 |
-| CTRL + SHIFT + Left Click | Add All Voxels of the Current Area To Current Cell (Bucket Paint Tool) |
+| Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Segment (Trace / Brush Mode) |
+| Right Click                       | Bring up context-menu with further actions                     |
+| SHIFT + Left Click                | Select Active Segment                                          |
+| CTRL + Left Mouse Drag            | Add Voxels To Current Segment while inverting the overwrite-mode (see toolbar for overwrite-mode) |
+| CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Segment                                     |
 | Alt + Mouse Move                  | Move                                                        |
-| C                                 | Create New Cell                                             |
-| W, 1                              | Toggle Modes (Move / Trace / Brush)                         |
-| SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                              |
-| V                                 | Copy Segmentation of Current Cell From Previous Slice       |
-| SHIFT + V                         | Copy Segmentation of Current Cell From Next Slice           |
+| C                                 | Create New Segment                                             |
+| W                                 | Toggle Modes (Move / Skeleton / Trace / Brush / ...)        |
+| SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                             |
+| V                                 | Interpolate current segment between last labeled and current slice |
+
+Note that you can enable *Classic Controls* which won't open a context menu on right-click, but instead erases when the brush/trace tool is activated.
+
+| Key Binding                       | Operation                                                   |
+| --------------------------------- | ----------------------------------------------------------- |
+| Right Mouse Drag                  | Remove Voxels                                               |
+| CTRL + Right Mouse Drag           | Remove Voxels while inverting the overwrite-mode (see toolbar for overwrite-mode) |
 
 ## Mesh Related Shortcuts
 
-The following bindings only work if isosurface rendering is activated in the settings and a segmentation exists.
-
 | Key Binding                                            | Operation                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------- |
-| Shift + Click on a segment in the orthogonal viewports | Initiate isosurface rendering for that cell                 |
-| Shift + Click on a segment in the 3D viewport          | Change the active position to the clicked position          |
-| Ctrl + Click on a segment in the 3D viewport           | Remove the isosurface of the clicked cell                   |
+| Shift + Click on a mesh in the 3D viewport          | Move the camera to the clicked position          |
+| Ctrl + Click on a mesh in the 3D viewport           | Unload the mesh from webKnossos
 
 ## Agglomerate File Mapping Skeleton
 
@@ -105,3 +125,10 @@ The following binding only works in skeleton/hybrid annotations and if an agglom
 | Key Binding                     | Operation                                 |
 | ------------------------------- | ----------------------------------------- |
 | SHIFT + Middle Click            | Import Skeleton for Selected Segment      |
+
+## Classic Controls
+
+Note that you can enable *Classic Controls* in the left sidebar. 
+Classic controls are provided for backward compatibility for long-time users and are not recommended for new user accounts.
+Hence, Classic controls are disabled by default, and webKnossos uses a more intuitive behavior which assigns the most important functionality to the left mouse button (e.g., moving around, selecting/creating/moving nodes). The right mouse button always opens a context-sensitive menu for more complex actions, such as merging two trees.
+With classic controls, several mouse controls are modifier-driven and may also use the right-click for actions, such as erasing volume data.

@@ -1,11 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
@@ -14,11 +15,12 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.concurrent.ExecutionContext
 
-class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
-                                       val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
-                                       val handledGroupIdStore: RedisTemporaryStore,
-                                       val temporaryTracingIdStore: RedisTemporaryStore,
-                                       val uncommittedUpdatesStore: RedisTemporaryStore)(implicit ec: ExecutionContext)
+class SkeletonTracingService @Inject()(
+    tracingDataStore: TracingDataStore,
+    val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
+    val handledGroupIdStore: TracingStoreRedisStore,
+    val temporaryTracingIdStore: TracingStoreRedisStore,
+    val uncommittedUpdatesStore: TracingStoreRedisStore)(implicit ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits
@@ -63,9 +65,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
           pendingUpdates <- findPendingUpdates(tracingId, existingVersion, newVersion)
           updatedTracing <- update(tracing, tracingId, pendingUpdates, newVersion)
           _ <- save(updatedTracing, Some(tracingId), newVersion)
-        } yield {
-          updatedTracing
-        }
+        } yield updatedTracing
       } else {
         Full(tracing)
       }
@@ -100,10 +100,8 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
         updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(
           tracingId,
           Some(desiredVersion),
-          Some(existingVersion + 1))(fromJson[List[SkeletonUpdateAction]])
-      } yield {
-        updateActionGroups.reverse.flatten
-      }
+          Some(existingVersion + 1))(fromJsonBytes[List[SkeletonUpdateAction]])
+      } yield updateActionGroups.reverse.flatten
     }
 
   private def update(tracing: SkeletonTracing,
@@ -134,16 +132,28 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     }
   }
 
-  def duplicate(tracing: SkeletonTracing, fromTask: Boolean): Fox[String] = {
+  def duplicate(tracing: SkeletonTracing,
+                fromTask: Boolean,
+                editPosition: Option[Vec3Int],
+                editRotation: Option[Vec3Double],
+                boundingBox: Option[BoundingBox]): Fox[String] = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-        NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
+        NamedBoundingBoxProto(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
       }
     } else None
 
     val newTracing =
-      tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0).addAllUserBoundingBoxes(taskBoundingBox)
+      tracing
+        .copy(
+          createdTimestamp = System.currentTimeMillis(),
+          editPosition = editPosition.map(vec3IntToProto).getOrElse(tracing.editPosition),
+          editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracing.editRotation),
+          boundingBox = boundingBoxOptToProto(boundingBox).orElse(tracing.boundingBox),
+          version = 0
+        )
+        .addAllUserBoundingBoxes(taskBoundingBox)
     val finalTracing = if (fromTask) newTracing.clearBoundingBox else newTracing
     save(finalTracing, None, finalTracing.version)
   }
@@ -176,6 +186,13 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     )
   }
 
+  // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
+  override def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =
+    if (skeletonTracing.trees.exists(_.treeId > 1048576)) {
+      val newTrees = for ((tree, index) <- skeletonTracing.trees.zipWithIndex) yield tree.withTreeId(index + 1)
+      skeletonTracing.withTrees(newTrees)
+    } else skeletonTracing
+
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[SkeletonTracing],
                       newId: String,
@@ -190,7 +207,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
       )
     for {
       updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJson[List[SkeletonUpdateAction]])
+        fromJsonBytes[List[SkeletonUpdateAction]])
       updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
@@ -198,7 +215,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
   def updateActionStatistics(tracingId: String): Fox[JsObject] =
     for {
       updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(
-        fromJson[List[SkeletonUpdateAction]])
+        fromJsonBytes[List[SkeletonUpdateAction]])
       updateActions = updateActionGroups.flatten
     } yield {
       Json.obj(
@@ -216,4 +233,6 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
         }
       )
     }
+
+  def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 }

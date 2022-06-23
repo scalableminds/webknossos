@@ -14,11 +14,11 @@ import scala.reflect.ClassTag
 
 class MappingService @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
 
-  lazy val cache = new ParsedMappingCache(config.Braingames.Binary.mappingCacheMaxSize)
+  lazy val cache = new ParsedMappingCache(config.Datastore.Cache.Mapping.maxEntries)
 
   def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
     val readInstruction =
-      MappingReadInstruction(Paths.get(config.Braingames.Binary.baseFolder), request.dataSource, request.mapping)
+      MappingReadInstruction(Paths.get(config.Datastore.baseFolder), request.dataSource, request.mapping)
     request.dataLayer.mappingProvider.load(readInstruction)
   }
 

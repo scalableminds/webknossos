@@ -57,12 +57,28 @@ object Fox extends FoxImplicits {
       implicit ec: ExecutionContext): Fox[Nothing] =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
+  // run serially, fail on the first failure
   def serialSequence[A, B](l: List[A])(f: A => Future[B])(implicit ec: ExecutionContext): Future[List[B]] = {
     def runNext(remaining: List[A], results: List[B]): Future[List[B]] =
       remaining match {
         case head :: tail =>
           for {
             currentResult <- f(head)
+            results <- runNext(tail, currentResult :: results)
+          } yield results
+        case Nil =>
+          Future.successful(results.reverse)
+      }
+    runNext(l, Nil)
+  }
+
+  // run serially, return individual results in list of box
+  def serialSequenceBox[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Box[B]]] = {
+    def runNext(remaining: List[A], results: List[Box[B]]): Future[List[Box[B]]] =
+      remaining match {
+        case head :: tail =>
+          for {
+            currentResult <- f(head).futureBox
             results <- runNext(tail, currentResult :: results)
           } yield results
         case Nil =>
@@ -105,6 +121,7 @@ object Fox extends FoxImplicits {
     new Fox(r)
   }
 
+  // Run serially, fail on the first failure
   def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
     def runNext(remaining: List[A], results: List[B]): Fox[List[B]] =
       remaining match {
@@ -137,6 +154,16 @@ object Fox extends FoxImplicits {
       results <- serialCombined(seq)(f)
       zipped = results.zip(seq)
     } yield zipped.filter(_._1 != inverted).map(_._2)
+
+  def find[T](seq: List[T])(f: T => Fox[Boolean])(implicit ec: ExecutionContext): Fox[T] =
+    seq match {
+      case head :: tail =>
+        for {
+          currentResult <- f(head)
+          remainingResult <- if (currentResult) Fox.successful(head) else find(tail)(f)
+        } yield remainingResult
+      case Nil => Fox.empty
+    }
 
   def runOptional[A, B](input: Option[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[Option[B]] =
     input match {
@@ -172,6 +199,20 @@ object Fox extends FoxImplicits {
       _ <- bool2Fox(asBoolean)
     } yield ()
 
+  def chainFunctions[T](functions: List[T => Fox[T]])(implicit ec: ExecutionContext): T => Fox[T] = {
+    def runNext(remainingFunctions: List[T => Fox[T]], previousRestult: T): Fox[T] =
+      remainingFunctions match {
+        case head :: tail =>
+          for {
+            currentResult <- head(previousRestult)
+            nextResult <- runNext(tail, currentResult)
+          } yield nextResult
+        case Nil =>
+          Fox.successful(previousRestult)
+      }
+    t =>
+      runNext(functions, t)
+  }
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
@@ -250,10 +291,10 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   /**
     * If the box is Empty this will create a Full. If The box is Full it will get emptied. Failures are passed through.
     */
-  def reverse: Fox[Boolean] =
+  def reverse: Fox[Unit] =
     new Fox(futureBox.map {
       case Full(_)    => Empty
-      case Empty      => Full(true)
+      case Empty      => Full(())
       case f: Failure => f
     })
 

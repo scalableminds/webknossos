@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits, Math}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -24,10 +24,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   private def getDataFor(dataSource: DataSource,
                          dataLayer: DataLayer,
-                         position: Point3D,
-                         resolution: Point3D): Fox[Array[Byte]] = {
+                         position: Vec3Int,
+                         resolution: Vec3Int): Fox[Array[Byte]] = {
     val request = DataRequest(
-      new VoxelPosition(position.x, position.y, position.z, resolution),
+      VoxelPosition(position.x, position.y, position.z, resolution),
       DataLayer.bucketLength,
       DataLayer.bucketLength,
       DataLayer.bucketLength
@@ -45,8 +45,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   private def getConcatenatedDataFor(dataSource: DataSource,
                                      dataLayer: DataLayer,
-                                     positions: List[Point3D],
-                                     resolution: Point3D) =
+                                     positions: List[Vec3Int],
+                                     resolution: Vec3Int) =
     for {
       dataBucketWise: Seq[Array[Byte]] <- Fox
         .sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, resolution)))
@@ -58,7 +58,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   private def createPositions(dataLayer: DataLayer, iterationCount: Int = 4) = {
 
     @tailrec
-    def positionCreationIter(remainingRuns: List[Int], currentPositions: List[Point3D]): List[Point3D] = {
+    def positionCreationIter(remainingRuns: List[Int], currentPositions: List[Vec3Int]): List[Vec3Int] = {
 
       def createPositionsFromExponent(exponent: Int) = {
         val power = math.pow(2, exponent).toInt
@@ -76,7 +76,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
               y <- 1 until power
               x <- 1 until power
             } yield
-              Point3D(topLeft.x + x * spaceBetweenWidth,
+              Vec3Int(topLeft.x + x * spaceBetweenWidth,
                       topLeft.y + y * spaceBetweenHeight,
                       topLeft.z + z * spaceBetweenDepth)).toList
           )
@@ -93,13 +93,13 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       }
     }
 
-    positionCreationIter((1 to iterationCount).toList, List[Point3D]())
+    positionCreationIter((1 to iterationCount).toList, List[Vec3Int]()) :+ dataLayer.boundingBox.topLeft
   }
 
   private def checkAllPositionsForData(dataSource: DataSource,
-                                       dataLayer: DataLayer): Fox[Option[(Point3D, Point3D)]] = {
+                                       dataLayer: DataLayer): Fox[Option[(Vec3Int, Vec3Int)]] = {
 
-    def searchPositionIter(positions: List[Point3D], resolution: Point3D): Fox[Option[Point3D]] =
+    def searchPositionIter(positions: List[Vec3Int], resolution: Vec3Int): Fox[Option[Vec3Int]] =
       positions match {
         case List() => Fox.successful(None)
         case head :: tail =>
@@ -109,13 +109,13 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
           }
       }
 
-    def checkIfPositionHasData(position: Point3D, resolution: Point3D) =
+    def checkIfPositionHasData(position: Vec3Int, resolution: Vec3Int) =
       for {
         data <- getDataFor(dataSource, dataLayer, position, resolution)
         position <- getPositionOfNonZeroData(data, position, dataLayer.bytesPerElement)
       } yield position
 
-    def resolutionIter(positions: List[Point3D], remainingResolutions: List[Point3D]): Fox[Option[(Point3D, Point3D)]] =
+    def resolutionIter(positions: List[Vec3Int], remainingResolutions: List[Vec3Int]): Fox[Option[(Vec3Int, Vec3Int)]] =
       remainingResolutions match {
         case List() => Fox.successful(None)
         case head :: tail =>
@@ -131,7 +131,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     resolutionIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
   }
 
-  def findPositionWithData(dataSource: DataSource, dataLayer: DataLayer): Fox[Option[(Point3D, Point3D)]] =
+  def findPositionWithData(dataSource: DataSource, dataLayer: DataLayer): Fox[Option[(Vec3Int, Vec3Int)]] =
     for {
       positionAndResolutionOpt <- checkAllPositionsForData(dataSource, dataLayer)
     } yield positionAndResolutionOpt
@@ -147,7 +147,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         case d: Array[Float]  => d.map(_.toDouble)
       }
 
-    def meanAndStdDevForPositions(positions: List[Point3D], resolution: Point3D): Fox[(Double, Double)] =
+    def meanAndStdDevForPositions(positions: List[Vec3Int], resolution: Vec3Int): Fox[(Double, Double)] =
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution)
         dataAsDoubles = convertNonZeroDataToDouble(dataConcatenated, dataLayer.elementClass)
@@ -204,7 +204,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         List(Histogram(counts, data.length, extrema._1, extrema._2))
     }
 
-    def histogramForPositions(positions: List[Point3D], resolution: Point3D) =
+    def histogramForPositions(positions: List[Vec3Int], resolution: Vec3Int) =
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "dataSet.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24

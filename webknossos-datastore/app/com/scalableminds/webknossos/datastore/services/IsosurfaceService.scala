@@ -1,10 +1,12 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.nio._
+
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D, Vector3I}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -14,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure}
-import java.nio._
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -27,8 +29,8 @@ case class IsosurfaceRequest(
     dataLayer: SegmentationLayer,
     cuboid: Cuboid,
     segmentId: Long,
-    voxelDimensions: Vector3I,
-    scale: Vector3D,
+    subsamplingStrides: Vec3Int,
+    scale: Vec3Double,
     mapping: Option[String] = None,
     mappingType: Option[String] = None
 )
@@ -54,9 +56,13 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                         actorSystem: ActorSystem,
                         isosurfaceTimeout: FiniteDuration,
                         isosurfaceActorPoolSize: Int)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
 
-  private val agglomerateService: AgglomerateService = binaryDataService.agglomerateService
+  private val agglomerateService
+    : Option[AgglomerateService] = try { Some(binaryDataService.agglomerateService) } catch {
+    case _: NullPointerException => None
+  }
 
   implicit val timeout: Timeout = Timeout(isosurfaceTimeout)
 
@@ -115,9 +121,9 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                 request.mapping,
                 request.cuboid,
                 DataServiceRequestSettings(halfByte = false, request.mapping, None),
-                Vector3I(1, 1, 1)
+                request.subsamplingStrides
               )
-              agglomerateService.applyAgglomerate(dataRequest)(data)
+              agglomerateService.get.applyAgglomerate(dataRequest)(data)
             case _ =>
               data
           }
@@ -134,7 +140,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
     }
 
     def subVolumeContainsSegmentId[T](data: Array[T],
-                                      dataDimensions: Vector3I,
+                                      dataDimensions: Vec3Int,
                                       boundingBox: BoundingBox,
                                       segmentId: T): Boolean = {
       for {
@@ -148,16 +154,16 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
       false
     }
 
-    def findNeighbors[T](data: Array[T], dataDimensions: Vector3I, segmentId: T): List[Int] = {
+    def findNeighbors[T](data: Array[T], dataDimensions: Vec3Int, segmentId: T): List[Int] = {
       val x = dataDimensions.x - 1
       val y = dataDimensions.y - 1
       val z = dataDimensions.z - 1
-      val front_xy = BoundingBox(Point3D(0, 0, 0), x, y, 1)
-      val front_xz = BoundingBox(Point3D(0, 0, 0), 1, y, z)
-      val front_yz = BoundingBox(Point3D(0, 0, 0), x, 1, z)
-      val back_xy = BoundingBox(Point3D(0, 0, z), x, y, 1)
-      val back_xz = BoundingBox(Point3D(0, y, 0), 1, y, z)
-      val back_yz = BoundingBox(Point3D(x, 0, 0), x, 1, z)
+      val front_xy = BoundingBox(Vec3Int(0, 0, 0), x, y, 1)
+      val front_xz = BoundingBox(Vec3Int(0, 0, 0), x, 1, z)
+      val front_yz = BoundingBox(Vec3Int(0, 0, 0), 1, y, z)
+      val back_xy = BoundingBox(Vec3Int(0, 0, z), x, y, 1)
+      val back_xz = BoundingBox(Vec3Int(0, y, 0), x, 1, z)
+      val back_yz = BoundingBox(Vec3Int(x, 0, 0), 1, y, z)
       val surfaceBoundingBoxes = List(front_xy, front_xz, front_yz, back_xy, back_xz, back_yz)
       surfaceBoundingBoxes.zipWithIndex.filter {
         case (surfaceBoundingBox, index) =>
@@ -168,24 +174,27 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
     }
 
     val cuboid = request.cuboid
-    val voxelDimensions = Vector3D(request.voxelDimensions.x, request.voxelDimensions.y, request.voxelDimensions.z)
+    val subsamplingStrides =
+      Vec3Double(request.subsamplingStrides.x, request.subsamplingStrides.y, request.subsamplingStrides.z)
 
     val dataRequest = DataServiceDataRequest(request.dataSource.orNull,
                                              request.dataLayer,
                                              request.mapping,
                                              cuboid,
                                              DataServiceRequestSettings.default,
-                                             request.voxelDimensions)
+                                             request.subsamplingStrides)
 
-    val dataDimensions = Vector3I(math.ceil(cuboid.width / voxelDimensions.x).toInt,
-                                  math.ceil(cuboid.height / voxelDimensions.y).toInt,
-                                  math.ceil(cuboid.depth / voxelDimensions.z).toInt)
+    val dataDimensions = Vec3Int(
+      math.ceil(cuboid.width / subsamplingStrides.x).toInt,
+      math.ceil(cuboid.height / subsamplingStrides.y).toInt,
+      math.ceil(cuboid.depth / subsamplingStrides.z).toInt
+    )
 
-    val offset = Vector3D(cuboid.topLeft.x, cuboid.topLeft.y, cuboid.topLeft.z)
-    val scale = Vector3D(cuboid.topLeft.resolution) * request.scale
+    val offset = Vec3Double(cuboid.topLeft.voxelXInMag, cuboid.topLeft.voxelYInMag, cuboid.topLeft.voxelZInMag)
+    val scale = Vec3Double(cuboid.topLeft.mag) * request.scale
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
-    val vertexBuffer = mutable.ArrayBuffer[Vector3D]()
+    val vertexBuffer = mutable.ArrayBuffer[Vec3Double]()
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
@@ -200,7 +209,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
         y <- 0 until dataDimensions.y by 32
         z <- 0 until dataDimensions.z by 32
       } {
-        val boundingBox = BoundingBox(Point3D(x, y, z),
+        val boundingBox = BoundingBox(Vec3Int(x, y, z),
                                       math.min(dataDimensions.x - x, 33),
                                       math.min(dataDimensions.y - y, 33),
                                       math.min(dataDimensions.z - z, 33))
@@ -209,7 +218,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                                          dataDimensions,
                                          boundingBox,
                                          mappedSegmentId,
-                                         voxelDimensions,
+                                         subsamplingStrides,
                                          offset,
                                          scale,
                                          vertexBuffer)

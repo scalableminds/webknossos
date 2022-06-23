@@ -1,6 +1,6 @@
-_id,email,passwordInfo_hasher,passwordInfo_password,isSuperUser,novelUserExperienceInfos,created,_lastLoggedInIdentity,isDeleted
-'8fb0c6a674d0af7b003b23ea','user_A@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z',,f
-'8fb0c6a674d0af7b003b23eb','user_B@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z',,f
-'8fb0c6a674d0af7b003b23ec','user_C@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z',,f
-'8fb0c6a674d0af7b003b23ed','user_D@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z',,f
-'8fb0c6a674d0af7b003b23ee','user_E@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z',,f
+_id,email,passwordInfo_hasher,passwordInfo_password,isSuperUser,novelUserExperienceInfos,created,selectedTheme,_lastLoggedInIdentity,isDeleted
+'8fb0c6a674d0af7b003b23ea','user_A@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z','auto',,f
+'8fb0c6a674d0af7b003b23eb','user_B@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z','auto',,f
+'8fb0c6a674d0af7b003b23ec','user_C@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z','auto',,f
+'8fb0c6a674d0af7b003b23ed','user_D@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z','light',,f
+'8fb0c6a674d0af7b003b23ee','user_E@scalableminds.com','SCrypt','$2a$10$6xBhZRx30Hzb8ZK1ygpslekVHsWXKLbLfxPz.U1yM0r5lMR06ELeW',t,'{}','2016-04-11T12:57:49.000Z','dark',,f

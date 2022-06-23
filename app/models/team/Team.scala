@@ -89,17 +89,23 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Team] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
-        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TeamsRow])
-      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+      r <- run(sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TeamsRow])
+      parsed <- parseFirst(r, id)
     } yield parsed
+
+  def countByNameAndOrganization(teamName: String, organizationId: ObjectId): Fox[Int] =
+    for {
+      countList <- run(
+        sql"select count(_id) from #$existingCollectionName where name = $teamName and _organization = $organizationId"
+          .as[Int])
+      count <- countList.headOption
+    } yield count
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[TeamsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   def findAllEditable(implicit ctx: DBAccessContext): Fox[List[Team]] =
@@ -110,7 +116,7 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                      where (_id in (select _team from webknossos.user_team_roles where _user = ${requestingUserId.id} and isTeamManager)
                            or _organization in (select _organization from webknossos.users_ where _id = ${requestingUserId.id} and isAdmin))
                      and #$accessQuery""".as[TeamsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   def findAllByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
@@ -119,7 +125,7 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       r <- run(
         sql"select #$columns from #$existingCollectionName where _organization = ${organizationId.id} and #$accessQuery"
           .as[TeamsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   def findAllIdsByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
@@ -137,7 +143,7 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       r <- run(sql"""select #${columnsWithPrefix("t.")} from #$existingCollectionName t
                      join webknossos.dataSet_allowedTeams at on t._id = at._team
                      where at._dataSet = $dataSetId and #$accessQuery""".as[TeamsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   def insertOne(t: Team): Fox[Unit] =

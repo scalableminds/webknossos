@@ -45,9 +45,7 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
       Fox.empty
     else {
       for {
-        (mergedSkeletonTracingReference, mergedVolumeTracingReference) <- mergeTracingsOfAnnotations(annotations,
-                                                                                                     _dataSet,
-                                                                                                     persistTracing)
+        mergedAnnotationLayers <- mergeTracingsOfAnnotations(annotations, _dataSet, persistTracing)
       } yield {
         Annotation(
           newId,
@@ -55,38 +53,51 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
           None,
           _team,
           _user,
-          mergedSkeletonTracingReference,
-          mergedVolumeTracingReference,
+          mergedAnnotationLayers,
           typ = typ
         )
       }
     }
 
   private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(
-      implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] =
+      implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       dataSet <- dataSetDAO.findOne(dataSetId)
-      tracingStoreClient: TracingStoreRpcClient <- tracingStoreService.clientFor(dataSet)
-      skeletonTracingIds <- Fox.successful(annotations.map(_.skeletonTracingId))
-      skeletonTracingReference <- mergeSkeletonTracings(tracingStoreClient, skeletonTracingIds, persistTracing)
-      volumeTracingIds <- Fox.successful(annotations.sortBy(_.modified).map(_.volumeTracingId))
-      volumeTracingReference <- mergeVolumeTracings(tracingStoreClient, volumeTracingIds, persistTracing)
-    } yield (skeletonTracingReference, volumeTracingReference)
+      tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      skeletonLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Skeleton))
+      volumeLayers = annotations.flatMap(_.annotationLayers.find(_.typ == AnnotationLayerType.Volume))
+      mergedSkeletonTracingId <- mergeSkeletonTracings(tracingStoreClient,
+                                                       skeletonLayers.map(_.tracingId),
+                                                       persistTracing)
+      mergedVolumeTracingId <- mergeVolumeTracings(tracingStoreClient, volumeLayers.map(_.tracingId), persistTracing)
+      mergedSkeletonName = allEqual(skeletonLayers.flatMap(_.name))
+      mergedVolumeName = allEqual(volumeLayers.flatMap(_.name))
+      mergedSkeletonLayer = mergedSkeletonTracingId.map(id =>
+        AnnotationLayer(id, AnnotationLayerType.Skeleton, mergedSkeletonName))
+      mergedVolumeLayer = mergedVolumeTracingId.map(id =>
+        AnnotationLayer(id, AnnotationLayerType.Volume, mergedVolumeName))
+    } yield List(mergedSkeletonLayer, mergedVolumeLayer).flatten
 
-  private def mergeSkeletonTracings(tracingStoreClient: TracingStoreRpcClient,
-                                    skeletonTracingIds: List[Option[String]],
+  private def allEqual(str: List[String]): Option[String] =
+    // returns the str if all names are equal, None otherwise
+    str.headOption.map(name => str.forall(_ == name)).flatMap { _ =>
+      str.headOption
+    }
+
+  private def mergeSkeletonTracings(tracingStoreClient: WKRemoteTracingStoreClient,
+                                    skeletonTracingIds: List[String],
                                     persistTracing: Boolean) =
-    if (skeletonTracingIds.flatten.isEmpty)
+    if (skeletonTracingIds.isEmpty)
       Fox.successful(None)
     else
       tracingStoreClient
         .mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing)
         .map(Some(_)) ?~> "Failed to merge skeleton tracings."
 
-  private def mergeVolumeTracings(tracingStoreClient: TracingStoreRpcClient,
-                                  volumeTracingIds: List[Option[String]],
+  private def mergeVolumeTracings(tracingStoreClient: WKRemoteTracingStoreClient,
+                                  volumeTracingIds: List[String],
                                   persistTracing: Boolean) =
-    if (volumeTracingIds.flatten.isEmpty)
+    if (volumeTracingIds.isEmpty)
       Fox.successful(None)
     else
       tracingStoreClient

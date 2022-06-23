@@ -1,9 +1,8 @@
-version: '2.1'
+version: "2.1"
 
 services:
   webknossos-tracingstore:
     image: scalableminds/webknossos-tracingstore:${DATASTORE_TAG}
-    entrypoint: bin/webknossos-tracingstore
     command:
       - -J-Xmx20G
       - -J-Xms1G
@@ -25,10 +24,7 @@ services:
       - $USER_GROUP_2
     volumes:
       - ./tmp:/tmp
-      - ./config/tracingstore-docker.conf:/srv/webknossos-tracingstore/conf/docker.conf
-    environment:
-      - NEW_RELIC_LICENSE_KEY
-      - NEW_RELIC_APP_NAME
+      - ./config/tracingstore-docker.conf:/webknossos-tracingstore/conf/docker.conf
 
   fossildb:
     image: scalableminds/fossildb:${FOSSILDB_TAG}

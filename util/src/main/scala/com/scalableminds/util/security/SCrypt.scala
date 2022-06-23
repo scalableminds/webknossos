@@ -50,6 +50,6 @@ object SCrypt {
   def verifyPassword(plainTextPassword: PlainPassword, hashedPassword: PasswordHash): Boolean =
     hashedPassword.compareTo(BCrypt.hashpw(plainTextPassword, hashedPassword)) == 0
 
-  def md5(s: String) =
+  def md5(s: String): String =
     MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02X".format(_)).mkString
 }

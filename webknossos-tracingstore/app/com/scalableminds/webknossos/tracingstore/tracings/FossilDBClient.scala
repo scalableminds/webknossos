@@ -4,7 +4,7 @@ import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
+import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
 import io.grpc.health.v1._
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
@@ -12,7 +12,7 @@ import io.grpc.{Status, StatusRuntimeException}
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Json, Reads, Writes}
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -22,13 +22,13 @@ trait KeyValueStoreImplicits extends BoxImplicits {
 
   implicit def toBox[T](x: T): Box[T] = Full(x)
 
-  implicit def asJson[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
+  implicit def toJsonBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
-  implicit def fromJson[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
+  implicit def fromJsonBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
 
-  implicit def asProto[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
+  implicit def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  implicit def fromProto[T <: GeneratedMessage with Message[T]](a: Array[Byte])(
+  implicit def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(
       implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
 }
 
@@ -41,7 +41,9 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
   def version: Long = versionedKey.version
 }
 
-class FossilDBClient(collection: String, config: TracingStoreConfig, slackNotificationService: SlackNotificationService)
+class FossilDBClient(collection: String,
+                     config: TracingStoreConfig,
+                     slackNotificationService: TSSlackNotificationService)
     extends FoxImplicits
     with LazyLogging {
   private val address = config.Tracingstore.Fossildb.address
@@ -75,7 +77,11 @@ class FossilDBClient(collection: String, config: TracingStoreConfig, slackNotifi
       case statusRuntimeException: StatusRuntimeException =>
         if (statusRuntimeException.getStatus == Status.UNAVAILABLE) Fox.failure("FossilDB is unavailable") ~> 500
         else Fox.failure("Could not get from FossilDB: " + statusRuntimeException.getMessage)
-      case e: Exception => Fox.failure("Could not get from FossilDB: " + e.getMessage)
+      case e: Exception => {
+        if (e.getMessage == "No such element") { Fox.empty } else {
+          Fox.failure("Could not get from FossilDB: " + e.getMessage)
+        }
+      }
     }
 
   def getVersion(key: String,

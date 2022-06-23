@@ -2,7 +2,9 @@ version: 2
 jobs:
   build_test_deploy:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-02
+      docker_layer_caching: true
+    resource_class: large
     environment:
       USER_NAME: circleci
       USER_UID: 1001
@@ -52,10 +54,10 @@ jobs:
           name: Install frontend dependencies
           command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
       - restore_cache:
-          name: Restore webpack-uglifyjs cache
+          name: Restore webpack cache
           keys:
-            - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-            - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-master
+            - webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - webpack-cache-{{ checksum ".circleci/cache_version" }}-master
       - run:
           name: Assert schema.sql and evolutions are equal
           command: |
@@ -73,17 +75,21 @@ jobs:
           name: Build webknossos (sbt)
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker-compose run compile sbt clean compile stage
+              docker-compose run compile sbt -no-colors clean compile stage
             else
-              docker-compose run compile sbt compile stage
+              docker-compose run compile sbt -no-colors compile stage
             fi
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt "project webknossosDatastore" copyMessages compile stage
+          command: docker-compose run base sbt -no-colors "project webknossosDatastore" copyMessages compile stage
 
       - run:
           name: Build webknossos-tracingstore (sbt)
-          command: docker-compose run base sbt "project webknossosTracingstore" copyMessages compile stage
+          command: docker-compose run base sbt -no-colors "project webknossosTracingstore" copyMessages compile stage
+
+      - run:
+          name: Assemble webknossos-datastore fat-jar (sbt)
+          command: docker-compose run base sbt -no-colors "project webknossosDatastore" assembly
 
       - save_cache:
           name: Save target cache
@@ -106,10 +112,10 @@ jobs:
             - "~/.cache/yarn"
 
       - save_cache:
-          name: Save webpack-uglifyjs cache
-          key: webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
+          name: Save webpack cache
+          key: webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
-            - "node_modules/.cache/uglifyjs-webpack-plugin"
+            - "node_modules/.cache/webpack"
 
       - run:
           name: Build webknossos docker image
@@ -147,9 +153,9 @@ jobs:
             done
             (exit $s)
       - run:
-          name: Validate frontend types with flow
+          name: Validate frontend types
           command: |
-            .circleci/not-on-master.sh docker-compose run base yarn flow
+            .circleci/not-on-master.sh docker-compose run base yarn typecheck
       - run:
           name: Start webknossos
           background: true
@@ -241,6 +247,7 @@ jobs:
   nightly:
     docker:
       - image: scalableminds/puppeteer:master
+    resource_class: large
     steps:
       - checkout
       - run:
@@ -249,7 +256,7 @@ jobs:
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Wait 3min
           command: sleep 180
@@ -259,7 +266,7 @@ jobs:
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Install dependencies and sleep at least 3min
           command: |
@@ -268,7 +275,7 @@ jobs:
             wait
       - run:
           name: Refresh datasets
-          command: curl https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretScmBoyToken
+          command: curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=$WK_AUTH_TOKEN
       - run:
           name: Run screenshot-tests
           command: |
@@ -277,6 +284,9 @@ jobs:
 
       - store_artifacts:
           path: frontend/javascripts/test/screenshots
+
+      - store_artifacts:
+          path: frontend/javascripts/test/snapshots/type-check
 
 workflows:
   version: 2

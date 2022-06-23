@@ -1,15 +1,15 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, VoxelPosition}
 
 /**
-  * A cuboid represents a generic cuboid at a specified position.
+  * Mag-aware BoundingBox
   */
 case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
 
   lazy val bottomRight: VoxelPosition =
-    topLeft.move(width * topLeft.resolution.x, height * topLeft.resolution.y, depth * topLeft.resolution.z)
+    topLeft.move(width * topLeft.mag.x, height * topLeft.mag.y, depth * topLeft.mag.z)
 
   val volume: Int = width * height * depth
 
@@ -28,11 +28,11 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     val minBucket = topLeft.toBucket
     var bucketList: List[BucketPosition] = Nil
     var bucket = minBucket
-    while (bucket.topLeft.x < bottomRight.x) {
+    while (bucket.topLeft.voxelXInMag < bottomRight.voxelXInMag) {
       val prevX = bucket
-      while (bucket.topLeft.y < bottomRight.y) {
+      while (bucket.topLeft.voxelYInMag < bottomRight.voxelYInMag) {
         val prevY = bucket
-        while (bucket.topLeft.z < bottomRight.z) {
+        while (bucket.topLeft.voxelZInMag < bottomRight.voxelZInMag) {
           bucketList ::= bucket
           bucket = bucket.nextBucketInZ
         }
@@ -43,5 +43,5 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     bucketList
   }
 
-  def resolution: Point3D = topLeft.resolution
+  def mag: Vec3Int = topLeft.mag
 }

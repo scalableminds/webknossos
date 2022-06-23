@@ -1,6 +1,6 @@
 #!/bin/bash
 
-testBundlePath="public/test-bundle"
+testBundlePath="public-test/test-bundle"
 jsPath="frontend/javascripts"
 FIND=find
 
@@ -20,11 +20,12 @@ function prepare {
   pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
   pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
   # --copy-files will copy files that are present in the source dir but are not transpiled (e.g.: json files)
-  BABEL_ENV=test babel "$jsPath" --out-dir "$testBundlePath" --copy-files -w
+  # "$@" inside this function refers to all arguments of the prepare function, not all arguments of this bash script
+  BABEL_ENV=test babel --extensions .ts,.tsx "$jsPath" --out-dir "$testBundlePath" --copy-files "$@"
 }
 
 function ensureUpToDateTests {
-  lastChangedSource=$($FIND "$jsPath" -regex ".*\.js$" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
+  lastChangedSource=$($FIND "$jsPath" -regex ".*\.tsx?$" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
   lastChangedTests=$($FIND "$testBundlePath" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
 
   if [ ! $lastChangedTests ] || [ $lastChangedSource -gt $lastChangedTests ]
@@ -38,10 +39,15 @@ function ensureUpToDateTests {
   fi
 }
 
+# For faster, local testing, you may want to remove the `nyc` part of the following statement.
+# Also, removing `istanbul` from .babelrc, allows to debug uninstrumented source code.
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "texture_bucket_manager.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "texture_bucket_manager.spec.js") "$@"
+elif [ $cmd == "test-debug" ]
+then
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava debug $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests

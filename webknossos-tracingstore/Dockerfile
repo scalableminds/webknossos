@@ -1,19 +1,22 @@
 FROM openjdk:8-jre
 
-RUN mkdir -p /srv/webknossos-tracingstore \
+RUN mkdir -p /webknossos-tracingstore \
   && groupadd -g 1000 -r webknossos \
   && useradd -u 1000 -r -g webknossos webknossos \
-  && mkdir /srv/webknossos-tracingstore/tracingData
+  && mkdir /webknossos-tracingstore/tracingData
 
-WORKDIR /srv/webknossos-tracingstore
+WORKDIR /webknossos-tracingstore
 
-VOLUME /srv/webknossos-tracingstore/tracingData /tmp
+VOLUME /webknossos-tracingstore/tracingData /tmp
 
 COPY target/universal/stage .
 
 RUN chown -R webknossos . \
   && chmod go+x bin/webknossos-tracingstore \
   && chmod go+w .
+
+RUN echo '#!/bin/bash\numask 002\nbin/webknossos-tracingstore "$@"\n' > /docker-entrypoint.sh \
+  && chmod +x /docker-entrypoint.sh
 
 USER webknossos
 
@@ -23,5 +26,5 @@ HEALTHCHECK \
 
 EXPOSE 9050
 
-ENTRYPOINT ["bin/webknossos-tracingstore"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-tracingstore.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]

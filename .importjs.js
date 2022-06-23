@@ -1,5 +1,5 @@
 module.exports = {
-  excludes: ["./target/**", "./public/**"],
+  excludes: ["./target/**", "./public/**", "./public-test/**"],
   useRelativePaths: false,
   environments: ["browser"],
   aliases: {
@@ -12,5 +12,8 @@ module.exports = {
       return moduleName.slice(appDirPrefix.length);
     }
     return moduleName;
+  },
+  importStatementFormatter({ importStatement }) {
+    return importStatement.replace(/'/g, '"');
   },
 };

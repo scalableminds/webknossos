@@ -11,18 +11,32 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessAnswer,
   UserAccessRequest
 }
+import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
+import io.swagger.annotations._
 import javax.inject.Inject
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetService, DataStoreRpcClient, DataStoreService}
+import models.binary.{DataSetDAO, DataSetService, DataStoreService}
+import models.job.JobDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
-import utils.WkConf
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
+object RpcTokenHolder {
+  /*
+   * This token is used to tell the datastore or tracing store “I am webKnossos”.
+   * The respective module asks the remote webKnossos to validate that.
+   * The token is refreshed on every wK restart.
+   * Keep it secret!
+   */
+  lazy val webKnossosToken: String = CompactRandomIDGenerator.generateBlocking()
+}
+
+@Api
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataSetService: DataSetService,
                                     annotationDAO: AnnotationDAO,
@@ -31,6 +45,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     annotationInformationProvider: AnnotationInformationProvider,
                                     dataStoreService: DataStoreService,
                                     tracingStoreService: TracingStoreService,
+                                    jobDAO: JobDAO,
                                     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                     conf: WkConf,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -38,6 +53,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
+  @ApiOperation(
+    value = "Generates a token that can be used for requests to a datastore. The token is valid for 1 day by default.")
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
@@ -46,21 +63,21 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
     for {
       token <- tokenFox
-    } yield {
-      Ok(Json.obj("token" -> token))
-    }
+    } yield Ok(Json.obj("token" -> token))
   }
 
-  def validateAccessViaDatastore(name: String, token: Option[String]): Action[UserAccessRequest] =
+  @ApiOperation(hidden = true, value = "")
+  def validateAccessViaDatastore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
-      dataStoreService.validateAccess(name) { _ =>
+      dataStoreService.validateAccess(name, key) { _ =>
         validateUserAccess(request.body, token)
       }
     }
 
-  def validateAccessViaTracingstore(name: String, token: Option[String]): Action[UserAccessRequest] =
+  @ApiOperation(hidden = true, value = "")
+  def validateAccessViaTracingstore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
-      tracingStoreService.validateAccess(name) { _ =>
+      tracingStoreService.validateAccess(name, key) { _ =>
         validateUserAccess(request.body, token)
       }
     }
@@ -72,7 +89,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[Result] =
-    if (token.contains(DataStoreRpcClient.webKnossosToken)) {
+    if (token.contains(RpcTokenHolder.webKnossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
@@ -83,6 +100,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
             handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
+          case AccessResourceType.jobExport =>
+            handleJobExportAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
@@ -162,6 +181,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         case _                => Fox.successful(false)
       }
 
+    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(UserAccessAnswer(granted = true))
     for {
       annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
       restrictions <- annotationInformationProvider.restrictionsFor(
@@ -172,4 +192,18 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
     }
   }
+
+  private def handleJobExportAccess(jobId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] =
+    if (mode != AccessMode.read)
+      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
+    else {
+      for {
+        jobIdValidated <- ObjectId.parse(jobId)
+        jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox
+        answer = jobBox match {
+          case Full(_) => UserAccessAnswer(granted = true)
+          case _       => UserAccessAnswer(granted = false, Some(s"No ${mode} access to job export"))
+        }
+      } yield answer
+    }
 }

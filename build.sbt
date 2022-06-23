@@ -1,10 +1,10 @@
 import play.routes.compiler.InjectedRoutesGenerator
-import play.sbt.routes.RoutesKeys.{routesGenerator, routesImport}
+import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.12.12"
-ThisBuild / scapegoatVersion := "1.3.8"
+ThisBuild / scalaVersion := "2.12.15"
+ThisBuild / scapegoatVersion := "1.4.10"
 ThisBuild / scalacOptions ++= Seq(
   "-Xmax-classfile-name",
   "100",
@@ -14,16 +14,12 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:implicitConversions",
   "-language:postfixOps",
   "-Xlint:unused",
- s"-P:silencer:sourceRoots=${baseDirectory.value.getCanonicalPath}",
-  "-P:silencer:pathFilters=(.*target/.*/routes/.*/(ReverseRoutes\\.scala|Routes\\.scala|routes\\.java|JavaScriptReverseRoutes.scala)|.*target/.*\\.template\\.scala)"
+  s"-Wconf:src=target/.*:s",
+  s"-Wconf:src=webknossos-datastore/target/.*:s",
+  s"-Wconf:src=webknossos-tracingstore/target/.*:s"
 )
 
-ThisBuild / routesImport := Seq.empty
-
-ThisBuild / libraryDependencies ++= Seq(
-  compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.0" cross CrossVersion.full),
-  "com.github.ghik" % "silencer-lib" % "1.7.0" % Provided cross CrossVersion.full
-)
+ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
@@ -32,19 +28,19 @@ scapegoatIgnoredFiles := Seq(".*/Tables.scala",
                              ".*/ReverseRoutes.scala",
                              ".*/JavaScriptReverseRoutes.scala",
                              ".*/.*mail.*template\\.scala")
-scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter")
+scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
 lazy val commonSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
-  sources in (Compile, doc) := Seq.empty,
-  publishArtifact in (Compile, packageDoc) := false
+  Compile / doc / sources := Seq.empty,
+  Compile / packageDoc / publishArtifact := false
 )
 
 lazy val protocolBufferSettings = Seq(
-  ProtocPlugin.autoImport.PB.targets in Compile := Seq(
-    scalapb.gen() -> new java.io.File((sourceManaged in Compile).value + "/proto")
-  ),
-  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-datastore/proto"))
+  Compile / PB.protoSources := Seq(baseDirectory.value / "proto"),
+  Compile / PB.targets := Seq(
+    scalapb.gen() -> (Compile / sourceManaged).value / "proto"
+  )
 )
 
 lazy val copyConfFilesSetting = {
@@ -72,7 +68,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     routesGenerator := InjectedRoutesGenerator,
     protocolBufferSettings,
-    unmanagedJars in Compile ++= {
+    Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
       val subs = (libs ** "*") filter { _.isDirectory }
       val targets = ((subs / "target") ** "*") filter { f =>
@@ -80,7 +76,19 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
-    copyConfFilesSetting
+    copyConfFilesSetting,
+    assembly / assemblyMergeStrategy := {
+      case PathList(ps @ _*) if ps.last endsWith ".class" => MergeStrategy.last
+      case PathList(ps @ _*) if ps.last endsWith ".proto" => MergeStrategy.last
+      case PathList(ps @ _*) if List("io.netty.versions.properties", "mailcap.default",
+        "mimetypes.default", "native-image.properties").contains(ps.last) => MergeStrategy.last
+      case PathList(ps @ _*) if List("application.conf", "reference-overrides.conf").contains(ps.last) => MergeStrategy.concat
+      case x =>
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
+        oldStrategy(x)
+    },
+    assembly / test := {},
+    assembly / assemblyJarName := s"webknossos-datastore-${BuildInfoSettings.webKnossosVersion}.jar"
   )
 
 lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
@@ -107,9 +115,9 @@ lazy val webknossos = (project in file("."))
     BuildInfoSettings.webknossosBuildInfoSettings,
     routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= Dependencies.webknossosDependencies,
-    sourceDirectory in Assets := file("none"),
+    Assets / sourceDirectory := file("none"),
     updateOptions := updateOptions.value.withLatestSnapshots(true),
-    unmanagedJars in Compile ++= {
+    Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
       val subs = (libs ** "*") filter { _.isDirectory }
       val targets = ((subs / "target") ** "*") filter { f =>

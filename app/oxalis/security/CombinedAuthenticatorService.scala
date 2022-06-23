@@ -64,6 +64,13 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     tokenAuthenticator.map(CombinedAuthenticator(_))
   }
 
+  def findOrCreateToken(loginInfo: LoginInfo): Future[CombinedAuthenticator] =
+    findTokenByLoginInfo(loginInfo).flatMap {
+      case Some(token) => Future.successful(token)
+      case _ =>
+        createToken(loginInfo)
+    }
+
   override def retrieve[B](implicit request: ExtractableRequest[B]): Future[Option[CombinedAuthenticator]] =
     for {
       optionCookie <- cookieAuthenticatorService.retrieve(request)
@@ -73,7 +80,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     }
 
   // only called in token case
-  def findByLoginInfo(loginInfo: LoginInfo): Future[Option[CombinedAuthenticator]] =
+  def findTokenByLoginInfo(loginInfo: LoginInfo): Future[Option[CombinedAuthenticator]] =
     tokenDao.findOneByLoginInfo(loginInfo, TokenType.Authentication).map(opt => opt.map(CombinedAuthenticator(_)))
 
   // only called in the cookie case

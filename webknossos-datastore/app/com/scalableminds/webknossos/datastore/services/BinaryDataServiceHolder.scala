@@ -14,8 +14,8 @@ import javax.inject.Inject
 
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig, agglomerateService: AgglomerateService) {
 
-  val binaryDataService = new BinaryDataService(Paths.get(config.Braingames.Binary.baseFolder),
-                                                config.Braingames.Binary.cacheMaxSize,
+  val binaryDataService = new BinaryDataService(Paths.get(config.Datastore.baseFolder),
+                                                config.Datastore.Cache.DataCube.maxEntries,
                                                 agglomerateService)
 
 }

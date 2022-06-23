@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Format, JsObject, Json}
-import play.api.mvc.{Request, Result, Results}
+import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -75,11 +75,10 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
         "allowsUpload" -> dataStore.allowsUpload
       ))
 
-  def validateAccess[A](name: String)(block: DataStore => Future[Result])(implicit request: Request[A],
-                                                                          m: MessagesProvider): Fox[Result] =
+  def validateAccess[A](name: String, key: String)(block: DataStore => Future[Result])(
+      implicit m: MessagesProvider): Fox[Result] =
     (for {
       dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
-      key <- request.getQueryString("key").toFox
       _ <- bool2Fox(key == dataStore.key)
       result <- block(dataStore)
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
@@ -114,26 +113,22 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
-        sql"select #$columns from webknossos.datastores_ where name = $name and #$accessQuery".as[DatastoresRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
+      r <- run(sql"select #$columns from webknossos.datastores_ where name = $name and #$accessQuery".as[DatastoresRow])
+      parsed <- parseFirst(r, name)
     } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
-        sql"select #$columns from webknossos.datastores_ where url = $url and #$accessQuery".as[DatastoresRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
+      r <- run(sql"select #$columns from webknossos.datastores_ where url = $url and #$accessQuery".as[DatastoresRow])
+      parsed <- parseFirst(r, url)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from webknossos.datastores_ where #$accessQuery order by name".as[DatastoresRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   def updateUrlByName(name: String, url: String): Fox[Unit] = {

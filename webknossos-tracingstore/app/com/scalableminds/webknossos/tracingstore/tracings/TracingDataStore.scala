@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.inject.Inject
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
+import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 
@@ -10,7 +10,7 @@ import scala.concurrent.Future
 
 class TracingDataStore @Inject()(config: TracingStoreConfig,
                                  lifecycle: ApplicationLifecycle,
-                                 slackNotificationService: SlackNotificationService)
+                                 slackNotificationService: TSSlackNotificationService)
     extends LazyLogging {
 
   val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)
@@ -27,6 +27,10 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
 
   lazy val volumeUpdates = new FossilDBClient("volumeUpdates", config, slackNotificationService)
 
+  lazy val editableMappings = new FossilDBClient("editableMappings", config, slackNotificationService)
+
+  lazy val editableMappingUpdates = new FossilDBClient("editableMappingUpdates", config, slackNotificationService)
+
   def shutdown(): Unit = {
     healthClient.shutdown()
     skeletons.shutdown()
@@ -34,6 +38,8 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
     volumes.shutdown()
     volumeData.shutdown()
     volumeUpdates.shutdown()
+    editableMappings.shutdown()
+    editableMappingUpdates.shutdown()
     ()
   }
 

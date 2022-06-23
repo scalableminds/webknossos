@@ -3,8 +3,10 @@ package com.scalableminds.webknossos.tracingstore
 import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
+import com.scalableminds.webknossos.datastore.services.IsosurfaceServiceHolder
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 
@@ -19,6 +21,9 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[VolumeTracingService]).asEagerSingleton()
     bind(classOf[TracingStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[TSRemoteWebKnossosClient]).asEagerSingleton()
+    bind(classOf[TSRemoteDatastoreClient]).asEagerSingleton()
+    bind(classOf[EditableMappingService]).asEagerSingleton()
     bind(classOf[TSSlackNotificationService]).asEagerSingleton()
+    bind(classOf[IsosurfaceServiceHolder]).asEagerSingleton()
   }
 }

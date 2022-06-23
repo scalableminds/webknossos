@@ -34,11 +34,11 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
         handleBucketRequest(request, bucket)
       }
     } else {
-      Fox
-        .serialSequence(bucketQueue.toList) { bucket =>
+      Fox.sequence {
+        bucketQueue.toList.map { bucket =>
           handleBucketRequest(request, bucket).map(r => bucket -> r)
         }
-        .map(buckets => cutOutCuboid(request, buckets.flatten))
+      }.map(buckets => cutOutCuboid(request, buckets.flatten))
     }
   }
 
@@ -54,7 +54,7 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
         for {
           data <- handleDataRequest(request)
           mappedData = convertIfNecessary(
-            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.resolution.maxDim <= MaxMagForAgglomerateMapping,
+            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
             data,
             agglomerateService.applyAgglomerate(request)
           )
@@ -102,23 +102,32 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
 
     rs.reverse.foreach {
       case (bucket, data) =>
-        val xRemainder = cuboid.topLeft.x % subsamplingStrides.x
-        val yRemainder = cuboid.topLeft.y % subsamplingStrides.y
-        val zRemainder = cuboid.topLeft.z % subsamplingStrides.z
+        val xRemainder = cuboid.topLeft.voxelXInMag % subsamplingStrides.x
+        val yRemainder = cuboid.topLeft.voxelYInMag % subsamplingStrides.y
+        val zRemainder = cuboid.topLeft.voxelZInMag % subsamplingStrides.z
 
         val xMin = math
-          .ceil((math.max(cuboid.topLeft.x, bucket.topLeft.x).toDouble - xRemainder) / subsamplingStrides.x.toDouble)
+          .ceil(
+            (math
+              .max(cuboid.topLeft.voxelXInMag, bucket.topLeft.voxelXInMag)
+              .toDouble - xRemainder) / subsamplingStrides.x.toDouble)
           .toInt * subsamplingStrides.x + xRemainder
         val yMin = math
-          .ceil((math.max(cuboid.topLeft.y, bucket.topLeft.y).toDouble - yRemainder) / subsamplingStrides.y.toDouble)
+          .ceil(
+            (math
+              .max(cuboid.topLeft.voxelYInMag, bucket.topLeft.voxelYInMag)
+              .toDouble - yRemainder) / subsamplingStrides.y.toDouble)
           .toInt * subsamplingStrides.y + yRemainder
         val zMin = math
-          .ceil((math.max(cuboid.topLeft.z, bucket.topLeft.z).toDouble - zRemainder) / subsamplingStrides.z.toDouble)
+          .ceil(
+            (math
+              .max(cuboid.topLeft.voxelZInMag, bucket.topLeft.voxelZInMag)
+              .toDouble - zRemainder) / subsamplingStrides.z.toDouble)
           .toInt * subsamplingStrides.z + zRemainder
 
-        val xMax = math.min(cuboid.bottomRight.x, bucket.topLeft.x + bucketLength)
-        val yMax = math.min(cuboid.bottomRight.y, bucket.topLeft.y + bucketLength)
-        val zMax = math.min(cuboid.bottomRight.z, bucket.topLeft.z + bucketLength)
+        val xMax = math.min(cuboid.bottomRight.voxelXInMag, bucket.topLeft.voxelXInMag + bucketLength)
+        val yMax = math.min(cuboid.bottomRight.voxelYInMag, bucket.topLeft.voxelYInMag + bucketLength)
+        val zMax = math.min(cuboid.bottomRight.voxelZInMag, bucket.topLeft.voxelZInMag + bucketLength)
 
         for {
           z <- zMin until zMax by subsamplingStrides.z
@@ -131,9 +140,9 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
               y % bucketLength * bucketLength +
               z % bucketLength * bucketLength * bucketLength) * bytesPerElement
 
-          val rx = (x - cuboid.topLeft.x) / subsamplingStrides.x
-          val ry = (y - cuboid.topLeft.y) / subsamplingStrides.y
-          val rz = (z - cuboid.topLeft.z) / subsamplingStrides.z
+          val rx = (x - cuboid.topLeft.voxelXInMag) / subsamplingStrides.x
+          val ry = (y - cuboid.topLeft.voxelYInMag) / subsamplingStrides.y
+          val rz = (z - cuboid.topLeft.voxelZInMag) / subsamplingStrides.z
 
           val resultOffset = (rx + ry * resultVolume.x + rz * resultVolume.x * resultVolume.y) * bytesPerElement
           if (subsamplingStrides.x == 1) {
@@ -180,8 +189,8 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
         _ == cubeKey.dataLayerName)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
-      agglomerateKey.dataSourceName == dataSetName && agglomerateKey.organization == organizationName && layerName
-        .forall(_ == agglomerateKey.dataLayerName)
+      agglomerateKey.dataSetName == dataSetName && agglomerateKey.organizationName == organizationName && layerName
+        .forall(_ == agglomerateKey.layerName)
 
     val closedAgglomerateFileHandleCount = agglomerateService.agglomerateFileCache.clear(agglomerateFileMatchPredicate)
     val closedDataCubeHandleCount = cache.clear(dataCubeMatchPredicate)

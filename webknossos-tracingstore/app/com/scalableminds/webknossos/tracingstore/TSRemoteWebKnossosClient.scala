@@ -55,9 +55,9 @@ class TSRemoteWebKnossosClient @Inject()(
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[DataSourceLike]
 
-  def getDataStoreUriForDataSource(organizationNameOpt: Option[String], dataSetName: String): Fox[String] =
+  def getDataStoreUriForDataSource(organizationName: String, dataSetName: String): Fox[String] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataStoreURI/$dataSetName")
-      .addQueryStringOptional("organizationName", organizationNameOpt)
+      .addQueryString("organizationName" -> organizationName)
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[String]
 

@@ -250,7 +250,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
       },
     ],
     transactionId: "dummyRequestId",
-    tracingType: "volume",
+    saveQueueType: "volume",
     tracingId,
   };
   return sendToStore(batch, tracingId).then(() => {

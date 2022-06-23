@@ -121,7 +121,7 @@ export function getTree(
 }
 export function getNodeAndTree(
   skeletonTracing: SkeletonTracing,
-  nodeId: number | null | undefined,
+  nodeId?: number | null | undefined,
   treeId?: number | null | undefined,
 ): Maybe<[Tree, Node]> {
   let tree;
@@ -129,9 +129,7 @@ export function getNodeAndTree(
   if (treeId != null) {
     tree = skeletonTracing.trees[treeId];
   } else if (nodeId != null) {
-    // Flow doesn't understand that nodeId is not null, otherwise ¯\_(ツ)_/¯
-    const nonNullNodeId = nodeId;
-    tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nonNullNodeId));
+    tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
   } else {
     const { activeTreeId } = skeletonTracing;
 

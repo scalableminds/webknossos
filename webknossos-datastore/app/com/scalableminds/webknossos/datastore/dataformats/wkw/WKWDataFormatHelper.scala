@@ -23,7 +23,7 @@ trait WKWDataFormatHelper {
       .resolve(dataSourceId.map(_.team).getOrElse(""))
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
-      .resolve(formatResolution(cube.resolution, resolutionAsTriple))
+      .resolve(formatResolution(cube.mag, resolutionAsTriple))
       .resolve(s"z${cube.z}")
       .resolve(s"y${cube.y}")
       .resolve(s"x${cube.x}.$dataFileExtension")

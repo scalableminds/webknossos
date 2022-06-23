@@ -170,6 +170,14 @@ class JsonResult(status: Int)
     Json.obj("messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }
 
+trait MimeTypes {
+  val jpegMimeType: String = "image/jpeg"
+  val protobufMimeType: String = "application/x-protobuf"
+  val xmlMimeType: String = "application/xml"
+  val zipMimeType: String = "application/zip"
+  val jsonMimeType: String = "application/json"
+}
+
 trait JsonResults extends JsonResultAttribues {
   val JsonOk = new JsonResult(OK)
   val JsonBadRequest = new JsonResult(BAD_REQUEST)
@@ -217,6 +225,7 @@ trait ExtendedController
     with WithFilters
     with I18nSupport
     with InjectedController
+    with MimeTypes
     with ValidationHelpers
     with LazyLogging
     with RequestTokenHelper

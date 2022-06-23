@@ -30,7 +30,7 @@ import { OxalisState } from "oxalis/store";
 import { call } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 
-export const MAXIMUM_INTERPOLATION_DEPTH = 8;
+export const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
 export function getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;

@@ -1,4 +1,5 @@
 import type {
+  EditableMapping,
   OxalisState,
   ReadOnlyTracing,
   SkeletonTracing,
@@ -8,6 +9,8 @@ import type {
 } from "oxalis/store";
 import type { ServerTracing, TracingType } from "types/api_flow_types";
 import { TracingTypeEnum } from "types/api_flow_types";
+import { SaveQueueType } from "oxalis/model/actions/save_actions";
+
 export function maybeGetSomeTracing(
   tracing: Tracing,
 ): SkeletonTracing | VolumeTracing | ReadOnlyTracing | null {
@@ -52,24 +55,36 @@ export function getTracingType(tracing: Tracing): TracingType {
 }
 export function selectTracing(
   state: OxalisState,
-  tracingType: "skeleton" | "volume",
+  tracingType: SaveQueueType,
   tracingId: string,
-): SkeletonTracing | VolumeTracing {
-  if (tracingType === "skeleton") {
-    if (state.tracing.skeleton == null) {
-      throw new Error(`Skeleton tracing with id ${tracingId} not found`);
+): SkeletonTracing | VolumeTracing | EditableMapping {
+  let tracing;
+
+  switch (tracingType) {
+    case "skeleton": {
+      tracing = state.tracing.skeleton;
+      break;
     }
-
-    return state.tracing.skeleton;
+    case "volume": {
+      tracing = state.tracing.volumes.find(
+        (volumeTracing) => volumeTracing.tracingId === tracingId,
+      );
+      break;
+    }
+    case "mapping": {
+      tracing = state.tracing.mappings.find((mapping) => mapping.tracingId === tracingId);
+      break;
+    }
+    default: {
+      throw new Error(`Unknown tracing type: ${tracingType}`);
+    }
   }
 
-  const volumeTracing = state.tracing.volumes.find((tracing) => tracing.tracingId === tracingId);
-
-  if (volumeTracing == null) {
-    throw new Error(`Volume tracing with id ${tracingId} not found`);
+  if (tracing == null) {
+    throw new Error(`${tracingType} object with id ${tracingId} not found`);
   }
 
-  return volumeTracing;
+  return tracing;
 }
 export const getUserBoundingBoxesFromState = (state: OxalisState): Array<UserBoundingBox> => {
   const maybeSomeTracing = maybeGetSomeTracing(state.tracing);

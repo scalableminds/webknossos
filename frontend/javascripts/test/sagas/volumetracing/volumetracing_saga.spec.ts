@@ -29,7 +29,7 @@ mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
 
-const { saveTracingTypeAsync } = require("oxalis/model/sagas/save_saga");
+const { setupSavingForTracingType } = require("oxalis/model/sagas/save_saga");
 
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 
@@ -116,10 +116,10 @@ test.before("Mock Date.now", async () => {
   sinon.stub(Date, "now").returns(TIMESTAMP);
 });
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {
-  const saga = saveTracingTypeAsync(
+  const saga = setupSavingForTracingType(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushTracingTypeAsync
+  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);
@@ -136,10 +136,10 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => 
 });
 test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const newState = VolumeTracingReducer(initialState, setActiveCellAction);
-  const saga = saveTracingTypeAsync(
+  const saga = setupSavingForTracingType(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushTracingTypeAsync
+  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);

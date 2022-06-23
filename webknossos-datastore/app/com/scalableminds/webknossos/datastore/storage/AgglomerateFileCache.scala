@@ -1,50 +1,59 @@
 package com.scalableminds.webknossos.datastore.storage
 
+import java.nio.file.Path
 import java.util
+
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
-import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
-import com.scalableminds.webknossos.datastore.storage
-import spire.math.{ULong, min, max}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
+import spire.math.{ULong, max, min}
 
 import scala.collection.mutable
 
 case class CachedAgglomerateFile(reader: IHDF5Reader,
                                  dataset: HDF5DataSet,
+                                 agglomerateIdCache: AgglomerateIdCache,
                                  cache: Either[AgglomerateIdCache, BoundingBoxCache])
     extends SafeCachable {
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
 
 case class AgglomerateFileKey(
-    organization: String,
-    dataSourceName: String,
-    dataLayerName: String,
-    agglomerateName: String
-)
+    organizationName: String,
+    dataSetName: String,
+    layerName: String,
+    mappingName: String
+) {
+  def path(dataBaseDir: Path, agglomerateDir: String, agglomerateFileExtension: String): Path =
+    dataBaseDir
+      .resolve(organizationName)
+      .resolve(dataSetName)
+      .resolve(layerName)
+      .resolve(agglomerateDir)
+      .resolve(s"$mappingName.$agglomerateFileExtension")
+}
 
 object AgglomerateFileKey {
-  def from(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
-    storage.AgglomerateFileKey(dataRequest.dataSource.id.team,
-                               dataRequest.dataSource.id.name,
-                               dataRequest.dataLayer.name,
-                               dataRequest.settings.appliedAgglomerate.get)
+  def fromDataRequest(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
+    AgglomerateFileKey(dataRequest.dataSource.id.team,
+                       dataRequest.dataSource.id.name,
+                       dataRequest.dataLayer.name,
+                       dataRequest.settings.appliedAgglomerate.get)
 }
 
 class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateFileKey, CachedAgglomerateFile] {
   override def onElementRemoval(key: AgglomerateFileKey, value: CachedAgglomerateFile): Unit =
     value.scheduleForRemoval()
 
-  def withCache(dataRequest: DataServiceDataRequest)(
-      loadFn: DataServiceDataRequest => CachedAgglomerateFile): CachedAgglomerateFile = {
-    val agglomerateFileKey = AgglomerateFileKey.from(dataRequest)
+  def withCache(agglomerateFileKey: AgglomerateFileKey)(
+      loadFn: AgglomerateFileKey => CachedAgglomerateFile): CachedAgglomerateFile = {
 
     def handleUncachedAgglomerateFile() = {
-      val agglomerateFile = loadFn(dataRequest)
+      val agglomerateFile = loadFn(agglomerateFileKey)
       // We don't need to check the return value of the `tryAccess` call as we just created the agglomerate file and use it only to increase the access counter.
       agglomerateFile.tryAccess()
       put(agglomerateFileKey, agglomerateFile)
@@ -92,9 +101,9 @@ case class BoundingBoxFinder(
     zCoordinates: util.TreeSet[Long],
     minBoundingBox: (Long, Long, Long)) {
   def findInitialBoundingBox(cuboid: Cuboid): (Long, Long, Long) = {
-    val x = Option(xCoordinates.floor(cuboid.topLeft.x))
-    val y = Option(yCoordinates.floor(cuboid.topLeft.y))
-    val z = Option(zCoordinates.floor(cuboid.topLeft.z))
+    val x = Option(xCoordinates.floor(cuboid.topLeft.voxelXInMag))
+    val y = Option(yCoordinates.floor(cuboid.topLeft.voxelYInMag))
+    val z = Option(zCoordinates.floor(cuboid.topLeft.voxelZInMag))
     (x.getOrElse(minBoundingBox._1), y.getOrElse(minBoundingBox._2), z.getOrElse(minBoundingBox._3)) // if the request is outside the layer box, use the minimal bb as start point
   }
 }
@@ -110,12 +119,14 @@ class BoundingBoxCache(
     val maxReaderRange: ULong) // config value for maximum amount of elements that are allowed to be read as once
     extends LazyLogging {
   private def getGlobalCuboid(cuboid: Cuboid): Cuboid = {
-    val res = cuboid.resolution
+    val res = cuboid.mag
     val tl = cuboid.topLeft
-    Cuboid(new VoxelPosition(tl.x * res.x, tl.y * res.y, tl.z * res.z, Vec3Int(1, 1, 1)),
-           cuboid.width * res.x,
-           cuboid.height * res.y,
-           cuboid.depth * res.z)
+    Cuboid(
+      VoxelPosition(tl.voxelXInMag * res.x, tl.voxelYInMag * res.y, tl.voxelZInMag * res.z, Vec3Int(1, 1, 1)),
+      cuboid.width * res.x,
+      cuboid.height * res.y,
+      cuboid.depth * res.z
+    )
   }
 
   // get the segment ID range for one cuboid
@@ -140,11 +151,11 @@ class BoundingBoxCache(
     var z = initialBoundingBox._3
 
     // step through each bb, but save starting coordinates to reset iteration once the outer bound is reached
-    while (x < requestedCuboid.x && x < dataLayerBox.x) {
+    while (x < requestedCuboid.voxelXInMag && x < dataLayerBox.x) {
       val nextBBinX = (x + currDimensions._1, y, z)
-      while (y < requestedCuboid.y && y < dataLayerBox.y) {
+      while (y < requestedCuboid.voxelYInMag && y < dataLayerBox.y) {
         val nextBBinY = (x, y + currDimensions._2, z)
-        while (z < requestedCuboid.z && z < dataLayerBox.z) {
+        while (z < requestedCuboid.voxelZInMag && z < dataLayerBox.z) {
           // get cached values for current bb and update the reader range by extending if necessary
           cache.get((x, y, z)).foreach { value =>
             range = (min(range._1, value.idRange._1), max(range._2, value.idRange._2))

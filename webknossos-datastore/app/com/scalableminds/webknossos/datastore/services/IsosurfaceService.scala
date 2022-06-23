@@ -1,10 +1,12 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.nio._
+
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -14,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure}
-import java.nio._
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -54,9 +56,13 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                         actorSystem: ActorSystem,
                         isosurfaceTimeout: FiniteDuration,
                         isosurfaceActorPoolSize: Int)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
 
-  private val agglomerateService: AgglomerateService = binaryDataService.agglomerateService
+  private val agglomerateService
+    : Option[AgglomerateService] = try { Some(binaryDataService.agglomerateService) } catch {
+    case _: NullPointerException => None
+  }
 
   implicit val timeout: Timeout = Timeout(isosurfaceTimeout)
 
@@ -117,7 +123,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                 DataServiceRequestSettings(halfByte = false, request.mapping, None),
                 request.subsamplingStrides
               )
-              agglomerateService.applyAgglomerate(dataRequest)(data)
+              agglomerateService.get.applyAgglomerate(dataRequest)(data)
             case _ =>
               data
           }
@@ -184,7 +190,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
       math.ceil(cuboid.depth / subsamplingStrides.z).toInt
     )
 
-    val offset = Vec3Double(cuboid.topLeft.x, cuboid.topLeft.y, cuboid.topLeft.z)
+    val offset = Vec3Double(cuboid.topLeft.voxelXInMag, cuboid.topLeft.voxelYInMag, cuboid.topLeft.voxelZInMag)
     val scale = Vec3Double(cuboid.topLeft.mag) * request.scale
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 

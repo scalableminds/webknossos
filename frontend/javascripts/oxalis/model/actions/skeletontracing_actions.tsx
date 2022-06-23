@@ -33,7 +33,7 @@ type DeleteNodeAction = {
   treeId?: number;
   timestamp: number;
 };
-type DeleteEdgeAction = {
+export type DeleteEdgeAction = {
   type: "DELETE_EDGE";
   sourceNodeId: number;
   targetNodeId: number;
@@ -133,7 +133,7 @@ type SetActiveGroupAction = {
 type DeselectActiveGroupAction = {
   type: "DESELECT_ACTIVE_GROUP";
 };
-type MergeTreesAction = {
+export type MergeTreesAction = {
   type: "MERGE_TREES";
   sourceNodeId: number;
   targetNodeId: number;

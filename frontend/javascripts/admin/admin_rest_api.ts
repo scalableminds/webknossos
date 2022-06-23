@@ -54,6 +54,7 @@ import type {
   ServerTracing,
   TracingType,
   WkConnectDatasetConfig,
+  ServerEditableMapping,
   APICompoundType,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
@@ -81,6 +82,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { SaveQueueType } from "oxalis/model/actions/save_actions";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -854,11 +856,11 @@ export async function getTracingForAnnotationType(
 export function getUpdateActionLog(
   tracingStoreUrl: string,
   tracingId: string,
-  tracingType: "skeleton" | "volume",
+  versionedObjectType: SaveQueueType,
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?token=${token}`,
     ),
   );
 }
@@ -1584,6 +1586,29 @@ export function fetchMapping(
   );
 }
 
+export function makeMappingEditable(
+  tracingStoreUrl: string,
+  tracingId: string,
+): Promise<ServerEditableMapping> {
+  return doWithToken((token) =>
+    Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
+      {
+        method: "POST",
+      },
+    ),
+  );
+}
+
+export function getEditableMapping(
+  tracingStoreUrl: string,
+  tracingId: string,
+): Promise<ServerEditableMapping> {
+  return doWithToken((token) =>
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}?token=${token}`),
+  );
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1871,10 +1896,12 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 // These parameters are bundled into an object to avoid that the computeIsosurface function
 // receives too many parameters, since this doesn't play well with the saga typings.
 type IsosurfaceRequest = {
+  // The position is in voxels in mag 1
   position: Vector3;
   mag: Vector3;
   segmentId: number;
   subsamplingStrides: Vector3;
+  // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scale: Vector3;
   mappingName: string | null | undefined;
@@ -1938,7 +1965,26 @@ export function getAgglomerateSkeleton(
   return doWithToken((token) =>
     Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
-      // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
+      {
+        useWebworkerForArrayBuffer: false,
+        showErrorToast: false,
+      },
+    ),
+  );
+}
+
+export function getEditableAgglomerateSkeleton(
+  tracingStoreUrl: string,
+  tracingId: string,
+  agglomerateId: number,
+): Promise<ArrayBuffer> {
+  return doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
         useWebworkerForArrayBuffer: false,
         showErrorToast: false,

@@ -27,7 +27,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
                          position: Vec3Int,
                          resolution: Vec3Int): Fox[Array[Byte]] = {
     val request = DataRequest(
-      new VoxelPosition(position.x, position.y, position.z, resolution),
+      VoxelPosition(position.x, position.y, position.z, resolution),
       DataLayer.bucketLength,
       DataLayer.bucketLength,
       DataLayer.bucketLength

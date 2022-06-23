@@ -116,7 +116,7 @@ class DataSetController @Inject()(userService: UserService,
           dataLayerName) ~> NOT_FOUND
         image <- imageFromCacheIfPossible(dataSet)
       } yield {
-        addRemoteOriginHeaders(Ok(image)).as("image/jpeg").withHeaders(CACHE_CONTROL -> "public, max-age=86400")
+        addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }
     }
 

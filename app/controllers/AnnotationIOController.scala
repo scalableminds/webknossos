@@ -428,9 +428,9 @@ Expects:
 
     def exportMimeTypeForAnnotation(annotation: Annotation): String =
       if (annotation.tracingType == TracingType.skeleton)
-        "application/xml"
+        xmlMimeType
       else
-        "application/zip"
+        zipMimeType
 
     for {
       annotation <- provider.provideAnnotation(typ, annotationId, issuingUser) ~> NOT_FOUND

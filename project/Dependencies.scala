@@ -69,7 +69,8 @@ object Dependencies {
     playFramework,
     reactiveBson,
     scalapbRuntime,
-    scalaLogging
+    scalaLogging,
+    akkaCaching
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(
@@ -77,7 +78,6 @@ object Dependencies {
     grpcServices,
     scalapbRuntimeGrpc,
     akkaLogging,
-    akkaCaching,
     ehcache,
     gson,
     webknossosWrap,

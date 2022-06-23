@@ -18,6 +18,39 @@ type State = {
   expanded: boolean;
 };
 
+function GroupHeader({
+  toggleExpand,
+  expanded,
+  batches,
+}: {
+  toggleExpand: () => void;
+  expanded: boolean;
+  batches: APIUpdateActionBatch[];
+}) {
+  const lastTimestamp = _.max(batches[0].value.map((action) => action.value.actionTimestamp)) || 0;
+  const lastVersion = _.last(batches)?.version || 0;
+  return (
+    <List.Item
+      style={{
+        cursor: "pointer",
+      }}
+      className="version-entry version-entry-header"
+      onClick={toggleExpand}
+    >
+      <List.Item.Meta
+        title={
+          <React.Fragment>
+            {lastVersion} to {batches[0].version} (
+            <FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
+          </React.Fragment>
+        }
+        avatar={
+          <Avatar size="small" icon={expanded ? <CaretDownOutlined /> : <CaretRightOutlined />} />
+        }
+      />
+    </List.Item>
+  );
+}
 export default class VersionEntryGroup extends React.Component<Props, State> {
   state: State = {
     expanded: false,
@@ -39,39 +72,16 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
       onPreviewVersion,
     } = this.props;
 
-    const lastTimestamp = _.max(batches[0].value.map((action) => action.value.actionTimestamp));
-
-    const GroupHeader = () => (
-      <List.Item
-        style={{
-          cursor: "pointer",
-        }}
-        className="version-entry version-entry-header"
-        onClick={this.toggleExpand}
-      >
-        <List.Item.Meta
-          title={
-            <React.Fragment>
-              {/* @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'. */}
-              {_.last(batches).version} to {batches[0].version} (
-              {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message */}
-              <FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
-            </React.Fragment>
-          }
-          avatar={
-            <Avatar
-              size="small"
-              icon={this.state.expanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
-            />
-          }
-        />
-      </List.Item>
-    );
-
     const containsMultipleBatches = batches.length > 1;
     return (
       <React.Fragment>
-        {containsMultipleBatches ? <GroupHeader /> : null}
+        {containsMultipleBatches ? (
+          <GroupHeader
+            toggleExpand={this.toggleExpand}
+            expanded={this.state.expanded}
+            batches={batches}
+          />
+        ) : null}
         {this.state.expanded || !containsMultipleBatches
           ? batches.map((batch) => (
               <VersionEntry

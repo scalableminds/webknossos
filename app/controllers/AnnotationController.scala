@@ -121,7 +121,7 @@ class AnnotationController @Inject()(
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
         result <- info(annotation.typ.toString, id, timestamp)(request)
       } yield result
-      
+
     }
   }
 
@@ -138,7 +138,7 @@ class AnnotationController @Inject()(
         js <- annotationService.publicWrites(mergedAnnotation, Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"
       } yield JsonOk(js, Messages("annotation.merge.success"))
     }
-  
+
   @ApiOperation(hidden = true, value = "")
   def mergeWithoutType(id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
@@ -217,7 +217,7 @@ class AnnotationController @Inject()(
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
         result <- addAnnotationLayer(annotation.typ.toString, id)(request)
       } yield result
-    }    
+    }
 
   @ApiOperation(hidden = true, value = "")
   def createExplorational(organizationName: String, dataSetName: String): Action[List[AnnotationLayerParameters]] =
@@ -280,7 +280,7 @@ class AnnotationController @Inject()(
         json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }
-  
+
   @ApiOperation(hidden = true, value = "")
   def makeHybridWithoutType(id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>

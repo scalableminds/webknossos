@@ -105,7 +105,10 @@ class AnnotationController @Inject()(
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
+  @ApiOperation(value = "Information about an annotation", nickname = "annotationInfo")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
+          new ApiResponse(code = 400, message = badRequestLabel)))
   def infoWithoutType(
       @ApiParam(
         value =

@@ -163,14 +163,25 @@ test("CuckooTable", (t) => {
   const entries = generateRandomEntrySet();
   console.time("start");
 
+  let n = 0;
   for (const entry of entries) {
     debugger;
+
+    console.log("!!!!!!!!!!!!!!!!!!!!!!");
+    console.log("!!!!!!!!!!!!!!!!!!!!!!        ", n);
+    console.log("!!!!!!!!!!!!!!!!!!!!!!");
     ct.setEntry(entry[0], entry[1]);
     t.is(entry[1], ct.getValue(entry[0]));
+    n++;
   }
 
+  n = 0;
   for (const entry of entries) {
+    console.log("??????????????????????");
+    console.log("??????????????????????        ", n);
+    console.log("??????????????????????");
     t.is(entry[1], ct.getValue(entry[0]));
+    n++;
   }
 
   // ct.setEntry([1, 10, 3, 4], 1337);

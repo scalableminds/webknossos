@@ -62,85 +62,95 @@ export class CuckooTable {
     this.seed2 = 21;
   }
 
-  setEntry(key: Vector4, value: number) {
-    const hashedAddress1 = this._hashKey(this.seed1, key, 0);
-    const hashedAddress2 = this._hashKey(this.seed2, key, 1);
-
-    // if (this.hasEntry(key, value, hashedAddress1, hashedAddress2)) {
-    //   return;
-    // }
-
-    let entryToWrite: Vector5 = [key[0], key[1], key[2], key[3], value];
-
-    if (this.isAddressValidForKey(key, hashedAddress1)) {
-      console.log("Writing", entryToWrite, "in table 1:", hashedAddress1);
-      this.writeEntryAtAddress(entryToWrite, hashedAddress1);
-      return;
-    } else {
-      console.log("Table 1 is already occupied at", hashedAddress1);
-    }
-
-    if (this.isAddressValidForKey(key, hashedAddress2)) {
-      console.log("Writing", entryToWrite, "in table 2:", hashedAddress2);
-      this.writeEntryAtAddress(entryToWrite, hashedAddress2);
-      return;
-    } else {
-      console.log("Table 2 is already occupied at", hashedAddress2);
-    }
-
+  setEntry(currentKey: Vector4, currentValue: number) {
     let displacedEntry;
-    let currentAddress = hashedAddress1;
-
+    let currentAddress;
     let iterationCounter = 0;
+
     const ITERATION_THRESHOLD = 10;
     while (iterationCounter++ < ITERATION_THRESHOLD) {
-      // x↔T1[h1(key[x])] // tausche x mit Pos. in T1
-      // if x=NIL then return
-      // x↔T2[h2(key[x])] // tausche x mit Pos. in T2
-      // if x=NIL then return
+      // Hash A
+      currentAddress = this._hashKey(this.seed1, currentKey, 0);
 
-      console.log("Try to evict at", currentAddress, "to make room for", entryToWrite);
-      displacedEntry = this.getEntryAtAddress(currentAddress);
-      console.log("displacedEntry", displacedEntry);
-      console.log("Write", entryToWrite, "at", currentAddress);
-      this.writeEntryAtAddress(entryToWrite, currentAddress);
-      if (
-        displacedEntry[0] === 0 &&
-        displacedEntry[1] === 0 &&
-        displacedEntry[2] === 0 &&
-        displacedEntry[3] === 0
-      ) {
-        console.log("Successfull store after", iterationCounter);
-        return;
-      }
-      entryToWrite = displacedEntry;
-      let keyToWrite: Vector4 = [
-        displacedEntry[0],
-        displacedEntry[1],
-        displacedEntry[2],
-        displacedEntry[3],
+      let entryToWrite: Vector5 = [
+        currentKey[0],
+        currentKey[1],
+        currentKey[2],
+        currentKey[3],
+        currentValue,
       ];
+      if (this.isAddressValidForKey(currentKey, currentAddress)) {
+        console.log("####### Writing", entryToWrite, "to empty slot in table 1:", currentAddress);
+        this.writeEntryAtAddress(entryToWrite, currentAddress);
+        return;
+      } else {
+        console.log("Table 1 is already occupied at", currentAddress);
+      }
 
-      currentAddress = this._hashKey(this.seed2, keyToWrite, 1);
+      // Swap currentKey, currentValue with what's contained in H1
       console.log("Try to evict at", currentAddress, "to make room for", entryToWrite);
       displacedEntry = this.getEntryAtAddress(currentAddress);
       console.log("displacedEntry", displacedEntry);
       console.log("Write", entryToWrite, "at", currentAddress);
       this.writeEntryAtAddress(entryToWrite, currentAddress);
 
-      if (
-        displacedEntry[0] === 0 &&
-        displacedEntry[1] === 0 &&
-        displacedEntry[2] === 0 &&
-        displacedEntry[3] === 0
-      ) {
-        console.log("Successfull store after", iterationCounter);
+      currentKey = [displacedEntry[0], displacedEntry[1], displacedEntry[2], displacedEntry[3]];
+      currentValue = displacedEntry[4];
+
+      // Hash B
+      currentAddress = this._hashKey(this.seed2, currentKey, 1);
+
+      if (this.isAddressValidForKey(currentKey, currentAddress)) {
+        console.log("###### Writing", entryToWrite, "to empty slot in table 2:", currentAddress);
+        this.writeEntryAtAddress(entryToWrite, currentAddress);
         return;
+      } else {
+        console.log("Table 2 is already occupied at", currentAddress);
       }
 
-      entryToWrite = displacedEntry;
-      keyToWrite = [displacedEntry[0], displacedEntry[1], displacedEntry[2], displacedEntry[3]];
-      currentAddress = this._hashKey(this.seed1, keyToWrite, 0);
+      displacedEntry = this.getEntryAtAddress(currentAddress);
+      currentKey = [displacedEntry[0], displacedEntry[1], displacedEntry[2], displacedEntry[3]];
+      currentValue = displacedEntry[4];
+
+      // // if (this.hasEntry(key, value, hashedAddress1, hashedAddress2)) {
+      // //   return;
+      // // }
+
+      // ///////////////////////////////
+
+      // // x↔T1[h1(key[x])] // tausche x mit Pos. in T1
+      // // if x=NIL then return
+      // // x↔T2[h2(key[x])] // tausche x mit Pos. in T2
+      // // if x=NIL then return
+
+      // entryToWrite = displacedEntry;
+      // let keyToWrite: Vector4 = [
+      //   displacedEntry[0],
+      //   displacedEntry[1],
+      //   displacedEntry[2],
+      //   displacedEntry[3],
+      // ];
+
+      // currentAddress = this._hashKey(this.seed2, keyToWrite, 1);
+      // console.log("Try to evict at", currentAddress, "to make room for", entryToWrite);
+      // displacedEntry = this.getEntryAtAddress(currentAddress);
+      // console.log("displacedEntry", displacedEntry);
+      // console.log("Write", entryToWrite, "at", currentAddress);
+      // this.writeEntryAtAddress(entryToWrite, currentAddress);
+
+      // if (
+      //   displacedEntry[0] === 0 &&
+      //   displacedEntry[1] === 0 &&
+      //   displacedEntry[2] === 0 &&
+      //   displacedEntry[3] === 0
+      // ) {
+      //   console.log("Successful store after", iterationCounter);
+      //   return;
+      // }
+
+      // entryToWrite = displacedEntry;
+      // keyToWrite = [displacedEntry[0], displacedEntry[1], displacedEntry[2], displacedEntry[3]];
+      // currentAddress = this._hashKey(this.seed1, keyToWrite, 0);
     }
 
     throw new Error(`couldnt add key. tried ${iterationCounter} iterations`);

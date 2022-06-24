@@ -839,13 +839,14 @@ class AnnotationService @Inject()(
     }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation): Fox[JsObject] =
+  def compactWrites(annotation: Annotation): Fox[JsObject] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
-      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      teams <- sharedTeamsFor(annotation._id)
-      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization)))
-      user <- userDAO.findOne(annotation._user)(GlobalAccessContext)
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      teams <- sharedTeamsFor(annotation._id) ?~> s"fetching sharedTeams for annotation ${annotation._id} failed"
+      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization))) ?~> s"serializing sharedTeams for annotation ${annotation._id} failed"
+      user <- userDAO.findOne(annotation._user) ?~> s"fetching owner info for annotation ${annotation._id} failed"
       userJson = Json.obj(
         "id" -> user._id.toString,
         "firstName" -> user.firstName,
@@ -871,4 +872,5 @@ class AnnotationService @Inject()(
         "owner" -> userJson
       )
     }
+  }
 }

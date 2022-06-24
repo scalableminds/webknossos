@@ -429,8 +429,9 @@ class AnnotationController @Inject()(
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0))
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllReadableExplorationalsFor(request.identity._id, isFinished))
-        jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites)
+          annotationDAO
+            .countAllReadableExplorationalsFor(request.identity._id, isFinished)) ?~> "annotation.countReadable.failed"
+        jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites) ?~> "annotation.compactWrites.failed"
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {

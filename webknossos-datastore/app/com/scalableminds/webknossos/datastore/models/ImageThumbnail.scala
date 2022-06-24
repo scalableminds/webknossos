@@ -27,6 +27,6 @@ object ImageThumbnail {
     val x = Math.max(0, center.x - width * mag.x / 2)
     val y = Math.max(0, center.y - height * mag.y / 2)
     val z = center.z
-    new VoxelPosition(x.toInt, y.toInt, z.toInt, mag)
+    VoxelPosition(x.toInt, y.toInt, z.toInt, mag)
   }
 }

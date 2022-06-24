@@ -664,8 +664,17 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // https://github.com/scalableminds/webknossos/pull/4755
   resolutions?: Array<Point3>;
   organizationName?: string;
+  mappingName?: string | null | undefined;
+  mappingIsEditable?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
+export type ServerEditableMapping = {
+  createdTimestamp: number;
+  version: number;
+  mappingName: string;
+  // The id of the volume tracing the editable mapping belongs to
+  tracingId: string;
+};
 export type APIMeshFile = {
   meshFileName: string;
   mappingName?: string | null | undefined;

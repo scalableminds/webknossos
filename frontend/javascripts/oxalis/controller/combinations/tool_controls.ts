@@ -22,11 +22,17 @@ import {
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store from "oxalis/store";
+import Store, { SkeletonTracing } from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
+import { proofreadAtPosition } from "oxalis/model/actions/proofread_actions";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getNodeAndTree,
+  getSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -617,10 +623,65 @@ export class BoundingBoxTool {
     getSceneController().highlightUserBoundingBox(null);
   }
 }
+export class ProofreadTool {
+  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
+    return {
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        this.onLeftClick(planeView, pos, plane, event, isTouch);
+      },
+    };
+  }
+
+  static onLeftClick(
+    planeView: PlaneView,
+    pos: Point2,
+    plane: OrthoView,
+    _event: MouseEvent,
+    isTouch: boolean,
+  ) {
+    const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
+
+    let globalPosition;
+    if (plane === OrthoViews.TDView) {
+      // In the 3D viewport the click position cannot be uniquely determined, because the position on the
+      // third axis is ambiguous. However, if the user clicked on a node, we can determine the position
+      // by looking up the position of the selected node.
+      if (didSelectNode) {
+        getSkeletonTracing(Store.getState().tracing).map((skeletonTracing: SkeletonTracing) =>
+          getNodeAndTree(skeletonTracing).map(([_activeTree, activeNode]) => {
+            globalPosition = activeNode.position;
+          }),
+        );
+      }
+    } else {
+      globalPosition = calculateGlobalPos(Store.getState(), pos);
+    }
+
+    if (globalPosition == null) return;
+
+    Store.dispatch(proofreadAtPosition(globalPosition));
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftClick: "Select Segment to Proofread",
+      rightClick: "Context Menu",
+    };
+  }
+
+  static onToolDeselected() {}
+}
 const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
   [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
+  [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,
   [AnnotationToolEnum.ERASE_TRACE]: EraseTool,

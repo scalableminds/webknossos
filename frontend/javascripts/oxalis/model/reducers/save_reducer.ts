@@ -6,13 +6,17 @@ import type {
   PushSaveQueueTransaction,
   SetVersionNumberAction,
   ShiftSaveQueueAction,
+  SetLastSaveTimestampAction,
 } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
-import { updateVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import {
+  updateEditableMapping,
+  updateVolumeTracing,
+} from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
 
@@ -21,47 +25,71 @@ function updateQueueObj(
   oldQueueObj: SaveState["queue"],
   newQueue: any,
 ): SaveState["queue"] {
-  if (action.tracingType === "skeleton") {
+  if (action.saveQueueType === "skeleton") {
     return { ...oldQueueObj, skeleton: newQueue };
+  } else if (action.saveQueueType === "volume") {
+    return { ...oldQueueObj, volumes: { ...oldQueueObj.volumes, [action.tracingId]: newQueue } };
+  } else if (action.saveQueueType === "mapping") {
+    return { ...oldQueueObj, mappings: { ...oldQueueObj.mappings, [action.tracingId]: newQueue } };
   }
 
-  return { ...oldQueueObj, volumes: { ...oldQueueObj.volumes, [action.tracingId]: newQueue } };
+  return oldQueueObj;
 }
 
 export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
   return (
     queueObj.skeleton.length +
-    _.sum(Utils.values(queueObj.volumes).map((volumeQueue: SaveQueueEntry[]) => volumeQueue.length))
+    _.sum(
+      Utils.values(queueObj.volumes).map((volumeQueue: SaveQueueEntry[]) => volumeQueue.length),
+    ) +
+    _.sum(
+      Utils.values(queueObj.mappings).map((mappingQueue: SaveQueueEntry[]) => mappingQueue.length),
+    )
   );
 }
 
 function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
-  if (action.tracingType === "skeleton" && state.tracing.skeleton != null) {
+  if (action.saveQueueType === "skeleton" && state.tracing.skeleton != null) {
     return updateKey2(state, "tracing", "skeleton", {
+      version: action.version,
+    });
+  } else if (action.saveQueueType === "volume") {
+    return updateVolumeTracing(state, action.tracingId, {
+      version: action.version,
+    });
+  } else if (action.saveQueueType === "mapping") {
+    return updateEditableMapping(state, action.tracingId, {
       version: action.version,
     });
   }
 
-  return updateVolumeTracing(state, action.tracingId, {
-    version: action.version,
-  });
+  return state;
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'state' implicitly has an 'any' type.
-function updateLastSaveTimestamp(state, action) {
-  if (action.tracingType === "skeleton") {
+function updateLastSaveTimestamp(state: OxalisState, action: SetLastSaveTimestampAction) {
+  if (action.saveQueueType === "skeleton") {
     return updateKey2(state, "save", "lastSaveTimestamp", {
       skeleton: action.timestamp,
     });
+  } else if (action.saveQueueType === "volume") {
+    const newVolumesDict = {
+      ...state.save.lastSaveTimestamp.volumes,
+      [action.tracingId]: action.timestamp,
+    };
+    return updateKey2(state, "save", "lastSaveTimestamp", {
+      volumes: newVolumesDict,
+    });
+  } else if (action.saveQueueType === "mapping") {
+    const newMappingsDict = {
+      ...state.save.lastSaveTimestamp.mappings,
+      [action.tracingId]: action.timestamp,
+    };
+    return updateKey2(state, "save", "lastSaveTimestamp", {
+      mappings: newMappingsDict,
+    });
   }
 
-  const newVolumesDict = {
-    ...state.save.lastSaveTimestamp.volumes,
-    [action.tracingId]: action.timestamp,
-  };
-  return updateKey2(state, "save", "lastSaveTimestamp", {
-    volumes: newVolumesDict,
-  });
+  return state;
 }
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
@@ -71,6 +99,14 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       const newVolumesQueue = { ...state.save.queue.volumes, [action.tracing.id]: [] };
       return updateKey2(state, "save", "queue", {
         volumes: newVolumesQueue,
+      });
+    }
+
+    case "INITIALIZE_EDITABLE_MAPPING": {
+      // Set up empty save queue array for editable mapping
+      const newMappingsQueue = { ...state.save.queue.mappings, [action.mapping.tracingId]: [] };
+      return updateKey2(state, "save", "queue", {
+        mappings: newMappingsQueue,
       });
     }
 
@@ -86,7 +122,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 
         const transactionGroupCount = updateActionChunks.length;
         const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
-        const oldQueue = selectQueue(state, action.tracingType, action.tracingId);
+        const oldQueue = selectQueue(state, action.saveQueueType, action.tracingId);
         const newQueue = oldQueue.concat(
           updateActionChunks.map((actions, transactionGroupIndex) => ({
             // Placeholder, the version number will be updated before sending to the server
@@ -123,7 +159,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       const { count } = action;
 
       if (count > 0) {
-        const queue = selectQueue(state, action.tracingType, action.tracingId);
+        const queue = selectQueue(state, action.saveQueueType, action.tracingId);
 
         const processedQueueActionCount = _.sumBy(
           queue.slice(0, count),
@@ -163,6 +199,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
             $set: {
               skeleton: [],
               volumes: _.mapValues(state.save.queue.volumes, () => []),
+              mappings: _.mapValues(state.save.queue.mappings, () => []),
             },
           },
           progressInfo: {
@@ -181,7 +218,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       return update(state, {
         save: {
           isBusyInfo: {
-            [action.tracingType]: {
+            [action.saveQueueType]: {
               $set: action.isBusy,
             },
           },

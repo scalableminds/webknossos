@@ -81,6 +81,7 @@ import {
   updateSegmentVolumeAction,
   updateUserBoundingBoxes,
   updateVolumeTracing,
+  updateMappingName,
 } from "oxalis/model/sagas/update_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
@@ -573,6 +574,10 @@ export function* diffVolumeTracing(
 
   if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
     yield removeFallbackLayer();
+  }
+
+  if (prevVolumeTracing.mappingName !== volumeTracing.mappingName) {
+    yield updateMappingName(volumeTracing.mappingName, volumeTracing.mappingIsEditable);
   }
 }
 

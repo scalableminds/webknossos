@@ -59,8 +59,13 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
 
   return `${prefix}${Utils.zeroPad(treeId, 3)}`;
 }
+function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
+  const minNodeId = _.min(_.flatMap(trees, (tree) => tree.nodes.map((n) => n.id)));
+
+  return minNodeId != null ? minNodeId : Constants.MIN_NODE_ID;
+}
 export function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
-  const newMaxNodeId = _.max(_.flatMap(trees, (__) => __.nodes.map((n) => n.id)));
+  const newMaxNodeId = _.max(_.flatMap(trees, (tree) => tree.nodes.map((n) => n.id)));
 
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
@@ -438,7 +443,7 @@ export function deleteBranchPoint(
   const { branchPointsAllowed } = restrictions;
   const { trees } = skeletonTracing;
 
-  const hasBranchPoints = _.some(_.map(trees, (__) => !_.isEmpty(__.branchPoints)));
+  const hasBranchPoints = _.some(_.map(trees, (tree) => !_.isEmpty(tree.branchPoints)));
 
   if (!branchPointsAllowed || !hasBranchPoints) return Maybe.Nothing();
 
@@ -534,10 +539,12 @@ export function addTreesAndGroups(
   treeGroups: Array<MutableTreeGroup>,
 ): Maybe<[MutableTreeMap, Array<TreeGroup>, number]> {
   const treeIds = Object.keys(trees).map((treeId) => Number(treeId));
-  // TreeIds > 1024^2 break webKnossos, see https://github.com/scalableminds/webknossos/issues/5009
-  const hasTreeIdsLargerThanMaximum = treeIds.some((treeId) => treeId > 1048576);
+  const hasInvalidTreeIds = treeIds.some(
+    (treeId) => treeId < Constants.MIN_TREE_ID || treeId > Constants.MAX_TREE_ID,
+  );
+  const hasInvalidNodeIds = getMinimumNodeId(trees) < Constants.MIN_NODE_ID;
   const needsReassignedIds =
-    Object.keys(skeletonTracing.trees).length > 0 || hasTreeIdsLargerThanMaximum;
+    Object.keys(skeletonTracing.trees).length > 0 || hasInvalidTreeIds || hasInvalidNodeIds;
 
   if (!needsReassignedIds) {
     // Without reassigning ids, the code is considerably faster.

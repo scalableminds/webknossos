@@ -2,6 +2,10 @@
 The following publications used webKnossos for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
 
 ## 2022
+* Sahil Loomba, Jakob Straehle, Vijayan Gangadharan, Natalie Heike, Abdelrahman Khalifa, Alessandro Motta, Niansheng Ju, Meike Sievers, Jens Gempt, Hanno S. Meyer & Moritz Helmstaedter.  
+  Connectomic comparison of mouse and human cortex.  
+  [Science (2022). DOI: 10.1126/science.abo0924](https://www.science.org/doi/abs/10.1126/science.abo0924). 
+
 * Carles Bosch, Tobias Ackels, Alexandra Pacureanu, Yuxin Zhang, Christopher J. Peddie, Manuel Berning, Norman Rzepka, Marie-Christine Zdora, Isabell Whiteley, Malte Storm, Anne Bonnin, Christoph Rau, Troy Margrie, Lucy Collinson & Andreas T. Schaefer.  
   Functional and multiscale 3D structural investigation of brain tissue through correlative in vivo physiology, synchrotron micro-tomography and volume electron microscopy.  
   [Nature Communications (2022) DOI: 10.1038/s41467-022-30199-6.](http://doi.org/10.1038/s41467-022-30199-6)

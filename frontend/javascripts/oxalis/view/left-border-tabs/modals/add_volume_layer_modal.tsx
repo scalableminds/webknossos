@@ -14,7 +14,6 @@ import {
   getDatasetResolutionInfo,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getFirstDiffPositionOfStrings } from "libs/utils";
 import {
   getAllReadableLayerNames,
   getVolumeTracingLayers,
@@ -37,33 +36,19 @@ export function checkForLayerNameDuplication(
 }
 
 export function checkLayerNameForInvalidCharacters(readableLayerName: string): ValidationResult {
-  let disallowedCharacters = "";
-  let isValid = true;
-  let readableLayerNameWithoutInvalidChars = readableLayerName;
-  // Collecting all characters that would be encoded within a URI.
-  do {
-    const encodedLayerNameWithoutInvalidChars = encodeURIComponent(
-      readableLayerNameWithoutInvalidChars,
-    );
-    const diffPosition = getFirstDiffPositionOfStrings(
-      readableLayerNameWithoutInvalidChars,
-      encodedLayerNameWithoutInvalidChars,
-    );
-    isValid = diffPosition === -1;
-    if (!isValid) {
-      const invalidChar = readableLayerNameWithoutInvalidChars[diffPosition];
-      disallowedCharacters += invalidChar;
-      readableLayerNameWithoutInvalidChars = readableLayerNameWithoutInvalidChars.replace(
-        `${invalidChar}`,
-        "",
-      );
-    }
-  } while (!isValid);
+  const uriSaveCharactersRegex = /[0-9a-zA-Z-._~]+/g;
+  // Removing all URISaveCharacters from readableLayerName. The left over chars are all invalid.
+  const allInvalidChars = readableLayerName.replace(uriSaveCharactersRegex, "");
+  const allUniqueInvalidCharsAsSet = new Set(...allInvalidChars);
+  const allUniqueInvalidCharsAsString = "".concat(...allUniqueInvalidCharsAsSet.values());
+  const isValid = allUniqueInvalidCharsAsString.length === 0;
   return {
     isValid,
     message: isValid
       ? ""
-      : messages["tracing.volume_layer_name_includes_invalid_characters"](disallowedCharacters),
+      : messages["tracing.volume_layer_name_includes_invalid_characters"](
+          allUniqueInvalidCharsAsString,
+        ),
   };
 }
 

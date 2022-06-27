@@ -925,15 +925,3 @@ export function pluralize(str: string, count: number, optPluralForm: string | nu
   }
   return `${str}s`;
 }
-
-export function getFirstDiffPositionOfStrings(firstString: string, secondString: string): number {
-  if (firstString === secondString) {
-    return -1;
-  }
-  let index = 0;
-  const end = Math.min(firstString.length, secondString.length);
-  while (firstString[index] === secondString[index] && index < end) {
-    ++index;
-  }
-  return index;
-}

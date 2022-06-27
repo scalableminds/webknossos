@@ -143,12 +143,14 @@ export function _getMaximumZoomForAllResolutions(
   // From that, we calculate the theoretical maximum zoom value. The dataset scale is taken into account,
   // because the entire scene is scaled with that.
   const maxSupportedZoomValue = 2 ** MAX_SUPPORTED_MAGNIFICATION_COUNT * Math.max(...datasetScale);
-  const maximumIterationCount = Math.log(maxSupportedZoomValue) / Math.log(ZOOM_STEP_INTERVAL);
-
   // Since the viewports can be quite large, it can happen that even a zoom value of 1 is not feasible.
   // That's why we start the search with a smaller value than 1. We use the ZOOM_STEP_INTERVAL factor
   // to ensure that the calculated thresholds correspond to the normal zoom behavior.
-  let currentMaxZoomValue = 1 / ZOOM_STEP_INTERVAL ** 20;
+  const ZOOM_IN_START_EXPONENT = 20;
+  let currentMaxZoomValue = 1 / ZOOM_STEP_INTERVAL ** ZOOM_IN_START_EXPONENT;
+  const maximumIterationCount =
+    Math.log(maxSupportedZoomValue) / Math.log(ZOOM_STEP_INTERVAL) + ZOOM_IN_START_EXPONENT;
+
   let currentIterationCount = 0;
   let currentResolutionIndex = 0;
   const maxZoomValueThresholds = [];

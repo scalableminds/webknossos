@@ -16,6 +16,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 import java.io.File
 
+import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
 
@@ -320,7 +321,77 @@ Expects:
           dataLayerName,
           mappingName,
           agglomerateId) ?~> "agglomerateSkeleton.failed"
-      } yield Ok(skeleton.toByteArray).as("application/x-protobuf")
+      } yield Ok(skeleton.toByteArray).as(protobufMimeType)
+    }
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def agglomerateGraph(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      mappingName: String,
+      agglomerateId: Long
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+      for {
+        agglomerateGraph <- binaryDataServiceHolder.binaryDataService.agglomerateService.generateAgglomerateGraph(
+          AgglomerateFileKey(organizationName, dataSetName, dataLayerName, mappingName),
+          agglomerateId) ?~> "agglomerateGraph.failed"
+      } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
+    }
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def largestAgglomerateId(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      mappingName: String
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+      for {
+        largestAgglomerateId: Long <- binaryDataServiceHolder.binaryDataService.agglomerateService
+          .largestAgglomerateId(
+            AgglomerateFileKey(
+              organizationName,
+              dataSetName,
+              dataLayerName,
+              mappingName
+            )
+          )
+          .toFox
+      } yield Ok(Json.toJson(largestAgglomerateId))
+    }
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def agglomerateIdsForSegmentIds(
+      token: Option[String],
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String,
+      mappingName: String
+  ): Action[List[Long]] = Action.async(validateJson[List[Long]]) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
+      for {
+        agglomerateIds: List[Long] <- binaryDataServiceHolder.binaryDataService.agglomerateService
+          .agglomerateIdsForSegmentIds(
+            AgglomerateFileKey(
+              organizationName,
+              dataSetName,
+              dataLayerName,
+              mappingName
+            ),
+            request.body
+          )
+          .toFox
+      } yield Ok(Json.toJson(agglomerateIds))
     }
   }
 

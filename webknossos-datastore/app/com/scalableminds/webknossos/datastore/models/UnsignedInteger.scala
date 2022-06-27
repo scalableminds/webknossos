@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models
 
-import java.nio.{Buffer, ByteBuffer, ByteOrder, IntBuffer, LongBuffer, ShortBuffer}
+import java.nio._
 
 import com.scalableminds.webknossos.datastore.models.UnsignedInteger.wrongElementClass
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -12,7 +12,7 @@ import scala.reflect.ClassTag
 trait UnsignedInteger {
   def increment: UnsignedInteger
   def isZero: Boolean
-  def toSignedLong: Long
+  def toPositiveLong: Long
 }
 
 object UInt8 { @inline final def apply(n: Byte): UInt8 = new UInt8(n) }
@@ -46,7 +46,8 @@ object UnsignedInteger {
 class UInt8(val signed: Byte) extends UnsignedInteger {
   def increment: UInt8 = UInt8((signed + 1).toByte)
   def isZero: Boolean = signed == 0
-  override def toSignedLong: Long = signed.toLong
+  override def toPositiveLong: Long =
+    if (signed >= 0) signed.toLong else signed.toLong + Byte.MaxValue.toLong + Byte.MaxValue.toLong + 2L
   override def toString = s"UInt8($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
@@ -54,10 +55,12 @@ class UInt8(val signed: Byte) extends UnsignedInteger {
     case _           => false
   }
 }
+
 class UInt16(val signed: Short) extends UnsignedInteger {
   def increment: UInt16 = UInt16((signed + 1).toShort)
   def isZero: Boolean = signed == 0
-  override def toSignedLong: Long = signed.toLong
+  override def toPositiveLong: Long =
+    if (signed >= 0) signed.toLong else signed.toLong + Short.MaxValue.toLong + Short.MaxValue.toLong + 2L
   override def toString = s"UInt16($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
@@ -65,10 +68,12 @@ class UInt16(val signed: Short) extends UnsignedInteger {
     case _            => false
   }
 }
+
 class UInt32(val signed: Int) extends UnsignedInteger {
   def increment: UInt32 = UInt32(signed + 1)
   def isZero: Boolean = signed == 0
-  override def toSignedLong: Long = signed.toLong
+  override def toPositiveLong: Long =
+    if (signed >= 0) signed.toLong else signed.toLong + Int.MaxValue.toLong + Int.MaxValue.toLong + 2L
   override def toString = s"UInt32($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
@@ -76,10 +81,12 @@ class UInt32(val signed: Int) extends UnsignedInteger {
     case _            => false
   }
 }
+
 class UInt64(val signed: Long) extends UnsignedInteger {
   def increment: UInt64 = UInt64(signed + 1)
   def isZero: Boolean = signed == 0L
-  override def toSignedLong: Long = signed
+  override def toPositiveLong: Long =
+    if (signed >= 0) signed else throw new Exception("Cannot convert UInt64 with value > 2**32 to Long")
   override def toString = s"UInt64($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {

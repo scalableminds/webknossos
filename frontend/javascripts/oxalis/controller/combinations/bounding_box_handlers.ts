@@ -1,4 +1,7 @@
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  calculateGlobalPos,
+  calculateMaybeGlobalPos,
+} from "oxalis/model/accessors/view_mode_accessor";
 import _ from "lodash";
 import type { OrthoView, Point2, Vector3, BoundingBoxType } from "oxalis/constants";
 import Store from "oxalis/store";
@@ -140,7 +143,10 @@ export function getClosestHoveredBoundingBox(
   plane: OrthoView,
 ): [SelectedEdge, SelectedEdge | null | undefined] | null {
   const state = Store.getState();
-  const globalPosition = calculateGlobalPos(state, pos, plane);
+  const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
+
+  if (globalPosition == null) return null;
+
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
   const indices = Dimension.getIndices(plane);
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);

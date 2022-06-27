@@ -113,6 +113,9 @@ In order to restore the current window, a reload is necessary.`,
   "undo.no_undo":
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
+  "undo.no_undo_during_proofread":
+    "Undo is not supported during proofreading yet. Please manually revert the last action you took.",
+  "undo.no_redo_during_proofread": "Redo is not supported during proofreading yet.",
   "undo.import_volume_tracing":
     "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",

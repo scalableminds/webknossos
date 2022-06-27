@@ -16,6 +16,9 @@ import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/tas
 import loadHistogramDataSaga from "oxalis/model/sagas/load_histogram_data_saga";
 import listenToClipHistogramSaga from "oxalis/model/sagas/clip_histogram_saga";
 import MappingSaga from "oxalis/model/sagas/mapping_saga";
+import ProofreadSaga from "oxalis/model/sagas/proofread_saga";
+import { listenForWkReady } from "oxalis/model/sagas/wk_ready_saga";
+
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
   while (true) {
@@ -32,6 +35,7 @@ export function hasRootSagaCrashed() {
 function* restartableSaga(): Saga<void> {
   try {
     yield* all([
+      call(listenForWkReady),
       call(warnAboutMagRestriction),
       call(SettingsSaga),
       ...SkeletontracingSagas.map((saga) => call(saga)),
@@ -44,6 +48,7 @@ function* restartableSaga(): Saga<void> {
       call(watchMaximumRenderableLayers),
       call(MappingSaga),
       call(watchToolDeselection),
+      call(ProofreadSaga),
       ...AnnotationSagas.map((saga) => call(saga)),
       ...SaveSagas.map((saga) => call(saga)),
       ...VolumetracingSagas.map((saga) => call(saga)),

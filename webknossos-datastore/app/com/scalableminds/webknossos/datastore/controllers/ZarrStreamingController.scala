@@ -206,10 +206,10 @@ class ZarrStreamingController @Inject()(
           dataLayer,
           None,
           Cuboid(
-            topLeft = new VoxelPosition(x * cubeSize * magParsed.x,
-                                        y * cubeSize * magParsed.y,
-                                        z * cubeSize * magParsed.z,
-                                        magParsed),
+            topLeft = VoxelPosition(x * cubeSize * magParsed.x,
+                                    y * cubeSize * magParsed.y,
+                                    z * cubeSize * magParsed.z,
+                                    magParsed),
             width = cubeSize,
             height = cubeSize,
             depth = cubeSize

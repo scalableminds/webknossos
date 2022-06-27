@@ -5,10 +5,11 @@ import Markdown from "react-remarkable";
 import * as React from "react";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import Toast from "libs/toast";
+import { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
 type Rule = {
   message?: string;
   type?: string;
-  validator?: (arg0: number | string) => boolean;
+  validator?: (arg0: string) => ValidationResult;
 };
 export type EditableTextLabelProp = {
   value: string;
@@ -22,7 +23,6 @@ export type EditableTextLabelProp = {
   disableEditing?: boolean;
   onContextMenu?: () => void;
   width?: string | number;
-  updateOnAllChanges?: boolean;
   isInvalid?: boolean | null | undefined;
   trimValue?: boolean | null | undefined;
 };
@@ -34,7 +34,6 @@ type State = {
 class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State> {
   static defaultProps = {
     rows: 1,
-    updateOnAllChanges: false,
     isInvalid: false,
     trimValue: false,
     rules: [],
@@ -91,18 +90,22 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       return true;
     }
     const allRulesValid = this.props.rules.every((rule) => {
-      let isValid = true;
       if (rule.type === "email") {
         const re =
           /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-        isValid = re.test(this.state.value);
+        const isValid = re.test(this.state.value);
+        if (!isValid) {
+          Toast.error(rule.message);
+          return false;
+        }
       } else if (rule.validator != null) {
-        isValid = rule.validator(this.state.value);
+        const validationResult = rule.validator(this.state.value);
+        if (!validationResult.isValid) {
+          Toast.error(rule.message);
+          return false;
+        }
       }
-      if (!isValid && rule.message) {
-        Toast.error(rule.message);
-      }
-      return isValid;
+      return true;
     });
     return allRulesValid;
   }

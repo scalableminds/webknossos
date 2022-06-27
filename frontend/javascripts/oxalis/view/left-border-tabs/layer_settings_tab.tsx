@@ -45,12 +45,10 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
-  checkForInvalidCharacters,
-  checkForLayerNameDuplication,
+  getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
-  validateReadableLayerName,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setNodeRadiusAction,
@@ -83,9 +81,9 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import messages, { settings } from "messages";
+import { settings } from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
-import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
+import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
@@ -348,11 +346,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       "tracingId" in layer && layer.tracingId != null
         ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
         : layerName;
-    const isReadableNameValidOrWarning = validateReadableLayerName(
+    const allReadableLayerNames = getAllReadableLayerNames(dataset, tracing);
+    const readableLayerNameValidationResult = validateReadableLayerName(
       readableName,
-      dataset,
-      tracing,
-      true,
+      allReadableLayerNames,
+      readableName,
     );
     return (
       <div className="flex-container">
@@ -366,14 +364,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         >
           {volumeDescriptor != null ? (
             <Tooltip
-              title={isReadableNameValidOrWarning === true ? null : isReadableNameValidOrWarning}
+              title={
+                readableLayerNameValidationResult.isValid
+                  ? null
+                  : readableLayerNameValidationResult.message
+              }
             >
               <span style={{ display: "inline-block" }}>
                 <EditableTextLabel
                   margin="0 10px 0 0"
                   width={150}
                   value={readableName}
-                  isInvalid={isReadableNameValidOrWarning !== true}
+                  isInvalid={!readableLayerNameValidationResult.isValid}
                   trimValue
                   onChange={(newName) => {
                     this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, {
@@ -382,23 +384,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   }}
                   rules={[
                     {
-                      message: messages["tracing.volume_layer_name_duplication"],
-                      validator: (newLayerName) =>
-                        typeof newLayerName === "string"
-                          ? checkForLayerNameDuplication(
-                              newLayerName,
-                              dataset,
-                              tracing,
-                              readableName,
-                            ) === true
-                          : false,
-                    },
-                    {
-                      message: messages["tracing.volume_layer_name_includes_slash"],
-                      validator: (newLayerName) =>
-                        typeof newLayerName === "string"
-                          ? checkForInvalidCharacters(newLayerName) === true
-                          : false,
+                      validator: (newReadableLayerName) =>
+                        validateReadableLayerName(
+                          newReadableLayerName,
+                          allReadableLayerNames,
+                          readableName,
+                        ),
                     },
                   ]}
                   label="Volume Layer Name"

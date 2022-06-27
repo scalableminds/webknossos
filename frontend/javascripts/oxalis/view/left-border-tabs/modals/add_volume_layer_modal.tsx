@@ -14,14 +14,85 @@ import {
   getDatasetResolutionInfo,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getFirstDiffPositionOfStrings } from "libs/utils";
 import {
   getAllReadableLayerNames,
   getVolumeTracingLayers,
-  validateReadableLayerName,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
+
+export type ValidationResult = { isValid: boolean; message: string };
+export function checkForLayerNameDuplication(
+  readableLayerName: string,
+  allReadableLayerNames: string[],
+): ValidationResult {
+  const layerNameDoesNotExist = _.countBy(allReadableLayerNames)[readableLayerName] <= 0;
+  return {
+    isValid: layerNameDoesNotExist,
+    message: layerNameDoesNotExist ? "" : messages["tracing.volume_layer_name_duplication"],
+  };
+}
+
+export function checkLayerNameForInvalidCharacters(readableLayerName: string): ValidationResult {
+  let disallowedCharacters = "";
+  let isValid = true;
+  let readableLayerNameWithoutInvalidChars = readableLayerName;
+  // Collecting all characters that would be encoded within a URI.
+  do {
+    const encodedLayerNameWithoutInvalidChars = encodeURIComponent(
+      readableLayerNameWithoutInvalidChars,
+    );
+    const diffPosition = getFirstDiffPositionOfStrings(
+      readableLayerNameWithoutInvalidChars,
+      encodedLayerNameWithoutInvalidChars,
+    );
+    isValid = diffPosition === -1;
+    if (!isValid) {
+      const invalidChar = readableLayerNameWithoutInvalidChars[diffPosition];
+      disallowedCharacters += invalidChar;
+      readableLayerNameWithoutInvalidChars = readableLayerNameWithoutInvalidChars.replace(
+        `${invalidChar}`,
+        "",
+      );
+    }
+  } while (!isValid);
+  return {
+    isValid,
+    message: isValid
+      ? ""
+      : messages["tracing.volume_layer_name_includes_invalid_characters"](disallowedCharacters),
+  };
+}
+
+export function validateReadableLayerName(
+  readableLayerName: string,
+  allReadableLayerNames: string[],
+  nameNotToCount?: string,
+): ValidationResult {
+  if (nameNotToCount) {
+    // If the given nameNotToCount is already once within the allReadableLayerNames. But as this name is now being renamed and having
+    // the same name as the previous name given by nameNotToCount should be still allowed, this name is removed from the array once.
+    // Nevertheless, additional duplicated of nameNotToCount are counted as a duplication.
+    const index = allReadableLayerNames.indexOf(nameNotToCount);
+    if (index > -1) {
+      allReadableLayerNames = _.clone(allReadableLayerNames); // Avoiding modifying passed parameters.
+      allReadableLayerNames.splice(index, 1);
+    }
+  }
+  const duplicatedNameResult = checkForLayerNameDuplication(
+    readableLayerName,
+    allReadableLayerNames,
+  );
+  if (!duplicatedNameResult.isValid) {
+    return duplicatedNameResult;
+  }
+  const invalidCharactersResult = checkLayerNameForInvalidCharacters(readableLayerName);
+  return invalidCharactersResult;
+}
+
 export default function AddVolumeLayerModal({
   dataset,
   onCancel,
@@ -34,8 +105,11 @@ export default function AddVolumeLayerModal({
   const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState<
     number | null | undefined
   >(null);
+  const allReadableLayerNames = useMemo(
+    () => getAllReadableLayerNames(dataset, tracing),
+    [dataset, tracing],
+  );
   const initialNewLayerName = useMemo(() => {
-    const allReadableLayerNames = getAllReadableLayerNames(dataset, tracing);
     if (allReadableLayerNames.indexOf("Volume") === -1) {
       return "Volume";
     } else {
@@ -64,9 +138,9 @@ export default function AddVolumeLayerModal({
   let selectedSegmentationLayer = null;
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
-    const isNewLayerNameValidOrWarning = validateReadableLayerName(newLayerName, dataset, tracing);
-    if (isNewLayerNameValidOrWarning !== true) {
-      Toast.error(isNewLayerNameValidOrWarning);
+    const validationResult = validateReadableLayerName(newLayerName, allReadableLayerNames);
+    if (!validationResult.isValid) {
+      Toast.error(validationResult.message);
       return;
     }
     const minResolutionAllowed = Math.max(

@@ -153,6 +153,7 @@ function generateRandomEntry() {
 
 function generateRandomEntrySet() {
   const count = 1600;
+  const set = new Set();
   const entries = [
     [[9, 88, 77, 4, 210], 1],
     [[64, 64, 26, 1, 427], 2],
@@ -160,12 +161,19 @@ function generateRandomEntrySet() {
     [[20, 63, 82, 1, 542], 4],
   ];
   for (let i = 0; i < count; i++) {
-    entries.push(generateRandomEntry());
+    const entry = generateRandomEntry();
+    const entryKey = entry.join("-");
+    if (set.has(entryKey)) {
+      i--;
+      continue;
+    }
+    set.add(entryKey);
+    entries.push(entry);
   }
   return entries;
 }
 
-test("CuckooTable", (t) => {
+test.serial("CuckooTable", (t) => {
   const ct = new CuckooTable();
   const entries = generateRandomEntrySet();
   console.time("start");
@@ -226,11 +234,16 @@ test("CuckooTable", (t) => {
 });
 
 test.serial("CuckooTable speed", (t) => {
-  const hashSets = _.range(100).map(() => generateRandomEntrySet());
+  const RUNS = 1000;
+  const hashSets = _.range(RUNS).map(() => generateRandomEntrySet());
+
+  const cts = _.range(RUNS).map(() => new CuckooTable());
 
   console.time("insertion");
-  for (let idx = 0; idx < 1; idx++) {
-    const ct = new CuckooTable();
+
+  for (let idx = 0; idx < RUNS; idx++) {
+    const ct = cts[idx];
+    // console.log("******************************************************", idx);
     const entries = hashSets[idx];
     for (const entry of entries) {
       ct.setEntry(entry[0], entry[1]);

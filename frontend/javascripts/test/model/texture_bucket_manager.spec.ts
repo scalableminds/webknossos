@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import _ from "lodash";
 import mock from "mock-require";
 import test, { ExecutionContext } from "ava";
 import { Vector4 } from "oxalis/constants";
@@ -140,18 +141,24 @@ const expectBucket = (
 function generateRandomEntry() {
   return [
     [
-      Math.floor(Math.random() * 100),
-      Math.floor(Math.random() * 100),
-      Math.floor(Math.random() * 100),
-      Math.floor(Math.random() * 5),
+      // todo: also use 0 here
+      Math.floor(1 + Math.random() * 1000),
+      Math.floor(1 + Math.random() * 1000),
+      Math.floor(1 + Math.random() * 1000),
+      Math.floor(1 + Math.random() * 1000),
     ],
-    Math.floor(Math.random() * 1000),
+    Math.floor(1 + Math.random() * 1000),
   ];
 }
 
 function generateRandomEntrySet() {
-  const count = 1000;
-  const entries = [];
+  const count = 1600;
+  const entries = [
+    [[9, 88, 77, 4, 210], 1],
+    [[64, 64, 26, 1, 427], 2],
+    [[70, 9, 81, 1, 474], 3],
+    [[20, 63, 82, 1, 542], 4],
+  ];
   for (let i = 0; i < count; i++) {
     entries.push(generateRandomEntry());
   }
@@ -163,24 +170,42 @@ test("CuckooTable", (t) => {
   const entries = generateRandomEntrySet();
   console.time("start");
 
+  const hashes = entries.map((entry) => [
+    ct._hashKey(ct.seed1, entry[0], 0),
+    ct._hashKey(ct.seed2, entry[0], 0),
+  ]);
+  const allHashes = _.flatten(hashes);
+  const uniqHashes = _.uniq(allHashes);
+  const duplicateCount = allHashes.length - uniqHashes.length;
+  // console.table(hashes);
+  console.log("duplicates:", duplicateCount);
+  console.log("duplicate ratio:", duplicateCount / allHashes.length);
+
   let n = 0;
   for (const entry of entries) {
     debugger;
 
-    console.log("!!!!!!!!!!!!!!!!!!!!!!");
-    console.log("!!!!!!!!!!!!!!!!!!!!!!        ", n);
-    console.log("!!!!!!!!!!!!!!!!!!!!!!");
+    console.log(`! write n=${n}   entry=${entry}`);
     ct.setEntry(entry[0], entry[1]);
     t.is(entry[1], ct.getValue(entry[0]));
-    n++;
-  }
-
-  n = 0;
-  for (const entry of entries) {
-    console.log("??????????????????????");
-    console.log("??????????????????????        ", n);
-    console.log("??????????????????????");
-    t.is(entry[1], ct.getValue(entry[0]));
+    if (entry[1] != ct.getValue(entry[0])) {
+      console.log("key:", entry[0]);
+      console.log("value:", entry[1]);
+      console.log("retrieved value: ", ct.getValue(entry[0]));
+      throw new Error("failed");
+    }
+    let nn = 0;
+    for (const entry of entries) {
+      if (nn > n) {
+        break;
+      }
+      t.is(entry[1], ct.getValue(entry[0]));
+      if (entry[1] != ct.getValue(entry[0])) {
+        console.log(`? nn=${nn}  expected=${entry}    retrieved=${ct.getValue(entry[0])}`);
+        throw new Error("failed");
+      }
+      nn++;
+    }
     n++;
   }
 
@@ -196,6 +221,32 @@ test("CuckooTable", (t) => {
   console.timeEnd("start");
 
   console.log("ct.table", ct.table);
+
+  t.is(true, true);
+});
+
+test.serial("CuckooTable speed", (t) => {
+  const hashSets = _.range(100).map(() => generateRandomEntrySet());
+
+  console.time("insertion");
+  for (let idx = 0; idx < 1; idx++) {
+    const ct = new CuckooTable();
+    const entries = hashSets[idx];
+    for (const entry of entries) {
+      ct.setEntry(entry[0], entry[1]);
+    }
+  }
+  console.timeEnd("insertion");
+
+  // ct.setEntry([1, 10, 3, 4], 1337);
+  // console.log(ct.getValue([1, 10, 3, 4]));
+  // ct.setEntry([1, 10, 3, 4], 1336);
+  // console.log(ct.getValue([1, 10, 3, 4]));
+  // ct.setEntry([1, 10, 2, 4], 1);
+  // ct.getValue([1, 10, 2, 4]);
+  // ct.setEntry([1, 10, 3, 4], 1);
+
+  // ct.setEntry([1, 34, 3, 4], 1);
 
   t.is(true, true);
 });

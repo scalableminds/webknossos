@@ -352,6 +352,10 @@ export default class TextureBucketManager {
     );
     this.keepLookUpBufferUpToDate();
     this.processWriterQueue();
+
+    setInterval(() => {
+      console.log(Array.from(this.activeBucketToIndexMap.entries()).length);
+    }, 2000);
   }
 
   clear() {

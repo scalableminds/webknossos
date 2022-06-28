@@ -152,17 +152,60 @@ function generateRandomEntry() {
 }
 
 function generateRandomEntrySet() {
+  // return [
+  //   [[463, 759, 13, 241], 634],
+  //   [[50, 14, 238, 661], 994],
+  // ];
+
+  // return [
+  //   [[238, 286, 712, 935], 805],
+  //   [[498, 971, 362, 418], 32],
+  //   [[719, 155, 331, 975], 686],
+  //   [[860, 81, 492, 666], 278],
+  //   [[846, 960, 900, 354], 501],
+  //   [[982, 231, 219, 309], 172],
+  //   [[332, 994, 357, 227], 689],
+  //   [[463, 759, 13, 241], 634],
+  //   [[99, 171, 865, 921], 572],
+  //   [[50, 14, 238, 661], 994],
+  //   [[701, 60, 607, 463], 181],
+  //   [[357, 416, 436, 709], 369],
+  //   [[718, 303, 946, 496], 301],
+  //   [[432, 641, 540, 243], 735],
+  //   [[705, 140, 632, 265], 981],
+  //   [[764, 762, 179, 229], 147],
+  //   [[707, 794, 515, 378], 293],
+  //   [[791, 991, 323, 483], 337],
+  //   [[932, 461, 762, 150], 581],
+  //   [[818, 363, 571, 477], 108],
+  //   [[666, 423, 680, 281], 545],
+  //   [[239, 677, 903, 241], 686],
+  //   [[71, 804, 505, 665], 480],
+  //   [[105, 237, 861, 497], 934],
+  //   [[44, 477, 516, 961], 918],
+  //   [[847, 92, 997, 287], 894],
+  //   [[817, 73, 265, 380], 723],
+  //   [[131, 842, 611, 9], 724],
+  //   [[499, 218, 895, 771], 811],
+  //   [[579, 662, 204, 853], 44],
+  //   [[98, 256, 557, 683], 893],
+  //   [[564, 989, 574, 297], 270],
+  //   [[883, 373, 635, 500], 778],
+  //   [[757, 35, 9, 572], 203],
+  //   [[469, 502, 973, 985], 856],
+  //   [[351, 355, 188, 597], 665],
+  //   [[754, 357, 529, 358], 135],
+  //   [[7, 978, 486, 325], 399],
+  //   [[956, 227, 752, 536], 365],
+  //   [[378, 461, 738, 995], 777],
+  // ];
+
   const count = 1600;
   const set = new Set();
-  const entries = [
-    [[9, 88, 77, 4, 210], 1],
-    [[64, 64, 26, 1, 427], 2],
-    [[70, 9, 81, 1, 474], 3],
-    [[20, 63, 82, 1, 542], 4],
-  ];
+  const entries = [];
   for (let i = 0; i < count; i++) {
     const entry = generateRandomEntry();
-    const entryKey = entry.join("-");
+    const entryKey = entry[0].join("-");
     if (set.has(entryKey)) {
       i--;
       continue;
@@ -174,14 +217,33 @@ function generateRandomEntrySet() {
 }
 
 test.serial("CuckooTable", (t) => {
-  const ct = new CuckooTable();
   const entries = generateRandomEntrySet();
+  const ct = new CuckooTable(entries.length);
   console.time("start");
 
   const hashes = entries.map((entry) => [
-    ct._hashKey(ct.seed1, entry[0], 0),
-    ct._hashKey(ct.seed2, entry[0], 0),
+    ct._hashKeyToAddress(ct.seed1, entry[0]),
+    ct._hashKeyToAddress(ct.seed2, entry[0]),
   ]);
+
+  let lines = ["["];
+  for (const hash of hashes) {
+    lines.push(`(${hash[0]}, ${hash[1]}),`);
+  }
+  lines.push(["]"]);
+
+  // console.log("hashes:");
+  // console.log(lines.join("\n"));
+
+  lines = ["["];
+  for (const entry of entries) {
+    lines.push(`[[${entry[0].join(", ")}], ${entry[1]}],`);
+  }
+  lines.push(["]"]);
+
+  // console.log("entries:");
+  // console.log(lines.join("\n"));
+
   const allHashes = _.flatten(hashes);
   const uniqHashes = _.uniq(allHashes);
   const duplicateCount = allHashes.length - uniqHashes.length;
@@ -191,9 +253,10 @@ test.serial("CuckooTable", (t) => {
 
   let n = 0;
   for (const entry of entries) {
-    debugger;
-
-    console.log(`! write n=${n}   entry=${entry}`);
+    // console.log(`! write n=${n}   entry=${entry}`);
+    if (n == 9) {
+      debugger;
+    }
     ct.setEntry(entry[0], entry[1]);
     t.is(entry[1], ct.getValue(entry[0]));
     if (entry[1] != ct.getValue(entry[0])) {

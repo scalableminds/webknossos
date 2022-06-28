@@ -80,11 +80,11 @@ class PlaneView {
 
     for (const plane of OrthoViewValuesWithoutTDView) {
       // Let's set up cameras
-      partialCameraMap[plane] = getNewCamera(plane, false);
+      partialCameraMap[plane] = getNewCamera(plane, true);
     }
     partialCameraMap[OrthoViews.TDView] = {
-      [TDCameras.OrthographicCamera]: getNewCamera(`${OrthoViews.TDView}_Orthographic`, false),
-      [TDCameras.PerspectiveCamera]: getNewCamera(`${OrthoViews.TDView}_Perspective`, true),
+      [TDCameras.OrthographicCamera]: getNewCamera(`${OrthoViews.TDView}_Orthographic`, true),
+      [TDCameras.PerspectiveCamera]: getNewCamera(`${OrthoViews.TDView}_Perspective`, false),
     };
     const cameras: OrthoViewCameraMap = partialCameraMap;
     this.cameras = cameras;

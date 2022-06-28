@@ -184,6 +184,7 @@ class CameraController extends React.PureComponent<Props> {
 
     if (inputCatcherRects != null) {
       // Update td camera's aspect ratio
+      // TODO: Adopt the perspective camera
       const tdOrthoCamera = this.props.cameras[OrthoViews.TDView].OrthographicCamera;
       const oldMid = (tdOrthoCamera.right + tdOrthoCamera.left) / 2;
       const oldWidth = tdOrthoCamera.right - tdOrthoCamera.left;
@@ -241,6 +242,7 @@ class CameraController extends React.PureComponent<Props> {
 
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
+    // TODO: Adopt the perspective camera
     const tdOrthoCamera = this.props.cameras[OrthoViews.TDView].OrthographicCamera;
     tdOrthoCamera.position.set(...cameraData.position);
     tdOrthoCamera.left = cameraData.left;

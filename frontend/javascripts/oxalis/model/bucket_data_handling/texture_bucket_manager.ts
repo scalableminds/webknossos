@@ -57,7 +57,7 @@ export class CuckooTable {
   setEntryCount: number = 0;
 
   constructor(requestedCapacity: number) {
-    this.entryCapacity = requestedCapacity * 2;
+    this.entryCapacity = requestedCapacity * 4;
     this.initialize();
   }
 
@@ -69,57 +69,32 @@ export class CuckooTable {
     let currentAddress;
     let iterationCounter = 0;
 
-    const ITERATION_THRESHOLD = 100;
-    const REHASH_THRESHOLD = 10;
+    const ITERATION_THRESHOLD = 10;
+    const REHASH_THRESHOLD = 100;
     if (rehashAttempt >= REHASH_THRESHOLD) {
       throw new Error(
         `Cannot rehash, since this is already the ${rehashAttempt}th attempt. setEntry was called ${this.setEntryCount}th times by the user.`,
       );
     }
-    debugger;
-    let seedIndex = Math.floor(Math.random() * 3);
+
+    let seedIndex = Math.floor(Math.random() * this.seeds.length);
     while (iterationCounter++ < ITERATION_THRESHOLD) {
       const seed = this.seeds[seedIndex];
-      // Hash A
       currentAddress = this._hashKeyToAddress(seed, pendingKey);
 
-      if (this.isAddressFreeForKey(pendingKey, currentAddress)) {
-        // console.log(//   "####### Writing", //   pendingKey, pendingValue, //   "to empty slot in table (seed 1):", //   currentAddress, // );
-        this.writeEntryAtAddress(pendingKey, pendingValue, currentAddress);
-        return;
-      } else {
-        // console.log("Table (seed 1) is already occupied at", currentAddress);
-      }
-
       // Swap pendingKey, pendingValue with what's contained in H1
-      displacedEntry = this.getEntryAtAddress(currentAddress);
-      // console.log(//   "Evict", //   displacedEntry, //   "at", //   currentAddress, //   "(seed 1) to make room for", //   pendingKey, pendingValue // );
-      this.writeEntryAtAddress(pendingKey, pendingValue, currentAddress);
+      displacedEntry = this.writeEntryAtAddress(pendingKey, pendingValue, currentAddress);
+
+      if (this.canDisplacedEntryBeIgnored(displacedEntry[0], pendingKey)) {
+        return;
+      }
 
       [pendingKey, pendingValue] = displacedEntry;
 
+      // Pick another random seed for the next swap
       seedIndex =
         (seedIndex + Math.floor(Math.random() * (this.seeds.length - 1)) + 1) % this.seeds.length;
-
-      // // Hash B
-      // currentAddress = this._hashKeyToAddress(this.seed2, pendingKey);
-
-      // if (this.isAddressFreeForKey(pendingKey, currentAddress)) {
-      //   // console.log(//   "###### Writing", //   pendingKey, //   pendingValue, //   "to empty slot in table (seed 2):", //   currentAddress, // );
-      //   this.writeEntryAtAddress(pendingKey, pendingValue, currentAddress);
-      //   return;
-      // } else {
-      //   // console.log("Table (seed 2) is already occupied at", currentAddress);
-      // }
-
-      // displacedEntry = this.getEntryAtAddress(currentAddress);
-
-      // // console.log(//   "Evict", //   displacedEntry, //   "at", //   currentAddress, //   "(seed 2) to make room for", //   pendingKey, //   pendingValue // );
-      // this.writeEntryAtAddress(pendingKey, pendingValue, currentAddress);
-
-      // [pendingKey, pendingValue] = displacedEntry;
     }
-    // throw new Error("rehashing is disabled, but necessary");
     this.rehash(rehashAttempt + 1);
     this.setEntry(pendingKey, pendingValue, rehashAttempt + 1);
   }
@@ -135,7 +110,6 @@ export class CuckooTable {
       offset < this.entryCapacity * ELEMENTS_PER_ENTRY;
       offset += ELEMENTS_PER_ENTRY
     ) {
-      // console.log("test", oldTable[offset]);
       if (oldTable[offset] === 0) {
         continue;
       }
@@ -153,14 +127,10 @@ export class CuckooTable {
   private initialize() {
     this.table = new Uint32Array(ELEMENTS_PER_ENTRY * this.entryCapacity);
 
-    // this.seed1 = 1;
-    // this.seed2 = 2;
-    // return;
-
     this.seeds = [
-      Math.floor(256 * Math.random() - 128),
-      Math.floor(256 * Math.random() - 128),
-      Math.floor(256 * Math.random() - 128),
+      Math.floor(32768 * Math.random()),
+      Math.floor(32768 * Math.random()),
+      Math.floor(32768 * Math.random()),
     ];
     // todo:
     // if (this.seed2 == this.seed1) {
@@ -169,11 +139,15 @@ export class CuckooTable {
   }
 
   getValue(key: Vector4): number {
-    const hashedAddress1 = this._hashKeyToAddress(this.seeds[0], key);
-    const hashedAddress2 = this._hashKeyToAddress(this.seeds[1], key);
-    const hashedAddress3 = this._hashKeyToAddress(this.seeds[2], key);
+    for (const seed of this.seeds) {
+      const hashedAddress = this._hashKeyToAddress(seed, key);
 
-    return this.getValueForAddresses(key, hashedAddress1, hashedAddress2, hashedAddress3);
+      const value = this.getValueAtAddress(key, hashedAddress);
+      if (value !== -1) {
+        return value;
+      }
+    }
+    return -1;
   }
 
   // hasEntry(key: Vector4, value: number, hashedAddress1: number, hashedAddress2: number): boolean {
@@ -193,26 +167,20 @@ export class CuckooTable {
     ];
   }
 
-  getValueForAddresses(
-    key: Vector4,
-    hashedAddress1: number,
-    hashedAddress2: number,
-    hashedAddress3: number,
-  ) {
-    const value1 = this.getValueAtAddress(key, hashedAddress1);
-    if (value1 !== -1) {
-      return value1;
-    }
-    const value2 = this.getValueAtAddress(key, hashedAddress2);
-    if (value2 !== -1) {
-      return value2;
-    }
-    const value3 = this.getValueAtAddress(key, hashedAddress3);
-    if (value3 !== -1) {
-      return value3;
-    }
-
-    return -1;
+  private canDisplacedEntryBeIgnored(displacedKey: Vector4, newKey: Vector4): boolean {
+    return (
+      // Either, the slot is empty...
+      // todo: What about 0, 0, 0, 0 as a key??
+      (displacedKey[0] === 0 &&
+        displacedKey[1] === 0 &&
+        displacedKey[2] === 0 &&
+        displacedKey[3] === 0) ||
+      // or the slot already refers to the key
+      (displacedKey[0] === newKey[0] &&
+        displacedKey[1] === newKey[1] &&
+        displacedKey[2] === newKey[2] &&
+        displacedKey[3] === newKey[3])
+    );
   }
 
   isAddressFreeForKey(key: Vector4, hashedAddress: number): boolean {
@@ -251,8 +219,23 @@ export class CuckooTable {
     }
   }
 
-  writeEntryAtAddress(key: Vector4, value: number, hashedAddress: number): void {
+  private writeEntryAtAddress(
+    key: Vector4,
+    value: number,
+    hashedAddress: number,
+  ): [Vector4, number] {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+
+    const displacedEntry = [
+      [
+        this.table[offset + 0],
+        this.table[offset + 1],
+        this.table[offset + 2],
+        this.table[offset + 3],
+      ],
+      this.table[offset + 4],
+    ];
+
     // eslint-disable-next-line prefer-destructuring
     this.table[offset] = key[0];
     // eslint-disable-next-line prefer-destructuring
@@ -263,6 +246,8 @@ export class CuckooTable {
     this.table[offset + 3] = key[3];
     // eslint-disable-next-line prefer-destructuring
     this.table[offset + 4] = value;
+
+    return displacedEntry;
   }
 
   // MurmurHash excluding the final mixing steps.
@@ -291,16 +276,10 @@ export class CuckooTable {
   }
 
   _hashKeyToAddress(seed: number, key: Vector4): number {
-    let shouldPrint = false;
-    if (_.isEqual(key, [463, 759, 13, 241])) {
-      shouldPrint = true;
-    }
     let state = this._hashCombine(seed, key[0]);
     state = this._hashCombine(state, key[1]);
     state = this._hashCombine(state, key[2]);
     state = this._hashCombine(state, key[3]);
-
-    if (shouldPrint) console.log("hashed address: ", state % this.entryCapacity, "for seed", seed);
 
     return state % this.entryCapacity;
   }

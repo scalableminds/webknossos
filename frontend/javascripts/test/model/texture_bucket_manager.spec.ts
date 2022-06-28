@@ -219,44 +219,12 @@ function generateRandomEntrySet() {
 test.serial("CuckooTable", (t) => {
   const entries = generateRandomEntrySet();
   const ct = new CuckooTable(entries.length);
-  console.time("start");
-
-  const hashes = entries.map((entry) => [
-    ct._hashKeyToAddress(ct.seed1, entry[0]),
-    ct._hashKeyToAddress(ct.seed2, entry[0]),
-  ]);
-
-  let lines = ["["];
-  for (const hash of hashes) {
-    lines.push(`(${hash[0]}, ${hash[1]}),`);
-  }
-  lines.push(["]"]);
-
-  // console.log("hashes:");
-  // console.log(lines.join("\n"));
-
-  lines = ["["];
-  for (const entry of entries) {
-    lines.push(`[[${entry[0].join(", ")}], ${entry[1]}],`);
-  }
-  lines.push(["]"]);
-
-  // console.log("entries:");
-  // console.log(lines.join("\n"));
-
-  const allHashes = _.flatten(hashes);
-  const uniqHashes = _.uniq(allHashes);
-  const duplicateCount = allHashes.length - uniqHashes.length;
-  // console.table(hashes);
-  console.log("duplicates:", duplicateCount);
-  console.log("duplicate ratio:", duplicateCount / allHashes.length);
+  console.time("simple");
 
   let n = 0;
   for (const entry of entries) {
     // console.log(`! write n=${n}   entry=${entry}`);
-    if (n == 9) {
-      debugger;
-    }
+
     ct.setEntry(entry[0], entry[1]);
     t.is(entry[1], ct.getValue(entry[0]));
     if (entry[1] != ct.getValue(entry[0])) {
@@ -289,11 +257,7 @@ test.serial("CuckooTable", (t) => {
   // ct.setEntry([1, 10, 3, 4], 1);
 
   // ct.setEntry([1, 34, 3, 4], 1);
-  console.timeEnd("start");
-
-  console.log("ct.table", ct.table);
-
-  t.is(true, true);
+  console.timeEnd("simple");
 });
 
 test.serial("CuckooTable speed", (t) => {
@@ -302,7 +266,7 @@ test.serial("CuckooTable speed", (t) => {
 
   const cts = _.range(RUNS).map(() => new CuckooTable());
 
-  console.time("insertion");
+  console.time("many runs");
 
   for (let idx = 0; idx < RUNS; idx++) {
     const ct = cts[idx];
@@ -312,7 +276,7 @@ test.serial("CuckooTable speed", (t) => {
       ct.setEntry(entry[0], entry[1]);
     }
   }
-  console.timeEnd("insertion");
+  console.timeEnd("many runs");
 
   // ct.setEntry([1, 10, 3, 4], 1337);
   // console.log(ct.getValue([1, 10, 3, 4]));

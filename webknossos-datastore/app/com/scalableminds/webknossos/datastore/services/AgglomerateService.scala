@@ -149,9 +149,20 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
       }
       val positions: Array[Array[Long]] =
-        reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
-      val edges: Array[Array[Long]] =
-        reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
+        if (nodeCount == 0L) {
+          Array.empty[Array[Long]]
+        } else {
+          reader
+            .uint64()
+            .readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
+        }
+      val edges: Array[Array[Long]] = {
+        if (edgeCount == 0L) {
+          Array.empty[Array[Long]]
+        } else {
+          reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
+        }
+      }
 
       val nodeIdStartAtOneOffset = 1
 

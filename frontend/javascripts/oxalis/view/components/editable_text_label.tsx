@@ -101,7 +101,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       } else if (rule.validator != null) {
         const validationResult = rule.validator(this.state.value);
         if (!validationResult.isValid) {
-          Toast.error(rule.message);
+          Toast.error(validationResult.message);
           return false;
         }
       }

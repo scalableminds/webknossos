@@ -28,7 +28,7 @@ export function checkForLayerNameDuplication(
   readableLayerName: string,
   allReadableLayerNames: string[],
 ): ValidationResult {
-  const layerNameDoesNotExist = _.countBy(allReadableLayerNames)[readableLayerName] <= 0;
+  const layerNameDoesNotExist = !allReadableLayerNames.includes(readableLayerName);
   return {
     isValid: layerNameDoesNotExist,
     message: layerNameDoesNotExist ? "" : messages["tracing.volume_layer_name_duplication"],
@@ -39,7 +39,7 @@ export function checkLayerNameForInvalidCharacters(readableLayerName: string): V
   const uriSaveCharactersRegex = /[0-9a-zA-Z-._~]+/g;
   // Removing all URISaveCharacters from readableLayerName. The left over chars are all invalid.
   const allInvalidChars = readableLayerName.replace(uriSaveCharactersRegex, "");
-  const allUniqueInvalidCharsAsSet = new Set(...allInvalidChars);
+  const allUniqueInvalidCharsAsSet = new Set(allInvalidChars);
   const allUniqueInvalidCharsAsString = "".concat(...allUniqueInvalidCharsAsSet.values());
   const isValid = allUniqueInvalidCharsAsString.length === 0;
   return {
@@ -58,9 +58,11 @@ export function validateReadableLayerName(
   nameNotToCount?: string,
 ): ValidationResult {
   if (nameNotToCount) {
-    // If the given nameNotToCount is already once within the allReadableLayerNames. But as this name is now being renamed and having
-    // the same name as the previous name given by nameNotToCount should be still allowed, this name is removed from the array once.
-    // Nevertheless, additional duplicated of nameNotToCount are counted as a duplication.
+    // If the given nameNotToCount is already once within the allReadableLayerNames we need to remove this name once from the allReadableLayerNames.
+    // This is needed in case of saving an existing volume layer's name when the name was not modified.
+    // In this scenario nameNotToCount should be the previous name the volume layer which will then be remove once from the allReadableLayerNames.
+    // Thus there is only a duplication of the given nameNotToCount if an additional other layer already has nameNotToCount as a name
+    // and the readableLayerName is equal to the name given by nameNotToCount.
     const index = allReadableLayerNames.indexOf(nameNotToCount);
     if (index > -1) {
       allReadableLayerNames = _.clone(allReadableLayerNames); // Avoiding modifying passed parameters.

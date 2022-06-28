@@ -9,7 +9,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ## [22.07.0](https://github.com/scalableminds/webknossos/releases/tag/22.07.0) - 2022-06-28
 [Commits](https://github.com/scalableminds/webknossos/compare/22.06.1...22.07.0)
-[Commits](https://github.com/scalableminds/webknossos/compare/22.06.1...HEAD)
 
 ### Highlights
 - Added a image data download speed indicator to the statusbar. On hover a tooltip is shown that show the total amount of downloaded shard data. [#6269](https://github.com/scalableminds/webknossos/pull/6269)

@@ -131,9 +131,9 @@ trait VolumeTracingDownsampling
                                          requiredMag: Vec3Int): Set[BucketPosition] =
     originalBucketPositions.map { bucketPosition: BucketPosition =>
       BucketPosition(
-        (bucketPosition.globalX / requiredMag.x / 32) * requiredMag.x * 32,
-        (bucketPosition.globalY / requiredMag.y / 32) * requiredMag.y * 32,
-        (bucketPosition.globalZ / requiredMag.z / 32) * requiredMag.z * 32,
+        (bucketPosition.voxelMag1X / requiredMag.x / 32) * requiredMag.x * 32,
+        (bucketPosition.voxelMag1Y / requiredMag.y / 32) * requiredMag.y * 32,
+        (bucketPosition.voxelMag1Z / requiredMag.z / 32) * requiredMag.z * 32,
         requiredMag
       )
     }.toSet
@@ -147,9 +147,9 @@ trait VolumeTracingDownsampling
       x <- 0 until downScaleFactor.x
     } yield {
       BucketPosition(
-        bucketPosition.globalX + x * bucketPosition.bucketLength * previousMag.x,
-        bucketPosition.globalY + y * bucketPosition.bucketLength * previousMag.y,
-        bucketPosition.globalZ + z * bucketPosition.bucketLength * previousMag.z,
+        bucketPosition.voxelMag1X + x * bucketPosition.bucketLength * previousMag.x,
+        bucketPosition.voxelMag1Y + y * bucketPosition.bucketLength * previousMag.y,
+        bucketPosition.voxelMag1Z + z * bucketPosition.bucketLength * previousMag.z,
         previousMag
       )
     }

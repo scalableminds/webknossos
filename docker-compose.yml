@@ -265,7 +265,7 @@ services:
     command:
       - fossildb
       - -c
-      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates
+      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates,editableMappings,editableMappingUpdates
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
 
   fossildb-persisted:

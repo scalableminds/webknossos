@@ -833,7 +833,7 @@ class AnnotationService @Inject()(
     }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def compactWrites(annotation: Annotation): Fox[JsObject] =
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"

@@ -20,6 +20,7 @@ import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
 import api from "oxalis/api/internal_api";
 import { MappingStatusEnum } from "oxalis/constants";
+import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
 type APIMappings = Record<string, APIMapping>;
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {
@@ -83,9 +84,13 @@ function* maybeFetchMapping(
     showLoadingIndicator,
   } = action;
 
-  if (mappingName == null || existingMapping != null) {
-    return;
-  }
+  // Editable mappings cannot be disabled or switched for now
+  const isEditableMappingActivationAllowed = yield* select((state) =>
+    isMappingActivationAllowed(state, mappingName, layerName),
+  );
+  if (!isEditableMappingActivationAllowed) return;
+
+  if (mappingName == null || existingMapping != null) return;
 
   if (showLoadingIndicator) {
     message.loading({
@@ -103,12 +108,18 @@ function* maybeFetchMapping(
       ? layerInfo.fallbackLayer
       : layerInfo.name,
   ];
-  const [jsonMappings, hdf5Mappings] = yield* all([
+  const [jsonMappings, serverHdf5Mappings] = yield* all([
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getMappingsForDatasetLayer, ...params),
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getAgglomeratesForDatasetLayer, ...params),
   ]);
+  const editableMappings = yield* select((state) =>
+    state.tracing.volumes
+      .filter((volumeTracing) => volumeTracing.mappingIsEditable)
+      .map((volumeTracing) => volumeTracing.mappingName),
+  );
+  const hdf5Mappings = [...serverHdf5Mappings, ...editableMappings];
   const mappingsWithCorrectType = mappingType === "JSON" ? jsonMappings : hdf5Mappings;
 
   if (!mappingsWithCorrectType.includes(mappingName)) {
@@ -191,7 +202,7 @@ function* getLargestSegmentId(layerName: string): Saga<number> {
   const segmentationLayer = getLayerByName(dataset, layerName);
 
   if (segmentationLayer.category !== "segmentation") {
-    throw new Error("Mappings class must be instantiated with a segmentation layer.");
+    throw new Error("Mappings only exist for segmentation layers.");
   }
 
   return segmentationLayer.largestSegmentId;

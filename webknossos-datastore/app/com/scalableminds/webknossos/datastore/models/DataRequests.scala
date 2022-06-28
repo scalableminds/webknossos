@@ -33,7 +33,7 @@ case class WebKnossosDataRequest(
 ) extends AbstractDataRequest {
 
   def cuboid(dataLayer: DataLayer): Cuboid =
-    Cuboid(new VoxelPosition(position.x, position.y, position.z, mag), cubeSize, cubeSize, cubeSize)
+    Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize, cubeSize, cubeSize)
 
   def settings: DataServiceRequestSettings =
     DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version)
@@ -54,7 +54,7 @@ case class WebKnossosIsosurfaceRequest(
     mappingType: Option[String] = None
 ) {
   def cuboid(dataLayer: DataLayer): Cuboid =
-    Cuboid(new VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
+    Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
 }
 
 object WebKnossosIsosurfaceRequest {

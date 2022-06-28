@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import window, { document } from "libs/window";
-import { Rect } from "oxalis/constants";
+import { AnyCamera, Rect } from "oxalis/constants";
 
 /**
  * The MIT License
@@ -30,6 +30,7 @@ import { Rect } from "oxalis/constants";
  */
 
 interface ITrackballControls {
+  forBothCameras: (func: (cam: AnyCamera) => void) => void;
   new (
     orthoCamera: THREE.OrthographicCamera,
     perspectiveCamera: THREE.PerspectiveCamera,
@@ -74,7 +75,6 @@ interface ITrackballControls {
     pageY: number,
     projection: THREE.Vector3,
   ) => THREE.Vector3;
-  object: any;
   zoomCamera: () => void;
   panCamera: () => void;
   checkDistances: () => void;
@@ -161,6 +161,10 @@ const TrackballControls = function (
   };
 
   // methods
+  this.forBothCameras = function forBothCameras(func: (cam: AnyCamera) => void) {
+    func(this.orthoCamera);
+    func(this.perspectiveCamera);
+  };
   this.getScreenBounds = function getScreenBounds() {
     const clientRect = this.domElement.getBoundingClientRect();
     const d = this.domElement.ownerDocument.documentElement;
@@ -218,10 +222,10 @@ const TrackballControls = function (
         mouseOnBall.z = Math.sqrt(1.0 - length * length);
       }
 
-      _eye.copy(_this.object.position).sub(_this.target);
+      _eye.copy(_this.orthoCamera.position).sub(_this.target);
 
-      projection.copy(_this.object.up).setLength(mouseOnBall.y);
-      projection.add(objectUp.copy(_this.object.up).cross(_eye).setLength(mouseOnBall.x));
+      projection.copy(_this.orthoCamera.up).setLength(mouseOnBall.y);
+      projection.add(objectUp.copy(_this.orthoCamera.up).cross(_eye).setLength(mouseOnBall.x));
       projection.add(_eye.setLength(mouseOnBall.z));
       return projection;
     };
@@ -241,8 +245,7 @@ const TrackballControls = function (
         quaternion.setFromAxisAngle(axis, -angle);
 
         _eye.applyQuaternion(quaternion);
-
-        _this.object.up.applyQuaternion(quaternion);
+        this.forBothCameras((camera) => camera.up.applyQuaternion(quaternion));
 
         _rotateEnd.applyQuaternion(quaternion);
 
@@ -287,10 +290,11 @@ const TrackballControls = function (
 
       if (mouseChange.lengthSq()) {
         mouseChange.multiplyScalar(_eye.length() * _this.panSpeed);
-        pan.copy(_eye).cross(_this.object.up).setLength(mouseChange.x);
-        pan.add(objectUp.copy(_this.object.up).setLength(mouseChange.y));
-
-        _this.object.position.add(pan);
+        this.forBothCameras((camera) => {
+          pan.copy(_eye).cross(camera.up).setLength(mouseChange.x);
+          pan.add(objectUp.copy(camera.up).setLength(mouseChange.y));
+          camera.position.add(pan);
+        });
 
         _this.target.add(pan);
 
@@ -308,17 +312,21 @@ const TrackballControls = function (
   this.checkDistances = () => {
     if (!_this.noZoom || !_this.noPan) {
       if (_eye.lengthSq() > _this.maxDistance * _this.maxDistance) {
-        _this.object.position.addVectors(_this.target, _eye.setLength(_this.maxDistance));
+        this.forBothCameras((camera) => {
+          camera.position.addVectors(_this.target, _eye.setLength(_this.maxDistance));
+        });
       }
 
       if (_eye.lengthSq() < _this.minDistance * _this.minDistance) {
-        _this.object.position.addVectors(_this.target, _eye.setLength(_this.minDistance));
+        this.forBothCameras((camera) => {
+          camera.position.addVectors(_this.target, _eye.setLength(_this.minDistance));
+        });
       }
     }
   };
 
   this.update = (externalUpdate = false, userTriggered = false) => {
-    _eye.subVectors(_this.object.position, _this.lastTarget);
+    _eye.subVectors(_this.orthoCamera.position, _this.lastTarget);
 
     if (!_this.noRotate) {
       _this.rotateCamera();
@@ -331,17 +339,20 @@ const TrackballControls = function (
     if (!_this.noPan) {
       _this.panCamera();
     }
-
-    _this.object.position.addVectors(_this.target, _eye);
+    this.forBothCameras((camera) => {
+      camera.position.addVectors(_this.target, _eye);
+    });
 
     _this.checkDistances();
 
-    _this.object.lookAt(_this.target);
+    this.forBothCameras((camera) => {
+      camera.position.addVectors(_this.target, _eye);
+    });
 
-    if (lastPosition.distanceToSquared(_this.object.position) > 0) {
+    if (lastPosition.distanceToSquared(_this.orthoCamera.position) > 0) {
       _this.dispatchEvent(changeEvent);
 
-      lastPosition.copy(_this.object.position);
+      lastPosition.copy(_this.orthoCamera.position);
     }
 
     _this.lastTarget = _this.target.clone();
@@ -357,17 +368,18 @@ const TrackballControls = function (
 
     _this.target.copy(_this.target0);
 
-    _this.object.position.copy(_this.position0);
+    this.forBothCameras((camera) => {
+      camera.position.copy(_this.position0);
 
-    _this.object.up.copy(_this.up0);
+      camera.up.copy(_this.up0);
 
-    _eye.subVectors(_this.object.position, _this.target);
-
-    _this.object.lookAt(_this.target);
+      camera.lookAt(_this.target);
+    });
+    _eye.subVectors(_this.orthoCamera.position, _this.target);
 
     _this.dispatchEvent(changeEvent);
 
-    lastPosition.copy(_this.object.position);
+    lastPosition.copy(_this.orthoCamera.position);
   };
 
   // listeners

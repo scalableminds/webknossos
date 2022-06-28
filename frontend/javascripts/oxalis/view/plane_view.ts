@@ -15,6 +15,7 @@ import Constants, {
   OrthoViewColors,
   OrthoViewValues,
   OrthoViews,
+  OrthoViewValuesWithoutTDView,
 } from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
@@ -64,17 +65,28 @@ class PlaneView {
     this.running = false;
     const { scene } = getSceneController();
     // Initialize main THREE.js components
-    const cameras: any = {};
+    const partialCameraMap: any = {};
 
-    for (const plane of OrthoViewValues) {
-      // Let's set up cameras
+    const getNewCamera = (name: string, isOrthographic: boolean) => {
       // No need to set any properties, because the cameras controller will deal with that
-      // TODO: Maybe set to perspective camera in td if settings say so
-      cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
+      const newCamera = isOrthographic
+        ? new THREE.OrthographicCamera(0, 0, 0, 0)
+        : new THREE.PerspectiveCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
-      cameras[plane].name = plane;
-      scene.add(cameras[plane]);
+      newCamera.name = name;
+      scene.add(newCamera);
+      return newCamera;
+    };
+
+    for (const plane of OrthoViewValuesWithoutTDView) {
+      // Let's set up cameras
+      partialCameraMap[plane] = getNewCamera(plane, false);
     }
+    partialCameraMap[OrthoViews.TDView] = {
+      [TDCameras.OrthographicCamera]: getNewCamera(`${OrthoViews.TDView}_Orthographic`, false),
+      [TDCameras.PerspectiveCamera]: getNewCamera(`${OrthoViews.TDView}_Perspective`, true),
+    };
+    const cameras: OrthoViewCameraMap = partialCameraMap;
     this.cameras = cameras;
     forBothTdCameras((camera) => {
       createDirLight([10, 10, 10], [0, 0, 10], 5, camera);

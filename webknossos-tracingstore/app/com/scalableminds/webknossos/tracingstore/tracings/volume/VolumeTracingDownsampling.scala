@@ -2,17 +2,18 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.arrays.NumericArray
+import com.scalableminds.webknossos.datastore.geometry.{Vec3IntProto => ProtoPoint3D}
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
 import com.scalableminds.webknossos.tracingstore.TSRemoteWebKnossosClient
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
   TracingDataStore,
   VersionedKeyValuePair
 }
-import com.scalableminds.webknossos.datastore.geometry.{Vec3IntProto => ProtoPoint3D}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import play.api.libs.json.{Format, Json}
 
 import scala.collection.mutable
@@ -117,10 +118,10 @@ trait VolumeTracingDownsampling
           Array[Byte](0)
         else {
           val sourceDataFilled = fillZeroedIfNeeded(sourceData, bucketVolume, dataLayer.bytesPerElement)
-          val sourceDataTyped = UnsignedIntegerArray.fromByteArray(sourceDataFilled.toArray.flatten, elementClass)
+          val sourceDataTyped = NumericArray.fromBytes(sourceDataFilled.toArray.flatten, elementClass)
           val dataDownscaledTyped =
-            downsampleData(sourceDataTyped.grouped(bucketVolume).toArray, downScaleFactor, bucketVolume)
-          UnsignedIntegerArray.toByteArray(dataDownscaledTyped, elementClass)
+            downsampleData(sourceDataTyped.grouped(bucketVolume).map(_.toArray).toArray, downScaleFactor, bucketVolume)
+          NumericArray.fromUnsignedIntegers(dataDownscaledTyped, elementClass).toBytes
         }
       bucketDataMapMutable(downsampledBucketPosition) = downsampledData
       updatedBucketsMutable += downsampledBucketPosition

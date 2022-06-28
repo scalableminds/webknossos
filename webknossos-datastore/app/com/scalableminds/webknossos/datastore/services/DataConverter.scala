@@ -50,4 +50,18 @@ trait DataConverter extends FoxImplicits {
     dataTypeFunctor.copyDataFn(srcBuffer, dstArray)
     dstArray
   }
+
+  def toBytes(typed: Array[_ >: UByte with UShort with UInt with ULong with Float],
+              elementClass: ElementClass.Value): Array[Byte] = {
+    val numBytes = ElementClass.bytesPerElement(elementClass)
+    val byteBuffer = ByteBuffer.allocate(numBytes * typed.length).order(ByteOrder.LITTLE_ENDIAN)
+    typed match {
+      case data: Array[UByte]  => data.foreach(el => byteBuffer.put(el.signed))
+      case data: Array[UShort] => data.foreach(el => byteBuffer.putChar(el.signed))
+      case data: Array[UInt]   => data.foreach(el => byteBuffer.putInt(el.signed))
+      case data: Array[ULong]  => data.foreach(el => byteBuffer.putLong(el.signed))
+      case data: Array[Float]  => data.foreach(el => byteBuffer.putFloat(el))
+    }
+    byteBuffer.array()
+  }
 }

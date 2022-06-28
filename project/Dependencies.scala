@@ -48,6 +48,7 @@ object Dependencies {
   private val s3fs = "org.lasersonlab" % "s3fs" % "2.2.3"
   private val jblosc = "org.lasersonlab" % "jblosc" % "1.0.1"
   private val scalajHttp = "org.scalaj" %% "scalaj-http" % "2.4.2"
+  private val tensorflow = "org.platanios" %% "tensorflow" % "0.6.4" classifier "linux"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",
@@ -83,6 +84,7 @@ object Dependencies {
     webknossosWrap,
     playIterateesStreams,
     filters,
+    tensorflow,
     ws,
     guice,
     swagger,

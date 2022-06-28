@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import window, { document } from "libs/window";
-import { TDCamerasType } from "oxalis/constants";
+import { Rect } from "oxalis/constants";
 
 /**
  * The MIT License
@@ -31,14 +31,16 @@ import { TDCamerasType } from "oxalis/constants";
 
 interface ITrackballControls {
   new (
-    object: TDCamerasType,
-    domElement: HTMLElement | Document | typeof document,
+    orthoCamera: THREE.OrthographicCamera,
+    perspectiveCamera: THREE.PerspectiveCamera,
+    domElement: HTMLElement,
     target: THREE.Vector3,
     updateCallback: (args: any) => void,
   ): ITrackballControls;
 
-  object: TDCamerasType;
-  domElement: HTMLElement | Document | typeof document;
+  orthoCamera: THREE.OrthographicCamera;
+  perspectiveCamera: THREE.PerspectiveCamera;
+  domElement: HTMLElement;
   enabled: boolean;
   updateCallback: (args: any) => void;
   keyboardEnabled: boolean;
@@ -61,15 +63,29 @@ interface ITrackballControls {
   target0: THREE.Vector3;
   position0: THREE.Vector3;
   up0: THREE.Vector3;
-
+  getScreenBounds: () => Rect;
+  handleEvent: (arg0: Event) => void;
   rotateCamera: () => void;
   destroy: () => void;
-  update: (args?: any) => void;
+  update: (externalUpdate?: boolean, userTriggered?: boolean) => void;
+  getMouseOnScreen: (pageX: number, pageY: number, vector: THREE.Vector2) => THREE.Vector2;
+  getMouseProjectionOnBall: (
+    pageX: number,
+    pageY: number,
+    projection: THREE.Vector3,
+  ) => THREE.Vector3;
+  object: any;
+  zoomCamera: () => void;
+  panCamera: () => void;
+  checkDistances: () => void;
+  dispatchEvent(changeEvent: { type: string }): unknown;
+  reset: () => void;
 }
 
 const TrackballControls = function (
   this: ITrackballControls,
-  object: TDCamerasType,
+  orthoCamera: THREE.OrthographicCamera,
+  perspectiveCamera: THREE.PerspectiveCamera,
   domElement: HTMLElement,
   target: THREE.Vector3,
   updateCallback: (args: any) => void,
@@ -85,8 +101,9 @@ const TrackballControls = function (
     TOUCH_ZOOM: 4,
     TOUCH_PAN: 5,
   };
-  this.object = object;
-  this.domElement = domElement !== undefined ? domElement : document;
+  this.orthoCamera = orthoCamera;
+  this.perspectiveCamera = perspectiveCamera;
+  this.domElement = domElement;
   this.updateCallback = updateCallback;
   // API
   this.enabled = true;
@@ -130,8 +147,8 @@ const TrackballControls = function (
 
   // for reset
   this.target0 = this.target.clone();
-  this.position0 = this.object.position.clone();
-  this.up0 = this.object.up.clone();
+  this.position0 = this.orthoCamera.position.clone();
+  this.up0 = this.orthoCamera.up.clone();
   // events
   const changeEvent = {
     type: "change",
@@ -156,7 +173,9 @@ const TrackballControls = function (
   };
 
   this.handleEvent = function handleEvent(event: Event) {
+    // @ts-ignore
     if (typeof this[event.type] === "function") {
+      // @ts-ignore
       this[event.type](event);
     }
   };
@@ -427,7 +446,7 @@ const TrackballControls = function (
     _this.dispatchEvent(endEvent);
   }
 
-  function mousewheel(event: WheelEvent) {
+  function mousewheel(event: WheelEvent): void {
     if (_this.enabled === false) return;
     event.preventDefault();
     let delta = 0;
@@ -560,8 +579,8 @@ const TrackballControls = function (
       false,
     );
     this.domElement.removeEventListener("mousedown", mousedown, false);
-    this.domElement.removeEventListener("mousewheel", mousewheel, false);
-    this.domElement.removeEventListener("DOMMouseScroll", mousewheel, false); // firefox
+    this.domElement.removeEventListener("mousewheel", mousewheel as EventListener, false);
+    this.domElement.removeEventListener("DOMMouseScroll", mousewheel as EventListener, false); // firefox
 
     this.domElement.removeEventListener("touchstart", touchstart, false);
     this.domElement.removeEventListener("touchend", touchend, false);
@@ -578,8 +597,8 @@ const TrackballControls = function (
     false,
   );
   this.domElement.addEventListener("mousedown", mousedown, false);
-  this.domElement.addEventListener("mousewheel", mousewheel, false);
-  this.domElement.addEventListener("DOMMouseScroll", mousewheel, false); // firefox
+  this.domElement.addEventListener("mousewheel", mousewheel as EventListener, false);
+  this.domElement.addEventListener("DOMMouseScroll", mousewheel as EventListener, false); // firefox
 
   this.domElement.addEventListener("touchstart", touchstart, false);
   this.domElement.addEventListener("touchend", touchend, false);

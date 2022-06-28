@@ -65,10 +65,12 @@ export type OrthoView = keyof typeof OrthoViews;
 export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, "TDView">;
 export type OrthoViewMap<T> = Record<OrthoView, T>;
 export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
+export type AnyCamera = THREE.PerspectiveCamera | THREE.OrthographicCamera;
 export type TDCamerasType = {
   PerspectiveCamera: THREE.PerspectiveCamera;
   OrthographicCamera: THREE.OrthographicCamera;
 };
+export type TDCamerasArray = [THREE.PerspectiveCamera, THREE.OrthographicCamera];
 export type OrthoViewCameraMap = OrthoViewWithoutTDMap<THREE.OrthographicCamera> & {
   TDView: TDCamerasType;
 };
@@ -101,7 +103,7 @@ export const OrthoViewValuesWithoutTDView = [
   OrthoViews.PLANE_XY,
   OrthoViews.PLANE_YZ,
   OrthoViews.PLANE_XZ,
-];
+] as [OrthoViews.PLANE_XY, OrthoViews.PLANE_YZ, OrthoViews.PLANE_XZ];
 export const OrthoViewColors: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0xc81414,
   // red

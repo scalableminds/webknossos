@@ -2,16 +2,18 @@ import * as React from "react";
 import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
-import _ from "lodash";
 import * as Utils from "libs/utils";
 import type {
   OrthoView,
   OrthoViewMap,
   OrthoViewCameraMap,
   OrthoViewRects,
+  AnyCamera,
   Vector3,
+  TDCamerasArray,
+  TDCamerasType,
 } from "oxalis/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
+import { TDCameras, OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
   getDatasetExtentInLength,
@@ -72,6 +74,38 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
   };
 }
 
+export function forBothTdCameras(func: (cam: AnyCamera) => void, tdCameras: TDCamerasType) {
+  Object.values(tdCameras).forEach((camera) => func(camera));
+}
+export function allCameras(cameraMap: OrthoViewCameraMap): AnyCamera[] {
+  return Object.values(OrthoViews)
+    .map((orthoView: OrthoView) => {
+      if (orthoView === OrthoViews.TDView) {
+        return [
+          cameraMap[orthoView][TDCameras.PerspectiveCamera],
+          cameraMap[orthoView][TDCameras.OrthographicCamera],
+        ];
+      } else {
+        return cameraMap[orthoView];
+      }
+    })
+    .flat();
+}
+
+export function getActiveCameraForPlane(
+  cameraMap: OrthoViewCameraMap,
+  plane: OrthoView,
+): AnyCamera {
+  if (plane !== OrthoViews.TDView) {
+    return cameraMap[plane];
+  }
+
+  const activeCameraKey = Store.getState().userConfiguration.tdViewUseOrthographicCamera
+    ? TDCameras.OrthographicCamera
+    : TDCameras.PerspectiveCamera;
+  return cameraMap[OrthoViews.TDView][activeCameraKey];
+}
+
 class CameraController extends React.PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
@@ -79,7 +113,7 @@ class CameraController extends React.PureComponent<Props> {
   componentDidMount() {
     const far = 8000000;
 
-    for (const cam of _.values(this.props.cameras)) {
+    for (const cam of allCameras(this.props.cameras)) {
       cam.near = 0;
       cam.far = far;
     }
@@ -90,7 +124,9 @@ class CameraController extends React.PureComponent<Props> {
     const diagonalDatasetExtent = Math.sqrt(
       datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
     );
-    this.props.cameras[OrthoViews.TDView].far = diagonalDatasetExtent * 2;
+    this.allTDCameras().forEach((tdCamera) => {
+      tdCamera.far = diagonalDatasetExtent * 2;
+    });
 
     const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();
@@ -114,6 +150,11 @@ class CameraController extends React.PureComponent<Props> {
 
   componentWillUnmount() {
     this.storePropertyUnsubscribers.forEach((fn) => fn());
+  }
+
+  allTDCameras(): TDCamerasArray {
+    const { PerspectiveCamera, OrthographicCamera } = this.props.cameras[OrthoViews.TDView];
+    return [PerspectiveCamera, OrthographicCamera];
   }
 
   // Non-TD-View methods
@@ -143,19 +184,19 @@ class CameraController extends React.PureComponent<Props> {
 
     if (inputCatcherRects != null) {
       // Update td camera's aspect ratio
-      const tdCamera = this.props.cameras[OrthoViews.TDView];
-      const oldMid = (tdCamera.right + tdCamera.left) / 2;
-      const oldWidth = tdCamera.right - tdCamera.left;
-      const oldHeight = tdCamera.top - tdCamera.bottom;
+      const tdOrthoCamera = this.props.cameras[OrthoViews.TDView].OrthographicCamera;
+      const oldMid = (tdOrthoCamera.right + tdOrthoCamera.left) / 2;
+      const oldWidth = tdOrthoCamera.right - tdOrthoCamera.left;
+      const oldHeight = tdOrthoCamera.top - tdOrthoCamera.bottom;
       const tdRect = inputCatcherRects[OrthoViews.TDView];
       // Do not update the tdCamera if the tdView is not visible
       if (tdRect.height === 0 || tdRect.width === 0) return;
       const oldAspectRatio = oldWidth / oldHeight;
       const newAspectRatio = tdRect.width / tdRect.height;
       const newWidth = (oldWidth * newAspectRatio) / oldAspectRatio;
-      tdCamera.left = oldMid - newWidth / 2;
-      tdCamera.right = oldMid + newWidth / 2;
-      tdCamera.updateProjectionMatrix();
+      tdOrthoCamera.left = oldMid - newWidth / 2;
+      tdOrthoCamera.right = oldMid + newWidth / 2;
+      tdOrthoCamera.updateProjectionMatrix();
       this.props.onTDCameraChanged();
     }
   }
@@ -200,15 +241,15 @@ class CameraController extends React.PureComponent<Props> {
 
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
-    const tdCamera = this.props.cameras[OrthoViews.TDView];
-    tdCamera.position.set(...cameraData.position);
-    tdCamera.left = cameraData.left;
-    tdCamera.right = cameraData.right;
-    tdCamera.top = cameraData.top;
-    tdCamera.bottom = cameraData.bottom;
-    tdCamera.up = new THREE.Vector3(...cameraData.up);
-    tdCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
-    tdCamera.updateProjectionMatrix();
+    const tdOrthoCamera = this.props.cameras[OrthoViews.TDView].OrthographicCamera;
+    tdOrthoCamera.position.set(...cameraData.position);
+    tdOrthoCamera.left = cameraData.left;
+    tdOrthoCamera.right = cameraData.right;
+    tdOrthoCamera.top = cameraData.top;
+    tdOrthoCamera.bottom = cameraData.bottom;
+    tdOrthoCamera.up = new THREE.Vector3(...cameraData.up);
+    tdOrthoCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
+    tdOrthoCamera.updateProjectionMatrix();
     this.props.onCameraPositionChanged();
   }
 

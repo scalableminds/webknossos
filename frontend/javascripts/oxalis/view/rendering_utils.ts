@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
-import type { OrthoView, THREE_Camera } from "oxalis/constants";
+import type { OrthoView, AnyCamera } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViewColors,
@@ -39,7 +39,7 @@ export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
 export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
   scene?: THREE.Scene,
-  camera?: THREE_Camera, // When withFarClipping is true, the user-specified clipping distance is used.
+  camera?: AnyCamera, // When withFarClipping is true, the user-specified clipping distance is used.
   // Note that the data planes might not be included in the rendered texture, since
   // these are exactly offset by the clipping distance. Currently, `withFarClipping`
   // is only used for node picking (which does not render the data planes), which is why
@@ -51,7 +51,7 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  camera = (camera || scene.getObjectByName(plane)) as THREE_Camera;
+  camera = (camera || scene.getObjectByName(plane)) as AnyCamera;
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.

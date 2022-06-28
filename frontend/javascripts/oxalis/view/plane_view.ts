@@ -7,19 +7,27 @@ import _ from "lodash";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type { OrthoViewCameraMap, ThreeCamera, Vector3 } from "oxalis/constants";
-import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
+import Constants, {
+  OrthoViewCameraMap,
+  AnyCamera,
+  Vector3,
+  TDCameras,
+  OrthoViewColors,
+  OrthoViewValues,
+  OrthoViews,
+} from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
+import { allCameras, forBothTdCameras } from "oxalis/controller/camera_controller";
 
 const createDirLight = (
   position: Vector3,
   target: Vector3,
   intensity: number,
-  parent: ThreeCamera,
+  parent: AnyCamera,
 ) => {
   const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
   dirLight.color.setHSL(0.1, 1, 0.95);
@@ -68,19 +76,20 @@ class PlaneView {
       scene.add(cameras[plane]);
     }
     this.cameras = cameras;
-
-    createDirLight([10, 10, 10], [0, 0, 10], 5, this.cameras[OrthoViews.TDView]);
+    forBothTdCameras((camera) => {
+      createDirLight([10, 10, 10], [0, 0, 10], 5, camera);
+      camera.position.copy(new THREE.Vector3(10, 10, -10));
+      camera.up = new THREE.Vector3(0, 0, -1);
+    }, this.cameras[OrthoViews.TDView]);
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
-    this.cameras[OrthoViews.TDView].position.copy(new THREE.Vector3(10, 10, -10));
     this.cameras[OrthoViews.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
     this.cameras[OrthoViews.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
     this.cameras[OrthoViews.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
-    this.cameras[OrthoViews.TDView].up = new THREE.Vector3(0, 0, -1);
 
-    for (const plane of OrthoViewValues) {
-      this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
+    for (const camera of allCameras(this.cameras)) {
+      camera.lookAt(new THREE.Vector3(0, 0, 0));
     }
 
     this.needsRerender = true;
@@ -136,7 +145,13 @@ class PlaneView {
 
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
-          renderer.render(scene, this.cameras[plane]);
+          if (plane === OrthoViews.TDView) {
+            renderer.render(scene, this.cameras[plane][TDCameras.OrthographicCamera]);
+            // TODO: use active camera????
+            // renderer.render(scene, this.cameras[plane][TDCameras.PerspectiveCamera]);
+          } else {
+            renderer.render(scene, this.cameras[plane]);
+          }
         }
       }
 
@@ -168,7 +183,8 @@ class PlaneView {
       (mousePosition[0] / tdViewport.width) * 2 - 1,
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
-    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+    // TODO: use active td camera
+    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera]);
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);
@@ -230,8 +246,8 @@ class PlaneView {
   stop(): void {
     this.running = false;
 
-    for (const plane of OrthoViewValues) {
-      getSceneController().scene.remove(this.cameras[plane]);
+    for (const camera of allCameras(this.cameras)) {
+      getSceneController().scene.remove(camera);
     }
 
     window.removeEventListener("resize", this.resizeThrottled);

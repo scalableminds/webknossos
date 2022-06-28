@@ -11,13 +11,20 @@ import {
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import type { TDCamera, OrthoViewCameraMap } from "oxalis/constants";
-import Constants, { ArbitraryViewport, OrthoViews } from "oxalis/constants";
+import type { OrthoViewCameraMap } from "oxalis/constants";
+import Constants, {
+  ArbitraryViewport,
+  OrthoViews,
+  AnyCamera,
+  TDCameras,
+  TDCamerasType,
+} from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea, renderToTexture } from "oxalis/view/rendering_utils";
+import { forBothTdCameras } from "oxalis/controller/camera_controller";
 
 type GeometryLike = {
   addToScene: (obj: THREE.Object3D) => void;
@@ -37,12 +44,9 @@ class ArbitraryView {
   isRunning: boolean = false;
   animationRequestId: number | null | undefined = null;
   camDistance: number;
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Perspective... Remove this comment to see the full error message
-  camera: THREE.PerspectiveCamera = null;
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Orthographi... Remove this comment to see the full error message
-  tdCamera: TDCamera = null;
+  tdCameras: TDCamerasType;
+  camera: THREE.PerspectiveCamera;
   geometries: Array<GeometryLike> = [];
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
   group: THREE.Object3D;
   cameraPosition: Array<number>;
 
@@ -64,19 +68,24 @@ class ArbitraryView {
     this.camera.matrixAutoUpdate = false;
     scene.add(this.camera);
     // TODO: here depending on settings
-    const tdCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
-    tdCamera.position.copy(new THREE.Vector3(10, 10, -10));
-    tdCamera.up = new THREE.Vector3(0, 0, -1);
-    tdCamera.matrixAutoUpdate = true;
-    this.tdCamera = tdCamera;
-    const dummyCamera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
+    this.group = new THREE.Object3D();
+    const orthoTDCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
+    const perspectiveTDCamera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
+
+    this.tdCameras = {
+      [TDCameras.PerspectiveCamera]: perspectiveTDCamera,
+      [TDCameras.OrthographicCamera]: orthoTDCamera,
+    };
+    forBothTdCameras((camera: AnyCamera) => {
+      camera.position.copy(new THREE.Vector3(10, 10, -10));
+      camera.up = new THREE.Vector3(0, 0, -1);
+      camera.matrixAutoUpdate = true;
+    }, this.tdCameras);
+    const dummyCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
     this.cameras = {
-      TDView: tdCamera,
-      // @ts-expect-error ts-migrate(2739) FIXME: Type 'PerspectiveCamera' is missing the following ... Remove this comment to see the full error message
+      TDView: this.tdCameras,
       PLANE_XY: dummyCamera,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'PerspectiveCamera' is not assignable to type... Remove this comment to see the full error message
       PLANE_YZ: dummyCamera,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'PerspectiveCamera' is not assignable to type... Remove this comment to see the full error message
       PLANE_XZ: dummyCamera,
     };
     this.cameraPosition = [0, 0, this.camDistance];
@@ -195,7 +204,7 @@ class ArbitraryView {
           this.plane.meshes.debuggerPlane.visible = true;
         }
 
-        renderViewport(OrthoViews.TDView, this.tdCamera);
+        renderViewport(OrthoViews.TDView, this.tdCameras[TDCameras.OrthographicCamera]);
       }
 
       this.needsRerender = false;

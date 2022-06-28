@@ -44,6 +44,7 @@ import { renderToTexture } from "oxalis/view/rendering_utils";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
+import { getActiveCameraForPlane } from "../camera_controller";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,
@@ -280,7 +281,7 @@ export function maybeGetNodeIdFromPosition(
   const pickingNode = skeleton.startPicking(isTouch);
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
-  const camera = planeView.getCameras()[plane];
+  const camera = getActiveCameraForPlane(planeView.getCameras(), plane);
   let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);

@@ -28,6 +28,7 @@ import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 import { SkeletonTool } from "oxalis/controller/combinations/tool_controls";
+import { Euler } from "three";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
@@ -141,9 +142,10 @@ class TDController extends React.PureComponent<Props> {
 
   initTrackballControls(view: HTMLElement): void {
     const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
-    const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const { OrthographicCamera, PerspectiveCamera } = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(
-      tdCamera,
+      OrthographicCamera,
+      PerspectiveCamera,
       view,
       new THREE.Vector3(...pos),
       this.onTDCameraChanged,
@@ -254,12 +256,13 @@ class TDController extends React.PureComponent<Props> {
     this.oldNmPos = nmPosition;
     const nmVector = new THREE.Vector3(...invertedDiff);
     // moves camera by the nm vector
-    const camera = this.props.cameras[OrthoViews.TDView];
-    const rotation = THREE.Vector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
+    const { OrthographicCamera } = this.props.cameras[OrthoViews.TDView];
+    const rotation: Euler = THREE.Vector3.prototype.multiplyScalar.call(
+      OrthographicCamera.rotation.clone(),
+      -1,
+    ) as any as Euler;
     // reverse euler order
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'order' does not exist on type 'Vector3'.
     rotation.order = rotation.order.split("").reverse().join("");
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Vector3' is not assignable to pa... Remove this comment to see the full error message
     nmVector.applyEuler(rotation);
     Store.dispatch(moveTDViewByVectorWithoutTimeTrackingAction(nmVector.x, nmVector.y));
   };
@@ -283,12 +286,12 @@ class TDController extends React.PureComponent<Props> {
   }
 
   onTDCameraChanged = (userTriggered: boolean = true) => {
-    const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const { OrthographicCamera } = this.props.cameras[OrthoViews.TDView];
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
     // Write threeJS camera into store
-    Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
+    Store.dispatch(setCameraAction(threeCameraToCameraData(OrthographicCamera)));
   };
 
   render() {

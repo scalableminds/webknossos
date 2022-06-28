@@ -132,6 +132,9 @@ export const userSettings = {
   useLegacyBindings: {
     type: "boolean",
   },
+  tdViewUseOrthographicCamera: {
+    type: "boolean",
+  },
   ...baseDatasetViewConfiguration,
 };
 export default {

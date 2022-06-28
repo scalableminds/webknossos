@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed that zooming out for datasets with very large scale was not possible until the coarsest level. [#6304](https://github.com/scalableminds/webknossos/pull/6304)
 
 ### Removed
 

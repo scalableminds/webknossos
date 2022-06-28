@@ -305,6 +305,7 @@ export type UserConfiguration = {
   readonly sphericalCapRadius: number;
   readonly tdViewDisplayPlanes: TDViewDisplayMode;
   readonly tdViewDisplayDatasetBorders: boolean;
+  readonly tdViewUseOrthographicCamera: boolean;
   readonly gpuMemoryFactor: number;
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
@@ -416,6 +417,7 @@ export type PartialCameraData = {
 };
 export type PlaneModeData = {
   readonly activeViewport: OrthoView;
+  // TODO This is only for persistence right? TODO later
   readonly tdCamera: CameraData;
   readonly inputCatcherRects: {
     readonly PLANE_XY: Rect;

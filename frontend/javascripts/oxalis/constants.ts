@@ -1,4 +1,4 @@
-import { PerspectiveCamera, OrthographicCamera } from "three";
+import * as THREE from "three";
 export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
@@ -50,6 +50,10 @@ export enum OrthoViews {
   PLANE_XZ = "PLANE_XZ",
   TDView = "TDView",
 }
+export enum TDCameras {
+  PerspectiveCamera = "PerspectiveCamera",
+  OrthographicCamera = "OrthographicCamera",
+}
 export const enum OrthoViewsToName {
   PLANE_XY = "XY",
   PLANE_YZ = "YZ",
@@ -57,13 +61,17 @@ export const enum OrthoViewsToName {
   TDView = "3D",
 }
 export type OrthoView = keyof typeof OrthoViews;
-export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, OrthoViews.TDView>;
-export type THREE_Camera = PerspectiveCamera | OrthographicCamera;
-export type TDCamera = THREE_Camera;
+// TODO: typing was broken here, find a better workaround than using "TDView" directly.
+export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, "TDView">;
 export type OrthoViewMap<T> = Record<OrthoView, T>;
-export type OrthoViewMapWithTDExtra<T, S> = Record<OrthoView, T> & { TDView: S };
-export type OrthoViewCameraMap = OrthoViewMapWithTDExtra<THREE.OrthographicCamera, TDCamera>;
 export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
+export type TDCamerasType = {
+  PerspectiveCamera: THREE.PerspectiveCamera;
+  OrthographicCamera: THREE.OrthographicCamera;
+};
+export type OrthoViewCameraMap = OrthoViewWithoutTDMap<THREE.OrthographicCamera> & {
+  TDView: TDCamerasType;
+};
 export type OrthoViewExtents = Readonly<OrthoViewMap<Vector2>>;
 export type OrthoViewRects = Readonly<OrthoViewMap<Rect>>;
 export const ArbitraryViewport = "arbitraryViewport";

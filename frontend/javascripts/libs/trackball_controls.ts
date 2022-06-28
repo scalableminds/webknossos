@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import window, { document } from "libs/window";
-import { TDCamera } from "oxalis/constants";
+import { TDCamerasType } from "oxalis/constants";
 
 /**
  * The MIT License
@@ -31,13 +31,16 @@ import { TDCamera } from "oxalis/constants";
 
 interface ITrackballControls {
   new (
-    object: TDCamera,
-    domElement: HTMLElement,
+    object: TDCamerasType,
+    domElement: HTMLElement | Document | typeof document,
     target: THREE.Vector3,
     updateCallback: (args: any) => void,
   ): ITrackballControls;
 
+  object: TDCamerasType;
+  domElement: HTMLElement | Document | typeof document;
   enabled: boolean;
+  updateCallback: (args: any) => void;
   keyboardEnabled: boolean;
   rotateSpeed: number;
   zoomSpeed: number;
@@ -52,6 +55,12 @@ interface ITrackballControls {
   maxDistance: number;
   keys: number[];
   target: THREE.Vector3;
+  up: THREE.Vector3;
+  position: THREE.Vector3;
+  lastTarget: THREE.Vector3;
+  target0: THREE.Vector3;
+  position0: THREE.Vector3;
+  up0: THREE.Vector3;
 
   rotateCamera: () => void;
   destroy: () => void;
@@ -59,8 +68,8 @@ interface ITrackballControls {
 }
 
 const TrackballControls = function (
-  this: any,
-  object: TDCamera,
+  this: ITrackballControls,
+  object: TDCamerasType,
   domElement: HTMLElement,
   target: THREE.Vector3,
   updateCallback: (args: any) => void,

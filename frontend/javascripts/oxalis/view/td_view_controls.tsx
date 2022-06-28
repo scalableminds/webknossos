@@ -17,15 +17,19 @@ import { SwitchChangeEventHandler } from "antd/lib/switch";
 type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
+  tdViewUseOrthographicCamera: boolean;
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
   onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
+  onChangeTdViewUseOrthographicCamera: SwitchChangeEventHandler;
 };
 
 function TDViewControls({
   tdViewDisplayPlanes,
   tdViewDisplayDatasetBorders,
+  tdViewUseOrthographicCamera,
   onChangeTdViewDisplayPlanes,
   onChangeTdViewDisplayDatasetBorders,
+  onChangeTdViewUseOrthographicCamera,
 }: Props) {
   const settingsMenu = (
     <Menu
@@ -77,6 +81,19 @@ function TDViewControls({
           </Col>
         </Row>
       </Menu.Item>
+      <Menu.Item key="useOrthographicCamera">
+        <Row>
+          <Col span={14}>
+            <label className="setting-label">Use Orthographic Camera</label>
+          </Col>
+          <Col span={10}>
+            <Switch
+              checked={tdViewUseOrthographicCamera}
+              onChange={onChangeTdViewUseOrthographicCamera}
+            />
+          </Col>
+        </Row>
+      </Menu.Item>
     </Menu>
   );
   return (
@@ -109,6 +126,7 @@ function mapStateToProps(state: OxalisState) {
   return {
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
     tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,
+    tdViewUseOrthographicCamera: state.userConfiguration.tdViewUseOrthographicCamera,
   };
 }
 
@@ -121,6 +139,9 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
 
     onChangeTdViewDisplayDatasetBorders(tdViewDisplayDatasetBorders: boolean) {
       dispatch(updateUserSettingAction("tdViewDisplayDatasetBorders", tdViewDisplayDatasetBorders));
+    },
+    onChangeTdViewUseOrthographicCamera(tdViewUseOrthographicCamera: boolean) {
+      dispatch(updateUserSettingAction("tdViewUseOrthographicCamera", tdViewUseOrthographicCamera));
     },
   };
 }

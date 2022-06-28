@@ -7,7 +7,7 @@ import _ from "lodash";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type { OrthoViewCameraMap, OrthoViewMap, TDCamera, Vector3 } from "oxalis/constants";
+import type { OrthoViewCameraMap, ThreeCamera, Vector3 } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
@@ -19,7 +19,7 @@ const createDirLight = (
   position: Vector3,
   target: Vector3,
   intensity: number,
-  parent: TDCamera,
+  parent: ThreeCamera,
 ) => {
   const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
   dirLight.color.setHSL(0.1, 1, 0.95);
@@ -40,7 +40,7 @@ class PlaneView {
   trigger: (...args: Array<any>) => any;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
   listenTo: (...args: Array<any>) => any;
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  cameras: OrthoViewCameraMap;
   throttledPerformIsosurfaceHitTest: (arg0: [number, number]) => THREE.Vector3 | null | undefined;
 
   running: boolean;

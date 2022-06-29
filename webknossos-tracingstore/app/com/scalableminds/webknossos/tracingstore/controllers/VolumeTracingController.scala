@@ -386,8 +386,9 @@ class VolumeTracingController @Inject()(
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
                                                             data,
                                                             missingBucketIndices,
-                                                            mag,
-                                                            cxyz,
+                                                            magParsed,
+                                                            Vec3Int(x, y, z),
+                                                            cubeSize,
                                                             combinedToken) ?~> "Getting fallback layer failed" ~> 400
           } yield Ok(dataWithFallback).withHeaders()
         }
@@ -397,28 +398,35 @@ class VolumeTracingController @Inject()(
   private def getFallbackLayerDataIfEmpty(tracing: VolumeTracing,
                                           data: Array[Byte],
                                           missingBucketIndices: List[Int],
-                                          mag: String,
-                                          cxyz: String,
+                                          mag: Vec3Int,
+                                          position: Vec3Int,
+                                          cubeSize: Int,
                                           urlToken: Option[String]): Fox[Array[Byte]] = {
-
     def fallbackLayerData(): Fox[Array[Byte]] = {
       val organizationName = tracing.organizationName
       val dataSetName = tracing.dataSetName
       val dataLayerName = tracing.getFallbackLayer
+      val request = WebKnossosDataRequest(
+        position = Vec3Int(position.x * cubeSize * mag.x, position.y * cubeSize * mag.y, position.z * cubeSize * mag.z),
+        mag = mag,
+        cubeSize = cubeSize,
+        fourBit = Some(false),
+        applyAgglomerate = tracing.mappingName,
+        version = None
+      )
 
       organizationName match {
         case Some(orgName) =>
           for {
-            fallbackData <- remoteDataStoreClient.fallbackLayerBucket(
+            // ignoring missing bucket indices, if data is empty overall response is empty anyways
+            (fallbackData, _) <- remoteDataStoreClient.getData(
               RemoteFallbackLayer(orgName, dataSetName, dataLayerName, tracing.elementClass),
-              mag,
-              cxyz,
+              List(request),
               urlToken)
           } yield fallbackData
         case None => Fox.failure("Organization Name is not set (Consider creating a new annotation).")
       }
     }
-
     if (missingBucketIndices.nonEmpty && tracing.fallbackLayer.isDefined) {
       fallbackLayerData()
     } else {

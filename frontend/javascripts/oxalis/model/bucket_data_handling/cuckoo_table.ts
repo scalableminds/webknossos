@@ -1,8 +1,8 @@
-import { Vector4 } from "oxalis/constants";
+import { Vector2, Vector4 } from "oxalis/constants";
 
-const ELEMENTS_PER_ENTRY = 5;
+const ELEMENTS_PER_ENTRY = 6;
 
-type Entry = [Vector4, number];
+type Entry = [Vector4, Vector2];
 
 export class CuckooTable {
   entryCapacity: number;
@@ -28,7 +28,11 @@ export class CuckooTable {
     ];
   }
 
-  setEntry(pendingKey: Vector4, pendingValue: number, rehashAttempt: number = 0) {
+  clearAll() {
+    this.table.fill(-1);
+  }
+
+  setEntry(pendingKey: Vector4, pendingValue: Vector2, rehashAttempt: number = 0) {
     if (rehashAttempt == 0) {
       this.setEntryCount++;
     }
@@ -86,21 +90,21 @@ export class CuckooTable {
         oldTable[offset + 2],
         oldTable[offset + 3],
       ];
-      const value = oldTable[offset + 4];
+      const value: Vector2 = [oldTable[offset + 4], oldTable[offset + 5]];
       this.setEntry(key, value, rehashAttempt);
     }
   }
 
-  getValue(key: Vector4): number {
+  getValue(key: Vector4): Vector2 {
     for (const seed of this.seeds) {
       const hashedAddress = this._hashKeyToAddress(seed, key);
 
       const value = this.getValueAtAddress(key, hashedAddress);
-      if (value !== -1) {
+      if (value != null) {
         return value;
       }
     }
-    return -1;
+    return [-1, -1];
   }
 
   // hasEntry(key: Vector4, value: number, hashedAddress1: number, hashedAddress2: number): boolean {
@@ -116,7 +120,7 @@ export class CuckooTable {
         this.table[offset + 2],
         this.table[offset + 3],
       ],
-      this.table[offset + 4],
+      [this.table[offset + 4], this.table[offset + 5]],
     ];
   }
 
@@ -146,16 +150,16 @@ export class CuckooTable {
     );
   }
 
-  getValueAtAddress(key: Vector4, hashedAddress: number): number {
+  getValueAtAddress(key: Vector4, hashedAddress: number): Vector2 | null {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
     if (this.doesAddressContainKey(key, hashedAddress)) {
-      return this.table[offset + 4];
+      return [this.table[offset + 4], this.table[offset + 5]];
     } else {
-      return -1;
+      return null;
     }
   }
 
-  private writeEntryAtAddress(key: Vector4, value: number, hashedAddress: number): Entry {
+  private writeEntryAtAddress(key: Vector4, value: Vector2, hashedAddress: number): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
 
     const displacedEntry: Entry = [
@@ -165,7 +169,7 @@ export class CuckooTable {
         this.table[offset + 2],
         this.table[offset + 3],
       ],
-      this.table[offset + 4],
+      [this.table[offset + 4], this.table[offset + 5]],
     ];
 
     // eslint-disable-next-line prefer-destructuring
@@ -177,7 +181,9 @@ export class CuckooTable {
     // eslint-disable-next-line prefer-destructuring
     this.table[offset + 3] = key[3];
     // eslint-disable-next-line prefer-destructuring
-    this.table[offset + 4] = value;
+    this.table[offset + 4] = value[0];
+    // eslint-disable-next-line prefer-destructuring
+    this.table[offset + 5] = value[1];
 
     return displacedEntry;
   }

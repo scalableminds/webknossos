@@ -2,7 +2,7 @@ import * as THREE from "three";
 import _ from "lodash";
 import mock from "mock-require";
 import test, { ExecutionContext } from "ava";
-import { Vector4 } from "oxalis/constants";
+import { Vector2, Vector4 } from "oxalis/constants";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
 
 const formatToChannelCount = new Map([
@@ -137,7 +137,7 @@ const expectBucket = (
 //   expectBucket(t, tbm, activeBuckets[5], 202);
 // });
 
-function generateRandomEntry(): [Vector4, number] {
+function generateRandomEntry(): [Vector4, Vector2] {
   return [
     [
       Math.floor(Math.random() * 1000),
@@ -145,7 +145,7 @@ function generateRandomEntry(): [Vector4, number] {
       Math.floor(Math.random() * 1000),
       Math.floor(Math.random() * 1000),
     ],
-    Math.floor(Math.random() * 1000),
+    [Math.floor(Math.random() * 1000), Math.floor(Math.random() * 1000)],
   ];
 }
 
@@ -166,6 +166,10 @@ function generateRandomEntrySet() {
   return entries;
 }
 
+function isValueEqual(t, val1: Vector2, val2: Vector2) {
+  return t.true(val1[0] === val2[0]) && t.true(val1[1] === val2[1]);
+}
+
 test.serial("CuckooTable", (t) => {
   const entries = generateRandomEntrySet();
   const ct = new CuckooTable(entries.length);
@@ -176,23 +180,24 @@ test.serial("CuckooTable", (t) => {
     // console.log(`! write n=${n}   entry=${entry}`);
 
     ct.setEntry(entry[0], entry[1]);
-    t.is(entry[1], ct.getValue(entry[0]));
-    if (entry[1] != ct.getValue(entry[0])) {
-      console.log("key:", entry[0]);
-      console.log("value:", entry[1]);
-      console.log("retrieved value: ", ct.getValue(entry[0]));
-      throw new Error("failed");
-    }
+    const readValue = ct.getValue(entry[0]);
+    isValueEqual(t, entry[1], readValue);
+    // if (entry[1][0] != readValue[0]) {
+    //   console.log("key:", entry[0]);
+    //   console.log("value:", entry[1]);
+    //   console.log("retrieved value: ", ct.getValue(entry[0]));
+    //   throw new Error("failed");
+    // }
     let nn = 0;
     for (const entry of entries) {
       if (nn > n) {
         break;
       }
-      t.is(entry[1], ct.getValue(entry[0]));
-      if (entry[1] != ct.getValue(entry[0])) {
-        console.log(`? nn=${nn}  expected=${entry}    retrieved=${ct.getValue(entry[0])}`);
-        throw new Error("failed");
-      }
+      isValueEqual(t, entry[1], ct.getValue(entry[0]));
+      // if (entry[1] != ct.getValue(entry[0])) {
+      //   console.log(`? nn=${nn}  expected=${entry}    retrieved=${ct.getValue(entry[0])}`);
+      //   throw new Error("failed");
+      // }
       nn++;
     }
     n++;
@@ -244,6 +249,5 @@ test.serial("CuckooTable speed", (t) => {
   // ct.setEntry([1, 10, 3, 4], 1);
 
   // ct.setEntry([1, 34, 3, 4], 1);
-
-  t.is(true, true);
+  t.true(true);
 });

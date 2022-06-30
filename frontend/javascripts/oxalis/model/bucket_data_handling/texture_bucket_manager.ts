@@ -20,6 +20,7 @@ import type { Vector3, Vector4, Vector5 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";
+import { CuckooTable } from "./cuckoo_table";
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
 // setActiveBuckets can be called with an array of buckets, which will be

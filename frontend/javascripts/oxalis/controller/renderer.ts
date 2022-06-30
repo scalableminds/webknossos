@@ -13,15 +13,16 @@ function getRenderer() {
   const renderCanvasElement = document.getElementById("render-canvas");
   renderer =
     renderCanvasElement != null
-      ? new THREE.WebGLRenderer({
+      ? new THREE.WebGL1Renderer({
           canvas: renderCanvasElement,
-          context: renderCanvasElement.getContext("webgl1"),
           // This prevents flickering when rendering to a buffer instead of the canvas
           preserveDrawingBuffer: true,
           antialias: true,
         })
       : {};
-  renderer.extensions.get("EXT_color_buffer_float");
+  // renderer.extensions.get("EXT_color_buffer_float");
+
+  console.log("THREE.REVISION", THREE.REVISION);
 
   return renderer;
 }

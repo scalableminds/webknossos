@@ -31,10 +31,12 @@ import { CuckooTable } from "./cuckoo_table";
 // A bucket is considered "committed" if it is indeed in the data texture.
 // Active buckets will be pushed into a writerQueue which is processed by
 // writing buckets to the data texture (i.e., "committing the buckets").
-// At the moment, we only store one float f per bucket.
-// If f >= 0, f denotes the index in the data texture where the bucket is stored.
-// If f == -1, the bucket is not yet committed
-// If f == -2, the bucket is not supposed to be rendered. Out of bounds.
+// At the moment, we store two floats per bucket.
+// The first value f denotes the following:
+//   If f >= 0, f denotes the index in the data texture where the bucket is stored.
+//   If f == -1, the bucket is not yet committed
+//   If f == -2, the bucket is not supposed to be rendered. Out of bounds.
+// The second value v denotes the magnification value of the addressed bucket.
 export const channelCountForLookupBuffer = 2;
 
 function getSomeValue<T>(set: Set<T>): T {

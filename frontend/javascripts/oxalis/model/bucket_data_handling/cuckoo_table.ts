@@ -9,7 +9,7 @@ export class CuckooTable {
   table!: Float32Array;
   seeds!: number[];
 
-  setEntryCount: number = 0;
+  setCount: number = 0;
 
   constructor(requestedCapacity: number) {
     this.entryCapacity = requestedCapacity * 4;
@@ -32,9 +32,9 @@ export class CuckooTable {
     this.table.fill(-1);
   }
 
-  setEntry(pendingKey: Vector4, pendingValue: Vector2, rehashAttempt: number = 0) {
+  set(pendingKey: Vector4, pendingValue: Vector2, rehashAttempt: number = 0) {
     if (rehashAttempt == 0) {
-      this.setEntryCount++;
+      this.setCount++;
     }
     let displacedEntry;
     let currentAddress;
@@ -44,7 +44,7 @@ export class CuckooTable {
     const REHASH_THRESHOLD = 100;
     if (rehashAttempt >= REHASH_THRESHOLD) {
       throw new Error(
-        `Cannot rehash, since this is already the ${rehashAttempt}th attempt. setEntry was called ${this.setEntryCount}th times by the user.`,
+        `Cannot rehash, since this is already the ${rehashAttempt}th attempt. set was called ${this.setCount}th times by the user.`,
       );
     }
 
@@ -67,7 +67,7 @@ export class CuckooTable {
         (seedIndex + Math.floor(Math.random() * (this.seeds.length - 1)) + 1) % this.seeds.length;
     }
     this.rehash(rehashAttempt + 1);
-    this.setEntry(pendingKey, pendingValue, rehashAttempt + 1);
+    this.set(pendingKey, pendingValue, rehashAttempt + 1);
   }
 
   private rehash(rehashAttempt: number): void {
@@ -91,11 +91,11 @@ export class CuckooTable {
         oldTable[offset + 3],
       ];
       const value: Vector2 = [oldTable[offset + 4], oldTable[offset + 5]];
-      this.setEntry(key, value, rehashAttempt);
+      this.set(key, value, rehashAttempt);
     }
   }
 
-  getValue(key: Vector4): Vector2 {
+  get(key: Vector4): Vector2 {
     for (const seed of this.seeds) {
       const hashedAddress = this._hashKeyToAddress(seed, key);
 

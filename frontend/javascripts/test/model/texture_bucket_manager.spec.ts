@@ -179,13 +179,13 @@ test.serial("CuckooTable", (t) => {
   for (const entry of entries) {
     // console.log(`! write n=${n}   entry=${entry}`);
 
-    ct.setEntry(entry[0], entry[1]);
-    const readValue = ct.getValue(entry[0]);
+    ct.set(entry[0], entry[1]);
+    const readValue = ct.get(entry[0]);
     isValueEqual(t, entry[1], readValue);
     // if (entry[1][0] != readValue[0]) {
     //   console.log("key:", entry[0]);
     //   console.log("value:", entry[1]);
-    //   console.log("retrieved value: ", ct.getValue(entry[0]));
+    //   console.log("retrieved value: ", ct.get(entry[0]));
     //   throw new Error("failed");
     // }
     let nn = 0;
@@ -193,9 +193,9 @@ test.serial("CuckooTable", (t) => {
       if (nn > n) {
         break;
       }
-      isValueEqual(t, entry[1], ct.getValue(entry[0]));
-      // if (entry[1] != ct.getValue(entry[0])) {
-      //   console.log(`? nn=${nn}  expected=${entry}    retrieved=${ct.getValue(entry[0])}`);
+      isValueEqual(t, entry[1], ct.get(entry[0]));
+      // if (entry[1] != ct.get(entry[0])) {
+      //   console.log(`? nn=${nn}  expected=${entry}    retrieved=${ct.get(entry[0])}`);
       //   throw new Error("failed");
       // }
       nn++;
@@ -203,15 +203,15 @@ test.serial("CuckooTable", (t) => {
     n++;
   }
 
-  // ct.setEntry([1, 10, 3, 4], 1337);
-  // console.log(ct.getValue([1, 10, 3, 4]));
-  // ct.setEntry([1, 10, 3, 4], 1336);
-  // console.log(ct.getValue([1, 10, 3, 4]));
-  // ct.setEntry([1, 10, 2, 4], 1);
-  // ct.getValue([1, 10, 2, 4]);
-  // ct.setEntry([1, 10, 3, 4], 1);
+  // ct.set([1, 10, 3, 4], 1337);
+  // console.log(ct.get([1, 10, 3, 4]));
+  // ct.set([1, 10, 3, 4], 1336);
+  // console.log(ct.get([1, 10, 3, 4]));
+  // ct.set([1, 10, 2, 4], 1);
+  // ct.get([1, 10, 2, 4]);
+  // ct.set([1, 10, 3, 4], 1);
 
-  // ct.setEntry([1, 34, 3, 4], 1);
+  // ct.set([1, 34, 3, 4], 1);
   console.timeEnd("simple");
 });
 
@@ -230,7 +230,7 @@ test.serial("CuckooTable speed", (t) => {
     const entries = hashSets[idx];
     for (const entry of entries) {
       const then = performance.now();
-      ct.setEntry(entry[0], entry[1]);
+      ct.set(entry[0], entry[1]);
       const now = performance.now();
       durations.push(now - then);
     }
@@ -240,14 +240,14 @@ test.serial("CuckooTable speed", (t) => {
   console.log("_.max(durations)", _.max(durations));
   console.log("_.mean(durations)", _.mean(durations));
 
-  // ct.setEntry([1, 10, 3, 4], 1337);
-  // console.log(ct.getValue([1, 10, 3, 4]));
-  // ct.setEntry([1, 10, 3, 4], 1336);
-  // console.log(ct.getValue([1, 10, 3, 4]));
-  // ct.setEntry([1, 10, 2, 4], 1);
-  // ct.getValue([1, 10, 2, 4]);
-  // ct.setEntry([1, 10, 3, 4], 1);
+  // ct.set([1, 10, 3, 4], 1337);
+  // console.log(ct.get([1, 10, 3, 4]));
+  // ct.set([1, 10, 3, 4], 1336);
+  // console.log(ct.get([1, 10, 3, 4]));
+  // ct.set([1, 10, 2, 4], 1);
+  // ct.get([1, 10, 2, 4]);
+  // ct.set([1, 10, 3, 4], 1);
 
-  // ct.setEntry([1, 34, 3, 4], 1);
+  // ct.set([1, 34, 3, 4], 1);
   t.true(true);
 });

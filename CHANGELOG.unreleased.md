@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/22.07.0...HEAD)
 
 ### Added
+- Added optional mappingName parameter to `requestRawCuboid` datastore route, which allows to directly apply a specified mapping in the backend. [#6311](https://github.com/scalableminds/webknossos/pull/6311)
 
 ### Changed
 

@@ -106,7 +106,8 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "Target-mag depth of the bounding box", required = true) depth: Int,
       @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: Option[String],
       resolution: Option[Int],
-      @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
+      @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean,
+      @ApiParam(value = "If set, apply set mapping name") mappingName: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
@@ -123,7 +124,7 @@ class BinaryDataController @Inject()(
           width,
           height,
           depth,
-          DataServiceRequestSettings(halfByte = halfByte)
+          DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
         (data, indices) <- requestData(dataSource, dataLayer, request)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)

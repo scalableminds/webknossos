@@ -21,6 +21,8 @@ function getRenderer() {
           antialias: true,
         })
       : {};
+  renderer.extensions.get("EXT_color_buffer_float");
+
   return renderer;
 }
 

@@ -63,8 +63,7 @@ class BinaryDataController @Inject()(
       dataLayerName: String
   ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      // TODO how to handle List
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 30 seconds) {
         val t = System.currentTimeMillis()
         for {

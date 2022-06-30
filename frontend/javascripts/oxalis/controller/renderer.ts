@@ -15,6 +15,7 @@ function getRenderer() {
     renderCanvasElement != null
       ? new THREE.WebGLRenderer({
           canvas: renderCanvasElement,
+          context: renderCanvasElement.getContext("webgl1"),
           // This prevents flickering when rendering to a buffer instead of the canvas
           preserveDrawingBuffer: true,
           antialias: true,

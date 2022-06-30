@@ -4,10 +4,13 @@ const ELEMENTS_PER_ENTRY = 6;
 
 type Entry = [Vector4, Vector2];
 
+export type SeedSubscriberFn = (seeds: number[]) => void;
+
 export class CuckooTable {
   entryCapacity: number;
   table!: Float32Array;
   seeds!: number[];
+  seedSubscribers: Array<SeedSubscriberFn> = [];
 
   setCount: number = 0;
 
@@ -26,6 +29,11 @@ export class CuckooTable {
       Math.floor(32768 * Math.random()),
       Math.floor(32768 * Math.random()),
     ];
+    this.seedSubscribers.forEach((fn) => fn(this.seeds));
+  }
+
+  subscribeToSeeds(fn: SeedSubscriberFn): void {
+    this.seedSubscribers.push(fn);
   }
 
   clearAll() {
@@ -42,6 +50,9 @@ export class CuckooTable {
 
     const ITERATION_THRESHOLD = 40;
     const REHASH_THRESHOLD = 100;
+    if (rehashAttempt > 5) {
+      console.log("rehashing 5 times in a row.");
+    }
     if (rehashAttempt >= REHASH_THRESHOLD) {
       throw new Error(
         `Cannot rehash, since this is already the ${rehashAttempt}th attempt. set was called ${this.setCount}th times by the user.`,

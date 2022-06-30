@@ -39,6 +39,15 @@ export const getRelativeCoords: ShaderModule = {
       vec3 coords = transDim(relativeCoords);
       return coords;
     }
+
+    // vec3 getAbsoluteCoords(vec3 worldCoordUVW, float usedZoomStep) {
+    //   vec3 resolution = getResolution(usedZoomStep);
+    //   vec3 resolutionUVW = transDim(resolution);
+    //   vec3 relativeCoords = worldCoordUVW / resolutionUVW;
+
+    //   vec3 coords = transDim(relativeCoords);
+    //   return coords;
+    // }
   `,
 };
 export const getWorldCoordUVW: ShaderModule = {
@@ -48,7 +57,7 @@ export const getWorldCoordUVW: ShaderModule = {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
 
       if (isFlightMode()) {
-        vec4 modelCoords = inverse(savedModelMatrix) * worldCoord;
+        vec4 modelCoords = inverseMatrix(savedModelMatrix) * worldCoord;
         float sphericalRadius = sphericalCapRadius;
 
         vec4 centerVertex = vec4(0.0, 0.0, -sphericalRadius, 0.0);

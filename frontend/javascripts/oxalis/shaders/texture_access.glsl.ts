@@ -25,12 +25,12 @@ export const linearizeVec3ToIndexWithMod: ShaderModule = {
 };
 export const getRgbaAtIndex: ShaderModule = {
   code: `
-    vec4 getRgbaAtIndex(sampler2D texture, float textureWidth, float idx) {
+    vec4 getRgbaAtIndex(sampler2D dtexture, float textureWidth, float idx) {
       float finalPosX = mod(idx, textureWidth);
       float finalPosY = div(idx, textureWidth);
 
       return texture2D(
-          texture,
+          dtexture,
           vec2(
             (floor(finalPosX) + 0.5) / textureWidth,
             (floor(finalPosY) + 0.5) / textureWidth
@@ -41,9 +41,9 @@ export const getRgbaAtIndex: ShaderModule = {
 };
 export const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    vec4 getRgbaAtXYIndex(sampler2D texture, float textureWidth, float x, float y) {
+    vec4 getRgbaAtXYIndex(sampler2D dtexture, float textureWidth, float x, float y) {
       return texture2D(
-          texture,
+          dtexture,
           vec2(
             (floor(x) + 0.5) / textureWidth,
             (floor(y) + 0.5) / textureWidth
@@ -101,6 +101,16 @@ export const getColorForCoords: ShaderModule = {
     getResolutionFactors,
   ],
   code: `
+    // highp uint hashCombine(highp uint state, highp uint value) {
+    //   value *= 0xcc9e2d51u;
+    //   value = (value << 15u) | (value >> 17u);
+    //   value *= 0x1b873593u;
+    //   state ^= value;
+    //   state = (state << 13u) | (state >> 19u);
+    //   state = (state * 5u) + 0xe6546b64u;
+    //   return state;
+    // }
+
     vec4 getColorForCoords(
       sampler2D lookUpTexture,
       float layerIndex,
@@ -113,7 +123,10 @@ export const getColorForCoords: ShaderModule = {
       // is reserved for missing buckets.
 
       vec3 coords = floor(getRelativeCoords(worldPositionUVW, zoomStep));
+      // vec3 absoluteCoords = floor(getAbsoluteCoords(worldPositionUVW, zoomStep));
+
       vec3 relativeBucketPosition = div(coords, bucketWidth);
+      // vec3 absoluteBucketPosition = div(absoluteCoords, bucketWidth);
       vec3 offsetInBucket = mod(coords, bucketWidth);
 
       if (relativeBucketPosition.x > addressSpaceDimensions.x ||
@@ -136,6 +149,26 @@ export const getColorForCoords: ShaderModule = {
         l_texture_width,
         bucketIdx
       ).ra;
+
+
+      // float h0 = hashCombine(<%= name %>_seed0, absoluteBucketPosition.x)
+      // h0 = hashCombine(h0, absoluteBucketPosition.y)
+      // h0 = hashCombine(h0, absoluteBucketPosition.z)
+
+      // vec2 bucketAddressWithZoomStep = getRgbaAtIndex(
+      //   lookUpTexture,
+      //   l_texture_width,
+      //   h0
+      // ).ra;
+
+
+
+
+
+
+
+
+
 
       float bucketAddress = bucketAddressWithZoomStep.x;
       float renderedZoomStep = bucketAddressWithZoomStep.y;

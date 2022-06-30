@@ -219,15 +219,22 @@ test.serial("CuckooTable speed", (t) => {
 
   console.time("many runs");
 
+  const durations = [];
   for (let idx = 0; idx < RUNS; idx++) {
     const ct = cts[idx];
     // console.log("******************************************************", idx);
     const entries = hashSets[idx];
     for (const entry of entries) {
+      const then = performance.now();
       ct.setEntry(entry[0], entry[1]);
+      const now = performance.now();
+      durations.push(now - then);
     }
   }
   console.timeEnd("many runs");
+  console.log("durations", _.reverse(durations.sort((a, b) => a - b)));
+  console.log("_.max(durations)", _.max(durations));
+  console.log("_.mean(durations)", _.mean(durations));
 
   // ct.setEntry([1, 10, 3, 4], 1337);
   // console.log(ct.getValue([1, 10, 3, 4]));

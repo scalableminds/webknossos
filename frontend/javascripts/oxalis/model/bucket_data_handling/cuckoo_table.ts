@@ -6,15 +6,26 @@ type Entry = [Vector4, number];
 
 export class CuckooTable {
   entryCapacity: number;
-  table: Uint32Array;
-
-  seeds: number[];
+  table!: Float32Array;
+  seeds!: number[];
 
   setEntryCount: number = 0;
 
   constructor(requestedCapacity: number) {
     this.entryCapacity = requestedCapacity * 4;
     this.initialize();
+  }
+
+  private initialize() {
+    this.table = new Float32Array(ELEMENTS_PER_ENTRY * this.entryCapacity);
+
+    // The chance of colliding seeds is lower than 9.32e-10 which is why
+    // we ignore this case (a rehash will happen automatically).
+    this.seeds = [
+      Math.floor(32768 * Math.random()),
+      Math.floor(32768 * Math.random()),
+      Math.floor(32768 * Math.random()),
+    ];
   }
 
   setEntry(pendingKey: Vector4, pendingValue: number, rehashAttempt: number = 0) {
@@ -25,7 +36,7 @@ export class CuckooTable {
     let currentAddress;
     let iterationCounter = 0;
 
-    const ITERATION_THRESHOLD = 10;
+    const ITERATION_THRESHOLD = 40;
     const REHASH_THRESHOLD = 100;
     if (rehashAttempt >= REHASH_THRESHOLD) {
       throw new Error(
@@ -78,20 +89,6 @@ export class CuckooTable {
       const value = oldTable[offset + 4];
       this.setEntry(key, value, rehashAttempt);
     }
-  }
-
-  private initialize() {
-    this.table = new Uint32Array(ELEMENTS_PER_ENTRY * this.entryCapacity);
-
-    this.seeds = [
-      Math.floor(32768 * Math.random()),
-      Math.floor(32768 * Math.random()),
-      Math.floor(32768 * Math.random()),
-    ];
-    // todo:
-    // if (this.seed2 == this.seed1) {
-    //   this.initialize();
-    // }
   }
 
   getValue(key: Vector4): number {

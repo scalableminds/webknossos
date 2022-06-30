@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added optional mappingName parameter to `requestRawCuboid` datastore route, which allows to directly apply a specified mapping in the backend. [#6311](https://github.com/scalableminds/webknossos/pull/6311)
+- Added option to use `X-Auth-Token` header instead of query parameter in every datastore and tracingstore route. [#6312](https://github.com/scalableminds/webknossos/pull/6312)
 
 ### Changed
 

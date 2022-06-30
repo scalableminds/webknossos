@@ -101,15 +101,13 @@ Expects:
                            required = true,
                            dataTypeClass = classOf[ReserveUploadInformation],
                            paramType = "body")))
-  def reserveUpload(token: String): Action[ReserveUploadInformation] =
+  def reserveUpload(token: Option[String]): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
-      // TODO token is not optional and urlOrHeaderToken always takes token from URL if provided
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources,
-                                        urlOrHeaderToken(Some(token), request)) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
-            (remoteWebKnossosClient.validateDataSourceUpload(request.body, Some(token)) ?~> "dataSet.upload.validation.failed")
+            (remoteWebKnossosClient.validateDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataSet.upload.validation.failed")
               .flatMap(_ => uploadService.reserveUpload(request.body))
           } else Fox.successful(())
         } yield Ok
@@ -138,7 +136,7 @@ Expects:
       new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
-  def uploadChunk(token: String): Action[MultipartFormData[Files.TemporaryFile]] =
+  def uploadChunk(token: Option[String]): Action[MultipartFormData[Files.TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       val uploadForm = Form(
         tuple(
@@ -148,9 +146,7 @@ Expects:
           "resumableIdentifier" -> nonEmptyText
         )).fill((-1, -1, -1, ""))
 
-      // TODO same as above... non optional token
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources,
-                                        urlOrHeaderToken(Some(token), request)) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
         uploadForm
           .bindFromRequest(request.body.dataParts)
           .fold(
@@ -199,15 +195,14 @@ Expects:
       new ApiResponse(code = 200, message = "Empty body, upload was successfully finished"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
-  def finishUpload(token: String): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
+  def finishUpload(token: Option[String]): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
     implicit request =>
       log() {
-        // TODO same as above, non optional token
-        accessTokenService.validateAccess(UserAccessRequest.administrateDataSources,
-                                          urlOrHeaderToken(Some(token), request)) {
+        accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
           for {
             (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-            _ <- remoteWebKnossosClient.reportUpload(dataSourceId, dataSetSizeBytes, token) ?~> "reportUpload.failed"
+            _ <- remoteWebKnossosClient
+              .reportUpload(dataSourceId, dataSetSizeBytes, urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
           } yield Ok
         }
       }
@@ -234,16 +229,15 @@ Expects:
       new ApiResponse(code = 200, message = "Empty body, upload was cancelled"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
-  def cancelUpload(token: String): Action[CancelUploadInformation] =
+  def cancelUpload(token: Option[String]): Action[CancelUploadInformation] =
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
       val dataSourceIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
         case false => Fox.failure("dataSet.upload.validation.failed")
         case true  => uploadService.getDataSourceIdByUploadId(request.body.uploadId)
       }
       dataSourceIdFox.flatMap { dataSourceId =>
-        // TODO non optional String
         accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId),
-                                          urlOrHeaderToken(Some(token), request)) {
+                                          urlOrHeaderToken(token, request)) {
           for {
             _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId) ?~> "dataSet.delete.webknossos.failed"
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."

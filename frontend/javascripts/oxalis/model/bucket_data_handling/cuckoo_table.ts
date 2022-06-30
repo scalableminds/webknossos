@@ -17,7 +17,7 @@ export class CuckooTable {
   }
 
   private initialize() {
-    this.table = new Float32Array(ELEMENTS_PER_ENTRY * this.entryCapacity);
+    this.table = new Float32Array(ELEMENTS_PER_ENTRY * this.entryCapacity).fill(-1);
 
     // The chance of colliding seeds is lower than 9.32e-10 which is why
     // we ignore this case (a rehash will happen automatically).
@@ -123,33 +123,16 @@ export class CuckooTable {
   private canDisplacedEntryBeIgnored(displacedKey: Vector4, newKey: Vector4): boolean {
     return (
       // Either, the slot is empty...
-      // todo: What about 0, 0, 0, 0 as a key??
-      (displacedKey[0] === 0 &&
-        displacedKey[1] === 0 &&
-        displacedKey[2] === 0 &&
-        displacedKey[3] === 0) ||
+      // -1, -1, -1, -1 is not allowed as a key
+      (displacedKey[0] === -1 &&
+        displacedKey[1] === -1 &&
+        displacedKey[2] === -1 &&
+        displacedKey[3] === -1) ||
       // or the slot already refers to the key
       (displacedKey[0] === newKey[0] &&
         displacedKey[1] === newKey[1] &&
         displacedKey[2] === newKey[2] &&
         displacedKey[3] === newKey[3])
-    );
-  }
-
-  isAddressFreeForKey(key: Vector4, hashedAddress: number): boolean {
-    const offset = hashedAddress * ELEMENTS_PER_ENTRY;
-    return (
-      // Either, the slot is empty...
-      // todo: What about 0, 0, 0, 0 as a key??
-      (this.table[offset] === 0 &&
-        this.table[offset + 1] === 0 &&
-        this.table[offset + 2] === 0 &&
-        this.table[offset + 3] === 0) ||
-      // or the slot already refers to the key
-      (this.table[offset] === key[0] &&
-        this.table[offset + 1] === key[1] &&
-        this.table[offset + 2] === key[2] &&
-        this.table[offset + 3] === key[3])
     );
   }
 
@@ -199,8 +182,8 @@ export class CuckooTable {
     return displacedEntry;
   }
 
-  // MurmurHash excluding the final mixing steps.
   _hashCombine(state: number, value: number) {
+    // Based on Murmur3_32
     const k1 = 0xcc9e2d51;
     const k2 = 0x1b873593;
 

@@ -140,13 +140,12 @@ const expectBucket = (
 function generateRandomEntry(): [Vector4, number] {
   return [
     [
-      // todo: also use 0 here
-      Math.floor(1 + Math.random() * 1000),
-      Math.floor(1 + Math.random() * 1000),
-      Math.floor(1 + Math.random() * 1000),
-      Math.floor(1 + Math.random() * 1000),
+      Math.floor(Math.random() * 1000),
+      Math.floor(Math.random() * 1000),
+      Math.floor(Math.random() * 1000),
+      Math.floor(Math.random() * 1000),
     ],
-    Math.floor(1 + Math.random() * 1000),
+    Math.floor(Math.random() * 1000),
   ];
 }
 

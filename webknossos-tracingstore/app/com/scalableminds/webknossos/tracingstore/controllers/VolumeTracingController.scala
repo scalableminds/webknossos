@@ -2,10 +2,9 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
-
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -34,6 +33,7 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
+import net.liftweb.common.{Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -389,7 +389,7 @@ class VolumeTracingController @Inject()(
                                                             magParsed,
                                                             Vec3Int(x, y, z),
                                                             cubeSize,
-                                                            combinedToken) ?~> "Getting fallback layer failed" ~> 400
+                                                            combinedToken) ?~> "Getting fallback layer failed" ~> 404
           } yield Ok(dataWithFallback).withHeaders()
         }
       }
@@ -418,12 +418,14 @@ class VolumeTracingController @Inject()(
       organizationName match {
         case Some(orgName) =>
           for {
-            // ignoring missing bucket indices, if data is empty overall response is empty anyways
-            (fallbackData, _) <- remoteDataStoreClient.getData(
+            (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(
               RemoteFallbackLayer(orgName, dataSetName, dataLayerName, tracing.elementClass),
               List(request),
               urlToken)
-          } yield fallbackData
+
+            response <- if (fallbackMissingBucketIndices.isEmpty) Full(fallbackData)
+            else Failure("No data at coordinations in fallback layer")
+          } yield response
         case None => Fox.failure("Organization Name is not set (Consider creating a new annotation).")
       }
     }

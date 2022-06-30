@@ -63,6 +63,7 @@ class BinaryDataController @Inject()(
       dataLayerName: String
   ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      // TODO how to handle List
                                       token) {
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 30 seconds) {
         val t = System.currentTimeMillis()
@@ -109,7 +110,7 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
@@ -144,7 +145,7 @@ class BinaryDataController @Inject()(
                         z: Int,
                         cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
@@ -175,7 +176,7 @@ class BinaryDataController @Inject()(
                     centerZ: Option[Int],
                     zoom: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
@@ -212,7 +213,7 @@ class BinaryDataController @Inject()(
       mappingName: String
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
@@ -234,7 +235,7 @@ class BinaryDataController @Inject()(
                         dataLayerName: String): Action[WebKnossosIsosurfaceRequest] =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
@@ -276,7 +277,7 @@ class BinaryDataController @Inject()(
                       dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
@@ -296,7 +297,7 @@ class BinaryDataController @Inject()(
                dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
@@ -316,7 +317,7 @@ class BinaryDataController @Inject()(
                 dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,

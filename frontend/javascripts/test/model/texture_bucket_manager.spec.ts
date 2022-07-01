@@ -166,8 +166,9 @@ function generateRandomEntrySet() {
   return entries;
 }
 
-function isValueEqual(t, val1: Vector2, val2: Vector2) {
-  return t.true(val1[0] === val2[0]) && t.true(val1[1] === val2[1]);
+function isValueEqual(t: ExecutionContext<any>, val1: Vector2, val2: Vector2) {
+  t.true(val1[0] === val2[0]);
+  t.true(val1[1] === val2[1]);
 }
 
 test.serial("CuckooTable", (t) => {

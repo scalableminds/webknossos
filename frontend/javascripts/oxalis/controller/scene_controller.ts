@@ -39,6 +39,7 @@ import constants, {
 } from "oxalis/constants";
 import window from "libs/window";
 import { setSceneController } from "./scene_controller_provider";
+import { BufferGeometryUtils } from "three";
 const CUBE_COLOR = 0x999999;
 
 class SceneController {
@@ -191,11 +192,7 @@ class SceneController {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
-  constructSceneMesh(
-    cellId: number,
-    geometry: THREE.Geometry | THREE.BufferGeometry,
-    passive: boolean,
-  ) {
+  constructSceneMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
     const [hue] = jsConvertCellIdToHSLA(cellId);
     const color = new THREE.Color().setHSL(hue, 0.75, 0.05);
     const meshMaterial = new THREE.MeshLambertMaterial({
@@ -226,7 +223,7 @@ class SceneController {
     return mesh;
   }
 
-  addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
+  addSTL(meshMetaData: MeshMetaData, geometry: THREE.BufferGeometry): void {
     const { id, position } = meshMetaData;
 
     if (this.stlMeshes[id] != null) {
@@ -235,7 +232,7 @@ class SceneController {
     }
 
     geometry.computeVertexNormals();
-    geometry.computeFaceNormals();
+    // geometry.computeFaceNormals();
 
     const meshNumber = _.size(this.stlMeshes);
 
@@ -255,23 +252,19 @@ class SceneController {
   ): void {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-    // convert to normal (unbuffered) geometry to merge vertices
-    const geometry = new THREE.Geometry().fromBufferGeometry(bufferGeometry);
 
     // @ts-ignore
     if (window.__isosurfaceMergeVertices) {
-      geometry.mergeVertices();
+      // @ts-ignore mergeVertices
+      bufferGeometry = BufferGeometryUtils.mergeVertices(bufferGeometry);
     }
 
-    geometry.computeVertexNormals();
-    geometry.computeFaceNormals();
-    // and back to a BufferGeometry
-    bufferGeometry = new THREE.BufferGeometry().fromGeometry(geometry);
+    bufferGeometry.computeVertexNormals();
     this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId, passive);
   }
 
   addIsosurfaceFromGeometry(
-    geometry: THREE.Geometry | THREE.BufferGeometry,
+    geometry: THREE.BufferGeometry,
     segmentationId: number,
     passive: boolean = false,
   ): void {

@@ -41,12 +41,15 @@ class Cube {
     this.initialized = false;
     this.visible = true;
     this.isHighlighted = properties.isHighlighted;
-    this.cube = new THREE.Line(new THREE.Geometry(), this.getLineMaterial());
+    this.cube = new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial());
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
     this.crossSections = {};
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.crossSections[planeId] = new THREE.Line(new THREE.Geometry(), this.getLineMaterial());
+      this.crossSections[planeId] = new THREE.Line(
+        new THREE.BufferGeometry(),
+        this.getLineMaterial(),
+      );
     }
 
     if (this.min != null && this.max != null) {
@@ -78,11 +81,9 @@ class Cube {
     // box, we subtract Number.EPSILON.
     max = [max[0] - Number.EPSILON, max[1] - Number.EPSILON, max[2] - Number.EPSILON];
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'x' implicitly has an 'any' type.
-    const vec = (x, y, z) => new THREE.Vector3(x, y, z);
+    const vec = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
-    this.cube.geometry.vertices = [
+    this.cube.geometry.setFromPoints([
       vec(min[0], min[1], min[2]),
       vec(min[0], max[1], min[2]),
       vec(max[0], max[1], min[2]),
@@ -99,7 +100,9 @@ class Cube {
       vec(min[0], min[1], max[2]),
       vec(min[0], max[1], max[2]),
       vec(min[0], max[1], min[2]),
-    ];
+    ]);
+
+    // todo: clarify what the cross sections are and fix them probably?
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
     this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [
       vec(min[0], min[1], 0),

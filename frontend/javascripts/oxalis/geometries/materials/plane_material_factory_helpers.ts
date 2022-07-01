@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 export const channelCountToFormat = {
-  "1": THREE.LuminanceFormat,
-  "2": THREE.LuminanceAlphaFormat,
+  "1": THREE.RedFormat,
+  "2": THREE.RGFormat,
   "3": THREE.RGBFormat,
   "4": THREE.RGBAFormat,
 };

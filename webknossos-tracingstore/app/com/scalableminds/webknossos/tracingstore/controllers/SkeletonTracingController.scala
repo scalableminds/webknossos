@@ -36,7 +36,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
   def mergedFromContents(token: Option[String], persist: Boolean): Action[SkeletonTracings] =
     Action.async(validateProto[SkeletonTracings]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val tracings: List[Option[SkeletonTracing]] = request.body
           val mergedTracing = tracingService.merge(tracings.flatten)
           val processedTracing = tracingService.remapTooLargeTreeIds(mergedTracing)
@@ -56,7 +56,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
                 boundingBox: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
@@ -76,7 +76,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
 
   def updateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     log() {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           updateLog <- tracingService.updateActionLog(tracingId)
         } yield {
@@ -89,7 +89,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
   def updateActionStatistics(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
     implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             statistics <- tracingService.updateActionStatistics(tracingId)
           } yield {

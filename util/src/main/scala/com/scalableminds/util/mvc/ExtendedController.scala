@@ -1,7 +1,6 @@
 package com.scalableminds.util.mvc
 
 import java.io.FileInputStream
-
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -212,7 +211,7 @@ trait ValidationHelpers {
 }
 
 trait RequestTokenHelper {
-  protected def urlOrHeaderToken(token: Option[String], request: Request[AnyContent]): Option[String] =
+  protected def urlOrHeaderToken(token: Option[String], request: Request[Any]): Option[String] =
     token.orElse(request.headers.get("X-Auth-Token"))
 }
 

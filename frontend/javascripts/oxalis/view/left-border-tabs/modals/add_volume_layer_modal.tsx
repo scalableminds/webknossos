@@ -58,9 +58,9 @@ export function validateReadableLayerName(
   nameNotToCount?: string,
 ): ValidationResult {
   if (nameNotToCount) {
-    // If the given nameNotToCount is already once within the allReadableLayerNames we need to remove this name once from the allReadableLayerNames.
+    // nameNotToCount needs to be removed once if it is included in allReadableLayerNames.
     // This is needed in case of saving an existing volume layer's name when the name was not modified.
-    // In this scenario nameNotToCount should be the previous name the volume layer which will then be remove once from the allReadableLayerNames.
+    // In this scenario nameNotToCount should be the previous name of the volume layer which will then be removed once from the allReadableLayerNames.
     // Thus there is only a duplication of the given nameNotToCount if an additional other layer already has nameNotToCount as a name
     // and the readableLayerName is equal to the name given by nameNotToCount.
     const index = allReadableLayerNames.indexOf(nameNotToCount);

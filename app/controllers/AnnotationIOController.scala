@@ -321,21 +321,15 @@ Expects:
   @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownload")
   @ApiResponses(
     Array(
-      new ApiResponse(
-        code = 200,
-        message =
-          "NML or Zip file containing skeleton and/or volume data of this annotation."
-      ),
+      new ApiResponse(code = 200,
+                      message = "NML or Zip file containing skeleton and/or volume data of this annotation."),
       new ApiResponse(code = 400, message = badRequestLabel)
     ))
-  def downloadWithoutType(
-      @ApiParam(
-        value =
-          "Id of the stored annotation")
-      id: String,
-      skeletonVersion: Option[Long],
-      volumeVersion: Option[Long],
-      skipVolumeData: Option[Boolean]): Action[AnyContent] =
+  def downloadWithoutType(@ApiParam(value = "Id of the stored annotation")
+                          id: String,
+                          skeletonVersion: Option[Long],
+                          volumeVersion: Option[Long],
+                          skipVolumeData: Option[Boolean]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity)

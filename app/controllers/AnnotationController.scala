@@ -109,20 +109,18 @@ class AnnotationController @Inject()(
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
           new ApiResponse(code = 400, message = badRequestLabel)))
-  def infoWithoutType(
-      @ApiParam(
-        value =
-          "Id of the stored annotation")
-      id: String,
-      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)", required = true) timestamp: Long)
-    : Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    log() {
-      for {
-        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-        result <- info(annotation.typ.toString, id, timestamp)(request)
-      } yield result
+  def infoWithoutType(@ApiParam(value = "Id of the stored annotation")
+                      id: String,
+                      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)",
+                                required = true) timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async {
+    implicit request =>
+      log() {
+        for {
+          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+          result <- info(annotation.typ.toString, id, timestamp)(request)
+        } yield result
 
-    }
+      }
   }
 
   @ApiOperation(hidden = true, value = "")

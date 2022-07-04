@@ -331,7 +331,7 @@ Expects:
   def downloadWithoutType(
       @ApiParam(
         value =
-          "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
+          "Id of the stored annotation")
       id: String,
       skeletonVersion: Option[Long],
       volumeVersion: Option[Long],

@@ -324,14 +324,14 @@ Expects:
       new ApiResponse(
         code = 200,
         message =
-          "NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip"
+          "NML or Zip file containing skeleton and/or volume data of this annotation."
       ),
       new ApiResponse(code = 400, message = badRequestLabel)
     ))
   def downloadWithoutType(
       @ApiParam(
         value =
-          "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
+          "Id of the stored annotation")
       id: String,
       skeletonVersion: Option[Long],
       volumeVersion: Option[Long],

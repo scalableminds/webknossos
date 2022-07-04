@@ -148,3 +148,5 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
 export default connector(TDViewControls);
+
+// TODO: check whether camera has any items to render!!!

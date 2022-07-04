@@ -100,7 +100,7 @@ function maybeGetActiveNodeFromProps(props: Props) {
 
 class TDController extends React.PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'controls' has no initializer and is not ... Remove this comment to see the full error message
-  controls: typeof TrackballControls;
+  controls: [typeof TrackballControls, typeof TrackballControls];
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'mouseController' has no initializer and ... Remove this comment to see the full error message
   mouseController: InputMouse;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'oldNmPos' has no initializer and is not ... Remove this comment to see the full error message
@@ -139,7 +139,7 @@ class TDController extends React.PureComponent<Props> {
     }
 
     if (this.controls != null) {
-      this.controls.destroy();
+      this.controls.forEach((control) => control.destroy());
     }
   }
 
@@ -159,17 +159,26 @@ class TDController extends React.PureComponent<Props> {
   initTrackballControls(view: HTMLElement): void {
     const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     const { OrthographicCamera, PerspectiveCamera } = this.props.cameras[OrthoViews.TDView];
-    this.controls = new TrackballControls(
-      OrthographicCamera,
-      PerspectiveCamera,
-      view,
-      new THREE.Vector3(...pos),
-      this.onTDCameraChanged,
-    );
-    this.controls.noZoom = true;
-    this.controls.noPan = true;
-    this.controls.staticMoving = true;
-    this.controls.target.set(...pos);
+    this.controls = [
+      new TrackballControls(
+        OrthographicCamera,
+        view,
+        new THREE.Vector3(...pos),
+        this.onTDCameraChanged,
+      ),
+      new TrackballControls(
+        PerspectiveCamera,
+        view,
+        new THREE.Vector3(...pos),
+        this.onTDCameraChanged,
+      ),
+    ];
+    this.controls.forEach((control) => {
+      control.noZoom = true;
+      control.noPan = true;
+      control.staticMoving = true;
+      control.target.set(...pos);
+    });
     // This is necessary, since we instantiated this.controls now. This should be removed
     // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
     this.forceUpdate();
@@ -180,7 +189,7 @@ class TDController extends React.PureComponent<Props> {
       return;
     }
 
-    this.controls.update(true);
+    this.controls.forEach((control) => control.update(true));
   };
 
   getTDViewMouseControls(): Record<string, any> {
@@ -265,8 +274,10 @@ class TDController extends React.PureComponent<Props> {
     const nmPosition = voxelToNm(this.props.scale, position);
 
     if (controls != null) {
-      controls.target.set(...nmPosition);
-      controls.update();
+      this.controls.forEach((control) => {
+        control.target.set(...nmPosition);
+        control.update();
+      });
     }
 
     // The following code is a dirty hack. If someone figures out

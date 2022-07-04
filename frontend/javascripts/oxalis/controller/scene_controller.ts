@@ -96,6 +96,7 @@ class SceneController {
     this.createMeshes();
     this.bindToEvents();
     this.scene = new THREE.Scene();
+    window.sceneController = this;
     // Because the voxel coordinates do not have a cube shape but are distorted,
     // we need to distort the entire scene to provide an illustration that is
     // proportional to the actual size in nm.

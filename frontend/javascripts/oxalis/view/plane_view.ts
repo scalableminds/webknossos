@@ -6,6 +6,7 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import Constants, {
   OrthoViewCameraMap,
@@ -51,13 +52,17 @@ class PlaneView {
   listenTo: (...args: Array<any>) => any;
   cameras: OrthoViewCameraMap;
   throttledPerformIsosurfaceHitTest: (arg0: [number, number]) => THREE.Vector3 | null | undefined;
+  storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  tdViewUseOrthographicCamera: boolean;
 
   running: boolean;
   needsRerender: boolean;
 
   constructor() {
     _.extend(this, BackboneEvents);
-
+    this.storePropertyUnsubscribers = [];
+    this.tdViewUseOrthographicCamera = true;
+    this.bindToEvents();
     this.throttledPerformIsosurfaceHitTest = _.throttle(
       this.performIsosurfaceHitTest,
       ISOSURFACE_HOVER_THROTTLING_DELAY,
@@ -71,7 +76,7 @@ class PlaneView {
       // No need to set any properties, because the cameras controller will deal with that
       const newCamera = isOrthographic
         ? new THREE.OrthographicCamera(0, 0, 0, 0)
-        : new THREE.PerspectiveCamera(0, 0, 0, 0);
+        : new THREE.PerspectiveCamera(45, 1, 50, 1000);
       // This name can be used to retrieve the camera from the scene
       newCamera.name = name;
       scene.add(newCamera);
@@ -150,7 +155,16 @@ class PlaneView {
       };
       renderer.autoClear = true;
       clearCanvas(renderer);
-
+      console.log(
+        "rotation",
+        this.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera].quaternion,
+        this.cameras[OrthoViews.TDView][TDCameras.PerspectiveCamera].quaternion,
+      );
+      console.log(
+        "position",
+        this.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera].position,
+        this.cameras[OrthoViews.TDView][TDCameras.PerspectiveCamera].position,
+      );
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
@@ -158,9 +172,11 @@ class PlaneView {
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
           if (plane === OrthoViews.TDView) {
-            renderer.render(scene, this.cameras[plane][TDCameras.OrthographicCamera]);
-            // TODO: use active camera????
-            // renderer.render(scene, this.cameras[plane][TDCameras.PerspectiveCamera]);
+            if (this.tdViewUseOrthographicCamera) {
+              renderer.render(scene, this.cameras[plane][TDCameras.OrthographicCamera]);
+            } else {
+              renderer.render(scene, this.cameras[plane][TDCameras.PerspectiveCamera]);
+            }
           } else {
             renderer.render(scene, this.cameras[plane]);
           }
@@ -238,6 +254,18 @@ class PlaneView {
     }
   }
 
+  bindToEvents() {
+    this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (storeState) => storeState.userConfiguration.tdViewUseOrthographicCamera,
+        (tdViewUseOrthographicCamera) => {
+          this.tdViewUseOrthographicCamera = tdViewUseOrthographicCamera;
+        },
+        true,
+      ),
+    ];
+  }
+
   draw(): void {
     app.vent.trigger("rerender");
   }
@@ -265,6 +293,7 @@ class PlaneView {
     }
 
     window.removeEventListener("resize", this.resizeThrottled);
+    this.storePropertyUnsubscribers.forEach((unsubscribeFunction) => unsubscribeFunction());
   }
 
   start(): void {

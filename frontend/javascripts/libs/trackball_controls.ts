@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import window, { document } from "libs/window";
-import { AnyCamera, Rect } from "oxalis/constants";
+import { AnyCamera } from "oxalis/constants";
 
 /**
  * The MIT License
@@ -30,20 +30,14 @@ import { AnyCamera, Rect } from "oxalis/constants";
  */
 
 interface ITrackballControls {
-  forBothCameras: (func: (cam: AnyCamera) => void) => void;
   new (
-    orthoCamera: THREE.OrthographicCamera,
-    perspectiveCamera: THREE.PerspectiveCamera,
+    object: AnyCamera,
     domElement: HTMLElement,
     target: THREE.Vector3,
     updateCallback: (args: any) => void,
   ): ITrackballControls;
 
-  orthoCamera: THREE.OrthographicCamera;
-  perspectiveCamera: THREE.PerspectiveCamera;
-  domElement: HTMLElement;
   enabled: boolean;
-  updateCallback: (args: any) => void;
   keyboardEnabled: boolean;
   rotateSpeed: number;
   zoomSpeed: number;
@@ -58,34 +52,15 @@ interface ITrackballControls {
   maxDistance: number;
   keys: number[];
   target: THREE.Vector3;
-  up: THREE.Vector3;
-  position: THREE.Vector3;
-  lastTarget: THREE.Vector3;
-  target0: THREE.Vector3;
-  position0: THREE.Vector3;
-  up0: THREE.Vector3;
-  getScreenBounds: () => Rect;
-  handleEvent: (arg0: Event) => void;
+
   rotateCamera: () => void;
   destroy: () => void;
-  update: (externalUpdate?: boolean, userTriggered?: boolean) => void;
-  getMouseOnScreen: (pageX: number, pageY: number, vector: THREE.Vector2) => THREE.Vector2;
-  getMouseProjectionOnBall: (
-    pageX: number,
-    pageY: number,
-    projection: THREE.Vector3,
-  ) => THREE.Vector3;
-  zoomCamera: () => void;
-  panCamera: () => void;
-  checkDistances: () => void;
-  dispatchEvent(changeEvent: { type: string }): unknown;
-  reset: () => void;
+  update: (args?: any) => void;
 }
 
 const TrackballControls = function (
-  this: ITrackballControls,
-  orthoCamera: THREE.OrthographicCamera,
-  perspectiveCamera: THREE.PerspectiveCamera,
+  this: any,
+  object: THREE.OrthographicCamera,
   domElement: HTMLElement,
   target: THREE.Vector3,
   updateCallback: (args: any) => void,
@@ -101,9 +76,8 @@ const TrackballControls = function (
     TOUCH_ZOOM: 4,
     TOUCH_PAN: 5,
   };
-  this.orthoCamera = orthoCamera;
-  this.perspectiveCamera = perspectiveCamera;
-  this.domElement = domElement;
+  this.object = object;
+  this.domElement = domElement !== undefined ? domElement : document;
   this.updateCallback = updateCallback;
   // API
   this.enabled = true;
@@ -147,8 +121,8 @@ const TrackballControls = function (
 
   // for reset
   this.target0 = this.target.clone();
-  this.position0 = this.orthoCamera.position.clone();
-  this.up0 = this.orthoCamera.up.clone();
+  this.position0 = this.object.position.clone();
+  this.up0 = this.object.up.clone();
   // events
   const changeEvent = {
     type: "change",
@@ -161,10 +135,6 @@ const TrackballControls = function (
   };
 
   // methods
-  this.forBothCameras = function forBothCameras(func: (cam: AnyCamera) => void) {
-    func(this.orthoCamera);
-    func(this.perspectiveCamera);
-  };
   this.getScreenBounds = function getScreenBounds() {
     const clientRect = this.domElement.getBoundingClientRect();
     const d = this.domElement.ownerDocument.documentElement;
@@ -177,9 +147,7 @@ const TrackballControls = function (
   };
 
   this.handleEvent = function handleEvent(event: Event) {
-    // @ts-ignore
     if (typeof this[event.type] === "function") {
-      // @ts-ignore
       this[event.type](event);
     }
   };
@@ -222,10 +190,10 @@ const TrackballControls = function (
         mouseOnBall.z = Math.sqrt(1.0 - length * length);
       }
 
-      _eye.copy(_this.orthoCamera.position).sub(_this.target);
+      _eye.copy(_this.object.position).sub(_this.target);
 
-      projection.copy(_this.orthoCamera.up).setLength(mouseOnBall.y);
-      projection.add(objectUp.copy(_this.orthoCamera.up).cross(_eye).setLength(mouseOnBall.x));
+      projection.copy(_this.object.up).setLength(mouseOnBall.y);
+      projection.add(objectUp.copy(_this.object.up).cross(_eye).setLength(mouseOnBall.x));
       projection.add(_eye.setLength(mouseOnBall.z));
       return projection;
     };
@@ -245,7 +213,8 @@ const TrackballControls = function (
         quaternion.setFromAxisAngle(axis, -angle);
 
         _eye.applyQuaternion(quaternion);
-        this.forBothCameras((camera) => camera.up.applyQuaternion(quaternion));
+
+        _this.object.up.applyQuaternion(quaternion);
 
         _rotateEnd.applyQuaternion(quaternion);
 
@@ -290,11 +259,10 @@ const TrackballControls = function (
 
       if (mouseChange.lengthSq()) {
         mouseChange.multiplyScalar(_eye.length() * _this.panSpeed);
-        this.forBothCameras((camera) => {
-          pan.copy(_eye).cross(camera.up).setLength(mouseChange.x);
-          pan.add(objectUp.copy(camera.up).setLength(mouseChange.y));
-          camera.position.add(pan);
-        });
+        pan.copy(_eye).cross(_this.object.up).setLength(mouseChange.x);
+        pan.add(objectUp.copy(_this.object.up).setLength(mouseChange.y));
+
+        _this.object.position.add(pan);
 
         _this.target.add(pan);
 
@@ -312,21 +280,17 @@ const TrackballControls = function (
   this.checkDistances = () => {
     if (!_this.noZoom || !_this.noPan) {
       if (_eye.lengthSq() > _this.maxDistance * _this.maxDistance) {
-        this.forBothCameras((camera) => {
-          camera.position.addVectors(_this.target, _eye.setLength(_this.maxDistance));
-        });
+        _this.object.position.addVectors(_this.target, _eye.setLength(_this.maxDistance));
       }
 
       if (_eye.lengthSq() < _this.minDistance * _this.minDistance) {
-        this.forBothCameras((camera) => {
-          camera.position.addVectors(_this.target, _eye.setLength(_this.minDistance));
-        });
+        _this.object.position.addVectors(_this.target, _eye.setLength(_this.minDistance));
       }
     }
   };
 
   this.update = (externalUpdate = false, userTriggered = false) => {
-    _eye.subVectors(_this.orthoCamera.position, _this.lastTarget);
+    _eye.subVectors(_this.object.position, _this.lastTarget);
 
     if (!_this.noRotate) {
       _this.rotateCamera();
@@ -339,20 +303,17 @@ const TrackballControls = function (
     if (!_this.noPan) {
       _this.panCamera();
     }
-    this.forBothCameras((camera) => {
-      camera.position.addVectors(_this.target, _eye);
-    });
+
+    _this.object.position.addVectors(_this.target, _eye);
 
     _this.checkDistances();
 
-    this.forBothCameras((camera) => {
-      camera.position.addVectors(_this.target, _eye);
-    });
+    _this.object.lookAt(_this.target);
 
-    if (lastPosition.distanceToSquared(_this.orthoCamera.position) > 0) {
+    if (lastPosition.distanceToSquared(_this.object.position) > 0) {
       _this.dispatchEvent(changeEvent);
 
-      lastPosition.copy(_this.orthoCamera.position);
+      lastPosition.copy(_this.object.position);
     }
 
     _this.lastTarget = _this.target.clone();
@@ -368,18 +329,17 @@ const TrackballControls = function (
 
     _this.target.copy(_this.target0);
 
-    this.forBothCameras((camera) => {
-      camera.position.copy(_this.position0);
+    _this.object.position.copy(_this.position0);
 
-      camera.up.copy(_this.up0);
+    _this.object.up.copy(_this.up0);
 
-      camera.lookAt(_this.target);
-    });
-    _eye.subVectors(_this.orthoCamera.position, _this.target);
+    _eye.subVectors(_this.object.position, _this.target);
+
+    _this.object.lookAt(_this.target);
 
     _this.dispatchEvent(changeEvent);
 
-    lastPosition.copy(_this.orthoCamera.position);
+    lastPosition.copy(_this.object.position);
   };
 
   // listeners
@@ -458,7 +418,7 @@ const TrackballControls = function (
     _this.dispatchEvent(endEvent);
   }
 
-  function mousewheel(event: WheelEvent): void {
+  function mousewheel(event: WheelEvent) {
     if (_this.enabled === false) return;
     event.preventDefault();
     let delta = 0;
@@ -591,8 +551,8 @@ const TrackballControls = function (
       false,
     );
     this.domElement.removeEventListener("mousedown", mousedown, false);
-    this.domElement.removeEventListener("mousewheel", mousewheel as EventListener, false);
-    this.domElement.removeEventListener("DOMMouseScroll", mousewheel as EventListener, false); // firefox
+    this.domElement.removeEventListener("mousewheel", mousewheel, false);
+    this.domElement.removeEventListener("DOMMouseScroll", mousewheel, false); // firefox
 
     this.domElement.removeEventListener("touchstart", touchstart, false);
     this.domElement.removeEventListener("touchend", touchend, false);
@@ -609,8 +569,8 @@ const TrackballControls = function (
     false,
   );
   this.domElement.addEventListener("mousedown", mousedown, false);
-  this.domElement.addEventListener("mousewheel", mousewheel as EventListener, false);
-  this.domElement.addEventListener("DOMMouseScroll", mousewheel as EventListener, false); // firefox
+  this.domElement.addEventListener("mousewheel", mousewheel, false);
+  this.domElement.addEventListener("DOMMouseScroll", mousewheel, false); // firefox
 
   this.domElement.addEventListener("touchstart", touchstart, false);
   this.domElement.addEventListener("touchend", touchend, false);

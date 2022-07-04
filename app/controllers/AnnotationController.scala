@@ -211,6 +211,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
+  @ApiOperation(hidden = true, value = "")
   def addAnnotationLayerWithoutType(id: String): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {

@@ -373,7 +373,7 @@ class VolumeTracingController @Inject()(
             _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
             cubeSize = DataLayer.bucketLength
             request = WebKnossosDataRequest(
-              position = Vec3Int(x * cubeSize * magParsed.x, y * cubeSize * magParsed.y, z * cubeSize * magParsed.z),
+              position = Vec3Int(x, y, z) * cubeSize * magParsed,
               mag = magParsed,
               cubeSize = cubeSize,
               fourBit = Some(false),
@@ -407,7 +407,7 @@ class VolumeTracingController @Inject()(
       val dataSetName = tracing.dataSetName
       val dataLayerName = tracing.getFallbackLayer
       val request = WebKnossosDataRequest(
-        position = Vec3Int(position.x * cubeSize * mag.x, position.y * cubeSize * mag.y, position.z * cubeSize * mag.z),
+        position = position * mag * cubeSize,
         mag = mag,
         cubeSize = cubeSize,
         fourBit = Some(false),

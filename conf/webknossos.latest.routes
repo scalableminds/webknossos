@@ -221,3 +221,7 @@ POST          /jobs/run/materializeVolumeAnnotation/:organizationName/:dataSetNa
 GET           /jobs/:id                                                                 controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                          controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                          controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)
+
+# Publications
+GET           /publications                                                             controllers.XXX
+GET           /publications/:id                                                         controllers.XXX

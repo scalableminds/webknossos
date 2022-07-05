@@ -1,7 +1,9 @@
 package models.binary
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
@@ -51,6 +53,21 @@ class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionConte
         r.isdeleted
       )
     )
+
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[PublicationsRow])
+      parsed <- parseFirst(r, id)
+    } yield parsed
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[Publication]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[PublicationsRow])
+      parsed <- parseAll(r)
+    } yield parsed
 
   def insertOne(p: Publication): Fox[Unit] =
     for {

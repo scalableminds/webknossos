@@ -1,3 +1,7 @@
+-- noinspection SqlNoDataSourceInspectionForFile
+
+-- noinspection SqlDialectInspectionForFile
+
 DROP SCHEMA IF EXISTS webknossos CASCADE;
 CREATE SCHEMA webknossos;
 
@@ -21,7 +25,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(82);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(83);
 COMMIT TRANSACTION;
 
 
@@ -34,6 +38,7 @@ CREATE TABLE webknossos.annotations(
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
+  _publication CHAR(24),
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
   name VARCHAR(256) NOT NULL DEFAULT '',

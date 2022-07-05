@@ -24,8 +24,6 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 import { allCameras, forBothTdCameras } from "oxalis/controller/camera_controller";
-import { voxelToNm } from "oxalis/model/scaleinfo";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 
 const createDirLight = (
   position: Vector3,
@@ -167,44 +165,7 @@ class PlaneView {
             if (this.tdViewUseOrthographicCamera) {
               renderer.render(scene, this.cameras[plane][TDCameras.OrthographicCamera]);
             } else {
-              const flycamPos = voxelToNm(
-                storeState.dataset.dataSource.scale,
-                getPosition(storeState.flycam),
-              );
-              const cam = this.cameras[plane][TDCameras.OrthographicCamera];
-              const brokenCam = this.cameras[plane][TDCameras.PerspectiveCamera];
-              const camHeight = Math.abs(cam.bottom - cam.top);
-              //const dist = brokenCam.far - brokenCam.near;
-              const dist = brokenCam.position.distanceTo(new THREE.Vector3(...flycamPos));
-              const tempCam = new THREE.PerspectiveCamera(
-                (180 / Math.PI) * 2 * Math.atan(camHeight / (2 * dist)),
-                brokenCam.aspect,
-                brokenCam.near,
-                brokenCam.far,
-              );
-              tempCam.position.set(flycamPos[0], flycamPos[1], flycamPos[2] - 28672);
-              tempCam.zoom = 1;
-              tempCam.up = brokenCam.up;
-              tempCam.setRotationFromQuaternion(brokenCam.quaternion);
-              tempCam.lookAt(...flycamPos);
-              tempCam.updateProjectionMatrix();
-              console.log("brokenCam", brokenCam);
-              console.log("tempCam", tempCam);
-              console.log(
-                "dists",
-                tempCam.position.distanceTo(new THREE.Vector3(...flycamPos)),
-                brokenCam.position.distanceTo(new THREE.Vector3(...flycamPos)),
-              );
-              console.log("fov", tempCam.fov, brokenCam.fov);
-              console.log("top, bottom, width", cam.top, cam.bottom, cam.bottom - cam.top);
-              console.log(
-                "tangens, arctan",
-                2 * Math.tan(camHeight / (2 * dist)),
-                2 * Math.atan(camHeight / (2 * dist)),
-                (180 / Math.PI) * 2 * Math.tan(camHeight / (2 * dist)),
-                (180 / Math.PI) * 2 * Math.atan(camHeight / (2 * dist)),
-              );
-              renderer.render(scene, tempCam);
+              renderer.render(scene, this.cameras[plane][TDCameras.PerspectiveCamera]);
             }
           } else {
             renderer.render(scene, this.cameras[plane]);

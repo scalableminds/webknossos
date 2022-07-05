@@ -67,7 +67,6 @@ class ArbitraryView {
     this.camera.name = ArbitraryViewport;
     this.camera.matrixAutoUpdate = false;
     scene.add(this.camera);
-    // TODO: here depending on settings
     this.group = new THREE.Object3D();
     const orthoTDCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
     const perspectiveTDCamera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
@@ -203,8 +202,11 @@ class ArbitraryView {
         if (this.plane.meshes.debuggerPlane != null) {
           this.plane.meshes.debuggerPlane.visible = true;
         }
-
-        renderViewport(OrthoViews.TDView, this.tdCameras[TDCameras.OrthographicCamera]);
+        if (storeState.userConfiguration.tdViewUseOrthographicCamera) {
+          renderViewport(OrthoViews.TDView, this.tdCameras[TDCameras.OrthographicCamera]);
+        } else {
+          renderViewport(OrthoViews.TDView, this.tdCameras[TDCameras.PerspectiveCamera]);
+        }
       }
 
       this.needsRerender = false;

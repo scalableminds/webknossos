@@ -114,7 +114,11 @@ class CameraController extends React.PureComponent<Props> {
     const far = 8000000;
 
     for (const cam of allCameras(this.props.cameras)) {
-      cam.near = 0;
+      if (cam.type === "PerspectiveCamera") {
+        cam.near = 0.00001;
+      } else {
+        cam.near = 0;
+      }
       cam.far = far;
     }
     // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
@@ -185,7 +189,8 @@ class CameraController extends React.PureComponent<Props> {
     if (inputCatcherRects != null) {
       // Update td camera's aspect ratio
       // TODO: Adopt the perspective camera
-      const tdOrthoCamera = this.props.cameras[OrthoViews.TDView].OrthographicCamera;
+      const { PerspectiveCamera: tdPerspectiveCamera, OrthographicCamera: tdOrthoCamera } =
+        this.props.cameras[OrthoViews.TDView];
       const oldMid = (tdOrthoCamera.right + tdOrthoCamera.left) / 2;
       const oldWidth = tdOrthoCamera.right - tdOrthoCamera.left;
       const oldHeight = tdOrthoCamera.top - tdOrthoCamera.bottom;
@@ -194,6 +199,7 @@ class CameraController extends React.PureComponent<Props> {
       if (tdRect.height === 0 || tdRect.width === 0) return;
       const oldAspectRatio = oldWidth / oldHeight;
       const newAspectRatio = tdRect.width / tdRect.height;
+      tdPerspectiveCamera.aspect = Math.abs(newAspectRatio);
       const newWidth = (oldWidth * newAspectRatio) / oldAspectRatio;
       tdOrthoCamera.left = oldMid - newWidth / 2;
       tdOrthoCamera.right = oldMid + newWidth / 2;
@@ -242,16 +248,32 @@ class CameraController extends React.PureComponent<Props> {
 
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
-    // TODO: Adopt the perspective camera
-    const tdOrthoCamera = this.props.cameras[OrthoViews.TDView].OrthographicCamera;
-    tdOrthoCamera.position.set(...cameraData.position);
+    const storeState = Store.getState();
+    const flycamPos = voxelToNm(
+      storeState.dataset.dataSource.scale,
+      getPosition(storeState.flycam),
+    );
+    const width = cameraData.right - cameraData.left;
+    const height = cameraData.bottom - cameraData.top;
+    const tdOrthoCamera = this.props.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera];
+    const tdPerspectiveCamera = this.props.cameras[OrthoViews.TDView][TDCameras.PerspectiveCamera];
+    const dist = tdPerspectiveCamera.position.distanceTo(new THREE.Vector3(...flycamPos));
+    const angle = Math.tan(width / 2 / dist);
+    this.allTDCameras().forEach((tdCamera) => {
+      tdCamera.position.set(...cameraData.position);
+      tdCamera.up = new THREE.Vector3(...cameraData.up);
+      tdCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
+    });
+    tdPerspectiveCamera.aspect = Math.abs(width / height);
+    tdPerspectiveCamera.fov = 2 * angle;
+    // fov depends on distance
     tdOrthoCamera.left = cameraData.left;
     tdOrthoCamera.right = cameraData.right;
     tdOrthoCamera.top = cameraData.top;
     tdOrthoCamera.bottom = cameraData.bottom;
-    tdOrthoCamera.up = new THREE.Vector3(...cameraData.up);
-    tdOrthoCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
-    tdOrthoCamera.updateProjectionMatrix();
+    this.allTDCameras().forEach((tdCamera) => {
+      tdCamera.updateProjectionMatrix();
+    });
     this.props.onCameraPositionChanged();
   }
 

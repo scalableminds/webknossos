@@ -424,7 +424,6 @@ export type PartialCameraData = {
 };
 export type PlaneModeData = {
   readonly activeViewport: OrthoView;
-  // TODO This is only for persistence right? TODO later
   readonly tdCamera: CameraData;
   readonly inputCatcherRects: {
     readonly PLANE_XY: Rect;

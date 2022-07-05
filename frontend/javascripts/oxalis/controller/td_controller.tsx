@@ -32,7 +32,6 @@ import Store from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
-import { Euler } from "three";
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
 
@@ -296,10 +295,10 @@ class TDController extends React.PureComponent<Props> {
     const nmVector = new THREE.Vector3(...invertedDiff);
     // moves camera by the nm vector
     const { OrthographicCamera } = this.props.cameras[OrthoViews.TDView];
-    const rotation: Euler = THREE.Vector3.prototype.multiplyScalar.call(
+    const rotation: THREE.Euler = THREE.Vector3.prototype.multiplyScalar.call(
       OrthographicCamera.rotation.clone(),
       -1,
-    ) as any as Euler;
+    ) as any as THREE.Euler;
     // reverse euler order
     rotation.order = rotation.order.split("").reverse().join("");
     nmVector.applyEuler(rotation);

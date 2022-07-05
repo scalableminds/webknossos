@@ -1,6 +1,6 @@
 import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import _ from "lodash";
 import type { APIDataset } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -14,9 +14,72 @@ import {
   getDatasetResolutionInfo,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getVolumeTracingLayers } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getAllReadableLayerNames,
+  getVolumeTracingLayers,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
+import Toast from "libs/toast";
+
+export type ValidationResult = { isValid: boolean; message: string };
+export function checkForLayerNameDuplication(
+  readableLayerName: string,
+  allReadableLayerNames: string[],
+): ValidationResult {
+  const layerNameDoesNotExist = !allReadableLayerNames.includes(readableLayerName);
+  return {
+    isValid: layerNameDoesNotExist,
+    message: layerNameDoesNotExist ? "" : messages["tracing.volume_layer_name_duplication"],
+  };
+}
+
+export function checkLayerNameForInvalidCharacters(readableLayerName: string): ValidationResult {
+  const uriSaveCharactersRegex = /[0-9a-zA-Z-._~]+/g;
+  // Removing all URISaveCharacters from readableLayerName. The left over chars are all invalid.
+  const allInvalidChars = readableLayerName.replace(uriSaveCharactersRegex, "");
+  const allUniqueInvalidCharsAsSet = new Set(allInvalidChars);
+  const allUniqueInvalidCharsAsString = "".concat(...allUniqueInvalidCharsAsSet.values());
+  const isValid = allUniqueInvalidCharsAsString.length === 0;
+  return {
+    isValid,
+    message: isValid
+      ? ""
+      : messages["tracing.volume_layer_name_includes_invalid_characters"](
+          allUniqueInvalidCharsAsString,
+        ),
+  };
+}
+
+export function validateReadableLayerName(
+  readableLayerName: string,
+  allReadableLayerNames: string[],
+  nameNotToCount?: string,
+): ValidationResult {
+  if (nameNotToCount) {
+    // nameNotToCount needs to be removed once if it is included in allReadableLayerNames.
+    // This is needed in case of saving an existing volume layer's name when the name was not modified.
+    // In this scenario nameNotToCount should be the previous name of the volume layer which will then be removed once from the allReadableLayerNames.
+    // Thus there is only a duplication of the given nameNotToCount if an additional other layer already has nameNotToCount as a name
+    // and the readableLayerName is equal to the name given by nameNotToCount.
+    const index = allReadableLayerNames.indexOf(nameNotToCount);
+    if (index > -1) {
+      allReadableLayerNames = _.clone(allReadableLayerNames); // Avoiding modifying passed parameters.
+      allReadableLayerNames.splice(index, 1);
+    }
+  }
+  const duplicatedNameResult = checkForLayerNameDuplication(
+    readableLayerName,
+    allReadableLayerNames,
+  );
+  if (!duplicatedNameResult.isValid) {
+    return duplicatedNameResult;
+  }
+  const invalidCharactersResult = checkLayerNameForInvalidCharacters(readableLayerName);
+  return invalidCharactersResult;
+}
+
 export default function AddVolumeLayerModal({
   dataset,
   onCancel,
@@ -29,7 +92,25 @@ export default function AddVolumeLayerModal({
   const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState<
     number | null | undefined
   >(null);
-  const [newLayerName, setNewLayerName] = useState("Volume");
+  const allReadableLayerNames = useMemo(
+    () => getAllReadableLayerNames(dataset, tracing),
+    [dataset, tracing],
+  );
+  const initialNewLayerName = useMemo(() => {
+    if (allReadableLayerNames.indexOf("Volume") === -1) {
+      return "Volume";
+    } else {
+      let counter = 1;
+      let name = `Volume${counter}`;
+      while (allReadableLayerNames.indexOf(name) >= 0) {
+        // Increase number at the end of name until a valid initial name is found.
+        ++counter;
+        name = `Volume${counter}`;
+      }
+      return name;
+    }
+  }, [dataset, tracing]);
+  const [newLayerName, setNewLayerName] = useState(initialNewLayerName);
 
   const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
   const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
@@ -44,7 +125,11 @@ export default function AddVolumeLayerModal({
   let selectedSegmentationLayer = null;
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
-
+    const validationResult = validateReadableLayerName(newLayerName, allReadableLayerNames);
+    if (!validationResult.isValid) {
+      Toast.error(validationResult.message);
+      return;
+    }
     const minResolutionAllowed = Math.max(
       ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[0]),
     );

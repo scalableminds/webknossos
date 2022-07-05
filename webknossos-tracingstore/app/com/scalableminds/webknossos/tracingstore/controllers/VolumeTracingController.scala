@@ -382,13 +382,14 @@ class VolumeTracingController @Inject()(
             (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
               editableMappingService.volumeData(tracing, List(wkRequest), urlOrHeaderToken(token, request))
             else tracingService.data(tracingId, tracing, List(wkRequest))
-            dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
-                                                            data,
-                                                            missingBucketIndices,
-                                                            magParsed,
-                                                            Vec3Int(x, y, z),
-                                                            cubeSize,
-                                                            urlOrHeaderToken(token, request)) ?~> "Getting fallback layer data failed" ~> 404
+            dataWithFallback <- getFallbackLayerDataIfEmpty(
+              tracing,
+              data,
+              missingBucketIndices,
+              magParsed,
+              Vec3Int(x, y, z),
+              cubeSize,
+              urlOrHeaderToken(token, request)) ?~> "Getting fallback layer data failed" ~> 404
           } yield Ok(dataWithFallback).withHeaders()
         }
       }

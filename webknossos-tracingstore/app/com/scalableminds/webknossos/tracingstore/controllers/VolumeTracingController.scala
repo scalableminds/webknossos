@@ -423,9 +423,8 @@ class VolumeTracingController @Inject()(
               List(request),
               urlToken)
 
-            response <- if (fallbackMissingBucketIndices.isEmpty) Full(fallbackData)
-            else Failure("No data at coordinations in fallback layer")
-          } yield response
+            _ <- bool2Fox(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer"
+          } yield fallbackData
         case None => Fox.failure("Organization Name is not set (Consider creating a new annotation).")
       }
     }

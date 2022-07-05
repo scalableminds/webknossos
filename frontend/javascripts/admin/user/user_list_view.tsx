@@ -444,10 +444,12 @@ class UserListView extends React.PureComponent<Props, State> {
                   <EditableTextLabel
                     value={user.email}
                     label="Email"
-                    rules={{
-                      message: messages["auth.registration_email_invalid"],
-                      type: "email",
-                    }}
+                    rules={[
+                      {
+                        message: messages["auth.registration_email_invalid"],
+                        type: "email",
+                      },
+                    ]}
                     onChange={(newEmail) => {
                       if (newEmail !== user.email) {
                         Modal.confirm({

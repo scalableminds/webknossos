@@ -26,6 +26,7 @@ import {
   getSegmentationLayerByName,
   getSegmentationLayers,
   getVisibleSegmentationLayer,
+  getDataLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -92,6 +93,18 @@ export function getReadableNameByVolumeTracingId(
 ) {
   const volumeDescriptor = getVolumeDescriptorById(tracing, tracingId);
   return volumeDescriptor.name || "Volume Layer";
+}
+
+export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) {
+  const allReadableLayerNames = getDataLayers(dataset).map((currentLayer) =>
+    "tracingId" in currentLayer && currentLayer.tracingId != null
+      ? getReadableNameByVolumeTracingId(tracing, currentLayer.tracingId)
+      : currentLayer.name,
+  );
+  if (tracing.skeleton != null) {
+    allReadableLayerNames.push("Skeletons");
+  }
+  return allReadableLayerNames;
 }
 
 function getSegmentationLayerForTracing(

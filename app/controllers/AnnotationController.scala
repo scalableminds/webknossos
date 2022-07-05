@@ -466,16 +466,22 @@ class AnnotationController @Inject()(
                           includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        readableAnnotations <- annotationDAO.findAllReadableExplorationalsFor(
-          request.identity._id,
+        before <- Fox.successful(System.currentTimeMillis())
+        readableAnnotations <- annotationDAO.findAllReadableExplorationals(
           isFinished,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0))
+        afterReadable <- Fox.successful(System.currentTimeMillis())
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO
-            .countAllReadableExplorationalsFor(request.identity._id, isFinished)) ?~> "annotation.countReadable.failed"
+          annotationDAO.countAllReadableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
+        afterCount <- Fox.successful(System.currentTimeMillis())
         jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites) ?~> "annotation.compactWrites.failed"
+        afterWrites <- Fox.successful(System.currentTimeMillis())
       } yield {
+        val read = afterReadable - before
+        val count = afterCount - afterReadable
+        val writes = afterWrites - afterCount
+        logger.info(s"read $read ms, count $count ms, writes $writes ms")
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
           case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
@@ -498,7 +504,7 @@ class AnnotationController @Inject()(
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
       _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
-      teams <- annotationService.sharedTeamsFor(annotation._id)
+      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
       json <- Fox.serialCombined(teams)(teamService.publicWrites(_))
     } yield Ok(Json.toJson(json))
   }

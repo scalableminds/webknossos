@@ -41,7 +41,7 @@ import models.mesh.{MeshDAO, MeshService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
-import models.team.{Team, TeamDAO, TeamService}
+import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -559,13 +559,6 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[Unit] =
     sharedAnnotationsDAO.updateTeamsForSharedAnnotation(annotationId, teams)
 
-  def sharedTeamsFor(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      teamIds <- sharedAnnotationsDAO.sharedTeamsFor(annotationId)
-      teamIdsValidated <- Fox.serialCombined(teamIds)(ObjectId.parse(_))
-      teams <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_))
-    } yield teams
-
   def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
       implicit
       ctx: DBAccessContext): Fox[TemporaryFile] =
@@ -791,7 +784,7 @@ class AnnotationService @Inject()(
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       meshes <- meshDAO.findAllWithAnnotation(annotation._id)
       meshesJs <- Fox.serialCombined(meshes)(meshService.publicWrites)
-      teams <- sharedTeamsFor(annotation._id)
+      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
       teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_))
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
@@ -844,7 +837,7 @@ class AnnotationService @Inject()(
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
-      teams <- sharedTeamsFor(annotation._id) ?~> s"fetching sharedTeams for annotation ${annotation._id} failed"
+      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id) ?~> s"fetching sharedTeams for annotation ${annotation._id} failed"
       teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization))) ?~> s"serializing sharedTeams for annotation ${annotation._id} failed"
       user <- userDAO.findOne(annotation._user) ?~> s"fetching owner info for annotation ${annotation._id} failed"
       userJson = Json.obj(

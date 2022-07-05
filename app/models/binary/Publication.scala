@@ -1,8 +1,9 @@
 package models.binary
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import models.annotation.Annotation
 
 import javax.inject.Inject
 import play.api.libs.json.{JsObject, Json}
@@ -20,7 +21,7 @@ case class Publication(_id: ObjectId,
                        created: Long = System.currentTimeMillis(),
                        isDeleted: Boolean = false)
 
-class PublicationService @Inject()()(implicit ec: ExecutionContext) {
+class PublicationService @Inject()(dataSetService: DataSetService)(implicit ec: ExecutionContext) {
   def publicWrites(p: Publication): Fox[JsObject] =
     Fox.successful(
       Json.obj(
@@ -31,6 +32,22 @@ class PublicationService @Inject()()(implicit ec: ExecutionContext) {
         "description" -> p.description,
         "created" -> p.created
       ))
+
+  def publicWritesWithDatasets(p: Publication,
+                               datasets: List[DataSet],
+                               annotations: List[Annotation]): Fox[JsObject] = {
+    Fox.successful(
+      Json.obj(
+        "id" -> p._id.id,
+        "publicationDate" -> p.publicationDate,
+        "imageUrl" -> p.imageUrl,
+        "title" -> p.title,
+        "description" -> p.description,
+        "created" -> p.created,
+        "datasets" -> datasets.map(d => dataSetService.publicWrites(d)(GlobalAccessContext)),
+        "annotations" -> annotations.map(d => dataSetService.publicWrites(d)(GlobalAccessContext)),
+      ))
+  }
 }
 
 class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

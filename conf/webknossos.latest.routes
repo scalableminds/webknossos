@@ -223,5 +223,5 @@ PATCH         /jobs/:id/cancel                                                  
 POST          /jobs/:id/status                                                          controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)
 
 # Publications
-GET           /publications                                                             controllers.XXX
-GET           /publications/:id                                                         controllers.XXX
+GET           /publications                                                             controllers.PublicationController.listPublications()
+GET           /publications/:id                                                         controllers.PublicationController.read(id: String)

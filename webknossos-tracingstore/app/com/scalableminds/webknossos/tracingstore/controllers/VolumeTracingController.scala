@@ -389,7 +389,7 @@ class VolumeTracingController @Inject()(
                                                             magParsed,
                                                             Vec3Int(x, y, z),
                                                             cubeSize,
-                                                            combinedToken) ?~> "Getting fallback layer failed" ~> 404
+                                                            combinedToken) ?~> "Getting fallback layer data failed" ~> 404
           } yield Ok(dataWithFallback).withHeaders()
         }
       }

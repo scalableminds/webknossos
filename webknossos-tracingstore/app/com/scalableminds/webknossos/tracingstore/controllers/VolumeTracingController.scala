@@ -371,7 +371,7 @@ class VolumeTracingController @Inject()(
             (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404
             _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
             cubeSize = DataLayer.bucketLength
-            request = WebKnossosDataRequest(
+            wkRequest = WebKnossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,
               mag = magParsed,
               cubeSize = cubeSize,
@@ -380,8 +380,8 @@ class VolumeTracingController @Inject()(
               version = None
             )
             (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
-              editableMappingService.volumeData(tracing, List(request), urlOrHeaderToken(token, request))
-            else tracingService.data(tracingId, tracing, List(request))
+              editableMappingService.volumeData(tracing, List(wkRequest), urlOrHeaderToken(token, request))
+            else tracingService.data(tracingId, tracing, List(wkRequest))
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
                                                             data,
                                                             missingBucketIndices,

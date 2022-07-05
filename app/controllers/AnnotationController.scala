@@ -466,22 +466,15 @@ class AnnotationController @Inject()(
                           includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        before <- Fox.successful(System.currentTimeMillis())
         readableAnnotations <- annotationDAO.findAllReadableExplorationals(
           isFinished,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0))
-        afterReadable <- Fox.successful(System.currentTimeMillis())
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllReadableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
-        afterCount <- Fox.successful(System.currentTimeMillis())
         jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites) ?~> "annotation.compactWrites.failed"
-        afterWrites <- Fox.successful(System.currentTimeMillis())
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {
-        val read = afterReadable - before
-        val count = afterCount - afterReadable
-        val writes = afterWrites - afterCount
-        logger.info(s"read $read ms, count $count ms, writes $writes ms")
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
           case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)

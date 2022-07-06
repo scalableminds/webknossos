@@ -139,7 +139,10 @@ class DataSetController @Inject()(userService: UserService,
     } yield Ok
   }
 
-  @ApiOperation(hidden = true, value = "")
+  @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON list containing one object per resulting dataset."),
+          new ApiResponse(code = 400, message = badRequestLabel)))
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),

@@ -86,7 +86,7 @@ class UInt64(val signed: Long) extends UnsignedInteger {
   def increment: UInt64 = UInt64(signed + 1)
   def isZero: Boolean = signed == 0L
   override def toPositiveLong: Long =
-    if (signed >= 0) signed else throw new Exception("Cannot convert UInt64 with value > 2**32 to Long")
+    if (signed >= 0) signed else throw new Exception("Cannot convert UInt64 with value >= 2^63 to Long")
   override def toString = s"UInt64($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {

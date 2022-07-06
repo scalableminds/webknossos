@@ -19,7 +19,6 @@ import com.scalableminds.webknossos.datastore.geometry.{
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{
-  ElementClass,
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
@@ -185,7 +184,7 @@ class AnnotationService @Inject()(
           }
           .headOption
           .toFox
-        _ <- bool2Fox(fallbackLayer.elementClass != ElementClass.uint64) ?~> "annotation.volume.uint64"
+        _ <- bool2Fox(fallbackLayer.largestSegmentId >= 0L) ?~> "annotation.volume.negativeLargestSegmentId"
       } yield fallbackLayer
 
     def createAndSaveAnnotationLayer(
@@ -480,7 +479,7 @@ class AnnotationService @Inject()(
           case _                        => None
         }.headOption
       } else None
-      _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+      _ <- bool2Fox(fallbackLayer.forall(_.largestSegmentId >= 0L)) ?~> "annotation.volume.negativeLargestSegmentId"
 
       volumeTracing <- createVolumeTracing(
         dataSource,

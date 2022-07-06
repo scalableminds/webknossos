@@ -225,6 +225,7 @@ tracing.wrongMag=Tracing “{0}” does not have mag “{1}”
 annotation.create.failed=Failed to create annotation.
 annotation.create.forbidden=You do not have permission to create annotations for this dataset.
 annotation.volume.uint64=Creating volume annotations with uint64 fallback layer is not supported by wK yet.
+annotation.volume.negativeLargestSegmentId=Creating volume annotations for fallback layers with segment ids >= 2^63 is not supported.
 annotation.volume.resolutionRestrictionsTooTight=Task type resolution restrictions are too tight, resulting annotation has no resolutions.
 annotation.volume.resolutionsDoNotMatch=Could not merge volume annotations, as their resolutions differ. Please ensure each annotation has the same set of resolutions.
 annotation.notFound=Annotation couldn’t be found

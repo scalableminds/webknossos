@@ -23,7 +23,6 @@ import {
 import {
   pushSaveQueueTransaction,
   setVersionNumberAction,
-  undoAction,
 } from "oxalis/model/actions/save_actions";
 import { splitAgglomerate, mergeAgglomerate } from "oxalis/model/sagas/update_actions";
 import Model from "oxalis/model";

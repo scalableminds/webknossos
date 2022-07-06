@@ -168,17 +168,6 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     compressed
   }
 
-  private def convertToUInt32(a: Array[Byte]) = {
-    val result = new Array[Byte](a.length / 2)
-
-    for (i <- a.indices by 8) {
-      for (j <- 0 until 4) {
-        result(i / 2 + j) = a(i + j)
-      }
-    }
-    result
-  }
-
   def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]): (Int, Int) = {
     def dataCubeMatchPredicate(cubeKey: CachedCube) =
       cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(

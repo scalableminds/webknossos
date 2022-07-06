@@ -459,19 +459,20 @@ class AnnotationController @Inject()(
     } yield JsonOk(json)
   }
 
+  // Note that this lists both the user’s own explorationals and those shared with the user’s teams
   @ApiOperation(hidden = true, value = "")
-  def readableAnnotations(isFinished: Option[Boolean],
-                          limit: Option[Int],
-                          pageNumber: Option[Int] = None,
-                          includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+  def listExplorationals(isFinished: Option[Boolean],
+                         limit: Option[Int],
+                         pageNumber: Option[Int] = None,
+                         includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        readableAnnotations <- annotationDAO.findAllReadableExplorationals(
+        readableAnnotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
           pageNumber.getOrElse(0))
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          annotationDAO.countAllReadableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
+          annotationDAO.countAllListableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
         jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites) ?~> "annotation.compactWrites.failed"
         _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {

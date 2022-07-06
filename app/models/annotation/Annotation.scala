@@ -229,7 +229,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
-  def findAllReadableExplorationals(isFinished: Option[Boolean], limit: Int, pageNumber: Int = 0)(
+  def findAllListableExplorationals(isFinished: Option[Boolean], limit: Int, pageNumber: Int = 0)(
       implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
     val stateQuery = getStateQuery(isFinished)
     for {
@@ -241,7 +241,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
-  def countAllReadableExplorationals(isFinished: Option[Boolean])(
+  def countAllListableExplorationals(isFinished: Option[Boolean])(
       implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
     val stateQuery = getStateQuery(isFinished)
     for {

@@ -349,7 +349,7 @@ function _ShareModalView(props: Props) {
             }}
           >
             Choose the teams to share your annotation with. Members of these teams can see this
-            annotation in their shared annotations tab.
+            annotation in their Annotations tab.
           </Hint>
         </Col>
       </Row>

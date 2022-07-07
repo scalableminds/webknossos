@@ -32,23 +32,16 @@ class PublicationController @Inject()(publicationService: PublicationService,
     sil.SecuredAction.async { implicit request =>
       for {
         publication <- publicationDAO.findOne(ObjectId(publicationId)) ?~> "publication.notFound" ~> NOT_FOUND
-        js <- publicationService.publicWrites(publication)
+        js <- publicationService.publicWritesWithDatasetsAndAnnotations(publication)
       } yield Ok(js)
     }
 
-  def listPublications: Action[AnyContent] = sil.SecuredAction.async { implicit request => {
-    def publicWritesWithDatasetsAndAnnotations(publication: Publication): Fox[JsObject] = {
+  def listPublications: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    {
       for {
-        dataSets <- dataSetDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
-        annotations <- annotationDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
-        json <- publicationService.publicWritesWithDatasets(publication, dataSets, annotations)
-      } yield json
-    }
-
-    for {
-      publications <- publicationDAO.findAll ?~> "publication.notFound" ~> NOT_FOUND
-      jsResult <- Fox.serialCombined(publications)(publicWritesWithDatasetsAndAnnotations)
-    } yield Ok(Json.toJson(jsResult))
+        publications <- publicationDAO.findAll ?~> "publication.notFound" ~> NOT_FOUND
+        jsResult <- Fox.serialCombined(publications)(publicationService.publicWritesWithDatasetsAndAnnotations)
+      } yield Ok(Json.toJson(jsResult))
     }
   }
 }

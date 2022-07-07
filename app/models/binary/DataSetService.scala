@@ -37,7 +37,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                teamDAO: TeamDAO,
                                workerDAO: WorkerDAO,
                                publicationDAO: PublicationDAO,
-                               publicationService: PublicationService,
+                               publicationService: CompactPublicationService,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
@@ -343,12 +343,18 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def publicWrites(dataSet: DataSet,
                    requestingUserOpt: Option[User],
-                   organization: Organization,
-                   dataStore: DataStore,
+                   organization: Option[Organization],
+                   dataStore: Option[DataStore],
                    skipResolutions: Boolean = false,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
       implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
+      organization <- Fox.fillOption(organization) {
+        organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      }
+      dataStore <- Fox.fillOption(dataStore) {
+        dataStoreFor(dataSet)
+      }
       teams <- allowedTeamsFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
       logoUrl <- logoUrlFor(dataSet, Some(organization)) ?~> "dataset.list.fetchLogoUrlFailed"

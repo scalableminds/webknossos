@@ -45,7 +45,7 @@ Private sharing is useful for giving outside users (reviewers, editors, journali
 
 To share a dataset privately, follow these steps:
 
-1. Navigate to your user dashboard and `Datasets`. 
+1. Navigate to your user dashboard and `My Datasets`. 
 2. Select the dataset that you want to share and click on `Settings`.
 3. Under the `Sharing & Permissions` tab, scroll down to the `Sharing Link` and copy it. 
 
@@ -90,7 +90,7 @@ There are three options to control who can see an annotation if they know the an
 1. `Private`: Only you and your team manager have access to the annotation.
 2. `Internal`: All members of your organization have access to the annotation. Default option.
 3. `Public`: Everybody, regardless their login status, can access this annotation.
-4. (`Team Sharing`: Share this annotation with other organization members so that it appears on their dashboard in the `Annotations` tab)
+4. (`Team Sharing`: Share this annotation with other organization members on the dashboard in the `Shared Annotations` tab)
 
 To change the visibility of an annotation, follow these steps:
 
@@ -197,7 +197,7 @@ The information is JSON-encoded in the URL fragment and has the following format
 To avoid having to create annotations in advance when programmatically crafting links, a sandbox annotation can be used. A sandbox annotation is always accessible through the same URL and offers all available annotation features, however, changes are not saved. At any point, users can decide to copy the current state to their account. The sandbox can be accessed at `<webknossos_host>/datasets/<organization>/<dataset>/sandbox/skeleton`.
 
 ### Team Sharing
-In addition to sharing your annotation via a link, you can also share your annotations with colleagues and make them available on their dashboard from the `Annotations` tab.
+In addition to sharing your annotation via a link, you can also share your annotations with colleagues and make them available on their dashboard from the `Shared Annotations` tab.
 This is the simplest way to share an annotation with a whole team.
 
 To share an annotation with a certain team, follow these steps:
@@ -206,7 +206,7 @@ To share an annotation with a certain team, follow these steps:
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Under *Team Sharing*, select the teams from the dropdown menu.
 
-If members of these teams open their [Annotations Dashboard Tab](./dashboard.md#shared-annotations), they will see your annotation.
+If members of these teams open their [Shared Annotations Dashboard Tab](./dashboard.md#shared-annotations), they will see your annotation.
 
 ![Enable Team Sharing for your annotation](images/sharing_modal_team.jpeg)
 

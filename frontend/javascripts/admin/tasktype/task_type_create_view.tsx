@@ -339,6 +339,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   width: "100%",
                 }}
                 options={[
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ value: null; label: string; }' is not assi... Remove this comment to see the full error message
                   {
                     value: null,
                     label: "Any",

@@ -37,13 +37,15 @@ class TextWithDescription extends React.PureComponent<Props> {
     );
     return (
       <span
-        className={hasDescription ? "flex-container" : ""}
+        // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
+        className={hasDescription ? "flex-container" : null}
         style={{
           alignItems: "center",
         }}
       >
         <span
-          className={hasDescription ? "flex-item" : ""}
+          // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
+          className={hasDescription ? "flex-item" : null}
           style={{
             flexGrow: 0,
           }}

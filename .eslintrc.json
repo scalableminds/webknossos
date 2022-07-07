@@ -123,7 +123,7 @@
     "react/no-unstable-nested-components": "warn", // probably should do something about it
     "react/no-array-index-key": "error", // maybe sensible, maybe not
     "prefer-exponentiation-operator": "off", // I find Math.pow() more readble than **
-    "eqeqeq": "error", // == vs ===
+    "eqeqeq": "warn", // == vs ===
     "react/jsx-no-bind": "off", // no opinion
     "react/function-component-definition": "warn", // probably should do this. can be autofixed with eslint --fix
     "@typescript-eslint/no-throw-literal": "warn" // probably should do this.

@@ -616,6 +616,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
             defaultValue={value.toString()}
             size="small"
             dropdownMatchSelectWidth={false}
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'Record<string, any>[]' is not assignable to ... Remove this comment to see the full error message
             options={this.props.options}
           />
         </Col>

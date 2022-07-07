@@ -3,7 +3,7 @@
 The Dashboard is your entry point to webKnossos.
 You can manage your datasets, create annotations, resume existing annotations and retrieve tasks distributed to you.
 
-## Datasets
+## My Datasets
 This screen shows all the available and accessible datasets for a user.
 You can *view* a dataset (read-only) or start new annotations from this screen.
 Search for your dataset by using the search bar or sorting any of the table columns.
@@ -18,7 +18,7 @@ Regular users can only start or continue annotations and work on tasks.
 
 ![Video: Community Dataset Gallery & Navigating Through Data](https://www.youtube.com/watch?v=naPL1jfCdOc)
 
-## Tasks
+## My Tasks
 
 With Tasks, you can coordinate large annotation projects with your users.
 Tasks are small annotation work assignments that are automatically distributed to users. This is particularly useful when you have several users in your organization that you can distribute the work to, e.g., working students, scientific assistances, outside collaborators, etc.
@@ -28,8 +28,8 @@ Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 
 ![Tasks can be distributed to users. Task can include rich instructions.](./images/dashboard_tasks.jpeg)
 
-## Annotations
-This screen lists all your annotations (skeleton, volume or both) that you started on a dataset (outside of tasks) and annotations that were shared with you. Annotations are either created by starting new annotations from the "Datasets" tab, from the webKnossos data viewer, or by uploading an existing annotation from your computer (see [NML files](./data_formats.md#nml) for skeleton annotations).
+## My Annotations
+This screen lists all your annotations (skeleton, volume or both) that you started on a dataset (outside of tasks). Annotations are either created by starting new annotations from the "My Datasets" tab, from the webKnossos data viewer, or by uploading an existing annotation from your computer (see [NML files](./data_formats.md#nml) for skeleton annotations).
 
 Annotations can be resumed, archived (like delete, but reversible), and downloaded for offline analysis. 
 You can also add custom tags to annotations to organize and group them. Click on one or multiple of your tags if you want to filter a particular group of annotations. 
@@ -39,10 +39,12 @@ Each annotation can be renamed to reflect its content.
 ![Annotations can archived to declutter your dashboard.](./images/dashboard_archive.jpeg)
 
 
-### Sharing Annotations
-The annotations tab also shows all annotations that were shared by other collaborators of your organization. Only annotations shared through the "Team Sharing" mechanic will be listed provided your user account is part of the respective team. Read more about sharing your own annotations in the [Sharing guide](./sharing.md#annotation-sharing).
+## Shared Annotations
+This screen shows all annotations that were shared by other collaborators of your organization. Only annotations shared through the "Team Sharing" mechanic will be listed provided your user account is part of the respective team. Read more about sharing your own annotations in the [Sharing guide](./sharing.md#annotation-sharing).
 
 You can view the linked annotations (read-only) or copy them to your account for modification.
+
+![Annotations shared with any of your teams are listed on your dashboard too.](./images/shared_annotations_tab.jpeg)
 
 ## Featured Publications
 

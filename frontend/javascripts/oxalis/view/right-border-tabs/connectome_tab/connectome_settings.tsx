@@ -118,7 +118,9 @@ class ConnectomeFilters extends React.Component<Props> {
             >
               <Select
                 placeholder="Select a connectome file"
+                // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'Se... Remove this comment to see the full error message
                 value={currentConnectomeFileName}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(connectomeFileName: string | null | undefin... Remove this comment to see the full error message
                 onChange={this.handleConnectomeFileSelected}
                 size="small"
                 loading={availableConnectomeFiles == null}
@@ -136,6 +138,7 @@ class ConnectomeFilters extends React.Component<Props> {
                     </Option>
                   ))
                 ) : (
+                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Key'.
                   <Option value={null} disabled>
                     No files available
                   </Option>

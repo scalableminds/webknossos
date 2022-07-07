@@ -130,7 +130,7 @@ jobs:
           command: docker-compose build --pull webknossos-tracingstore
 
       - run:
-          name: Lint frontend code and check formatting
+          name: Lint frontend code
           command: |
             .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
       - run:
@@ -138,7 +138,7 @@ jobs:
           command: |
             .circleci/not-on-master.sh docker-compose run base yarn test-verbose
       - run:
-          name: Lint backend code and check formatting
+          name: Lint backend code
           command: |
             .circleci/not-on-master.sh docker-compose run backend-lint-format
       - run:

@@ -146,15 +146,6 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findSharedTeamsForAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(sql"""select #$columns from #$existingCollectionName
-              where _id in (select _team from webknossos.annotation_sharedTeams where _annotation = $annotationId)
-              and #$accessQuery""".as[TeamsRow])
-      parsed <- parseAll(r)
-    } yield parsed
-
   def insertOne(t: Team): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)

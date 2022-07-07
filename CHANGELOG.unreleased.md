@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Add new backend API routes for working with annotations without having to provide a 'type' argument. Note that these support stored annotations (Task and Explorational), but do not work for CompoundTask/CompoundProject/CompoundTaskType annotations. For the latter, please use the original route variants with explicit type. [#6285](https://github.com/scalableminds/webknossos/pull/6285)
 
 ### Changed
+- Changed the name of the volume annotation layer in tasks to be "Volume" instead of "Volume Layer". [#6321](https://github.com/scalableminds/webknossos/pull/6321)
 
 ### Fixed
 - Fixed that zooming out for datasets with very large scale was not possible until the coarsest level. [#6304](https://github.com/scalableminds/webknossos/pull/6304)

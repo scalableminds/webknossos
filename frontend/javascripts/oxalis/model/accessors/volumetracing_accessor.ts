@@ -92,7 +92,7 @@ export function getReadableNameByVolumeTracingId(
   tracingId: string,
 ) {
   const volumeDescriptor = getVolumeDescriptorById(tracing, tracingId);
-  return volumeDescriptor.name || "Volume Layer";
+  return volumeDescriptor.name || "Volume";
 }
 
 export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) {

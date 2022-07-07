@@ -74,7 +74,7 @@ export function getLayerInfos(
     // Satisfy flow.
     throw new Error("Tracing is null, but layer.tracingId is defined.");
   }
-  const readbleVolumeLayerName = getReadableNameOfVolumeLayer(layer, tracing) || "Volume Layer";
+  const readbleVolumeLayerName = getReadableNameOfVolumeLayer(layer, tracing) || "Volume";
   const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
 
   if (layer.fallbackLayerInfo != null) {

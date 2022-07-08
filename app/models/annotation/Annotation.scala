@@ -178,24 +178,32 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
 
   private def listAccessQ(requestingUserId: ObjectId): String =
     s"""
-        (_user = '${requestingUserId.id}'
-        or ((visibility = '${AnnotationVisibility.Public}' or visibility = '${AnnotationVisibility.Internal}')
-          and _id in
-          (select distinct a._annotation
-           from webknossos.annotation_sharedTeams a
-           join webknossos.user_team_roles t
-           on a._team = t._team
-           where t._user = '${requestingUserId.id}')))
+        (
+          _user = '${requestingUserId.id}'
+          or (
+            (visibility = '${AnnotationVisibility.Public}' or visibility = '${AnnotationVisibility.Internal}')
+            and _id in (
+              select distinct a._annotation
+              from webknossos.annotation_sharedTeams a
+              join webknossos.user_team_roles t
+              on a._team = t._team
+              where t._user = '${requestingUserId.id}'
+            )
+          )
+        )
        """
 
   override def readAccessQ(requestingUserId: ObjectId): String =
-    s"""    (visibility = '${AnnotationVisibility.Public}'
-         or (visibility = '${AnnotationVisibility.Internal}' and (select _organization from webknossos.teams where webknossos.teams._id = _team)
-                   in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))
-         or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}' and isTeamManager)
-         or _user = '${requestingUserId.id}'
-         or (select _organization from webknossos.teams where webknossos.teams._id = _team)
-           in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+    s"""(
+              visibility = '${AnnotationVisibility.Public}'
+           or (visibility = '${AnnotationVisibility.Internal}'
+               and (select _organization from webknossos.teams where webknossos.teams._id = _team)
+                 in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))
+           or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}' and isTeamManager)
+           or _user = '${requestingUserId.id}'
+           or (select _organization from webknossos.teams where webknossos.teams._id = _team)
+             in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
+         )"""
 
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'

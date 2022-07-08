@@ -818,10 +818,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "user" -> userJson,
         "owner" -> userJson,
         "meshes" -> meshesJs,
-        // have to choose segmentation layer --> volume annotation oder data set segmentation
-        // take all color layers
-        // datasetjson reinschreiben mit boolean
-        // im publication publicWrites, für annotation kram zusammen bauen
       )
     }
   }

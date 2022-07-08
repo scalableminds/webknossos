@@ -101,16 +101,14 @@ class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionConte
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
     for {
-      accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[PublicationsRow])
+        sql"select #$columns from #$existingCollectionName where _id = ${id.id}".as[PublicationsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Publication]] =
     for {
-      accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[PublicationsRow])
+      r <- run(sql"select #$columns from #$existingCollectionName".as[PublicationsRow])
       parsed <- parseAll(r)
     } yield parsed
 

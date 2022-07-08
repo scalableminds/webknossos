@@ -102,7 +102,7 @@ export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) 
       : currentLayer.name,
   );
   if (tracing.skeleton != null) {
-    allReadableLayerNames.push("Skeletons");
+    allReadableLayerNames.push("Skeleton");
   }
   return allReadableLayerNames;
 }

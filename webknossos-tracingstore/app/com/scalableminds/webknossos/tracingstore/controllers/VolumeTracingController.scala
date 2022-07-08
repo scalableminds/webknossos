@@ -1,32 +1,26 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import java.io.File
+import java.io.{ByteArrayOutputStream, File}
 import java.nio.{ByteBuffer, ByteOrder}
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  EditableMappingService,
-  EditableMappingUpdateActionGroup,
-  RemoteFallbackLayer
-}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ResolutionRestrictions,
-  UpdateMappingNameAction,
-  VolumeTracingService
-}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, EditableMappingUpdateActionGroup, RemoteFallbackLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, UpdateMappingNameAction, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
+
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebKnossosClient,
@@ -34,12 +28,14 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreConfig
 }
 import net.liftweb.common.{Failure, Full}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient, TracingStoreAccessTokenService, TracingStoreConfig}
+import io.swagger.annotations.ApiOperation
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers, RawBuffer}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -242,6 +238,45 @@ class VolumeTracingController @Inject()(
         }
       }
     }
+
+  @ApiOperation(hidden = true, value = "")
+  def thumbnailJpeg(token: Option[String],
+                    tracingId: String,
+                    width: Int,
+                    height: Int,
+                    centerX: Option[Int],
+                    centerY: Option[Int],
+                    centerZ: Option[Int],
+                    zoom: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+      for {
+        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
+        dataRequest = DataRequest(position, width, height, 1)
+//        (data, _) <- requestData(dataSource, dataLayer, request)
+        (data, indices) <- if (tracing.mappingIsEditable.getOrElse(false))
+          editableMappingService.volumeData(tracing, List(dataRequest), urlOrHeaderToken(token, request))
+        else tracingService.data(tracingId, tracing, List(dataRequest))
+
+        params = ImageCreatorParameters(
+          dataLayer.bytesPerElement,
+          request.settings.halfByte,
+          request.cuboid(dataLayer).width,
+          request.cuboid(dataLayer).height,
+          imagesPerRow = 1,
+          blackAndWhite = false,
+          isSegmentation = dataLayer.category == Category.segmentation
+        )
+        dataWithFallback = if (data.length == 0)
+          new Array[Byte](params.slideHeight * params.slideWidth * params.bytesPerElement)
+        else data
+        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> "image.create.failed"
+        firstSheet <- spriteSheet.pages.headOption ?~> "image.page.failed"
+        outputStream = new ByteArrayOutputStream()
+        _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
+      } yield Ok(outputStream.toByteArray).as(jpegMimeType)
+    }
+  }
 
   def volumeTracingFolderContent(token: Option[String], tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>

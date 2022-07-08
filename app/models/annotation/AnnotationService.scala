@@ -1,7 +1,6 @@
 package models.annotation
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
-
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
@@ -23,6 +22,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ResolutionRestrictions,
@@ -31,6 +31,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
+
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
@@ -73,31 +74,33 @@ case class RedundantTracingProperties(
     userBoundingBoxes: Seq[NamedBoundingBoxProto]
 )
 
-class AnnotationService @Inject()(
-    annotationInformationProvider: AnnotationInformationProvider,
-    savedTracingInformationHandler: SavedTracingInformationHandler,
-    annotationDAO: AnnotationDAO,
-    annotationLayersDAO: AnnotationLayerDAO,
-    userDAO: UserDAO,
-    taskTypeDAO: TaskTypeDAO,
-    taskService: TaskService,
-    dataSetService: DataSetService,
-    dataSetDAO: DataSetDAO,
-    dataStoreService: DataStoreService,
-    tracingStoreService: TracingStoreService,
-    tracingStoreDAO: TracingStoreDAO,
-    taskDAO: TaskDAO,
-    teamDAO: TeamDAO,
-    userService: UserService,
-    dataStoreDAO: DataStoreDAO,
-    projectDAO: ProjectDAO,
-    organizationDAO: OrganizationDAO,
-    annotationRestrictionDefults: AnnotationRestrictionDefaults,
-    nmlWriter: NmlWriter,
-    temporaryFileCreator: TemporaryFileCreator,
-    meshDAO: MeshDAO,
-    meshService: MeshService,
-    sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext, val materializer: Materializer)
+class AnnotationService @Inject()(annotationInformationProvider: AnnotationInformationProvider,
+                                  savedTracingInformationHandler: SavedTracingInformationHandler,
+                                  annotationDAO: AnnotationDAO,
+                                  annotationLayersDAO: AnnotationLayerDAO,
+                                  userDAO: UserDAO,
+                                  taskTypeDAO: TaskTypeDAO,
+                                  taskService: TaskService,
+                                  dataSetService: DataSetService,
+                                  dataSetDAO: DataSetDAO,
+                                  dataStoreService: DataStoreService,
+                                  tracingStoreService: TracingStoreService,
+                                  tracingStoreDAO: TracingStoreDAO,
+                                  taskDAO: TaskDAO,
+                                  teamDAO: TeamDAO,
+                                  userService: UserService,
+                                  dataStoreDAO: DataStoreDAO,
+                                  projectDAO: ProjectDAO,
+                                  organizationDAO: OrganizationDAO,
+                                  annotationRestrictionDefults: AnnotationRestrictionDefaults,
+                                  nmlWriter: NmlWriter,
+                                  temporaryFileCreator: TemporaryFileCreator,
+                                  meshDAO: MeshDAO,
+                                  meshService: MeshService,
+                                  sharedAnnotationsDAO: SharedAnnotationsDAO,
+                                  val thumbnailCache: TemporaryStore[String, Array[Byte]])(
+    implicit ec: ExecutionContext,
+    val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
     with ProtoGeometryImplicits
@@ -814,7 +817,11 @@ class AnnotationService @Inject()(
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "user" -> userJson,
         "owner" -> userJson,
-        "meshes" -> meshesJs
+        "meshes" -> meshesJs,
+        // have to choose segmentation layer --> volume annotation oder data set segmentation
+        // take all color layers
+        // datasetjson reinschreiben mit boolean
+        // im publication publicWrites, für annotation kram zusammen bauen
       )
     }
   }

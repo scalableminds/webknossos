@@ -29,14 +29,14 @@ class PublicationController @Inject()(publicationService: PublicationService,
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this publication."),
           new ApiResponse(code = 400, message = badRequestLabel)))
   def read(@ApiParam(value = "The id of the publication") publicationId: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.UserAwareAction.async { implicit request =>
       for {
         publication <- publicationDAO.findOne(ObjectId(publicationId)) ?~> "publication.notFound" ~> NOT_FOUND
         js <- publicationService.publicWritesWithDatasetsAndAnnotations(publication)
       } yield Ok(js)
     }
 
-  def listPublications: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def listPublications: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     {
       for {
         publications <- publicationDAO.findAll ?~> "publication.notFound" ~> NOT_FOUND

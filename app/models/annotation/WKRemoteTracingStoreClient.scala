@@ -24,6 +24,22 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
 
   def baseInfo = s" Dataset: ${dataSet.name} Tracingstore: ${tracingStore.url}"
 
+  def dataLayerThumbnail(tracingId: String,
+                         width: Int,
+                         height: Int,
+                         zoom: Option[Double],
+                         center: Option[Vec3Int]): Fox[Array[Byte]] = {
+    logger.debug(s"Thumbnail called for: $tracingId")
+    rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/thumbnail.jpg")
+      .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
+      .addQueryString("width" -> width.toString, "height" -> height.toString)
+      .addQueryStringOptional("zoom", zoom.map(_.toString))
+      .addQueryStringOptional("centerX", center.map(_.x.toString))
+      .addQueryStringOptional("centerY", center.map(_.y.toString))
+      .addQueryStringOptional("centerZ", center.map(_.z.toString))
+      .getWithBytesResponse
+  }
+
   def getSkeletonTracing(annotationLayer: AnnotationLayer, version: Option[Long]): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
     for {

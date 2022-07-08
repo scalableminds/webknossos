@@ -3,8 +3,10 @@ package models.binary
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
-import models.annotation.{Annotation, AnnotationDAO, AnnotationService}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationService, TracingStoreDAO, TracingStoreService}
 import play.api.http.Status.NOT_FOUND
+import play.api.libs.json.Format.GenericFormat
+import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
 
 import javax.inject.Inject
 import play.api.libs.json.{JsObject, Json}
@@ -23,6 +25,7 @@ case class Publication(_id: ObjectId,
                        isDeleted: Boolean = false)
 
 class CompactPublicationService @Inject()()(implicit ec: ExecutionContext) {
+  // TODO Does the dataset need to know the publication?
   def publicWrites(p: Publication): Fox[JsObject] =
     Fox.successful(
       Json.obj(
@@ -36,6 +39,10 @@ class CompactPublicationService @Inject()()(implicit ec: ExecutionContext) {
 }
 class PublicationService @Inject()(dataSetService: DataSetService,
                                    dataSetDAO: DataSetDAO,
+                                   dataStoreDAO: DataStoreDAO,
+                                   dataStoreService: DataStoreService,
+                                   tracingStoreDAO: TracingStoreDAO,
+                                   tracingStoreService: TracingStoreService,
                                    annotationService: AnnotationService,
                                    annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) {
 
@@ -45,8 +52,18 @@ class PublicationService @Inject()(dataSetService: DataSetService,
       dataSets <- dataSetDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
       annotations <- annotationDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND
       dataSetsJson <- Fox.serialCombined(dataSets)(d => dataSetService.publicWrites(d, None, None, None))
-      annotationsJson <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, None, None))
-
+      annotationsJson <- Fox.serialCombined(annotations) { annotation =>
+        for {
+          dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+          tracingStore <- tracingStoreDAO.findFirst
+          tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+          dataSetJs <- dataSetService.publicWrites(dataSet, None, None, None)
+        } yield
+          Json.obj("id" -> annotation._id,
+                   "typ" -> annotation.typ,
+                   "tracingStore" -> tracingStoreJs,
+                   "dataSet" -> dataSetJs)
+      }
     } yield
       Json.obj(
         "id" -> publication._id.id,

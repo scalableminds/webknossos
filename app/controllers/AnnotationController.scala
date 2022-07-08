@@ -21,6 +21,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.annotation.AnnotationLayerType.AnnotationLayerType

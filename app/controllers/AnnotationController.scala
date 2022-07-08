@@ -67,7 +67,8 @@ class AnnotationController @Inject()(
   implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
 
-  @ApiOperation(value = "Information about an annotation", nickname = "annotationInfo")
+  @ApiOperation(value = "Information about an annotation, supplying the type explicitly",
+                nickname = "annotationInfoByType")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
           new ApiResponse(code = 400, message = badRequestLabel)))

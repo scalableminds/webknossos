@@ -88,7 +88,7 @@ class VolumeTracingService @Inject()(
           case Full(tracing) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                if (tracing.mappingIsEditable.getOrElse(false)) {
+                if (tracing.getMappingIsEditable) {
                   Fox.failure("Cannot mutate buckets in annotation with editable mapping.")
                 } else updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>

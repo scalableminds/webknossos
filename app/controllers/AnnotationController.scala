@@ -460,12 +460,37 @@ class AnnotationController @Inject()(
     } yield JsonOk(json)
   }
 
+  // Note that this lists both the user’s own explorationals and those shared with the user’s teams
+  @ApiOperation(hidden = true, value = "")
+  def listExplorationals(isFinished: Option[Boolean],
+                         limit: Option[Int],
+                         pageNumber: Option[Int] = None,
+                         includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        readableAnnotations <- annotationDAO.findAllListableExplorationals(
+          isFinished,
+          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber.getOrElse(0))
+        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
+          annotationDAO.countAllListableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
+        jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites) ?~> "annotation.compactWrites.failed"
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+      } yield {
+        val result = Ok(Json.toJson(jsonList))
+        annotationCount match {
+          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+          case None        => result
+        }
+      }
+    }
+
   @ApiOperation(hidden = true, value = "")
   def sharedAnnotations: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       userTeams <- userService.teamIdsFor(request.identity._id)
       sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
-      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites(_))
+      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites)
     } yield Ok(Json.toJson(json))
   }
 
@@ -474,7 +499,7 @@ class AnnotationController @Inject()(
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
       _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
-      teams <- annotationService.sharedTeamsFor(annotation._id)
+      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
       json <- Fox.serialCombined(teams)(teamService.publicWrites(_))
     } yield Ok(Json.toJson(json))
   }

@@ -329,10 +329,11 @@ class AnnotationService @Inject()(
         case _                    => Fox.failure("annotation.makeHybrid.alreadyHybrid")
       }
       usedFallbackLayerName = if (newAnnotationLayerType == AnnotationLayerType.Volume) fallbackLayerName else None
-      newAnnotationLayerParameters = AnnotationLayerParameters(newAnnotationLayerType,
-                                                               usedFallbackLayerName,
-                                                               Some(ResolutionRestrictions.empty),
-                                                               None)
+      newAnnotationLayerParameters = AnnotationLayerParameters(
+        newAnnotationLayerType,
+        usedFallbackLayerName,
+        Some(ResolutionRestrictions.empty),
+        AnnotationLayer.defaultNameForType(newAnnotationLayerType))
       _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
     } yield ()
 

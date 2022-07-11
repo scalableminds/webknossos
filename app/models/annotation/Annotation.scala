@@ -110,7 +110,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
 
   def insertOneQuery(annotationId: ObjectId, a: AnnotationLayer): SqlAction[Int, NoStream, Effect] =
     sqlu"""insert into webknossos.annotation_layers(_annotation, tracingId, typ, name)
-            values($annotationId, ${a.tracingId}, '#${a.typ.toString}', ${a.name.map(sanitize)})"""
+            values($annotationId, ${a.tracingId}, '#${a.typ.toString}', ${a.name})"""
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
     for {
@@ -125,7 +125,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
         sqlu"update webknossos.annotation_layers set tracingId = $newTracingId where _annotation = $annotationId and tracingId = $oldTracingId")
     } yield ()
 
-  def updateName(annotationId: ObjectId, tracingId: String, newName: Option[String]): Fox[Unit] =
+  def updateName(annotationId: ObjectId, tracingId: String, newName: String): Fox[Unit] =
     for {
       _ <- run(
         sqlu"update webknossos.annotation_layers set name = $newName where _annotation = $annotationId and tracingId = $tracingId")

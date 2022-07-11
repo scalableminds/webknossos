@@ -35,8 +35,6 @@ class UserController @Inject()(userService: UserService,
     extends Controller
     with FoxImplicits {
 
-  private val DefaultAnnotationListLimit = 1000
-
   @ApiOperation(value = "Returns a json with information about the requesting user", nickname = "currentUserInfo")
   def current: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log() {
@@ -71,9 +69,9 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllFor(request.identity._id,
                                                 isFinished,
                                                 AnnotationType.Explorational,
-                                                limit.getOrElse(DefaultAnnotationListLimit),
+                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
                                                 pageNumber.getOrElse(0))
-        annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+        annotationCount: Option[Int] <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
         _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
@@ -96,7 +94,7 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllFor(request.identity._id,
                                                 isFinished,
                                                 AnnotationType.Task,
-                                                limit.getOrElse(DefaultAnnotationListLimit),
+                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
                                                 pageNumber.getOrElse(0))
         annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task))
@@ -183,11 +181,11 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllFor(userIdValidated,
                                                 isFinished,
                                                 AnnotationType.Explorational,
-                                                limit.getOrElse(DefaultAnnotationListLimit),
+                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
                                                 pageNumber.getOrElse(0))
         annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
           annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Explorational))
-        jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
+        jsonList <- Fox.serialCombined(annotations)(annotationService.compactWrites)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
@@ -211,7 +209,7 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllFor(userIdValidated,
                                                 isFinished,
                                                 AnnotationType.Task,
-                                                limit.getOrElse(DefaultAnnotationListLimit),
+                                                limit.getOrElse(annotationService.DefaultAnnotationListLimit),
                                                 pageNumber.getOrElse(0))
         annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
           annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Task))

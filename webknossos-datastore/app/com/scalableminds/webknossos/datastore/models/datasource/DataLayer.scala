@@ -61,7 +61,7 @@ object ElementClass extends ExtendedEnumeration {
   }
 
   def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =
-    largestSegmentId <= maxSegmentIdValue(elementClass)
+    largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")

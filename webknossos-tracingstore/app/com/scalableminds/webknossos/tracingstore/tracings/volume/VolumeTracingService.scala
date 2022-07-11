@@ -174,7 +174,7 @@ class VolumeTracingService @Inject()(
     for {
       _ <- withZipsFromMultiZip(initialData)((_, dataZip) => mergedVolume.addLabelSetFromDataZip(dataZip)).toFox
       _ <- withZipsFromMultiZip(initialData)((index, dataZip) => mergedVolume.addFromDataZip(index, dataZip)).toFox
-      _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> "volume.largestSegmentIdExceedsRange"
+      _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
       destinationDataLayer = volumeTracingLayer(tracingId, tracing)
       _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
         saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
@@ -465,7 +465,7 @@ class VolumeTracingService @Inject()(
     }
     val destinationDataLayer = volumeTracingLayer(newId, newTracing)
     for {
-      _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "volume.largestSegmentIdExceedsRange"
+      _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
       _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
         saveBucket(destinationDataLayer, bucketPosition, bucketBytes, newTracing.version, toCache)
       }
@@ -490,7 +490,7 @@ class VolumeTracingService @Inject()(
       _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
       _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
       _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox
-      _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> "volume.largestSegmentIdExceedsRange"
+      _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
       _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
         saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
       }

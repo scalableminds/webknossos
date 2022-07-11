@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.geometry.{
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  ElementClass,
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
@@ -184,7 +185,9 @@ class AnnotationService @Inject()(
           }
           .headOption
           .toFox
-        _ <- bool2Fox(fallbackLayer.largestSegmentId >= 0L) ?~> "annotation.volume.negativeLargestSegmentId"
+        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(
+          fallbackLayer.largestSegmentId,
+          fallbackLayer.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
       } yield fallbackLayer
 
     def createAndSaveAnnotationLayer(

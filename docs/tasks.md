@@ -50,7 +50,7 @@ Tasks can also be created in bulk using the advanced CSV text input. Not recomme
 
 ![Assigning Experiences to users](./images/users_experience.jpeg)
 
-After your *Task* is created, other users in your organization can request *Tasks* from their dashboard (*My Tasks* Tab). 
+After your *Task* is created, other users in your organization can request *Tasks* from their dashboard (*Tasks* tab). 
 If there are no other projects with high priorities, they will eventually get your *Task* assigned.
 Once a user is done working on a task, they can mark the task as `Finished`.
 
@@ -66,7 +66,7 @@ Finally, you can collect and review the completed data of all annotations within
 ![Video: Focused Annotation and High-Speed Tasks](https://www.youtube.com/watch?v=2A3en7Kxl3M)
 
 ## Task Assignment Criteria
-When users request a new task from their dashboard ("My Tasks" tab), a set of criteria is matched to assign them to a fitting task:
+When users request a new task from their dashboard ("Tasks" tab), a set of criteria is matched to assign them to a fitting task:
 
 - Available *Tasks* are assigned to users that have the required *Experience* and are members of the specified team
 - Multiple *Task* Instances will be assigned to different users

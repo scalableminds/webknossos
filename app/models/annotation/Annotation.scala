@@ -110,7 +110,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
 
   def insertOneQuery(annotationId: ObjectId, a: AnnotationLayer): SqlAction[Int, NoStream, Effect] =
     sqlu"""insert into webknossos.annotation_layers(_annotation, tracingId, typ, name)
-            values($annotationId, ${a.tracingId}, '#${a.typ.toString}', ${a.name.map(sanitize)})"""
+            values($annotationId, ${a.tracingId}, '#${a.typ.toString}', ${a.name})"""
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
     for {

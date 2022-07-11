@@ -33,7 +33,7 @@ import scala.concurrent.duration._
 case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      fallbackLayerName: Option[String],
                                      resolutionRestrictions: Option[ResolutionRestrictions],
-                                     name: Option[String])
+                                     name: String)
 object AnnotationLayerParameters {
   implicit val jsonFormat: OFormat[AnnotationLayerParameters] = Json.format[AnnotationLayerParameters]
 }
@@ -262,7 +262,10 @@ class AnnotationController @Inject()(
           None,
           ObjectId.dummyId,
           ObjectId.dummyId,
-          List(AnnotationLayer(TracingIds.dummyTracingId, AnnotationLayerType.Skeleton))
+          List(
+            AnnotationLayer(TracingIds.dummyTracingId,
+                            AnnotationLayerType.Skeleton,
+                            AnnotationLayer.defaultSkeletonLayerName))
         )
         json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)

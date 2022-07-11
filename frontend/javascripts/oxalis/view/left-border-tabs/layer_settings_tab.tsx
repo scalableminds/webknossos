@@ -781,7 +781,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <React.Fragment>
         <Tooltip
-          title={showSkeletons ? "Hide all Skeletons" : "Show all skeletons"}
+          title={showSkeletons ? "Hide skeleton layer" : "Show skeleton layer"}
           placement="top"
         >
           {/* This div is necessary for the tooltip to be displayed */}
@@ -804,7 +804,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             wordWrap: "break-word",
           }}
         >
-          Skeletons
+          Skeleton
         </span>
         {showSkeletons ? (
           <div

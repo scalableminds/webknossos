@@ -9,17 +9,16 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreRedisStore}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
@@ -42,8 +41,7 @@ class VolumeTracingService @Inject()(
     val handledGroupIdStore: TracingStoreRedisStore,
     val uncommittedUpdatesStore: TracingStoreRedisStore,
     val temporaryTracingIdStore: TracingStoreRedisStore,
-    val temporaryFileCreator: TemporaryFileCreator,
-    editableMappingService: EditableMappingService
+    val temporaryFileCreator: TemporaryFileCreator
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with VolumeTracingDownsampling
@@ -176,6 +174,7 @@ class VolumeTracingService @Inject()(
     for {
       _ <- withZipsFromMultiZip(initialData)((_, dataZip) => mergedVolume.addLabelSetFromDataZip(dataZip)).toFox
       _ <- withZipsFromMultiZip(initialData)((index, dataZip) => mergedVolume.addFromDataZip(index, dataZip)).toFox
+      _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> "volume.largestSegmentIdExceedsRange"
       destinationDataLayer = volumeTracingLayer(tracingId, tracing)
       _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
         saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
@@ -427,7 +426,7 @@ class VolumeTracingService @Inject()(
                       newId: String,
                       newTracing: VolumeTracing,
                       toCache: Boolean): Fox[Unit] = {
-    val elementClass = tracings.headOption.map(_.elementClass).getOrElse(ElementClass.uint8)
+    val elementClass = tracings.headOption.map(_.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
 
     val resolutionSets = new mutable.HashSet[Set[Vec3Int]]()
     tracingSelectors.zip(tracings).foreach {
@@ -466,6 +465,7 @@ class VolumeTracingService @Inject()(
     }
     val destinationDataLayer = volumeTracingLayer(newId, newTracing)
     for {
+      _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> "volume.largestSegmentIdExceedsRange"
       _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
         saveBucket(destinationDataLayer, bucketPosition, bucketBytes, newTracing.version, toCache)
       }
@@ -490,6 +490,7 @@ class VolumeTracingService @Inject()(
       _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
       _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
       _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox
+      _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> "volume.largestSegmentIdExceedsRange"
       _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
         saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
       }

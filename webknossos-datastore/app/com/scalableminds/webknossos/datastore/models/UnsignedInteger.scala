@@ -13,6 +13,7 @@ trait UnsignedInteger {
   def increment: UnsignedInteger
   def isZero: Boolean
   def toPositiveLong: Long
+  def toLong: Long
 }
 
 object UInt8 { @inline final def apply(n: Byte): UInt8 = new UInt8(n) }
@@ -48,6 +49,7 @@ class UInt8(val signed: Byte) extends UnsignedInteger {
   def isZero: Boolean = signed == 0
   override def toPositiveLong: Long =
     if (signed >= 0) signed.toLong else signed.toLong + Byte.MaxValue.toLong + Byte.MaxValue.toLong + 2L
+  override def toLong: Long = toPositiveLong
   override def toString = s"UInt8($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
@@ -61,6 +63,7 @@ class UInt16(val signed: Short) extends UnsignedInteger {
   def isZero: Boolean = signed == 0
   override def toPositiveLong: Long =
     if (signed >= 0) signed.toLong else signed.toLong + Short.MaxValue.toLong + Short.MaxValue.toLong + 2L
+  override def toLong: Long = toPositiveLong
   override def toString = s"UInt16($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
@@ -74,6 +77,7 @@ class UInt32(val signed: Int) extends UnsignedInteger {
   def isZero: Boolean = signed == 0
   override def toPositiveLong: Long =
     if (signed >= 0) signed.toLong else signed.toLong + Int.MaxValue.toLong + Int.MaxValue.toLong + 2L
+  override def toLong: Long = toPositiveLong
   override def toString = s"UInt32($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
@@ -87,6 +91,7 @@ class UInt64(val signed: Long) extends UnsignedInteger {
   def isZero: Boolean = signed == 0L
   override def toPositiveLong: Long =
     if (signed >= 0) signed else throw new Exception("Cannot convert UInt64 with value >= 2^63 to Long")
+  override def toLong: Long = signed
   override def toString = s"UInt64($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {

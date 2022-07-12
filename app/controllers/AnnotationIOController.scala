@@ -278,7 +278,7 @@ Expects:
       )
     }
 
-  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownload")
+  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownloadByType")
   @ApiResponses(
     Array(
       new ApiResponse(

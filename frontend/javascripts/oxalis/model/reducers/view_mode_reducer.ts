@@ -39,10 +39,21 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
         action.curHeight,
       );
     }
-
-    case "MOVE_TD_VIEW_BY_VECTOR_WITHOUT_TIME_TRACKING":
-    case "MOVE_TD_VIEW_BY_VECTOR": {
-      return moveTDViewByVectorReducer(state, action.x, action.y);
+    case "MOVE_TD_VIEW_TO_POSITION_WITHOUT_TIME_TRACKING":
+    case "MOVE_TD_VIEW_TO_POSITION": {
+      console.log("MOVE_TD_VIEW_TO_POSITION");
+      const { x, y, z } = action;
+      return update(state, {
+        viewModeData: {
+          plane: {
+            tdCamera: {
+              $merge: {
+                position: [x, y, z],
+              },
+            },
+          },
+        },
+      });
     }
 
     case "SET_INPUT_CATCHER_RECT": {
@@ -104,6 +115,8 @@ function moveTDViewByVectorReducer(state: OxalisState, x: number, y: number): Ox
             right: camera.right + x,
             top: camera.top + y,
             bottom: camera.bottom + y,
+            xDiff: x,
+            yDiff: y,
           },
         },
       },
@@ -116,7 +129,7 @@ function setTDCameraReducer(state: OxalisState, cameraData: PartialCameraData): 
     viewModeData: {
       plane: {
         tdCamera: {
-          $merge: cameraData,
+          $merge: { xDiff: 0, yDiff: 0, ...cameraData },
         },
       },
     },

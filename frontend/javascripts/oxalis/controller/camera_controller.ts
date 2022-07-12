@@ -1,5 +1,6 @@
 import * as React from "react";
 import * as THREE from "three";
+import { createNanoEvents } from "nanoevents";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import * as Utils from "libs/utils";
@@ -36,6 +37,8 @@ type Props = {
   onTDCameraChanged: () => void;
   setTargetAndFixPosition: () => void;
 };
+
+export const resetTrackballsEmitter = createNanoEvents();
 
 function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector3) {
   const up = V3.normalize(_up);
@@ -115,7 +118,7 @@ class CameraController extends React.PureComponent<Props> {
 
     for (const cam of allCameras(this.props.cameras)) {
       if (cam.type === "PerspectiveCamera") {
-        cam.near = 0.00001;
+        cam.near = 10;
       } else {
         cam.near = 0;
       }
@@ -142,7 +145,7 @@ class CameraController extends React.PureComponent<Props> {
         this.props.setTargetAndFixPosition();
         Store.dispatch(
           setTDCameraWithoutTimeTrackingAction({
-            near: 0,
+            near: 10,
             far,
           }),
         );
@@ -257,18 +260,43 @@ class CameraController extends React.PureComponent<Props> {
     const height = Math.abs(cameraData.bottom - cameraData.top);
     const tdOrthoCamera = this.props.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera];
     const tdPerspectiveCamera = this.props.cameras[OrthoViews.TDView][TDCameras.PerspectiveCamera];
-    const dist = tdPerspectiveCamera.position.distanceTo(new THREE.Vector3(...flycamPos));
-    const angleInRadian = 2 * Math.atan(height / (2 * dist));
-    const angleInDegree = angleInRadian * (180 / Math.PI);
+    const allowedPerspectiveDistance = 50000;
+
     this.allTDCameras().forEach((tdCamera) => {
       tdCamera.position.set(...cameraData.position);
       tdCamera.up = new THREE.Vector3(...cameraData.up);
-      if (cameraData.lookAt[0] != undefined) {
+      if (cameraData.lookAt !== undefined) {
         tdCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
       }
     });
+    const flycamVector = new THREE.Vector3(...flycamPos);
+    /*const directionToFlyCam = new THREE.Vector3();
+    directionToFlyCam.subVectors(tdOrthoCamera.position, flycamVector) ;
+    tdPerspectiveCamera.position.*/
+    const directionToFlyCam = new THREE.Vector3();
+    directionToFlyCam.subVectors(tdOrthoCamera.position, flycamVector);
+    /*if (cameraData.xDiff !== 0 || cameraData.yDiff !== 0) {
+      const cameraMovementVector = new THREE.Vector3().copy(directionToFlyCam);
+      cameraMovementVector.cross(tdPerspectiveCamera.up).setLength(cameraData.xDiff);
+      cameraMovementVector.add(directionToFlyCam.clone().setLength(cameraData.yDiff));
+      tdPerspectiveCamera.position.add(cameraMovementVector);
+      console.log("movement", cameraMovementVector, "position", tdPerspectiveCamera.position);
+    }*/
+    let distToFlycam = tdPerspectiveCamera.position.distanceTo(flycamVector);
+    // correct distance to flycam to ensure no z fighting in that distance area.
+    if (distToFlycam > allowedPerspectiveDistance) {
+      directionToFlyCam.multiplyScalar(allowedPerspectiveDistance / distToFlycam);
+      tdPerspectiveCamera.position.add(directionToFlyCam);
+      distToFlycam = tdPerspectiveCamera.position.distanceTo(flycamVector);
+    }
+    // tdPerspectiveCamera.lookAt(orthoCamLookAt);
+    // console.log(orthoCamLookAt);
+
+    const angleInRadian = 2 * Math.atan(height / (2 * distToFlycam));
+    const angleInDegree = angleInRadian * (180 / Math.PI);
     tdPerspectiveCamera.aspect = width / height;
     tdPerspectiveCamera.fov = angleInDegree;
+    // tdPerspectiveCamera.far = distToFlycam + allowedPerspectiveDistance;
     tdOrthoCamera.left = cameraData.left;
     tdOrthoCamera.right = cameraData.right;
     tdOrthoCamera.top = cameraData.top;
@@ -276,6 +304,20 @@ class CameraController extends React.PureComponent<Props> {
     this.allTDCameras().forEach((tdCamera) => {
       tdCamera.updateProjectionMatrix();
     });
+    /*const orthoCamLookAt = new THREE.Vector3(0, 0, -1);
+    // rotated to the direction the ortho cam is looking.
+    orthoCamLookAt.applyQuaternion(tdOrthoCamera.quaternion).normalize();
+    // enlarge the vector to match the distance of the focus point ot the ortho cam (we assume the focus point is the flycam position or at a similar distance)
+    //orthoCamLookAt.multiplyScalar(tdOrthoCamera.position.distanceTo(flycamVector));
+    //orthoCamLookAt.add(tdOrthoCamera.position);
+    const myTest = new THREE.Vector3(
+      cameraData.right - cameraData.left,
+      cameraData.bottom - cameraData.top,
+      -tdOrthoCamera.position.distanceTo(flycamVector),
+    );
+    const TestB = myTest.clone().applyQuaternion(tdOrthoCamera.quaternion);
+
+    console.log("position", tdOrthoCamera.position);*/
     this.props.onCameraPositionChanged();
   }
 
@@ -422,5 +464,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   } else {
     updateCameraTDView(to, 1);
   }
+  resetTrackballsEmitter.emit("reset");
 }
 export default CameraController;

@@ -1,9 +1,6 @@
 import * as THREE from "three";
-import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
 import type { PartialCameraData } from "oxalis/store";
-import Store from "oxalis/store";
 import type { OrthoView, Rect, Viewport, ViewportRects } from "oxalis/constants";
-import constants from "oxalis/constants";
 type SetViewportAction = {
   type: "SET_VIEWPORT";
   viewport: OrthoView;
@@ -26,6 +23,18 @@ type MoveTDViewByVectorAction = {
   type: "MOVE_TD_VIEW_BY_VECTOR";
   x: number;
   y: number;
+};
+type MoveTDViewToPositionAction = {
+  type: "MOVE_TD_VIEW_TO_POSITION";
+  x: number;
+  y: number;
+  z: number;
+};
+type MoveTDViewToPositionWithoutTimeTrackingAction = {
+  type: "MOVE_TD_VIEW_TO_POSITION_WITHOUT_TIME_TRACKING";
+  x: number;
+  y: number;
+  z: number;
 };
 // These two actions are used instead of their functionally identical counterparts
 // (without the `_WITHOUT_TIME_TRACKING` suffix)
@@ -95,14 +104,26 @@ export const moveTDViewByVectorWithoutTimeTrackingAction = (
   x,
   y,
 });
-export const moveTDViewXAction = (x: number): MoveTDViewByVectorAction => {
-  const state = Store.getState();
-  return moveTDViewByVectorAction((x * getTDViewportSize(state)[0]) / constants.VIEWPORT_WIDTH, 0);
-};
-export const moveTDViewYAction = (y: number): MoveTDViewByVectorAction => {
-  const state = Store.getState();
-  return moveTDViewByVectorAction(0, (-y * getTDViewportSize(state)[1]) / constants.VIEWPORT_WIDTH);
-};
+export const moveTDViewToPositionWithoutTimeTrackingAction = (
+  x: number,
+  y: number,
+  z: number,
+): MoveTDViewToPositionWithoutTimeTrackingAction => ({
+  type: "MOVE_TD_VIEW_TO_POSITION_WITHOUT_TIME_TRACKING",
+  x,
+  y,
+  z,
+});
+export const moveTDViewToPositionAction = (
+  x: number,
+  y: number,
+  z: number,
+): MoveTDViewToPositionAction => ({
+  type: "MOVE_TD_VIEW_TO_POSITION",
+  x,
+  y,
+  z,
+});
 export const setInputCatcherRect = (viewport: Viewport, rect: Rect): SetInputCatcherRect => ({
   type: "SET_INPUT_CATCHER_RECT",
   viewport,
@@ -121,7 +142,9 @@ export type ViewModeAction =
   | MoveTDViewByVectorAction
   | MoveTDViewByVectorWithoutTimeTrackingAction
   | SetInputCatcherRect
-  | SetInputCatcherRects;
+  | SetInputCatcherRects
+  | MoveTDViewToPositionAction
+  | MoveTDViewToPositionWithoutTimeTrackingAction;
 export const ViewModeSaveRelevantActions = [
   "SET_TD_CAMERA",
   "CENTER_TD_VIEW",

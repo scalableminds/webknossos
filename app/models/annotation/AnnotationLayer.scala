@@ -13,18 +13,28 @@ import scala.concurrent.ExecutionContext
 case class AnnotationLayer(
     tracingId: String,
     typ: AnnotationLayerType,
-    name: Option[String] = None
+    name: String
 ) {}
 
 object AnnotationLayer extends FoxImplicits {
   implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]
 
+  val defaultSkeletonLayerName: String = "Skeleton"
+  val defaultVolumeLayerName: String = "Volume"
+
+  def defaultNameForType(typ: AnnotationLayerType): String =
+    typ match {
+      case AnnotationLayerType.Skeleton => defaultSkeletonLayerName
+      case AnnotationLayerType.Volume   => defaultVolumeLayerName
+    }
+
   def layersFromIds(skeletonTracingIdOpt: Option[String],
                     volumeTracingIdOpt: Option[String],
                     assertNonEmpty: Boolean = true)(implicit ec: ExecutionContext): Fox[List[AnnotationLayer]] = {
     val annotationLayers: List[AnnotationLayer] = List(
-      skeletonTracingIdOpt.map(AnnotationLayer(_, AnnotationLayerType.Skeleton)),
-      volumeTracingIdOpt.map(AnnotationLayer(_, AnnotationLayerType.Volume))).flatten
+      skeletonTracingIdOpt.map(AnnotationLayer(_, AnnotationLayerType.Skeleton, defaultSkeletonLayerName)),
+      volumeTracingIdOpt.map(AnnotationLayer(_, AnnotationLayerType.Volume, defaultVolumeLayerName))
+    ).flatten
     for {
       _ <- bool2Fox(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
     } yield annotationLayers
@@ -32,7 +42,7 @@ object AnnotationLayer extends FoxImplicits {
 }
 
 case class FetchedAnnotationLayer(tracingId: String,
-                                  name: Option[String],
+                                  name: String,
                                   tracing: Either[SkeletonTracing, VolumeTracing],
                                   volumeDataOpt: Option[Array[Byte]] = None) {
   def typ: AnnotationLayerType =
@@ -40,7 +50,7 @@ case class FetchedAnnotationLayer(tracingId: String,
 
   def volumeDataZipName(index: Int, isSingle: Boolean): String = {
     val indexLabel = if (isSingle) "" else s"_$index"
-    val nameLabel = name.map(n => s"_$n").getOrElse("")
+    val nameLabel = s"_$name"
     s"data$indexLabel$nameLabel.zip"
   }
 }
@@ -74,8 +84,10 @@ object FetchedAnnotationLayer {
       _ <- bool2Fox(skeletonTracingIdOpt.isDefined == skeletonTracingOpt.isDefined) ?~> "annotation.mismatchingSkeletonIdsAndTracings"
       _ <- bool2Fox(volumeTracingIdOpt.isDefined == volumeTracingOpt.isDefined) ?~> "annotation.mismatchingVolumeIdsAndTracings"
       annotationLayers: List[FetchedAnnotationLayer] = List(
-        skeletonTracingIdOpt.map(FetchedAnnotationLayer(_, None, Left(skeletonTracingOpt.get))),
-        volumeTracingIdOpt.map(FetchedAnnotationLayer(_, None, Right(volumeTracingOpt.get)))
+        skeletonTracingIdOpt.map(
+          FetchedAnnotationLayer(_, AnnotationLayer.defaultSkeletonLayerName, Left(skeletonTracingOpt.get))),
+        volumeTracingIdOpt.map(
+          FetchedAnnotationLayer(_, AnnotationLayer.defaultVolumeLayerName, Right(volumeTracingOpt.get)))
       ).flatten
       _ <- bool2Fox(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
     } yield annotationLayers

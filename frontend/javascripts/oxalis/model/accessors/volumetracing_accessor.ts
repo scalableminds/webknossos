@@ -102,7 +102,7 @@ export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) 
       : currentLayer.name,
   );
   if (tracing.skeleton != null) {
-    allReadableLayerNames.push("Skeletons");
+    allReadableLayerNames.push("Skeleton");
   }
   return allReadableLayerNames;
 }
@@ -485,6 +485,6 @@ export function getLabelActionFromPreviousSlice(
   const position = adapt(getFlooredPosition(state.flycam));
 
   return volumeTracing.lastLabelActions.find(
-    (el) => Math.floor(adapt(el.centroid)[dim]) != position[dim],
+    (el) => Math.floor(adapt(el.centroid)[dim]) !== position[dim],
   );
 }

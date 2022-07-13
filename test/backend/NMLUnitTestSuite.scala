@@ -4,7 +4,7 @@ import java.io.ByteArrayInputStream
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import models.annotation.nml.{NmlParser, NmlWriter}
-import models.annotation.{FetchedAnnotationLayer, UploadedVolumeLayer}
+import models.annotation.{AnnotationLayer, FetchedAnnotationLayer, UploadedVolumeLayer}
 import net.liftweb.common.{Box, Full}
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
@@ -23,7 +23,7 @@ class NMLUnitTestSuite extends PlaySpec {
 
   def writeAndParseTracing(skeletonTracing: SkeletonTracing)
     : Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)] = {
-    val annotationLayers = List(FetchedAnnotationLayer("dummySkeletonTracingId", None, Left(skeletonTracing), None))
+    val annotationLayers = List(FetchedAnnotationLayer("dummySkeletonTracingId", AnnotationLayer.defaultSkeletonLayerName, Left(skeletonTracing), None))
     val nmlEnumarator =
       new NmlWriter().toNmlStream(annotationLayers, None, None, None, "testOrganization", None, None)
     val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run

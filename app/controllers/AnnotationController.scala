@@ -5,17 +5,22 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
-import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
+import io.swagger.annotations._
+import javax.inject.Inject
+import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
+import models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService}
+import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserDAO, UserService}
+import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
@@ -34,7 +39,7 @@ import scala.concurrent.duration._
 case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      fallbackLayerName: Option[String],
                                      resolutionRestrictions: Option[ResolutionRestrictions],
-                                     name: Option[String])
+                                     name: String)
 object AnnotationLayerParameters {
   implicit val jsonFormat: OFormat[AnnotationLayerParameters] = Json.format[AnnotationLayerParameters]
 }
@@ -263,7 +268,10 @@ class AnnotationController @Inject()(
           None,
           ObjectId.dummyId,
           ObjectId.dummyId,
-          List(AnnotationLayer(TracingIds.dummyTracingId, AnnotationLayerType.Skeleton))
+          List(
+            AnnotationLayer(TracingIds.dummyTracingId,
+                            AnnotationLayerType.Skeleton,
+                            AnnotationLayer.defaultSkeletonLayerName))
         )
         json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)
@@ -385,7 +393,7 @@ class AnnotationController @Inject()(
         annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
         restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
         _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        newLayerName = (request.body \ "name").asOpt[String]
+        newLayerName = (request.body \ "name").as[String]
         _ <- annotationLayerDAO.updateName(annotation._id, tracingId, newLayerName) ?~> "annotation.edit.failed"
       } yield JsonOk(Messages("annotation.edit.success"))
     }
@@ -461,12 +469,37 @@ class AnnotationController @Inject()(
     } yield JsonOk(json)
   }
 
+  // Note that this lists both the user’s own explorationals and those shared with the user’s teams
+  @ApiOperation(hidden = true, value = "")
+  def listExplorationals(isFinished: Option[Boolean],
+                         limit: Option[Int],
+                         pageNumber: Option[Int] = None,
+                         includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        readableAnnotations <- annotationDAO.findAllListableExplorationals(
+          isFinished,
+          limit.getOrElse(annotationService.DefaultAnnotationListLimit),
+          pageNumber.getOrElse(0))
+        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
+          annotationDAO.countAllListableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
+        jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites) ?~> "annotation.compactWrites.failed"
+        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+      } yield {
+        val result = Ok(Json.toJson(jsonList))
+        annotationCount match {
+          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+          case None        => result
+        }
+      }
+    }
+
   @ApiOperation(hidden = true, value = "")
   def sharedAnnotations: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       userTeams <- userService.teamIdsFor(request.identity._id)
       sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
-      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites(_))
+      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites)
     } yield Ok(Json.toJson(json))
   }
 
@@ -475,7 +508,7 @@ class AnnotationController @Inject()(
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
       _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
-      teams <- annotationService.sharedTeamsFor(annotation._id)
+      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
       json <- Fox.serialCombined(teams)(teamService.publicWrites(_))
     } yield Ok(Json.toJson(json))
   }

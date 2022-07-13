@@ -9,11 +9,11 @@ import play.api.libs.json.{Json, OFormat}
 
 case class ImageThumbnail(mimeType: String, value: String)
 
-object ImageThumbnail extends ProtoGeometryImplicits {
+object ImageThumbnail {
   implicit val jsonFormat: OFormat[ImageThumbnail] = Json.format[ImageThumbnail]
 
-  def magForZoom(resolutions: List[Vec3Int], zoom: Double): Vec3Int =
-    resolutions.minBy(r => Math.abs(r.maxDim - zoom))
+  def magForZoom(dataLayer: DataLayerLike, zoom: Double): Vec3Int =
+    dataLayer.resolutions.minBy(r => Math.abs(r.maxDim - zoom))
 
   def goodThumbnailParameters(dataLayer: DataLayerLike,
                               width: Int,
@@ -26,33 +26,7 @@ object ImageThumbnail extends ProtoGeometryImplicits {
       if (centerX.isDefined && centerY.isDefined && centerZ.isDefined)
         Vec3Int(centerX.get, centerY.get, centerZ.get)
       else dataLayer.boundingBox.center
-    goodThumbnailParametersCompact(center, dataLayer.resolutions, width, height, zoomOpt)
-  }
-
-  def goodThumbnailParametersVolumeTracing(tracing: VolumeTracing,
-                                           width: Int,
-                                           height: Int,
-                                           centerX: Option[Int] = None,
-                                           centerY: Option[Int] = None,
-                                           centerZ: Option[Int] = None,
-                                           zoomOpt: Option[Double] = None): VoxelPosition = {
-    val center =
-      if (centerX.isDefined && centerY.isDefined && centerZ.isDefined)
-        Vec3Int(centerX.get, centerY.get, centerZ.get)
-      else tracing.boundingBox.center
-    goodThumbnailParametersCompact(center,
-                                   tracing.resolutions.map(r => Vec3Int(r.x, r.y, r.z)).toList,
-                                   width,
-                                   height,
-                                   zoomOpt)
-  }
-
-  def goodThumbnailParametersCompact(center: Vec3Int,
-                                     resolutions: List[Vec3Int],
-                                     width: Int,
-                                     height: Int,
-                                     zoomOpt: Option[Double] = None): VoxelPosition = {
-    val mag = magForZoom(resolutions, zoomOpt.getOrElse(1.0))
+    val mag = magForZoom(dataLayer, zoomOpt.getOrElse(1.0))
     val x = Math.max(0, center.x - width * mag.x / 2)
     val y = Math.max(0, center.y - height * mag.y / 2)
     val z = center.z

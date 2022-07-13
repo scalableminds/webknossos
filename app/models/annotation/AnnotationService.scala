@@ -22,7 +22,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ResolutionRestrictions,
@@ -74,33 +73,33 @@ case class RedundantTracingProperties(
     userBoundingBoxes: Seq[NamedBoundingBoxProto]
 )
 
-class AnnotationService @Inject()(annotationInformationProvider: AnnotationInformationProvider,
-                                  savedTracingInformationHandler: SavedTracingInformationHandler,
-                                  annotationDAO: AnnotationDAO,
-                                  annotationLayersDAO: AnnotationLayerDAO,
-                                  userDAO: UserDAO,
-                                  taskTypeDAO: TaskTypeDAO,
-                                  taskService: TaskService,
-                                  dataSetService: DataSetService,
-                                  dataSetDAO: DataSetDAO,
-                                  dataStoreService: DataStoreService,
-                                  tracingStoreService: TracingStoreService,
-                                  tracingStoreDAO: TracingStoreDAO,
-                                  taskDAO: TaskDAO,
-                                  teamDAO: TeamDAO,
-                                  userService: UserService,
-                                  dataStoreDAO: DataStoreDAO,
-                                  projectDAO: ProjectDAO,
-                                  organizationDAO: OrganizationDAO,
-                                  annotationRestrictionDefults: AnnotationRestrictionDefaults,
-                                  nmlWriter: NmlWriter,
-                                  temporaryFileCreator: TemporaryFileCreator,
-                                  meshDAO: MeshDAO,
-                                  meshService: MeshService,
-                                  sharedAnnotationsDAO: SharedAnnotationsDAO,
-                                  val thumbnailCache: TemporaryStore[String, Array[Byte]])(
-    implicit ec: ExecutionContext,
-    val materializer: Materializer)
+class AnnotationService @Inject()(
+    annotationInformationProvider: AnnotationInformationProvider,
+    savedTracingInformationHandler: SavedTracingInformationHandler,
+    annotationDAO: AnnotationDAO,
+    annotationLayersDAO: AnnotationLayerDAO,
+    userDAO: UserDAO,
+    taskTypeDAO: TaskTypeDAO,
+    taskService: TaskService,
+    dataSetService: DataSetService,
+    dataSetDAO: DataSetDAO,
+    dataStoreService: DataStoreService,
+    tracingStoreService: TracingStoreService,
+    tracingStoreDAO: TracingStoreDAO,
+    taskDAO: TaskDAO,
+    teamDAO: TeamDAO,
+    userService: UserService,
+    teamService: TeamService,
+    dataStoreDAO: DataStoreDAO,
+    projectDAO: ProjectDAO,
+    organizationDAO: OrganizationDAO,
+    annotationRestrictionDefults: AnnotationRestrictionDefaults,
+    nmlWriter: NmlWriter,
+    temporaryFileCreator: TemporaryFileCreator,
+    meshDAO: MeshDAO,
+    meshService: MeshService,
+    sharedAnnotationsDAO: SharedAnnotationsDAO
+)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
     with ProtoGeometryImplicits

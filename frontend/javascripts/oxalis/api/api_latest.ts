@@ -71,13 +71,8 @@ import {
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
-  getMaxZoomStep,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getPosition,
-  getRotation,
-  getMaximumZoomForAllResolutionsFromStore,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -1370,21 +1365,10 @@ class DataApi {
     );
 
     // Find a viable resolution to compute the histogram on
-    const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
-    const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
-
     const layer = getLayerByName(state.dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const halfResolutionIndex = Math.floor(0.2 * maximumZoomSteps.length);
-    const zoomStep = resolutionInfo.getClosestExistingIndex(halfResolutionIndex);
-
-    let resolutionIndex = 0;
-    if (zoomStep === -1) {
-      resolutionIndex = maxLogZoomStep;
-    } else {
-      resolutionIndex = Math.min(zoomStep, maxLogZoomStep);
-    }
-
+    const maybeResolutionIndex = 2;
+    const resolutionIndex = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
     const cuboid = await this.getDataForBoundingBox(
       layerName,
       {

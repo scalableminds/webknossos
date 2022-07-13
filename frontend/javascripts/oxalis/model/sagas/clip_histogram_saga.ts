@@ -17,7 +17,7 @@ function onThresholdChange(layerName: string, [firstVal, secVal]: [number, numbe
   }
 }
 
-async function getClippingValues(layerName: string, thresholdRatio: number = 0.00001) {
+async function getClippingValues(layerName: string, thresholdRatio: number = 0.0001) {
   const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
   const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
@@ -50,7 +50,7 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
     accumulator.set(key, area);
   }
 
-  const thresholdValue = (thresholdRatio * area) / 100.0;
+  const thresholdValue = (thresholdRatio * area) / 2.0;
   let lowerClip = -1;
 
   for (const key of sortedHistKeys) {

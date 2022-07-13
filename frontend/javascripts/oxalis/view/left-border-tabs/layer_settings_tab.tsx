@@ -33,6 +33,7 @@ import {
   findDataPositionForLayer,
   clearCache,
   findDataPositionForVolumeTracing,
+  convertToHybridTracing,
 } from "admin/admin_rest_api";
 import {
   getDefaultIntensityRangeOfLayer,
@@ -42,6 +43,7 @@ import {
   getLayerByName,
   getResolutionInfo,
   getResolutions,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -897,6 +899,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     });
   };
 
+  handleConvertToHybrid = async () => {
+    await Model.ensureSavedState();
+    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+    await convertToHybridTracing(
+      this.props.tracing.annotationId,
+      maybeSegmentationLayer != null ? maybeSegmentationLayer.name : null,
+    );
+    location.reload();
+  };
+
   render() {
     const { layers } = this.props.datasetConfiguration;
 
@@ -914,6 +926,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       (el) => !el.isColorLayer,
     ).map((el) => this.getLayerSettings(el.layerName, el.layer, el.isColorLayer));
 
+    const isSkeleton = this.props.tracing.skeleton != null;
+    const isVolume = this.props.tracing.volumes.length > 0;
+    const isHybrid = isSkeleton && isVolume;
+
     return (
       <div className="tracing-settings-menu">
         {layerSettings}
@@ -924,12 +940,32 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <>
             <Divider />
             <Row justify="center" align="middle">
-              <Button onClick={this.showAddVolumeLayerModal}>
+              <Button
+                onClick={this.showAddVolumeLayerModal}
+                style={{
+                  width: 235,
+                }}
+              >
                 <PlusOutlined />
                 Add Volume Annotation Layer
               </Button>
             </Row>
           </>
+        ) : null}
+
+        {this.props.tracing.restrictions.allowUpdate && !isHybrid ? (
+          <Row justify="center" align="middle">
+            <Button
+              onClick={this.handleConvertToHybrid}
+              style={{
+                width: 235,
+                marginTop: 10,
+              }}
+            >
+              <PlusOutlined />
+              Add Skeleton Annotation Layer
+            </Button>
+          </Row>
         ) : null}
 
         {this.state.volumeTracingToDownsample != null ? (

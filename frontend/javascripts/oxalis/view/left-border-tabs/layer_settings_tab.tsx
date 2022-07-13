@@ -931,12 +931,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       (el) => !el.isColorLayer,
     ).map((el) => this.getLayerSettings(el.layerName, el.layer, el.isColorLayer));
 
-    const isSkeleton = this.props.tracing.skeleton != null;
-    const isVolume = this.props.tracing.volumes.length > 0;
-    const isHybrid = isSkeleton && isVolume;
-    const isExplorational =
-      this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational;
-
+    const state = Store.getState();
+    const canBeMadeHybrid =
+      this.props.tracing.skeleton === null &&
+      this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational &&
+      state.task === null;
     return (
       <div className="tracing-settings-menu">
         {layerSettings}
@@ -960,7 +959,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {!isHybrid && this.props.tracing.restrictions.allowUpdate && isExplorational ? (
+        {this.props.tracing.restrictions.allowUpdate && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <Button
               onClick={this.handleConvertToHybrid}

@@ -11,10 +11,7 @@ import type { Vector3 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import {
-  getDatasetExtentAsString,
-  getResolutions,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getDatasetExtentAsString, getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import {

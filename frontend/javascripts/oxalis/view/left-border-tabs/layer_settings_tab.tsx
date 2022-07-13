@@ -14,7 +14,12 @@ import React from "react";
 import _ from "lodash";
 
 import classnames from "classnames";
-import type { APIDataLayer, APIDataset, EditableLayerProperties } from "types/api_flow_types";
+import {
+  APIAnnotationTypeEnum,
+  APIDataLayer,
+  APIDataset,
+  EditableLayerProperties,
+} from "types/api_flow_types";
 import { ValueOf } from "types/globals";
 import { AsyncIconButton } from "components/async_clickables";
 import {
@@ -929,6 +934,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const isSkeleton = this.props.tracing.skeleton != null;
     const isVolume = this.props.tracing.volumes.length > 0;
     const isHybrid = isSkeleton && isVolume;
+    const isExplorational =
+      this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational;
 
     return (
       <div className="tracing-settings-menu">
@@ -953,7 +960,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {this.props.tracing.restrictions.allowUpdate && !isHybrid ? (
+        {!isHybrid && this.props.tracing.restrictions.allowUpdate && isExplorational ? (
           <Row justify="center" align="middle">
             <Button
               onClick={this.handleConvertToHybrid}

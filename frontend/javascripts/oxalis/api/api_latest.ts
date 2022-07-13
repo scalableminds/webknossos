@@ -71,11 +71,12 @@ import {
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getMappingInfo,
+  getMaxZoomStep,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
   getRotation,
-  getRequestLogZoomStep,
+  getMaximumZoomForAllResolutionsFromStore,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   loadAdHocMeshAction,
@@ -1349,7 +1350,7 @@ class DataApi {
     return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
   }
 
-  async getViewportData(viewport: OrthoView, layerName: string) {
+  async getViewportDataForHistogram(viewport: OrthoView, layerName: string) {
     const state = Store.getState();
     const [curX, curY, curZ] = dimensions.transDim(
       dimensions.roundCoordinate(getPosition(state.flycam)),
@@ -1367,7 +1368,23 @@ class DataApi {
       V3.add([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 1]),
       viewport,
     );
-    const resolutionIndex = getRequestLogZoomStep(state);
+
+    // Find a viable resolution to compute the histogram on
+    const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
+    const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
+
+    const layer = getLayerByName(state.dataset, layerName);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const halfResolutionIndex = Math.floor(0.2 * maximumZoomSteps.length);
+    const zoomStep = resolutionInfo.getClosestExistingIndex(halfResolutionIndex);
+
+    let resolutionIndex = 0;
+    if (zoomStep === -1) {
+      resolutionIndex = maxLogZoomStep;
+    } else {
+      resolutionIndex = Math.min(zoomStep, maxLogZoomStep);
+    }
+
     const cuboid = await this.getDataForBoundingBox(
       layerName,
       {

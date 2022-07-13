@@ -17,13 +17,13 @@ function onThresholdChange(layerName: string, [firstVal, secVal]: [number, numbe
   }
 }
 
-async function getClippingValues(layerName: string, thresholdRatio: number = 0.005) {
+async function getClippingValues(layerName: string, thresholdRatio: number = 0.00001) {
   const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
   const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
-    api.data.getViewportData(OrthoViews.PLANE_XY, layerName),
-    api.data.getViewportData(OrthoViews.PLANE_XZ, layerName),
-    api.data.getViewportData(OrthoViews.PLANE_YZ, layerName),
+    api.data.getViewportDataForHistogram(OrthoViews.PLANE_XY, layerName),
+    api.data.getViewportDataForHistogram(OrthoViews.PLANE_XZ, layerName),
+    api.data.getViewportDataForHistogram(OrthoViews.PLANE_YZ, layerName),
   ]);
   const dataForAllViewPorts = new TypedArrayClass(
     cuboidXY.length + cuboidXZ.length + cuboidYZ.length,
@@ -32,7 +32,7 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
   dataForAllViewPorts.set(cuboidXZ, cuboidXY.length);
   dataForAllViewPorts.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
   const localHist = new Map();
-
+  console.log({ dataForAllViewPorts });
   for (let i = 0; i < dataForAllViewPorts.length; i++) {
     if (dataForAllViewPorts[i] !== 0) {
       const value = localHist.get(dataForAllViewPorts[i]);
@@ -50,7 +50,7 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
     accumulator.set(key, area);
   }
 
-  const thresholdValue = (thresholdRatio * area) / 2.0;
+  const thresholdValue = (thresholdRatio * area) / 100.0;
   let lowerClip = -1;
 
   for (const key of sortedHistKeys) {

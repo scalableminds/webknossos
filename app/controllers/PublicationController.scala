@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import io.swagger.annotations._
 import models.annotation.AnnotationDAO
-import models.binary.{DataSetDAO, Publication, PublicationDAO, PublicationService}
+import models.binary.{DataSetDAO, PublicationDAO, PublicationService}
 import oxalis.security.WkEnv
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}

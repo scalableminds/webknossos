@@ -820,6 +820,20 @@ class AnnotationService @Inject()(
     }
   }
 
+  def writesWithDataset(annotation: Annotation): Fox[JsObject] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      tracingStore <- tracingStoreDAO.findFirst
+      tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+      dataSetJs <- dataSetService.publicWrites(dataSet, None, None, None)
+    } yield
+      Json.obj("id" -> annotation._id,
+               "typ" -> annotation.typ,
+               "tracingStore" -> tracingStoreJs,
+               "dataSet" -> dataSetJs)
+  }
+
   private def userJsonForAnnotation(userId: ObjectId, requestingUser: Option[User]): Fox[Option[JsObject]] =
     if (userId == ObjectId.dummyId) {
       Fox.successful(None)

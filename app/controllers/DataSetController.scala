@@ -18,7 +18,7 @@ import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
 import scala.concurrent.duration._
@@ -37,7 +37,9 @@ class DataSetController @Inject()(userService: UserService,
                                   dataSetDAO: DataSetDAO,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
-                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                                  sil: Silhouette[WkEnv])
+                                 (implicit ec: ExecutionContext,
+                                  bodyParsers: PlayBodyParsers)
     extends Controller {
 
   private val DefaultThumbnailWidth = 400
@@ -136,6 +138,14 @@ class DataSetController @Inject()(userService: UserService,
         .reverse ?~> "dataSet.name.alreadyTaken"
       organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext).map(_.name)
       _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
+    } yield Ok
+  }
+
+
+  @ApiOperation(hidden = true, value = "")
+  def exploreRemoteDataset(): Action[List[String]] = sil.SecuredAction.async(validateJson[List[String]]) { implicit request =>
+    for {
+      _ <- Fox.successful(())
     } yield Ok
   }
 

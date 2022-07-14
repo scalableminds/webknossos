@@ -68,6 +68,7 @@ GET           /datasets/:organizationName/:dataSetName/sandbox/:typ             
 GET           /datasets                                                                 controllers.DataSetController.list
 POST          /datasets                                                                 controllers.DataSetController.create(typ: String)
 POST          /datasets/addForeign                                                      controllers.DataSetController.addForeignDataStoreAndDataSet
+POST          /datasets/exploreRemote                                                   controllers.DataSetController.exploreRemoteDataset
 GET           /datasets/disambiguate/:dataSetName/toNew                                 controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/health                           controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
 PATCH         /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.update(organizationName: String, dataSetName: String)

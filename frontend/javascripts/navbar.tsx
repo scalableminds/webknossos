@@ -682,6 +682,9 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
         theme="dark"
         subMenuCloseDelay={subMenuCloseDelay}
         triggerSubMenuAction="click"
+        // There is a bug where the last menu entry disappears behind the overflow indicator
+        // although there is ample space available, see https://github.com/ant-design/ant-design/issues/32277
+        overflowedIndicator={false}
       >
         {[
           <Menu.Item key="0">

@@ -414,6 +414,15 @@ CREATE TABLE webknossos.invites(
 );
 
 
+CREATE TABLE webknossos.annotation_private_links(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  value Text NOT NULL,
+  loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
+  expirationDateTime TIMESTAMPTZ NOT NULL,
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+)
+
+
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
 CREATE VIEW webknossos.publications_ AS SELECT * FROM webknossos.publications WHERE NOT isDeleted;

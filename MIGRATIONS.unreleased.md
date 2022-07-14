@@ -30,3 +30,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ### Postgres Evolutions:
 
 - [083-unique-layer-names.sql](conf/evolutions/083-unique-layer-names.sql) Note: Note that this evolution introduces constraints which may not be met by existing data. See above for manual steps
+- [084-add-annotations-publicationforeignkey](conf/evolutions/084-add-annotations-publicationforeignkey.sql)

@@ -37,9 +37,8 @@ class DataSetController @Inject()(userService: UserService,
                                   dataSetDAO: DataSetDAO,
                                   analyticsService: AnalyticsService,
                                   mailchimpClient: MailchimpClient,
-                                  sil: Silhouette[WkEnv])
-                                 (implicit ec: ExecutionContext,
-                                  bodyParsers: PlayBodyParsers)
+                                  exploreRemoteLayerService: ExploreRemoteLayerService,
+                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   private val DefaultThumbnailWidth = 400
@@ -140,13 +139,12 @@ class DataSetController @Inject()(userService: UserService,
       _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
     } yield Ok
   }
-
-
   @ApiOperation(hidden = true, value = "")
-  def exploreRemoteDataset(): Action[List[String]] = sil.SecuredAction.async(validateJson[List[String]]) { implicit request =>
-    for {
-      _ <- Fox.successful(())
-    } yield Ok
+  def exploreRemoteDataset(): Action[List[String]] = sil.SecuredAction.async(validateJson[List[String]]) {
+    implicit request =>
+      for {
+        exploredLayers <- Fox.serialCombined(request.body)(exploreRemoteLayerService.exploreRemoteLayer)
+      } yield Ok
   }
 
   @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")

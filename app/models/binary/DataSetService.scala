@@ -15,16 +15,16 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
+import models.job.WorkerDAO
+import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security.CompactRandomIDGenerator
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
-import javax.inject.Inject
-import models.job.WorkerDAO
-import models.organization.{Organization, OrganizationDAO}
-import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}

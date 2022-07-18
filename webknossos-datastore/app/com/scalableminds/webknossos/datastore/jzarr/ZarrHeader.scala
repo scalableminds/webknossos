@@ -1,10 +1,13 @@
 package com.scalableminds.webknossos.datastore.jzarr
 
 import java.nio.ByteOrder
+
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.jzarr.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.jzarr.BytesConverter.bytesPerElementFor
 import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
@@ -45,6 +48,10 @@ case class ZarrHeader(
       chunks
     } else chunks.reverse
 
+  lazy val boundingBox: Option[BoundingBox] =
+    if (shape.length >= 3) Some(BoundingBox(Vec3Int.zeros, shape(0), shape(1), shape(2))) else None
+
+  lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
 }
 
 object ZarrHeader {

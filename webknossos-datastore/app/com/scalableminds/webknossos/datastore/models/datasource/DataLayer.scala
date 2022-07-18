@@ -73,6 +73,20 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int32  => (1, "<i4")
     case ElementClass.int64  => (1, "<i8")
   }
+
+  def guessFromZarrString(zarrDtype: String): Option[ElementClass.Value] = zarrDtype match {
+    case "|u1" => Some(ElementClass.uint8)
+    case "<u2" => Some(ElementClass.uint16)
+    case "<u4" => Some(ElementClass.uint32)
+    case "<u8" => Some(ElementClass.uint64)
+    case "<f4" => Some(ElementClass.float)
+    case "<f8" => Some(ElementClass.double)
+    case "|i1" => Some(ElementClass.int8)
+    case "<i2" => Some(ElementClass.int16)
+    case "<i4" => Some(ElementClass.int32)
+    case "<i8" => Some(ElementClass.int64)
+    case _     => None
+  }
 }
 
 object LayerViewConfiguration {

@@ -44,7 +44,7 @@ function DatasetSettingsSharingTab({
           : null
       }
     >
-      <TeamSelectionComponent mode="multiple" />
+      <TeamSelectionComponent mode="multiple" allowNonEditableTeams />
     </FormItemWithInfo>
   );
 

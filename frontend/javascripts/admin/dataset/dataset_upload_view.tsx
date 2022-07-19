@@ -659,6 +659,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     <TeamSelectionComponent
                       mode="multiple"
                       value={this.state.selectedTeams}
+                      allowNonEditableTeams
                       onChange={(selectedTeams) => {
                         if (this.formRef.current == null) return;
 

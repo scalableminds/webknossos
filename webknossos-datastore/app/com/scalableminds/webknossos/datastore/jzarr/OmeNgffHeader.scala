@@ -23,7 +23,7 @@ object OmeNgffAxis {
 
 case class OmeNgffOneHeader(
     version: String = "0.4", // format version number
-    name: String,
+    name: Option[String],
     axes: List[OmeNgffAxis] = List(
       OmeNgffAxis(name = "c", `type` = "channel"),
       OmeNgffAxis(name = "x", `type` = "space", unit = Some("nanometer")),
@@ -47,8 +47,10 @@ object OmeNgffHeader {
           path = mag.toMagLiteral(allowScalar = true),
           List(
             OmeNgffCoordinateTransformation(scale = List[Double](1.0) ++ (dataSourceScale * Vec3Double(mag)).toList))))
-    OmeNgffHeader(multiscales = List(OmeNgffOneHeader(name = dataLayerName, datasets = datasets)))
+    OmeNgffHeader(multiscales = List(OmeNgffOneHeader(name = Some(dataLayerName), datasets = datasets)))
   }
 
   implicit val jsonFormat: OFormat[OmeNgffHeader] = Json.format[OmeNgffHeader]
+
+  val FILENAME_DOT_ZATTRS = ".zattrs"
 }

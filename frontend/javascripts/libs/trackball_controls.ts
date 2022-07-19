@@ -105,6 +105,7 @@ const TrackballControls = function (
   const _eye = new THREE.Vector3();
   this.flycamPos = new THREE.Vector3();
   const dirToFlycam = new THREE.Vector3();
+  this.mouseMoveFactor = [0, 0];
 
   const _rotateStart = new THREE.Vector3();
 
@@ -161,10 +162,7 @@ const TrackballControls = function (
   ) {
     const screenBounds = _this.getScreenBounds();
 
-    return vector.set(
-      (pageX - screenBounds.left) / screenBounds.width,
-      (pageY - screenBounds.top) / screenBounds.height,
-    );
+    return vector.set(pageX - screenBounds.left, pageY - screenBounds.top);
   };
 
   this.getMouseProjectionOnBall = (() => {
@@ -272,7 +270,8 @@ const TrackballControls = function (
       mouseChange.copy(_panEnd).sub(_panStart);
 
       if (mouseChange.lengthSq()) {
-        mouseChange.multiplyScalar(_eye.length() * _this.panSpeed);
+        mouseChange.x *= _this.mouseMoveFactor[0];
+        mouseChange.y *= _this.mouseMoveFactor[1];
         pan.copy(_eye).cross(_this.object.up).setLength(mouseChange.x);
         pan.add(objectUp.copy(_this.object.up).setLength(mouseChange.y));
 

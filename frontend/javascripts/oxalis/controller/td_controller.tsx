@@ -184,7 +184,6 @@ class TDController extends React.PureComponent<Props> {
   initTrackballControls(view: HTMLElement): void {
     const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     const { OrthographicCamera, PerspectiveCamera } = this.props.cameras[OrthoViews.TDView];
-    console.log("performed init of trackball");
     // TODO: ensure "onTDCameraChanged is only called once"
     this.controls = [
       new TrackballControls(
@@ -216,6 +215,13 @@ class TDController extends React.PureComponent<Props> {
     if (!this.controls) {
       return;
     }
+    const storeState = Store.getState();
+    const [scaleX, scaleY] = getViewportScale(storeState, OrthoViews.TDView);
+    const tdViewportSize = getTDViewportSize(storeState);
+    const mouseMoveFactor = [
+      tdViewportSize[0] / (scaleX * constants.VIEWPORT_WIDTH),
+      tdViewportSize[1] / (scaleY * constants.VIEWPORT_WIDTH),
+    ];
     // TODO:
     // Make the fly cam the rotation center
     // The camera teleports to the center when clicking one of the buttons.
@@ -224,6 +230,7 @@ class TDController extends React.PureComponent<Props> {
     const flycamPos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     this.controls.forEach((control) => {
       control.flycamPos.set(...flycamPos);
+      control.mouseMoveFactor = mouseMoveFactor;
       control.update(true);
     });
   };

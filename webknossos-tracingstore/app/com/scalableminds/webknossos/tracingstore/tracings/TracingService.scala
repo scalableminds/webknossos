@@ -122,7 +122,7 @@ trait TracingService[T <: GeneratedMessage]
            useCache: Boolean = true,
            applyUpdates: Boolean = false): Fox[T] = {
     if (tracingId == TracingIds.dummyTracingId) return Fox.successful(dummyTracing)
-    val tracingFox = tracingStore.get(tracingId, version)(fromProto[T]).map(_.value)
+    val tracingFox = tracingStore.get(tracingId, version)(fromProtoBytes[T]).map(_.value)
     tracingFox.flatMap { tracing =>
       val updatedTracing = if (applyUpdates) {
         applyPendingUpdates(tracing, tracingId, version)

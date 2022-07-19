@@ -36,6 +36,8 @@ message VolumeTracing {
     optional string organizationName = 14; // to identify the dataset (may differ from annotation orga)
     repeated Vec3IntProto resolutions = 15;
     repeated Segment segments = 16;
+    optional string mappingName = 17; // either a mapping present in the fallback layer, or an editable mapping on the tracingstore
+    optional bool mappingIsEditable = 18;
 }
 
 message VolumeTracingOpt {

@@ -22,13 +22,13 @@ trait KeyValueStoreImplicits extends BoxImplicits {
 
   implicit def toBox[T](x: T): Box[T] = Full(x)
 
-  implicit def asJson[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
+  implicit def toJsonBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
-  implicit def fromJson[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
+  implicit def fromJsonBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
 
-  implicit def asProto[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
+  implicit def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  implicit def fromProto[T <: GeneratedMessage](a: Array[Byte])(
+  implicit def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(
       implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
 }
 

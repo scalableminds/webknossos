@@ -12,6 +12,7 @@ import Model from "oxalis/model";
 import * as Utils from "libs/utils";
 import features from "features";
 import _ from "lodash";
+import { getReadableNameOfVolumeLayer } from "./starting_job_modals";
 type Props = {
   handleClose: () => void;
   tracing: Tracing | null | undefined;
@@ -24,7 +25,6 @@ type LayerInfos = {
   tracingId: string | null | undefined;
   annotationId: string | null | undefined;
   annotationType: APIAnnotationType | null | undefined;
-  tracingVersion: number | null | undefined;
   hasMag1: boolean;
   mappingName: string | null | undefined;
   mappingType: string | null | undefined;
@@ -40,7 +40,7 @@ export function getLayerInfos(
   tracing: HybridTracing | null | undefined,
   activeMappingInfos: any,
   isMergerModeEnabled: boolean,
-) {
+): LayerInfos {
   const annotationId = tracing != null ? tracing.annotationId : null;
   const annotationType = tracing != null ? tracing.annotationType : null;
 
@@ -60,7 +60,6 @@ export function getLayerInfos(
       tracingId: null,
       annotationId: null,
       annotationType: null,
-      tracingVersion: null,
       hasMag1: hasMag1(layer),
       hideUnmappedIds: !isColorLayer && existsActivePersistentMapping ? hideUnmappedIds : null,
       mappingName: !isColorLayer && existsActivePersistentMapping ? mappingName : null,
@@ -75,17 +74,16 @@ export function getLayerInfos(
     // Satisfy flow.
     throw new Error("Tracing is null, but layer.tracingId is defined.");
   }
-
+  const readableVolumeLayerName = getReadableNameOfVolumeLayer(layer, tracing) || "Volume";
   const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
 
   if (layer.fallbackLayerInfo != null) {
     return {
-      displayName: "Volume annotation with fallback segmentation",
+      displayName: readableVolumeLayerName,
       layerName: layer.fallbackLayerInfo.name,
       tracingId: volumeTracing.tracingId,
       annotationId,
       annotationType,
-      tracingVersion: volumeTracing.version,
       hasMag1: hasMag1(layer),
       hideUnmappedIds: existsActivePersistentMapping ? hideUnmappedIds : null,
       mappingName: existsActivePersistentMapping ? mappingName : null,
@@ -95,12 +93,11 @@ export function getLayerInfos(
   }
 
   return {
-    displayName: "Volume annotation",
+    displayName: readableVolumeLayerName,
     layerName: null,
     tracingId: volumeTracing.tracingId,
     annotationId,
     annotationType,
-    tracingVersion: volumeTracing.version,
     hasMag1: hasMag1(layer),
     hideUnmappedIds: null,
     mappingName: null,
@@ -129,9 +126,9 @@ export async function handleStartExport(
     dataset.owningOrganization,
     Utils.computeArrayFromBoundingBox(boundingBox),
     layerInfos.layerName,
-    layerInfos.tracingId,
     layerInfos.annotationId,
     layerInfos.annotationType,
+    layerInfos.displayName,
     layerInfos.mappingName,
     layerInfos.mappingType,
     layerInfos.hideUnmappedIds,

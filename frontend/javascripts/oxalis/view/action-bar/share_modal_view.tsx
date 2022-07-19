@@ -54,7 +54,9 @@ export function useDatasetSharingToken(dataset: APIDataset) {
 
   const fetchAndSetToken = async () => {
     try {
-      const sharingToken = await getDatasetSharingToken(dataset);
+      const sharingToken = await getDatasetSharingToken(dataset, {
+        doNotInvestigate: true,
+      });
       setDatasetToken(sharingToken);
     } catch (error) {
       console.error(error);
@@ -371,7 +373,7 @@ function _ShareModalView(props: Props) {
             }}
           >
             Choose the teams to share your annotation with. Members of these teams can see this
-            annotation in their shared annotations tab.
+            annotation in their Annotations tab.
           </Hint>
         </Col>
       </Row>

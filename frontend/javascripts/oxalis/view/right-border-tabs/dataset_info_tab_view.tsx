@@ -414,12 +414,12 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       );
     } else if (!this.props.tracing.restrictions.allowUpdate) {
       // For readonly tracings display the non-editable explorative tracing name
-      annotationTypeLabel = <span>Explorational Tracing: {tracingName}</span>;
+      annotationTypeLabel = <span>Annotation: {tracingName}</span>;
     } else {
       // Or display the editable explorative tracing name
       annotationTypeLabel = (
         <span>
-          Explorational Annotation:
+          Annotation:
           <EditableTextLabel
             value={tracingName}
             onChange={this.setAnnotationName}

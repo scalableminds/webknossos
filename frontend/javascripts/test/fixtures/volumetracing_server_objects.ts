@@ -72,6 +72,7 @@ export const annotation: APIAnnotation = {
   modified: 1529066010230,
   name: "",
   typ: "Explorational",
+  teams: [],
   task: null,
   stats: {},
   restrictions: {

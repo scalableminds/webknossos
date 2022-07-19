@@ -130,7 +130,7 @@ export const BorderTabs: Record<string, BorderTabType> = {
   SkeletonTabView: {
     id: "SkeletonTabView",
     name: "Skeleton",
-    description: "Create and organize skeletons",
+    description: "Create and organize trees",
   },
   AbstractTreeTab: {
     id: "AbstractTreeTab",
@@ -158,7 +158,7 @@ export const BorderTabs: Record<string, BorderTabType> = {
     description: "Explore Connectomes of the Dataset",
     // Always render the connectome tab in the background, to allow to use its functionality even
     // if the tab is not visible. For example, when opening a link where agglomerates and synapses
-    // should be loaded automatically. During normal tracing, the performance impact is negligible, because
+    // should be loaded automatically. During normal annotation, the performance impact is negligible, because
     // the connectome tab doesn't do anything, then.
     enableRenderOnDemand: false,
   },
@@ -180,6 +180,7 @@ export enum AnnotationToolEnum {
   FILL_CELL = "FILL_CELL",
   PICK_CELL = "PICK_CELL",
   BOUNDING_BOX = "BOUNDING_BOX",
+  PROOFREAD = "PROOFREAD",
 }
 export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.BRUSH,
@@ -257,7 +258,7 @@ export type ShowContextMenuFunction = (
   arg1: number,
   arg2: number | null | undefined,
   arg3: number | null | undefined,
-  arg4: Vector3,
+  arg4: Vector3 | null | undefined,
   arg5: OrthoView,
 ) => void;
 const Constants = {
@@ -294,6 +295,8 @@ const Constants = {
   DEFAULT_NODE_RADIUS: 1.0,
   RESIZE_THROTTLE_TIME: 50,
   MIN_TREE_ID: 1,
+  // TreeIds > 1024^2 break webKnossos, see https://github.com/scalableminds/webknossos/issues/5009
+  MAX_TREE_ID: 1048576,
   MIN_NODE_ID: 1,
   // Maximum of how many buckets will be held in RAM (per layer)
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,

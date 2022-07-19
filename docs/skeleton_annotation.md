@@ -18,7 +18,7 @@ webKnossos supports several modes for displaying your dataset & interacting with
 
 #### Orthogonal Mode
 Orthogonal mode displays a dataset with the camera oriented orthogonally to each of the three main axis x, y, z.
-Additionally, a fourth viewport shows the data and skeletons from a 3D perspective.
+Additionally, a fourth viewport shows the data and skeleton from a 3D perspective.
 All camera movements happen along the respective main axis.
 This view is especially useful for viewing your data in the highest possible quality alongside its main imaging axis, typically XY.
 Every single slice of the raw data can be viewed.
@@ -191,7 +191,7 @@ There are two ways for downloading your annotations:
 
 ![Download of skeeleton annotations via ´Download´button in the toolbar.](images/tracing_ui_download_tooolbar.jpeg)
 
-2. If you need more fine-grained control over which trees to download, use the `Download Selected Trees` option. From the `Skeletons` Tab, click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
+2. If you need more fine-grained control over which trees to download, use the `Download Selected Trees` option. From the `Skeleton` Tab, click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
 
 ![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](images/tracing_ui_download.jpeg)
 
@@ -199,7 +199,7 @@ Importing a skeleton annotation can be achieved using one of two ways:
 
 1. If you already have an annotation open you can easily add more skeletons to it by *drag and dropping* an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML file's content with the already open annotation.
 
-2. To import a skeleton annotation as a completely new webKnossos annotation, drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "My Annotations" section.
+2. To import a skeleton annotation as a completely new webKnossos annotation, drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "Annotations" section.
 
 ![Skeletons can be imported by drag and drop in the annotation view or from the dashboard](images/tracing_ui_import.jpeg)
 

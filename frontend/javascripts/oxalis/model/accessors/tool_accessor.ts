@@ -20,6 +20,7 @@ const getExplanationForDisabledVolume = (
   isInMergerMode: boolean,
   isSegmentationTracingVisibleForMag: boolean,
   isZoomInvalidForTracing: boolean,
+  isEditableMappingActive: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
     return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable it in the left settings sidebar.";
@@ -35,6 +36,10 @@ const getExplanationForDisabledVolume = (
 
   if (!isSegmentationTracingVisibleForMag) {
     return "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
+  }
+
+  if (isEditableMappingActive) {
+    return "Volume annotation is disabled while an editable mapping is active.";
   }
 
   return "Volume annotation is currently disabled.";
@@ -56,10 +61,12 @@ export function isTraceTool(activeTool: AnnotationTool): boolean {
 }
 const disabledSkeletonExplanation =
   "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
+const disabledAgglomerateMappingsExplanation = "This dataset does not have agglomerate mappings.";
 
 function _getDisabledInfoWhenVolumeIsDisabled(
   genericDisabledExplanation: string,
   hasSkeleton: boolean,
+  isVolumeDisabled: boolean,
 ) {
   const disabledInfo = {
     isDisabled: true,
@@ -82,6 +89,10 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     [AnnotationToolEnum.FILL_CELL]: disabledInfo,
     [AnnotationToolEnum.PICK_CELL]: disabledInfo,
     [AnnotationToolEnum.BOUNDING_BOX]: notDisabledInfo,
+    [AnnotationToolEnum.PROOFREAD]: {
+      isDisabled: isVolumeDisabled,
+      explanation: genericDisabledExplanation,
+    },
   };
 }
 
@@ -92,6 +103,7 @@ function _getDisabledInfoFromArgs(
   isZoomStepTooHighForBrushing: boolean,
   isZoomStepTooHighForTracing: boolean,
   isZoomStepTooHighForFilling: boolean,
+  hasAgglomerateMappings: boolean,
   genericDisabledExplanation: string,
 ) {
   return {
@@ -131,6 +143,12 @@ function _getDisabledInfoFromArgs(
       isDisabled: false,
       explanation: disabledSkeletonExplanation,
     },
+    [AnnotationToolEnum.PROOFREAD]: {
+      isDisabled: !hasSkeleton || !hasAgglomerateMappings,
+      explanation: !hasSkeleton
+        ? disabledSkeletonExplanation
+        : disabledAgglomerateMappingsExplanation,
+    },
   };
 }
 
@@ -159,31 +177,43 @@ export function getDisabledInfoForTools(state: OxalisState): Record<
     segmentationTracingLayer != null &&
     visibleSegmentationLayer != null &&
     visibleSegmentationLayer.name === segmentationTracingLayer.tracingId;
+  const isEditableMappingActive =
+    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
   const genericDisabledExplanation = getExplanationForDisabledVolume(
     isSegmentationTracingVisible,
     isInMergerMode,
     isSegmentationTracingVisibleForMag,
     isZoomInvalidForTracing,
+    isEditableMappingActive,
   );
 
-  if (
+  const isVolumeDisabled =
     !hasVolume ||
     !isSegmentationTracingVisible ||
+    // isSegmentationTracingVisibleForMag is false if isZoomInvalidForTracing is true which is why
+    // this condition doesn't need to be checked here
     !isSegmentationTracingVisibleForMag ||
-    isInMergerMode
-  ) {
+    isInMergerMode;
+
+  if (isVolumeDisabled || isEditableMappingActive) {
     // All segmentation-related tools are disabled.
-    return getDisabledInfoWhenVolumeIsDisabled(genericDisabledExplanation, hasSkeleton);
+    return getDisabledInfoWhenVolumeIsDisabled(
+      genericDisabledExplanation,
+      hasSkeleton,
+      isVolumeDisabled,
+    );
   }
 
   const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(state, AnnotationToolEnum.BRUSH);
   const isZoomStepTooHighForTracing = isZoomStepTooHighFor(state, AnnotationToolEnum.TRACE);
   const isZoomStepTooHighForFilling = isZoomStepTooHighFor(state, AnnotationToolEnum.FILL_CELL);
+  const hasAgglomerateMappings = (visibleSegmentationLayer.agglomerates?.length ?? 0) > 0;
   return getDisabledInfoFromArgs(
     hasSkeleton,
     isZoomStepTooHighForBrushing,
     isZoomStepTooHighForTracing,
     isZoomStepTooHighForFilling,
+    hasAgglomerateMappings,
     genericDisabledExplanation,
   );
 }

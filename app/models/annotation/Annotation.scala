@@ -111,7 +111,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
 
   def insertOneQuery(annotationId: ObjectId, a: AnnotationLayer): SqlAction[Int, NoStream, Effect] =
     sqlu"""insert into webknossos.annotation_layers(_annotation, tracingId, typ, name)
-            values($annotationId, ${a.tracingId}, '#${a.typ.toString}', ${a.name.map(sanitize)})"""
+            values($annotationId, ${a.tracingId}, '#${a.typ.toString}', ${a.name})"""
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
     for {
@@ -126,7 +126,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
         sqlu"update webknossos.annotation_layers set tracingId = $newTracingId where _annotation = $annotationId and tracingId = $oldTracingId")
     } yield ()
 
-  def updateName(annotationId: ObjectId, tracingId: String, newName: Option[String]): Fox[Unit] =
+  def updateName(annotationId: ObjectId, tracingId: String, newName: String): Fox[Unit] =
     for {
       _ <- run(
         sqlu"update webknossos.annotation_layers set name = $newName where _annotation = $annotationId and tracingId = $tracingId")
@@ -177,14 +177,35 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     }
 
   override def anonymousReadAccessQ(sharingToken: Option[String]) = s"visibility = '${AnnotationVisibility.Public}'"
-  override def readAccessQ(requestingUserId: ObjectId) =
-    s"""(visibility = '${AnnotationVisibility.Public}'
-          or (visibility = '${AnnotationVisibility.Internal}' and (select _organization from webknossos.teams where webknossos.teams._id = _team)
-            in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))
-          or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}' and isTeamManager)
-          or _user = '${requestingUserId.id}'
-          or (select _organization from webknossos.teams where webknossos.teams._id = _team)
-            in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+
+  private def listAccessQ(requestingUserId: ObjectId): String =
+    s"""
+        (
+          _user = '${requestingUserId.id}'
+          or (
+            (visibility = '${AnnotationVisibility.Public}' or visibility = '${AnnotationVisibility.Internal}')
+            and _id in (
+              select distinct a._annotation
+              from webknossos.annotation_sharedTeams a
+              join webknossos.user_team_roles t
+              on a._team = t._team
+              where t._user = '${requestingUserId.id}'
+            )
+          )
+        )
+       """
+
+  override def readAccessQ(requestingUserId: ObjectId): String =
+    s"""(
+              visibility = '${AnnotationVisibility.Public}'
+           or (visibility = '${AnnotationVisibility.Internal}'
+               and (select _organization from webknossos.teams where webknossos.teams._id = _team)
+                 in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))
+           or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}' and isTeamManager)
+           or _user = '${requestingUserId.id}'
+           or (select _organization from webknossos.teams where webknossos.teams._id = _team)
+             in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
+         )"""
 
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'
@@ -222,6 +243,31 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       r <- run(sql"""select #$columns from #$existingCollectionName
                      where _user = ${userId.id} and typ = '#${annotationType.toString}' and #$stateQuery and #$accessQuery
                      order by _id desc limit $limit offset ${pageNumber * limit}""".as[AnnotationsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+  }
+
+  def findAllListableExplorationals(isFinished: Option[Boolean], limit: Int, pageNumber: Int = 0)(
+      implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
+    val stateQuery = getStateQuery(isFinished)
+    for {
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      r <- run(sql"""select #$columns from #$existingCollectionName
+                     where typ = '#${AnnotationType.Explorational.toString}' and #$stateQuery and #$accessQuery
+                     order by _id desc limit $limit offset ${pageNumber * limit}""".as[AnnotationsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+  }
+
+  def countAllListableExplorationals(isFinished: Option[Boolean])(
+      implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
+    val stateQuery = getStateQuery(isFinished)
+    for {
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      r <- run(
+        sql"""select count(_id) from #$existingCollectionName
+                     typ = '#${AnnotationType.Explorational.toString}' and #$stateQuery and #$accessQuery"""
+          .as[AnnotationsRow])
       parsed <- parseAll(r)
     } yield parsed
   }

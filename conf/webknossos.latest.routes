@@ -118,6 +118,13 @@ PUT           /annotations/:typ/:id/reset                                       
 PATCH         /annotations/:typ/:id/transfer                                            controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:id/info                                                     controllers.AnnotationController.infoWithoutType(id: String, timestamp: Long)
+PATCH         /annotations/:id/makeHybrid                                               controllers.AnnotationController.makeHybridWithoutType(id: String, fallbackLayerName: Option[String])
+PATCH         /annotations/:id/downsample                                               controllers.AnnotationController.downsampleWithoutType(id: String, tracingId: String)
+PATCH         /annotations/:id/addAnnotationLayer                                       controllers.AnnotationController.addAnnotationLayerWithoutType(id: String)
+DELETE        /annotations/:id                                                          controllers.AnnotationController.cancelWithoutType(id: String)
+POST          /annotations/:id/merge/:mergedTyp/:mergedId                               controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
+GET           /annotations/:id/download                                                 controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
+
 GET           /annotations/:typ/:id/info                                                controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                          controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
 PATCH         /annotations/:typ/:id/downsample                                          controllers.AnnotationController.downsample(typ: String, id: String, tracingId: String)
@@ -129,6 +136,7 @@ GET           /annotations/:typ/:id/download                                    
 GET           /annotations/:typ/:id/loggedTime                                          controllers.AnnotationController.loggedTime(typ: String, id: String)
 
 GET           /annotations/shared                                                       controllers.AnnotationController.sharedAnnotations()
+GET           /annotations/readable                                                     controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.getSharedTeams(typ: String, id: String)
 PATCH         /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.updateSharedTeams(typ: String, id: String)
 PATCH         /annotations/:typ/:id/othersMayEdit                                       controllers.AnnotationController.updateOthersMayEdit(typ: String, id: String, othersMayEdit: Boolean)
@@ -207,7 +215,7 @@ GET           /jobs                                                             
 GET           /jobs/status                                                              controllers.JobsController.status
 POST          /jobs/run/convertToWkw/:organizationName/:dataSetName                     controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String, dataStoreName: String)
 POST          /jobs/run/computeMeshFile/:organizationName/:dataSetName                  controllers.JobsController.runComputeMeshFileJob(organizationName: String, dataSetName: String, layerName: String, mag: String, agglomerateView: Option[String])
-POST          /jobs/run/exportTiff/:organizationName/:dataSetName                       controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
+POST          /jobs/run/exportTiff/:organizationName/:dataSetName                       controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], annotationLayerName: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
 POST          /jobs/run/inferNuclei/:organizationName/:dataSetName                      controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: String, newDatasetName: String)
 POST          /jobs/run/inferNeurons/:organizationName/:dataSetName                     controllers.JobsController.runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: String, bbox: String, newDatasetName: String)
 POST          /jobs/run/globalizeFloodfills/:organizationName/:dataSetName              controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, volumeLayerName: Option[String])

@@ -187,9 +187,10 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
-                  const { tab } = match.params;
-                  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-                  const initialTabKey = tab ? urlTokenToTabKeyMap[tab] : null;
+                  const tab: string = match.params.tab;
+                  const initialTabKey =
+                    // @ts-ignore If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
+                    tab ? urlTokenToTabKeyMap[tab] : null;
                   return (
                     <DashboardView
                       userId={null}
@@ -315,14 +316,15 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/annotations/:type/:id"
-                render={({ match }: ContextRouter) => {
+                render={({ location, match }: ContextRouter) => {
                   const initialMaybeCompoundType =
                     match.params.type != null
                       ? coalesce(APICompoundTypeEnum, match.params.type)
                       : null;
 
                   if (initialMaybeCompoundType == null) {
-                    return <Redirect to={`/annotations/${match.params.id}`} />;
+                    const { hash, search } = location;
+                    return <Redirect to={`/annotations/${match.params.id}${search}${hash}`} />;
                   }
 
                   return this.tracingView({ match });
@@ -571,7 +573,7 @@ class ReactRouter extends React.Component<Props> {
                         resolutionRestrictions,
                       );
                       trackAction(`Create ${type} tracing`);
-                      return `/annotations/${annotation.typ}/${annotation.id}`;
+                      return `/annotations/${annotation.id}`;
                     }}
                   />
                 )}

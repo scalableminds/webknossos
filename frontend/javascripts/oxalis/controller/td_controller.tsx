@@ -2,8 +2,16 @@ import { connect } from "react-redux";
 import * as React from "react";
 import * as THREE from "three";
 import { InputMouse } from "libs/input";
-import type { OrthoView, OrthoViewMap, Point2, Vector3 } from "oxalis/constants";
-import { OrthoViews } from "oxalis/constants";
+import {
+  AnnotationTool,
+  AnnotationToolEnum,
+  OrthoView,
+  OrthoViews,
+  OrthoViewMap,
+  Point2,
+  ShowContextMenuFunction,
+  Vector3,
+} from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
@@ -27,7 +35,8 @@ import Store from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
-import { SkeletonTool } from "oxalis/controller/combinations/tool_controls";
+import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
+import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
@@ -50,16 +59,24 @@ export function threeCameraToCameraData(camera: THREE.OrthographicCamera): Camer
 
 function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, any> {
   return {
-    leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-      SkeletonTool.onLegacyLeftClick(
-        planeView,
-        pos,
-        event.shiftKey,
-        event.altKey,
-        event.ctrlKey,
-        OrthoViews.TDView,
-        isTouch,
-      ),
+    leftClick: (
+      pos: Point2,
+      plane: OrthoView,
+      event: MouseEvent,
+      isTouch: boolean,
+      activeTool: AnnotationTool,
+    ) =>
+      activeTool === AnnotationToolEnum.PROOFREAD
+        ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
+        : SkeletonTool.onLegacyLeftClick(
+            planeView,
+            pos,
+            event.shiftKey,
+            event.altKey,
+            event.ctrlKey,
+            OrthoViews.TDView,
+            isTouch,
+          ),
   };
 }
 
@@ -68,10 +85,12 @@ type OwnProps = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   planeView?: PlaneView;
   tracing?: Tracing;
+  showContextMenuAt?: ShowContextMenuFunction;
 };
 type StateProps = {
   flycam: Flycam;
   scale: Vector3;
+  activeTool: AnnotationTool;
 };
 type Props = OwnProps & StateProps;
 
@@ -191,7 +210,7 @@ class TDController extends React.PureComponent<Props> {
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (skeletonControls != null) {
-          skeletonControls.leftClick(pos, plane, event, isTouch);
+          skeletonControls.leftClick(pos, plane, event, isTouch, this.props.activeTool);
         }
 
         if (this.props.planeView == null) {
@@ -224,6 +243,18 @@ class TDController extends React.PureComponent<Props> {
 
           Store.dispatch(removeIsosurfaceAction(segmentationLayer.name, hoveredSegmentId));
         }
+      },
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        if (this.props.planeView == null || this.props.showContextMenuAt == null) return;
+
+        handleOpenContextMenu(
+          this.props.planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          this.props.showContextMenuAt,
+        );
       },
     };
     return controls;
@@ -307,6 +338,7 @@ export function mapStateToProps(state: OxalisState): StateProps {
   return {
     flycam: state.flycam,
     scale: state.dataset.dataSource.scale,
+    activeTool: state.uiInformation.activeTool,
   };
 }
 const connector = connect(mapStateToProps);

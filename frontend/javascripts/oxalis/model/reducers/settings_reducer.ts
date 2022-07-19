@@ -12,6 +12,10 @@ import {
 import type { StateShape1 } from "oxalis/model/helpers/deep_update";
 import { updateKey, updateKey3 } from "oxalis/model/helpers/deep_update";
 import { userSettings } from "types/schemas/user_settings.schema";
+import {
+  hasEditableMapping,
+  isMappingActivationAllowed,
+} from "oxalis/model/accessors/volumetracing_accessor";
 
 //
 // Update helpers
@@ -208,6 +212,11 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_MAPPING_ENABLED": {
       const { isMappingEnabled, layerName } = action;
+
+      // Editable mappings cannot be disabled or switched for now
+      const isEditableMappingActive = hasEditableMapping(state, layerName);
+      if (isEditableMappingActive && !action.isMappingEnabled) return state;
+
       return updateActiveMapping(
         state,
         {
@@ -230,6 +239,10 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_MAPPING": {
       const { mappingName, mapping, mappingKeys, mappingColors, mappingType, layerName } = action;
+
+      // Editable mappings cannot be disabled or switched for now
+      if (!isMappingActivationAllowed(state, mappingName, layerName)) return state;
+
       const hideUnmappedIds =
         action.hideUnmappedIds != null
           ? action.hideUnmappedIds
@@ -250,6 +263,15 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         },
         layerName,
       );
+    }
+
+    case "SET_MAPPING_NAME": {
+      const { mappingName, layerName } = action;
+
+      // Editable mappings cannot be disabled or switched for now
+      if (!isMappingActivationAllowed(state, mappingName, layerName)) return state;
+
+      return updateActiveMapping(state, { mappingName }, layerName);
     }
 
     default: // pass;

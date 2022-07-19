@@ -46,12 +46,14 @@ type SetThemeAction = {
   type: "SET_THEME";
   value: Theme;
 };
-
 type SetDownloadModalVisibilityAction = {
   type: "SET_DOWNLOAD_MODAL_VISIBILITY";
   visible: boolean;
 };
-
+type SetPythonClientModalVisibilityAction = {
+  type: "SET_PYTHON_MODAL_VISIBILITY";
+  visible: boolean;
+};
 type SetShareModalVisibilityAction = {
   type: "SET_SHARE_MODAL_VISIBILITY";
   visible: boolean;
@@ -68,6 +70,7 @@ export type UiAction =
   | CycleToolAction
   | SetThemeAction
   | SetDownloadModalVisibilityAction
+  | SetPythonClientModalVisibilityAction
   | SetShareModalVisibilityAction
   | SetBusyBlockingInfoAction;
 export const setDropzoneModalVisibilityAction = (
@@ -117,14 +120,18 @@ export const setThemeAction = (value: Theme): SetThemeAction => ({
   type: "SET_THEME",
   value,
 });
-
 export const setDownloadModalVisibilityAction = (
   visible: boolean,
 ): SetDownloadModalVisibilityAction => ({
   type: "SET_DOWNLOAD_MODAL_VISIBILITY",
   visible,
 });
-
+export const setPythonClientModalVisibilityAction = (
+  visible: boolean,
+): SetPythonClientModalVisibilityAction => ({
+  type: "SET_PYTHON_MODAL_VISIBILITY",
+  visible,
+});
 export const setShareModalVisibilityAction = (visible: boolean): SetShareModalVisibilityAction => ({
   type: "SET_SHARE_MODAL_VISIBILITY",
   visible,

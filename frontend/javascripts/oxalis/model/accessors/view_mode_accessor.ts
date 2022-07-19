@@ -103,7 +103,7 @@ function _calculateMaybeGlobalPos(
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
 ): Vector3 | null | undefined {
-  let position;
+  let position: Vector3;
   planeId = planeId || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
@@ -142,7 +142,6 @@ function _calculateMaybeGlobalPos(
       return null;
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return position;
 }
 

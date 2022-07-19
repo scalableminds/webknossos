@@ -54,6 +54,7 @@ import type {
   ServerTracing,
   TracingType,
   WkConnectDatasetConfig,
+  ServerEditableMapping,
   APICompoundType,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
@@ -81,6 +82,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { SaveQueueType } from "oxalis/model/actions/save_actions";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -566,6 +568,15 @@ export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON("/api/annotations/shared");
 }
 
+export function getReadableAnnotations(
+  isFinished: boolean,
+  pageNumber: number = 0,
+): Promise<Array<APIAnnotationCompact>> {
+  return Request.receiveJSON(
+    `/api/annotations/readable?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
+  );
+}
+
 export function getTeamsForSharedAnnotation(
   typ: string,
   id: string,
@@ -868,11 +879,11 @@ export async function getTracingForAnnotationType(
 export function getUpdateActionLog(
   tracingStoreUrl: string,
   tracingId: string,
-  tracingType: "skeleton" | "volume",
+  versionedObjectType: SaveQueueType,
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?token=${token}`,
     ),
   );
 }
@@ -1049,19 +1060,18 @@ export async function startExportTiffJob(
   organizationName: string,
   bbox: Vector6,
   layerName: string | null | undefined,
-  tracingId: string | null | undefined,
   annotationId: string | null | undefined,
   annotationType: APIAnnotationType | null | undefined,
+  annotationLayerName: string | null | undefined,
   mappingName: string | null | undefined,
   mappingType: string | null | undefined,
   hideUnmappedIds: boolean | null | undefined,
-  tracingVersion: number | null | undefined = null,
 ): Promise<Array<APIJob>> {
   const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
-  const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
   const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
   const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
-  const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
+  const annotationLayerNameSuffix =
+    annotationLayerName != null ? `&annotationLayerName=${annotationLayerName}` : "";
   const mappingNameSuffix = mappingName != null ? `&mappingName=${mappingName}` : "";
   const mappingTypeSuffix = mappingType != null ? `&mappingType=${mappingType}` : "";
   const hideUnmappedIdsSuffix =
@@ -1069,7 +1079,7 @@ export async function startExportTiffJob(
   return Request.receiveJSON(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
+    )}${layerNameSuffix}${annotationIdSuffix}${annotationTypeSuffix}${annotationLayerNameSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
     {
       method: "POST",
     },
@@ -1611,6 +1621,29 @@ export function fetchMapping(
   );
 }
 
+export function makeMappingEditable(
+  tracingStoreUrl: string,
+  tracingId: string,
+): Promise<ServerEditableMapping> {
+  return doWithToken((token) =>
+    Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
+      {
+        method: "POST",
+      },
+    ),
+  );
+}
+
+export function getEditableMapping(
+  tracingStoreUrl: string,
+  tracingId: string,
+): Promise<ServerEditableMapping> {
+  return doWithToken((token) =>
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}?token=${token}`),
+  );
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1898,10 +1931,12 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 // These parameters are bundled into an object to avoid that the computeIsosurface function
 // receives too many parameters, since this doesn't play well with the saga typings.
 type IsosurfaceRequest = {
+  // The position is in voxels in mag 1
   position: Vector3;
   mag: Vector3;
   segmentId: number;
   subsamplingStrides: Vector3;
+  // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scale: Vector3;
   mappingName: string | null | undefined;
@@ -1965,7 +2000,26 @@ export function getAgglomerateSkeleton(
   return doWithToken((token) =>
     Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
-      // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
+      {
+        useWebworkerForArrayBuffer: false,
+        showErrorToast: false,
+      },
+    ),
+  );
+}
+
+export function getEditableAgglomerateSkeleton(
+  tracingStoreUrl: string,
+  tracingId: string,
+  agglomerateId: number,
+): Promise<ArrayBuffer> {
+  return doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
         useWebworkerForArrayBuffer: false,
         showErrorToast: false,

@@ -365,16 +365,13 @@ function DashboardSubMenu({ collapse, ...other }: { collapse: boolean } & SubMen
       {...other}
     >
       <Menu.Item key="/dashboard/datasets">
-        <Link to="/dashboard/datasets">My Datasets</Link>
+        <Link to="/dashboard/datasets">Datasets</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/tasks">
-        <Link to="/dashboard/tasks">My Tasks</Link>
+        <Link to="/dashboard/tasks">Tasks</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/annotations">
-        <Link to="/dashboard/annotations">My Annotations</Link>
-      </Menu.Item>
-      <Menu.Item key="/dashboard/shared">
-        <Link to="/dashboard/shared">Shared Annotations</Link>
+        <Link to="/dashboard/annotations">Annotations</Link>
       </Menu.Item>
     </SubMenu>
   );

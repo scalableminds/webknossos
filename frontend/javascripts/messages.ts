@@ -53,9 +53,9 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
     "Decrease size of transferred data by half, using lossy compression. Recommended for poor and/or capped internet connections.",
   interpolation: "Smooth the rendered data by interpolating color values",
   renderMissingDataBlack:
-    "If disabled, missing data will be rendered by using downsampled resolutions.",
+    "If disabled, missing data will be rendered by using downsampled magnifications.",
   gpuMemoryFactor:
-    "Controls which data resolution is displayed, depending on zoom step and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.",
+    "Controls which data magnification is displayed, depending on zoom value and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.",
   useLegacyBindings:
     "When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.",
   dynamicSpaceDirection:
@@ -110,8 +110,11 @@ A reload is necessary to return to a valid state.`,
   "undo.no_undo":
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
+  "undo.no_undo_during_proofread":
+    "Undo is not supported during proofreading yet. Please manually revert the last action you took.",
+  "undo.no_redo_during_proofread": "Redo is not supported during proofreading yet.",
   "undo.import_volume_tracing":
-    "Importing a volume tracing cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
@@ -148,13 +151,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.edit_volume_in_merger_mode":
     "The volume annotation would be changed by this action. This is not allowed while merger mode is active.",
   "tracing.volume_resolution_mismatch":
-    "The volume annotation resolutions do not match the dataset resolutions. Was the dataset edited after creating the annotation? Consider downloading and re-uploading resolution 1 only to adapt the annotation.",
+    "The volume annotation magnifications do not match the dataset magnifications. Was the dataset edited after creating the annotation? Consider downloading and re-uploading magnification 1 only to adapt the annotation.",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.uint64_segmentation_warning":
     "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 32-bit. Thus, they might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":
-    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this resolution. Please zoom in further.",
+    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
@@ -162,6 +165,14 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.read_only_mode_notification":
     "This annotation is in read-only mode and cannot be updated.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
+  "tracing.volume_layer_name_duplication":
+    "This layer name already exists! Please change it to resolve duplicates.",
+  "tracing.volume_layer_name_includes_invalid_characters": (disallowedCharacters: string) =>
+    `This layer name includes the disallowed character${
+      disallowedCharacters.length > 1 ? "s" : ""
+    } "${disallowedCharacters}". Please remove ${
+      disallowedCharacters.length > 1 ? "them" : "it"
+    } to set the layer name.`,
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
@@ -199,7 +210,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.agglomerate_skeleton.no_skeleton_tracing":
     "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":
-    'All skeletons are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
+    'All trees are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
   "tracing.invalid_json_url_hash":
     "Cannot parse JSON URL hash. More information was printed to the browser's console.",
   "layouting.missing_custom_layout_info":
@@ -228,7 +239,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This can only be undone by refreshing the page. All unsaved changes will be lost. Only use this for large, temporary annotations to save resources.",
   "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
   "annotation.undoFinish.content":
-    "If you reopen your old tracing, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
+    "If you reopen your old annotation, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -252,7 +263,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Cancel”.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
-  "dataset.segmentationlayer_not_existing": "This tracing has no segmentation layer.",
+  "dataset.segmentationlayer_not_existing": "This annotation has no segmentation layer.",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
@@ -280,7 +291,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.resolution_mismatch":
-    "This dataset contains multiple layers which differ in their resolution. Please convert the layers to make their resolutions match. Otherwise, rendering errors cannot be avoided.",
+    "This dataset contains multiple layers which differ in their magnification. Please convert the layers to make their resolutions match. Otherwise, rendering errors cannot be avoided.",
   "dataset.z1_downsampling_hint":
     "The currently rendered quality is not optimal due to the available magnifications and the viewport arrangement. To improve the quality try to increase the size of the XY viewport (e.g. by maximizing it).",
   "annotation.finish": "Are you sure you want to permanently finish this annotation?",

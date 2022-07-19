@@ -41,6 +41,7 @@ import {
   PickCellTool,
   FillCellTool,
   BoundingBoxTool,
+  ProofreadTool,
 } from "oxalis/controller/combinations/tool_controls";
 import type {
   ShowContextMenuFunction,
@@ -298,6 +299,7 @@ class PlaneController extends React.PureComponent<Props> {
       this.planeView,
       this.props.showContextMenuAt,
     );
+    const proofreadControls = ProofreadTool.getPlaneMouseControls(planeId, this.planeView);
 
     const allControlKeys = _.union(
       Object.keys(moveControls),
@@ -307,6 +309,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(fillCellControls),
       Object.keys(pickCellControls),
       Object.keys(boundingBoxControls),
+      Object.keys(proofreadControls),
     );
 
     const controls: Record<string, any> = {};
@@ -323,6 +326,7 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
         [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
         [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
+        [AnnotationToolEnum.PROOFREAD]: proofreadControls[controlKey],
       });
     }
 
@@ -592,6 +596,7 @@ class PlaneController extends React.PureComponent<Props> {
         cameras={this.planeView.getCameras()}
         tracing={this.props.tracing}
         planeView={this.planeView}
+        showContextMenuAt={this.props.showContextMenuAt}
       />
     );
   }

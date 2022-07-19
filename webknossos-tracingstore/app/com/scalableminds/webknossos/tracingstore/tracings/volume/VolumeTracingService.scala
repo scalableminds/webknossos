@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossos
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreRedisStore}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
@@ -41,7 +42,8 @@ class VolumeTracingService @Inject()(
     val handledGroupIdStore: TracingStoreRedisStore,
     val uncommittedUpdatesStore: TracingStoreRedisStore,
     val temporaryTracingIdStore: TracingStoreRedisStore,
-    val temporaryFileCreator: TemporaryFileCreator
+    val temporaryFileCreator: TemporaryFileCreator,
+    editableMappingService: EditableMappingService
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with VolumeTracingDownsampling
@@ -86,7 +88,9 @@ class VolumeTracingService @Inject()(
           case Full(tracing) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                updateBucket(tracingId, tracing, a, updateGroup.version)
+                if (tracing.getMappingIsEditable) {
+                  Fox.failure("Cannot mutate buckets in annotation with editable mapping.")
+                } else updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
                   tracing.copy(
@@ -243,7 +247,8 @@ class VolumeTracingService @Inject()(
     for {
       isTemporaryTracing <- isTemporaryTracing(tracingId)
       dataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
-      requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings))
+      requests = dataRequests.map(r =>
+        DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
@@ -325,7 +330,7 @@ class VolumeTracingService @Inject()(
 
     for {
       volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJson[List[CompactVolumeUpdateAction]])
+        fromJsonBytes[List[CompactVolumeUpdateAction]])
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
@@ -348,6 +353,9 @@ class VolumeTracingService @Inject()(
       resultingResolutions <- downsampleWithLayer(tracingId, tracing, volumeTracingLayer(tracingId, tracing))
       _ <- updateResolutionList(tracingId, tracing, resultingResolutions.toSet)
     } yield ()
+
+  def volumeBucketsAreEmpty(tracingId: String): Boolean =
+    volumeDataStore.getMultipleKeys(tracingId, Some(tracingId), limit = Some(1))(toBox).isEmpty
 
   def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
     for {
@@ -375,7 +383,7 @@ class VolumeTracingService @Inject()(
         val bucket = bucketStream.next()
         val bucketPos = bucket._1
         getPositionOfNonZeroData(bucket._2,
-                                 Vec3Int(bucketPos.globalX, bucketPos.globalY, bucketPos.globalZ),
+                                 Vec3Int(bucketPos.voxelMag1X, bucketPos.voxelMag1Y, bucketPos.voxelMag1Z),
                                  volumeLayer.bytesPerElement)
       } else None
     } yield bucketPosOpt
@@ -485,17 +493,18 @@ class VolumeTracingService @Inject()(
       _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
         saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
       }
-      updateGroup = UpdateActionGroup[VolumeTracing](tracing.version + 1,
-                                                     System.currentTimeMillis(),
-                                                     None,
-                                                     List(ImportVolumeData(mergedVolume.largestSegmentId.toSignedLong)),
-                                                     None,
-                                                     None,
-                                                     None,
-                                                     None,
-                                                     None)
+      updateGroup = UpdateActionGroup[VolumeTracing](
+        tracing.version + 1,
+        System.currentTimeMillis(),
+        None,
+        List(ImportVolumeData(mergedVolume.largestSegmentId.toPositiveLong)),
+        None,
+        None,
+        None,
+        None,
+        None)
       _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
-    } yield mergedVolume.largestSegmentId.toSignedLong
+    } yield mergedVolume.largestSegmentId.toPositiveLong
   }
 
   def dummyTracing: VolumeTracing = ???

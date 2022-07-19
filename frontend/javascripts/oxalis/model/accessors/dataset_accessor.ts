@@ -37,7 +37,7 @@ type UnrenderableLayersInfos = {
 
 function maxValue(array: Array<number>): number {
   const value = _.max(array);
-  if (value == undefined) {
+  if (value == null) {
     throw Error(`Max of empty array: ${array}`);
   }
   return value;
@@ -45,7 +45,7 @@ function maxValue(array: Array<number>): number {
 
 function minValue(array: Array<number>): number {
   const value = _.min(array);
-  if (value == undefined) {
+  if (value == null) {
     throw Error(`Min of empty array: ${array}`);
   }
   return value;
@@ -116,7 +116,7 @@ export class ResolutionInfo {
     const resolution = this.getResolutionByIndex(index);
 
     if (!resolution) {
-      throw new Error(`Resolution with index ${index} does not exist.`);
+      throw new Error(`Magnification with index ${index} does not exist.`);
     }
 
     return resolution;
@@ -130,7 +130,7 @@ export class ResolutionInfo {
     const resolutionMaybe = this.getResolutionByIndex(index);
     if (!_.isEqual(resolution, resolutionMaybe)) {
       throw new Error(
-        `Resolution ${resolution} with index ${index} is not equal to existing resolution at that index: ${resolutionMaybe}.`,
+        `Magnification ${resolution} with index ${index} is not equal to existing magnification at that index: ${resolutionMaybe}.`,
       );
     }
     return index;
@@ -158,7 +158,7 @@ export class ResolutionInfo {
       return [1, 1, 1];
     }
 
-    throw new Error(`Resolution could not be determined for index ${index}`);
+    throw new Error(`Magnification could not be determined for index ${index}`);
   }
 
   getResolutionByPowerOf2(powerOfTwo: number): Vector3 | null | undefined {

@@ -297,7 +297,10 @@ case class UpdateMappingNameAction(mappingName: Option[String],
     this.copy(actionTimestamp = Some(timestamp))
 
   override def transformToCompact: UpdateAction[VolumeTracing] =
-    CompactVolumeUpdateAction("updateMappingName", actionTimestamp, Json.obj("mappingName" -> mappingName))
+    CompactVolumeUpdateAction("updateMappingName",
+                              actionTimestamp,
+                              actionAuthorId,
+                              Json.obj("mappingName" -> mappingName))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.copy(mappingName = mappingName, mappingIsEditable = Some(isEditable.getOrElse(false)))

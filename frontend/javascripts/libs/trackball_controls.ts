@@ -103,6 +103,8 @@ const TrackballControls = function (
   let _prevState = STATE.NONE;
 
   const _eye = new THREE.Vector3();
+  this.flycamPos = new THREE.Vector3();
+  const dirToFlycam = new THREE.Vector3();
 
   const _rotateStart = new THREE.Vector3();
 
@@ -189,12 +191,11 @@ const TrackballControls = function (
       } else {
         mouseOnBall.z = Math.sqrt(1.0 - length * length);
       }
-
-      _eye.copy(_this.object.position).sub(_this.target);
+      dirToFlycam.copy(_this.object.position).sub(_this.flycamPos);
 
       projection.copy(_this.object.up).setLength(mouseOnBall.y);
-      projection.add(objectUp.copy(_this.object.up).cross(_eye).setLength(mouseOnBall.x));
-      projection.add(_eye.setLength(mouseOnBall.z));
+      projection.add(objectUp.copy(_this.object.up).cross(dirToFlycam).setLength(mouseOnBall.x));
+      projection.add(dirToFlycam.setLength(mouseOnBall.z));
       return projection;
     };
   })();
@@ -215,6 +216,19 @@ const TrackballControls = function (
         _eye.applyQuaternion(quaternion);
 
         _this.object.up.applyQuaternion(quaternion);
+        dirToFlycam
+          .copy(_this.object.position)
+          .sub(_this.flycamPos)
+          .applyQuaternion(quaternion)
+          .add(_this.flycamPos);
+        _this.object.position.copy(dirToFlycam);
+
+        dirToFlycam
+          .copy(_this.target)
+          .sub(_this.flycamPos)
+          .applyQuaternion(quaternion)
+          .add(_this.flycamPos);
+        _this.target.copy(dirToFlycam);
 
         _rotateEnd.applyQuaternion(quaternion);
 

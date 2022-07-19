@@ -132,7 +132,7 @@ class TDController extends React.PureComponent<Props> {
       this.props.tracing &&
       this.props.tracing.skeleton
     ) {
-      // The rotation center of this viewport is not updated to the new position after selecing a node in the viewport.
+      // The rotation center of this viewport is not updated to the new position after selecting a node in the viewport.
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
       getActiveNode(this.props.tracing.skeleton).map((activeNode) =>
@@ -220,9 +220,12 @@ class TDController extends React.PureComponent<Props> {
     // Make the fly cam the rotation center
     // The camera teleports to the center when clicking one of the buttons.
     // Likely the position and so in the store is not up to date with the camera.
-    console.log("would update trackball controls");
     // return;
-    this.controls.forEach((control) => control.update(true));
+    const flycamPos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
+    this.controls.forEach((control) => {
+      control.flycamPos.set(...flycamPos);
+      control.update(true);
+    });
   };
 
   getTDViewMouseControls(): Record<string, any> {
@@ -393,7 +396,6 @@ class TDController extends React.PureComponent<Props> {
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
     // Write threeJS camera into store
-    console.log("Setting position: ", threeCameraToCameraData(OrthographicCamera).position);
     Store.dispatch(setCameraAction(threeCameraToCameraData(OrthographicCamera)));
   };
 

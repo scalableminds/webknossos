@@ -200,14 +200,13 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                         volumeFilename: Option[String],
                         skipVolumeData: Boolean)(implicit writer: XMLStreamWriter): Unit =
     if (skipVolumeData) {
-      val nameLabel = volumeLayer.name.map(n => f"named $n ").getOrElse("")
       writer.writeComment(
-        f"A volume layer $nameLabel(id = $index) was omitted here while downloading this annotation without volume data.")
+        f"A volume layer named ${volumeLayer.name} (id = $index) was omitted here while downloading this annotation without volume data.")
     } else {
       Xml.withinElementSync("volume") {
         writer.writeAttribute("id", index.toString)
         writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index, isSingle)))
-        volumeLayer.name.foreach(n => writer.writeAttribute("name", n))
+        writer.writeAttribute("name", volumeLayer.name)
         volumeLayer.tracing match {
           case Right(volumeTracing) => volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
           case _                    => ()

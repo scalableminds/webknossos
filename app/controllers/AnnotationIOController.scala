@@ -144,7 +144,9 @@ Expects:
     if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
       return Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
     if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
-      Fox.serialCombined(volumeLayersGrouped.toList.flatten) { uploadedVolumeLayer =>
+      Fox.serialCombined(volumeLayersGrouped.toList.flatten.zipWithIndex) { volumeLayerWithIndex =>
+        val uploadedVolumeLayer = volumeLayerWithIndex._1
+        val idx = volumeLayerWithIndex._2
         for {
           savedTracingId <- client.saveVolumeTracing(uploadedVolumeLayer.tracing,
                                                      uploadedVolumeLayer.getDataZipFrom(otherFiles))
@@ -152,7 +154,7 @@ Expects:
           AnnotationLayer(
             savedTracingId,
             AnnotationLayerType.Volume,
-            uploadedVolumeLayer.name
+            uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString)
           )
       }
     } else { // Multiple annotations with volume layers (but at most one each) was uploaded merge those volume layers into one
@@ -168,7 +170,7 @@ Expects:
           AnnotationLayer(
             mergedTracingId,
             AnnotationLayerType.Volume,
-            None
+            AnnotationLayer.defaultVolumeLayerName
           ))
     }
   }
@@ -180,7 +182,8 @@ Expects:
       mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
         SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
         persistTracing = true)
-    } yield List(AnnotationLayer(mergedTracingId, AnnotationLayerType.Skeleton, None))
+    } yield
+      List(AnnotationLayer(mergedTracingId, AnnotationLayerType.Skeleton, AnnotationLayer.defaultSkeletonLayerName))
   }
 
   private def assertNonEmpty(parseSuccesses: List[NmlParseSuccess]) =
@@ -275,7 +278,7 @@ Expects:
       )
     }
 
-  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownload")
+  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownloadByType")
   @ApiResponses(
     Array(
       new ApiResponse(

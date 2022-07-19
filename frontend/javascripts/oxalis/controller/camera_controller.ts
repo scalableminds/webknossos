@@ -282,16 +282,19 @@ class CameraController extends React.PureComponent<Props> {
       tdPerspectiveCamera.position.add(cameraMovementVector);
       console.log("movement", cameraMovementVector, "position", tdPerspectiveCamera.position);
     }*/
-    let distToFlycam = tdPerspectiveCamera.position.distanceTo(flycamVector);
-    // correct distance to flycam to ensure no z fighting in that distance area.
-    if (distToFlycam > allowedPerspectiveDistance) {
+    const distToFlycam = tdPerspectiveCamera.position.distanceTo(flycamVector);
+    // correct distance to flycam to ensure no z fighting in that distance area. -> This calculation breaks the perspective camera!!!!
+    /*if (distToFlycam > allowedPerspectiveDistance) {
       directionToFlyCam.multiplyScalar(allowedPerspectiveDistance / distToFlycam);
       tdPerspectiveCamera.position.add(directionToFlyCam);
       distToFlycam = tdPerspectiveCamera.position.distanceTo(flycamVector);
-    }
+    }*/
     // tdPerspectiveCamera.lookAt(orthoCamLookAt);
-    // console.log(orthoCamLookAt);
 
+    // TODO: Check whether this calculation is ok. The calculation uses the flycam as a reference point,
+    // which may not be ideal because this changes the angle / fov calculation once the dataset is moved
+    // away from the center and therefore the distance changes.
+    // TODO: Fix rotation for perspective camera.
     const angleInRadian = 2 * Math.atan(height / (2 * distToFlycam));
     const angleInDegree = angleInRadian * (180 / Math.PI);
     tdPerspectiveCamera.aspect = width / height;

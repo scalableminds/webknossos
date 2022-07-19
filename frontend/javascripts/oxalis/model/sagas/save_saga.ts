@@ -1182,6 +1182,8 @@ function* watchForSaveConflicts() {
       // If the version check fails for some reason, we don't want to crash the entire
       // saga.
       console.warn(exception);
+      // @ts-ignore
+      ErrorHandling.notify(exception);
     }
   }
 }

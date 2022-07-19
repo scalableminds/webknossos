@@ -12,7 +12,7 @@ import window from "libs/window";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import { OxalisState } from "oxalis/store";
-import { isUserAdminOrTeamManager } from "libs/utils";
+import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
@@ -31,6 +31,7 @@ function DatasetSettingsSharingTab({
   activeUser,
 }: Props) {
   const [sharingToken, setSharingToken] = useState("");
+  const isDatasetManagerOrAdmin = isUserAdminOrDatasetManager(activeUser);
 
   const allowedTeamsComponent = (
     <FormItemWithInfo
@@ -44,7 +45,7 @@ function DatasetSettingsSharingTab({
           : null
       }
     >
-      <TeamSelectionComponent mode="multiple" allowNonEditableTeams />
+      <TeamSelectionComponent mode="multiple" allowNonEditableTeams={isDatasetManagerOrAdmin} />
     </FormItemWithInfo>
   );
 

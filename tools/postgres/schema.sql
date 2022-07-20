@@ -416,11 +416,11 @@ CREATE TABLE webknossos.invites(
 
 CREATE TABLE webknossos.annotation_private_links(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _annotation CHAR(24) NOT NULL,
   value Text NOT NULL,
-  loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false
-)
+);
 
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
@@ -443,6 +443,7 @@ CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDelete
 CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
+CREATE VIEW webknossos.annotation_private_links_ as SELECt * FROM webknossos.annotation_private_links WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
@@ -535,6 +536,8 @@ ALTER TABLE webknossos.jobs
   ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE,
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE,
   ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE;
+ALTER TABLE webknossos.annotation_private_links
+  ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$

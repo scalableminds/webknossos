@@ -5,10 +5,11 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.geometry._
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayerType, FetchedAnnotationLayer}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import javax.inject.Inject
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
-import models.annotation.{Annotation, AnnotationLayerType, FetchedAnnotationLayer}
+import models.annotation.Annotation
 import models.task.Task
 import models.user.User
 import org.joda.time.DateTime

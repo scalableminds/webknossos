@@ -140,6 +140,9 @@ GET           /annotations/readable                                             
 GET           /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.getSharedTeams(typ: String, id: String)
 PATCH         /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.updateSharedTeams(typ: String, id: String)
 
+# Annotation Private Links
+GET           /annotations/zarr_private/:accessId                                       controllers.AnnotationController.lookupPrivateLink(accessId: String)
+
 # Meshes
 POST          /meshes                                                                   controllers.MeshController.create
 PUT           /meshes/:id                                                               controllers.MeshController.update(id: String)

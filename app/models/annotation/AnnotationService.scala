@@ -1,7 +1,6 @@
 package models.annotation
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
-
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
@@ -11,26 +10,15 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.{
-  ColorProto,
-  NamedBoundingBoxProto,
-  Vec3DoubleProto,
-  Vec3IntProto
-}
+import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto, Vec3DoubleProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  ElementClass,
-  DataSourceLike => DataSource,
-  SegmentationLayerLike => SegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, FetchedAnnotationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ResolutionRestrictions,
-  VolumeTracingDefaults,
-  VolumeTracingDownsampling
-}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingDefaults, VolumeTracingDownsampling}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
+
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
@@ -43,6 +31,7 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
+import com.scalableminds.webknossos.datastore.models
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
@@ -235,7 +224,7 @@ class AnnotationService @Inject()(
           case _ =>
             Fox.failure(s"Unknown AnnotationLayerType: ${annotationLayerParameters.typ}")
         }
-      } yield AnnotationLayer(tracingId, annotationLayerParameters.typ, annotationLayerParameters.name)
+      } yield models.annotation.AnnotationLayer(tracingId, annotationLayerParameters.typ, annotationLayerParameters.name)
 
     def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
       if (existingAnnotationLayers.isEmpty) Fox.successful(None)
@@ -815,6 +804,27 @@ class AnnotationService @Inject()(
         "user" -> userJson,
         "owner" -> userJson,
         "meshes" -> meshesJs
+      )
+    }
+  }
+
+  def writesLayersAndStores(annotation: Annotation): Fox[JsObject] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
+      dataStoreJs <- dataStoreService.publicWrites(dataStore)
+      tracingStore <- tracingStoreDAO.findFirst
+      tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+    } yield {
+      Json.obj(
+        "id" -> annotation.id,
+        "annotationLayers" -> Json.toJson(annotation.annotationLayers),
+        "dataSetName" -> dataSet.name,
+        "organization" -> organization.name,
+        "dataStoreUrl" -> dataStore.publicUrl,
+        "tracingStoreUrl" -> tracingStore.publicUrl
       )
     }
   }

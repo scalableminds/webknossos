@@ -3,9 +3,9 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
-import models.annotation.{AnnotationLayer, AnnotationLayerType}
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
 import models.user.User

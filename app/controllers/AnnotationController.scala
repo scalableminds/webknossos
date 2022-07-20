@@ -5,12 +5,14 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import io.swagger.annotations._
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
-import models.annotation.AnnotationLayerType.AnnotationLayerType
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService}
@@ -23,11 +25,11 @@ import models.user.{User, UserDAO, UserService}
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsArray, _}
+import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 case class AnnotationLayerParameters(typ: AnnotationLayerType,
@@ -52,6 +54,7 @@ class AnnotationController @Inject()(
     teamService: TeamService,
     projectDAO: ProjectDAO,
     teamDAO: TeamDAO,
+    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
     timeSpanService: TimeSpanService,
     annotationMerger: AnnotationMerger,
     tracingStoreService: TracingStoreService,
@@ -520,6 +523,17 @@ class AnnotationController @Inject()(
           _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
         } yield Ok(Json.toJson(teamIdsValidated))
       }
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def lookupPrivateLink(accessId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessId(accessId)
+      annotation: Annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)
+      // TODO add user to table?
+      writtenAnnotation <- annotationService.writesLayersAndStores(annotation)
+      // TODO check expiration date
+    } yield Ok(writtenAnnotation)
   }
 
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,

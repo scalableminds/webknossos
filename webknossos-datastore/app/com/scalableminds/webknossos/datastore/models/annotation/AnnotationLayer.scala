@@ -1,10 +1,10 @@
-package models.annotation
+package com.scalableminds.webknossos.datastore.models.annotation
 
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import models.annotation.AnnotationLayerType.AnnotationLayerType
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import play.api.libs.json.{Json, OFormat}
 import scalapb.GeneratedMessage
 
@@ -15,6 +15,10 @@ case class AnnotationLayer(
     typ: AnnotationLayerType,
     name: String
 ) {}
+
+object AnnotationLayer {
+  implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]
+}
 
 object AnnotationLayer extends FoxImplicits {
   implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]

@@ -381,8 +381,8 @@ export function isUserAdminOrTeamManager(user: APIUser): boolean {
 export function isUserDatasetManager(user: APIUser): boolean {
   return user.isDatasetManager;
 }
-export function isUserAdminOrDatasetManager(user: APIUser): boolean {
-  return isUserAdmin(user) || isUserDatasetManager(user);
+export function isUserAdminOrDatasetManager(user: APIUser | null | undefined): boolean {
+  return user != null && (isUserAdmin(user) || isUserDatasetManager(user));
 }
 export function getUrlParamsObject(): UrlParams {
   return getUrlParamsObjectFromString(location.search);

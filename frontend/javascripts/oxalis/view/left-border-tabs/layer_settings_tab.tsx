@@ -320,7 +320,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(dataset, layerName);
     const isSegmentation = layer.category === "segmentation";
-    const canBeMadeEditable = isSegmentation && layer.tracingId == null;
+    const canBeMadeEditable =
+      isSegmentation && layer.tracingId == null && this.props.controlMode === "TRACE";
     const isVolumeTracing = isSegmentation ? layer.tracingId != null : false;
     const maybeTracingId = isSegmentation ? layer.tracingId : null;
     const maybeVolumeTracing =
@@ -420,7 +421,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }}
         >
           <div className="flex-item">
-            {isSegmentation && canBeMadeEditable ? (
+            {canBeMadeEditable ? (
               <Tooltip
                 title="Make this segmentation editable by adding a Volume Annotation Layer."
                 placement="left"

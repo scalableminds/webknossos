@@ -14,6 +14,7 @@ import {
   getAgglomeratesForDatasetLayer,
 } from "admin/admin_rest_api";
 import type { APIMapping } from "types/api_flow_types";
+import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import { getLayerByName, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import type { ActiveMappingInfo, Mapping } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
@@ -114,6 +115,12 @@ function* maybeFetchMapping(
     // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getAgglomeratesForDatasetLayer, ...params),
   ]);
+  // Make sure the available mappings are persisted in the store if they are not already
+  const areServerHdf5MappingsInStore =
+    "agglomerates" in layerInfo && layerInfo.agglomerates != null;
+  if (!areServerHdf5MappingsInStore) {
+    yield* put(setLayerMappingsAction(layerName, jsonMappings, serverHdf5Mappings));
+  }
   const editableMappings = yield* select((state) =>
     state.tracing.volumes
       .filter((volumeTracing) => volumeTracing.mappingIsEditable)

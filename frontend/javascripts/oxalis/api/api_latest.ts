@@ -1349,7 +1349,11 @@ class DataApi {
     return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
   }
 
-  async getViewportData(viewport: OrthoView, layerName: string) {
+  async getViewportData(
+    viewport: OrthoView,
+    layerName: string,
+    maybeResolutionIndex: number | null | undefined,
+  ) {
     const state = Store.getState();
     const [curX, curY, curZ] = dimensions.transDim(
       dimensions.roundCoordinate(getPosition(state.flycam)),
@@ -1368,20 +1372,21 @@ class DataApi {
       viewport,
     );
 
-    // Find a viable resolution to compute the histogram on
-    const layer = getLayerByName(state.dataset, layerName);
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
-    // Ideally, we want to avoid resolutions 1 and 2 to keep
-    // the amount of data that has to be loaded small
-    const maybeResolutionIndex = Math.max(2, getRequestLogZoomStep(state) + 1);
-    const resolutionIndex = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+    let zoomStep;
+    if (maybeResolutionIndex == null) {
+      zoomStep = getRequestLogZoomStep(state);
+    } else {
+      const layer = getLayerByName(state.dataset, layerName);
+      const resolutionInfo = getResolutionInfo(layer.resolutions);
+      zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+    }
     const cuboid = await this.getDataForBoundingBox(
       layerName,
       {
         min,
         max,
       },
-      resolutionIndex,
+      zoomStep,
     );
     return cuboid;
   }

@@ -8,6 +8,7 @@ import { OrthoViews } from "oxalis/constants";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import api from "oxalis/api/internal_api";
+import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 
 function onThresholdChange(layerName: string, [firstVal, secVal]: [number, number]) {
   if (firstVal < secVal) {
@@ -20,10 +21,17 @@ function onThresholdChange(layerName: string, [firstVal, secVal]: [number, numbe
 async function getClippingValues(layerName: string, thresholdRatio: number = 0.0001) {
   const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
+
+  // Find a viable resolution to compute the histogram on
+  // Ideally, we want to avoid resolutions 1 and 2 to keep
+  // the amount of data that has to be loaded small
+  const state = Store.getState();
+  const maybeResolutionIndex = Math.max(2, getRequestLogZoomStep(state) + 1);
+
   const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
-    api.data.getViewportData(OrthoViews.PLANE_XY, layerName),
-    api.data.getViewportData(OrthoViews.PLANE_XZ, layerName),
-    api.data.getViewportData(OrthoViews.PLANE_YZ, layerName),
+    api.data.getViewportData(OrthoViews.PLANE_XY, layerName, maybeResolutionIndex),
+    api.data.getViewportData(OrthoViews.PLANE_XZ, layerName, maybeResolutionIndex),
+    api.data.getViewportData(OrthoViews.PLANE_YZ, layerName, maybeResolutionIndex),
   ]);
   const dataForAllViewPorts = new TypedArrayClass(
     cuboidXY.length + cuboidXZ.length + cuboidYZ.length,

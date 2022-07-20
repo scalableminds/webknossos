@@ -49,7 +49,8 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where value = ${accessId} and #$accessQuery".as[AnnotationPrivateLinksRow])
+        sql"select #$columns from #$existingCollectionName where value = ${accessId} and #$accessQuery"
+          .as[AnnotationPrivateLinksRow])
       parsed <- parseFirst(r, accessId)
     } yield parsed
 }

@@ -10,12 +10,29 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto, Vec3DoubleProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.geometry.{
+  ColorProto,
+  NamedBoundingBoxProto,
+  Vec3DoubleProto,
+  Vec3IntProto
+}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, FetchedAnnotationLayer}
-import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerType,
+  FetchedAnnotationLayer
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  ElementClass,
+  DataSourceLike => DataSource,
+  SegmentationLayerLike => SegmentationLayer
+}
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingDefaults, VolumeTracingDownsampling}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ResolutionRestrictions,
+  VolumeTracingDefaults,
+  VolumeTracingDownsampling
+}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
 
@@ -224,7 +241,8 @@ class AnnotationService @Inject()(
           case _ =>
             Fox.failure(s"Unknown AnnotationLayerType: ${annotationLayerParameters.typ}")
         }
-      } yield models.annotation.AnnotationLayer(tracingId, annotationLayerParameters.typ, annotationLayerParameters.name)
+      } yield
+        models.annotation.AnnotationLayer(tracingId, annotationLayerParameters.typ, annotationLayerParameters.name)
 
     def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
       if (existingAnnotationLayers.isEmpty) Fox.successful(None)

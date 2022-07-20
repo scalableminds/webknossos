@@ -11,8 +11,17 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, FetchedAnnotationLayer}
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractSegmentationLayer, DataLayerLike, GenericDataSource, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerType,
+  FetchedAnnotationLayer
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AbstractSegmentationLayer,
+  DataLayerLike,
+  GenericDataSource,
+  SegmentationLayer
+}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging

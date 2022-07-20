@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 - Merged the "Shared Annotations" tab into the "Annotations" tab in the user's dashboard. If annotations are shared with you, you can see them in your dashboard. The table can be filtered by owner if you prefer to see only your own annotations. [#6230](https://github.com/scalableminds/webknossos/pull/6230)
 - Changed the name of the volume annotation layer in tasks to be "Volume" instead of "Volume Layer". [#6321](https://github.com/scalableminds/webknossos/pull/6321)
+- Dataset managers are now allowed to change dataset team permissions for all teams they are a member of. [#6336](https://github.com/scalableminds/webknossos/pull/6336)
 
 ### Fixed
 - Fixed that zooming out for datasets with very large scale was not possible until the coarsest level. [#6304](https://github.com/scalableminds/webknossos/pull/6304)

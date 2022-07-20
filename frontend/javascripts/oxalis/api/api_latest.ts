@@ -72,7 +72,7 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRequestLogZoomStep, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -1345,7 +1345,7 @@ class DataApi {
     return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
   }
 
-  async getViewportDataForHistogram(viewport: OrthoView, layerName: string) {
+  async getViewportData(viewport: OrthoView, layerName: string) {
     const state = Store.getState();
     const [curX, curY, curZ] = dimensions.transDim(
       dimensions.roundCoordinate(getPosition(state.flycam)),
@@ -1367,7 +1367,9 @@ class DataApi {
     // Find a viable resolution to compute the histogram on
     const layer = getLayerByName(state.dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const maybeResolutionIndex = 2;
+    // Ideally, we want to avoid resolutions 1 and 2 to keep 
+    // the amount of data that has to be loaded small
+    const maybeResolutionIndex = Math.max(2, getRequestLogZoomStep(state));
     const resolutionIndex = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
     const cuboid = await this.getDataForBoundingBox(
       layerName,

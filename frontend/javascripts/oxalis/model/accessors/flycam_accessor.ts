@@ -187,7 +187,7 @@ export function _getMaximumZoomForAllResolutions(
 }
 const getMaximumZoomForAllResolutions = memoizeOne(_getMaximumZoomForAllResolutions);
 
-export function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<number> {
+function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<number> {
   const { viewMode } = state.temporaryConfiguration;
   return getMaximumZoomForAllResolutions(
     viewMode,

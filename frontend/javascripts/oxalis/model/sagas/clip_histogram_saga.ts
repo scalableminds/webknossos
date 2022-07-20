@@ -21,9 +21,9 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
   const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
   const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
-    api.data.getViewportDataForHistogram(OrthoViews.PLANE_XY, layerName),
-    api.data.getViewportDataForHistogram(OrthoViews.PLANE_XZ, layerName),
-    api.data.getViewportDataForHistogram(OrthoViews.PLANE_YZ, layerName),
+    api.data.getViewportData(OrthoViews.PLANE_XY, layerName),
+    api.data.getViewportData(OrthoViews.PLANE_XZ, layerName),
+    api.data.getViewportData(OrthoViews.PLANE_YZ, layerName),
   ]);
   const dataForAllViewPorts = new TypedArrayClass(
     cuboidXY.length + cuboidXZ.length + cuboidYZ.length,
@@ -32,7 +32,6 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
   dataForAllViewPorts.set(cuboidXZ, cuboidXY.length);
   dataForAllViewPorts.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
   const localHist = new Map();
-  console.log({ dataForAllViewPorts });
   for (let i = 0; i < dataForAllViewPorts.length; i++) {
     if (dataForAllViewPorts[i] !== 0) {
       const value = localHist.get(dataForAllViewPorts[i]);

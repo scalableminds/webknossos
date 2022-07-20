@@ -419,7 +419,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         <div
           className="flex-container"
           style={{
-            paddingRight: 5,
+            paddingRight: 1,
           }}
         >
           <div className="flex-item">

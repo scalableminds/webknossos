@@ -27,11 +27,13 @@ export function NewVolumeLayerSelection({
   dataset,
   selectedSegmentationLayerIndex,
   setSelectedSegmentationLayerIndex,
+  showLayerSelectionDisabled,
 }: {
   segmentationLayers: Array<APISegmentationLayer>;
   dataset: APIDataset;
   selectedSegmentationLayerIndex: number | null | undefined;
   setSelectedSegmentationLayerIndex: (arg0: number | null | undefined) => void;
+  showLayerSelectionDisabled: boolean | null | undefined;
 }) {
   return (
     <div
@@ -52,6 +54,7 @@ export function NewVolumeLayerSelection({
           setSelectedSegmentationLayerIndex(index !== -1 ? index : null);
         }}
         value={selectedSegmentationLayerIndex != null ? selectedSegmentationLayerIndex : -1}
+        disabled={showLayerSelectionDisabled != null ? showLayerSelectionDisabled : false}
       >
         <Radio key={-1} value={-1}>
           Create empty layer

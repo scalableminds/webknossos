@@ -24,7 +24,8 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
 
   // Find a viable resolution to compute the histogram on
   // Ideally, we want to avoid resolutions 1 and 2 to keep
-  // the amount of data that has to be loaded small
+  // the amount of data that has to be loaded small and
+  // to de-noise the data
   const state = Store.getState();
   const maybeResolutionIndex = Math.max(2, getRequestLogZoomStep(state) + 1);
 

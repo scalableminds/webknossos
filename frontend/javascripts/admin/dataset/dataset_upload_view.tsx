@@ -202,10 +202,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
   }
 
-  isDatasetManagerOrAdmin = () =>
-    this.props.activeUser &&
-    (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
-
   getDatastoreForUrl(url: string): APIDataStore | null | undefined {
     const uploadableDatastores = this.props.datastores.filter(
       (datastore) => datastore.allowsUpload,
@@ -597,7 +593,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   render() {
     const form = this.formRef.current;
     const { activeUser, withoutCard, datastores } = this.props;
-    const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
+    const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(this.props.activeUser);
+
     const { needsConversion } = this.state;
     const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
     const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
@@ -659,6 +656,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     <TeamSelectionComponent
                       mode="multiple"
                       value={this.state.selectedTeams}
+                      allowNonEditableTeams={isDatasetManagerOrAdmin}
                       onChange={(selectedTeams) => {
                         if (this.formRef.current == null) return;
 

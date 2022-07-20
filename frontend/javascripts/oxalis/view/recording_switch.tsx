@@ -12,7 +12,6 @@ type Props = {
 function RecordingSwitch({ flightmodeRecording, onChangeFlightmodeRecording }: Props) {
   return (
     <Switch
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ id: string; checkedChildren: string; unChe... Remove this comment to see the full error message
       id="flightmode-switch"
       checkedChildren="Recording"
       unCheckedChildren="Watching"

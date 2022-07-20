@@ -45,6 +45,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
+  getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
@@ -82,7 +83,7 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import { settings } from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
-import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
+import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
@@ -304,9 +305,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     elementClass: string,
     layerSettings: DatasetLayerConfiguration,
   ) => {
-    const { tracing } = this.props;
+    const { tracing, dataset } = this.props;
     const { intensityRange } = layerSettings;
-    const layer = getLayerByName(this.props.dataset, layerName);
+    const layer = getLayerByName(dataset, layerName);
     const isVolumeTracing = layer.category === "segmentation" ? layer.tracingId != null : false;
     const maybeTracingId = layer.category === "segmentation" ? layer.tracingId : null;
     const maybeVolumeTracing =
@@ -335,7 +336,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         setSingleLayerVisibility(true);
       }
     };
-
     const hasHistogram = this.props.histogramData[layerName] != null;
     const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
     const volumeDescriptor =
@@ -346,6 +346,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       "tracingId" in layer && layer.tracingId != null
         ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
         : layerName;
+    const allReadableLayerNames = getAllReadableLayerNames(dataset, tracing);
+    const readableLayerNameValidationResult = validateReadableLayerName(
+      readableName,
+      allReadableLayerNames,
+      readableName,
+    );
     return (
       <div className="flex-container">
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
@@ -357,17 +363,39 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }}
         >
           {volumeDescriptor != null ? (
-            <EditableTextLabel
-              margin="0 10px 0 0"
-              width={150}
-              value={readableName}
-              onChange={(newName) => {
-                this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, {
-                  name: newName,
-                });
-              }}
-              label="Volume Layer Name"
-            />
+            <Tooltip
+              title={
+                readableLayerNameValidationResult.isValid
+                  ? null
+                  : readableLayerNameValidationResult.message
+              }
+            >
+              <span style={{ display: "inline-block" }}>
+                <EditableTextLabel
+                  margin="0 10px 0 0"
+                  width={150}
+                  value={readableName}
+                  isInvalid={!readableLayerNameValidationResult.isValid}
+                  trimValue
+                  onChange={(newName) => {
+                    this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, {
+                      name: newName,
+                    });
+                  }}
+                  rules={[
+                    {
+                      validator: (newReadableLayerName) =>
+                        validateReadableLayerName(
+                          newReadableLayerName,
+                          allReadableLayerNames,
+                          readableName,
+                        ),
+                    },
+                  ]}
+                  label="Volume Layer Name"
+                />
+              </span>
+            </Tooltip>
           ) : (
             layerName
           )}
@@ -753,7 +781,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <React.Fragment>
         <Tooltip
-          title={showSkeletons ? "Hide all Skeletons" : "Show all skeletons"}
+          title={showSkeletons ? "Hide skeleton layer" : "Show skeleton layer"}
           placement="top"
         >
           {/* This div is necessary for the tooltip to be displayed */}
@@ -776,7 +804,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             wordWrap: "break-word",
           }}
         >
-          Skeletons
+          Skeleton
         </span>
         {showSkeletons ? (
           <div

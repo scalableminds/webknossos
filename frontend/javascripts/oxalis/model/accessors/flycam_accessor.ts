@@ -128,19 +128,30 @@ export function _getMaximumZoomForAllResolutions(
   maximumCapacity: number,
   initializedGpuFactor: number,
 ): Array<number> {
-  // maximumIterationCount is used as an upper limit to avoid an endless loop, in case
-  // the following while loop causes havoc for some reason (e.g., because
-  // the calculated bucket size isn't strictly increasing anymore). It means,
-  // that even with the best GPU specs and biggest dataset (i.e., many magnifications),
-  // wk will at most zoom out until a zoom value of ZOOM_STEP_INTERVAL**maximumIterationCount.
-  // With the current values, this would indicate a maximum zoom value of ~ 35 000, meaning
-  // that ~ 15 different magnifications (~ log2 of 35000) are supported properly.
-  const maximumIterationCount = 120;
-  let currentIterationCount = 0;
+  // This function determines which zoom value ranges are valid for the given magnifications.
+  // The calculation iterates through several zoom values and checks the required bucket capacity
+  // against the capacity supported by the GPU.
+  // In each iteration, the last zoom value is incremented as if the user performed a zoom-out action.
+  //
+  // In theory, we could simply abort the loop once a maximum zoom value was found for all magnifications.
+  // However, to avoid an infinite loop in case of violated assumptions (e.g., because the calculated
+  // bucket size isn't strictly increasing anymore), we calculate an iteration limit.
+
+  // For that limit, we specify how many magnifications we want to support at least.
+  // 15 magnifications means that the highest mag would be something like [32768, 32768, 1024].
+  const MAX_SUPPORTED_MAGNIFICATION_COUNT = 15;
+  // From that, we calculate the theoretical maximum zoom value. The dataset scale is taken into account,
+  // because the entire scene is scaled with that.
+  const maxSupportedZoomValue = 2 ** MAX_SUPPORTED_MAGNIFICATION_COUNT * Math.max(...datasetScale);
   // Since the viewports can be quite large, it can happen that even a zoom value of 1 is not feasible.
   // That's why we start the search with a smaller value than 1. We use the ZOOM_STEP_INTERVAL factor
   // to ensure that the calculated thresholds correspond to the normal zoom behavior.
-  let maxZoomValue = 1 / ZOOM_STEP_INTERVAL ** 20;
+  const ZOOM_IN_START_EXPONENT = 20;
+  let currentMaxZoomValue = 1 / ZOOM_STEP_INTERVAL ** ZOOM_IN_START_EXPONENT;
+  const maximumIterationCount =
+    Math.log(maxSupportedZoomValue) / Math.log(ZOOM_STEP_INTERVAL) + ZOOM_IN_START_EXPONENT;
+
+  let currentIterationCount = 0;
   let currentResolutionIndex = 0;
   const maxZoomValueThresholds = [];
 
@@ -148,7 +159,7 @@ export function _getMaximumZoomForAllResolutions(
     currentIterationCount < maximumIterationCount &&
     currentResolutionIndex < resolutions.length
   ) {
-    const nextZoomValue = maxZoomValue * ZOOM_STEP_INTERVAL;
+    const nextZoomValue = currentMaxZoomValue * ZOOM_STEP_INTERVAL;
     const nextCapacity = calculateTotalBucketCountForZoomLevel(
       viewMode,
       loadingStrategy,
@@ -164,11 +175,11 @@ export function _getMaximumZoomForAllResolutions(
     );
 
     if (nextCapacity > maximumCapacity) {
-      maxZoomValueThresholds.push(maxZoomValue);
+      maxZoomValueThresholds.push(currentMaxZoomValue);
       currentResolutionIndex++;
     }
 
-    maxZoomValue = nextZoomValue;
+    currentMaxZoomValue = nextZoomValue;
     currentIterationCount++;
   }
 

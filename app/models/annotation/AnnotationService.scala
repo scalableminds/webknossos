@@ -41,7 +41,7 @@ import models.mesh.{MeshDAO, MeshService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
-import models.team.{Team, TeamDAO}
+import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -89,6 +89,7 @@ class AnnotationService @Inject()(
     taskDAO: TaskDAO,
     teamDAO: TeamDAO,
     userService: UserService,
+    teamService: TeamService,
     dataStoreDAO: DataStoreDAO,
     projectDAO: ProjectDAO,
     organizationDAO: OrganizationDAO,
@@ -103,6 +104,8 @@ class AnnotationService @Inject()(
     with ProtoGeometryImplicits
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
+
+  val DefaultAnnotationListLimit = 1000
 
   private def selectSuitableTeam(user: User, dataSet: DataSet): Fox[ObjectId] =
     (for {
@@ -326,10 +329,11 @@ class AnnotationService @Inject()(
         case _                    => Fox.failure("annotation.makeHybrid.alreadyHybrid")
       }
       usedFallbackLayerName = if (newAnnotationLayerType == AnnotationLayerType.Volume) fallbackLayerName else None
-      newAnnotationLayerParameters = AnnotationLayerParameters(newAnnotationLayerType,
-                                                               usedFallbackLayerName,
-                                                               Some(ResolutionRestrictions.empty),
-                                                               None)
+      newAnnotationLayerParameters = AnnotationLayerParameters(
+        newAnnotationLayerType,
+        usedFallbackLayerName,
+        Some(ResolutionRestrictions.empty),
+        AnnotationLayer.defaultNameForType(newAnnotationLayerType))
       _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
     } yield ()
 
@@ -556,13 +560,6 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[Unit] =
     sharedAnnotationsDAO.updateTeamsForSharedAnnotation(annotationId, teams)
 
-  def sharedTeamsFor(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      teamIds <- sharedAnnotationsDAO.sharedTeamsFor(annotationId)
-      teamIdsValidated <- Fox.serialCombined(teamIds)(ObjectId.parse(_))
-      teams <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_))
-    } yield teams
-
   def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
       implicit
       ctx: DBAccessContext): Fox[TemporaryFile] =
@@ -788,6 +785,8 @@ class AnnotationService @Inject()(
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       meshes <- meshDAO.findAllWithAnnotation(annotation._id)
       meshesJs <- Fox.serialCombined(meshes)(meshService.publicWrites)
+      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
+      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_))
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
     } yield {
@@ -811,6 +810,7 @@ class AnnotationService @Inject()(
         "visibility" -> annotation.visibility,
         "settings" -> settings,
         "tracingTime" -> annotation.tracingTime,
+        "teams" -> teamsJson,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "user" -> userJson,
         "owner" -> userJson,
@@ -833,11 +833,14 @@ class AnnotationService @Inject()(
     }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation): Fox[JsObject] =
+  def compactWrites(annotation: Annotation): Fox[JsObject] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
-      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      user <- userDAO.findOne(annotation._user)(GlobalAccessContext)
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id) ?~> s"fetching sharedTeams for annotation ${annotation._id} failed"
+      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization))) ?~> s"serializing sharedTeams for annotation ${annotation._id} failed"
+      user <- userDAO.findOne(annotation._user) ?~> s"fetching owner info for annotation ${annotation._id} failed"
       userJson = Json.obj(
         "id" -> user._id.toString,
         "firstName" -> user.firstName,
@@ -858,8 +861,10 @@ class AnnotationService @Inject()(
         "organization" -> organization.name,
         "visibility" -> annotation.visibility,
         "tracingTime" -> annotation.tracingTime,
+        "teams" -> teamsJson,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "owner" -> userJson
       )
     }
+  }
 }

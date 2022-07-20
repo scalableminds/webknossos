@@ -41,7 +41,7 @@ There are four different roles for webKnossos users divided into global, organiz
 
   - __Admin:__ Manage a whole organization, including full access to all datasets, teams, and projects. Admins can access all administrative settings - similar to `Team Managers` but for all teams - and have full control over all datasets - similar to `Dataset Managers`. They can promote other users to `Admin` or to `Dataset Manager` by using the `Edit Teams and Permissions` modal at the top of the user list. Admins can access ALL annotations, datasets, projects, tasks, etc belonging to their respective organization and can modify any setting of an organization. Admins have the most permissions in your organization, and this role should be assigned with care.
 
-  - __Dataset Manager:__ Manage all datasets of an organization. Dataset Managers have full read/write access to all datasets within their respective organizations regardless of whether a dataset has been made available only to a specific team. Use this role for power users who regularly upload datasets or who need access to all datasets regardless of who created them.
+  - __Dataset Manager:__ Manage all datasets of an organization. Dataset Managers have full read/write access to all datasets within their respective organizations regardless of whether a dataset has been made available only to a specific team. They can also set team permissions for datasets. Use this role for power users who regularly upload datasets or who need access to all datasets regardless of who created them.
   Unlike `Admins`, Dataset Managers do NOT have access to any of the administration interfaces for users, tasks, and projects.
 
 
@@ -69,7 +69,7 @@ For more information regarding (public) dataset sharing and access rights (espec
 | Access time tracking for users of managed teams          	| Yes   	| No              	| Yes          	| No          	|
 | Create scripts (visible to everyone)            	| Yes   	| No              	| Yes          	| No          	|
 | Upload Datasets via UI                           	| Yes   	| Yes             	| Yes          	| No          	|
-| Set team access permissions upon dataset upload    	| Yes   	| Yes              	| Yes          	| No          	|
+| Set team access permissions for datasets    	| Yes   	| Yes              	| Yes          	| No          	|
 | Get tasks again after canceling an instance     	| Yes   	| No              	| Yes          	| No          	|
 | Access to wK Statistics Menu  	| Yes   	| No              	| Yes          	| No          	|
 

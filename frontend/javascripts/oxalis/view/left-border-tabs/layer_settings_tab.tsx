@@ -8,6 +8,8 @@ import {
   WarningOutlined,
   PlusOutlined,
   VerticalAlignMiddleOutlined,
+  LockOutlined,
+  UnlockOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -23,6 +25,7 @@ import {
 } from "types/api_flow_types";
 import { ValueOf } from "types/globals";
 import { AsyncIconButton } from "components/async_clickables";
+import { HoverIconButton } from "components/hover_icon_button";
 import {
   SwitchSetting,
   NumberSliderSetting,
@@ -479,6 +482,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 placement="left"
               >
                 <ToolOutlined
+                  icon={<LockOutlined />}
+                  hoveredIcon={<UnlockOutlined />}
                   onClick={() => {
                     const segmentationLayers = getSegmentationLayers(dataset);
                     const segmentationLayerIndex = segmentationLayers.indexOf(layer);

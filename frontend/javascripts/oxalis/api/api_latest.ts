@@ -72,7 +72,11 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRequestLogZoomStep, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getRequestLogZoomStep,
+  getRotation,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
@@ -1367,7 +1371,7 @@ class DataApi {
     // Find a viable resolution to compute the histogram on
     const layer = getLayerByName(state.dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
-    // Ideally, we want to avoid resolutions 1 and 2 to keep 
+    // Ideally, we want to avoid resolutions 1 and 2 to keep
     // the amount of data that has to be loaded small
     const maybeResolutionIndex = Math.max(2, getRequestLogZoomStep(state));
     const resolutionIndex = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);

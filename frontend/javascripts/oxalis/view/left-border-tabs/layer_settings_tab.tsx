@@ -10,7 +10,6 @@ import {
   VerticalAlignMiddleOutlined,
   LockOutlined,
   UnlockOutlined,
-  ToolOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -481,7 +480,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 title="Make this segmentation editable by adding a Volume Annotation Layer."
                 placement="left"
               >
-                <ToolOutlined
+                <HoverIconButton
                   icon={<LockOutlined />}
                   hoveredIcon={<UnlockOutlined />}
                   onClick={() => {

@@ -84,14 +84,16 @@ export default function AddVolumeLayerModal({
   dataset,
   onCancel,
   tracing,
+  preselectedLayerIndex,
 }: {
   dataset: APIDataset;
   onCancel: () => void;
   tracing: Tracing;
+  preselectedLayerIndex: number | null | undefined;
 }) {
   const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState<
     number | null | undefined
-  >(null);
+  >(preselectedLayerIndex);
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, tracing),
     [dataset, tracing],

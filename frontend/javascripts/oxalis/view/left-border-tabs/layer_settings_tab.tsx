@@ -8,6 +8,7 @@ import {
   WarningOutlined,
   PlusOutlined,
   VerticalAlignMiddleOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -49,6 +50,7 @@ import {
   getResolutionInfo,
   getResolutions,
   getVisibleSegmentationLayer,
+  getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -124,6 +126,7 @@ type State = {
   // is shown for that VolumeTracing
   volumeTracingToDownsample: VolumeTracing | null | undefined;
   isAddVolumeLayerModalVisible: boolean;
+  preselectSegmentationLayerIndex: number | null | undefined;
   layerToMergeWithFallback: APIDataLayer | null | undefined;
 };
 
@@ -132,6 +135,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   state: State = {
     volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,
+    preselectSegmentationLayerIndex: 0,
     layerToMergeWithFallback: null,
   };
 
@@ -315,8 +319,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { tracing, dataset } = this.props;
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(dataset, layerName);
-    const isVolumeTracing = layer.category === "segmentation" ? layer.tracingId != null : false;
-    const maybeTracingId = layer.category === "segmentation" ? layer.tracingId : null;
+    const isSegmentation = layer.category === "segmentation";
+    const canBeMadeEditable = isSegmentation && layer.tracingId == null;
+    const isVolumeTracing = isSegmentation ? layer.tracingId != null : false;
+    const maybeTracingId = isSegmentation ? layer.tracingId : null;
     const maybeVolumeTracing =
       maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
     const maybeFallbackLayer =
@@ -414,6 +420,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }}
         >
           <div className="flex-item">
+              {(isSegmentation && canBeMadeEditable) ? (
+                <Tooltip
+                  title="Make this segmentation editable by adding a Volume Annotation Layer."
+                  placement="left">
+                  <ToolOutlined
+                    onClick={() => {
+                      const segmentationLayers = getSegmentationLayers(dataset);
+                      const segmentationLayerIndex = segmentationLayers.indexOf(layer);
+                      this.setState({
+                        preselectSegmentationLayerIndex: segmentationLayerIndex,
+                        isAddVolumeLayerModalVisible: true,
+                      });
+                    }}
+                    style={{ marginLeft: 5 }}
+                  />
+                </Tooltip>
+              ) : null
+              }
             <Tooltip
               overlayStyle={{
                 maxWidth: 800,
@@ -994,6 +1018,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             dataset={this.props.dataset}
             onCancel={this.hideAddVolumeLayerModal}
             tracing={this.props.tracing}
+            preselectedLayerIndex={this.state.preselectSegmentationLayerIndex}
           />
         ) : null}
       </div>

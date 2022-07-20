@@ -420,24 +420,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }}
         >
           <div className="flex-item">
-              {(isSegmentation && canBeMadeEditable) ? (
-                <Tooltip
-                  title="Make this segmentation editable by adding a Volume Annotation Layer."
-                  placement="left">
-                  <ToolOutlined
-                    onClick={() => {
-                      const segmentationLayers = getSegmentationLayers(dataset);
-                      const segmentationLayerIndex = segmentationLayers.indexOf(layer);
-                      this.setState({
-                        preselectSegmentationLayerIndex: segmentationLayerIndex,
-                        isAddVolumeLayerModalVisible: true,
-                      });
-                    }}
-                    style={{ marginLeft: 5 }}
-                  />
-                </Tooltip>
-              ) : null
-              }
+            {isSegmentation && canBeMadeEditable ? (
+              <Tooltip
+                title="Make this segmentation editable by adding a Volume Annotation Layer."
+                placement="left"
+              >
+                <ToolOutlined
+                  onClick={() => {
+                    const segmentationLayers = getSegmentationLayers(dataset);
+                    const segmentationLayerIndex = segmentationLayers.indexOf(layer);
+                    this.setState({
+                      preselectSegmentationLayerIndex: segmentationLayerIndex,
+                      isAddVolumeLayerModalVisible: true,
+                    });
+                  }}
+                  style={{ marginLeft: 5 }}
+                />
+              </Tooltip>
+            ) : null}
             <Tooltip
               overlayStyle={{
                 maxWidth: 800,

@@ -526,12 +526,14 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def lookupPrivateLink(accessId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def lookupPrivateLink(accessId: String): Action[AnyContent] = sil.UnsecuredAction.async { implicit request =>
     for {
-      annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessId(accessId)
-      annotation: Annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)
+      annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessId(accessId)(GlobalAccessContext)
+      annotation: Annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
       // TODO add user to table?
       writtenAnnotation <- annotationService.writesLayersAndStores(annotation)
+      _ = println(s"annotationPrivateLink: $annotationPrivateLink")
+      _ = println(s"writtenAnnotation: $writtenAnnotation")
       // TODO check expiration date
     } yield Ok(writtenAnnotation)
   }

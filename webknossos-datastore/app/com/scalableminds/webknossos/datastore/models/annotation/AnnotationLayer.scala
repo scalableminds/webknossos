@@ -16,10 +16,6 @@ case class AnnotationLayer(
     name: String
 ) {}
 
-object AnnotationLayer {
-  implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]
-}
-
 object AnnotationLayer extends FoxImplicits {
   implicit val jsonFormat: OFormat[AnnotationLayer] = Json.format[AnnotationLayer]
 

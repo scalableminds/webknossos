@@ -114,8 +114,10 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   override def anonymousReadAccessQ(token: Option[String]): String =
     "isPublic" + token
       .map(t =>
-        s" or sharingToken = '$t' or _id in (select _dataset" +
-          s"from webknossos.annotation_private_links_ apl join webknossos.annotations_ ans ON apl._annotation = ans._id where apl.value = '$token')")
+        s" or sharingToken = '$t' or _id in (select _dataset " +
+          s"from webknossos.annotation_private_links_ apl " +
+          s"join webknossos.annotations_ ans ON apl._annotation = ans._id " +
+          s"where apl.value = '$token')")
       .getOrElse("")
 
   override def readAccessQ(requestingUserId: ObjectId) =
@@ -157,17 +159,24 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> ("organization.notFound " + organizationName)
+      x = println("in findbyNameAndOrgName")
+      _ = println(s"organization: $organization, name: $name, organization_id: ${organization._id}")
       dataset <- findOneByNameAndOrganization(name, organization._id)
+      _ = println(s"dataset: $dataset")
     } yield dataset
 
   def findOneByNameAndOrganization(name: String, organizationId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
+      _ = println(s"accessQuery: $accessQuery")
+      _ = println("in findonebynameandorg")
       r <- run(
         sql"select #$columns from #$existingCollectionName where name = $name and _organization = $organizationId and #$accessQuery"
           .as[DatasetsRow])
+      _ = println(s"r: $r")
       parsed <- parseFirst(r, s"$organizationId/$name")
+      _ = println(s"query: $parsed")
     } yield parsed
 
   def findAllByNamesAndOrganization(names: List[String], organizationId: ObjectId)(

@@ -220,6 +220,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
             s"RequestBody: '$requestBodyPreview'. Status ${response.status}. " +
             s"ResponseBody: '${response.body.take(100)}'")
       }
+      logger.debug(f"parsed: ${Json.parse(response.body)}")
       Json.parse(response.body).validate[T] match {
         case JsSuccess(value, _) =>
           Full(value)

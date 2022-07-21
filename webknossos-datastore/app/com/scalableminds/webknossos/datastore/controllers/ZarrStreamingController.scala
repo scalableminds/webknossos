@@ -308,26 +308,6 @@ class ZarrStreamingController @Inject()(
     } yield result
   }
 
-  def dataLayerFolderContentsPrivateLink(accessId: String, dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessId)
-        layer = annotationSource.getAnnotationLayer(dataLayerName)
-
-        result <- layer match {
-          case Some(annotationLayer) =>
-            remoteTracingstoreClient
-              .getDataLayerFolderContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl)
-              .map(Ok(_))
-          case None =>
-            dataLayerFolderContents(Some(accessId),
-                                    annotationSource.organizationName,
-                                    annotationSource.dataSetName,
-                                    dataLayerName)
-        }
-      } yield result
-    }
-
   def dataLayerFolderContents(token: Option[String],
                               organizationName: String,
                               dataSetName: String,
@@ -347,6 +327,26 @@ class ZarrStreamingController @Inject()(
               (mag.toMagLiteral(), s"$dataLayerName/${mag.toMagLiteral()}")
             }.toMap
           )).withHeaders()
+    }
+
+  def dataLayerFolderContentsPrivateLink(accessId: String, dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      for {
+        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessId)
+        layer = annotationSource.getAnnotationLayer(dataLayerName)
+
+        result <- layer match {
+          case Some(annotationLayer) =>
+            remoteTracingstoreClient
+              .getDataLayerFolderContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl)
+              .map(Ok(_))
+          case None =>
+            dataLayerFolderContents(Some(accessId),
+              annotationSource.organizationName,
+              annotationSource.dataSetName,
+              dataLayerName)
+        }
+      } yield result
     }
 
   def requestDataSourceFolderContents(token: Option[String],
@@ -374,6 +374,11 @@ class ZarrStreamingController @Inject()(
   def dataSourceFolderContentsPrivateLink(accessId: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessId)
+      _ = println("got annotation for private link")
+
+      // TODO add
+//      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+//      urlOrHeaderToken(token, request)
       dataSource <- dataSourceRepository
         .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
         .toFox ?~> Messages("dataSource.notFound") ~> 404

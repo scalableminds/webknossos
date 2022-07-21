@@ -88,7 +88,9 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
-      implicit ec: ExecutionContext): Fox[Result] =
+      implicit ec: ExecutionContext): Fox[Result] = {
+    println(s"token: $token")
+
     if (token.contains(RpcTokenHolder.webKnossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
@@ -109,6 +111,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         Ok(Json.toJson(answer))
       }
     }
+  }
 
   private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(
       implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {

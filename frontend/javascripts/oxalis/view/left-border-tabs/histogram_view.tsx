@@ -199,7 +199,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   };
 
   tipFormatter = (value: number) =>
-    value >= 100000 || (value < 0.001 && value > -0.001)
+    value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
       ? value.toExponential()
       : roundTo(value, this.getPrecision()).toString();
 

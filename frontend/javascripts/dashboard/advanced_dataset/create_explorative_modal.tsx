@@ -9,6 +9,7 @@ import {
   getSegmentationLayers,
   getResolutionInfo,
   ResolutionInfo,
+  getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
@@ -25,14 +26,22 @@ type RestrictResolutionSliderProps = {
 export function NewVolumeLayerSelection({
   segmentationLayers,
   dataset,
-  selectedSegmentationLayerIndex,
-  setSelectedSegmentationLayerIndex,
+  selectedSegmentationLayerName,
+  setSelectedSegmentationLayerName,
+  disableLayerSelection,
 }: {
   segmentationLayers: Array<APISegmentationLayer>;
   dataset: APIDataset;
-  selectedSegmentationLayerIndex: number | null | undefined;
-  setSelectedSegmentationLayerIndex: (arg0: number | null | undefined) => void;
+  selectedSegmentationLayerName: string | null | undefined;
+  setSelectedSegmentationLayerName: (arg0: string | null | undefined) => void;
+  disableLayerSelection: boolean | undefined;
 }) {
+  const selectedSegmentationLayerIndex =
+    selectedSegmentationLayerName != null
+      ? segmentationLayers.indexOf(
+          getSegmentationLayerByName(dataset, selectedSegmentationLayerName),
+        )
+      : -1;
   return (
     <div
       style={{
@@ -49,9 +58,10 @@ export function NewVolumeLayerSelection({
       <Radio.Group
         onChange={(e) => {
           const index = parseInt(e.target.value);
-          setSelectedSegmentationLayerIndex(index !== -1 ? index : null);
+          setSelectedSegmentationLayerName(index !== -1 ? segmentationLayers[index].name : null);
         }}
-        value={selectedSegmentationLayerIndex != null ? selectedSegmentationLayerIndex : -1}
+        value={selectedSegmentationLayerIndex}
+        disabled={disableLayerSelection ?? false}
       >
         <Radio key={-1} value={-1}>
           Create empty layer
@@ -154,7 +164,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
   const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
   const [annotationType, setAnnotationType] = useState("hybrid");
   const [userDefinedResolutionIndices, setUserDefinedResolutionIndices] = useState([0, 10000]);
-  const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState(null);
+  const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState(null);
   let modalContent = <Spin />;
 
   if (dataset !== null) {
@@ -162,8 +172,8 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
     const selectedSegmentationLayer =
       annotationType !== "skeleton" &&
       segmentationLayers.length > 0 &&
-      selectedSegmentationLayerIndex != null
-        ? segmentationLayers[selectedSegmentationLayerIndex]
+      selectedSegmentationLayerName != null
+        ? getSegmentationLayerByName(dataset, selectedSegmentationLayerName)
         : null;
     const fallbackLayerGetParameter =
       selectedSegmentationLayer != null
@@ -210,9 +220,9 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
           <NewVolumeLayerSelection
             segmentationLayers={segmentationLayers}
             dataset={dataset}
-            selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
+            selectedSegmentationLayerName={selectedSegmentationLayerName}
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'Dispatch<SetStateAction<null>>' is not assig... Remove this comment to see the full error message
-            setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
+            setSelectedSegmentationLayerName={setSelectedSegmentationLayerName}
           />
         ) : null}
 

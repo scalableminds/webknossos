@@ -74,8 +74,8 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
-  getRotation,
   getRequestLogZoomStep,
+  getRotation,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   loadAdHocMeshAction,
@@ -1349,7 +1349,11 @@ class DataApi {
     return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
   }
 
-  async getViewportData(viewport: OrthoView, layerName: string) {
+  async getViewportData(
+    viewport: OrthoView,
+    layerName: string,
+    maybeResolutionIndex: number | null | undefined,
+  ) {
     const state = Store.getState();
     const [curX, curY, curZ] = dimensions.transDim(
       dimensions.roundCoordinate(getPosition(state.flycam)),
@@ -1367,14 +1371,22 @@ class DataApi {
       V3.add([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 1]),
       viewport,
     );
-    const resolutionIndex = getRequestLogZoomStep(state);
+
+    let zoomStep;
+    if (maybeResolutionIndex == null) {
+      zoomStep = getRequestLogZoomStep(state);
+    } else {
+      const layer = getLayerByName(state.dataset, layerName);
+      const resolutionInfo = getResolutionInfo(layer.resolutions);
+      zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+    }
     const cuboid = await this.getDataForBoundingBox(
       layerName,
       {
         min,
         max,
       },
-      resolutionIndex,
+      zoomStep,
     );
     return cuboid;
   }

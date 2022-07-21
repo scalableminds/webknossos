@@ -58,7 +58,6 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def run[R](query: DBIOAction[R, NoStream, Nothing],
              retryCount: Int = 0,
              retryIfErrorContains: List[String] = List()): Fox[R] = {
-    println(s"run - query: ${query.getDumpInfo.mainInfo}")
     val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
       result match {
         case Success(res) =>

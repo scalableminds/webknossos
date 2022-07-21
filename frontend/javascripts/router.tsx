@@ -1,5 +1,5 @@
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import { ContextRouter } from "react-router-dom";
+import type { ContextRouter } from "react-router-dom";
 import { Redirect, Route, Router, Switch, useLocation } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";

@@ -11,7 +11,7 @@ CREATE TABLE webknossos.annotation_private_links
   isDeleted          BOOLEAN     NOT NULL DEFAULT false
 );
 ALTER TABLE webknossos.annotation_private_links
-  ADD CONSTRAINT annotation_ref FOREIGN KEY (_ annotation) REFERENCES webknossos.annotations (_ id) DEFERRABLE;
+  ADD CONSTRAINT annotation_ref FOREIGN KEY (_annotation) REFERENCES webknossos.annotations (_id) DEFERRABLE;
 
 CREATE VIEW webknossos.annotation_private_links_ as
 SELECT *

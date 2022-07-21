@@ -32,26 +32,33 @@ class DSRemoteTracingstoreClient @Inject()(
   private val dataStoreName: String = config.Datastore.name
   private val dataStoreUri: String = config.Http.uri
 
-  def getZArray(tracingId: String, mag: String, tracingStoreUri: String): Fox[ZarrHeader] =
+  def getZArray(tracingId: String, mag: String, tracingStoreUri: String, accessId: String): Fox[ZarrHeader] =
     rpc(s"$tracingStoreUri/volume/zarr/$tracingId/$mag/.zarray")
       .addQueryString("key" -> dataStoreKey)
+      .addQueryString("token" -> accessId)
       .getWithJsonResponse[ZarrHeader]
 
-  def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String): Fox[Array[Byte]] =
+  def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String, accessId: String): Fox[Array[Byte]] =
     rpc(s"$tracingStoreUri/volume/zarr/$tracingId/$mag/$cxyz")
       .addQueryString("key" -> dataStoreKey)
+      .addQueryString("token" -> accessId)
       .getWithBytesResponse
 
-  def getDataLayerMagFolderContents(tracingId: String, mag: String, tracingStoreUri: String): Fox[JsObject] =
+  def getDataLayerMagFolderContents(tracingId: String, mag: String, tracingStoreUri: String, accessId: String): Fox[JsObject] =
     rpc(s"$tracingStoreUri/volume/zarr/$tracingId/$mag")
       .addQueryString("key" -> dataStoreKey)
+      .addQueryString("token" -> accessId)
       .getWithJsonResponse[JsObject]
 
-  def getDataLayerFolderContents(tracingId: String, tracingStoreUri: String): Fox[JsObject] =
-    rpc(s"$tracingStoreUri/volume/zarr/$tracingId").addQueryString("key" -> dataStoreKey).getWithJsonResponse[JsObject]
+  def getDataLayerFolderContents(tracingId: String, tracingStoreUri: String, accessId: String): Fox[JsObject] =
+    rpc(s"$tracingStoreUri/volume/zarr/$tracingId")
+      .addQueryString("key" -> dataStoreKey)
+      .addQueryString("token" -> accessId)
+      .getWithJsonResponse[JsObject]
 
-  def getZGroup(tracingId: String, tracingStoreUri: String): Fox[JsObject] =
+  def getZGroup(tracingId: String, tracingStoreUri: String, accessId: String): Fox[JsObject] =
     rpc(s"$tracingStoreUri/volume/zarr/$tracingId/.zgroup")
       .addQueryString("key" -> dataStoreKey)
+      .addQueryString("token" -> accessId)
       .getWithJsonResponse[JsObject]
 }

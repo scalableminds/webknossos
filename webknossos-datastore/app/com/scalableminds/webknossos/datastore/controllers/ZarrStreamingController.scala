@@ -148,7 +148,7 @@ class ZarrStreamingController @Inject()(
         result <- layer match {
           case Some(annotationLayer) =>
             remoteTracingstoreClient
-              .getRawZarrCube(annotationLayer.tracingId, mag, cxyz, annotationSource.tracingStoreUrl)
+              .getRawZarrCube(annotationLayer.tracingId, mag, cxyz, annotationSource.tracingStoreUrl, accessId)
               .map(Ok(_))
           case None =>
             rawZarrCube(Some(accessId),
@@ -235,7 +235,7 @@ class ZarrStreamingController @Inject()(
         result <- layer match {
           case Some(annotationLayer) =>
             remoteTracingstoreClient
-              .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)
+              .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, accessId)
               .map(z => Ok(Json.toJson(z)))
           case None =>
             zArray(Some(accessId), annotationSource.organizationName, annotationSource.dataSetName, dataLayerName, mag)
@@ -287,7 +287,7 @@ class ZarrStreamingController @Inject()(
         result <- layer match {
           case Some(annotationLayer) =>
             remoteTracingstoreClient
-              .getDataLayerMagFolderContents(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)
+              .getDataLayerMagFolderContents(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, accessId)
               .map(Ok(_))
           case None =>
             dataLayerMagFolderContents(Some(accessId),
@@ -338,13 +338,13 @@ class ZarrStreamingController @Inject()(
         result <- layer match {
           case Some(annotationLayer) =>
             remoteTracingstoreClient
-              .getDataLayerFolderContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl)
+              .getDataLayerFolderContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, accessId)
               .map(Ok(_))
           case None =>
             dataLayerFolderContents(Some(accessId),
-              annotationSource.organizationName,
-              annotationSource.dataSetName,
-              dataLayerName)
+                                    annotationSource.organizationName,
+                                    annotationSource.dataSetName,
+                                    dataLayerName)
         }
       } yield result
     }
@@ -426,7 +426,9 @@ class ZarrStreamingController @Inject()(
 
         result <- layer match {
           case Some(annotationLayer) =>
-            remoteTracingstoreClient.getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl).map(Ok(_))
+            remoteTracingstoreClient
+              .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl, accessId)
+              .map(Ok(_))
           case None =>
             zGroup(Some(accessId), annotationSource.organizationName, annotationSource.dataSetName, dataLayerName)
         }

@@ -529,12 +529,9 @@ class AnnotationController @Inject()(
   def lookupPrivateLink(accessId: String): Action[AnyContent] = sil.UnsecuredAction.async { implicit request =>
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessId(accessId)(GlobalAccessContext)
+      _ <- bool2Fox(annotationPrivateLink.expirationDateTime < System.currentTimeMillis()) ?~> "Token expired" ~> 404
       annotation: Annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
-      // TODO add user to table?
       writtenAnnotation <- annotationService.writesLayersAndStores(annotation)
-      _ = println(s"annotationPrivateLink: $annotationPrivateLink")
-      _ = println(s"writtenAnnotation: $writtenAnnotation")
-      // TODO check expiration date
     } yield Ok(writtenAnnotation)
   }
 

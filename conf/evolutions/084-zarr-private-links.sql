@@ -2,13 +2,16 @@
 
 START TRANSACTION;
 
-CREATE TABLE webknossos.annotation_private_links(
+CREATE TABLE webknossos.annotation_private_links
+(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _annotation CHAR(24) NOT NULL,
   value              Text        NOT NULL,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   isDeleted          BOOLEAN     NOT NULL DEFAULT false
-) ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
+);
+ALTER TABLE webknossos.annotation_private_links
+  ADD CONSTRAINT annotation_ref FOREIGN KEY (_ annotation) REFERENCES webknossos.annotations (_ id) DEFERRABLE;
 
 CREATE VIEW webknossos.annotation_private_links_ as
 SELECT *

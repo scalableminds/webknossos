@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(83);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(84);
 COMMIT TRANSACTION;
 
 
@@ -443,7 +443,7 @@ CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDelete
 CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
-CREATE VIEW webknossos.annotation_private_links_ as SELECt * FROM webknossos.annotation_private_links WHERE NOT isDeleted;
+CREATE VIEW webknossos.annotation_private_links_ as SELECT * FROM webknossos.annotation_private_links WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT

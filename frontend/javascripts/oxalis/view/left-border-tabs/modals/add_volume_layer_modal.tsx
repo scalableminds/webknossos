@@ -12,6 +12,7 @@ import type { Tracing } from "oxalis/store";
 import { addAnnotationLayer } from "admin/admin_rest_api";
 import {
   getDatasetResolutionInfo,
+  getLayerByName,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -84,14 +85,18 @@ export default function AddVolumeLayerModal({
   dataset,
   onCancel,
   tracing,
+  preselectedLayerName,
+  disableLayerSelection,
 }: {
   dataset: APIDataset;
   onCancel: () => void;
   tracing: Tracing;
+  preselectedLayerName: string | undefined;
+  disableLayerSelection: boolean | undefined;
 }) {
-  const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState<
-    number | null | undefined
-  >(null);
+  const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState<
+    string | null | undefined
+  >(preselectedLayerName);
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, tracing),
     [dataset, tracing],
@@ -137,7 +142,7 @@ export default function AddVolumeLayerModal({
       ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[1]),
     );
 
-    if (selectedSegmentationLayerIndex == null) {
+    if (selectedSegmentationLayerName == null) {
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
         name: newLayerName,
@@ -148,7 +153,7 @@ export default function AddVolumeLayerModal({
         },
       });
     } else {
-      selectedSegmentationLayer = availableSegmentationLayers[selectedSegmentationLayerIndex];
+      selectedSegmentationLayer = getLayerByName(dataset, selectedSegmentationLayerName);
       const fallbackLayerName = selectedSegmentationLayer.name;
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
@@ -188,8 +193,9 @@ export default function AddVolumeLayerModal({
         <NewVolumeLayerSelection
           dataset={dataset}
           segmentationLayers={availableSegmentationLayers}
-          selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
-          setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
+          selectedSegmentationLayerName={selectedSegmentationLayerName}
+          setSelectedSegmentationLayerName={setSelectedSegmentationLayerName}
+          disableLayerSelection={disableLayerSelection ?? false}
         />
       ) : null}
       <RestrictResolutionSlider

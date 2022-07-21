@@ -51,7 +51,6 @@ import {
   getLayerByName,
   getResolutionInfo,
   getResolutions,
-  getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -127,7 +126,7 @@ type State = {
   // is shown for that VolumeTracing
   volumeTracingToDownsample: VolumeTracing | null | undefined;
   isAddVolumeLayerModalVisible: boolean;
-  preselectedSegmentationLayerIndex: number | undefined;
+  preselectedSegmentationLayerName: string | undefined;
   segmentationLayerWasPreselected: boolean | undefined;
   layerToMergeWithFallback: APIDataLayer | null | undefined;
 };
@@ -137,7 +136,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   state: State = {
     volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,
-    preselectedSegmentationLayerIndex: undefined,
+    preselectedSegmentationLayerName: undefined,
     segmentationLayerWasPreselected: false,
     layerToMergeWithFallback: null,
   };
@@ -483,12 +482,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   icon={<LockOutlined />}
                   hoveredIcon={<UnlockOutlined />}
                   onClick={() => {
-                    const segmentationLayers = getSegmentationLayers(dataset);
-                    const segmentationLayerIndex = segmentationLayers.indexOf(layer);
                     this.setState({
                       isAddVolumeLayerModalVisible: true,
                       segmentationLayerWasPreselected: true,
-                      preselectedSegmentationLayerIndex: segmentationLayerIndex,
+                      preselectedSegmentationLayerName: layer.name,
                     });
                   }}
                 />
@@ -932,16 +929,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     this.setState({
       isAddVolumeLayerModalVisible: false,
       segmentationLayerWasPreselected: false,
-      preselectedSegmentationLayerIndex: undefined,
+      preselectedSegmentationLayerName: undefined,
     });
   };
 
   addSkeletonAnnotationLayer = async () => {
     await Model.ensureSavedState();
-    await convertToHybridTracing(
-      this.props.tracing.annotationId,
-      null,
-    );
+    await convertToHybridTracing(this.props.tracing.annotationId, null);
     location.reload();
   };
 
@@ -1025,7 +1019,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             dataset={this.props.dataset}
             onCancel={this.hideAddVolumeLayerModal}
             tracing={this.props.tracing}
-            preselectedLayerIndex={this.state.preselectedSegmentationLayerIndex}
+            preselectedLayerName={this.state.preselectedSegmentationLayerName}
             disableLayerSelection={this.state.segmentationLayerWasPreselected}
           />
         ) : null}

@@ -51,7 +51,6 @@ import {
   getLayerByName,
   getResolutionInfo,
   getResolutions,
-  getVisibleSegmentationLayer,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
@@ -128,8 +127,8 @@ type State = {
   // is shown for that VolumeTracing
   volumeTracingToDownsample: VolumeTracing | null | undefined;
   isAddVolumeLayerModalVisible: boolean;
-  preselectedSegmentationLayerIndex: number | null | undefined;
-  segmentationLayerWasPreselected: boolean | null | undefined;
+  preselectedSegmentationLayerIndex: number | undefined;
+  segmentationLayerWasPreselected: boolean | undefined;
   layerToMergeWithFallback: APIDataLayer | null | undefined;
 };
 
@@ -138,7 +137,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   state: State = {
     volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,
-    preselectedSegmentationLayerIndex: null,
+    preselectedSegmentationLayerIndex: undefined,
     segmentationLayerWasPreselected: false,
     layerToMergeWithFallback: null,
   };
@@ -933,16 +932,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     this.setState({
       isAddVolumeLayerModalVisible: false,
       segmentationLayerWasPreselected: false,
-      preselectedSegmentationLayerIndex: null,
+      preselectedSegmentationLayerIndex: undefined,
     });
   };
 
-  handleConvertToHybrid = async () => {
+  addSkeletonAnnotationLayer = async () => {
     await Model.ensureSavedState();
-    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
     await convertToHybridTracing(
       this.props.tracing.annotationId,
-      maybeSegmentationLayer != null ? maybeSegmentationLayer.name : null,
+      null,
     );
     location.reload();
   };
@@ -995,7 +993,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {this.props.tracing.restrictions.allowUpdate && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <Button
-              onClick={this.handleConvertToHybrid}
+              onClick={this.addSkeletonAnnotationLayer}
               style={{
                 width: 235,
                 marginTop: 10,
@@ -1028,7 +1026,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             onCancel={this.hideAddVolumeLayerModal}
             tracing={this.props.tracing}
             preselectedLayerIndex={this.state.preselectedSegmentationLayerIndex}
-            showLayerSelectionDisabled={this.state.segmentationLayerWasPreselected}
+            disableLayerSelection={this.state.segmentationLayerWasPreselected}
           />
         ) : null}
       </div>

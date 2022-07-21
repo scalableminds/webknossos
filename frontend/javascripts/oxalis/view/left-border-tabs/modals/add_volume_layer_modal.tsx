@@ -85,13 +85,13 @@ export default function AddVolumeLayerModal({
   onCancel,
   tracing,
   preselectedLayerIndex,
-  showLayerSelectionDisabled,
+  disableLayerSelection,
 }: {
   dataset: APIDataset;
   onCancel: () => void;
   tracing: Tracing;
-  preselectedLayerIndex: number | null | undefined;
-  showLayerSelectionDisabled: boolean | null | undefined;
+  preselectedLayerIndex: number | undefined;
+  disableLayerSelection: boolean | undefined;
 }) {
   const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState<
     number | null | undefined
@@ -194,9 +194,7 @@ export default function AddVolumeLayerModal({
           segmentationLayers={availableSegmentationLayers}
           selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
           setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
-          showLayerSelectionDisabled={
-            showLayerSelectionDisabled != null ? showLayerSelectionDisabled : false
-          }
+          disableLayerSelection={disableLayerSelection ?? false}
         />
       ) : null}
       <RestrictResolutionSlider

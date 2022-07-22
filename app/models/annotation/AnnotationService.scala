@@ -776,7 +776,7 @@ class AnnotationService @Inject()(
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
-      userJson <- userJsonForAnnotation(annotation._user, requestingUser)
+      userJson <- userJsonForAnnotation(annotation._user)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
         restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)),
@@ -790,7 +790,7 @@ class AnnotationService @Inject()(
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
       contributors <- userDAO.findContributorsForAnnotation(annotation._id)
-      contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, requestingUser, Some(c)))
+      contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, Some(c)))
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -823,19 +823,14 @@ class AnnotationService @Inject()(
     }
   }
 
-  private def userJsonForAnnotation(userId: ObjectId,
-                                    requestingUser: Option[User],
-                                    userOpt: Option[User] = None): Fox[Option[JsObject]] =
+  private def userJsonForAnnotation(userId: ObjectId, userOpt: Option[User] = None): Fox[Option[JsObject]] =
     if (userId == ObjectId.dummyId) {
       Fox.successful(None)
     } else {
       for {
         user <- Fox.fillOption(userOpt)(userService.findOneById(userId, useCache = true)(GlobalAccessContext))
-        isTeamManagerOrAdminOfOwner <- Fox.runOptional(requestingUser)(requester =>
-          userService.isTeamManagerOrAdminOf(requester, user))
-        userJson <- if (isTeamManagerOrAdminOfOwner.getOrElse(false)) userService.compactWrites(user).map(Some(_))
-        else Fox.successful(None)
-      } yield userJson
+        userJson <- userService.compactWrites(user)
+      } yield Some(userJson)
     }
 
   //for Explorative Annotations list

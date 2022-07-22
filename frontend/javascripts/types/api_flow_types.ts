@@ -347,6 +347,7 @@ export type APIAnnotationCompact = {
   // or due to missing permissions).
   readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
+  readonly othersMayEdit: boolean;
 };
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCompact {
@@ -367,6 +368,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     typ,
     owner,
     teams,
+    othersMayEdit,
   } = annotation;
 
   return {
@@ -386,6 +388,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     typ,
     owner,
     teams,
+    othersMayEdit,
   };
 }
 

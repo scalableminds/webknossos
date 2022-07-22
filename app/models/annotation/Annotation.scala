@@ -184,12 +184,19 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
           _user = '${requestingUserId.id}'
           or (
             (visibility = '${AnnotationVisibility.Public}' or visibility = '${AnnotationVisibility.Internal}')
-            and _id in (
-              select distinct a._annotation
-              from webknossos.annotation_sharedTeams a
-              join webknossos.user_team_roles t
-              on a._team = t._team
-              where t._user = '${requestingUserId.id}'
+            and (
+              _id in (
+                select distinct a._annotation
+                from webknossos.annotation_sharedTeams a
+                join webknossos.user_team_roles t
+                on a._team = t._team
+                where t._user = '${requestingUserId.id}'
+              )
+              or
+              _id in (
+                select _annotation from webknossos.annotation_contributors
+                where _user = '${requestingUserId.id}'
+              )
             )
           )
         )

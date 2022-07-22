@@ -54,6 +54,8 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
     Vec3Double(nx, ny, nz)
   }
 
+  def maxDim: Double = Math.max(Math.max(x, y), z)
+
   def toVec3Int: Vec3Int = Vec3Int(x.toInt, y.toInt, z.toInt)
 
   def °(o: Vec3Double): Double = x * o.x + y * o.y + z * o.z

@@ -4,10 +4,15 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{RemoteSourceDescriptor, ZarrDataLayer, ZarrMag}
-import com.scalableminds.webknossos.datastore.jzarr.{OmeNgffCoordinateTransformation, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.jzarr.{
+  OmeNgffAxis,
+  OmeNgffCoordinateTransformation,
+  OmeNgffHeader,
+  ZarrHeader
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer}
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
@@ -17,6 +22,8 @@ import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Reads
 
 import scala.concurrent.ExecutionContext
+
+case class AxisOrder(x: Int, y: Int, z: Int)
 
 class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLogging {
 
@@ -62,8 +69,13 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
         logger.info("Found multiple multiscale images in ngff header. using first.")
       }
       firstMultiscale <- omeNgffHeader.multiscales.headOption.toFox
-      mags = firstMultiscale.datasets.map(d =>
-        ZarrMag(magFromTransforms(d.coordinateTransformations), Some(remotePath.resolve(d.path).toString), None))
+      axisOrder = extractAxisOrder(firstMultiscale.axes)
+      voxelSize = extractVoxelSize(firstMultiscale.datasets.map(_.coordinateTransformations), axisOrder)
+      mags = firstMultiscale.datasets.map(
+        d =>
+          ZarrMag(magFromTransforms(d.coordinateTransformations, voxelSize, axisOrder),
+                  Some(remotePath.resolve(d.path).toString),
+                  None))
       firstMag <- mags.headOption.toFox
       firstMagPath <- firstMultiscale.datasets.headOption.map(d => remotePath.resolve(d.path)).toFox
       zarrHeader <- parseJsonFromPath[ZarrHeader](firstMagPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)).toFox
@@ -80,6 +92,36 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
   private def guessNameFromPath(path: Path): String =
     "explored_remote_dataset" // TODO
 
-  private def magFromTransforms(coordinateTransformations: List[OmeNgffCoordinateTransformation]): Vec3Int =
-    Vec3Int.ones // TODO
+  private def extractAxisOrder(axes: List[OmeNgffAxis]): AxisOrder = {
+    def axisMatches(axis: OmeNgffAxis, name: String) = axis.name.toLowerCase == "x" && axis.`type` == "space"
+    val x = axes.indexWhere(axisMatches(_, "x"))
+    val y = axes.indexWhere(axisMatches(_, "y"))
+    val z = axes.indexWhere(axisMatches(_, "z"))
+    // todo assert none are -1
+    AxisOrder(x, y, z)
+  }
+
+  private def magFromTransforms(coordinateTransformations: List[OmeNgffCoordinateTransformation],
+                                voxelSize: Vec3Double,
+                                axisOrder: AxisOrder): Vec3Int = {
+    val combinedScale = extractAndCombineScaleTransforms(coordinateTransformations, axisOrder)
+    (combinedScale / voxelSize).toVec3Int // todo round properly?
+    // assert valid mag
+  }
+
+  private def extractVoxelSize(allCoordinateTransformations: List[List[OmeNgffCoordinateTransformation]],
+                               axisOrder: AxisOrder): Vec3Double = {
+    val scales: List[Vec3Double] = allCoordinateTransformations.map(t => extractAndCombineScaleTransforms(t, axisOrder))
+    val smallestScaleIsUniform = scales.minBy(_.x) == scales.minBy(_.y) && scales.minBy(_.y) == scales.minBy(_.z) // TODO assert
+    scales.minBy(_.x)
+  }
+
+  private def extractAndCombineScaleTransforms(coordinateTransformations: List[OmeNgffCoordinateTransformation],
+                                               axisOrder: AxisOrder): Vec3Double = {
+    val filtered = coordinateTransformations.filter(_.`type` == "scale")
+    val xFactors = filtered.map(_.scale(axisOrder.x))
+    val yFactors = filtered.map(_.scale(axisOrder.y))
+    val zFactors = filtered.map(_.scale(axisOrder.z))
+    Vec3Double(xFactors.product, yFactors.product, zFactors.product)
+  }
 }

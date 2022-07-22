@@ -18,7 +18,7 @@ export function formatUserName(
   if (!user) {
     return "Unknown";
   }
-  const maybeYouHint = activeUser?.id == user.id ? " (you)" : "";
+  const maybeYouHint = activeUser?.id === user.id ? " (you)" : "";
   return `${user.firstName} ${user.lastName}${maybeYouHint}`;
 }
 

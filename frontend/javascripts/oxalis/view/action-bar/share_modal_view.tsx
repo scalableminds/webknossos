@@ -148,7 +148,7 @@ function _ShareModalView(props: Props) {
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
 
   const hasUpdatePermissions =
-    restrictions.allowUpdate && restrictions.allowSave && activeUser && owner?.id == activeUser.id;
+    restrictions.allowUpdate && restrictions.allowSave && activeUser && owner?.id === activeUser.id;
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
@@ -191,7 +191,7 @@ function _ShareModalView(props: Props) {
       Toast.success(messages["annotation.shared_teams_edited"]);
     }
 
-    if (newOthersMayEdit != othersMayEdit) {
+    if (newOthersMayEdit !== othersMayEdit) {
       await setOthersMayEditForAnnotation(annotationId, annotationType, newOthersMayEdit);
       Store.dispatch(setOthersMayEditForAnnotationAction(newOthersMayEdit));
     }

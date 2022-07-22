@@ -101,6 +101,8 @@ To change the visibility of an annotation, follow these steps:
 
 ![Configure the Annotation Permissions](images/sharing_modal_visibility.jpeg)
 
+Additionally, you can control whether other users, who can see your annotation, may also edit your annotation.
+
 ### Link Sharing
 Annotations can be shared via a link. People, who obtain the link, must have access to the annotation according to the permissions above to view the annotation.
 

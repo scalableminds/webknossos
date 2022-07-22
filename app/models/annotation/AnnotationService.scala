@@ -864,7 +864,8 @@ class AnnotationService @Inject()(
         "tracingTime" -> annotation.tracingTime,
         "teams" -> teamsJson,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "owner" -> userJson
+        "owner" -> userJson,
+        "othersMayEdit" -> annotation.othersMayEdit
       )
     }
   }

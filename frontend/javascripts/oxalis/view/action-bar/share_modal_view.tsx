@@ -42,7 +42,15 @@ type Props = {
 
 function Hint({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
   return (
-    <div style={{ ...style, marginBottom: 12, fontSize: 12, color: "var(--ant-text-secondary)" }}>
+    <div
+      style={{
+        ...style,
+        marginTop: 4,
+        marginBottom: 12,
+        fontSize: 12,
+        color: "var(--ant-text-secondary)",
+      }}
+    >
       {children}
     </div>
   );
@@ -357,7 +365,7 @@ function _ShareModalView(props: Props) {
             lineHeight: "22px",
           }}
         >
-          Should this annotation appear in the sharing tab?
+          For which teams should this annotation be listed?
         </Col>
         <Col span={18}>
           <TeamSelectionComponent

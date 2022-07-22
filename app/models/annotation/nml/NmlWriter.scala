@@ -208,7 +208,27 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index, isSingle)))
         writer.writeAttribute("name", volumeLayer.name)
         volumeLayer.tracing match {
-          case Right(volumeTracing) => volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
+          case Right(volumeTracing) =>
+            volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
+            if (volumeTracing.segments.nonEmpty)
+              Xml.withinElementSync("segments") {
+                volumeTracing.segments.foreach { s =>
+                  Xml.withinElementSync("segment") {
+                    writer.writeAttribute("id", s.segmentId.toString)
+                    s.name.foreach { n =>
+                      writer.writeAttribute("name", n)
+                    }
+                    s.creationTime.foreach { t =>
+                      writer.writeAttribute("created", t.toString)
+                    }
+                    s.anchorPosition.foreach { a =>
+                      writer.writeAttribute("anchorPositionX", a.x.toString)
+                      writer.writeAttribute("anchorPositionY", a.y.toString)
+                      writer.writeAttribute("anchorPositionZ", a.z.toString)
+                    }
+                  }
+                }
+              }
           case _                    => ()
         }
       }

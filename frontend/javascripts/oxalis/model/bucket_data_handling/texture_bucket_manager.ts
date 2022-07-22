@@ -55,11 +55,11 @@ function vec4ToVec3Dummy(vec: Vector4): Vector4 {
 }
 
 export default class TextureBucketManager {
-  dataTextures: Array<typeof UpdatableTexture>;
+  dataTextures: Array<UpdatableTexture>;
   lookUpBuffer: Float32Array;
   lookUpTable: CuckooTable;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lookUpTexture' has no initializer and is... Remove this comment to see the full error message
-  lookUpTexture: THREE.DataTexture;
+  // @ts-expect-error missing initializer
+  lookUpTexture: UpdatableTexture;
   // Holds the index for each active bucket, to which it should (or already
   // has been was) written in the data texture.
   activeBucketToIndexMap: Map<DataBucket, number> = new Map();
@@ -110,7 +110,6 @@ export default class TextureBucketManager {
 
   async startRAFLoops() {
     await waitForCondition(
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'isInitialized' does not exist on type 'D... Remove this comment to see the full error message
       () => this.lookUpTexture.isInitialized() && this.dataTextures[0].isInitialized(),
     );
     this.keepLookUpBufferUpToDate();
@@ -243,7 +242,6 @@ export default class TextureBucketManager {
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
       const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof U... Remove this comment to see the full error message
       this.dataTextures[dataTextureIndex].update(
         new TypedArrayClass(
           data.buffer,
@@ -268,7 +266,7 @@ export default class TextureBucketManager {
     });
   }
 
-  getTextures(): Array<THREE.DataTexture | typeof UpdatableTexture> {
+  getTextures(): Array<THREE.DataTexture | UpdatableTexture> {
     // @ts-ignore
     return [this.lookUpTexture].concat(this.dataTextures);
   }
@@ -292,7 +290,6 @@ export default class TextureBucketManager {
       THREE.FloatType,
       getRenderer(),
     );
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'typeof UpdatableTexture' is not assignable t... Remove this comment to see the full error message
     this.lookUpTexture = lookUpTexture;
     this.startRAFLoops();
   }
@@ -463,7 +460,6 @@ export default class TextureBucketManager {
       }
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof D... Remove this comment to see the full error message
     this.lookUpTexture.update(
       this.lookUpBuffer,
       0,

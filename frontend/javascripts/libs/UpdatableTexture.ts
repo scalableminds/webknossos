@@ -6,36 +6,32 @@ class UpdatableTexture extends THREE.Texture {
   constructor(
     width: number,
     height: number,
-    format,
-    type,
-    mapping,
-    wrapS,
-    wrapT,
-    magFilter,
-    minFilter,
-    anisotropy,
-    encoding,
+    format?: THREE.PixelFormat,
+    type?: THREE.TextureDataType,
+    mapping?: THREE.Mapping,
+    wrapS?: THREE.Wrapping,
+    wrapT?: THREE.Wrapping,
+    magFilter?: THREE.TextureFilter,
+    minFilter?: THREE.TextureFilter,
+    anisotropy?: number,
+    encoding?: THREE.TextureEncoding,
   ) {
-    super(null, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy, encoding);
-
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d");
-    const imageData = ctx.createImageData(width, height);
-    this.image = imageData;
+    // const imageData = ctx.createImageData(width, height);
+    // this.image = imageData;
+    super(canvas, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy, encoding);
+
     this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
     this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;
     this.generateMipmaps = false;
     this.flipY = false;
     this.unpackAlignment = 1;
     this.needsUpdate = true;
-
-    // this.isDepthTexture = true;
-    // this.isDataTexture = true;
+    this.isUpdatableTexture = true;
   }
-
-  isUpdatableTexture = true;
 
   setRenderer(renderer) {
     this.renderer = renderer;

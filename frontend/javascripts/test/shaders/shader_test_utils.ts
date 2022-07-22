@@ -59,6 +59,7 @@ export function renderShader(fragColorExpr: string, shaderModule: ShaderModule) 
   };
   const renderer = new THREE.WebGLRenderer({
     antialias: false,
+    // @ts-ignore
     canvas,
     context: gl,
   });

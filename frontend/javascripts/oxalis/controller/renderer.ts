@@ -21,9 +21,6 @@ function getRenderer() {
           antialias: true,
         })
       : {};
-  // renderer.extensions.get("EXT_color_buffer_float");
-
-  console.log("THREE.REVISION", THREE.REVISION);
 
   return renderer;
 }

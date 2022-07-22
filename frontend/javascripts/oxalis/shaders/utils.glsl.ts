@@ -212,22 +212,6 @@ export const div: ShaderModule = {
     }
   `,
 };
-export const round: ShaderModule = {
-  requirements: [],
-  code: `
-    // float round(float a) {
-    //   return floor(a + 0.5);
-    // }
-
-    // vec3 round(vec3 a) {
-    //   return floor(a + 0.5);
-    // }
-
-    // vec4 round(vec4 a) {
-    //   return floor(a + 0.5);
-    // }
-`,
-};
 export const isNan: ShaderModule = {
   requirements: [],
   code: `

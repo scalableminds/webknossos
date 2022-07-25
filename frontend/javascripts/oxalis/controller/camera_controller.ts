@@ -15,7 +15,7 @@ import type {
   TDCamerasType,
 } from "oxalis/constants";
 import { TDCameras, OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
-import { V3 } from "libs/mjs";
+import { V3, type Vector3Like } from "libs/mjs";
 import {
   getDatasetExtentInLength,
   getDatasetCenter,
@@ -34,7 +34,7 @@ import api from "oxalis/api/internal_api";
 type Props = {
   cameras: OrthoViewCameraMap;
   onCameraPositionChanged: () => void;
-  onTDCameraChanged: () => void;
+  onTDCameraChanged: (arg0: boolean) => void;
   setTargetAndFixPosition: () => void;
 };
 
@@ -207,7 +207,7 @@ class CameraController extends React.PureComponent<Props> {
       tdOrthoCamera.left = oldMid - newWidth / 2;
       tdOrthoCamera.right = oldMid + newWidth / 2;
       tdOrthoCamera.updateProjectionMatrix();
-      this.props.onTDCameraChanged();
+      this.props.onTDCameraChanged(true);
     }
   }
 
@@ -339,7 +339,10 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const state = Store.getState();
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
-  const flycamPos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
+  const currentFlycamPos = voxelToNm(
+    Store.getState().dataset.dataSource.scale,
+    getPosition(Store.getState().flycam),
+  ) || [0, 0, 0];
   const datasetExtent = getDatasetExtentInLength(dataset);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
@@ -375,13 +378,13 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     position = [
       datasetCenter[0] + clippingOffsetFactor,
       datasetCenter[1] + clippingOffsetFactor,
-      flycamPos[2] - clippingOffsetFactor,
+      currentFlycamPos[2] - clippingOffsetFactor,
     ];
   } else if (id === OrthoViews.TDView) {
     position = [
-      flycamPos[0] + clippingOffsetFactor,
-      flycamPos[1] + clippingOffsetFactor,
-      flycamPos[2] - clippingOffsetFactor,
+      currentFlycamPos[0] + clippingOffsetFactor,
+      currentFlycamPos[1] + clippingOffsetFactor,
+      currentFlycamPos[2] - clippingOffsetFactor,
     ];
     up = [0, 0, -1];
   } else {
@@ -399,23 +402,22 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     };
     up = upVector[id];
     position = [
-      positionOffset[id][0] + flycamPos[0],
-      positionOffset[id][1] + flycamPos[1],
-      positionOffset[id][2] + flycamPos[2],
+      positionOffset[id][0] + currentFlycamPos[0],
+      positionOffset[id][1] + currentFlycamPos[1],
+      positionOffset[id][2] + currentFlycamPos[2],
     ];
   }
 
-  const currentFlycamPos = voxelToNm(
-    Store.getState().dataset.dataSource.scale,
-    getPosition(Store.getState().flycam),
-  ) || [0, 0, 0];
   // Compute current and target orientation as quaternion. When tweening between
   // these orientations, we compute the new camera position by keeping the distance
   // (radius) to currentFlycamPos constant. Consequently, the camera moves on the
   // surfaces of a sphere with the center at currentFlycamPos.
-  const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, currentFlycamPos);
+  const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, tdCamera.lookAt);
   const targetQuaternion = getQuaternionFromCamera(up, position, currentFlycamPos);
-  const centerDistance = V3.length(V3.sub(currentFlycamPos, position));
+  const currentCenterDistance = V3.length(V3.sub(tdCamera.position, tdCamera.lookAt));
+  const targetCenterDistance = V3.length(V3.sub(currentFlycamPos, position));
+  const lookAt = new THREE.Vector3(...tdCamera.lookAt);
+  const flycamVector = new THREE.Vector3(...currentFlycamPos);
   const to: TweenState = {
     left: -width / 2,
     right: width / 2,
@@ -428,10 +430,14 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const tweenedQuat = new THREE.Quaternion();
     THREE.Quaternion.slerp(startQuaternion, targetQuaternion, tweenedQuat, t);
     const tweened = getCameraFromQuaternion(tweenedQuat);
+    const newLookAt = new THREE.Vector3().lerpVectors(lookAt, flycamVector, t);
+    const currentDistance = currentCenterDistance * (1 - t) + targetCenterDistance * t;
+    debugger;
     // Use forward vector and currentFlycamPos (lookAt target) to calculate the current
     // camera's position which should be on a sphere (center=currentFlycamPos, radius=centerDistance).
+    //
     const newPosition = V3.toArray(
-      V3.sub(currentFlycamPos, V3.scale(tweened.forward, centerDistance)),
+      V3.sub(newLookAt.toArray() as Vector3, V3.scale(tweened.forward, currentDistance)),
     );
     Store.dispatch(
       setTDCameraWithoutTimeTrackingAction({

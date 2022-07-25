@@ -211,22 +211,12 @@ const TrackballControls = function (
         angle *= _this.rotateSpeed;
         quaternion.setFromAxisAngle(axis, -angle);
 
-        _eye.applyQuaternion(quaternion);
+        _eye.sub(_this.flycamPos).applyQuaternion(quaternion).add(_this.flycamPos);
 
         _this.object.up.applyQuaternion(quaternion);
-        dirToFlycam
-          .copy(_this.object.position)
-          .sub(_this.flycamPos)
-          .applyQuaternion(quaternion)
-          .add(_this.flycamPos);
-        _this.object.position.copy(dirToFlycam);
+        _this.object.position.sub(_this.flycamPos).applyQuaternion(quaternion).add(_this.flycamPos);
 
-        dirToFlycam
-          .copy(_this.target)
-          .sub(_this.flycamPos)
-          .applyQuaternion(quaternion)
-          .add(_this.flycamPos);
-        _this.target.copy(dirToFlycam);
+        _this.target.sub(_this.flycamPos).applyQuaternion(quaternion).add(_this.flycamPos);
 
         _rotateEnd.applyQuaternion(quaternion);
 
@@ -332,7 +322,7 @@ const TrackballControls = function (
     _this.lastTarget = _this.target.clone();
 
     if (!externalUpdate) {
-      _this.updateCallback(userTriggered);
+      _this.updateCallback(userTriggered, _this.target.clone());
     }
   };
 

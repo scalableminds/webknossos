@@ -41,24 +41,28 @@ import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions"
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
 
-export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
+export function threeCameraToCameraData(
+  camera: THREE.OrthographicCamera,
+  lookAt?: THREE.Vector3,
+): CameraData {
   const { position, up, near, far, left, right, top, bottom } = camera;
 
   const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
 
-  return {
+  const cameraData: any = {
     left,
     right,
     top,
     bottom,
     near,
     far,
-    xDiff: 0,
-    yDiff: 0,
     position: objToArr(position),
     up: objToArr(up),
-    lookAt: undefined,
   };
+  if (lookAt) {
+    cameraData.lookAt = objToArr(lookAt);
+  }
+  return cameraData;
 }
 
 function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, any> {
@@ -397,13 +401,14 @@ class TDController extends React.PureComponent<Props> {
     this.updateTDPositionAfterMovement(scaleX, scaleY);*/
   }
 
-  onTDCameraChanged = (userTriggered: boolean = true) => {
+  onTDCameraChanged = (userTriggered: boolean, lookAt: THREE.Vector3) => {
     const { OrthographicCamera } = this.props.cameras[OrthoViews.TDView];
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
     // Write threeJS camera into store
-    Store.dispatch(setCameraAction(threeCameraToCameraData(OrthographicCamera)));
+    console.log("setting lookat to ", lookAt);
+    Store.dispatch(setCameraAction(threeCameraToCameraData(OrthographicCamera, lookAt)));
   };
 
   render() {

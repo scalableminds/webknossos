@@ -2,11 +2,10 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, GenericDataSource}
 import io.swagger.annotations._
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
@@ -141,15 +140,12 @@ class DataSetController @Inject()(userService: UserService,
     } yield Ok
   }
   @ApiOperation(hidden = true, value = "")
-  def exploreRemoteDataset(): Action[List[String]] = sil.SecuredAction.async(validateJson[List[String]]) {
-    implicit request =>
+  def exploreRemoteDataset(): Action[List[ExploreRemoteDatasetParameters]] =
+    sil.SecuredAction.async(validateJson[List[ExploreRemoteDatasetParameters]]) { implicit request =>
       for {
-        exploredLayersNested <- Fox.serialCombined(request.body)(exploreRemoteLayerService.exploreRemoteLayers)
-        dataSource = GenericDataSource[DataLayer](DataSourceId("explored_datasource", "team"),
-                                                  exploredLayersNested.flatten,
-                                                  Vec3Double(1.0, 1.0, 1.0))
+        dataSource <- exploreRemoteLayerService.exploreRemoteDatasource(request.body)
       } yield Ok(Json.toJson(dataSource))
-  }
+    }
 
   @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")
   @ApiResponses(

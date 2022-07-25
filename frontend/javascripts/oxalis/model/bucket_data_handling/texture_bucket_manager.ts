@@ -250,7 +250,7 @@ export default class TextureBucketManager {
       const data = bucket.getData();
       const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
 
-      let rawSrc = new TypedArrayClass(
+      const rawSrc = new TypedArrayClass(
         data.buffer,
         data.byteOffset,
         data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,

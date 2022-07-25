@@ -39,7 +39,7 @@ import constants, {
 } from "oxalis/constants";
 import window from "libs/window";
 import { setSceneController } from "./scene_controller_provider";
-import { BufferGeometryUtils } from "three";
+
 const CUBE_COLOR = 0x999999;
 
 class SceneController {
@@ -256,7 +256,7 @@ class SceneController {
     // @ts-ignore
     if (window.__isosurfaceMergeVertices) {
       // @ts-ignore mergeVertices
-      bufferGeometry = BufferGeometryUtils.mergeVertices(bufferGeometry);
+      bufferGeometry = THREE.BufferGeometryUtils.mergeVertices(bufferGeometry);
     }
 
     bufferGeometry.computeVertexNormals();

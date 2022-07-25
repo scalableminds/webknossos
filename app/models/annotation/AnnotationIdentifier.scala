@@ -20,5 +20,4 @@ object AnnotationIdentifier extends FoxImplicits {
       identifier <- ObjectId.parse(id)
       typ <- AnnotationType.fromString(typ) ?~> ("Invalid AnnotationType: " + typ)
     } yield AnnotationIdentifier(typ, identifier)
-
 }

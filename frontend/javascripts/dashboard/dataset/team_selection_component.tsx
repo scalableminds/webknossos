@@ -99,7 +99,6 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
       >
         {this.getAllTeams().map((team) => (
-          // @ts-expect-error ts-migrate(2741) FIXME: Property 'value' is missing in type '{ children: s... Remove this comment to see the full error message
           <Option
             disabled={this.state.possibleTeams.find((t) => t.id === team.id) == null}
             key={team.id}

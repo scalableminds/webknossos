@@ -27,15 +27,6 @@ class TSRemoteDatastoreClient @Inject()(
   private lazy val largestAgglomerateIdCache: AlfuFoxCache[(RemoteFallbackLayer, String, Option[String]), Long] =
     AlfuFoxCache()
 
-  def fallbackLayerBucket(remoteFallbackLayer: RemoteFallbackLayer,
-                          mag: String,
-                          cxyz: String,
-                          userToken: Option[String]): Fox[Array[Byte]] =
-    for {
-      remoteLayerUri <- getRemoteLayerUriZarr(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/$mag/$cxyz").addQueryStringOptional("token", userToken).getWithBytesResponse
-    } yield result
-
   def getAgglomerateSkeleton(userToken: Option[String],
                              remoteFallbackLayer: RemoteFallbackLayer,
                              mappingName: String,
@@ -117,12 +108,6 @@ class TSRemoteDatastoreClient @Inject()(
   }
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
-    for {
-      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.dataSetName)
-    } yield
-      s"$datastoreUri/data/datasets/${remoteLayer.organizationName}/${remoteLayer.dataSetName}/layers/${remoteLayer.layerName}"
-
-  private def getRemoteLayerUriZarr(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {
       datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.dataSetName)
     } yield

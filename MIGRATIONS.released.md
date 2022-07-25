@@ -5,6 +5,41 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [22.08.0](https://github.com/scalableminds/webknossos/releases/tag/22.08.0) - 2022-07-20
+[Commits](https://github.com/scalableminds/webknossos/compare/22.07.0...22.08.0)
+
+ - Postgres evolution 83 (see below) introduces unique and url-safe constraints for annotation layer names. If the database contains entries violating those new constraints, they need to be fixed manually, otherwise the evolution will abort:
+    - change null names to the front-end-side defaults:
+        ```
+        update webknossos.annotation_layers set name = 'Volume' where name is null and typ = 'Volume'
+        update webknossos.annotation_layers set name = 'Skeleton' where name is null and typ = 'Skeleton'
+        ```
+
+    - find annotations with multiple layers, make unique manually
+        ```
+        select _annotation, name from webknossos.annotation_layers where _annotation in (select s._annotation from
+        (select _annotation, count(_annotation) from webknossos.annotation_layers where typ = 'Volume' group by _annotation order by count(_annotation) desc limit 1000) as s
+        where count > 1) and typ = 'Volume' order by _annotation
+        ```
+
+   - find layers with interesting names, manually remove spaces and special characters
+        ```
+        select * from webknossos.annotation_layers where not name ~* '^[A-Za-z0-9\-_\.]+$'
+        ```
+
+### Postgres Evolutions:
+
+- [083-unique-layer-names.sql](conf/evolutions/083-unique-layer-names.sql) Note: Note that this evolution introduces constraints which may not be met by existing data. See above for manual steps
+
+
+## [22.07.0](https://github.com/scalableminds/webknossos/releases/tag/22.07.0) - 2022-06-28
+[Commits](https://github.com/scalableminds/webknossos/compare/22.06.1...22.07.0)
+
+ - FossilDB now has to be started with two new additional column families: editableMappings,editableMappingUpdates. Note that this upgrade can not be trivially rolled back, since new rocksDB column families are added and it is not easy to remove them again from an existing database. In case webKnossos needs to be rolled back, it is recommended to still keep the new column families in FossilDB. [#6195](https://github.com/scalableminds/webknossos/pull/6195)
+
+### Postgres Evolutions:
+
+
 ## [22.06.1](https://github.com/scalableminds/webknossos/releases/tag/22.06.1) - 2022-06-16
 [Commits](https://github.com/scalableminds/webknossos/compare/22.06.0...22.06.1)
 

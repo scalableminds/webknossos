@@ -78,7 +78,7 @@ function* prepareDatasetSettingsForSaving(
    */
   const controlMode = yield* select((state) => state.temporaryConfiguration.controlMode);
 
-  if (controlMode == "VIEW") {
+  if (controlMode === "VIEW") {
     return datasetConfiguration;
   }
 

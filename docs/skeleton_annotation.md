@@ -199,7 +199,7 @@ Importing a skeleton annotation can be achieved using one of two ways:
 
 1. If you already have an annotation open you can easily add more skeletons to it by *drag and dropping* an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML file's content with the already open annotation.
 
-2. To import a skeleton annotation as a completely new webKnossos annotation, drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "My Annotations" section.
+2. To import a skeleton annotation as a completely new webKnossos annotation, drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "Annotations" section.
 
 ![Skeletons can be imported by drag and drop in the annotation view or from the dashboard](images/tracing_ui_import.jpeg)
 

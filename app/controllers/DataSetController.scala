@@ -139,7 +139,10 @@ class DataSetController @Inject()(userService: UserService,
     } yield Ok
   }
 
-  @ApiOperation(hidden = true, value = "")
+  @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON list containing one object per resulting dataset."),
+          new ApiResponse(code = 400, message = badRequestLabel)))
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
@@ -336,7 +339,8 @@ Expects:
             dataSetName) ~> NOT_FOUND
           _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
           teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
-          userTeams <- teamDAO.findAllEditable
+          includeMemberOnlyTeams = request.identity.isDatasetManager
+          userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
           oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
           teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
           teamsWithUpdate = teamIdsValidated.filter(t => userTeams.exists(_._id == t))

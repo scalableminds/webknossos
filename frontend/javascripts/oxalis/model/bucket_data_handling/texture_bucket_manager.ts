@@ -54,6 +54,26 @@ function vec4ToVec3Dummy(vec: Vector4): Vector4 {
   return [vec[0], vec[1], vec[2], 0];
 }
 
+const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
+function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementClass) {
+  if (elementClass !== "uint24") {
+    return src;
+  }
+
+  // Copy the RGB data to an RGBA buffer, since ThreeJS does not support RGB textures
+  // since r137.
+  let idx = 0;
+  let srcIdx = 0;
+  while (idx < 3 * constants.BUCKET_SIZE) {
+    tmpPaddingBuffer[idx++] = src[srcIdx++];
+    tmpPaddingBuffer[idx++] = src[srcIdx++];
+    tmpPaddingBuffer[idx++] = src[srcIdx++];
+    idx++;
+  }
+
+  return tmpPaddingBuffer;
+}
+
 export default class TextureBucketManager {
   dataTextures: Array<UpdatableTexture>;
   lookUpBuffer: Float32Array;
@@ -242,12 +262,17 @@ export default class TextureBucketManager {
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
       const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
+
+      let rawSrc = new TypedArrayClass(
+        data.buffer,
+        data.byteOffset,
+        data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+      );
+
+      const src = maybePadRgbData(rawSrc, this.elementClass);
+
       this.dataTextures[dataTextureIndex].update(
-        new TypedArrayClass(
-          data.buffer,
-          data.byteOffset,
-          data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-        ),
+        src,
         0,
         bucketHeightInTexture * indexInDataTexture,
         this.textureWidth,

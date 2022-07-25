@@ -3,7 +3,9 @@ import UpdatableTexture from "libs/UpdatableTexture";
 export const channelCountToFormat = {
   "1": THREE.RedFormat,
   "2": THREE.RGFormat,
-  "3": THREE.RGBFormat, // todo: does not exist anymore
+  // ThreeJS does not support RGB textures, anymore, which is why we pad the data
+  // from RGB to RGBA before uploading the data to the GPU.
+  "3": THREE.RGBAFormat,
   "4": THREE.RGBAFormat,
 };
 // This function has to be in its own file as non-resolvable cycles are created otherwise

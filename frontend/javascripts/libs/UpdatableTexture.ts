@@ -78,9 +78,6 @@ class UpdatableTexture extends THREE.Texture {
     if (!this.isInitialized()) {
       this.renderer.initTexture(this);
     }
-
-    // this.setSize(width, width);
-    // return;
     const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
     const textureProperties = this.renderer.properties.get(this);
     this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);

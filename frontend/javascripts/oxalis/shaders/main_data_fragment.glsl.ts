@@ -50,9 +50,6 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_maxZoomStep;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_unrenderable;
-  uniform float <%= name %>_seed0;
-  uniform float <%= name %>_seed1;
-  uniform float <%= name %>_seed2;
 <% }) %>
 
 <% if (hasSegmentation) { %>

@@ -269,15 +269,6 @@ class PlaneMaterialFactory {
         type: "t",
         value: lookUpTexture,
       };
-
-      dataLayer.layerRenderingManager.subscribeToSeeds((seeds) => {
-        seeds.forEach((seed, idx) => {
-          this.uniforms[`${layerName}_seed${idx}`] = {
-            type: "f",
-            value: seed,
-          };
-        });
-      });
     }
 
     this.attachSegmentationTextures();

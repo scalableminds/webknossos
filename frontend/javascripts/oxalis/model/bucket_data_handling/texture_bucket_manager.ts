@@ -16,11 +16,10 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
-import type { Vector3, Vector4, Vector5 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTable } from "./cuckoo_table";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -50,10 +49,6 @@ function getSomeValue<T>(set: Set<T>): T {
   return value;
 }
 
-function vec4ToVec3Dummy(vec: Vector4): Vector4 {
-  return [vec[0], vec[1], vec[2], 0];
-}
-
 const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
 function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementClass) {
   if (elementClass !== "uint24") {
@@ -77,7 +72,6 @@ function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementCl
 export default class TextureBucketManager {
   dataTextures: Array<UpdatableTexture>;
   lookUpBuffer: Float32Array;
-  lookUpTable: CuckooTable;
   // @ts-expect-error missing initializer
   lookUpTexture: UpdatableTexture;
   // Holds the index for each active bucket, to which it should (or already
@@ -121,9 +115,6 @@ export default class TextureBucketManager {
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
     this.lookUpBuffer = new Float32Array(lookUpBufferSize);
-
-    // todo: don't hardcode requested capacity
-    this.lookUpTable = new CuckooTable(1600);
     this.freeIndexSet = new Set(_.range(this.maximumCapacity));
     this.dataTextures = [];
   }
@@ -134,10 +125,6 @@ export default class TextureBucketManager {
     );
     this.keepLookUpBufferUpToDate();
     this.processWriterQueue();
-
-    // setInterval(() => {
-    //   console.log(Array.from(this.activeBucketToIndexMap.entries()).length);
-    // }, 2000);
   }
 
   clear() {
@@ -382,7 +369,6 @@ export default class TextureBucketManager {
      *     the positions of the look up buffer which map to that fallback bucket (in an isotropic case, that's 8
      *     positions).
      */
-    // this.lookUpTable.clearAll();
 
     this.lookUpBuffer.fill(-2);
     const maxZoomStepDiff = getMaxZoomStepDiff(
@@ -442,10 +428,6 @@ export default class TextureBucketManager {
           // the best possible quality.
           this.lookUpBuffer[posInBuffer] = address;
           this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
-
-          // todo: clean up
-          // this works:
-          // this.lookUpTable.set(vec4ToVec3Dummy(bucket.zoomedAddress), [address, bucketZoomStep]);
         }
       } else if (address !== -1) {
         const baseBucketAddresses = this._getBaseBucketAddresses(
@@ -462,8 +444,6 @@ export default class TextureBucketManager {
             // The lookUpIdx is invalid. Ignore this bucket.
             continue;
           } else if (
-            // todo!! read from lookUpTable
-
             this.lookUpBuffer[posInBuffer] > -1 &&
             this.lookUpBuffer[posInBuffer + 1] <= bucketZoomStep
           ) {
@@ -474,10 +454,6 @@ export default class TextureBucketManager {
 
           this.lookUpBuffer[posInBuffer] = address;
           this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
-
-          // todo: clean up
-          // this is slow?
-          // this.lookUpTable.set(vec4ToVec3Dummy(baseBucketAddress), [address, bucketZoomStep]);
         }
       } else {
         // Don't overwrite the default -2 within the look up buffer for fallback buckets,
@@ -492,21 +468,6 @@ export default class TextureBucketManager {
       this.lookUpBufferWidth,
       this.lookUpBufferWidth,
     );
-    // const useOldLookupMethod = true;
-
-    // if (useOldLookupMethod) {
-    // } else {
-    // todo!!
-    // write to texture
-    // /@ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof D... Remove this comment to see the full error message
-    // this.lookUpTexture.update(
-    //   this.lookUpTable.table,
-    //   0,
-    //   0,
-    //   this.lookUpBufferWidth,
-    //   this.lookUpBufferWidth,
-    // );
-    // }
 
     this.isRefreshBufferOutOfDate = false;
     // @ts-ignore

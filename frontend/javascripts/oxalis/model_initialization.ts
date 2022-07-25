@@ -115,9 +115,6 @@ export async function initialize(
   | null
   | undefined
 > {
-  // why?
-  // console.warn("not returning initialize promise")
-  // return new Promise(() => {});
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
   let datasetId: APIDatasetId;

@@ -35,9 +35,6 @@ function ensureUpToDateTests {
     echo ""
     echo -e "${YELLOW}Running test-prepare as the source files seem to be newer than the compiled ones.${NC}"
     echo ""
-    echo "abort. syntax error?"
-    exit 1
-    # prepare
   fi
 }
 
@@ -46,10 +43,10 @@ function ensureUpToDateTests {
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "texture_bucket_manager.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-debug" ]
 then
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava debug $(find "$testBundlePath" -name "texture_bucket_manager.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava debug $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests

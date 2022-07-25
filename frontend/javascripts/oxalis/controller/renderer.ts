@@ -13,7 +13,7 @@ function getRenderer() {
   const renderCanvasElement = document.getElementById("render-canvas");
   renderer =
     renderCanvasElement != null
-      ? // Use THREE.WebGL1Renderer for webgl1
+      ? // Create a WebGL2 renderer
         new THREE.WebGLRenderer({
           canvas: renderCanvasElement,
           // This prevents flickering when rendering to a buffer instead of the canvas

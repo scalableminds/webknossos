@@ -148,7 +148,7 @@ export const getColorForCoords: ShaderModule = {
         lookUpTexture,
         l_texture_width,
         bucketIdx
-      ).ra;
+      ).rg;
 
 
       // float h0 = hashCombine(<%= name %>_seed0, absoluteBucketPosition.x)
@@ -159,7 +159,7 @@ export const getColorForCoords: ShaderModule = {
       //   lookUpTexture,
       //   l_texture_width,
       //   h0
-      // ).ra;
+      // ).rg;
 
 
 

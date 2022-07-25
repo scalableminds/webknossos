@@ -52,13 +52,13 @@ class UpdatableTexture extends THREE.Texture {
     console.log("this.format", this.format);
     console.log("this.utils.convert(this.format)", this.utils.convert(this.format));
 
-    const convertToInternalFormat = (format) => {
-      if (format != THREE.RGFormat) {
-        return this.utils.convert(format);
-      } else {
-        return 0x8230;
-      }
-    };
+    // const convertToInternalFormat = (format) => {
+    //   if (format != THREE.RGFormat) {
+    //     return this.utils.convert(format);
+    //   } else {
+    //     return 0x8230;
+    //   }
+    // };
 
     this.gl.texImage2D(
       this.gl.TEXTURE_2D,

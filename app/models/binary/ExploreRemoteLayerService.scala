@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{RemoteSourceDesc
 import com.scalableminds.webknossos.datastore.jzarr.{
   OmeNgffAxis,
   OmeNgffCoordinateTransformation,
+  OmeNgffDataset,
   OmeNgffHeader,
   ZarrHeader
 }
@@ -69,13 +70,9 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
         logger.info("Found multiple multiscale images in ngff header. using first.")
       }
       firstMultiscale <- omeNgffHeader.multiscales.headOption.toFox
-      axisOrder = extractAxisOrder(firstMultiscale.axes)
-      voxelSize = extractVoxelSize(firstMultiscale.datasets.map(_.coordinateTransformations), axisOrder)
-      mags = firstMultiscale.datasets.map(
-        d =>
-          ZarrMag(magFromTransforms(d.coordinateTransformations, voxelSize, axisOrder),
-                  Some(remotePath.resolve(d.path).toString),
-                  None))
+      axisOrder <- extractAxisOrder(firstMultiscale.axes)
+      voxelSize <- extractVoxelSize(firstMultiscale.datasets.map(_.coordinateTransformations), axisOrder)
+      mags <- Fox.serialCombined(firstMultiscale.datasets)(d => magFromNgffDataset(d, remotePath, voxelSize, axisOrder))
       firstMag <- mags.headOption.toFox
       firstMagPath <- firstMultiscale.datasets.headOption.map(d => remotePath.resolve(d.path)).toFox
       zarrHeader <- parseJsonFromPath[ZarrHeader](firstMagPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)).toFox
@@ -89,31 +86,44 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
                     elementClass,
                     List(firstMag))
 
+  private def magFromNgffDataset(dataset: OmeNgffDataset, layerPath: Path, voxelSize: Vec3Double, axisOrder: AxisOrder)(
+      implicit ec: ExecutionContext): Fox[ZarrMag] =
+    for {
+      mag <- magFromTransforms(dataset.coordinateTransformations, voxelSize, axisOrder)
+    } yield ZarrMag(mag, Some(layerPath.resolve(dataset.path).toString), None)
+
   private def guessNameFromPath(path: Path): String =
     "explored_remote_dataset" // TODO
 
-  private def extractAxisOrder(axes: List[OmeNgffAxis]): AxisOrder = {
-    def axisMatches(axis: OmeNgffAxis, name: String) = axis.name.toLowerCase == "x" && axis.`type` == "space"
+  private def extractAxisOrder(axes: List[OmeNgffAxis])(implicit ec: ExecutionContext): Fox[AxisOrder] = {
+    def axisMatches(axis: OmeNgffAxis, name: String) = axis.name.toLowerCase == name && axis.`type` == "space"
     val x = axes.indexWhere(axisMatches(_, "x"))
     val y = axes.indexWhere(axisMatches(_, "y"))
     val z = axes.indexWhere(axisMatches(_, "z"))
-    // todo assert none are -1
-    AxisOrder(x, y, z)
+    for {
+      _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid axis order: $x,$y,$z"
+    } yield AxisOrder(x, y, z)
   }
 
   private def magFromTransforms(coordinateTransformations: List[OmeNgffCoordinateTransformation],
                                 voxelSize: Vec3Double,
-                                axisOrder: AxisOrder): Vec3Int = {
+                                axisOrder: AxisOrder)(implicit ec: ExecutionContext): Fox[Vec3Int] = {
     val combinedScale = extractAndCombineScaleTransforms(coordinateTransformations, axisOrder)
-    (combinedScale / voxelSize).toVec3Int // todo round properly?
-    // assert valid mag
+    val mag = (combinedScale / voxelSize).round.toVec3Int
+    for {
+      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x)) ?~> s"invalid mag: ${mag}"
+    } yield mag
   }
 
+  private def isPowerOfTwo(x: Int): Boolean = x != 0 && (x & (x - 1)) == 0
+
   private def extractVoxelSize(allCoordinateTransformations: List[List[OmeNgffCoordinateTransformation]],
-                               axisOrder: AxisOrder): Vec3Double = {
-    val scales: List[Vec3Double] = allCoordinateTransformations.map(t => extractAndCombineScaleTransforms(t, axisOrder))
-    val smallestScaleIsUniform = scales.minBy(_.x) == scales.minBy(_.y) && scales.minBy(_.y) == scales.minBy(_.z) // TODO assert
-    scales.minBy(_.x)
+                               axisOrder: AxisOrder)(implicit ec: ExecutionContext): Fox[Vec3Double] = {
+    val scales = allCoordinateTransformations.map(t => extractAndCombineScaleTransforms(t, axisOrder))
+    val smallestScaleIsUniform = scales.minBy(_.x) == scales.minBy(_.y) && scales.minBy(_.y) == scales.minBy(_.z)
+    for {
+      _ <- bool2Fox(smallestScaleIsUniform) ?~> "ome scales do not agree on smallest dimension"
+    } yield scales.minBy(_.x)
   }
 
   private def extractAndCombineScaleTransforms(coordinateTransformations: List[OmeNgffCoordinateTransformation],

@@ -58,6 +58,8 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
 
   def toVec3Int: Vec3Int = Vec3Int(x.toInt, y.toInt, z.toInt)
 
+  def round: Vec3Double = Vec3Double(x.round, y.round, z.round)
+
   def °(o: Vec3Double): Double = x * o.x + y * o.y + z * o.z
 
   def °(o: Tuple3[Double, Double, Double]): Double = x * o._1 + y * o._2 + z * o._3

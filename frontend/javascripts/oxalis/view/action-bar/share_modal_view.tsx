@@ -2,7 +2,7 @@ import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, RadioChangeEvent
 import { CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { useSelector } from "react-redux";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import type {
   APIDataset,
   APIAnnotationVisibility,
@@ -138,9 +138,10 @@ function _ShareModalView(props: Props) {
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const isFirstRender = useRef(true);
   const hasUpdatePermissions = restrictions.allowUpdate && restrictions.allowSave;
-  useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
+  useEffect(() => {
+    setVisibility(annotationVisibility);
+  }, [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
     if (!activeUser) {
@@ -154,37 +155,46 @@ function _ShareModalView(props: Props) {
     fetchAndSetSharedTeams();
   }, [annotationType, annotationId, activeUser]);
 
-  const handleCheckboxChange = (event: RadioChangeEvent) => {
-    setVisibility(event.target.value as any as APIAnnotationVisibility);
+  const reportSuccessfulChange = (newVisibility: APIAnnotationVisibility) => {
+    const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);
+    Toast.success(messages["annotation.shared_teams_edited"], {
+      timeout: 4000,
+      key: randomKeyToAllowDuplicates,
+    });
+
+    sendAnalyticsEvent("share_annotation", {
+      visibility: newVisibility,
+    });
   };
 
-  const updateAnnotationVisibility = async () => {
-    // Do not update on initial render or when not having edit permissions.
-    if (!hasUpdatePermissions || isFirstRender.current) {
-      isFirstRender.current = false;
+  const handleCheckboxChange = async (event: RadioChangeEvent) => {
+    const newVisibility = event.target.value as any as APIAnnotationVisibility;
+    if (newVisibility === visibility || !hasUpdatePermissions) {
       return;
     }
+    setVisibility(newVisibility as any as APIAnnotationVisibility);
     await editAnnotation(annotationId, annotationType, {
-      visibility,
+      visibility: newVisibility,
     });
-    Store.dispatch(setAnnotationVisibilityAction(visibility));
+    Store.dispatch(setAnnotationVisibilityAction(newVisibility));
+    reportSuccessfulChange(newVisibility);
+  };
 
+  const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
+    const newTeams = _.flatten([value]);
+    if (_.isEqual(newTeams, sharedTeams) || !hasUpdatePermissions) {
+      return;
+    }
+    setSharedTeams(_.flatten([value]));
     if (visibility !== "Private") {
       await updateTeamsForSharedAnnotation(
         annotationType,
         annotationId,
         sharedTeams.map((team) => team.id),
       );
-      Toast.success(messages["annotation.shared_teams_edited"]);
     }
-
-    sendAnalyticsEvent("share_annotation", {
-      visibility,
-    });
+    reportSuccessfulChange(visibility);
   };
-  useEffect(() => {
-    updateAnnotationVisibility();
-  }, [visibility, sharedTeams]);
 
   const maybeShowWarning = () => {
     let message;
@@ -347,7 +357,7 @@ function _ShareModalView(props: Props) {
             mode="multiple"
             allowNonEditableTeams
             value={sharedTeams}
-            onChange={(value) => setSharedTeams(_.flatten([value]))}
+            onChange={handleSharedTeamsChange}
             disabled={!hasUpdatePermissions || visibility === "Private"}
           />
           <Hint

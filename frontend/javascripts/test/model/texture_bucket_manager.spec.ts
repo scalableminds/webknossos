@@ -97,7 +97,7 @@ const expectBucket = (
 };
 
 test("TextureBucketManager: basic functionality", (t) => {
-  const tbm = new TextureBucketManager(2048, 1, 1);
+  const tbm = new TextureBucketManager(2048, 1, 1, "uint8");
   tbm.setupDataTextures(1);
   const activeBuckets = [
     buildBucket([1, 1, 1, 0], 100),
@@ -111,7 +111,7 @@ test("TextureBucketManager: basic functionality", (t) => {
 });
 
 test("TextureBucketManager: changing active buckets", (t) => {
-  const tbm = new TextureBucketManager(2048, 2, 1);
+  const tbm = new TextureBucketManager(2048, 2, 1, "uint8");
   tbm.setupDataTextures(1);
   const activeBuckets = [
     buildBucket([0, 0, 0, 0], 100),

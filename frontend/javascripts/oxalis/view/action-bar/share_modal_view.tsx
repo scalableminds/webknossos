@@ -135,6 +135,7 @@ function _ShareModalView(props: Props) {
   const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
   const restrictions = useSelector((state: OxalisState) => state.tracing.restrictions);
   const [visibility, setVisibility] = useState(annotationVisibility);
+  const [isChangingInProgess, setIsChangingInProgess] = useState(false);
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -172,11 +173,13 @@ function _ShareModalView(props: Props) {
     if (newVisibility === visibility || !hasUpdatePermissions) {
       return;
     }
+    setIsChangingInProgess(true);
     setVisibility(newVisibility as any as APIAnnotationVisibility);
     await editAnnotation(annotationId, annotationType, {
       visibility: newVisibility,
     });
     Store.dispatch(setAnnotationVisibilityAction(newVisibility));
+    setIsChangingInProgess(false);
     reportSuccessfulChange(newVisibility);
   };
 
@@ -185,6 +188,7 @@ function _ShareModalView(props: Props) {
     if (_.isEqual(newTeams, sharedTeams) || !hasUpdatePermissions) {
       return;
     }
+    setIsChangingInProgess(true);
     setSharedTeams(_.flatten([value]));
     if (visibility !== "Private") {
       await updateTeamsForSharedAnnotation(
@@ -193,6 +197,7 @@ function _ShareModalView(props: Props) {
         sharedTeams.map((team) => team.id),
       );
     }
+    setIsChangingInProgess(false);
     reportSuccessfulChange(visibility);
   };
 
@@ -297,7 +302,11 @@ function _ShareModalView(props: Props) {
           Who can view this annotation?
         </Col>
         <Col span={18}>
-          <RadioGroup onChange={handleCheckboxChange} value={visibility}>
+          <RadioGroup
+            onChange={handleCheckboxChange}
+            value={visibility}
+            disabled={isChangingInProgess}
+          >
             <Radio style={radioStyle} value="Private" disabled={!hasUpdatePermissions}>
               Private
             </Radio>
@@ -358,7 +367,7 @@ function _ShareModalView(props: Props) {
             allowNonEditableTeams
             value={sharedTeams}
             onChange={handleSharedTeamsChange}
-            disabled={!hasUpdatePermissions || visibility === "Private"}
+            disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgess}
           />
           <Hint
             style={{

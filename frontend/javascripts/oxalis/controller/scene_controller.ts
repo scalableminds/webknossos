@@ -232,7 +232,6 @@ class SceneController {
     }
 
     geometry.computeVertexNormals();
-    // geometry.computeFaceNormals();
 
     const meshNumber = _.size(this.stlMeshes);
 

@@ -144,9 +144,9 @@ class DataSetController @Inject()(userService: UserService,
   def exploreRemoteDataset(): Action[List[String]] = sil.SecuredAction.async(validateJson[List[String]]) {
     implicit request =>
       for {
-        exploredLayers <- Fox.serialCombined(request.body)(exploreRemoteLayerService.exploreRemoteLayer)
+        exploredLayersNested <- Fox.serialCombined(request.body)(exploreRemoteLayerService.exploreRemoteLayers)
         dataSource = GenericDataSource[DataLayer](DataSourceId("explored_datasource", "team"),
-                                                  exploredLayers,
+                                                  exploredLayersNested.flatten,
                                                   Vec3Double(1.0, 1.0, 1.0))
       } yield Ok(Json.toJson(dataSource))
   }

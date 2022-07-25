@@ -35,6 +35,7 @@ function ensureUpToDateTests {
     echo ""
     echo -e "${YELLOW}Running test-prepare as the source files seem to be newer than the compiled ones.${NC}"
     echo ""
+    prepare
   fi
 }
 

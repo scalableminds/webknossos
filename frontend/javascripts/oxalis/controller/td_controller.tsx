@@ -7,7 +7,6 @@ import constants, {
   Point2,
   Vector3,
   OrthoViewCameraMap,
-  TDCameras,
   AnnotationTool,
   AnnotationToolEnum,
   OrthoViews,
@@ -27,7 +26,6 @@ import {
   setTDCameraAction,
   setTDCameraWithoutTimeTrackingAction,
   zoomTDViewAction,
-  moveTDViewToPositionWithoutTimeTrackingAction,
 } from "oxalis/model/actions/view_mode_actions";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { voxelToNm } from "oxalis/model/scaleinfo";
@@ -117,7 +115,6 @@ class TDController extends React.PureComponent<Props> {
   oldNmPos: Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
   isStarted: boolean;
-  unbindFromEmitter: () => void = () => {};
 
   componentDidMount() {
     const { dataset, flycam } = Store.getState();
@@ -156,6 +153,8 @@ class TDController extends React.PureComponent<Props> {
       this.controls.forEach((control) => control.destroy());
     }
   }
+
+  unbindFromEmitter: () => void = () => {};
 
   initMouse(): void {
     const tdView = OrthoViews.TDView;
@@ -247,7 +246,6 @@ class TDController extends React.PureComponent<Props> {
         ? getTDViewMouseControlsSkeleton(this.props.planeView)
         : null;
     const controls = {
-      leftDownMove: (delta: Point2) => this.moveTDView(delta),
       scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
       over: () => {
         Store.dispatch(setViewportAction(OrthoViews.TDView));
@@ -315,6 +313,7 @@ class TDController extends React.PureComponent<Props> {
     return controls;
   }
 
+  /*
   updateTDPositionAfterMovement(x: number, y: number) {
     const storeState = Store.getState();
     const flycamPos = voxelToNm(
@@ -338,7 +337,7 @@ class TDController extends React.PureComponent<Props> {
     );
     this.props.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera].updateProjectionMatrix();
     // console.log(this.props.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera]);
-  }
+  }*/
 
   setTargetAndFixPosition = (position?: Vector3): void => {
     const { controls } = this;
@@ -390,7 +389,7 @@ class TDController extends React.PureComponent<Props> {
     Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
-  moveTDView(delta: Point2): void {
+  /*moveTDView(delta: Point2): void {
     console.log("I would be moved now....");
     /*const storeState = Store.getState();
     let [scaleX, scaleY] = getViewportScale(Store.getState(), OrthoViews.TDView);
@@ -398,16 +397,15 @@ class TDController extends React.PureComponent<Props> {
     scaleY = -delta.y / scaleY;
     scaleX *= getTDViewportSize(storeState)[0] / constants.VIEWPORT_WIDTH;
     scaleY *= (-1 * getTDViewportSize(storeState)[1]) / constants.VIEWPORT_WIDTH;
-    this.updateTDPositionAfterMovement(scaleX, scaleY);*/
-  }
+    this.updateTDPositionAfterMovement(scaleX, scaleY);
+  } */
 
-  onTDCameraChanged = (userTriggered: boolean, lookAt: THREE.Vector3) => {
+  onTDCameraChanged = (userTriggered: boolean, lookAt?: THREE.Vector3) => {
     const { OrthographicCamera } = this.props.cameras[OrthoViews.TDView];
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
     // Write threeJS camera into store
-    console.log("setting lookat to ", lookAt);
     Store.dispatch(setCameraAction(threeCameraToCameraData(OrthographicCamera, lookAt)));
   };
 

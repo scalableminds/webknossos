@@ -115,8 +115,6 @@ function moveTDViewByVectorReducer(state: OxalisState, x: number, y: number): Ox
             right: camera.right + x,
             top: camera.top + y,
             bottom: camera.bottom + y,
-            xDiff: x,
-            yDiff: y,
           },
         },
       },
@@ -129,7 +127,7 @@ function setTDCameraReducer(state: OxalisState, cameraData: PartialCameraData): 
     viewModeData: {
       plane: {
         tdCamera: {
-          $merge: { xDiff: 0, yDiff: 0, ...cameraData },
+          $merge: { ...cameraData },
         },
       },
     },

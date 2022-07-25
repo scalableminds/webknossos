@@ -15,7 +15,7 @@ import type {
   TDCamerasType,
 } from "oxalis/constants";
 import { TDCameras, OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
-import { V3, type Vector3Like } from "libs/mjs";
+import { V3 } from "libs/mjs";
 import {
   getDatasetExtentInLength,
   getDatasetCenter,
@@ -34,7 +34,7 @@ import api from "oxalis/api/internal_api";
 type Props = {
   cameras: OrthoViewCameraMap;
   onCameraPositionChanged: () => void;
-  onTDCameraChanged: (arg0: boolean) => void;
+  onTDCameraChanged: (arg0: boolean, arg1?: THREE.Vector3) => void;
   setTargetAndFixPosition: () => void;
 };
 
@@ -260,7 +260,7 @@ class CameraController extends React.PureComponent<Props> {
     const height = Math.abs(cameraData.bottom - cameraData.top);
     const tdOrthoCamera = this.props.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera];
     const tdPerspectiveCamera = this.props.cameras[OrthoViews.TDView][TDCameras.PerspectiveCamera];
-    const allowedPerspectiveDistance = 50000;
+    // const allowedPerspectiveDistance = 50000;
 
     this.allTDCameras().forEach((tdCamera) => {
       tdCamera.position.set(...cameraData.position);
@@ -432,7 +432,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const tweened = getCameraFromQuaternion(tweenedQuat);
     const newLookAt = new THREE.Vector3().lerpVectors(lookAt, flycamVector, t);
     const currentDistance = currentCenterDistance * (1 - t) + targetCenterDistance * t;
-    debugger;
     // Use forward vector and currentFlycamPos (lookAt target) to calculate the current
     // camera's position which should be on a sphere (center=currentFlycamPos, radius=centerDistance).
     //

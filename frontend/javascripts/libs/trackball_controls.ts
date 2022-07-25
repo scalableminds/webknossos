@@ -34,7 +34,7 @@ interface ITrackballControls {
     object: AnyCamera,
     domElement: HTMLElement,
     target: THREE.Vector3,
-    updateCallback: (args: any) => void,
+    updateCallback: (arg0: boolean, arg1: THREE.Vector3) => void,
   ): ITrackballControls;
 
   enabled: boolean;
@@ -63,7 +63,7 @@ const TrackballControls = function (
   object: THREE.OrthographicCamera,
   domElement: HTMLElement,
   target: THREE.Vector3,
-  updateCallback: (args: any) => void,
+  updateCallback: (arg0: boolean, arg1: THREE.Vector3) => void,
 ) {
   const _this = this;
 

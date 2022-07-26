@@ -4,6 +4,7 @@ import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.VolumeTracing.Segment
 import com.scalableminds.webknossos.datastore.geometry._
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import javax.inject.Inject
@@ -210,26 +211,28 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         volumeLayer.tracing match {
           case Right(volumeTracing) =>
             volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
-            if (volumeTracing.segments.nonEmpty)
-              Xml.withinElementSync("segments") {
-                volumeTracing.segments.foreach { s =>
-                  Xml.withinElementSync("segment") {
-                    writer.writeAttribute("id", s.segmentId.toString)
-                    s.name.foreach { n =>
-                      writer.writeAttribute("name", n)
-                    }
-                    s.creationTime.foreach { t =>
-                      writer.writeAttribute("created", t.toString)
-                    }
-                    s.anchorPosition.foreach { a =>
-                      writer.writeAttribute("anchorPositionX", a.x.toString)
-                      writer.writeAttribute("anchorPositionY", a.y.toString)
-                      writer.writeAttribute("anchorPositionZ", a.z.toString)
-                    }
-                  }
-                }
-              }
-          case _                    => ()
+            writeVolumeSegmentMetadata(volumeTracing.segments)
+          case _ => ()
+        }
+      }
+    }
+
+  def writeVolumeSegmentMetadata(segments: Seq[Segment])(implicit writer: XMLStreamWriter): Unit =
+    Xml.withinElementSync("segments") {
+      segments.foreach { s =>
+        Xml.withinElementSync("segment") {
+          writer.writeAttribute("id", s.segmentId.toString)
+          s.name.foreach { n =>
+            writer.writeAttribute("name", n)
+          }
+          s.creationTime.foreach { t =>
+            writer.writeAttribute("created", t.toString)
+          }
+          s.anchorPosition.foreach { a =>
+            writer.writeAttribute("anchorPositionX", a.x.toString)
+            writer.writeAttribute("anchorPositionY", a.y.toString)
+            writer.writeAttribute("anchorPositionZ", a.z.toString)
+          }
         }
       }
     }

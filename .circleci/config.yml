@@ -246,7 +246,7 @@ jobs:
 
   nightly:
     docker:
-      - image: scalableminds/puppeteer:master
+      - image: scalableminds/puppeteer:puppeteer_node16
     resource_class: large
     steps:
       - checkout

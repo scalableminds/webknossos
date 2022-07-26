@@ -522,6 +522,16 @@ class AnnotationController @Inject()(
       }
   }
 
+  @ApiOperation(hidden = true, value = "")
+  def updateOthersMayEdit(typ: String, id: String, othersMayEdit: Boolean): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- annotationDAO.updateOthersMayEdit(annotation._id, othersMayEdit)
+      } yield Ok(Json.toJson(othersMayEdit))
+    }
+
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {

@@ -234,7 +234,7 @@ class SynapseTree extends React.Component<Props, State> {
           <Dropdown // Lazily create the dropdown menu and destroy it again, afterwards
             overlay={() => this.createSegmentDropdownMenu(data.id)}
             autoDestroy
-            placement="bottomCenter"
+            placement="bottom"
             visible={this.state.activeSegmentDropdownKey === key}
             onVisibleChange={(isVisible) =>
               this.handleSegmentDropdownMenuVisibility(key, isVisible)

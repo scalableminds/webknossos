@@ -11,6 +11,7 @@ POST        /volume/saveMultiple                                @com.scalablemin
 POST        /volume/:tracingId/initialData                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(token: Option[String], tracingId: String, minResolution: Option[Int], maxResolution: Option[Int])
 POST        /volume/:tracingId/initialDataMultiple              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialDataMultiple(token: Option[String], tracingId: String)
 GET         /volume/:tracingId                                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.get(token: Option[String], tracingId: String, version: Option[Long])
+GET         /volume/:tracingId/newestVersion                    @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.newestVersion(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/update                           @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.update(token: Option[String], tracingId: String)
 GET         /volume/:tracingId/allData                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allData(token: Option[String], tracingId: String, version: Option[Long])
 GET         /volume/:tracingId/allDataBlocking                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataBlocking(token: Option[String], tracingId: String, version: Option[Long])
@@ -47,6 +48,7 @@ POST        /skeleton/mergedFromContents                        @com.scalablemin
 POST        /skeleton/mergedFromIds                             @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.mergedFromIds(token: Option[String], persist: Boolean)
 
 GET         /skeleton/:tracingId                                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.get(token: Option[String], tracingId: String, version: Option[Long])
+GET         /skeleton/:tracingId/newestVersion                  @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.newestVersion(token: Option[String], tracingId: String)
 GET         /skeleton/:tracingId/updateActionStatistics         @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionStatistics(token: Option[String], tracingId: String)
 GET         /skeleton/:tracingId/updateActionLog                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionLog(token: Option[String], tracingId: String)
 POST        /skeleton/getMultiple                               @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple(token: Option[String])

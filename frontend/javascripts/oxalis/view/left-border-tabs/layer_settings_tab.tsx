@@ -8,15 +8,23 @@ import {
   WarningOutlined,
   PlusOutlined,
   VerticalAlignMiddleOutlined,
+  LockOutlined,
+  UnlockOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
 import classnames from "classnames";
-import type { APIDataLayer, APIDataset, EditableLayerProperties } from "types/api_flow_types";
+import {
+  APIAnnotationTypeEnum,
+  APIDataLayer,
+  APIDataset,
+  EditableLayerProperties,
+} from "types/api_flow_types";
 import { ValueOf } from "types/globals";
 import { AsyncIconButton } from "components/async_clickables";
+import { HoverIconButton } from "components/hover_icon_button";
 import {
   SwitchSetting,
   NumberSliderSetting,
@@ -33,6 +41,7 @@ import {
   findDataPositionForLayer,
   clearCache,
   findDataPositionForVolumeTracing,
+  convertToHybridTracing,
 } from "admin/admin_rest_api";
 import {
   getDefaultIntensityRangeOfLayer,
@@ -117,6 +126,8 @@ type State = {
   // is shown for that VolumeTracing
   volumeTracingToDownsample: VolumeTracing | null | undefined;
   isAddVolumeLayerModalVisible: boolean;
+  preselectedSegmentationLayerName: string | undefined;
+  segmentationLayerWasPreselected: boolean | undefined;
   layerToMergeWithFallback: APIDataLayer | null | undefined;
 };
 
@@ -125,6 +136,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   state: State = {
     volumeTracingToDownsample: null,
     isAddVolumeLayerModalVisible: false,
+    preselectedSegmentationLayerName: undefined,
+    segmentationLayerWasPreselected: false,
     layerToMergeWithFallback: null,
   };
 
@@ -308,8 +321,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { tracing, dataset } = this.props;
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(dataset, layerName);
-    const isVolumeTracing = layer.category === "segmentation" ? layer.tracingId != null : false;
-    const maybeTracingId = layer.category === "segmentation" ? layer.tracingId : null;
+    const isSegmentation = layer.category === "segmentation";
+    const canBeMadeEditable =
+      isSegmentation && layer.tracingId == null && this.props.controlMode === "TRACE";
+    const isVolumeTracing = isSegmentation ? layer.tracingId != null : false;
+    const maybeTracingId = isSegmentation ? layer.tracingId : null;
     const maybeVolumeTracing =
       maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
     const maybeFallbackLayer =
@@ -403,7 +419,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         <div
           className="flex-container"
           style={{
-            paddingRight: 5,
+            paddingRight: 1,
           }}
         >
           <div className="flex-item">
@@ -457,6 +473,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             >
               <InfoCircleOutlined />
             </Tooltip>
+            {canBeMadeEditable ? (
+              <Tooltip
+                title="Make this segmentation editable by adding a Volume Annotation Layer."
+                placement="left"
+              >
+                <HoverIconButton
+                  icon={<LockOutlined />}
+                  hoveredIcon={<UnlockOutlined />}
+                  onClick={() => {
+                    this.setState({
+                      isAddVolumeLayerModalVisible: true,
+                      segmentationLayerWasPreselected: true,
+                      preselectedSegmentationLayerName: layer.name,
+                    });
+                  }}
+                />
+              </Tooltip>
+            ) : null}
           </div>
           <div className="flex-item">
             {isVolumeTracing ? (
@@ -894,7 +928,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   hideAddVolumeLayerModal = () => {
     this.setState({
       isAddVolumeLayerModalVisible: false,
+      segmentationLayerWasPreselected: false,
+      preselectedSegmentationLayerName: undefined,
     });
+  };
+
+  addSkeletonAnnotationLayer = async () => {
+    await Model.ensureSavedState();
+    await convertToHybridTracing(this.props.tracing.annotationId, null);
+    location.reload();
   };
 
   render() {
@@ -914,6 +956,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       (el) => !el.isColorLayer,
     ).map((el) => this.getLayerSettings(el.layerName, el.layer, el.isColorLayer));
 
+    const state = Store.getState();
+    const canBeMadeHybrid =
+      this.props.tracing.skeleton === null &&
+      this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational &&
+      state.task === null;
     return (
       <div className="tracing-settings-menu">
         {layerSettings}
@@ -924,12 +971,32 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <>
             <Divider />
             <Row justify="center" align="middle">
-              <Button onClick={this.showAddVolumeLayerModal}>
+              <Button
+                onClick={this.showAddVolumeLayerModal}
+                style={{
+                  width: 235,
+                }}
+              >
                 <PlusOutlined />
                 Add Volume Annotation Layer
               </Button>
             </Row>
           </>
+        ) : null}
+
+        {this.props.tracing.restrictions.allowUpdate && canBeMadeHybrid ? (
+          <Row justify="center" align="middle">
+            <Button
+              onClick={this.addSkeletonAnnotationLayer}
+              style={{
+                width: 235,
+                marginTop: 10,
+              }}
+            >
+              <PlusOutlined />
+              Add Skeleton Annotation Layer
+            </Button>
+          </Row>
         ) : null}
 
         {this.state.volumeTracingToDownsample != null ? (
@@ -952,6 +1019,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             dataset={this.props.dataset}
             onCancel={this.hideAddVolumeLayerModal}
             tracing={this.props.tracing}
+            preselectedLayerName={this.state.preselectedSegmentationLayerName}
+            disableLayerSelection={this.state.segmentationLayerWasPreselected}
           />
         ) : null}
       </div>

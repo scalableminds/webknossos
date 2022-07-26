@@ -496,6 +496,7 @@ class VolumeTracingService @Inject()(
       updateGroup = UpdateActionGroup[VolumeTracing](
         tracing.version + 1,
         System.currentTimeMillis(),
+        None,
         List(ImportVolumeData(mergedVolume.largestSegmentId.toPositiveLong)),
         None,
         None,

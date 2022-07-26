@@ -4,11 +4,11 @@ import java.io.InputStream
 
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
+import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto, Vec3IntProto}
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.typesafe.scalalogging.LazyLogging
@@ -87,10 +87,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 zoomLevel,
                 None,
                 userBoundingBoxes,
-                organizationName
+                organizationName,
+                segments = v.segments
               ),
               basePath.getOrElse("") + v.dataZipPath,
-              v.name
+              v.name,
             )
           }
 
@@ -148,12 +149,32 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
   private def extractVolumes(volumeNodes: NodeSeq): immutable.Seq[NmlVolumeTag] =
     volumeNodes.map(
-      node =>
+      node => {
         NmlVolumeTag(
           getSingleAttribute(node, "location"),
           getSingleAttributeOpt(node, "fallbackLayer"),
-          getSingleAttributeOpt(node, "name")
-      ))
+          getSingleAttributeOpt(node, "name"),
+          parseVolumeSegmentMetadata(node \ "segments" \ "segment")
+        )
+      }
+    )
+
+  private def parseVolumeSegmentMetadata(segmentNodes: NodeSeq): Seq[Segment] =
+    segmentNodes.map(node => {
+      val anchorPositionX = getSingleAttributeOpt(node, "anchorPositionX")
+      val anchorPositionY = getSingleAttributeOpt(node, "anchorPositionY")
+      val anchorPositionZ = getSingleAttributeOpt(node, "anchorPositionZ")
+      val anchorPosition = (anchorPositionX, anchorPositionY, anchorPositionZ) match {
+        case (Some(x), Some(y), Some(z)) => Some(Vec3IntProto(x.toInt, y.toInt, z.toInt))
+        case _                           => None
+      }
+      Segment(
+        getSingleAttribute(node, "id").toLong,
+        anchorPosition,
+        getSingleAttributeOpt(node, "name"),
+        getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt)
+      )
+    })
 
   private def parseTrees(treeNodes: NodeSeq,
                          branchPoints: Map[Int, List[BranchPoint]],

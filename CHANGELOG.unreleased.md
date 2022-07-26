@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Segmentation layers which were not previously editable now show an (un)lock icon button which shortcuts to the Add Volume Layer modal with the layer being preselected. [#6330](https://github.com/scalableminds/webknossos/pull/6330)
+- The NML file in volume annotation download now includes segment metadata like names and anchor positions. [#6347](https://github.com/scalableminds/webknossos/pull/6347)
 
 ### Changed
 - The Layers tab now displays an Add Skeleton Annotation Layer button with which volume-only annotations can be converted to hybrid annotations. [#6330](https://github.com/scalableminds/webknossos/pull/6330)

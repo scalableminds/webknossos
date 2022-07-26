@@ -1,6 +1,8 @@
 package com.scalableminds.webknossos.datastore.jzarr
 
-object ChunkUtils {
+import com.typesafe.scalalogging.LazyLogging
+
+object ChunkUtils extends LazyLogging {
   def computeChunkIndices(arrayShape: Array[Int],
                           arrayChunkSize: Array[Int],
                           selectedShape: Array[Int],
@@ -10,13 +12,18 @@ object ChunkUtils {
     val to = new Array[Int](depth)
     var numChunks = 1
     for (dim <- 0 until depth) {
-      val startIdx = selectedOffset(dim) / arrayChunkSize(dim)
       val maxIdx = (arrayShape(dim) - 1) / arrayChunkSize(dim)
+      val startIdx = Math.min(maxIdx, selectedOffset(dim) / arrayChunkSize(dim))
       var toIdx = (selectedOffset(dim) + selectedShape(dim) - 1) / arrayChunkSize(dim)
       toIdx = Math.min(toIdx, maxIdx)
       start(dim) = startIdx
       to(dim) = toIdx
-      numChunks *= (toIdx - startIdx + 1)
+      val numChunksForDim = toIdx - startIdx + 1
+      logger.info(s"dim ${dim}, start: ${startIdx} to: ${toIdx}, num ${numChunksForDim}")
+      numChunks *= numChunksForDim
+    }
+    if (numChunks < 0) {
+      logger.info(s"Failed to compute chunk indices. array shape ${arrayShape.toList}, chunkShape: ${arrayChunkSize.toList}, requested ${selectedShape.toList} at ${selectedOffset.toList}")
     }
     val chunkIndices = new Array[Array[Int]](numChunks)
     val currentIdx = start.clone

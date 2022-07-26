@@ -25,6 +25,9 @@ object ExploreRemoteDatasetParameters {
 }
 
 case class AxisOrder(x: Int, y: Int, z: Int)
+object AxisOrder {
+  def guessFromRank(rank: Int): AxisOrder = AxisOrder(rank - 1, rank - 2, rank - 3)
+}
 case class MagWithAttributes(mag: ZarrMag, remotePath: Path, elementClass: ElementClass.Value, boundingBox: BoundingBox)
 
 class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLogging {
@@ -103,7 +106,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
           reportMutable += s"Found ZarrArray with name ${asArrayResult.headOption.map(_._1.name)} at $remotePath"
           Fox.successful(asArrayResult)
         case f: Failure =>
-          reportMutable += s"Error when reading ${remotePath} as ZarrArray: $f"
+          reportMutable += s"Error when reading $remotePath as ZarrArray: $f"
           reportMutable += s"Trying to explore $remotePath as multiscales group..."
           (for {
             asNgffBox <- exploreAsNgff(remotePath, credentials).futureBox
@@ -112,7 +115,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
                 reportMutable += s"Found multiscales group with layer names ${asNgffResult.map(_._1.name)} at $remotePath"
                 Fox.successful(asNgffResult)
               case f2: Failure =>
-                reportMutable += s"Error when reading ${remotePath} as multiscales group: $f2"
+                reportMutable += s"Error when reading $remotePath as multiscales group: $f2"
                 f2.toFox
               case Empty => Fox.empty
             }
@@ -128,10 +131,14 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       name <- guessNameFromPath(remotePath)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       elementClass <- zarrHeader.elementClass
-      boundingBox <- zarrHeader.boundingBox
+      boundingBox = boundingBoxFromZarrHeader(zarrHeader, AxisOrder.guessFromRank(zarrHeader.shape.length))
       zarrMag = ZarrMag(Vec3Int.ones, Some(remotePath.toString), credentials)
     } yield
       List((ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag)), Vec3Double(1.0, 1.0, 1.0)))
+
+  private def boundingBoxFromZarrHeader(zarrHeader: ZarrHeader, axisOrder: AxisOrder): BoundingBox = {
+    BoundingBox(Vec3Int.zeros, zarrHeader.shape(axisOrder.x), zarrHeader.shape(axisOrder.y), zarrHeader.shape(axisOrder.z))
+  }
 
   private def parseJsonFromPath[T: Reads](path: Path): Box[T] =
     for {
@@ -194,7 +201,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       path = layerPath.resolve(dataset.path)
       zarrHeader <- parseJsonFromPath[ZarrHeader](path.resolve(ZarrHeader.FILENAME_DOT_ZARRAY))
       elementClass <- zarrHeader.elementClass
-      boundingBox <- zarrHeader.boundingBox
+      boundingBox = boundingBoxFromZarrHeader(zarrHeader, axisOrder)
     } yield MagWithAttributes(ZarrMag(mag, Some(path.toString), credentials), path, elementClass, boundingBox)
 
   private def elementClassFromMags(magsWithAttributes: List[MagWithAttributes])(

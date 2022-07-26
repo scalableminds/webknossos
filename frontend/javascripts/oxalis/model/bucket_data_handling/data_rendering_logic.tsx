@@ -50,7 +50,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
       <span>
         Your browser does not seem to support WebGL 2. Please upgrade your browser or hardware and
         ensure that WebGL 2 is supported. You might want to use{" "}
-        <a href="https://get.webgl.org/webgl2/" target="_blank">
+        <a href="https://get.webgl.org/webgl2/" target="_blank" rel="noreferrer">
           this site
         </a>{" "}
         to check the WebGL support yourself.

@@ -49,7 +49,7 @@ class SkeletonTracingService @Inject()(
       tracingId,
       updateActionGroup.version,
       updateActionGroup.actions
-        .map(_.addTimestamp(updateActionGroup.timestamp)) match { //to the first action in the group, attach the group's info
+        .map(_.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)) match { //to the first action in the group, attach the group's info
         case Nil           => Nil
         case first :: rest => first.addInfo(updateActionGroup.info) :: rest
       }
@@ -115,7 +115,7 @@ class SkeletonTracingService @Inject()(
         case Full(tracing) =>
           remainingUpdates match {
             case List() => Fox.successful(tracing)
-            case RevertToVersionAction(sourceVersion, _, _) :: tail =>
+            case RevertToVersionAction(sourceVersion, _, _, _) :: tail =>
               val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
               updateIter(sourceTracing, tail)
             case update :: tail => updateIter(Full(update.applyOn(tracing)), tail)

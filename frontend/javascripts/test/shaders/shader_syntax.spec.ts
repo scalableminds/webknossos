@@ -3,7 +3,7 @@ import constants from "oxalis/constants";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import resolutions from "test/fixtures/resolutions";
 import test, { ExecutionContext } from "ava";
-import { parser, generate } from "@shaderfrog/glsl-parser";
+import { parser } from "@shaderfrog/glsl-parser";
 
 const DEFAULT_LOOK_UP_TEXTURE_WIDTH = getLookupBufferSize(constants.DEFAULT_GPU_MEMORY_FACTOR);
 

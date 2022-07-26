@@ -25,6 +25,7 @@ case class OmeNgffAxis(name: String, `type`: String, unit: Option[String] = None
       return Fox.failure(s"unit-to-nanometer factor requested for non-space axis ($name, ${`type`})")
     unit.map(_.toLowerCase) match {
       case None               => Fox.successful(1.0)
+      case Some("")           => Fox.successful(1.0)
       case Some("yoctometer") => Fox.successful(1e-15)
       case Some("zeptometer") => Fox.successful(1e-12)
       case Some("attometer")  => Fox.successful(1e-9)

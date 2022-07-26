@@ -143,8 +143,8 @@ class DataSetController @Inject()(userService: UserService,
   def exploreRemoteDataset(): Action[List[ExploreRemoteDatasetParameters]] =
     sil.SecuredAction.async(validateJson[List[ExploreRemoteDatasetParameters]]) { implicit request =>
       for {
-        dataSource <- exploreRemoteLayerService.exploreRemoteDatasource(request.body)
-      } yield Ok(Json.toJson(dataSource))
+        (dataSource, report) <- exploreRemoteLayerService.exploreRemoteDatasource(request.body)
+      } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSource), "report" -> report))
     }
 
   @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")

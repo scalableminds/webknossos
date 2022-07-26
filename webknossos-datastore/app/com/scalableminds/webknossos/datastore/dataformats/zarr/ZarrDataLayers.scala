@@ -16,6 +16,7 @@ object FileSystemCredentials {
 
 case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Option[String]) {
   lazy val remotePath: String = uri.getPath
+  lazy val credentials: Option[FileSystemCredentials] = user.map(u => FileSystemCredentials(u, password))
 }
 
 case class ZarrMag(mag: Vec3Int, path: Option[String], credentials: Option[FileSystemCredentials]) {

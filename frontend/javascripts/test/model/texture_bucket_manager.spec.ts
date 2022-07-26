@@ -3,12 +3,17 @@ import mock from "mock-require";
 import test, { ExecutionContext } from "ava";
 import { Vector4 } from "oxalis/constants";
 
+/*
+ * Note that RGB textures are currently not tested in this spec.
+ * If tests were added, the following Map would not be sufficient, anymore,
+ * since RGBAFormat is also used for 3 channels which would make the key not unique.
+ */
 const formatToChannelCount = new Map([
-  [THREE.LuminanceFormat, 1],
-  [THREE.LuminanceAlphaFormat, 2],
-  [THREE.RGBFormat, 3],
+  [THREE.RedFormat, 1],
+  [THREE.RGFormat, 2],
   [THREE.RGBAFormat, 4],
 ]);
+
 // @ts-ignore
 global.performance = {
   now: () => Date.now(),
@@ -29,6 +34,9 @@ mock(
 
     constructor(_width: number, _height: number, format: any) {
       this.channelCount = formatToChannelCount.get(format) || 0;
+      if (this.channelCount === 0) {
+        throw new Error("Format could not be converted to channel count");
+      }
     }
 
     update(src: Float32Array | Uint8Array, x: number, y: number, _width: number, _height: number) {

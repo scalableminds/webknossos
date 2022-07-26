@@ -3,7 +3,7 @@
   "version": "0.17.146",
   "license": "AGPL-3.0",
   "engines": {
-    "node": ">=7"
+    "node": ">=16"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
     "@babel/preset-react": "^7.0.0",
     "@babel/preset-typescript": "^7.16.7",
     "@babel/register": "^7.0.0",
+    "@shaderfrog/glsl-parser": "^0.2.2",
     "@types/cwise": "^1.0.4",
     "@types/lodash": "^4.14.181",
     "@types/memoize-one": "^5.1.2",
@@ -172,7 +173,6 @@
     "distance-transform": "^1.0.2",
     "file-saver": "^2.0.1",
     "flexlayout-react": "^0.5.5",
-    "glsl-parser": "git+https://github.com/anvaka/glslx.git#glsl-parser",
     "hammerjs": "^2.0.8",
     "history": "^4.7.2",
     "immutability-helper": "^2.6.6",
@@ -209,7 +209,7 @@
     "redux-batched-actions": "^0.4.1",
     "redux-saga": "^1.0.0",
     "resumablejs": "^1.1.0",
-    "saxophone": "^0.7.1",
+    "saxophone": "^0.8.0",
     "terser-webpack-plugin": "^5.3.0",
     "three": "^0.137.0",
     "tween.js": "^16.3.1",

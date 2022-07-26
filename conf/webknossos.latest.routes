@@ -139,6 +139,7 @@ GET           /annotations/shared                                               
 GET           /annotations/readable                                                     controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.getSharedTeams(typ: String, id: String)
 PATCH         /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.updateSharedTeams(typ: String, id: String)
+PATCH         /annotations/:typ/:id/othersMayEdit                                       controllers.AnnotationController.updateOthersMayEdit(typ: String, id: String, othersMayEdit: Boolean)
 
 # Meshes
 POST          /meshes                                                                   controllers.MeshController.create

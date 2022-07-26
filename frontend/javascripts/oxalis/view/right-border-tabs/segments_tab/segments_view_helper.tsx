@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
-import React, { useState } from "react";
-import { Popconfirm } from "antd";
+import React from "react";
+import { Modal } from "antd";
 import { getMeshfilesForDatasetLayer } from "admin/admin_rest_api";
 import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
 import type { ActiveMappingInfo } from "oxalis/store";
@@ -13,6 +13,9 @@ import { MappingStatusEnum } from "oxalis/constants";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { waitForCondition } from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+
+const { confirm } = Modal;
+
 export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
   return segmentationLayer.fallbackLayer || segmentationLayer.name;
@@ -53,6 +56,7 @@ export async function maybeFetchMeshFiles(
 
   return files;
 }
+
 type MappingActivationConfirmationProps<R> = R & {
   mappingName: string | null | undefined;
   descriptor: string;
@@ -74,40 +78,26 @@ export function withMappingActivationConfirmation<P, C extends ComponentType<P>>
       onClick: originalOnClick,
       ...rest
     } = props;
-    const [isConfirmVisible, setConfirmVisible] = useState(false);
-
-    // If the mapping name is undefined, no mapping is specified. In that case never show the activation modal.
-    // In contrast, if the mapping name is null, this indicates that all mappings should be specifically disabled.
-    if (mappingName === undefined || layerName == null) {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<MappingActivationConfirmationProps<P>, ... Remove this comment to see the full error message
-      return <WrappedComponent {...rest} onClick={originalOnClick} />;
-    }
 
     const isMappingEnabled = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
     const enabledMappingName = isMappingEnabled ? mappingInfo.mappingName : null;
 
-    const checkWhetherConfirmIsNeeded = () => {
-      if (mappingName !== enabledMappingName) {
-        setConfirmVisible(true);
-      } else {
-        originalOnClick();
-      }
-    };
+    // If the mapping name is undefined, no mapping is specified. In that case never show the activation modal.
+    // In contrast, if the mapping name is null, this indicates that all mappings should be specifically disabled.
+    if (mappingName === undefined || layerName == null || mappingName === enabledMappingName) {
+      // @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<MappingActivationConfirmationProps<P>, ... Remove this comment to see the full error message
+      return <WrappedComponent {...rest} onClick={originalOnClick} />;
+    }
 
     const mappingString =
       mappingName != null
         ? `for the mapping "${mappingName}" which is not active. The mapping will be activated`
         : "without a mapping but a mapping is active. The mapping will be deactivated";
-    return (
-      <Popconfirm
-        title={`The currently active ${descriptor} was computed ${mappingString} when clicking OK.`}
-        overlayStyle={{
-          maxWidth: 500,
-        }}
-        visible={isConfirmVisible}
-        onConfirm={async () => {
-          setConfirmVisible(false);
 
+    const confirmMappingActivation = () => {
+      confirm({
+        title: `The currently active ${descriptor} was computed ${mappingString} when clicking OK.`,
+        async onOk() {
           if (mappingName != null) {
             Store.dispatch(setMappingAction(layerName, mappingName, "HDF5"));
             await waitForCondition(
@@ -131,12 +121,11 @@ export function withMappingActivationConfirmation<P, C extends ComponentType<P>>
           }
 
           originalOnClick();
-        }}
-        onCancel={() => setConfirmVisible(false)}
-      >
-        {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<MappingActivationConfirmationProps<P>, ... Remove this comment to see the full error message */}
-        <WrappedComponent {...rest} onClick={checkWhetherConfirmIsNeeded} />
-      </Popconfirm>
-    );
+        },
+      });
+    };
+
+    /* @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<MappingActivationConfirmationProps<P>, ... Remove this comment to see the full error message */
+    return <WrappedComponent {...rest} onClick={confirmMappingActivation} />;
   };
 }

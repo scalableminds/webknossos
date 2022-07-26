@@ -203,6 +203,7 @@ export type APIRestrictions = {
   readonly allowUpdate: boolean;
   readonly allowFinish: boolean;
   readonly allowDownload: boolean;
+  // allowSave might be false even though allowUpdate is true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight" | "volume";
@@ -346,6 +347,7 @@ export type APIAnnotationCompact = {
   // or due to missing permissions).
   readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
+  readonly othersMayEdit: boolean;
 };
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCompact {
@@ -366,6 +368,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     typ,
     owner,
     teams,
+    othersMayEdit,
   } = annotation;
 
   return {
@@ -385,6 +388,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     typ,
     owner,
     teams,
+    othersMayEdit,
   };
 }
 
@@ -417,6 +421,8 @@ type APIAnnotationBase = APIAnnotationCompact & {
   readonly owner?: APIUserBase;
   // This `user` attribute is deprecated and should not be used, anymore. It only exists to satisfy e2e type checks
   readonly user?: APIUserBase;
+  readonly contributors: APIUserBase[];
+  readonly othersMayEdit: boolean;
   readonly meshes: Array<MeshMetaData>;
 };
 export type APIAnnotation = APIAnnotationBase & {

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import type { OrthoView, OrthoViewMap, Vector3 } from "oxalis/constants";
+import type { OrthoView, OrthoViewMap, OrthoViewWithoutTDMap, Vector3 } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/throttled_store";
@@ -18,7 +18,12 @@ type Properties = {
 };
 
 class Cube {
-  crossSections: OrthoViewMap<THREE.Line>;
+  // The cross sections are lines that are rendered in the XY, YZ and XZ
+  // viewports to make the dataset bounding box visible regardless of the
+  // current W position. Without the cross sections, the bounding box' wireframe
+  // would only be visible when the current position matches the edge positions
+  // of the bounding box.
+  crossSections: OrthoViewWithoutTDMap<THREE.Line>;
   cube: THREE.Line;
   min: Vector3;
   max: Vector3;
@@ -42,15 +47,11 @@ class Cube {
     this.visible = true;
     this.isHighlighted = properties.isHighlighted;
     this.cube = new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial());
-    // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
-    this.crossSections = {};
-
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.crossSections[planeId] = new THREE.Line(
-        new THREE.BufferGeometry(),
-        this.getLineMaterial(),
-      );
-    }
+    this.crossSections = {
+      PLANE_XY: new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial()),
+      PLANE_XZ: new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial()),
+      PLANE_YZ: new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial()),
+    };
 
     if (this.min != null && this.max != null) {
       this.setCorners(this.min, this.max);
@@ -58,7 +59,7 @@ class Cube {
 
     listenToStoreProperty(
       (state) => getPosition(state.flycam),
-      (position) => this.updatePosition(position),
+      (position) => this.updatePositionForCrossSections(position),
     );
   }
 
@@ -75,6 +76,8 @@ class Cube {
   }
 
   setCorners(min: Vector3, max: Vector3) {
+    /* Adapt the cube and the cross sections to the bounding box. */
+
     this.min = min;
     this.max = max;
     // Since `max` itself should not be included in the rendered
@@ -102,44 +105,42 @@ class Cube {
       vec(min[0], max[1], min[2]),
     ]);
 
-    // todo: clarify what the cross sections are and fix them probably?
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
-    this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [
+    this.crossSections[OrthoViews.PLANE_XY].geometry.setFromPoints([
       vec(min[0], min[1], 0),
       vec(min[0], max[1], 0),
       vec(max[0], max[1], 0),
       vec(max[0], min[1], 0),
       vec(min[0], min[1], 0),
-    ];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
-    this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = [
+    ]);
+    this.crossSections[OrthoViews.PLANE_YZ].geometry.setFromPoints([
       vec(0, min[1], min[2]),
       vec(0, min[1], max[2]),
       vec(0, max[1], max[2]),
       vec(0, max[1], min[2]),
       vec(0, min[1], min[2]),
-    ];
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
-    this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = [
+    ]);
+    this.crossSections[OrthoViews.PLANE_XZ].geometry.setFromPoints([
       vec(min[0], 0, min[2]),
       vec(min[0], 0, max[2]),
       vec(max[0], 0, max[2]),
       vec(max[0], 0, min[2]),
       vec(min[0], 0, min[2]),
-    ];
+    ]);
 
     for (const mesh of _.values(this.crossSections).concat([this.cube])) {
       mesh.geometry.computeBoundingSphere();
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'verticesNeedUpdate' does not exist on ty... Remove this comment to see the full error message
-      mesh.geometry.verticesNeedUpdate = true;
+      mesh.geometry.attributes.position.needsUpdate = true;
     }
 
     this.initialized = true;
-    this.updatePosition(getPosition(Store.getState().flycam));
+    this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
+    this.crossSections[OrthoViews.PLANE_XZ].geometry.computeBoundingSphere();
+    this.crossSections[OrthoViews.PLANE_XZ].geometry.attributes.position.needsUpdate = true;
+
     app.vent.trigger("rerender");
   }
 
-  updatePosition(position: Vector3) {
+  updatePositionForCrossSections(position: Vector3) {
     if (!this.initialized) {
       return;
     }
@@ -148,16 +149,19 @@ class Cube {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
       const { geometry } = this.crossSections[planeId];
 
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertices' does not exist on type 'Geomet... Remove this comment to see the full error message
-      for (const vertex of geometry.vertices) {
-        const array = vertex.toArray();
-        array[thirdDim] = position[thirdDim];
-        vertex.fromArray(array);
+      // Update the third dimension for all vectors
+      for (let idx = 0; idx < geometry.attributes.position.count; idx++) {
+        if (thirdDim === 0) {
+          geometry.attributes.position.setX(idx, position[thirdDim]);
+        } else if (thirdDim === 1) {
+          geometry.attributes.position.setY(idx, position[thirdDim]);
+        } else {
+          geometry.attributes.position.setZ(idx, position[thirdDim]);
+        }
       }
 
       geometry.computeBoundingSphere();
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'verticesNeedUpdate' does not exist on ty... Remove this comment to see the full error message
-      geometry.verticesNeedUpdate = true;
+      geometry.attributes.position.needsUpdate = true;
     }
   }
 

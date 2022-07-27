@@ -135,16 +135,18 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (job.type === "export_tiff" && job.organizationName && job.datasetName) {
       const labelToAnnotationOrDataset =
         job.annotationId != null ? (
-          <Link to={`/annotations/${job.annotationId}`}>annotation of {job.datasetName}</Link>
+          <Link to={`/annotations/${job.annotationId}`}>
+            annotation of dataset {job.datasetName}
+          </Link>
         ) : (
           <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            {job.datasetName}
+            dataset {job.datasetName}
           </Link>
         );
       const layerLabel = job.annotationLayerName || job.layerName;
       return (
         <span>
-          Tiff export from {layerLabel} layer of {labelToAnnotationOrDataset} (Bounding Box{" "}
+          Tiff export of layer {layerLabel} from {labelToAnnotationOrDataset} (Bounding Box{" "}
           {job.boundingBox})
         </span>
       );

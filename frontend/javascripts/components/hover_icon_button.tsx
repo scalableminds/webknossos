@@ -22,9 +22,9 @@ export function HoverIconButton(props: HoverButtonProps) {
       props.onMouseLeave(event);
     }
   };
-
-  return React.cloneElement(isMouseOver ? props.hoveredIcon : props.icon, {
-    ...props,
+  const { hoveredIcon, ...restProps } = props;
+  return React.cloneElement(isMouseOver ? hoveredIcon : props.icon, {
+    ...restProps,
     onMouseEnter,
     onMouseLeave,
   });

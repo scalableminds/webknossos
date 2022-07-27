@@ -39,6 +39,9 @@ import type {
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { useSelector } from "react-redux";
+import { OxalisState } from "oxalis/store";
+import { formatUserName, getContributorById } from "oxalis/model/accessors/user_accessor";
 type Description = {
   description: string;
   icon: React.ReactNode;
@@ -273,6 +276,9 @@ export default function VersionEntry({
   onPreviewVersion,
 }: Props) {
   const lastTimestamp = _.max(actions.map((action) => action.value.actionTimestamp));
+  const contributors = useSelector((state: OxalisState) => state.tracing.contributors);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const owner = useSelector((state: OxalisState) => state.tracing.owner);
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,
@@ -289,6 +295,12 @@ export default function VersionEntry({
     </Button>
   );
   const { description, icon } = getDescriptionForBatch(actions);
+
+  // In case the actionAuthorId is not set, the action was created before the multi-contributor
+  // support. Default to the owner in that case.
+  const author = getContributorById(actions[0].value.actionAuthorId, contributors) || owner;
+  const authorName = formatUserName(activeUser, author);
+
   return (
     <List.Item
       style={{
@@ -310,11 +322,12 @@ export default function VersionEntry({
         description={
           <React.Fragment>
             {isNewest ? (
-              <React.Fragment>
+              <>
                 <i>Newest version</i> <br />
-              </React.Fragment>
+              </>
             ) : null}
             {description}
+            <div>Authored by {authorName}</div>
           </React.Fragment>
         }
       />

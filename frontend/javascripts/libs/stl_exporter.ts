@@ -145,7 +145,7 @@ class STLExporter {
   }
 }
 
-export default function exportToStl(mesh) {
+export default function exportToStl(mesh): DataView {
   const exporter = new STLExporter();
   const data = exporter.parse(mesh, {
     binary: true,

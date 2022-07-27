@@ -18,6 +18,12 @@ object OmeNgffDataset {
   implicit val jsonFormat: OFormat[OmeNgffDataset] = Json.format[OmeNgffDataset]
 }
 
+case class OmeNgffGroupHeader(zarr_format: Int)
+object OmeNgffGroupHeader {
+  implicit val jsonFormat: OFormat[OmeNgffGroupHeader] = Json.format[OmeNgffGroupHeader]
+  val FILENAME_DOT_ZGROUP = ".zgroup"
+}
+
 case class OmeNgffAxis(name: String, `type`: String, unit: Option[String] = None) {
 
   def spaceUnitToNmFactor(implicit ec: ExecutionContext): Fox[Double] = {

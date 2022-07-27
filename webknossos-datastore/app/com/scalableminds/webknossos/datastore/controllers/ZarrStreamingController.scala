@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -287,7 +287,7 @@ class ZarrStreamingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
-      Future(Ok(Json.obj("zarr_format" -> 2)))
+      Future(Ok(Json.toJson(OmeNgffGroupHeader(zarr_format = 2))))
     }
   }
 }

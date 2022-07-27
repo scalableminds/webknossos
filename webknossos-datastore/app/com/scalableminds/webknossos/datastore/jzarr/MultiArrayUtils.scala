@@ -126,4 +126,13 @@ object MultiArrayUtils {
     source.permute(permutation)
   }
 
+  def axisOrderXYZView(source: MultiArray, axisOrder: AxisOrder, flip: Boolean): MultiArray = {
+    // create a view in which the last three axes are XYZ, rest unchanged
+    // optionally flip the axes afterwards
+    val permutation = (0 until (source.getShape.length - 3)).toList :+ axisOrder.x :+ axisOrder.y :+ axisOrder.z
+    val flippedIfNeeded = if (flip) permutation.reverse else permutation
+    // println(s"permutation (flipped=$flip): $flippedIfNeeded")
+    source.permute(flippedIfNeeded.toArray)
+  }
+
 }

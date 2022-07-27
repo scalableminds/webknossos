@@ -37,7 +37,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       layersWithVoxelSizes = exploredLayersNested.flatten
       voxelSize <- extractVoxelSize(layersWithVoxelSizes.map(_._2))
       layers = makeLayerNamesUnique(layersWithVoxelSizes.map(_._1))
-      dataSetName <- dataSetName(urisWithCredentials.map(_.remoteUri))
+      dataSetName <- dataSetName(urisWithCredentials.map(uriWithCred => normalizeUri(uriWithCred.remoteUri)))
       dataSource = GenericDataSource[DataLayer](
         DataSourceId(dataSetName, ""),
         layers,
@@ -81,7 +81,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       user: Option[String],
       password: Option[String],
       reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[List[(ZarrLayer, Vec3Double)]] = {
-    val uri = new URI(layerUri)
+    val uri = new URI(normalizeUri(layerUri))
     val remoteSource = RemoteSourceDescriptor(uri, user, password)
     for {
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "failed to get file system"
@@ -89,6 +89,13 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       layersWithVoxelSizes <- exploreAsArrayOrNgff(remotePath, remoteSource.credentials, reportMutable)
     } yield layersWithVoxelSizes
   }
+
+  private def normalizeUri(uri: String): String =
+    if (uri.endsWith(ZarrHeader.FILENAME_DOT_ZARRAY)) uri.dropRight(ZarrHeader.FILENAME_DOT_ZARRAY.length)
+    else if (uri.endsWith(OmeNgffHeader.FILENAME_DOT_ZATTRS)) uri.dropRight(OmeNgffHeader.FILENAME_DOT_ZATTRS.length)
+    else if (uri.endsWith(OmeNgffGroupHeader.FILENAME_DOT_ZGROUP))
+      uri.dropRight(OmeNgffGroupHeader.FILENAME_DOT_ZGROUP.length)
+    else uri
 
   private def exploreAsArrayOrNgff(
       remotePath: Path,
@@ -123,7 +130,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
   private def exploreAsZarrArray(remotePath: Path, credentials: Option[FileSystemCredentials])(
       implicit ec: ExecutionContext): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
-      zarrayPath <- Fox.successful(guessZarrayPath(remotePath))
+      zarrayPath <- Fox.successful(remotePath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY))
       name <- guessNameFromPath(remotePath)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       elementClass <- zarrHeader.elementClass
@@ -144,18 +151,10 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       parsed <- JsonHelper.parseJsonToFox[T](fileAsString)
     } yield parsed
 
-  private def guessZarrayPath(layerPath: Path): Path =
-    if (layerPath.endsWith(ZarrHeader.FILENAME_DOT_ZARRAY)) layerPath
-    else layerPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
-
-  private def guessZattrsPath(layerPath: Path): Path =
-    if (layerPath.endsWith(OmeNgffHeader.FILENAME_DOT_ZATTRS)) layerPath
-    else layerPath.resolve(OmeNgffHeader.FILENAME_DOT_ZATTRS)
-
   private def exploreAsNgff(remotePath: Path, credentials: Option[FileSystemCredentials])(
       implicit ec: ExecutionContext): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
-      zattrsPath <- Fox.successful(guessZattrsPath(remotePath))
+      zattrsPath <- Fox.successful(remotePath.resolve(OmeNgffHeader.FILENAME_DOT_ZATTRS))
       omeNgffHeader <- parseJsonFromPath[OmeNgffHeader](zattrsPath) ?~> s"failed to read ome ngff header at $zattrsPath"
       _ <- Fox.successful(logger.info(f"OMG: $omeNgffHeader"))
       layers <- Fox.serialCombined(omeNgffHeader.multiscales)(layerFromMultiscale(_, remotePath, credentials))

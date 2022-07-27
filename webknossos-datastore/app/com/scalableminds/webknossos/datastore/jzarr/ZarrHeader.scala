@@ -48,6 +48,7 @@ case class ZarrHeader(
     } else chunks.reverse
 
   lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
+
 }
 
 object ZarrHeader {

@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
+
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
@@ -10,29 +11,16 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
-  EditableMappingService,
-  EditableMappingUpdateActionGroup,
-  RemoteFallbackLayer
-}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{
-  ResolutionRestrictions,
-  UpdateMappingNameAction,
-  VolumeTracingService
-}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, EditableMappingUpdateActionGroup, RemoteFallbackLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, UpdateMappingNameAction, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteDatastoreClient,
-  TSRemoteWebKnossosClient,
-  TracingStoreAccessTokenService,
-  TracingStoreConfig
-}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient, TracingStoreAccessTokenService, TracingStoreConfig}
 import net.liftweb.common.{Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
@@ -330,7 +318,7 @@ class VolumeTracingController @Inject()(
 
   def zGroup(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-      Future(Ok(Json.obj("zarr_format" -> 2)))
+      Future(Ok(Json.toJson(OmeNgffGroupHeader(zarr_format = 2))))
     }
   }
 

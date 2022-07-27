@@ -49,6 +49,8 @@ object ZarrArray extends LazyLogging {
 
 class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extends LazyLogging {
 
+  private val axisOrder: AxisOrder = AxisOrder.guessFromRank(header.shape.length)
+
   private val chunkReader =
     ChunkReader.create(store, header)
 
@@ -63,20 +65,25 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   @throws[IOException]
   @throws[InvalidRangeException]
   def readBytesXYZ(shape: Vec3Int, offset: Vec3Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    // Assumes that the last three dimensions of the array are x, y, z
     val paddingDimensionsCount = header.shape.length - 3
-    val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
-    val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
+    val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.z :+ offset.y :+ offset.x // TODO create from axis order
+    val outputShapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
+    val inputShapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.z :+ shape.y :+ shape.x
 
-    readBytes(shapeArray, offsetArray)
+    readBytes(inputShapeArray, outputShapeArray, offsetArray)
   }
 
   // @return Byte array in fortran-order with little-endian values
   @throws[IOException]
   @throws[InvalidRangeException]
-  def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def readBytes(shape: Array[Int], outputShape: Array[Int], offset: Array[Int])(
+      implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       typedData <- readAsFortranOrder(shape, offset)
+      typedDataWrapped = MultiArrayUtils.createArrayWithGivenStorage(typedData, shape.reverse)
+      targetAxisOrderBuffer = MultiArrayUtils.createDataBuffer(header.dataType, outputShape)
+      target = MultiArrayUtils.createArrayWithGivenStorage(targetAxisOrderBuffer, outputShape)
+      source = MultiArrayUtils.axisOrderXYZView(typedDataWrapped, axisOrder, flip = false)
     } yield BytesConverter.toByteArray(typedData, header.dataType, ByteOrder.LITTLE_ENDIAN)
 
   @throws[IOException]
@@ -87,7 +94,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
     val res = Fox.serialCombined(chunkIndices.toList) { chunkIndex: Array[Int] =>
       for {
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
-        offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
+        offsetInChunk = computeOffsetInChunk(chunkIndex, offset) // todo use axis order in here?
         _ = if (partialCopyingIsNotNeeded(shape, offsetInChunk)) {
           return Future.successful(sourceChunk.getStorage)
         } else {

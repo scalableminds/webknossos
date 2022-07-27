@@ -24,10 +24,6 @@ object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
 
-case class AxisOrder(x: Int, y: Int, z: Int)
-object AxisOrder {
-  def guessFromRank(rank: Int): AxisOrder = AxisOrder(rank - 1, rank - 2, rank - 3)
-}
 case class MagWithAttributes(mag: ZarrMag, remotePath: Path, elementClass: ElementClass.Value, boundingBox: BoundingBox)
 
 class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLogging {
@@ -136,9 +132,11 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     } yield
       List((ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag)), Vec3Double(1.0, 1.0, 1.0)))
 
-  private def boundingBoxFromZarrHeader(zarrHeader: ZarrHeader, axisOrder: AxisOrder): BoundingBox = {
-    BoundingBox(Vec3Int.zeros, zarrHeader.shape(axisOrder.x), zarrHeader.shape(axisOrder.y), zarrHeader.shape(axisOrder.z))
-  }
+  private def boundingBoxFromZarrHeader(zarrHeader: ZarrHeader, axisOrder: AxisOrder): BoundingBox =
+    BoundingBox(Vec3Int.zeros,
+                zarrHeader.shape(axisOrder.x),
+                zarrHeader.shape(axisOrder.y),
+                zarrHeader.shape(axisOrder.z))
 
   private def parseJsonFromPath[T: Reads](path: Path): Box[T] =
     for {
@@ -226,7 +224,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     val z = axes.indexWhere(axisMatches(_, "z"))
     for {
       _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid axis order: $x,$y,$z"
-      _ <- bool2Fox(z == axes.length - 3 && y == axes.length - 2 && x == axes.length - 1) ?~> s"currently, wk supports only axis order where z,y,x are the last three axes. got z$z,y$y,x$x, count=${axes.length}"
+      //_ <- bool2Fox(z == axes.length - 3 && y == axes.length - 2 && x == axes.length - 1) ?~> s"currently, wk supports only axis order where z,y,x are the last three axes. got z$z,y$y,x$x, count=${axes.length}"
     } yield AxisOrder(x, y, z)
   }
 

@@ -68,6 +68,8 @@ object MultiArrayUtils {
     val targetShape: Array[Int] = target.getShape
     val sourceRanges = new util.ArrayList[Range]
     val targetRanges = new util.ArrayList[Range]
+    println(
+      s"copyRange, offset ${offset.toList}, sourceShape: ${sourceShape.toList}, targetShape: ${targetShape.toList}")
     for (dimension <- offset.indices) {
       val dimOffset = offset(dimension)
       var sourceFirst = 0
@@ -129,10 +131,10 @@ object MultiArrayUtils {
   def axisOrderXYZView(source: MultiArray, axisOrder: AxisOrder, flip: Boolean): MultiArray = {
     // create a view in which the last three axes are XYZ, rest unchanged
     // optionally flip the axes afterwards
-    val permutation = (0 until (source.getShape.length - 3)).toList :+ axisOrder.x :+ axisOrder.y :+ axisOrder.z
+    val permutation = axisOrder.permutation(source.getRank)
     val flippedIfNeeded = if (flip) permutation.reverse else permutation
     // println(s"permutation (flipped=$flip): $flippedIfNeeded")
-    source.permute(flippedIfNeeded.toArray)
+    source.permute(flippedIfNeeded)
   }
 
 }

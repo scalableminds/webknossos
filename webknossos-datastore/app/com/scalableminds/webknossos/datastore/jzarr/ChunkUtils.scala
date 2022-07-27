@@ -19,7 +19,7 @@ object ChunkUtils extends LazyLogging {
       start(dim) = startIdx
       to(dim) = toIdx
       val numChunksForDim = toIdx - startIdx + 1
-      logger.info(s"dim ${dim}, start: ${startIdx} to: ${toIdx}, num ${numChunksForDim}")
+      //logger.info(s"dim ${dim}, start: ${startIdx} to: ${toIdx}, num ${numChunksForDim}")
       numChunks *= numChunksForDim
     }
     if (numChunks < 0) {

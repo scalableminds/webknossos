@@ -66,44 +66,42 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   @throws[InvalidRangeException]
   def readBytesXYZ(shape: Vec3Int, offset: Vec3Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val paddingDimensionsCount = header.shape.length - 3
-    val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.z :+ offset.y :+ offset.x // TODO create from axis order
-    val outputShapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
-    val inputShapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.z :+ shape.y :+ shape.x
+    val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
+    val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
 
-    readBytes(inputShapeArray, outputShapeArray, offsetArray)
+    readBytes(shapeArray, offsetArray)
   }
 
   // @return Byte array in fortran-order with little-endian values
   @throws[IOException]
   @throws[InvalidRangeException]
-  def readBytes(shape: Array[Int], outputShape: Array[Int], offset: Array[Int])(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       typedData <- readAsFortranOrder(shape, offset)
-      typedDataWrapped = MultiArrayUtils.createArrayWithGivenStorage(typedData, shape.reverse)
-      targetAxisOrderBuffer = MultiArrayUtils.createDataBuffer(header.dataType, outputShape)
-      target = MultiArrayUtils.createArrayWithGivenStorage(targetAxisOrderBuffer, outputShape)
-      source = MultiArrayUtils.axisOrderXYZView(typedDataWrapped, axisOrder, flip = false)
     } yield BytesConverter.toByteArray(typedData, header.dataType, ByteOrder.LITTLE_ENDIAN)
 
   @throws[IOException]
   @throws[InvalidRangeException]
   def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
     val buffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
-    val chunkIndices = ChunkUtils.computeChunkIndices(header.shape, header.chunks, shape, offset)
+    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.shape),
+                                                      axisOrder.permuteIndicesReverse(header.chunks),
+                                                      shape,
+                                                      offset)
+    val targetInCOrder: MultiArray =
+      MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(buffer, shape.reverse))
     val res = Fox.serialCombined(chunkIndices.toList) { chunkIndex: Array[Int] =>
       for {
-        sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
-        offsetInChunk = computeOffsetInChunk(chunkIndex, offset) // todo use axis order in here?
+        _ <- Fox.successful(logger.info(s"chunkIndex: ${chunkIndex.toList}, permutedIndex: ${axisOrder
+          .permuteIndices(chunkIndex)
+          .toList}, axisOrder: $axisOrder, permutation: ${axisOrder.permutation(chunkIndex.length).toList}"))
+        sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex)) // permute chunk index here, using axis order
+        offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
         _ = if (partialCopyingIsNotNeeded(shape, offsetInChunk)) {
           return Future.successful(sourceChunk.getStorage)
         } else {
           val sourceChunkInCOrder: MultiArray =
-            if (header.order == ArrayOrder.C)
-              sourceChunk
-            else MultiArrayUtils.orderFlippedView(sourceChunk)
-          val targetInCOrder: MultiArray =
-            MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(buffer, shape.reverse))
+            MultiArrayUtils.axisOrderXYZView(sourceChunk, axisOrder, flip = header.order == ArrayOrder.C)
           MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
         }
       } yield ()
@@ -125,7 +123,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
     chunkIndex.mkString(header.dimension_separator.toString)
 
   private def partialCopyingIsNotNeeded(bufferShape: Array[Int], offset: Array[Int]): Boolean =
-    header.order == ArrayOrder.F && isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape)
+    header.order == ArrayOrder.F && isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape) // TODO assert correct axis order
 
   private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
     util.Arrays.equals(bufferShape, header.chunks)
@@ -135,7 +133,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
 
   private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * header.chunks(dim))
+      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(header.chunks)(dim))
     }.toArray
 
   override def toString: String =

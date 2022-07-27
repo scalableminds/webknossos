@@ -59,7 +59,7 @@ function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementCl
   // since r137.
   let idx = 0;
   let srcIdx = 0;
-  while (idx < 3 * constants.BUCKET_SIZE) {
+  while (srcIdx < 3 * constants.BUCKET_SIZE) {
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     tmpPaddingBuffer[idx++] = src[srcIdx++];

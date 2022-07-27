@@ -135,7 +135,7 @@ function _ShareModalView(props: Props) {
   const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
   const restrictions = useSelector((state: OxalisState) => state.tracing.restrictions);
   const [visibility, setVisibility] = useState(annotationVisibility);
-  const [isChangingInProgess, setIsChangingInProgess] = useState(false);
+  const [isChangingInProgress, setIsChangingInProgress] = useState(false);
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -159,7 +159,7 @@ function _ShareModalView(props: Props) {
   const reportSuccessfulChange = (newVisibility: APIAnnotationVisibility) => {
     const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);
     Toast.success(messages["annotation.shared_teams_edited"], {
-      timeout: 4000,
+      timeout: 3500,
       key: randomKeyToAllowDuplicates,
     });
 
@@ -173,13 +173,13 @@ function _ShareModalView(props: Props) {
     if (newVisibility === visibility || !hasUpdatePermissions) {
       return;
     }
-    setIsChangingInProgess(true);
+    setIsChangingInProgress(true);
     setVisibility(newVisibility as any as APIAnnotationVisibility);
     await editAnnotation(annotationId, annotationType, {
       visibility: newVisibility,
     });
     Store.dispatch(setAnnotationVisibilityAction(newVisibility));
-    setIsChangingInProgess(false);
+    setIsChangingInProgress(false);
     reportSuccessfulChange(newVisibility);
   };
 
@@ -188,8 +188,8 @@ function _ShareModalView(props: Props) {
     if (_.isEqual(newTeams, sharedTeams) || !hasUpdatePermissions) {
       return;
     }
-    setIsChangingInProgess(true);
-    setSharedTeams(_.flatten([value]));
+    setIsChangingInProgress(true);
+    setSharedTeams(newTeams);
     if (visibility !== "Private") {
       await updateTeamsForSharedAnnotation(
         annotationType,
@@ -197,7 +197,7 @@ function _ShareModalView(props: Props) {
         sharedTeams.map((team) => team.id),
       );
     }
-    setIsChangingInProgess(false);
+    setIsChangingInProgress(false);
     reportSuccessfulChange(visibility);
   };
 
@@ -305,7 +305,7 @@ function _ShareModalView(props: Props) {
           <RadioGroup
             onChange={handleCheckboxChange}
             value={visibility}
-            disabled={isChangingInProgess}
+            disabled={isChangingInProgress}
           >
             <Radio style={radioStyle} value="Private" disabled={!hasUpdatePermissions}>
               Private
@@ -367,7 +367,7 @@ function _ShareModalView(props: Props) {
             allowNonEditableTeams
             value={sharedTeams}
             onChange={handleSharedTeamsChange}
-            disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgess}
+            disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
           />
           <Hint
             style={{

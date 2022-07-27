@@ -39,22 +39,6 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
         action.curHeight,
       );
     }
-    case "MOVE_TD_VIEW_TO_POSITION_WITHOUT_TIME_TRACKING":
-    case "MOVE_TD_VIEW_TO_POSITION": {
-      console.log("MOVE_TD_VIEW_TO_POSITION");
-      const { x, y, z } = action;
-      return update(state, {
-        viewModeData: {
-          plane: {
-            tdCamera: {
-              $merge: {
-                position: [x, y, z],
-              },
-            },
-          },
-        },
-      });
-    }
 
     case "SET_INPUT_CATCHER_RECT": {
       const newState = setInputCatcherRect(state, action.viewport, action.rect);

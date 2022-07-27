@@ -11,6 +11,7 @@ import constants, {
   AnnotationToolEnum,
   OrthoViews,
   ShowContextMenuFunction,
+  TDCameras,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -206,7 +207,6 @@ class TDController extends React.PureComponent<Props> {
       control.noZoom = true;
       control.staticMoving = true;
       control.panSpeed = 1;
-      // !!! target is set here !!!
       control.target.set(...pos);
     });
     // This is necessary, since we instantiated this.controls now. This should be removed
@@ -225,11 +225,6 @@ class TDController extends React.PureComponent<Props> {
       tdViewportSize[0] / (scaleX * constants.VIEWPORT_WIDTH),
       tdViewportSize[1] / (scaleY * constants.VIEWPORT_WIDTH),
     ];
-    // TODO:
-    // Make the fly cam the rotation center
-    // The camera teleports to the center when clicking one of the buttons.
-    // Likely the position and so in the store is not up to date with the camera.
-    // return;
     const flycamPos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     this.controls.forEach((control) => {
       control.flycamPos.set(...flycamPos);
@@ -313,7 +308,6 @@ class TDController extends React.PureComponent<Props> {
     return controls;
   }
 
-  /*
   updateTDPositionAfterMovement(x: number, y: number) {
     const storeState = Store.getState();
     const flycamPos = voxelToNm(
@@ -336,8 +330,7 @@ class TDController extends React.PureComponent<Props> {
       cameraMovementVector,
     );
     this.props.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera].updateProjectionMatrix();
-    // console.log(this.props.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera]);
-  }*/
+  }
 
   setTargetAndFixPosition = (position?: Vector3): void => {
     const { controls } = this;
@@ -373,8 +366,7 @@ class TDController extends React.PureComponent<Props> {
     // reverse euler order
     rotation.order = rotation.order.split("").reverse().join("");
     nmVector.applyEuler(rotation);
-    // TODO: here
-    // this.updateTDPositionAfterMovement(nmVector.x, nmVector.y);
+    this.updateTDPositionAfterMovement(nmVector.x, nmVector.y);
   };
 
   zoomTDView(value: number, zoomToMouse: boolean = true): void {
@@ -388,17 +380,6 @@ class TDController extends React.PureComponent<Props> {
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Point2 | null | undefined' is no... Remove this comment to see the full error message
     Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
-
-  /*moveTDView(delta: Point2): void {
-    console.log("I would be moved now....");
-    /*const storeState = Store.getState();
-    let [scaleX, scaleY] = getViewportScale(Store.getState(), OrthoViews.TDView);
-    scaleX = delta.x / scaleX;
-    scaleY = -delta.y / scaleY;
-    scaleX *= getTDViewportSize(storeState)[0] / constants.VIEWPORT_WIDTH;
-    scaleY *= (-1 * getTDViewportSize(storeState)[1]) / constants.VIEWPORT_WIDTH;
-    this.updateTDPositionAfterMovement(scaleX, scaleY);
-  } */
 
   onTDCameraChanged = (userTriggered: boolean, lookAt?: THREE.Vector3) => {
     const { OrthographicCamera } = this.props.cameras[OrthoViews.TDView];

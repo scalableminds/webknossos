@@ -191,7 +191,6 @@ class CameraController extends React.PureComponent<Props> {
 
     if (inputCatcherRects != null) {
       // Update td camera's aspect ratio
-      // TODO: Adopt the perspective camera
       const { PerspectiveCamera: tdPerspectiveCamera, OrthographicCamera: tdOrthoCamera } =
         this.props.cameras[OrthoViews.TDView];
       const oldMid = (tdOrthoCamera.right + tdOrthoCamera.left) / 2;
@@ -260,7 +259,6 @@ class CameraController extends React.PureComponent<Props> {
     const height = Math.abs(cameraData.bottom - cameraData.top);
     const tdOrthoCamera = this.props.cameras[OrthoViews.TDView][TDCameras.OrthographicCamera];
     const tdPerspectiveCamera = this.props.cameras[OrthoViews.TDView][TDCameras.PerspectiveCamera];
-    // const allowedPerspectiveDistance = 50000;
 
     this.allTDCameras().forEach((tdCamera) => {
       tdCamera.position.set(...cameraData.position);
@@ -270,36 +268,13 @@ class CameraController extends React.PureComponent<Props> {
       }
     });
     const flycamVector = new THREE.Vector3(...flycamPos);
-    /*const directionToFlyCam = new THREE.Vector3();
-    directionToFlyCam.subVectors(tdOrthoCamera.position, flycamVector) ;
-    tdPerspectiveCamera.position.*/
     const directionToFlyCam = new THREE.Vector3();
     directionToFlyCam.subVectors(tdOrthoCamera.position, flycamVector);
-    /*if (cameraData.xDiff !== 0 || cameraData.yDiff !== 0) {
-      const cameraMovementVector = new THREE.Vector3().copy(directionToFlyCam);
-      cameraMovementVector.cross(tdPerspectiveCamera.up).setLength(cameraData.xDiff);
-      cameraMovementVector.add(directionToFlyCam.clone().setLength(cameraData.yDiff));
-      tdPerspectiveCamera.position.add(cameraMovementVector);
-      console.log("movement", cameraMovementVector, "position", tdPerspectiveCamera.position);
-    }*/
     const distToFlycam = tdPerspectiveCamera.position.distanceTo(flycamVector);
-    // correct distance to flycam to ensure no z fighting in that distance area. -> This calculation breaks the perspective camera!!!!
-    /*if (distToFlycam > allowedPerspectiveDistance) {
-      directionToFlyCam.multiplyScalar(allowedPerspectiveDistance / distToFlycam);
-      tdPerspectiveCamera.position.add(directionToFlyCam);
-      distToFlycam = tdPerspectiveCamera.position.distanceTo(flycamVector);
-    }*/
-    // tdPerspectiveCamera.lookAt(orthoCamLookAt);
-
-    // TODO: Check whether this calculation is ok. The calculation uses the flycam as a reference point,
-    // which may not be ideal because this changes the angle / fov calculation once the dataset is moved
-    // away from the center and therefore the distance changes.
-    // TODO: Fix rotation for perspective camera.
     const angleInRadian = 2 * Math.atan(height / (2 * distToFlycam));
     const angleInDegree = angleInRadian * (180 / Math.PI);
     tdPerspectiveCamera.aspect = width / height;
     tdPerspectiveCamera.fov = angleInDegree;
-    // tdPerspectiveCamera.far = distToFlycam + allowedPerspectiveDistance;
     tdOrthoCamera.left = cameraData.left;
     tdOrthoCamera.right = cameraData.right;
     tdOrthoCamera.top = cameraData.top;
@@ -307,20 +282,6 @@ class CameraController extends React.PureComponent<Props> {
     this.allTDCameras().forEach((tdCamera) => {
       tdCamera.updateProjectionMatrix();
     });
-    /*const orthoCamLookAt = new THREE.Vector3(0, 0, -1);
-    // rotated to the direction the ortho cam is looking.
-    orthoCamLookAt.applyQuaternion(tdOrthoCamera.quaternion).normalize();
-    // enlarge the vector to match the distance of the focus point ot the ortho cam (we assume the focus point is the flycam position or at a similar distance)
-    //orthoCamLookAt.multiplyScalar(tdOrthoCamera.position.distanceTo(flycamVector));
-    //orthoCamLookAt.add(tdOrthoCamera.position);
-    const myTest = new THREE.Vector3(
-      cameraData.right - cameraData.left,
-      cameraData.bottom - cameraData.top,
-      -tdOrthoCamera.position.distanceTo(flycamVector),
-    );
-    const TestB = myTest.clone().applyQuaternion(tdOrthoCamera.quaternion);
-
-    console.log("position", tdOrthoCamera.position);*/
     this.props.onCameraPositionChanged();
   }
 
@@ -434,7 +395,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const currentDistance = currentCenterDistance * (1 - t) + targetCenterDistance * t;
     // Use forward vector and currentFlycamPos (lookAt target) to calculate the current
     // camera's position which should be on a sphere (center=currentFlycamPos, radius=centerDistance).
-    //
     const newPosition = V3.toArray(
       V3.sub(newLookAt.toArray() as Vector3, V3.scale(tweened.forward, currentDistance)),
     );

@@ -61,7 +61,15 @@ import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
+const MESH_CHUNK_THROTTLE_DELAY = 500;
 const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 6;
+
+// The calculation of an isosurface is spread across multiple requests.
+// In order to avoid, that a huge amount of chunks is downloaded at full speed,
+// we artificially throttle the download speed after the first MESH_CHUNK_THROTTLE_LIMIT
+// requests for each segment.
+const batchCounterPerSegment: Record<number, number> = {};
+const MESH_CHUNK_THROTTLE_LIMIT = 50;
 
 /*
  *
@@ -146,12 +154,6 @@ function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vect
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return neighboringPosition;
 }
-
-// The calculation of an isosurface is spread across multiple requests.
-// In order to avoid, that too many chunks are computed for one user interaction,
-// we store the amount of requests in a batch per segment.
-const batchCounterPerSegment: Record<number, number> = {};
-const MAXIMUM_BATCH_SIZE = 400;
 
 function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void> {
   yield* call(
@@ -314,27 +316,9 @@ function* loadIsosurfaceWithNeighbors(
   yield* put(finishedLoadingIsosurfaceAction(layer.name, segmentId));
 }
 
-function getAdHocMeshLoadingLimit(): number {
-  // @ts-expect-error ts-migrate(2339) FIXME: Property '__isosurfaceMaxBatchSize' does not exist... Remove this comment to see the full error message
-  return window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE;
+function hasMeshChunkExceededThrottleLimit(segmentId: number): boolean {
+  return batchCounterPerSegment[segmentId] > MESH_CHUNK_THROTTLE_LIMIT;
 }
-
-function hasBatchCounterExceededLimit(segmentId: number): boolean {
-  return batchCounterPerSegment[segmentId] > getAdHocMeshLoadingLimit();
-}
-
-function _warnAboutAdHocMeshLimit(segmentId: number) {
-  const warning = "Reached ad-hoc mesh loading limit";
-  console.warn(`${warning} for segment ${segmentId}`);
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string' is not assignable to par... Remove this comment to see the full error message
-  ErrorHandling.notify(warning, {
-    segmentId,
-    limit: getAdHocMeshLoadingLimit(),
-  });
-}
-
-// Avoid warning about the same segment multiple times
-const warnAboutAdHocMeshLimit = _.memoize(_warnAboutAdHocMeshLimit);
 
 function* maybeLoadIsosurface(
   layer: DataLayer,
@@ -352,9 +336,8 @@ function* maybeLoadIsosurface(
     return [];
   }
 
-  if (hasBatchCounterExceededLimit(segmentId)) {
-    warnAboutAdHocMeshLimit(segmentId);
-    return [];
+  if (hasMeshChunkExceededThrottleLimit(segmentId)) {
+    yield* call(sleep, MESH_CHUNK_THROTTLE_DELAY);
   }
 
   batchCounterPerSegment[segmentId]++;

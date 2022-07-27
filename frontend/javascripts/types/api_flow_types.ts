@@ -560,6 +560,7 @@ export type APIJob = {
   readonly datasetName: string | null | undefined;
   readonly exportFileName: string | null | undefined;
   readonly layerName: string | null | undefined;
+  readonly annotationLayerName: string | null | undefined;
   readonly tracingId: string | null | undefined;
   readonly annotationId: string | null | undefined;
   readonly annotationType: string | null | undefined;

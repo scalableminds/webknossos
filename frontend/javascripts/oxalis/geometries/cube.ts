@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import type { OrthoView, OrthoViewMap, OrthoViewWithoutTDMap, Vector3 } from "oxalis/constants";
+import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/throttled_store";

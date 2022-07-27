@@ -203,6 +203,7 @@ void main() {
      vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
      <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellId);
      gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
+     gl_FragColor.a = 1.0;
   <% }) %>
   <% } %>
 }

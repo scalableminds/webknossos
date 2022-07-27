@@ -195,7 +195,7 @@ datasetNames.map(async (datasetName) => {
 annotationSpecs.map(async (annotationSpec) => {
   const [datasetName, fallbackLayerName] = annotationSpec;
 
-  test.serial.only(
+  test.serial(
     `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
     async (t) => {
       console.log(

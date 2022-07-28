@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr
 import java.net.URI
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.jzarr.AxisOrder
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
@@ -19,7 +20,10 @@ case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Opti
   lazy val credentials: Option[FileSystemCredentials] = user.map(u => FileSystemCredentials(u, password))
 }
 
-case class ZarrMag(mag: Vec3Int, path: Option[String], credentials: Option[FileSystemCredentials]) {
+case class ZarrMag(mag: Vec3Int,
+                   path: Option[String],
+                   credentials: Option[FileSystemCredentials],
+                   axisOrder: Option[AxisOrder]) {
 
   lazy val pathWithFallback: String =
     path.getOrElse(if (mag.isIsotropic) s"${mag.x}" else s"${mag.x}-${mag.y}-${mag.z}")

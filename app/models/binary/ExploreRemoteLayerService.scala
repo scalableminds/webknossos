@@ -143,8 +143,9 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       name <- guessNameFromPath(remotePath)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
-      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, AxisOrder.guessFromRank(zarrHeader.shape.length)) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
-      zarrMag = ZarrMag(Vec3Int.ones, Some(remotePath.toString), credentials)
+      guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)
+      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
+      zarrMag = ZarrMag(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
     } yield
       List((ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag)), Vec3Double(1.0, 1.0, 1.0)))
 
@@ -210,7 +211,11 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       boundingBox <- boundingBoxFromZarrHeader(zarrHeader, axisOrder) ?~> "failed to read bounding box from zarr header."
-    } yield MagWithAttributes(ZarrMag(mag, Some(path.toString), credentials), path, elementClass, boundingBox)
+    } yield
+      MagWithAttributes(ZarrMag(mag, Some(path.toString), credentials, Some(axisOrder)),
+                        path,
+                        elementClass,
+                        boundingBox)
 
   private def elementClassFromMags(magsWithAttributes: List[MagWithAttributes])(
       implicit ec: ExecutionContext): Fox[ElementClass.Value] = {

@@ -68,8 +68,8 @@ object MultiArrayUtils {
     val targetShape: Array[Int] = target.getShape
     val sourceRanges = new util.ArrayList[Range]
     val targetRanges = new util.ArrayList[Range]
-    println(
-      s"copyRange, offset ${offset.toList}, sourceShape: ${sourceShape.toList}, targetShape: ${targetShape.toList}")
+    //println(
+    //  s"copyRange, offset ${offset.toList}, sourceShape: ${sourceShape.toList}, targetShape: ${targetShape.toList}")
     for (dimension <- offset.indices) {
       val dimOffset = offset(dimension)
       var sourceFirst = 0
@@ -96,28 +96,22 @@ object MultiArrayUtils {
     while ({ sourceRangeIterator.hasNext }) setter.set(sourceRangeIterator, targetRangeIterator)
   }
 
-  private def createValueSetter(elementType: Class[_]): MultiArrayUtils.ValueSetter = {
-    if (elementType eq classOf[Double])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setDoubleNext(sourceIterator.getDoubleNext)
-    else if (elementType eq classOf[Float])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setFloatNext(sourceIterator.getFloatNext)
-    else if (elementType eq classOf[Long])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setLongNext(sourceIterator.getLongNext)
-    else if (elementType eq classOf[Int])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setIntNext(sourceIterator.getIntNext)
-    else if (elementType eq classOf[Short])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setShortNext(sourceIterator.getShortNext)
-    else if (elementType eq classOf[Byte])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setByteNext(sourceIterator.getByteNext)
-    (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-      targetIterator.setObjectNext(sourceIterator.getObjectNext)
-  }
+  private def createValueSetter(elementType: Class[_]): MultiArrayUtils.ValueSetter =
+    if (elementType eq classOf[Double])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setDoubleNext(sourceIterator.getDoubleNext)
+    else if (elementType eq classOf[Float])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setFloatNext(sourceIterator.getFloatNext)
+    else if (elementType eq classOf[Long])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setLongNext(sourceIterator.getLongNext)
+    else if (elementType eq classOf[Int])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setIntNext(sourceIterator.getIntNext)
+    else if (elementType eq classOf[Short])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setShortNext(sourceIterator.getShortNext)
+    else if (elementType eq classOf[Byte])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setByteNext(sourceIterator.getByteNext)
+    else
+      (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+        targetIterator.setObjectNext(sourceIterator.getObjectNext)
 
   private trait ValueSetter {
     def set(sourceIterator: IndexIterator, targetIterator: IndexIterator)

@@ -155,7 +155,7 @@ class DataSetController @Inject()(userService: UserService,
             reportMutable += s"Resulted in dataSource with ${dataSource.dataLayers.length} layers."
             Some(dataSource)
           case Full(_) =>
-            reportMutable += "Error: Resulted in zero layers."
+            reportMutable += "Error when exploring as layer set: Resulted in zero layers."
             None
           case f: Failure =>
             reportMutable += s"Error when exploring as layer set: ${exploreRemoteLayerService.formatFailureForReport(f)}"

@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.jzarr
 
+import play.api.libs.json.{Json, OFormat}
+
 case class AxisOrder(x: Int, y: Int, z: Int, c: Option[Int] = None, t: Option[Int] = None) {
   def permutation(rank: Int): Array[Int] =
     ((0 until (rank - 3)).toList :+ x :+ y :+ z).toArray
@@ -23,5 +25,10 @@ case class AxisOrder(x: Int, y: Int, z: Int, c: Option[Int] = None, t: Option[In
 
 object AxisOrder {
   // assumes that the last three elements of the shapre are z,y,x (standard in OME NGFF)
-  def guessFromRank(rank: Int): AxisOrder = AxisOrder(rank - 1, rank - 2, rank - 3)
+  def asZyxFromRank(rank: Int): AxisOrder = AxisOrder(rank - 1, rank - 2, rank - 3)
+
+  // assumes that the last three elements of the shapre are x,y,z (which is what webKnossos sends to the frontend)
+  def asXyzFromRank(rank: Int): AxisOrder = AxisOrder(rank - 3, rank - 2, rank - 1)
+
+  implicit val jsonFormat: OFormat[AxisOrder] = Json.format[AxisOrder]
 }

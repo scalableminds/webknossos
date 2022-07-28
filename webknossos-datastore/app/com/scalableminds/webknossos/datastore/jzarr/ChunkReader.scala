@@ -32,10 +32,12 @@ trait ChunkReader {
   protected def readBytes(path: String): Option[Array[Byte]] =
     Using.Manager { use =>
       val is = use(store.getInputStream(path))
-      if (is == null) return None
-      val os = use(new ByteArrayOutputStream())
-      header.compressorImpl.uncompress(is, os)
-      Some(os.toByteArray)
+      if (is == null) None
+      else {
+        val os = use(new ByteArrayOutputStream())
+        header.compressorImpl.uncompress(is, os)
+        Some(os.toByteArray)
+      }
     }.get
 
   def createFilled(dataType: MADataType): MultiArray =

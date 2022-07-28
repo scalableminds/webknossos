@@ -49,6 +49,8 @@ case class ZarrHeader(
 
   lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
 
+  lazy val rank: Int = shape.length
+
 }
 
 object ZarrHeader {

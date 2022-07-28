@@ -90,64 +90,64 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   @SuppressWarnings(Array("TraversableHead", "TraversableLast")) // Only functions call this which put at least one timestamp in the seq
   private def trackTime(timestamps: Seq[Long], _user: ObjectId, _annotation: Annotation)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+      implicit ctx: DBAccessContext): Fox[Unit] =
     if (timestamps.isEmpty) {
       logger.warn("Timetracking called with empty timestamps list.")
-      return Fox.successful(())
-    }
-    // Only if the annotation belongs to the user, we are going to log the time on the annotation
-    val annotation = if (_annotation._user == _user) Some(_annotation) else None
-    val start = timestamps.head
+      Fox.successful(())
+    } else {
+      // Only if the annotation belongs to the user, we are going to log the time on the annotation
+      val annotation = if (_annotation._user == _user) Some(_annotation) else None
+      val start = timestamps.head
 
-    var timeSpansToInsert: List[TimeSpan] = List()
-    var timeSpansToUpdate: List[(TimeSpan, Long)] = List()
+      var timeSpansToInsert: List[TimeSpan] = List()
+      var timeSpansToUpdate: List[(TimeSpan, Long)] = List()
 
-    def createNewTimeSpan(timestamp: Long, _user: ObjectId, annotation: Option[Annotation]) = {
-      val timeSpan = TimeSpan.createFrom(timestamp, timestamp, _user, annotation.map(_._id))
-      timeSpansToInsert = timeSpan :: timeSpansToInsert
-      timeSpan
-    }
-
-    def updateTimeSpan(timeSpan: TimeSpan, timestamp: Long) = {
-      val duration = timestamp - timeSpan.lastUpdate
-      if (duration >= 0) {
-        timeSpansToUpdate = (timeSpan, timestamp) :: timeSpansToUpdate
-        timeSpan.addTime(duration, timestamp)
-      } else {
-        logger.info(
-          s"Not updating previous timespan due to negative duration $duration ms. (user ${timeSpan._user}, last timespan id ${timeSpan._id}, this=$this)")
+      def createNewTimeSpan(timestamp: Long, _user: ObjectId, annotation: Option[Annotation]) = {
+        val timeSpan = TimeSpan.createFrom(timestamp, timestamp, _user, annotation.map(_._id))
+        timeSpansToInsert = timeSpan :: timeSpansToInsert
         timeSpan
       }
-    }
 
-    var current = lastUserActivities
-      .get(_user)
-      .flatMap(lastActivity => {
-        if (isNotInterrupted(start, lastActivity)) {
-          if (belongsToSameTracing(lastActivity, annotation)) {
-            Some(lastActivity)
-          } else {
-            updateTimeSpan(lastActivity, start)
-            None
-          }
-        } else None
-      })
-      .getOrElse(createNewTimeSpan(start, _user, annotation))
-
-    timestamps.sliding(2).foreach { pair =>
-      val start = pair.head
-      val end = pair.last
-      val duration = end - start
-      if (duration >= MaxTracingPauseMillis) {
-        updateTimeSpan(current, start)
-        current = createNewTimeSpan(end, _user, annotation)
+      def updateTimeSpan(timeSpan: TimeSpan, timestamp: Long) = {
+        val duration = timestamp - timeSpan.lastUpdate
+        if (duration >= 0) {
+          timeSpansToUpdate = (timeSpan, timestamp) :: timeSpansToUpdate
+          timeSpan.addTime(duration, timestamp)
+        } else {
+          logger.info(
+            s"Not updating previous timespan due to negative duration $duration ms. (user ${timeSpan._user}, last timespan id ${timeSpan._id}, this=$this)")
+          timeSpan
+        }
       }
-    }
-    current = updateTimeSpan(current, timestamps.last)
-    lastUserActivities.update(_user, current)
 
-    flushToDb(timeSpansToInsert, timeSpansToUpdate)(ctx)
-  }
+      var current = lastUserActivities
+        .get(_user)
+        .flatMap(lastActivity => {
+          if (isNotInterrupted(start, lastActivity)) {
+            if (belongsToSameTracing(lastActivity, annotation)) {
+              Some(lastActivity)
+            } else {
+              updateTimeSpan(lastActivity, start)
+              None
+            }
+          } else None
+        })
+        .getOrElse(createNewTimeSpan(start, _user, annotation))
+
+      timestamps.sliding(2).foreach { pair =>
+        val start = pair.head
+        val end = pair.last
+        val duration = end - start
+        if (duration >= MaxTracingPauseMillis) {
+          updateTimeSpan(current, start)
+          current = createNewTimeSpan(end, _user, annotation)
+        }
+      }
+      current = updateTimeSpan(current, timestamps.last)
+      lastUserActivities.update(_user, current)
+
+      flushToDb(timeSpansToInsert, timeSpansToUpdate)(ctx)
+    }
 
   private def isNotInterrupted(current: Long, last: TimeSpan) = {
     val duration = current - last.lastUpdate

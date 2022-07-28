@@ -28,7 +28,7 @@ case class OmeNgffAxis(name: String, `type`: String, unit: Option[String] = None
 
   def spaceUnitToNmFactor(implicit ec: ExecutionContext): Fox[Double] = {
     if (`type` != "space")
-      return Fox.failure(s"unit-to-nanometer factor requested for non-space axis ($name, ${`type`})")
+      return Fox.failure(s"unit-to-nanometer factor requested for non-space axis ($name, type=${`type`})")
     unit.map(_.toLowerCase) match {
       case None               => Fox.successful(1.0)
       case Some("")           => Fox.successful(1.0)

@@ -28,14 +28,15 @@ case class MagWithAttributes(mag: ZarrMag, remotePath: Path, elementClass: Eleme
 
 class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLogging {
 
-  def exploreRemoteDatasource(urisWithCredentials: List[ExploreRemoteDatasetParameters])(
-      implicit ec: ExecutionContext): Fox[(GenericDataSource[DataLayer], List[String])] =
+  def exploreRemoteDatasource(
+      urisWithCredentials: List[ExploreRemoteDatasetParameters],
+      reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
     for {
-      reportMutable <- Fox.successful(ListBuffer[String]())
       exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(parameters =>
         exploreRemoteLayers(parameters.remoteUri, parameters.user, parameters.password, reportMutable))
       layersWithVoxelSizes = exploredLayersNested.flatten
-      voxelSize <- extractVoxelSize(layersWithVoxelSizes.map(_._2))
+      _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
+      voxelSize <- extractVoxelSize(layersWithVoxelSizes.map(_._2)) ?~> "Could not extract common voxel size from layers"
       layers = makeLayerNamesUnique(layersWithVoxelSizes.map(_._1))
       dataSetName <- dataSetName(urisWithCredentials.map(uriWithCred => normalizeUri(uriWithCred.remoteUri)))
       dataSource = GenericDataSource[DataLayer](
@@ -43,8 +44,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
         layers,
         voxelSize
       )
-      _ = logger.info(reportMutable.mkString("\n"))
-    } yield (dataSource, reportMutable.toList)
+    } yield dataSource
 
   private def makeLayerNamesUnique(layers: List[ZarrLayer]): List[ZarrLayer] = {
     val namesSetMutable = scala.collection.mutable.Set[String]()
@@ -72,8 +72,8 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
 
   private def extractVoxelSize(voxelSizes: List[Vec3Double])(implicit ec: ExecutionContext): Fox[Vec3Double] =
     for {
-      head <- voxelSizes.headOption.toFox
-      _ <- bool2Fox(voxelSizes.forall(_ == head))
+      head <- voxelSizes.headOption.toFox ?~> s"no layers"
+      _ <- bool2Fox(voxelSizes.forall(_ == head)) ?~> s"voxel sizes for layers are not uniform, got $voxelSizes"
     } yield head
 
   private def exploreRemoteLayers(
@@ -84,8 +84,8 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     val uri = new URI(normalizeUri(layerUri))
     val remoteSource = RemoteSourceDescriptor(uri, user, password)
     for {
-      fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "failed to get file system"
-      remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "failed to get remote path"
+      fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
+      remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
       layersWithVoxelSizes <- exploreAsArrayOrNgff(remotePath, remoteSource.credentials, reportMutable)
     } yield layersWithVoxelSizes
   }
@@ -109,8 +109,8 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
           reportMutable += s"Found ZarrArray with name ${asArrayResult.headOption.map(_._1.name)} at $remotePath"
           Fox.successful(asArrayResult)
         case f: Failure =>
-          reportMutable += s"Error when reading $remotePath as ZarrArray: $f"
-          reportMutable += s"Trying to explore $remotePath as multiscales group..."
+          reportMutable += s"Error when reading $remotePath as ZarrArray: ${formatFailureForReport(f)}"
+          reportMutable += s"Trying to explore $remotePath as OME NGFF 0.4 multiscales group..."
           (for {
             asNgffBox <- exploreAsNgff(remotePath, credentials).futureBox
             result <- asNgffBox match {
@@ -118,14 +118,23 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
                 reportMutable += s"Found multiscales group with layer names ${asNgffResult.map(_._1.name)} at $remotePath"
                 Fox.successful(asNgffResult)
               case f2: Failure =>
-                reportMutable += s"Error when reading $remotePath as multiscales group: $f2"
-                f2.toFox
-              case Empty => Fox.empty
+                reportMutable += s"Error when reading $remotePath as multiscales group: ${formatFailureForReport(f)}"
+                Fox.successful(List.empty)
+              case Empty => Fox.successful(List.empty)
             }
           } yield result).toFox
-        case Empty => Fox.empty
+        case Empty => Fox.successful(List.empty)
       }
     } yield result
+
+  def formatFailureForReport(failure: Failure): String = {
+    def formatChain(chain: Box[Failure]): String = chain match {
+      case Full(failure) =>
+        " <~ " + failure.msg + formatChain(failure.chain)
+      case _ => ""
+    }
+    failure.msg + formatChain(failure.chain)
+  }
 
   private def exploreAsZarrArray(remotePath: Path, credentials: Option[FileSystemCredentials])(
       implicit ec: ExecutionContext): Fox[List[(ZarrLayer, Vec3Double)]] =
@@ -133,29 +142,30 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       zarrayPath <- Fox.successful(remotePath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY))
       name <- guessNameFromPath(remotePath)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
-      elementClass <- zarrHeader.elementClass
-      boundingBox = boundingBoxFromZarrHeader(zarrHeader, AxisOrder.guessFromRank(zarrHeader.shape.length))
+      elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header"
+      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, AxisOrder.guessFromRank(zarrHeader.shape.length)) ?~> s"failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
       zarrMag = ZarrMag(Vec3Int.ones, Some(remotePath.toString), credentials)
     } yield
       List((ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag)), Vec3Double(1.0, 1.0, 1.0)))
 
-  private def boundingBoxFromZarrHeader(zarrHeader: ZarrHeader, axisOrder: AxisOrder): BoundingBox =
-    BoundingBox(Vec3Int.zeros,
-                zarrHeader.shape(axisOrder.x),
-                zarrHeader.shape(axisOrder.y),
-                zarrHeader.shape(axisOrder.z))
+  private def boundingBoxFromZarrHeader(zarrHeader: ZarrHeader, axisOrder: AxisOrder): Box[BoundingBox] =
+    tryo(
+      BoundingBox(Vec3Int.zeros,
+                  zarrHeader.shape(axisOrder.x),
+                  zarrHeader.shape(axisOrder.y),
+                  zarrHeader.shape(axisOrder.z)))
 
-  private def parseJsonFromPath[T: Reads](path: Path): Box[T] =
+  private def parseJsonFromPath[T: Reads](path: Path)(implicit ec: ExecutionContext): Fox[T] =
     for {
-      fileAsString <- tryo(new String(Files.readAllBytes(path), StandardCharsets.UTF_8))
-      parsed <- JsonHelper.parseJsonToFox[T](fileAsString)
+      fileAsString <- tryo(new String(Files.readAllBytes(path), StandardCharsets.UTF_8)).toFox ?~> "Failed to read remote file"
+      parsed <- JsonHelper.parseJsonToFox[T](fileAsString) ?~> "Failed to validate json against data schema"
     } yield parsed
 
   private def exploreAsNgff(remotePath: Path, credentials: Option[FileSystemCredentials])(
       implicit ec: ExecutionContext): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       zattrsPath <- Fox.successful(remotePath.resolve(OmeNgffHeader.FILENAME_DOT_ZATTRS))
-      omeNgffHeader <- parseJsonFromPath[OmeNgffHeader](zattrsPath) ?~> s"failed to read ome ngff header at $zattrsPath"
+      omeNgffHeader <- parseJsonFromPath[OmeNgffHeader](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
       _ <- Fox.successful(logger.info(f"OMG: $omeNgffHeader"))
       layers <- Fox.serialCombined(omeNgffHeader.multiscales)(layerFromMultiscale(_, remotePath, credentials))
     } yield layers
@@ -165,11 +175,11 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       remotePath: Path,
       credentials: Option[FileSystemCredentials])(implicit ec: ExecutionContext): Fox[(ZarrLayer, Vec3Double)] =
     for {
-      axisOrder <- extractAxisOrder(multiscale.axes)
-      axisUnitFactors <- extractAxisUnitFactors(multiscale.axes, axisOrder)
+      axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
+      axisUnitFactors <- extractAxisUnitFactors(multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
       voxelSizeInAxisUnits <- extractVoxelSize(multiscale.datasets.map(_.coordinateTransformations),
                                                axisOrder,
-                                               axisUnitFactors)
+                                               axisUnitFactors) ?~> "Could not extract voxel size from scale transforms"
       magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
         zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials))
       _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
@@ -194,11 +204,12 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       axisOrder: AxisOrder,
       credentials: Option[FileSystemCredentials])(implicit ec: ExecutionContext): Fox[MagWithAttributes] =
     for {
-      mag <- magFromTransforms(dataset.coordinateTransformations, voxelSizeInAxisUnits, axisOrder)
+      mag <- magFromTransforms(dataset.coordinateTransformations, voxelSizeInAxisUnits, axisOrder) ?~> "Could not extract mag from scale transforms"
       path = layerPath.resolve(dataset.path)
-      zarrHeader <- parseJsonFromPath[ZarrHeader](path.resolve(ZarrHeader.FILENAME_DOT_ZARRAY))
-      elementClass <- zarrHeader.elementClass
-      boundingBox = boundingBoxFromZarrHeader(zarrHeader, axisOrder)
+      zarrayPath = path.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
+      zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
+      elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header"
+      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, axisOrder) ?~> s"failed to read bounding box from zarr header."
     } yield MagWithAttributes(ZarrMag(mag, Some(path.toString), credentials), path, elementClass, boundingBox)
 
   private def elementClassFromMags(magsWithAttributes: List[MagWithAttributes])(
@@ -206,7 +217,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     val elementClasses = magsWithAttributes.map(_.elementClass)
     for {
       head <- elementClasses.headOption.toFox
-      _ <- bool2Fox(elementClasses.forall(_ == head))
+      _ <- bool2Fox(elementClasses.forall(_ == head)) ?~> s"Element class must be the same for all mags of a layer. got $elementClasses"
     } yield head
   }
 
@@ -222,8 +233,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     val y = axes.indexWhere(axisMatches(_, "y"))
     val z = axes.indexWhere(axisMatches(_, "z"))
     for {
-      _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid axis order: $x,$y,$z"
-      //_ <- bool2Fox(z == axes.length - 3 && y == axes.length - 2 && x == axes.length - 1) ?~> s"currently, wk supports only axis order where z,y,x are the last three axes. got z$z,y$y,x$x, count=${axes.length}"
+      _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
     } yield AxisOrder(x, y, z)
   }
 
@@ -241,7 +251,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     val combinedScale = extractAndCombineScaleTransforms(coordinateTransformations, axisOrder)
     val mag = (combinedScale / voxelSizeInAxisUnits).round.toVec3Int
     for {
-      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x)) ?~> s"invalid mag: $mag"
+      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x)) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
   }
 

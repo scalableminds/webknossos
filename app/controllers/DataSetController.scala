@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
 import io.swagger.annotations._
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
@@ -13,6 +14,7 @@ import models.binary._
 import models.organization.OrganizationDAO
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
+import net.liftweb.common.{Box, Failure, Full, Empty}
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -21,6 +23,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -142,9 +145,26 @@ class DataSetController @Inject()(userService: UserService,
   @ApiOperation(hidden = true, value = "")
   def exploreRemoteDataset(): Action[List[ExploreRemoteDatasetParameters]] =
     sil.SecuredAction.async(validateJson[List[ExploreRemoteDatasetParameters]]) { implicit request =>
+      val reportMutable = ListBuffer[String]()
       for {
-        (dataSource, report) <- exploreRemoteLayerService.exploreRemoteDatasource(request.body)
-      } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSource), "report" -> report))
+        dataSourceBox: Box[GenericDataSource[DataLayer]] <- exploreRemoteLayerService
+          .exploreRemoteDatasource(request.body, reportMutable)
+          .futureBox
+        dataSourceOpt = dataSourceBox match {
+          case Full(dataSource) if dataSource.dataLayers.nonEmpty =>
+            reportMutable += s"Resulted in dataSource with ${dataSource.dataLayers.length} layers."
+            Some(dataSource)
+          case Full(_) =>
+            reportMutable += s"Error: Resulted in zero layers."
+            None
+          case f: Failure =>
+            reportMutable += s"Error when exploring as layer set: ${exploreRemoteLayerService.formatFailureForReport(f)}"
+            None
+          case Empty =>
+            reportMutable += s"Error when exploring as layer set: Empty"
+            None
+        }
+      } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.toList))
     }
 
   @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")

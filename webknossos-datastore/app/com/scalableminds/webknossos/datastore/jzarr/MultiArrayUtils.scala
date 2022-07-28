@@ -131,7 +131,7 @@ object MultiArrayUtils {
   def axisOrderXYZView(source: MultiArray, axisOrder: AxisOrder, flip: Boolean): MultiArray = {
     // create a view in which the last three axes are XYZ, rest unchanged
     // optionally flip the axes afterwards
-    val permutation = axisOrder.permutation(source.getRank)
+    val permutation = axisOrder.permutation(source.getRank) // TODO double check when to use inverse
     val flippedIfNeeded = if (flip) permutation.reverse else permutation
     // println(s"permutation (flipped=$flip): $flippedIfNeeded")
     source.permute(flippedIfNeeded)

@@ -75,7 +75,7 @@ test("Flycam Accessors should calculate the request log zoom step (2/2)", (t) =>
   state.flycam.zoomStep = 8;
   t.is(accessors.getRequestLogZoomStep(state), 3);
 });
-test.only("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", (t) => {
+test("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", (t) => {
   const scale: Vector3 = [4, 4, 35];
   const resolutions: Vector3[] = [
     [1, 1, 1],

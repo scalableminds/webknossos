@@ -348,7 +348,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     ),
   );
 });
-test.only("VolumeTracingSaga should ignore brush action when busy (saga test)", (t) => {
+test("VolumeTracingSaga should ignore brush action when busy (saga test)", (t) => {
   const saga = editVolumeLayerAsync();
   saga.next();
   saga.next();

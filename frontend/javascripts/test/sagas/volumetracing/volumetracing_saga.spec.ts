@@ -115,6 +115,7 @@ test.before("Mock Date.now", async () => {
   // This only mocks Date.now, but leaves the constructor intact
   sinon.stub(Date, "now").returns(TIMESTAMP);
 });
+
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {
   const saga = setupSavingForTracingType(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
@@ -134,6 +135,7 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => 
   const items = execCall(t, saga.next(initialState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
 });
+
 test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const newState = VolumeTracingReducer(initialState, setActiveCellAction);
   const saga = setupSavingForTracingType(
@@ -159,6 +161,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
     put(pushSaveQueueTransaction(items, "volume", volumeTracing.tracingId)),
   );
 });
+
 test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
   const saga = editVolumeLayerAsync();
   saga.next();
@@ -196,6 +199,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
   const layer = startEditingSaga.next([1, 1, 1]).value;
   t.is(layer.plane, OrthoViews.PLANE_XY);
 });
+
 test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   const saga = editVolumeLayerAsync();
   saga.next();
@@ -242,6 +246,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   t.deepEqual(volumeLayer.minCoord, [-1, 0, 1]);
   t.deepEqual(volumeLayer.maxCoord, [5, 6, 7]);
 });
+
 test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   const saga = editVolumeLayerAsync();
   saga.next();
@@ -292,9 +297,11 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
       ContourModeEnum.DRAW,
       OverwriteModeEnum.OVERWRITE_ALL,
       0,
+      OrthoViews.PLANE_XY,
     ),
   );
 });
+
 test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)", (t) => {
   const saga = editVolumeLayerAsync();
   saga.next();
@@ -345,9 +352,11 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
       ContourModeEnum.DELETE,
       OverwriteModeEnum.OVERWRITE_ALL,
       0,
+      OrthoViews.PLANE_XY,
     ),
   );
 });
+
 test("VolumeTracingSaga should ignore brush action when busy (saga test)", (t) => {
   const saga = editVolumeLayerAsync();
   saga.next();

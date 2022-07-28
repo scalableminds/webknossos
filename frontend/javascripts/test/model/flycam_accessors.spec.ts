@@ -57,7 +57,7 @@ const initialState: OxalisState = {
   },
   flycam: {
     ...defaultState.flycam,
-    zoomStep: 1.3,
+    zoomStep: 1.0,
     currentMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1223, 3218, 518, 1],
     spaceDirectionOrtho: [1, 1, 1],
   },

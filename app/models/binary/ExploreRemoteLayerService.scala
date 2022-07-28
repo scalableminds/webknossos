@@ -118,7 +118,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
                 reportMutable += s"Found multiscales group with layer names ${asNgffResult.map(_._1.name)} at $remotePath"
                 Fox.successful(asNgffResult)
               case f2: Failure =>
-                reportMutable += s"Error when reading $remotePath as multiscales group: ${formatFailureForReport(f)}"
+                reportMutable += s"Error when reading $remotePath as multiscales group: ${formatFailureForReport(f2)}"
                 Fox.successful(List.empty)
               case Empty => Fox.successful(List.empty)
             }

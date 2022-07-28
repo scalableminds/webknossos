@@ -72,7 +72,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
 
   private def extractVoxelSize(voxelSizes: List[Vec3Double])(implicit ec: ExecutionContext): Fox[Vec3Double] =
     for {
-      head <- voxelSizes.headOption.toFox ?~> s"no layers"
+      head <- voxelSizes.headOption.toFox
       _ <- bool2Fox(voxelSizes.forall(_ == head)) ?~> s"voxel sizes for layers are not uniform, got $voxelSizes"
     } yield head
 
@@ -142,8 +142,8 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       zarrayPath <- Fox.successful(remotePath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY))
       name <- guessNameFromPath(remotePath)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
-      elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header"
-      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, AxisOrder.guessFromRank(zarrHeader.shape.length)) ?~> s"failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
+      elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
+      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, AxisOrder.guessFromRank(zarrHeader.shape.length)) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
       zarrMag = ZarrMag(Vec3Int.ones, Some(remotePath.toString), credentials)
     } yield
       List((ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag)), Vec3Double(1.0, 1.0, 1.0)))
@@ -208,8 +208,8 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       path = layerPath.resolve(dataset.path)
       zarrayPath = path.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
-      elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header"
-      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, axisOrder) ?~> s"failed to read bounding box from zarr header."
+      elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
+      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, axisOrder) ?~> "failed to read bounding box from zarr header."
     } yield MagWithAttributes(ZarrMag(mag, Some(path.toString), credentials), path, elementClass, boundingBox)
 
   private def elementClassFromMags(magsWithAttributes: List[MagWithAttributes])(

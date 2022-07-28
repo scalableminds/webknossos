@@ -155,13 +155,13 @@ class DataSetController @Inject()(userService: UserService,
             reportMutable += s"Resulted in dataSource with ${dataSource.dataLayers.length} layers."
             Some(dataSource)
           case Full(_) =>
-            reportMutable += s"Error: Resulted in zero layers."
+            reportMutable += "Error: Resulted in zero layers."
             None
           case f: Failure =>
             reportMutable += s"Error when exploring as layer set: ${exploreRemoteLayerService.formatFailureForReport(f)}"
             None
           case Empty =>
-            reportMutable += s"Error when exploring as layer set: Empty"
+            reportMutable += "Error when exploring as layer set: Empty"
             None
         }
       } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.toList))

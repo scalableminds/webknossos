@@ -11,6 +11,8 @@ import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
 import com.typesafe.scalalogging.LazyLogging
 
+import scala.collection.JavaConverters._
+
 class FileSystemsCache(val maxEntries: Int) extends LRUConcurrentCache[RemoteSourceDescriptor, FileSystem]
 class FileSystemsProvidersCache(val maxEntries: Int) extends LRUConcurrentCache[String, FileSystemProvider]
 
@@ -89,14 +91,8 @@ object FileSystemsHolder extends LazyLogging {
 
   private def findProvider(scheme: String): Option[FileSystemProvider] = {
     val providersIterator =
-      ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator()
-    while (providersIterator.hasNext) {
-      val provider = providersIterator.next()
-      if (provider.getScheme.equalsIgnoreCase(scheme)) {
-        return Some(provider)
-      }
-    }
-    None
+      ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator().asScala
+    providersIterator.find(p => p.getScheme.equalsIgnoreCase(scheme))
   }
 
 }

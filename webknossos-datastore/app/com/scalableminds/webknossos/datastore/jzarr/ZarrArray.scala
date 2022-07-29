@@ -9,6 +9,7 @@ import akka.http.caching.scaladsl.Cache
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.option2Fox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
@@ -83,29 +84,33 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader, axisOr
   @throws[IOException]
   @throws[InvalidRangeException]
   def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
-    val buffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.shape),
                                                       axisOrder.permuteIndicesReverse(header.chunks),
                                                       shape,
                                                       offset)
-    val targetInCOrder: MultiArray =
-      MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(buffer, shape.reverse))
-    val res = Fox.serialCombined(chunkIndices.toList) { chunkIndex: Array[Int] =>
+    if (partialCopyingIsNotNeeded(shape, offset, chunkIndices)) {
       for {
+        chunkIndex <- chunkIndices.headOption.toFox
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
-        offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
-        _ = if (partialCopyingIsNotNeeded(shape, offsetInChunk)) {
-          return Future.successful(sourceChunk.getStorage)
-        } else {
-          val sourceChunkInCOrder: MultiArray =
-            MultiArrayUtils.axisOrderXYZView(sourceChunk, axisOrder, flip = header.order != ArrayOrder.C)
-          MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
-        }
-      } yield ()
+      } yield sourceChunk.getStorage
+    } else {
+      val targetBuffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
+      val targetInCOrder: MultiArray =
+        MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
+      val wasCopiedFox = Fox.serialCombined(chunkIndices) { chunkIndex: Array[Int] =>
+        for {
+          sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
+          offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
+          sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
+                                                                             axisOrder,
+                                                                             flip = header.order != ArrayOrder.C)
+          _ = MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
+        } yield ()
+      }
+      for {
+        _ <- wasCopiedFox
+      } yield targetBuffer
     }
-    for {
-      _ <- res
-    } yield buffer
   }
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Future[MultiArray] = {
@@ -123,6 +128,19 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader, axisOr
     header.order == ArrayOrder.F && isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape) && axisOrder == AxisOrder
       .asXyzFromRank(header.rank)
 
+  private def partialCopyingIsNotNeeded(bufferShape: Array[Int],
+                                        globalOffset: Array[Int],
+                                        chunkIndices: List[Array[Int]]): Boolean =
+    chunkIndices match {
+      case chunkIndex :: Nil =>
+        val offsetInChunk = computeOffsetInChunk(chunkIndex, globalOffset)
+        header.order == ArrayOrder.F &&
+        isZeroOffset(offsetInChunk) &&
+        isBufferShapeEqualChunkShape(bufferShape) &&
+        axisOrder == AxisOrder.asXyzFromRank(header.rank)
+      case _ :: _ => false
+    }
+
   private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
     util.Arrays.equals(bufferShape, header.chunks)
 
@@ -135,7 +153,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader, axisOr
     }.toArray
 
   override def toString: String =
-    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' shape=${header.shape.mkString(",")} chunks=${header.chunks
+    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.shape.mkString(",")} chunks=${header.chunks
       .mkString(",")} dtype=${header.dtype} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
 
 }

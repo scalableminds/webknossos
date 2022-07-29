@@ -6,7 +6,7 @@ object ChunkUtils extends LazyLogging {
   def computeChunkIndices(arrayShape: Array[Int],
                           arrayChunkSize: Array[Int],
                           selectedShape: Array[Int],
-                          selectedOffset: Array[Int]): Array[Array[Int]] = {
+                          selectedOffset: Array[Int]): List[Array[Int]] = {
     val depth = arrayShape.length
     val start = new Array[Int](depth)
     val to = new Array[Int](depth)
@@ -39,6 +39,6 @@ object ChunkUtils extends LazyLogging {
         depthIdx = -1
       }
     }
-    chunkIndices
+    chunkIndices.toList
   }
 }

@@ -178,9 +178,9 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     for {
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
       axisUnitFactors <- extractAxisUnitFactors(multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
-      voxelSizeInAxisUnits <- extractVoxelSize(multiscale.datasets.map(_.coordinateTransformations),
-                                               axisOrder,
-                                               axisUnitFactors) ?~> "Could not extract voxel size from scale transforms"
+      voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(
+        multiscale.datasets.map(_.coordinateTransformations),
+        axisOrder) ?~> "Could not extract voxel size from scale transforms"
       magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
         zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentials))
       _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
@@ -209,8 +209,8 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       path = layerPath.resolve(dataset.path)
       zarrayPath = path.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
-      elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
-      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, axisOrder) ?~> "failed to read bounding box from zarr header."
+      elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrayPath"
+      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, axisOrder) ?~> s"failed to read bounding box from zarr header  at $zarrayPath"
     } yield
       MagWithAttributes(ZarrMag(mag, Some(path.toString), credentials, Some(axisOrder)),
                         path,
@@ -262,16 +262,14 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
 
   private def isPowerOfTwo(x: Int): Boolean = x != 0 && (x & (x - 1)) == 0
 
-  private def extractVoxelSize(allCoordinateTransformations: List[List[OmeNgffCoordinateTransformation]],
-                               axisOrder: AxisOrder,
-                               axisUnitFactors: Vec3Double)(implicit ec: ExecutionContext): Fox[Vec3Double] = {
+  private def extractVoxelSizeInAxisUnits(allCoordinateTransformations: List[List[OmeNgffCoordinateTransformation]],
+                                          axisOrder: AxisOrder)(implicit ec: ExecutionContext): Fox[Vec3Double] = {
     val scales = allCoordinateTransformations.map(t => extractAndCombineScaleTransforms(t, axisOrder))
     val smallestScaleIsUniform = scales.minBy(_.x) == scales.minBy(_.y) && scales.minBy(_.y) == scales.minBy(_.z)
     for {
       _ <- bool2Fox(smallestScaleIsUniform) ?~> "ome scales do not agree on smallest dimension"
       voxelSizeInAxisUnits = scales.minBy(_.x)
-      voxelSize = voxelSizeInAxisUnits * axisUnitFactors
-    } yield voxelSize
+    } yield voxelSizeInAxisUnits
   }
 
   private def extractAndCombineScaleTransforms(coordinateTransformations: List[OmeNgffCoordinateTransformation],

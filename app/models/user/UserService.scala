@@ -195,7 +195,7 @@ class UserService @Inject()(conf: WkConf,
 
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {
-      userIdValidated <- ObjectId.parse(loginInfo.providerKey)
+      userIdValidated <- ObjectId.fromString(loginInfo.providerKey)
       user <- findOneById(userIdValidated, useCache = true)(GlobalAccessContext)
       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
     } yield passwordInfo

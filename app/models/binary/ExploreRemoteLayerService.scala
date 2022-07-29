@@ -33,12 +33,12 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
     for {
       exploredLayersNested <- Fox.serialCombined(urisWithCredentials)(parameters =>
-        exploreRemoteLayers(parameters.remoteUri, parameters.user, parameters.password, reportMutable))
+        exploreRemoteLayersForUri(parameters.remoteUri, parameters.user, parameters.password, reportMutable))
       layersWithVoxelSizes = exploredLayersNested.flatten
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
-      voxelSize <- extractVoxelSize(layersWithVoxelSizes.map(_._2)) ?~> "Could not extract common voxel size from layers"
+      voxelSize <- commonVoxelSize(layersWithVoxelSizes.map(_._2)) ?~> "Could not extract common voxel size from layers"
       layers = makeLayerNamesUnique(layersWithVoxelSizes.map(_._1))
-      dataSetName <- dataSetName(urisWithCredentials.map(uriWithCred => normalizeUri(uriWithCred.remoteUri)))
+      dataSetName <- dataSetName(urisWithCredentials.map(_.remoteUri))
       dataSource = GenericDataSource[DataLayer](
         DataSourceId(dataSetName, ""),
         layers,
@@ -67,22 +67,21 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
   }
 
   private def dataSetName(uris: List[String])(implicit ec: ExecutionContext): Fox[String] =
-    if (uris.length == 1) uris.headOption.map(_.split("/").last).toFox
+    if (uris.length == 1) uris.headOption.map(normalizeUri(_).split("/").last).toFox
     else Fox.successful("explored_remote_dataset")
 
-  private def extractVoxelSize(voxelSizes: List[Vec3Double])(implicit ec: ExecutionContext): Fox[Vec3Double] =
+  private def commonVoxelSize(voxelSizes: List[Vec3Double])(implicit ec: ExecutionContext): Fox[Vec3Double] =
     for {
       head <- voxelSizes.headOption.toFox
       _ <- bool2Fox(voxelSizes.forall(_ == head)) ?~> s"voxel sizes for layers are not uniform, got $voxelSizes"
     } yield head
 
-  private def exploreRemoteLayers(
+  private def exploreRemoteLayersForUri(
       layerUri: String,
       user: Option[String],
       password: Option[String],
       reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[List[(ZarrLayer, Vec3Double)]] = {
-    val uri = new URI(normalizeUri(layerUri))
-    val remoteSource = RemoteSourceDescriptor(uri, user, password)
+    val remoteSource = RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)
     for {
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
       remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
@@ -144,17 +143,10 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)
-      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
+      boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
       zarrMag = ZarrMag(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
     } yield
       List((ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag)), Vec3Double(1.0, 1.0, 1.0)))
-
-  private def boundingBoxFromZarrHeader(zarrHeader: ZarrHeader, axisOrder: AxisOrder): Box[BoundingBox] =
-    tryo(
-      BoundingBox(Vec3Int.zeros,
-                  zarrHeader.shape(axisOrder.x),
-                  zarrHeader.shape(axisOrder.y),
-                  zarrHeader.shape(axisOrder.z)))
 
   private def parseJsonFromPath[T: Reads](path: Path)(implicit ec: ExecutionContext): Fox[T] =
     for {
@@ -166,12 +158,11 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       implicit ec: ExecutionContext): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       zattrsPath <- Fox.successful(remotePath.resolve(OmeNgffHeader.FILENAME_DOT_ZATTRS))
-      omeNgffHeader <- parseJsonFromPath[OmeNgffHeader](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      _ <- Fox.successful(logger.info(f"OMG: $omeNgffHeader"))
-      layers <- Fox.serialCombined(omeNgffHeader.multiscales)(layerFromMultiscale(_, remotePath, credentials))
+      ngffHeader <- parseJsonFromPath[OmeNgffHeader](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
+      layers <- Fox.serialCombined(ngffHeader.multiscales)(layerFromNgffMultiscale(_, remotePath, credentials))
     } yield layers
 
-  private def layerFromMultiscale(
+  private def layerFromNgffMultiscale(
       multiscale: OmeNgffOneHeader,
       remotePath: Path,
       credentials: Option[FileSystemCredentials])(implicit ec: ExecutionContext): Fox[(ZarrLayer, Vec3Double)] =
@@ -187,7 +178,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       boundingBox = boundingBoxFromMags(magsWithAttributes)
       name <- guessNameFromPath(remotePath)
-      voxelSizeNm = voxelSizeInAxisUnits * axisUnitFactors
+      voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
     } yield
       (ZarrDataLayer(
          multiscale.name.getOrElse(name),
@@ -196,24 +187,24 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
          elementClass,
          magsWithAttributes.map(_.mag)
        ),
-       voxelSizeNm)
+       voxelSizeNanometers)
 
   private def zarrMagFromNgffDataset(
-      dataset: OmeNgffDataset,
+      ngffDataset: OmeNgffDataset,
       layerPath: Path,
       voxelSizeInAxisUnits: Vec3Double,
       axisOrder: AxisOrder,
       credentials: Option[FileSystemCredentials])(implicit ec: ExecutionContext): Fox[MagWithAttributes] =
     for {
-      mag <- magFromTransforms(dataset.coordinateTransformations, voxelSizeInAxisUnits, axisOrder) ?~> "Could not extract mag from scale transforms"
-      path = layerPath.resolve(dataset.path)
-      zarrayPath = path.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
+      mag <- magFromTransforms(ngffDataset.coordinateTransformations, voxelSizeInAxisUnits, axisOrder) ?~> "Could not extract mag from scale transforms"
+      magPath = layerPath.resolve(ngffDataset.path)
+      zarrayPath = magPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
       zarrHeader <- parseJsonFromPath[ZarrHeader](zarrayPath) ?~> s"failed to read zarr header at $zarrayPath"
       elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrayPath"
-      boundingBox <- boundingBoxFromZarrHeader(zarrHeader, axisOrder) ?~> s"failed to read bounding box from zarr header  at $zarrayPath"
+      boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
-      MagWithAttributes(ZarrMag(mag, Some(path.toString), credentials, Some(axisOrder)),
-                        path,
+      MagWithAttributes(ZarrMag(mag, Some(magPath.toString), credentials, Some(axisOrder)),
+                        magPath,
                         elementClass,
                         boundingBox)
 
@@ -250,21 +241,22 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       zUnitFactor <- axes(axisOrder.z).spaceUnitToNmFactor
     } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor)
 
-  private def magFromTransforms(coordinateTransformations: List[OmeNgffCoordinateTransformation],
+  private def magFromTransforms(coordinateTransforms: List[OmeNgffCoordinateTransformation],
                                 voxelSizeInAxisUnits: Vec3Double,
                                 axisOrder: AxisOrder)(implicit ec: ExecutionContext): Fox[Vec3Int] = {
-    val combinedScale = extractAndCombineScaleTransforms(coordinateTransformations, axisOrder)
+    def isPowerOfTwo(x: Int): Boolean =
+      x != 0 && (x & (x - 1)) == 0
+
+    val combinedScale = extractAndCombineScaleTransforms(coordinateTransforms, axisOrder)
     val mag = (combinedScale / voxelSizeInAxisUnits).round.toVec3Int
     for {
       _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x)) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
   }
 
-  private def isPowerOfTwo(x: Int): Boolean = x != 0 && (x & (x - 1)) == 0
-
-  private def extractVoxelSizeInAxisUnits(allCoordinateTransformations: List[List[OmeNgffCoordinateTransformation]],
+  private def extractVoxelSizeInAxisUnits(allCoordinateTransforms: List[List[OmeNgffCoordinateTransformation]],
                                           axisOrder: AxisOrder)(implicit ec: ExecutionContext): Fox[Vec3Double] = {
-    val scales = allCoordinateTransformations.map(t => extractAndCombineScaleTransforms(t, axisOrder))
+    val scales = allCoordinateTransforms.map(t => extractAndCombineScaleTransforms(t, axisOrder))
     val smallestScaleIsUniform = scales.minBy(_.x) == scales.minBy(_.y) && scales.minBy(_.y) == scales.minBy(_.z)
     for {
       _ <- bool2Fox(smallestScaleIsUniform) ?~> "ome scales do not agree on smallest dimension"
@@ -272,12 +264,13 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     } yield voxelSizeInAxisUnits
   }
 
-  private def extractAndCombineScaleTransforms(coordinateTransformations: List[OmeNgffCoordinateTransformation],
+  private def extractAndCombineScaleTransforms(coordinateTransforms: List[OmeNgffCoordinateTransformation],
                                                axisOrder: AxisOrder): Vec3Double = {
-    val filtered = coordinateTransformations.filter(_.`type` == "scale")
+    val filtered = coordinateTransforms.filter(_.`type` == "scale")
     val xFactors = filtered.map(_.scale(axisOrder.x))
     val yFactors = filtered.map(_.scale(axisOrder.y))
     val zFactors = filtered.map(_.scale(axisOrder.z))
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
+
 }

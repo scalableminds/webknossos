@@ -19,12 +19,11 @@ object ChunkUtils extends LazyLogging {
       start(dim) = startIdx
       to(dim) = toIdx
       val numChunksForDim = toIdx - startIdx + 1
-      //logger.info(s"dim ${dim}, start: ${startIdx} to: ${toIdx}, num ${numChunksForDim}")
       numChunks *= numChunksForDim
     }
     if (numChunks < 0) {
-      logger.info(
-        s"Failed to compute chunk indices. array shape ${arrayShape.toList}, chunkShape: ${arrayChunkSize.toList}, requested ${selectedShape.toList} at ${selectedOffset.toList}")
+      logger.warn(
+        s"Failed to compute zarr chunk indices. array shape ${arrayShape.toList}, chunkShape: ${arrayChunkSize.toList}, requested ${selectedShape.toList} at ${selectedOffset.toList}")
     }
     val chunkIndices = new Array[Array[Int]](numChunks)
     val currentIdx = start.clone

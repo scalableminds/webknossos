@@ -74,16 +74,16 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader, axisOr
   // @return Byte array in fortran-order with little-endian values
   @throws[IOException]
   @throws[InvalidRangeException]
-  def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       typedData <- readAsFortranOrder(shape, offset)
     } yield BytesConverter.toByteArray(typedData, header.dataType, ByteOrder.LITTLE_ENDIAN)
 
-  // Read from array. Note that shape and offset should be passed in zero-left-padded XYZ order
+  // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
   @throws[IOException]
   @throws[InvalidRangeException]
-  def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
+  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
     val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.shape),
                                                       axisOrder.permuteIndicesReverse(header.chunks),
                                                       shape,
@@ -123,10 +123,6 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader, axisOr
 
   private def getChunkFilename(chunkIndex: Array[Int]): String =
     chunkIndex.mkString(header.dimension_separator.toString)
-
-  private def partialCopyingIsNotNeeded(bufferShape: Array[Int], offset: Array[Int]): Boolean =
-    header.order == ArrayOrder.F && isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape) && axisOrder == AxisOrder
-      .asXyzFromRank(header.rank)
 
   private def partialCopyingIsNotNeeded(bufferShape: Array[Int],
                                         globalOffset: Array[Int],

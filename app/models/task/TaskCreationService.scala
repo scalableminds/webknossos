@@ -380,56 +380,57 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     val fullTasks = requestedTasks.flatten
     if (fullTasks.isEmpty) {
       // if there is no nonempty task, we directly return all of the errors
-      Fox.successful(TaskCreationResult.fromBoxResults(requestedTasks.map(_.map(_ => Json.obj())), List.empty[String]))
-    } else {
-      for {
-        _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
-        firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
-        _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
-          "dataSet.notFound",
-          firstDatasetName)
-        _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))
-          slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeId).distinct,
-                                                                    fullTasks.count(_._1.baseAnnotation.isDefined))
-        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        savedSkeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
-          SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple.map(_._2).openOr(None)))))
-        skeletonTracingIds: List[Box[Option[String]]] = savedSkeletonTracingIds.zip(requestedTasks).map {
-          case (savedId, base) =>
-            base match {
-              case f: Failure => f
-              case _          => savedId
-            }
-        }
-        // Note that volume tracings are saved sequentially to reduce server load
-        volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
-          saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)
-        }
-        skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), skeletonTracingIds).zipped.toList,
-                                                    isSkeletonId = true)
-        volumeTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), volumeTracingIds).zipped.toList,
-                                                  isSkeletonId = false)
-        requestedTasksWithTracingIds = (requestedTasks, skeletonTracingsIdsMerged, volumeTracingsIdsMerged).zipped.toList
-        taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r =>
-          createTaskWithoutAnnotationBase(r._1.map(_._1), r._2, r._3, requestingUser))
-        zipped = (requestedTasks, skeletonTracingsIdsMerged.zip(volumeTracingsIdsMerged), taskObjects).zipped.toList
-        createAnnotationBaseResults: List[Fox[Unit]] = zipped.map(
-          tuple =>
-            annotationService.createAnnotationBase(
-              taskFox = tuple._3,
-              requestingUser._id,
-              skeletonTracingIdBox = tuple._2._1,
-              volumeTracingIdBox = tuple._2._2,
-              dataSet._id,
-              description = tuple._1.map(_._1.description).openOr(None)
-          ))
-        warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataSet, requestingUser)
-        zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
-        taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
-        result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
-      } yield result
+      return Fox.successful(
+        TaskCreationResult.fromBoxResults(requestedTasks.map(_.map(_ => Json.obj())), List.empty[String]))
     }
+
+    for {
+      _ <- assertEachHasEitherSkeletonOrVolume(fullTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
+      firstDatasetName <- fullTasks.headOption.map(_._1.dataSet).toFox
+      _ <- assertAllOnSameDataset(fullTasks, firstDatasetName)
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, requestingUser._organization) ?~> Messages(
+        "dataSet.notFound",
+        firstDatasetName)
+      _ = if (fullTasks.exists(task => task._1.baseAnnotation.isDefined))
+        slackNotificationService.noticeBaseAnnotationTaskCreation(fullTasks.map(_._1.taskTypeId).distinct,
+                                                                  fullTasks.count(_._1.baseAnnotation.isDefined))
+      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      savedSkeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
+        SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple.map(_._2).openOr(None)))))
+      skeletonTracingIds: List[Box[Option[String]]] = savedSkeletonTracingIds.zip(requestedTasks).map {
+        case (savedId, base) =>
+          base match {
+            case f: Failure => f
+            case _          => savedId
+          }
+      }
+      // Note that volume tracings are saved sequentially to reduce server load
+      volumeTracingIds: List[Box[Option[String]]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
+        saveVolumeTracingIfPresent(requestedTask, tracingStoreClient)
+      }
+      skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), skeletonTracingIds).zipped.toList,
+                                                  isSkeletonId = true)
+      volumeTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), volumeTracingIds).zipped.toList,
+                                                isSkeletonId = false)
+      requestedTasksWithTracingIds = (requestedTasks, skeletonTracingsIdsMerged, volumeTracingsIdsMerged).zipped.toList
+      taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r =>
+        createTaskWithoutAnnotationBase(r._1.map(_._1), r._2, r._3, requestingUser))
+      zipped = (requestedTasks, skeletonTracingsIdsMerged.zip(volumeTracingsIdsMerged), taskObjects).zipped.toList
+      createAnnotationBaseResults: List[Fox[Unit]] = zipped.map(
+        tuple =>
+          annotationService.createAnnotationBase(
+            taskFox = tuple._3,
+            requestingUser._id,
+            skeletonTracingIdBox = tuple._2._1,
+            volumeTracingIdBox = tuple._2._2,
+            dataSet._id,
+            description = tuple._1.map(_._1.description).openOr(None)
+        ))
+      warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataSet, requestingUser)
+      zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
+      taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
+      result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
+    } yield result
   }
 
   private def assertEachHasEitherSkeletonOrVolume(

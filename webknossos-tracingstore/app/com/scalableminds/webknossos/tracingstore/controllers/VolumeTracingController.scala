@@ -501,6 +501,17 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  def agglomerateGraphMinCut(token: Option[String], tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            _ <- editableMappingService.agglomerateGraphMinCut()
+          } yield Ok
+        }
+      }
+    }
+
   def updateEditableMapping(token: Option[String], tracingId: String): Action[List[EditableMappingUpdateActionGroup]] =
     Action.async(validateJson[List[EditableMappingUpdateActionGroup]]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {

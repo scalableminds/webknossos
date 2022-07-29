@@ -134,7 +134,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader, axisOr
         isZeroOffset(offsetInChunk) &&
         isBufferShapeEqualChunkShape(bufferShape) &&
         axisOrder == AxisOrder.asXyzFromRank(header.rank)
-      case _ :: _ => false
+      case _ => false
     }
 
   private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =

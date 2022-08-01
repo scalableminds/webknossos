@@ -204,11 +204,9 @@ function _ShareModalView(props: Props) {
       await editAnnotation(annotationId, annotationType, {
         visibility: newVisibility,
       });
-      debugger;
       Store.dispatch(setAnnotationVisibilityAction(newVisibility));
       reportSuccessfulChange(newVisibility);
     } catch (e) {
-      debugger;
       console.error("Failed to update the annotations visibility.", e);
       // Resetting the visibility to the old value as the request failed
       // so the user still sees the settings currently saved in the backend.
@@ -307,7 +305,13 @@ function _ShareModalView(props: Props) {
   const includeToken = !dataset.isPublic && visibility === "Public";
   const url = getUrl(sharingToken, includeToken);
   return (
-    <Modal title="Share this annotation" visible={isVisible} width={800} onOk={onOk}>
+    <Modal
+      title="Share this annotation"
+      visible={isVisible}
+      width={800}
+      onOk={onOk}
+      cancelButtonProps={{ style: { display: "none" } }}
+    >
       <Row>
         <Col
           span={6}

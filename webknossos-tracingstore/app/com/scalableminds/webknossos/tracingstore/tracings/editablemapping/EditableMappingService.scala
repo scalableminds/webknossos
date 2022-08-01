@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import java.nio.file.Paths
+import java.util
 import java.util.UUID
 
 import com.google.inject.Inject
@@ -14,19 +15,30 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.Elemen
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
-
-import scala.concurrent.duration._
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.{BinaryDataService, IsosurfaceRequest, IsosurfaceService, IsosurfaceServiceHolder}
+import com.scalableminds.webknossos.datastore.services.{
+  BinaryDataService,
+  IsosurfaceRequest,
+  IsosurfaceService,
+  IsosurfaceServiceHolder
+}
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, VersionedKeyValuePair}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  KeyValueStoreImplicits,
+  TracingDataStore,
+  VersionedKeyValuePair
+}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Empty, Full}
+import org.jgrapht.alg.flow.PushRelabelMFImpl
+import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.jdk.CollectionConverters.asScalaSetConverter
 
 case class EditableMappingKey(
     editableMappingId: String,
@@ -568,8 +580,9 @@ class EditableMappingService @Inject()(
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result
 
-
-  def agglomerateGraphMinCut(parameters: MinCutParameters, remoteFallbackLayer: RemoteFallbackLayer, userToken: Option[String]): Fox[List[(Long, Long)]] = {
+  def agglomerateGraphMinCut(parameters: MinCutParameters,
+                             remoteFallbackLayer: RemoteFallbackLayer,
+                             userToken: Option[String]): Fox[List[(Long, Long)]] =
     for {
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition2, parameters.mag, userToken)
@@ -577,10 +590,21 @@ class EditableMappingService @Inject()(
       agglomerateGraph <- agglomerateGraphForId(mapping, parameters.agglomerateId, remoteFallbackLayer, userToken)
       edgesToCut = minCut(agglomerateGraph, segmentId1, segmentId2)
     } yield edgesToCut
-  }
 
   private def minCut(agglomerateGraph: AgglomerateGraph, segmentId1: Long, segmentId2: Long): List[(Long, Long)] = {
-    List.empty
+    val g = new SimpleWeightedGraph[Long, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
+    agglomerateGraph.segments.foreach { segmentId =>
+      g.addVertex(segmentId)
+    }
+    agglomerateGraph.edges.zip(agglomerateGraph.affinities).foreach {
+      case (edge, affinity) =>
+        val e = g.addEdge(edge.source, edge.target)
+        g.setEdgeWeight(e, affinity)
+    }
+    val minCutImpl = new PushRelabelMFImpl(g)
+    minCutImpl.calculateMinCut(segmentId1, segmentId2)
+    val minCutEdges: util.Set[DefaultWeightedEdge] = minCutImpl.getCutEdges
+    minCutEdges.asScala.toList.map(e => (g.getEdgeSource(e), g.getEdgeTarget(e)))
   }
 
 }

@@ -263,7 +263,7 @@ class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implici
       rows: Seq[(String, String, Boolean)] <- run(query.result)
       teamMemberships <- Fox.combined(rows.toList.map {
         case (teamId, _, isTeamManager) =>
-          ObjectId.parse(teamId).map(teamIdValidated => TeamMembership(teamIdValidated, isTeamManager))
+          ObjectId.fromString(teamId).map(teamIdValidated => TeamMembership(teamIdValidated, isTeamManager))
       })
     } yield teamMemberships
   }

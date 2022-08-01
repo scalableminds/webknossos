@@ -338,7 +338,7 @@ Expects:
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
           includeMemberOnlyTeams = request.identity.isDatasetManager
           userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
           oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)

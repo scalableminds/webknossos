@@ -51,7 +51,7 @@ class UserController @Inject()(userService: UserService,
     implicit request =>
       log() {
         for {
-          userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+          userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
           js <- userService.publicWrites(user, request.identity)
@@ -114,7 +114,7 @@ class UserController @Inject()(userService: UserService,
       "Get the logged time of the passed user. Only available for admins or team managers of the user in question.")
   def userLoggedTime(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+      userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
       user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
       loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
@@ -137,7 +137,7 @@ class UserController @Inject()(userService: UserService,
       Fox
         .combined(request.body.users.map { userId =>
           for {
-            userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+            userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
             user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
             userEmail <- userService.emailFor(user)
             _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
@@ -175,7 +175,7 @@ class UserController @Inject()(userService: UserService,
                       includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         annotations <- annotationDAO.findAllFor(userIdValidated,
@@ -203,7 +203,7 @@ class UserController @Inject()(userService: UserService,
                 includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         annotations <- annotationDAO.findAllFor(userIdValidated,
@@ -341,7 +341,7 @@ class UserController @Inject()(userService: UserService,
             experiencesOpt,
             lastTaskTypeIdOpt) =>
         for {
-          userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+          userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
           oldExperience <- userService.experiencesFor(user._id)
           oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
@@ -393,7 +393,7 @@ class UserController @Inject()(userService: UserService,
     val issuingUser = request.identity
     withJsonBodyUsing((__ \ "lastTaskTypeId").readNullable[String]) { lastTaskTypeId =>
       for {
-        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isEditable <- userService.isEditableBy(user, request.identity) ?~> "notAllowed" ~> FORBIDDEN
         _ <- bool2Fox(isEditable | user._id == issuingUser._id)
@@ -408,7 +408,7 @@ class UserController @Inject()(userService: UserService,
   def updateNovelUserExperienceInfos(userId: String): Action[JsObject] =
     sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
       for {
-        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
         _ <- bool2Fox(request.identity._id == userIdValidated) ?~> "notAllowed" ~> FORBIDDEN
         _ <- multiUserDAO.updateNovelUserExperienceInfos(request.identity._multiUser, request.body)
         updatedUser <- userDAO.findOne(userIdValidated)
@@ -420,7 +420,7 @@ class UserController @Inject()(userService: UserService,
   def updateSelectedTheme(userId: String): Action[Theme] =
     sil.SecuredAction.async(validateJson[Theme]) { implicit request =>
       for {
-        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        userIdValidated <- ObjectId.fromString(userId) ?~> "user.id.invalid"
         _ <- bool2Fox(request.identity._id == userIdValidated) ?~> "notAllowed" ~> FORBIDDEN
         _ <- multiUserDAO.updateSelectedTheme(request.identity._multiUser, request.body)
         updatedUser <- userDAO.findOne(userIdValidated)

@@ -71,10 +71,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       taskParameters: TaskParameters,
       organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
-      taskTypeIdValidated <- ObjectId.parse(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
+      taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       dataSet <- dataSetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
-      baseAnnotationIdValidated <- ObjectId.parse(baseAnnotation.baseId)
+      baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       newSkeletonId <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid)
@@ -169,7 +169,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       implicit ctx: DBAccessContext): Fox[List[Option[SkeletonTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
-        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
+        taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         skeletonTracingOpt = if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           Some(
@@ -189,7 +189,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       m: MessagesProvider): Fox[List[Option[(VolumeTracing, Option[File])]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
-        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
+        taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         volumeTracingOpt <- if ((taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           annotationService
@@ -476,7 +476,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     } match {
       case Full((params: TaskParameters, Some((tracing, initialFile)))) =>
         for {
-          taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
+          taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
           taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
           saveResult <- tracingStoreClient
             .saveVolumeTracing(tracing, initialFile, resolutionRestrictions = taskType.settings.resolutionRestrictions)
@@ -514,7 +514,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     scriptIdOpt match {
       case Some(scriptId) =>
         for {
-          scriptIdValidated <- ObjectId.parse(scriptId)
+          scriptIdValidated <- ObjectId.fromString(scriptId)
           _ <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
         } yield ()
       case _ => Fox.successful(())
@@ -529,7 +529,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
-      taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
+      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId)
       project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> "project.notFound"
       _ <- validateScript(params.scriptId) ?~> "script.invalid"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team))

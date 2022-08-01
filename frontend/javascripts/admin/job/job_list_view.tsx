@@ -133,22 +133,21 @@ class JobListView extends React.PureComponent<Props, State> {
     if (job.type === "convert_to_wkw" && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
     } else if (job.type === "export_tiff" && job.organizationName && job.datasetName) {
-      const volumeAnnotationLabel =
+      const labelToAnnotationOrDataset =
         job.annotationId != null ? (
-          <Link to={`/annotations/${job.annotationType || "Explorational"}/${job.annotationId}`}>
-            volume annotation
+          <Link to={`/annotations/${job.annotationId}`}>
+            annotation of dataset {job.datasetName}
           </Link>
         ) : (
-          "volume annotation"
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            dataset {job.datasetName}
+          </Link>
         );
-      const layerLabel = job.tracingId != null ? volumeAnnotationLabel : job.layerName || "a";
+      const layerLabel = job.annotationLayerName || job.layerName;
       return (
         <span>
-          Tiff export from {layerLabel} layer of{" "}
-          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
-            {job.datasetName}
-          </Link>{" "}
-          (Bounding Box {job.boundingBox})
+          Tiff export of layer {layerLabel} from {labelToAnnotationOrDataset} (Bounding Box{" "}
+          {job.boundingBox})
         </span>
       );
     } else if (job.type === "compute_mesh_file" && job.organizationName && job.datasetName) {

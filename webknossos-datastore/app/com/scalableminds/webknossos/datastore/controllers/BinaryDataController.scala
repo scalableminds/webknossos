@@ -8,6 +8,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -44,7 +45,8 @@ class BinaryDataController @Inject()(
     isosurfaceServiceHolder: IsosurfaceServiceHolder,
     findDataService: FindDataService,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends Controller
+    with MissingBucketHeaders {
 
   override def allowRemoteOrigin: Boolean = true
 
@@ -61,7 +63,7 @@ class BinaryDataController @Inject()(
       dataLayerName: String
   ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 30 seconds) {
         val t = System.currentTimeMillis()
         for {
@@ -77,16 +79,10 @@ class BinaryDataController @Inject()(
                 + s"  dataLayer: $dataLayerName\n"
                 + s"  requestCount: ${request.body.size}"
                 + s"  requestHead: ${request.body.headOption}")
-        } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
       }
     }
   }
-
-  private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
-
-  private def formatMissingBucketList(indices: List[Int]): String =
-    "[" + indices.mkString(", ") + "]"
 
   /**
     * Handles requests for raw binary data via HTTP GET.
@@ -110,10 +106,11 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "Target-mag depth of the bounding box", required = true) depth: Int,
       @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: Option[String],
       resolution: Option[Int],
-      @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
+      @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean,
+      @ApiParam(value = "If set, apply set mapping name") mappingName: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
@@ -123,14 +120,14 @@ class BinaryDataController @Inject()(
         magParsedOpt <- Fox.runOptional(mag)(Vec3Int.fromMagLiteral(_).toFox)
         magParsed <- magParsedOpt.orElse(magFromZoomStep).toFox ?~> "No mag supplied"
         request = DataRequest(
-          new VoxelPosition(x, y, z, magParsed),
+          VoxelPosition(x, y, z, magParsed),
           width,
           height,
           depth,
-          DataServiceRequestSettings(halfByte = halfByte)
+          DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
         (data, indices) <- requestData(dataSource, dataLayer, request)
-      } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
 
@@ -148,22 +145,22 @@ class BinaryDataController @Inject()(
                         z: Int,
                         cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
                                                                                   dataLayerName) ~> 404
         request = DataRequest(
-          new VoxelPosition(x * cubeSize * resolution,
-                            y * cubeSize * resolution,
-                            z * cubeSize * resolution,
-                            Vec3Int(resolution, resolution, resolution)),
+          VoxelPosition(x * cubeSize * resolution,
+                        y * cubeSize * resolution,
+                        z * cubeSize * resolution,
+                        Vec3Int(resolution, resolution, resolution)),
           cubeSize,
           cubeSize,
           cubeSize
         )
         (data, indices) <- requestData(dataSource, dataLayer, request)
-      } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
 
@@ -179,7 +176,7 @@ class BinaryDataController @Inject()(
                     centerZ: Option[Int],
                     zoom: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
@@ -204,7 +201,7 @@ class BinaryDataController @Inject()(
         firstSheet <- spriteSheet.pages.headOption ?~> "image.page.failed"
         outputStream = new ByteArrayOutputStream()
         _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
-      } yield Ok(outputStream.toByteArray).as("image/jpeg")
+      } yield Ok(outputStream.toByteArray).as(jpegMimeType)
     }
   }
   @ApiOperation(hidden = true, value = "")
@@ -216,7 +213,7 @@ class BinaryDataController @Inject()(
       mappingName: String
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
@@ -238,7 +235,7 @@ class BinaryDataController @Inject()(
                         dataLayerName: String): Action[WebKnossosIsosurfaceRequest] =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
@@ -280,7 +277,7 @@ class BinaryDataController @Inject()(
                       dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
@@ -300,7 +297,7 @@ class BinaryDataController @Inject()(
                dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
@@ -320,7 +317,7 @@ class BinaryDataController @Inject()(
                 dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,

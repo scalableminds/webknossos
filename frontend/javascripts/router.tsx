@@ -1,14 +1,13 @@
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter } from "react-router-dom";
-import { Redirect, Route, Router, Switch } from "react-router-dom";
+import { Redirect, Route, Router, Switch, useLocation } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
-import React from "react";
+import React, { useEffect } from "react";
 import { createBrowserHistory } from "history";
 import _ from "lodash";
 import AcceptInviteView from "admin/auth/accept_invite_view";
-import type { APIUser } from "types/api_flow_types";
-import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
+import { TracingTypeEnum, APICompoundTypeEnum, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
@@ -53,7 +52,7 @@ import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
 import * as Utils from "libs/utils";
 import features from "features";
-import window from "libs/window";
+import window, { location as windowLocation } from "libs/window";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { coalesce } from "libs/utils";
 const { Content } = Layout;
@@ -101,23 +100,30 @@ function PageNotFoundView() {
   );
 }
 
+function RedirectToWorkflowViewer() {
+  const location = useLocation();
+
+  useEffect(() => {
+    windowLocation.assign(`https://workflows.voxelytics.com${location.pathname}${location.search}`);
+  }, []);
+
+  return null;
+}
+
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ContextRouter) => {
-    const annotationType = coalesce(APIAnnotationTypeEnum, match.params.type);
+    const initialMaybeCompoundType =
+      match.params.type != null ? coalesce(APICompoundTypeEnum, match.params.type) : null;
 
-    if (annotationType != null) {
-      return (
-        <TracingLayoutView
-          initialAnnotationType={annotationType}
-          initialCommandType={{
-            type: ControlModeEnum.TRACE,
-            annotationId: match.params.id || "",
-          }}
-        />
-      );
-    }
-
-    return <h3>Invalid annotation URL.</h3>;
+    return (
+      <TracingLayoutView
+        initialMaybeCompoundType={initialMaybeCompoundType}
+        initialCommandType={{
+          type: ControlModeEnum.TRACE,
+          annotationId: match.params.id || "",
+        }}
+      />
+    );
   };
 
   tracingSandbox = ({ match }: ContextRouter) => {
@@ -126,7 +132,7 @@ class ReactRouter extends React.Component<Props> {
     if (tracingType != null) {
       return (
         <TracingLayoutView
-          initialAnnotationType={APIAnnotationTypeEnum.Explorational}
+          initialMaybeCompoundType={null}
           initialCommandType={{
             type: ControlModeEnum.SANDBOX,
             tracingType,
@@ -142,7 +148,7 @@ class ReactRouter extends React.Component<Props> {
 
   tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
-      initialAnnotationType={APIAnnotationTypeEnum.View}
+      initialMaybeCompoundType={null}
       initialCommandType={{
         type: ControlModeEnum.VIEW,
         name: match.params.datasetName || "",
@@ -150,6 +156,17 @@ class ReactRouter extends React.Component<Props> {
       }}
     />
   );
+
+  serverAuthenticationCallback = async ({ match }: ContextRouter) => {
+    try {
+      const annotationInformation = await getAnnotationInformation(match.params.id || "");
+      return annotationInformation.visibility === "Public";
+    } catch (ex) {
+      // Annotation could not be found
+    }
+
+    return false;
+  };
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;
@@ -180,9 +197,10 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
-                  const { tab } = match.params;
-                  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-                  const initialTabKey = tab ? urlTokenToTabKeyMap[tab] : null;
+                  const tab: string = match.params.tab;
+                  const initialTabKey =
+                    // @ts-ignore If tab does not exist in urlTokenToTabKeyMap, initialTabKey is still valid (i.e., undefined)
+                    tab ? urlTokenToTabKeyMap[tab] : null;
                   return (
                     <DashboardView
                       userId={null}
@@ -308,21 +326,26 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/annotations/:type/:id"
-                render={this.tracingView}
-                serverAuthenticationCallback={async ({ match }: ContextRouter) => {
-                  try {
-                    const annotationInformation = await getAnnotationInformation(
-                      match.params.id || "",
-                      coalesce(APIAnnotationTypeEnum, match.params.type) ||
-                        APIAnnotationTypeEnum.Explorational,
-                    );
-                    return annotationInformation.visibility === "Public";
-                  } catch (ex) {
-                    // Annotation could not be found
+                render={({ location, match }: ContextRouter) => {
+                  const initialMaybeCompoundType =
+                    match.params.type != null
+                      ? coalesce(APICompoundTypeEnum, match.params.type)
+                      : null;
+
+                  if (initialMaybeCompoundType == null) {
+                    const { hash, search } = location;
+                    return <Redirect to={`/annotations/${match.params.id}${search}${hash}`} />;
                   }
 
-                  return false;
+                  return this.tracingView({ match });
                 }}
+                serverAuthenticationCallback={this.serverAuthenticationCallback}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/annotations/:id"
+                render={this.tracingView}
+                serverAuthenticationCallback={this.serverAuthenticationCallback}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -560,7 +583,7 @@ class ReactRouter extends React.Component<Props> {
                         resolutionRestrictions,
                       );
                       trackAction(`Create ${type} tracing`);
-                      return `/annotations/${annotation.typ}/${annotation.id}`;
+                      return `/annotations/${annotation.id}`;
                     }}
                   />
                 )}
@@ -581,6 +604,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
+              <Route path="/workflows" component={RedirectToWorkflowViewer} />
               {!features().isDemoInstance && <Route path="/onboarding" component={Onboarding} />}
               <Route component={PageNotFoundView} />
             </Switch>

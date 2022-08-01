@@ -23,6 +23,7 @@ import type {
   MeshMetaData,
   TracingType,
   APIMeshFile,
+  ServerEditableMapping,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
@@ -64,6 +65,7 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
+import { SaveQueueType } from "./model/actions/save_actions";
 export type MutableCommentType = {
   content: string;
   nodeId: number;
@@ -164,7 +166,6 @@ export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
 export type MutableTreeMap = Record<number, MutableTree>;
 export type TreeMap = Record<number, Tree>;
-export type AnnotationType = APIAnnotationType;
 export type AnnotationVisibility = APIAnnotationVisibility;
 export type RestrictionsAndSettings = Restrictions & Settings;
 export type Annotation = {
@@ -176,11 +177,13 @@ export type Annotation = {
   readonly description: string;
   readonly name: string;
   readonly tracingStore: APITracingStore;
-  readonly annotationType: AnnotationType;
+  readonly annotationType: APIAnnotationType;
   // This property contains back-end stored mesh objects for which
   // the support is about to end. See webknossos/#5633.
   readonly meshes: Array<MeshMetaData>;
   readonly owner: APIUserBase | null | undefined;
+  readonly contributors: APIUserBase[];
+  readonly othersMayEdit: boolean;
 };
 type TracingBase = {
   readonly createdTimestamp: number;
@@ -230,14 +233,20 @@ export type VolumeTracing = TracingBase & {
   // Stores points of the currently drawn region in global coordinates
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
+  readonly mappingName?: string | null | undefined;
+  readonly mappingIsEditable?: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
+};
+export type EditableMapping = Readonly<ServerEditableMapping> & {
+  readonly type: "mapping";
 };
 export type HybridTracing = Annotation & {
   readonly skeleton: SkeletonTracing | null | undefined;
   readonly volumes: Array<VolumeTracing>;
   readonly readOnly: ReadOnlyTracing | null | undefined;
+  readonly mappings: Array<EditableMapping>;
 };
 export type Tracing = HybridTracing;
 export type TraceOrViewCommand =
@@ -360,6 +369,7 @@ export type Task = APITask;
 export type SaveQueueEntry = {
   version: number;
   timestamp: number;
+  authorId: string;
   actions: Array<UpdateAction>;
   transactionId: string;
   transactionGroupCount: number;
@@ -371,19 +381,18 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
-export type IsBusyInfo = {
-  readonly skeleton: boolean;
-  readonly volume: boolean;
-};
+export type IsBusyInfo = Record<SaveQueueType, boolean>;
 export type SaveState = {
   readonly isBusyInfo: IsBusyInfo;
   readonly queue: {
     readonly skeleton: Array<SaveQueueEntry>;
     readonly volumes: Record<string, Array<SaveQueueEntry>>;
+    readonly mappings: Record<string, Array<SaveQueueEntry>>;
   };
   readonly lastSaveTimestamp: {
     readonly skeleton: number;
     readonly volumes: Record<string, number>;
+    readonly mappings: Record<string, number>;
   };
   readonly progressInfo: ProgressInfo;
 };
@@ -445,6 +454,7 @@ type UiInformation = {
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
   readonly showDownloadModal: boolean;
+  readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
   readonly activeTool: AnnotationTool;
   readonly storedLayouts: Record<string, any>;

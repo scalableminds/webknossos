@@ -14,6 +14,7 @@ type SetThemeAction = ReturnType<typeof setThemeAction>;
 type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
 type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
+type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -27,6 +28,7 @@ export type UiAction =
   | CycleToolAction
   | SetThemeAction
   | SetDownloadModalVisibilityAction
+  | SetPythonClientModalVisibilityAction
   | SetShareModalVisibilityAction
   | SetBusyBlockingInfoAction;
 
@@ -96,4 +98,9 @@ export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
       isBusy,
       reason,
     },
+  } as const);
+export const setPythonClientModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_PYTHON_MODAL_VISIBILITY",
+    visible,
   } as const);

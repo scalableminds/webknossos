@@ -13,32 +13,33 @@ import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
-import ConnectionInfo from "oxalis/model/data_connection_info";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import DataLayer from "oxalis/model/data_layer";
 import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import type { TraceOrViewCommand, AnnotationType } from "oxalis/store";
+import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
+import { APICompoundType } from "types/api_flow_types";
+
 import { initialize } from "./model_initialization";
+
 // TODO: Non-reactive
 export class OxalisModel {
-  connectionInfo: ConnectionInfo | null = null;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
   isMappingSupported: boolean = true;
   maximumTextureCountForLayer: number = 0;
 
   async fetch(
-    annotationType: AnnotationType,
+    initialMaybeCompoundType: APICompoundType | null,
     initialCommandType: TraceOrViewCommand,
     initialFetch: boolean,
     versions?: Versions,
   ) {
     try {
       const initializationInformation = await initialize(
-        annotationType,
+        initialMaybeCompoundType,
         initialCommandType,
         initialFetch,
         versions,
@@ -46,7 +47,7 @@ export class OxalisModel {
 
       if (initializationInformation) {
         // Only executed on initial fetch
-        const { dataLayers, connectionInfo, isMappingSupported, maximumTextureCountForLayer } =
+        const { dataLayers, isMappingSupported, maximumTextureCountForLayer } =
           initializationInformation;
 
         if (this.dataLayers != null) {
@@ -54,14 +55,12 @@ export class OxalisModel {
         }
 
         this.dataLayers = dataLayers;
-        this.connectionInfo = connectionInfo;
         this.isMappingSupported = isMappingSupported;
         this.maximumTextureCountForLayer = maximumTextureCountForLayer;
       }
     } catch (error) {
       try {
         const maybeOrganizationToSwitchTo = await isDatasetAccessibleBySwitching(
-          annotationType,
           initialCommandType,
         );
 

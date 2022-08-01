@@ -1,7 +1,7 @@
 import { Divider, Modal, Checkbox, Row, Col, Tabs, Typography, Button } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
-import { useFetch } from "libs/react_helpers";
+import { makeComponentLazy, useFetch } from "libs/react_helpers";
 import type { APIAnnotationType } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -34,7 +34,13 @@ type Props = {
   hasVolumeFallback: boolean;
 };
 
-function Hint({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
+export function Hint({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style: React.CSSProperties;
+}) {
   return (
     <div style={{ ...style, fontSize: 12, color: "var(--ant-text-secondary)" }}>{children}</div>
   );
@@ -45,7 +51,7 @@ export async function copyToClipboard(code: string) {
   Toast.success("Snippet copied to clipboard.");
 }
 
-function MoreInfoHint() {
+export function MoreInfoHint() {
   return (
     <Hint
       style={{
@@ -65,7 +71,7 @@ function MoreInfoHint() {
   );
 }
 
-function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
+export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
   return (
     <pre>
       <Button
@@ -117,7 +123,7 @@ function Footer({
   ) : null;
 }
 
-export default function DownloadModalView(props: Props): JSX.Element {
+function _DownloadModalView(props: Props): JSX.Element {
   const { isVisible, onClose, annotationType, annotationId, hasVolumeFallback } = props;
 
   const [activeTabKey, setActiveTabKey] = useState("download");
@@ -127,6 +133,7 @@ export default function DownloadModalView(props: Props): JSX.Element {
   const [selectedLayerName, setSelectedLayerName] = useState<string | null>(null);
   const [selectedBoundingBoxID, setSelectedBoundingBoxId] = useState(-1);
 
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const userBoundingBoxes = useSelector((state: OxalisState) =>
@@ -209,7 +216,9 @@ export default function DownloadModalView(props: Props): JSX.Element {
             }}
             type="warning"
           >
-            {messages["annotation.python_do_not_share"]}
+            {activeUser != null
+              ? messages["annotation.python_do_not_share"]
+              : messages["annotation.register_for_token"]}
           </Text>
         </Row>
       );
@@ -253,11 +262,20 @@ export default function DownloadModalView(props: Props): JSX.Element {
     lineHeight: "30px",
   };
 
-  const authToken = useFetch(getAuthToken, "loading...", []);
+  const authToken = useFetch(
+    async () => {
+      if (activeUser != null) {
+        return getAuthToken();
+      }
+      return null;
+    },
+    "loading...",
+    [activeUser],
+  );
   const wkInitSnippet = `import webknossos as wk
 
 with wk.webknossos_context(
-    token="${authToken}",
+    token="${authToken || "<insert token here>"}",
     url="${window.location.origin}"
 ):
     annotation = wk.Annotation.download(
@@ -494,3 +512,6 @@ with wk.webknossos_context(
     </Modal>
   );
 }
+
+const DownloadModalView = makeComponentLazy(_DownloadModalView);
+export default DownloadModalView;

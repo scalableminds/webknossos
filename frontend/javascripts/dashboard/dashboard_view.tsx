@@ -1,7 +1,6 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { Spin, Tabs, Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import React, { PureComponent } from "react";
@@ -17,7 +16,6 @@ import DatasetView from "dashboard/dataset_view";
 import DatasetCacheProvider from "dashboard/dataset/dataset_cache_provider";
 import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
-import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
@@ -47,7 +45,6 @@ export const urlTokenToTabKeyMap = {
   datasets: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
-  shared: "sharedAnnotations",
 };
 
 class DashboardView extends PureComponent<PropsWithRouter, State> {
@@ -66,10 +63,8 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
     // Flow doesn't allow validTabKeys[key] where key may be null, so check that first
     const activeTabKey =
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      (initialTabKey && validTabKeys[initialTabKey] && initialTabKey) ||
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      (lastUsedTabKey && validTabKeys[lastUsedTabKey] && lastUsedTabKey) ||
+      (initialTabKey && initialTabKey in validTabKeys && initialTabKey) ||
+      (lastUsedTabKey && lastUsedTabKey in validTabKeys && lastUsedTabKey) ||
       defaultTabKey;
     this.state = {
       activeTabKey,
@@ -104,7 +99,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
         createGroupForEachFile,
       },
     });
-    this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
+    this.props.history.push(`/annotations/${response.annotation.id}`);
   };
 
   getValidTabKeys() {
@@ -114,14 +109,12 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
-      sharedAnnotations: true,
     };
   }
 
   getTabs(user: APIUser) {
     if (this.props.activeUser) {
       const validTabKeys = this.getValidTabKeys();
-      const optionalMyPrefix = this.props.isAdminView ? "" : "My ";
       return [
         validTabKeys.publications ? (
           <TabPane tab="Featured Publications" key="publications">
@@ -129,36 +122,19 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
           </TabPane>
         ) : null,
         validTabKeys.datasets ? (
-          <TabPane tab={`${optionalMyPrefix}Datasets`} key="datasets">
+          <TabPane tab="Datasets" key="datasets">
             <DatasetView user={user} />
           </TabPane>
         ) : null,
-        <TabPane tab={`${optionalMyPrefix}Tasks`} key="tasks">
+        <TabPane tab="Tasks" key="tasks">
           <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
         </TabPane>,
-        <TabPane tab={`${optionalMyPrefix} Annotations`} key="explorativeAnnotations">
+        <TabPane tab="Annotations" key="explorativeAnnotations">
           <ExplorativeAnnotationsView
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}
+            activeUser={this.props.activeUser}
           />
-        </TabPane>,
-        <TabPane
-          tab={
-            <div>
-              Shared Annotations
-              <Tooltip title="This is the Shared Annotations tab. Annotations that are shared with teams you are a member of are displayed here. You can share your own annotations in the sharing modal in the annotation view.">
-                <InfoCircleOutlined
-                  style={{
-                    color: "gray",
-                    marginLeft: 6,
-                  }}
-                />
-              </Tooltip>
-            </div>
-          }
-          key="sharedAnnotations"
-        >
-          <SharedAnnotationsView />
         </TabPane>,
       ];
     } else {
@@ -191,8 +167,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       );
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'activeTabKey' implicitly has an 'any' t... Remove this comment to see the full error message
-    const onTabChange = (activeTabKey) => {
+    const onTabChange = (activeTabKey: string) => {
       const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
 
       const url = tabKeyToURLMap[activeTabKey];

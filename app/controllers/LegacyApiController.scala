@@ -233,13 +233,13 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def taskListTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
       _ <- Fox.successful(logVersioned(request))
-      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
+      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.fromString)
       projectNameOpt = (request.body \ "project").asOpt[String]
       projectOpt <- Fox.runOptional(projectNameOpt)(projectName =>
         projectDAO.findOneByNameAndOrganization(projectName, request.identity._organization))
       taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids =>
-        Fox.serialCombined(ids)(ObjectId.parse))
-      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse)
+        Fox.serialCombined(ids)(ObjectId.fromString))
+      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.fromString)
       randomizeOpt = (request.body \ "random").asOpt[Boolean]
       tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectOpt.map(_._id),
                                                                 taskTypeIdOpt,
@@ -429,7 +429,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
           AnnotationLayerParameters(AnnotationLayerType.Skeleton,
                                     request.body.fallbackLayerName,
                                     request.body.resolutionRestrictions,
-                                    name = None))
+                                    name = AnnotationLayer.defaultSkeletonLayerName))
     val volumeParameters =
       if (request.body.typ == "skeleton") None
       else
@@ -437,7 +437,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
           AnnotationLayerParameters(AnnotationLayerType.Volume,
                                     request.body.fallbackLayerName,
                                     request.body.resolutionRestrictions,
-                                    name = None))
+                                    name = AnnotationLayer.defaultVolumeLayerName))
     List(skeletonParameters, volumeParameters).flatten
   }
 

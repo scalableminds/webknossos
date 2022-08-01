@@ -365,16 +365,13 @@ function DashboardSubMenu({ collapse, ...other }: { collapse: boolean } & SubMen
       {...other}
     >
       <Menu.Item key="/dashboard/datasets">
-        <Link to="/dashboard/datasets">My Datasets</Link>
+        <Link to="/dashboard/datasets">Datasets</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/tasks">
-        <Link to="/dashboard/tasks">My Tasks</Link>
+        <Link to="/dashboard/tasks">Tasks</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/annotations">
-        <Link to="/dashboard/annotations">My Annotations</Link>
-      </Menu.Item>
-      <Menu.Item key="/dashboard/shared">
-        <Link to="/dashboard/shared">Shared Annotations</Link>
+        <Link to="/dashboard/annotations">Annotations</Link>
       </Menu.Item>
     </SubMenu>
   );
@@ -685,6 +682,9 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
         theme="dark"
         subMenuCloseDelay={subMenuCloseDelay}
         triggerSubMenuAction="click"
+        // There is a bug where the last menu entry disappears behind the overflow indicator
+        // although there is ample space available, see https://github.com/ant-design/ant-design/issues/32277
+        disabledOverflow
       >
         {[
           <Menu.Item key="0">

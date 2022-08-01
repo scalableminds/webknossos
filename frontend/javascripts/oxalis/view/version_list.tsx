@@ -9,19 +9,25 @@ import { getUpdateActionLog, downloadAnnotation } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import {
   pushSaveQueueTransaction,
+  SaveQueueType,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
-import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
+import {
+  revertToVersion,
+  serverCreateTracing,
+  type ServerUpdateAction,
+} from "oxalis/model/sagas/update_actions";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import Model from "oxalis/model";
-import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
+import type { EditableMapping, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import api from "oxalis/api/internal_api";
+import Toast from "libs/toast";
 type Props = {
-  tracingType: "skeleton" | "volume";
-  tracing: SkeletonTracing | VolumeTracing;
+  versionedObjectType: SaveQueueType;
+  tracing: SkeletonTracing | VolumeTracing | EditableMapping;
   allowUpdate: boolean;
 };
 type State = {
@@ -45,8 +51,8 @@ const VERSION_LIST_PLACEHOLDER = {
 export async function previewVersion(versions?: Versions) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
-  const { annotationType, annotationId } = state.tracing;
-  await api.tracing.restart(annotationType, annotationId, controlMode, versions);
+  const { annotationId } = state.tracing;
+  await api.tracing.restart(null, annotationId, controlMode, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
   const segmentationLayersToReload = [];
 
@@ -89,12 +95,11 @@ class VersionList extends React.Component<Props, State> {
       const updateActionLog = await getUpdateActionLog(
         tracingStoreUrl,
         tracingId,
-        this.props.tracingType,
+        this.props.versionedObjectType,
       );
       // Insert version 0
       updateActionLog.push({
         version: 0,
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ name: string; value: { actionTimestamp: nu... Remove this comment to see the full error message
         value: [serverCreateTracing(this.props.tracing.createdTimestamp)],
       });
       this.setState({
@@ -118,14 +123,14 @@ class VersionList extends React.Component<Props, State> {
       Store.dispatch(
         setVersionNumberAction(
           this.getNewestVersion(),
-          this.props.tracingType,
+          this.props.versionedObjectType,
           this.props.tracing.tracingId,
         ),
       );
       Store.dispatch(
         pushSaveQueueTransaction(
           [revertToVersion(version)],
-          this.props.tracingType,
+          this.props.versionedObjectType,
           this.props.tracing.tracingId,
         ),
       );
@@ -136,22 +141,27 @@ class VersionList extends React.Component<Props, State> {
       const { annotationType, annotationId, volumes } = Store.getState().tracing;
       const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
       downloadAnnotation(annotationId, annotationType, includesVolumeFallbackData, {
-        [this.props.tracingType]: version,
+        [this.props.versionedObjectType]: version,
       });
     }
   };
 
   handlePreviewVersion = (version: number) => {
-    if (this.props.tracingType === "skeleton") {
+    if (this.props.versionedObjectType === "skeleton") {
       return previewVersion({
         skeleton: version,
       });
-    } else {
+    } else if (this.props.versionedObjectType === "volume") {
       return previewVersion({
         volumes: {
           [this.props.tracing.tracingId]: version,
         },
       });
+    } else {
+      Toast.warning(
+        `Version preview and restoring for ${this.props.versionedObjectType}s is not supported yet.`,
+      );
+      return Promise.resolve();
     }
   };
 
@@ -167,13 +177,10 @@ class VersionList extends React.Component<Props, State> {
           .calendar(null, MOMENT_CALENDAR_FORMAT),
       );
 
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'batch' implicitly has an 'any' type.
-      const getBatchTime = (batch) =>
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'action' implicitly has an 'any' type.
-        _.max(batch.value.map((action) => action.value.actionTimestamp));
+      const getBatchTime = (batch: APIUpdateActionBatch): number =>
+        _.max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
 
       return _.mapValues(groupedVersions, (versionsOfOneDay) =>
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(batch: any) => unknown' is not ... Remove this comment to see the full error message
         chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
       );
     },

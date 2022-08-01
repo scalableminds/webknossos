@@ -9,6 +9,7 @@ import { sleep } from "libs/utils";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import window from "libs/window";
+import dummyUser from "test/fixtures/dummy_user";
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
@@ -129,7 +130,7 @@ export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTraci
     return Maybe.Just(tracing.volumes[0]);
   }
 
-  throw new Error("Tracing is not of type volume!");
+  throw new Error("Annotation is not of type volume!");
 }
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
@@ -161,7 +162,8 @@ export function __setupOxalis(
           arg, // Match against the URL while ignoring further GET parameters (such as timestamps)
         ) =>
           typeof arg === "string" &&
-          arg.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`),
+          (arg.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`) ||
+            arg.startsWith(`/api/annotations/${ANNOTATION_ID}/info`)),
       ),
     )
     .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
@@ -192,6 +194,12 @@ export function __setupOxalis(
     );
   Request.receiveJSON.returns(Promise.resolve({}));
   Request.sendJSONReceiveJSON.returns(Promise.resolve({}));
+
+  // Make calls to updateLastTaskTypeIdOfUser() pass.
+  Request.sendJSONReceiveJSON
+    .withArgs(sinon.match((arg) => arg === `/api/users/${dummyUser.id}/taskTypeId`))
+    .returns(Promise.resolve(dummyUser));
+
   return Model.fetch(
     ANNOTATION_TYPE,
     {

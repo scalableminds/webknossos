@@ -70,15 +70,9 @@ trait VolumeBucketCompression extends LazyLogging {
 
 trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
   protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
-    val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
-    s"$dataLayerName/${formatResolution(bucket.mag)}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
+    val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
+    s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
   }
-
-  protected def formatResolution(resolution: Vec3Int): String =
-    if (resolution.x == resolution.y && resolution.x == resolution.z)
-      s"${resolution.maxDim}"
-    else
-      s"${resolution.x}-${resolution.y}-${resolution.z}"
 
   protected def buildKeyPrefix(dataLayerName: String): String =
     s"$dataLayerName/"

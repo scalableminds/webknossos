@@ -27,7 +27,7 @@ mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
-const { saveTracingTypeAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
+const { setupSavingForTracingType } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 const SkeletonTracingActions = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );
@@ -109,10 +109,10 @@ const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(
   12345678,
 );
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {
-  const saga = saveTracingTypeAsync(
+  const saga = setupSavingForTracingType(
     SkeletonTracingActions.initializeSkeletonTracingAction(skeletonTracing),
   );
-  saga.next(); // forking pushTracingTypeAsync
+  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.skeleton);
@@ -129,10 +129,10 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) =
 });
 test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
-  const saga = saveTracingTypeAsync(
+  const saga = setupSavingForTracingType(
     SkeletonTracingActions.initializeSkeletonTracingAction(skeletonTracing),
   );
-  saga.next(); // forking pushTracingTypeAsync
+  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.skeleton);

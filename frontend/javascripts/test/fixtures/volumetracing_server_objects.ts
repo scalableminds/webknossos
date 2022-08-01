@@ -72,6 +72,7 @@ export const annotation: APIAnnotation = {
   modified: 1529066010230,
   name: "",
   typ: "Explorational",
+  teams: [],
   task: null,
   stats: {},
   restrictions: {
@@ -113,4 +114,6 @@ export const annotation: APIAnnotation = {
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,
   meshes: [],
+  contributors: [],
+  othersMayEdit: false,
 };

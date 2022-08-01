@@ -4,7 +4,7 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import type { ElementClass } from "types/api_flow_types";
+import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
 import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
@@ -74,8 +74,8 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
-  getRotation,
   getRequestLogZoomStep,
+  getRotation,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   loadAdHocMeshAction,
@@ -124,7 +124,6 @@ import type { OxalisModel } from "oxalis/model";
 import Model from "oxalis/model";
 import Request from "libs/request";
 import type {
-  AnnotationType,
   MappingType,
   DatasetConfiguration,
   Mapping,
@@ -146,6 +145,8 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { coalesce } from "libs/utils";
+
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 export function assertExists<T>(value: any, message: string): asserts value is NonNullable<T> {
   if (value == null) {
@@ -575,7 +576,7 @@ class TracingApi {
       ) {
         location.href = newTaskUrl;
       } else {
-        await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
+        await this.restart(null, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
@@ -595,7 +596,8 @@ class TracingApi {
    *
    */
   async restart(
-    newAnnotationType: AnnotationType,
+    // Earlier versions used newAnnotationType here.
+    newMaybeCompoundType: APICompoundType | null,
     newAnnotationId: string,
     newControlMode: ControlMode,
     versions?: Versions,
@@ -605,8 +607,12 @@ class TracingApi {
       throw new Error("Restarting with view option is not supported");
     Store.dispatch(restartSagaAction());
     UrlManager.reset(keepUrlState);
+
+    newMaybeCompoundType =
+      newMaybeCompoundType != null ? coalesce(APICompoundTypeEnum, newMaybeCompoundType) : null;
+
     await Model.fetch(
-      newAnnotationType,
+      newMaybeCompoundType,
       {
         annotationId: newAnnotationId,
         // @ts-ignore
@@ -745,12 +751,10 @@ class TracingApi {
    */
   measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
       skeletonTracing,
       sourceNodeId,
     );
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 3 arguments, but got 2.
     const { node: targetNode, tree: targetTree } = getNodeAndTreeOrNull(
       skeletonTracing,
       targetNodeId,
@@ -1345,7 +1349,11 @@ class DataApi {
     return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
   }
 
-  async getViewportData(viewport: OrthoView, layerName: string) {
+  async getViewportData(
+    viewport: OrthoView,
+    layerName: string,
+    maybeResolutionIndex: number | null | undefined,
+  ) {
     const state = Store.getState();
     const [curX, curY, curZ] = dimensions.transDim(
       dimensions.roundCoordinate(getPosition(state.flycam)),
@@ -1363,14 +1371,22 @@ class DataApi {
       V3.add([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 1]),
       viewport,
     );
-    const resolutionIndex = getRequestLogZoomStep(state);
+
+    let zoomStep;
+    if (maybeResolutionIndex == null) {
+      zoomStep = getRequestLogZoomStep(state);
+    } else {
+      const layer = getLayerByName(state.dataset, layerName);
+      const resolutionInfo = getResolutionInfo(layer.resolutions);
+      zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+    }
     const cuboid = await this.getDataForBoundingBox(
       layerName,
       {
         min,
         max,
       },
-      resolutionIndex,
+      zoomStep,
     );
     return cuboid;
   }
@@ -1524,7 +1540,11 @@ class DataApi {
     });
   }
 
-  getRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
+  getRawDataCuboid(
+    layerName: string,
+    topLeft: Vector3,
+    bottomRight: Vector3,
+  ): Promise<ArrayBuffer> {
     return doWithToken((token) => {
       const downloadUrl = this._getDownloadUrlForRawDataCuboid(
         layerName,

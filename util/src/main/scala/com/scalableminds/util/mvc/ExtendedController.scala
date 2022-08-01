@@ -1,7 +1,6 @@
 package com.scalableminds.util.mvc
 
 import java.io.FileInputStream
-
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -170,6 +169,14 @@ class JsonResult(status: Int)
     Json.obj("messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }
 
+trait MimeTypes {
+  val jpegMimeType: String = "image/jpeg"
+  val protobufMimeType: String = "application/x-protobuf"
+  val xmlMimeType: String = "application/xml"
+  val zipMimeType: String = "application/zip"
+  val jsonMimeType: String = "application/json"
+}
+
 trait JsonResults extends JsonResultAttribues {
   val JsonOk = new JsonResult(OK)
   val JsonBadRequest = new JsonResult(BAD_REQUEST)
@@ -204,7 +211,7 @@ trait ValidationHelpers {
 }
 
 trait RequestTokenHelper {
-  protected def urlOrHeaderToken(token: Option[String], request: Request[AnyContent]): Option[String] =
+  protected def urlOrHeaderToken(token: Option[String], request: Request[Any]): Option[String] =
     token.orElse(request.headers.get("X-Auth-Token"))
 }
 
@@ -217,6 +224,7 @@ trait ExtendedController
     with WithFilters
     with I18nSupport
     with InjectedController
+    with MimeTypes
     with ValidationHelpers
     with LazyLogging
     with RequestTokenHelper

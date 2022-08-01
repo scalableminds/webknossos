@@ -1,8 +1,6 @@
 DROP SCHEMA IF EXISTS webknossos CASCADE;
 CREATE SCHEMA webknossos;
 
--- CREATE EXTENSION pgcrypto;
-
 CREATE TYPE webknossos.VECTOR3 AS (
   x DOUBLE PRECISION,
   y DOUBLE PRECISION,
@@ -21,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(82);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(84);
 COMMIT TRANSACTION;
 
 
@@ -43,6 +41,7 @@ CREATE TABLE webknossos.annotations(
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
+  othersMayEdit BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
@@ -56,7 +55,8 @@ CREATE TABLE webknossos.annotation_layers(
   _annotation CHAR(24) NOT NULL,
   tracingId CHAR(36) NOT NULL UNIQUE,
   typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
-  name VARCHAR(256),
+  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
+  UNIQUE (name, _annotation),
   PRIMARY KEY (_annotation, tracingId)
 );
 
@@ -64,6 +64,12 @@ CREATE TABLE webknossos.annotation_sharedTeams(
   _annotation CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
   PRIMARY KEY (_annotation, _team)
+);
+
+CREATE TABLE webknossos.annotation_contributors(
+  _annotation CHAR(24) NOT NULL,
+  _user CHAR(24) NOT NULL,
+  PRIMARY KEY (_annotation, _user)
 );
 
 CREATE TABLE webknossos.meshes(
@@ -475,6 +481,9 @@ ALTER TABLE webknossos.annotations
 ALTER TABLE webknossos.annotation_sharedTeams
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.annotation_contributors
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.meshes
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
 ALTER TABLE webknossos.dataSets

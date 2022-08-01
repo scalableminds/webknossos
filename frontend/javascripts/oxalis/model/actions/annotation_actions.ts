@@ -153,6 +153,11 @@ export type AddPrecomputedIsosurfaceAction = BaseIsosurfaceInformation & {
   type: "ADD_PRECOMPUTED_ISOSURFACE";
   meshFileName: string;
 };
+export type SetOthersMayEditForAnnotationAction = {
+  type: "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION";
+  othersMayEdit: boolean;
+};
+
 export type AnnotationActionTypes =
   | InitializeAnnotationAction
   | SetAnnotationNameAction
@@ -182,7 +187,8 @@ export type AnnotationActionTypes =
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction
   | AddAdHocIsosurfaceAction
-  | AddPrecomputedIsosurfaceAction;
+  | AddPrecomputedIsosurfaceAction
+  | SetOthersMayEditForAnnotationAction;
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
   | AddNewUserBoundingBox
@@ -407,4 +413,10 @@ export const addPrecomputedIsosurfaceAction = (
   cellId,
   seedPosition,
   meshFileName,
+});
+export const setOthersMayEditForAnnotationAction = (
+  othersMayEdit: boolean,
+): SetOthersMayEditForAnnotationAction => ({
+  type: "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION",
+  othersMayEdit,
 });

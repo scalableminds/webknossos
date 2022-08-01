@@ -43,8 +43,7 @@ class TemporalBucketManager {
 
         // @ts-expect-error ts-migrate(2322) FIXME: Type 'Promise<unknown>[]' is not assignable to typ... Remove this comment to see the full error message
         this.loadedPromises = _.without(this.loadedPromises, loadedPromise);
-        // @ts-expect-error ts-migrate(2794) FIXME: Expected 1 arguments, but got 0. Did you forget to... Remove this comment to see the full error message
-        return resolve();
+        return resolve(null);
       };
 
       bucket.on("bucketLoaded", onLoadedOrMissingHandler);

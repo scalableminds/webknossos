@@ -7,6 +7,8 @@ import type {
   APIDataLayer,
   ServerVolumeTracing,
   ServerTracing,
+  ServerEditableMapping,
+  APICompoundType,
 } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import {
@@ -39,6 +41,8 @@ import {
   getSharingToken,
   getUserConfiguration,
   getDatasetViewConfiguration,
+  getEditableMapping,
+  getAnnotationCompoundInformation,
 } from "admin/admin_rest_api";
 import {
   initializeAnnotationAction,
@@ -51,7 +55,10 @@ import {
   setViewModeAction,
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
-import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  initializeEditableMappingAction,
+  initializeVolumeTracingAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
@@ -70,11 +77,9 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
-import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import type {
-  AnnotationType,
   DatasetConfiguration,
   DatasetLayerConfiguration,
   TraceOrViewCommand,
@@ -92,17 +97,18 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
+
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
+
 export async function initialize(
-  annotationType: AnnotationType,
+  initialMaybeCompoundType: APICompoundType | null,
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
   versions?: Versions,
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
-      connectionInfo: ConnectionInfo;
       isMappingSupported: boolean;
       maximumTextureCountForLayer: number;
     }
@@ -115,7 +121,10 @@ export async function initialize(
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
-    annotation = await getAnnotationInformation(annotationId, annotationType);
+    annotation =
+      initialMaybeCompoundType != null
+        ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
+        : await getAnnotationInformation(annotationId);
     datasetId = {
       name: annotation.dataSetName,
       owningOrganization: annotation.organization,
@@ -154,13 +163,12 @@ export async function initialize(
     datasetId,
     versions,
   );
-  const displayedVolumeTracings = getServerVolumeTracings(serverTracings).map(
-    (volumeTracing) => volumeTracing.id,
-  );
+  const serverVolumeTracings = getServerVolumeTracings(serverTracings);
+  const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
   initializeDataset(initialFetch, dataset, serverTracings);
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
-    displayedVolumeTracings,
+    serverVolumeTracingIds,
     getSharingToken(),
   );
   const annotationSpecificDatasetSettings = applyAnnotationSpecificViewConfiguration(
@@ -193,7 +201,11 @@ export async function initialize(
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
   if (annotation != null) {
-    initializeTracing(annotation, serverTracings);
+    const editableMappings = await fetchEditableMappings(
+      annotation.tracingStore.url,
+      serverVolumeTracings,
+    );
+    initializeTracing(annotation, serverTracings, editableMappings);
   } else {
     // In view only tracings we need to set the view mode too.
     const { allowedModes } = determineAllowedModes(dataset);
@@ -222,6 +234,16 @@ async function fetchParallel(
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     annotation ? getTracingsForAnnotation(annotation, versions) : [],
   ]);
+}
+
+async function fetchEditableMappings(
+  tracingStoreUrl: string,
+  serverVolumeTracings: ServerVolumeTracing[],
+): Promise<ServerEditableMapping[]> {
+  const promises = serverVolumeTracings
+    .filter((tracing) => tracing.mappingIsEditable)
+    .map((tracing) => getEditableMapping(tracingStoreUrl, tracing.id));
+  return Promise.all(promises);
 }
 
 function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: number): any {
@@ -257,7 +279,11 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
   }
 }
 
-function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<ServerTracing>) {
+function initializeTracing(
+  _annotation: APIAnnotation,
+  serverTracings: Array<ServerTracing>,
+  editableMappings: Array<ServerEditableMapping>,
+) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   let annotation = _annotation;
@@ -294,6 +320,9 @@ function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<Ser
       );
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
     });
+
+    editableMappings.map((mapping) => Store.dispatch(initializeEditableMappingAction(mapping)));
+
     const skeletonTracing = getNullableSkeletonTracing(serverTracings);
 
     if (skeletonTracing != null) {
@@ -421,7 +450,6 @@ function initializeSettings(
 
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   dataLayers: DataLayerCollection;
-  connectionInfo: ConnectionInfo;
   isMappingSupported: boolean;
   maximumTextureCountForLayer: number;
   smallestCommonBucketCapacity: number;
@@ -443,7 +471,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
   }
 
-  const connectionInfo = new ConnectionInfo();
   const layers = dataset.dataSource.dataLayers;
   const dataLayers = {};
 
@@ -457,7 +484,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     dataLayers[layer.name] = new DataLayer(
       layer,
-      connectionInfo,
       textureInformation.textureSize,
       textureInformation.textureCount,
     );
@@ -475,7 +501,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
 
   return {
     dataLayers,
-    connectionInfo,
     isMappingSupported,
     maximumTextureCountForLayer,
     smallestCommonBucketCapacity,
@@ -567,6 +592,7 @@ function determineDefaultState(
     zoomStep: urlStateZoomStep,
     rotation: urlStateRotation,
     activeNode: urlStateActiveNode,
+    stateByLayer: urlStateByLayer,
     ...rest
   } = urlState;
   // If there is no editPosition (e.g. when viewing a dataset) and
@@ -609,12 +635,34 @@ function determineDefaultState(
     rotation = urlStateRotation;
   }
 
+  const stateByLayer = urlStateByLayer ?? {};
+
+  const volumeTracings = tracings.filter(
+    (tracing) => tracing.typ === "Volume",
+  ) as ServerVolumeTracing[];
+  for (const volumeTracing of volumeTracings) {
+    const { id: layerName, mappingName } = volumeTracing;
+
+    if (mappingName == null) continue;
+
+    if (!(layerName in stateByLayer)) {
+      stateByLayer[layerName] = {};
+    }
+    if (stateByLayer[layerName].mappingInfo == null) {
+      stateByLayer[layerName].mappingInfo = {
+        mappingName,
+        mappingType: "HDF5",
+      };
+    }
+  }
+
   const activeNode = urlStateActiveNode;
   return {
     position,
     zoomStep,
     rotation,
     activeNode,
+    stateByLayer,
     ...rest,
   };
 }

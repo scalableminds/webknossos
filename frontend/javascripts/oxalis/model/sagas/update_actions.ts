@@ -34,7 +34,7 @@ export type DeleteTreeUpdateAction = {
     id: number;
   };
 };
-type MoveTreeComponentUpdateAction = {
+export type MoveTreeComponentUpdateAction = {
   name: "moveTreeComponent";
   value: {
     sourceId: number;
@@ -42,7 +42,7 @@ type MoveTreeComponentUpdateAction = {
     nodeIds: Array<number>;
   };
 };
-type MergeTreeUpdateAction = {
+export type MergeTreeUpdateAction = {
   name: "mergeTree";
   value: {
     sourceId: number;
@@ -113,7 +113,7 @@ type UpdateVolumeTracingUpdateAction = {
     zoomLevel: number;
   };
 };
-type CreateSegmentVolumeAction = {
+export type CreateSegmentUpdateAction = {
   name: "createSegment";
   value: {
     id: number;
@@ -122,7 +122,7 @@ type CreateSegmentVolumeAction = {
     creationTime: number | null | undefined;
   };
 };
-type UpdateSegmentVolumeAction = {
+export type UpdateSegmentUpdateAction = {
   name: "updateSegment";
   value: {
     id: number;
@@ -131,13 +131,13 @@ type UpdateSegmentVolumeAction = {
     creationTime: number | null | undefined;
   };
 };
-type DeleteSegmentVolumeAction = {
+export type DeleteSegmentUpdateAction = {
   name: "deleteSegment";
   value: {
     id: number;
   };
 };
-type UpdateUserBoundingBoxesAction = {
+type UpdateUserBoundingBoxesUpdateAction = {
   name: "updateUserBoundingBoxes";
   value: {
     boundingBoxes: Array<UserBoundingBoxToServer>;
@@ -163,13 +163,39 @@ export type RevertToVersionUpdateAction = {
 };
 // This action is not dispatched by our code, anymore,
 // but we still need to keep it for backwards compatibility.
-export type RemoveFallbackLayerAction = {
+export type RemoveFallbackLayerUpdateAction = {
   name: "removeFallbackLayer";
   value: {};
 };
-export type UpdateTdCameraAction = {
+export type UpdateTdCameraUpdateAction = {
   name: "updateTdCamera";
   value: {};
+};
+export type UpdateMappingNameUpdateAction = {
+  name: "updateMappingName";
+  value: {
+    mappingName: string | null | undefined;
+    isEditable: boolean | undefined;
+  };
+};
+export type SplitAgglomerateUpdateAction = {
+  name: "splitAgglomerate";
+  value: {
+    agglomerateId: number;
+    segmentPosition1: Vector3;
+    segmentPosition2: Vector3;
+    mag: Vector3;
+  };
+};
+export type MergeAgglomerateUpdateAction = {
+  name: "mergeAgglomerate";
+  value: {
+    agglomerateId1: number;
+    agglomerateId2: number;
+    segmentPosition1: Vector3;
+    segmentPosition2: Vector3;
+    mag: Vector3;
+  };
 };
 export type UpdateAction =
   | UpdateTreeUpdateAction
@@ -183,55 +209,48 @@ export type UpdateAction =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
-  | UpdateUserBoundingBoxesAction
-  | CreateSegmentVolumeAction
-  | UpdateSegmentVolumeAction
-  | DeleteSegmentVolumeAction
+  | UpdateUserBoundingBoxesUpdateAction
+  | CreateSegmentUpdateAction
+  | UpdateSegmentUpdateAction
+  | DeleteSegmentUpdateAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
   | UpdateTreeGroupsUpdateAction
-  | RemoveFallbackLayerAction
-  | UpdateTdCameraAction;
+  | RemoveFallbackLayerUpdateAction
+  | UpdateTdCameraUpdateAction
+  | UpdateMappingNameUpdateAction
+  | SplitAgglomerateUpdateAction
+  | MergeAgglomerateUpdateAction;
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
   value: {};
 };
+// This update action is only created by the backend
+type ImportVolumeTracingUpdateAction = {
+  name: "importVolumeTracing";
+  value: {
+    largestSegmentId: number;
+  };
+};
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   value: T["value"] & {
     actionTimestamp: number;
+    actionAuthorId?: string;
   };
 };
 
 type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
-// Since flow does not provide ways to perform type transformations on the
-// single parts of a union, we need to write this out manually.
-export type ServerUpdateAction =
-  | AsServerAction<UpdateTreeUpdateAction>
-  | AsServerAction<DeleteTreeUpdateAction>
-  | AsServerAction<MergeTreeUpdateAction>
-  | AsServerAction<MoveTreeComponentUpdateAction>
-  | AsServerAction<CreateNodeUpdateAction>
-  | AsServerAction<UpdateNodeUpdateAction>
-  | AsServerAction<DeleteNodeUpdateAction>
-  | AsServerAction<CreateEdgeUpdateAction>
-  | AsServerAction<DeleteEdgeUpdateAction>
-  | AsServerAction<UpdateSkeletonTracingUpdateAction>
-  | AsServerAction<UpdateVolumeTracingUpdateAction>
-  | AsServerAction<UpdateUserBoundingBoxesAction>
-  | AsServerAction<CreateSegmentVolumeAction>
-  | AsServerAction<UpdateSegmentVolumeAction>
-  | AsServerAction<DeleteSegmentVolumeAction>
-  | AsServerAction<UpdateBucketUpdateAction>
-  | AsServerAction<UpdateTreeVisibilityUpdateAction>
-  | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
-  | AsServerAction<RevertToVersionUpdateAction>
-  | AsServerAction<UpdateTreeGroupsUpdateAction>
-  | AsServerAction<CreateTracingUpdateAction>
-  | AsServerAction<RemoveFallbackLayerAction>
-  | AsServerAction<UpdateTdCameraAction>;
+
+export type ServerUpdateAction = AsServerAction<
+  | UpdateAction
+  // These two actions are never sent by the frontend and, therefore, don't exist in the UpdateAction type
+  | ImportVolumeTracingUpdateAction
+  | CreateTracingUpdateAction
+>;
+
 export function createTree(tree: Tree): UpdateTreeUpdateAction {
   return {
     name: "createTree",
@@ -407,7 +426,7 @@ export function updateVolumeTracing(
 }
 export function updateUserBoundingBoxes(
   userBoundingBoxes: Array<UserBoundingBox>,
-): UpdateUserBoundingBoxesAction {
+): UpdateUserBoundingBoxesUpdateAction {
   return {
     name: "updateUserBoundingBoxes",
     value: {
@@ -420,7 +439,7 @@ export function createSegmentVolumeAction(
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
   creationTime: number | null | undefined = Date.now(),
-): CreateSegmentVolumeAction {
+): CreateSegmentUpdateAction {
   return {
     name: "createSegment",
     value: {
@@ -436,7 +455,7 @@ export function updateSegmentVolumeAction(
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
   creationTime: number | null | undefined = Date.now(),
-): UpdateSegmentVolumeAction {
+): UpdateSegmentUpdateAction {
   return {
     name: "updateSegment",
     value: {
@@ -447,7 +466,7 @@ export function updateSegmentVolumeAction(
     },
   };
 }
-export function deleteSegmentVolumeAction(id: number): DeleteSegmentVolumeAction {
+export function deleteSegmentVolumeAction(id: number): DeleteSegmentUpdateAction {
   return {
     name: "deleteSegment",
     value: {
@@ -482,23 +501,66 @@ export function revertToVersion(version: number): RevertToVersionUpdateAction {
     },
   };
 }
-export function removeFallbackLayer(): RemoveFallbackLayerAction {
+export function removeFallbackLayer(): RemoveFallbackLayerUpdateAction {
   return {
     name: "removeFallbackLayer",
     value: {},
   };
 }
-export function updateTdCamera(): UpdateTdCameraAction {
+export function updateTdCamera(): UpdateTdCameraUpdateAction {
   return {
     name: "updateTdCamera",
     value: {},
   };
 }
-export function serverCreateTracing(timestamp: number) {
+export function serverCreateTracing(timestamp: number): AsServerAction<CreateTracingUpdateAction> {
   return {
     name: "createTracing",
     value: {
       actionTimestamp: timestamp,
+    },
+  };
+}
+export function updateMappingName(
+  mappingName: string | null | undefined,
+  isEditable: boolean | undefined,
+): UpdateMappingNameUpdateAction {
+  return {
+    name: "updateMappingName",
+    value: { mappingName, isEditable },
+  };
+}
+export function splitAgglomerate(
+  agglomerateId: number,
+  segmentPosition1: Vector3,
+  segmentPosition2: Vector3,
+  mag: Vector3,
+): SplitAgglomerateUpdateAction {
+  return {
+    name: "splitAgglomerate",
+    value: {
+      agglomerateId,
+      segmentPosition1,
+      segmentPosition2,
+      mag,
+    },
+  };
+}
+export function mergeAgglomerate(
+  agglomerateId1: number,
+  agglomerateId2: number,
+  segmentPosition1: Vector3,
+  segmentPosition2: Vector3,
+  mag: Vector3,
+): MergeAgglomerateUpdateAction {
+  return {
+    name: "mergeAgglomerate",
+    value: {
+      agglomerateId1,
+      agglomerateId2,
+      segmentPosition1,
+      segmentPosition2,
+      mag,
     },
   };
 }

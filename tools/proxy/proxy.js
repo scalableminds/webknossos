@@ -74,7 +74,9 @@ function shutdown() {
       proc.kill("SIGTERM");
     }
   }
-  exec("kill $(lsof -t -i:5005)"); // Also kill Java debug subproces, as it’s sometimes not terminated by sbt properly.
+  if (processes.backend != null) {
+    exec("kill $(lsof -t -i:5005)"); // Also kill Java debug subprocess, as it’s sometimes not terminated by sbt properly.
+  }
   process.exit(0);
 }
 

@@ -54,6 +54,8 @@ import type {
   ServerTracing,
   TracingType,
   WkConnectDatasetConfig,
+  ServerEditableMapping,
+  APICompoundType,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -63,7 +65,6 @@ import type {
   PartialDatasetConfiguration,
   Tracing,
   TraceOrViewCommand,
-  AnnotationType,
   MappingType,
   VolumeTracing,
   UserConfiguration,
@@ -81,6 +82,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { SaveQueueType } from "oxalis/model/actions/save_actions";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -339,13 +341,17 @@ export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promi
 
 // ### Teams
 export async function getTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams");
+  const teams = await Request.receiveJSON("/api/teams", {
+    doNotInvestigate: true,
+  });
   assertResponseLimit(teams);
   return teams;
 }
 
 export async function getEditableTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams?isEditable=true");
+  const teams = await Request.receiveJSON("/api/teams?isEditable=true", {
+    doNotInvestigate: true,
+  });
   assertResponseLimit(teams);
   return teams;
 }
@@ -402,6 +408,7 @@ export async function increaseProjectTaskInstances(
   );
   return transformProject(project);
 }
+
 export function deleteProject(projectId: string): Promise<void> {
   return Request.receiveJSON(`/api/projects/${projectId}`, {
     method: "DELETE",
@@ -561,6 +568,15 @@ export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON("/api/annotations/shared");
 }
 
+export function getReadableAnnotations(
+  isFinished: boolean,
+  pageNumber: number = 0,
+): Promise<Array<APIAnnotationCompact>> {
+  return Request.receiveJSON(
+    `/api/annotations/readable?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
+  );
+}
+
 export function getTeamsForSharedAnnotation(
   typ: string,
   id: string,
@@ -606,6 +622,19 @@ export function editAnnotation(
     data,
     method: "PATCH",
   });
+}
+
+export function setOthersMayEditForAnnotation(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  othersMayEdit: boolean,
+): Promise<void> {
+  return Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/othersMayEdit?othersMayEdit=${othersMayEdit}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 export function updateAnnotationLayer(
@@ -704,11 +733,25 @@ export function copyAnnotationToUserAccount(
 
 export async function getAnnotationInformation(
   annotationId: string,
-  annotationType: APIAnnotationType,
+  options: RequestOptions = {},
+): Promise<APIAnnotation> {
+  const infoUrl = `/api/annotations/${annotationId}/info?timestamp=${Date.now()}`;
+  const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+
+  // Extract the potential messages property before returning the task to avoid
+  // failing e2e tests in annotations.e2e.ts
+  const { messages: _messages, ...annotation } = annotationWithMessages;
+  return annotation;
+}
+
+export async function getAnnotationCompoundInformation(
+  annotationId: string,
+  annotationType: APICompoundType,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
   const annotationWithMessages = await Request.receiveJSON(infoUrl, options);
+
   // Extract the potential messages property before returning the task to avoid
   // failing e2e tests in annotations.e2e.ts
   const { messages: _messages, ...annotation } = annotationWithMessages;
@@ -729,8 +772,8 @@ export function getEmptySandboxAnnotationInformation(
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
-  fallbackLayerName: string | null | undefined,
-  resolutionRestrictions: APIResolutionRestrictions | null | undefined,
+  fallbackLayerName?: string | null | undefined,
+  resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
@@ -836,12 +879,24 @@ export async function getTracingForAnnotationType(
 export function getUpdateActionLog(
   tracingStoreUrl: string,
   tracingId: string,
-  tracingType: "skeleton" | "volume",
+  versionedObjectType: SaveQueueType,
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?token=${token}`,
     ),
+  );
+}
+
+export function getNewestVersionForTracing(
+  tracingStoreUrl: string,
+  tracingId: string,
+  tracingType: "skeleton" | "volume",
+): Promise<number> {
+  return doWithToken((token) =>
+    Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
+    ).then((obj) => obj.version),
   );
 }
 
@@ -948,6 +1003,7 @@ export async function getJobs(): Promise<APIJob[]> {
     datasetName: job.commandArgs.dataset_name,
     organizationName: job.commandArgs.organization_name,
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
+    annotationLayerName: job.commandArgs.annotation_layer_name,
     boundingBox: job.commandArgs.bbox,
     exportFileName: job.commandArgs.export_file_name,
     tracingId: job.commandArgs.volume_tracing_id,
@@ -1005,19 +1061,18 @@ export async function startExportTiffJob(
   organizationName: string,
   bbox: Vector6,
   layerName: string | null | undefined,
-  tracingId: string | null | undefined,
   annotationId: string | null | undefined,
   annotationType: APIAnnotationType | null | undefined,
+  annotationLayerName: string | null | undefined,
   mappingName: string | null | undefined,
   mappingType: string | null | undefined,
   hideUnmappedIds: boolean | null | undefined,
-  tracingVersion: number | null | undefined = null,
 ): Promise<Array<APIJob>> {
   const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
-  const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
   const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
   const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
-  const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
+  const annotationLayerNameSuffix =
+    annotationLayerName != null ? `&annotationLayerName=${annotationLayerName}` : "";
   const mappingNameSuffix = mappingName != null ? `&mappingName=${mappingName}` : "";
   const mappingTypeSuffix = mappingType != null ? `&mappingType=${mappingType}` : "";
   const hideUnmappedIdsSuffix =
@@ -1025,7 +1080,7 @@ export async function startExportTiffJob(
   return Request.receiveJSON(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
+    )}${layerNameSuffix}${annotationIdSuffix}${annotationTypeSuffix}${annotationLayerNameSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
     {
       method: "POST",
     },
@@ -1567,6 +1622,29 @@ export function fetchMapping(
   );
 }
 
+export function makeMappingEditable(
+  tracingStoreUrl: string,
+  tracingId: string,
+): Promise<ServerEditableMapping> {
+  return doWithToken((token) =>
+    Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
+      {
+        method: "POST",
+      },
+    ),
+  );
+}
+
+export function getEditableMapping(
+  tracingStoreUrl: string,
+  tracingId: string,
+): Promise<ServerEditableMapping> {
+  return doWithToken((token) =>
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}?token=${token}`),
+  );
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1748,12 +1826,11 @@ export async function updateOrganization(
 }
 
 export async function isDatasetAccessibleBySwitching(
-  annotationType: AnnotationType,
   commandType: TraceOrViewCommand,
 ): Promise<APIOrganization | null | undefined> {
   if (commandType.type === ControlModeEnum.TRACE) {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?annotationTyp=${annotationType}&annotationId=${commandType.annotationId}`,
+      `/api/auth/accessibleBySwitching?annotationId=${commandType.annotationId}`,
     );
   } else {
     return Request.receiveJSON(
@@ -1855,10 +1932,12 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 // These parameters are bundled into an object to avoid that the computeIsosurface function
 // receives too many parameters, since this doesn't play well with the saga typings.
 type IsosurfaceRequest = {
+  // The position is in voxels in mag 1
   position: Vector3;
   mag: Vector3;
   segmentId: number;
   subsamplingStrides: Vector3;
+  // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
   scale: Vector3;
   mappingName: string | null | undefined;
@@ -1922,7 +2001,26 @@ export function getAgglomerateSkeleton(
   return doWithToken((token) =>
     Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
-      // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
+      {
+        useWebworkerForArrayBuffer: false,
+        showErrorToast: false,
+      },
+    ),
+  );
+}
+
+export function getEditableAgglomerateSkeleton(
+  tracingStoreUrl: string,
+  tracingId: string,
+  agglomerateId: number,
+): Promise<ArrayBuffer> {
+  return doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
         useWebworkerForArrayBuffer: false,
         showErrorToast: false,

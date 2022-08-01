@@ -28,18 +28,33 @@ import type {
   UpdateTreeGroupVisibilityUpdateAction,
   CreateEdgeUpdateAction,
   DeleteEdgeUpdateAction,
+  SplitAgglomerateUpdateAction,
+  MergeAgglomerateUpdateAction,
+  CreateSegmentUpdateAction,
+  UpdateSegmentUpdateAction,
+  DeleteSegmentUpdateAction,
+  MoveTreeComponentUpdateAction,
+  MergeTreeUpdateAction,
+  UpdateMappingNameUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { useSelector } from "react-redux";
+import { OxalisState } from "oxalis/store";
+import { formatUserName, getContributorById } from "oxalis/model/accessors/user_accessor";
 type Description = {
   description: string;
   icon: React.ReactNode;
+};
+const updateTracingDescription = {
+  description: "Modified the annotation.",
+  icon: <EditOutlined />,
 };
 // The order in which the update actions are added to this object,
 // determines the order in which update actions are checked
 // to describe an update action batch. See also the comment
 // of the `getDescriptionForBatch` function.
-const descriptionFns = {
+const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Description> = {
   importVolumeTracing: (): Description => ({
     description: "Imported a volume tracing.",
     icon: <PlusOutlined />,
@@ -55,6 +70,21 @@ const descriptionFns = {
   removeFallbackLayer: (): Description => ({
     description: "Removed the segmentation fallback layer.",
     icon: <DeleteOutlined />,
+  }),
+  updateMappingName: (action: UpdateMappingNameUpdateAction): Description => ({
+    description:
+      action.value.mappingName != null
+        ? `Activated mapping ${action.value.mappingName}.`
+        : "Deactivated the active mapping.",
+    icon: <EyeOutlined />,
+  }),
+  splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => ({
+    description: `Split agglomerate ${action.value.agglomerateId} by separating the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
+    icon: <DeleteOutlined />,
+  }),
+  mergeAgglomerate: (action: MergeAgglomerateUpdateAction): Description => ({
+    description: `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
+    icon: <PlusOutlined />,
   }),
   deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({
     description:
@@ -116,6 +146,31 @@ const descriptionFns = {
     description: "Updated the 3D view.",
     icon: <CodeSandboxOutlined />,
   }),
+  createSegment: (action: CreateSegmentUpdateAction): Description => ({
+    description: `Added the segment with id ${action.value.id} to the segments list.`,
+    icon: <PlusOutlined />,
+  }),
+  updateSegment: (action: UpdateSegmentUpdateAction): Description => ({
+    description: `Updated the segment with id ${action.value.id} in the segments list.`,
+    icon: <EditOutlined />,
+  }),
+  deleteSegment: (action: DeleteSegmentUpdateAction): Description => ({
+    description: `Deleted the segment with id ${action.value.id} from the segments list.`,
+    icon: <DeleteOutlined />,
+  }),
+  // This should never be shown since currently this update action can only be triggered
+  // by merging or splitting trees which is recognized separately, before this description
+  // is accessed.
+  moveTreeComponent: (action: MoveTreeComponentUpdateAction): Description => ({
+    description: `Moved ${action.value.nodeIds.length} nodes from tree with id ${action.value.sourceId} to tree with id ${action.value.targetId}.`,
+    icon: <EditOutlined />,
+  }),
+  // This should never be shown since currently this update action is never dispatched.
+  mergeTree: (action: MergeTreeUpdateAction): Description => ({
+    description: `Merged the trees with id ${action.value.sourceId} and ${action.value.targetId}.`,
+    icon: <EditOutlined />,
+  }),
+  updateTracing: (): Description => updateTracingDescription,
 };
 
 function getDescriptionForSpecificBatch(
@@ -128,7 +183,6 @@ function getDescriptionForSpecificBatch(
     throw new Error("Flow constraint violated");
   }
 
-  // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
   return descriptionFns[type](firstAction, actions.length);
 }
 
@@ -198,10 +252,7 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
   }
 
   // Catch-all for other update actions, currently updateTracing.
-  return {
-    description: "Modified the annotation.",
-    icon: <EditOutlined />,
-  };
+  return updateTracingDescription;
 }
 
 type Props = {
@@ -225,6 +276,9 @@ export default function VersionEntry({
   onPreviewVersion,
 }: Props) {
   const lastTimestamp = _.max(actions.map((action) => action.value.actionTimestamp));
+  const contributors = useSelector((state: OxalisState) => state.tracing.contributors);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const owner = useSelector((state: OxalisState) => state.tracing.owner);
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,
@@ -241,6 +295,12 @@ export default function VersionEntry({
     </Button>
   );
   const { description, icon } = getDescriptionForBatch(actions);
+
+  // In case the actionAuthorId is not set, the action was created before the multi-contributor
+  // support. Default to the owner in that case.
+  const author = getContributorById(actions[0].value.actionAuthorId, contributors) || owner;
+  const authorName = formatUserName(activeUser, author);
+
   return (
     <List.Item
       style={{
@@ -262,11 +322,12 @@ export default function VersionEntry({
         description={
           <React.Fragment>
             {isNewest ? (
-              <React.Fragment>
+              <>
                 <i>Newest version</i> <br />
-              </React.Fragment>
+              </>
             ) : null}
             {description}
+            <div>Authored by {authorName}</div>
           </React.Fragment>
         }
       />

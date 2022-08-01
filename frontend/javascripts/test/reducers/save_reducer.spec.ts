@@ -2,6 +2,9 @@ import Maybe from "data.maybe";
 import mockRequire from "mock-require";
 import test from "ava";
 import "test/reducers/save_reducer.mock";
+import dummyUser from "test/fixtures/dummy_user";
+import type { SaveState } from "oxalis/store";
+import { APIUser } from "types/api_flow_types";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 const TIMESTAMP = 1494695001688;
 const DateMock = {
@@ -15,16 +18,24 @@ mockRequire("oxalis/model/accessors/skeletontracing_accessor", AccessorMock);
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer").default;
 const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions");
-const initialState = {
+
+const initialState: { save: SaveState; activeUser: APIUser } = {
+  activeUser: dummyUser,
   save: {
-    isBusy: false,
+    isBusyInfo: {
+      skeleton: false,
+      volume: false,
+      mapping: false,
+    },
     queue: {
       skeleton: [],
       volumes: {},
+      mappings: {},
     },
     lastSaveTimestamp: {
       skeleton: 0,
-      volume: {},
+      volumes: {},
+      mappings: {},
     },
     progressInfo: {
       processedActionCount: 0,
@@ -58,7 +69,7 @@ test("Save should add zero update actions to the queue", (t) => {
 test("Save should remove one update actions from the queue", (t) => {
   const firstItem = [createEdge(0, 1, 2)];
   const secondItem = [createEdge(1, 2, 3)];
-  const saveQueue = createSaveQueueFromUpdateActions(secondItem, TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions([secondItem], TIMESTAMP);
   const firstPushAction = SaveActions.pushSaveQueueTransaction(firstItem, "skeleton");
   const secondPushAction = SaveActions.pushSaveQueueTransaction(secondItem, "skeleton");
   const popAction = SaveActions.shiftSaveQueueAction(1, "skeleton");

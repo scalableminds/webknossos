@@ -144,22 +144,28 @@ const defaultState: OxalisState = {
       tracingId: "",
     },
     volumes: [],
+    mappings: [],
     skeleton: null,
     owner: null,
+    contributors: [],
+    othersMayEdit: false,
     annotationLayers: [],
   },
   save: {
     queue: {
       skeleton: [],
       volumes: {},
+      mappings: {},
     },
     isBusyInfo: {
       skeleton: false,
       volume: false,
+      mapping: false,
     },
     lastSaveTimestamp: {
       skeleton: 0,
       volumes: {},
+      mappings: {},
     },
     progressInfo: {
       processedActionCount: 0,
@@ -203,6 +209,7 @@ const defaultState: OxalisState = {
     showDropzoneModal: false,
     showVersionRestore: false,
     showDownloadModal: false,
+    showPythonClientModal: false,
     showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,

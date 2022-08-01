@@ -49,7 +49,7 @@ class SkeletonTracingService @Inject()(
       tracingId,
       updateActionGroup.version,
       updateActionGroup.actions
-        .map(_.addTimestamp(updateActionGroup.timestamp)) match { //to the first action in the group, attach the group's info
+        .map(_.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)) match { //to the first action in the group, attach the group's info
         case Nil           => Nil
         case first :: rest => first.addInfo(updateActionGroup.info) :: rest
       }
@@ -65,9 +65,7 @@ class SkeletonTracingService @Inject()(
           pendingUpdates <- findPendingUpdates(tracingId, existingVersion, newVersion)
           updatedTracing <- update(tracing, tracingId, pendingUpdates, newVersion)
           _ <- save(updatedTracing, Some(tracingId), newVersion)
-        } yield {
-          updatedTracing
-        }
+        } yield updatedTracing
       } else {
         Full(tracing)
       }
@@ -102,10 +100,8 @@ class SkeletonTracingService @Inject()(
         updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(
           tracingId,
           Some(desiredVersion),
-          Some(existingVersion + 1))(fromJson[List[SkeletonUpdateAction]])
-      } yield {
-        updateActionGroups.reverse.flatten
-      }
+          Some(existingVersion + 1))(fromJsonBytes[List[SkeletonUpdateAction]])
+      } yield updateActionGroups.reverse.flatten
     }
 
   private def update(tracing: SkeletonTracing,
@@ -119,7 +115,7 @@ class SkeletonTracingService @Inject()(
         case Full(tracing) =>
           remainingUpdates match {
             case List() => Fox.successful(tracing)
-            case RevertToVersionAction(sourceVersion, _, _) :: tail =>
+            case RevertToVersionAction(sourceVersion, _, _, _) :: tail =>
               val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
               updateIter(sourceTracing, tail)
             case update :: tail => updateIter(Full(update.applyOn(tracing)), tail)
@@ -211,7 +207,7 @@ class SkeletonTracingService @Inject()(
       )
     for {
       updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJson[List[SkeletonUpdateAction]])
+        fromJsonBytes[List[SkeletonUpdateAction]])
       updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
@@ -219,7 +215,7 @@ class SkeletonTracingService @Inject()(
   def updateActionStatistics(tracingId: String): Fox[JsObject] =
     for {
       updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(
-        fromJson[List[SkeletonUpdateAction]])
+        fromJsonBytes[List[SkeletonUpdateAction]])
       updateActions = updateActionGroups.flatten
     } yield {
       Json.obj(

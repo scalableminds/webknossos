@@ -1,4 +1,4 @@
-import type { ServerVolumeTracing } from "types/api_flow_types";
+import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import type { Segment, SegmentMap } from "oxalis/store";
@@ -8,6 +8,10 @@ import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actio
 export type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING";
   tracing: ServerVolumeTracing;
+};
+export type InitializeEditableMappingAction = {
+  type: "INITIALIZE_EDITABLE_MAPPING";
+  mapping: ServerEditableMapping;
 };
 type CreateCellAction = {
   type: "CREATE_CELL";
@@ -102,6 +106,9 @@ export type UpdateSegmentAction = {
   layerName: string;
   timestamp: number;
 };
+export type SetMappingIsEditableAction = {
+  type: "SET_MAPPING_IS_EDITABLE";
+};
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
@@ -123,7 +130,9 @@ export type VolumeTracingAction =
   | UpdateSegmentAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
-  | SetMaxCellAction;
+  | SetMaxCellAction
+  | SetMappingIsEditableAction
+  | InitializeEditableMappingAction;
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
@@ -131,6 +140,9 @@ export const VolumeTracingSaveRelevantActions = [
   "UPDATE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
+  // Note that the following two actions are defined in settings_actions.ts
+  "SET_MAPPING",
+  "SET_MAPPING_ENABLED",
 ];
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
 export const initializeVolumeTracingAction = (
@@ -138,6 +150,12 @@ export const initializeVolumeTracingAction = (
 ): InitializeVolumeTracingAction => ({
   type: "INITIALIZE_VOLUMETRACING",
   tracing,
+});
+export const initializeEditableMappingAction = (
+  mapping: ServerEditableMapping,
+): InitializeEditableMappingAction => ({
+  type: "INITIALIZE_EDITABLE_MAPPING",
+  mapping,
 });
 export const createCellAction = (): CreateCellAction => ({
   type: "CREATE_CELL",
@@ -256,8 +274,10 @@ export const dispatchFloodfillAsync = async (
   planeId: OrthoView,
 ): Promise<void> => {
   const readyDeferred = new Deferred();
-  // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
-  const action = floodFillAction(position, planeId, () => readyDeferred.resolve());
+  const action = floodFillAction(position, planeId, () => readyDeferred.resolve(null));
   dispatch(action);
   await readyDeferred.promise();
 };
+export const setMappingIsEditableAction = (): SetMappingIsEditableAction => ({
+  type: "SET_MAPPING_IS_EDITABLE",
+});

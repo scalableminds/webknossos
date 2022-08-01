@@ -269,7 +269,7 @@ export function areBoundingBoxesOverlappingOrTouching(
   return areOverlapping;
 }
 export function compareBy<T>(
-  _collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
+  _collectionForTypeInference: Array<T>, // this parameter is only used let TS infer the used type
   selector: (arg0: T) => number,
   isSortedAscending: boolean = true,
 ): Comparator<T> {
@@ -381,8 +381,8 @@ export function isUserAdminOrTeamManager(user: APIUser): boolean {
 export function isUserDatasetManager(user: APIUser): boolean {
   return user.isDatasetManager;
 }
-export function isUserAdminOrDatasetManager(user: APIUser): boolean {
-  return isUserAdmin(user) || isUserDatasetManager(user);
+export function isUserAdminOrDatasetManager(user: APIUser | null | undefined): boolean {
+  return user != null && (isUserAdmin(user) || isUserDatasetManager(user));
 }
 export function getUrlParamsObject(): UrlParams {
   return getUrlParamsObjectFromString(location.search);

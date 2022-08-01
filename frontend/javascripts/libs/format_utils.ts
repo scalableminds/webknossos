@@ -3,6 +3,7 @@ import { presetPalettes } from "@ant-design/colors";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import type { BoundingBoxObject } from "oxalis/store";
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 const COLOR_MAP: Array<string> = [
@@ -72,6 +73,24 @@ export function formatScale(scaleArr: Vector3 | null | undefined, roundTo: numbe
     return "";
   }
 }
+
+export function formatNumberToUnit(number: number, unitMap: Map<number, string>): string {
+  const closestFactor = findClosestToUnitFactor(number, unitMap);
+  const unit = unitMap.get(closestFactor);
+
+  if (unit == null) {
+    throw new Error("Couldn't look up appropriate unit.");
+  }
+
+  const valueInUnit = number / closestFactor;
+
+  if (valueInUnit !== Math.floor(valueInUnit)) {
+    return `${valueInUnit.toFixed(1)}${ThinSpace}${unit}`;
+  }
+
+  return `${valueInUnit}${ThinSpace}${unit}`;
+}
+
 const nmFactorToUnit = new Map([
   [1e-3, "pm"],
   [1, "nm"],
@@ -80,28 +99,31 @@ const nmFactorToUnit = new Map([
   [1e9, "m"],
   [1e12, "km"],
 ]);
-const sortedNmFactors = Array.from(nmFactorToUnit.keys()).sort((a, b) => a - b);
 export function formatNumberToLength(lengthInNm: number): string {
-  const closestFactor = findClosestLengthUnitFactor(lengthInNm);
-  const unit = nmFactorToUnit.get(closestFactor);
-
-  if (unit == null) {
-    throw new Error("Couldn't look up appropriate length unit.");
-  }
-
-  const lengthInUnit = lengthInNm / closestFactor;
-
-  if (lengthInUnit !== Math.floor(lengthInUnit)) {
-    return `${lengthInUnit.toFixed(1)}${ThinSpace}${unit}`;
-  }
-
-  return `${lengthInUnit}${ThinSpace}${unit}`;
+  return formatNumberToUnit(lengthInNm, nmFactorToUnit);
 }
-export function findClosestLengthUnitFactor(lengthInNm: number): number {
-  let closestFactor = sortedNmFactors[0];
 
-  for (const factor of sortedNmFactors) {
-    if (lengthInNm >= factor) {
+const byteFactorToUnit = new Map([
+  [1, "B"],
+  [1e3, "KB"],
+  [1e6, "MB"],
+  [1e9, "GB"],
+  [1e12, "TB"],
+]);
+export function formatCountToDataAmountUnit(count: number): string {
+  return formatNumberToUnit(count, byteFactorToUnit);
+}
+
+const getSortedFactors = _.memoize((unitMap: Map<number, string>) =>
+  Array.from(unitMap.keys()).sort((a, b) => a - b),
+);
+
+export function findClosestToUnitFactor(number: number, unitMap: Map<number, string>): number {
+  const sortedFactors = getSortedFactors(unitMap);
+  let closestFactor = sortedFactors[0];
+
+  for (const factor of sortedFactors) {
+    if (number >= factor) {
       closestFactor = factor;
     }
   }

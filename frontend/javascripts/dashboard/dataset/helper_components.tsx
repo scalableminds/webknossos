@@ -54,17 +54,18 @@ export const FormItemWithInfo = ({
   </FormItem>
 );
 
+type Props = {
+  children: React.ReactNode;
+};
+
 export class RetryingErrorBoundary extends React.Component<
-  {
-    children: React.ReactNode;
-  },
+  Props,
   {
     error: Error | null | undefined;
   }
 > {
-  constructor() {
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1-2 arguments, but got 0.
-    super();
+  constructor(props: Props) {
+    super(props);
     this.state = {
       error: null,
     };

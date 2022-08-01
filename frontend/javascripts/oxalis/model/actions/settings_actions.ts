@@ -85,6 +85,12 @@ export type SetMappingAction = {
   layerName: string;
   showLoadingIndicator: boolean | null | undefined;
 };
+export type SetMappingNameAction = {
+  type: "SET_MAPPING_NAME";
+  mappingName: string;
+  mappingType: MappingType;
+  layerName: string;
+};
 type SetHideUnmappedIdsAction = {
   type: "SET_HIDE_UNMAPPED_IDS";
   hideUnmappedIds: boolean;
@@ -102,6 +108,7 @@ export type SettingAction =
   | SetControlModeAction
   | SetMappingEnabledAction
   | SetMappingAction
+  | SetMappingNameAction
   | SetHideUnmappedIdsAction
   | SetHistogramDataAction
   | InitializeGpuSetupAction;
@@ -182,8 +189,7 @@ export const dispatchClipHistogramAsync = async (
 ): Promise<void> => {
   const readyDeferred = new Deferred();
   const action = clipHistogramAction(layerName, shouldAdjustClipRange, () =>
-    // @ts-expect-error ts-migrate(2554) FIXME: Expected 1 arguments, but got 0.
-    readyDeferred.resolve(),
+    readyDeferred.resolve(null),
   );
   dispatch(action);
   await readyDeferred.promise();
@@ -232,6 +238,16 @@ export const setMappingAction = (
   mappingColors,
   hideUnmappedIds,
   showLoadingIndicator,
+});
+export const setMappingNameAction = (
+  layerName: string,
+  mappingName: string,
+  mappingType: MappingType,
+): SetMappingNameAction => ({
+  type: "SET_MAPPING_NAME",
+  layerName,
+  mappingName,
+  mappingType,
 });
 export const setHideUnmappedIdsAction = (
   layerName: string,

@@ -3,8 +3,6 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 
-import akka.http.caching.LfuCache
-import akka.http.caching.scaladsl.{Cache, CachingSettings}
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
@@ -19,14 +17,23 @@ import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, Web
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  EditableMappingService,
+  EditableMappingUpdateActionGroup,
+  RemoteFallbackLayer
+}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ResolutionRestrictions,
+  UpdateMappingNameAction,
+  VolumeTracingService
+}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteDataStoreClient,
+  TSRemoteDatastoreClient,
   TSRemoteWebKnossosClient,
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
-import net.liftweb.common.Box
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -34,19 +41,20 @@ import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
-import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 class VolumeTracingController @Inject()(
     val tracingService: VolumeTracingService,
     val config: TracingStoreConfig,
     val remoteWebKnossosClient: TSRemoteWebKnossosClient,
-    val remoteDataStoreClient: TSRemoteDataStoreClient,
+    val remoteDataStoreClient: TSRemoteDatastoreClient,
     val accessTokenService: TracingStoreAccessTokenService,
+    editableMappingService: EditableMappingService,
     val slackNotificationService: TSSlackNotificationService,
     val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings]
-    with ProtoGeometryImplicits {
+    with ProtoGeometryImplicits
+    with KeyValueStoreImplicits {
 
   implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
 
@@ -66,7 +74,7 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
+          accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
@@ -84,7 +92,7 @@ class VolumeTracingController @Inject()(
   def mergedFromContents(token: Option[String], persist: Boolean): Action[VolumeTracings] =
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val tracings: List[Option[VolumeTracing]] = request.body
           val mergedTracing = tracingService.merge(tracings.flatten)
           tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
@@ -98,7 +106,7 @@ class VolumeTracingController @Inject()(
     implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
+          accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
@@ -113,7 +121,7 @@ class VolumeTracingController @Inject()(
   def allData(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async {
     implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
           } yield {
@@ -127,7 +135,7 @@ class VolumeTracingController @Inject()(
   def allDataBlocking(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
             data <- tracingService.allDataFile(tracingId, tracing)
@@ -139,10 +147,12 @@ class VolumeTracingController @Inject()(
   def data(token: Option[String], tracingId: String): Action[List[WebKnossosDataRequest]] =
     Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            (data, indices) <- tracingService.data(tracingId, tracing, request.body)
+            (data, indices) <- if (tracing.mappingIsEditable.getOrElse(false))
+              editableMappingService.volumeData(tracing, request.body, urlOrHeaderToken(token, request))
+            else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
@@ -165,9 +175,10 @@ class VolumeTracingController @Inject()(
                 boundingBox: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            _ <- bool2Fox(!tracing.getMappingIsEditable) ?~> "Duplicate is not yet implemented for editable mapping annotations"
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
@@ -191,7 +202,7 @@ class VolumeTracingController @Inject()(
   def importVolumeData(token: Option[String], tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), token) {
+        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId)
             currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
@@ -204,7 +215,7 @@ class VolumeTracingController @Inject()(
 
   def updateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     log() {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           updateLog <- tracingService.updateActionLog(tracingId)
         } yield Ok(updateLog)
@@ -214,12 +225,15 @@ class VolumeTracingController @Inject()(
 
   def requestIsosurface(token: Option[String], tracingId: String): Action[WebKnossosIsosurfaceRequest] =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
-          (vertices, neighbors) <- tracingService.createIsosurface(tracingId, request.body)
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
+            editableMappingService.createIsosurface(tracing, request.body, urlOrHeaderToken(token, request))
+          else tracingService.createIsosurface(tracingId, request.body)
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
@@ -233,14 +247,14 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
           existingMags = tracing.resolutions.map(vec3IntFromProto)
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              Map(tracingId -> ".") ++ existingMags.map { mag =>
+              existingMags.map { mag =>
                 (mag.toMagLiteral(allowScalar = true), mag.toMagLiteral(allowScalar = true))
               }.toMap
             )).withHeaders()
@@ -251,17 +265,17 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              Map(mag -> ".")
+              Map.empty
             )).withHeaders()
       }
     }
@@ -270,10 +284,10 @@ class VolumeTracingController @Inject()(
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
           cubeLength = DataLayer.bucketLength
@@ -331,10 +345,10 @@ class VolumeTracingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       for {
-        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
-        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName)
+        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName) ~> 404
 
         omeNgffHeader = OmeNgffHeader.fromDataLayerName(tracingId,
                                                         dataSourceScale = dataSource.scale,
@@ -346,33 +360,36 @@ class VolumeTracingController @Inject()(
   def rawZarrCube(token: Option[String], tracingId: String, mag: String, cxyz: String): Action[AnyContent] =
     Action.async { implicit request =>
       {
-        val combinedToken = urlOrHeaderToken(token, request)
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), combinedToken) {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
             existingMags = tracing.resolutions.map(vec3IntFromProto)
-            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag)
+            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
             _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
 
             (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404
             _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
             cubeSize = DataLayer.bucketLength
-            request = WebKnossosDataRequest(
-              position = Vec3Int(x * cubeSize * magParsed.x, y * cubeSize * magParsed.y, z * cubeSize * magParsed.z),
+            wkRequest = WebKnossosDataRequest(
+              position = Vec3Int(x, y, z) * cubeSize * magParsed,
               mag = magParsed,
               cubeSize = cubeSize,
               fourBit = Some(false),
               applyAgglomerate = None,
               version = None
             )
-            (data, missingBucketIndices) <- tracingService.data(tracingId, tracing, List(request))
-            dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
-                                                            data,
-                                                            missingBucketIndices,
-                                                            mag,
-                                                            cxyz,
-                                                            combinedToken) ?~> "Getting fallback layer failed" ~> 400
+            (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
+              editableMappingService.volumeData(tracing, List(wkRequest), urlOrHeaderToken(token, request))
+            else tracingService.data(tracingId, tracing, List(wkRequest))
+            dataWithFallback <- getFallbackLayerDataIfEmpty(
+              tracing,
+              data,
+              missingBucketIndices,
+              magParsed,
+              Vec3Int(x, y, z),
+              cubeSize,
+              urlOrHeaderToken(token, request)) ?~> "Getting fallback layer data failed" ~> 404
           } yield Ok(dataWithFallback).withHeaders()
         }
       }
@@ -381,56 +398,41 @@ class VolumeTracingController @Inject()(
   private def getFallbackLayerDataIfEmpty(tracing: VolumeTracing,
                                           data: Array[Byte],
                                           missingBucketIndices: List[Int],
-                                          mag: String,
-                                          cxyz: String,
+                                          mag: Vec3Int,
+                                          position: Vec3Int,
+                                          cubeSize: Int,
                                           urlToken: Option[String]): Fox[Array[Byte]] = {
-    def dataStoreFromCache(organizationName: String, dataSetName: String): Future[Box[String]] =
-      dataStoreUriCache.getOrLoad(
-        (Some(organizationName), dataSetName),
-        keyTuple => remoteWebKnossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2)
-      )
-
     def fallbackLayerData(): Fox[Array[Byte]] = {
       val organizationName = tracing.organizationName
       val dataSetName = tracing.dataSetName
       val dataLayerName = tracing.getFallbackLayer
+      val request = WebKnossosDataRequest(
+        position = position * mag * cubeSize,
+        mag = mag,
+        cubeSize = cubeSize,
+        fourBit = Some(false),
+        applyAgglomerate = tracing.mappingName,
+        version = None
+      )
 
       organizationName match {
         case Some(orgName) =>
           for {
-            dataStoreURL <- Fox(dataStoreFromCache(orgName, dataSetName))
-            fallbackData <- remoteDataStoreClient.fallbackLayerBucket(dataStoreURL,
-                                                                      orgName,
-                                                                      dataSetName,
-                                                                      dataLayerName,
-                                                                      mag,
-                                                                      cxyz,
-                                                                      urlToken)
+            (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(
+              RemoteFallbackLayer(orgName, dataSetName, dataLayerName, tracing.elementClass),
+              List(request),
+              urlToken)
+
+            _ <- bool2Fox(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer"
           } yield fallbackData
         case None => Fox.failure("Organization Name is not set (Consider creating a new annotation).")
       }
     }
-
     if (missingBucketIndices.nonEmpty && tracing.fallbackLayer.isDefined) {
       fallbackLayerData()
     } else {
       Fox.successful(data)
     }
-  }
-
-  private lazy val dataStoreUriCache: Cache[(Option[String], String), Box[String]] = {
-    val defaultCachingSettings = CachingSettings("")
-    val maxEntries = 1000
-    val lfuCacheSettings =
-      defaultCachingSettings.lfuCacheSettings
-        .withInitialCapacity(maxEntries)
-        .withMaxCapacity(maxEntries)
-        .withTimeToLive(2.hours)
-        .withTimeToIdle(1.hour)
-    val cachingSettings =
-      defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
-    val lfuCache: Cache[(Option[String], String), Box[String]] = LfuCache(cachingSettings)
-    lfuCache
   }
 
   private def getNeighborIndices(neighbors: List[Int]) =
@@ -440,13 +442,113 @@ class VolumeTracingController @Inject()(
     "[" + neighbors.mkString(", ") + "]"
 
   def findData(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       for {
         positionOpt <- tracingService.findData(tracingId)
       } yield {
         Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int(1, 1, 1))))
       }
     }
+  }
+
+  def agglomerateSkeleton(token: Option[String], tracingId: String, agglomerateId: Long): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId)
+          _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Cannot query agglomerate skeleton for volume annotation"
+          mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
+          remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
+          agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(
+            mappingName,
+            remoteFallbackLayer,
+            agglomerateId,
+            urlOrHeaderToken(token, request))
+        } yield Ok(agglomerateSkeletonBytes)
+      }
+    }
+
+  def makeMappingEditable(token: Option[String], tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
+            _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
+            (editableMappingId, editableMapping) <- editableMappingService.create(baseMappingName = tracingMappingName)
+            volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
+                                                   isEditable = Some(true),
+                                                   actionTimestamp = Some(System.currentTimeMillis()))
+            _ <- tracingService.handleUpdateGroup(
+              tracingId,
+              UpdateActionGroup[VolumeTracing](tracing.version + 1,
+                                               System.currentTimeMillis(),
+                                               None,
+                                               List(volumeUpdate),
+                                               None,
+                                               None,
+                                               None,
+                                               None,
+                                               None),
+              tracing.version
+            )
+            infoJson <- editableMappingService.infoJson(tracingId = tracingId,
+                                                        editableMappingId = editableMappingId,
+                                                        editableMapping = editableMapping)
+          } yield Ok(infoJson)
+        }
+      }
+    }
+
+  def updateEditableMapping(token: Option[String], tracingId: String): Action[List[EditableMappingUpdateActionGroup]] =
+    Action.async(validateJson[List[EditableMappingUpdateActionGroup]]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId)
+          mappingName <- tracing.mappingName.toFox
+          _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+          currentVersion <- editableMappingService.newestMaterializableVersion(mappingName)
+          _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update group must contain exactly one update group"
+          updateGroup <- request.body.headOption.toFox
+          _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
+          _ <- bool2Fox(updateGroup.actions.length == 1) ?~> "Editable mapping update group must contain exactly one update action"
+          _ <- editableMappingService.update(mappingName, updateGroup, updateGroup.version)
+        } yield Ok
+      }
+    }
+
+  def editableMappingUpdateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            mappingName <- tracing.mappingName.toFox
+            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            updateLog <- editableMappingService.updateActionLog(mappingName)
+          } yield Ok(updateLog)
+        }
+      }
+  }
+
+  def editableMappingInfo(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            mappingName <- tracing.mappingName.toFox
+            remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
+            editableMapping <- editableMappingService.get(mappingName,
+                                                          remoteFallbackLayer,
+                                                          urlOrHeaderToken(token, request))
+            infoJson <- editableMappingService.infoJson(tracingId = tracingId,
+                                                        editableMappingId = mappingName,
+                                                        editableMapping = editableMapping)
+          } yield Ok(infoJson)
+        }
+      }
   }
 
 }

@@ -107,7 +107,7 @@ Expects:
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       _ <- taskCreationService.assertBatchLimit(inputFiles.length, List(params.taskTypeId))
-      taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
+      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       project <- projectDAO
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
@@ -136,7 +136,7 @@ Expects:
     implicit request =>
       val params = request.body
       for {
-        taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
+        taskIdValidated <- ObjectId.fromString(taskId) ?~> "task.id.invalid"
         task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
         project <- projectDAO.findOne(task._project)
         _ <- Fox
@@ -150,7 +150,7 @@ Expects:
   @ApiOperation(hidden = true, value = "")
   def delete(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
+      taskIdValidated <- ObjectId.fromString(taskId) ?~> "task.id.invalid"
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Messages(
@@ -162,7 +162,7 @@ Expects:
   @ApiOperation(hidden = true, value = "")
   def listTasksForType(taskTypeId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+      taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
       tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       js <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
     } yield Ok(Json.toJson(js))
@@ -171,11 +171,11 @@ Expects:
   @ApiOperation(hidden = true, value = "")
   def listTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
-      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
-      projectIdOpt <- Fox.runOptional((request.body \ "project").asOpt[String])(ObjectId.parse)
+      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.fromString)
+      projectIdOpt <- Fox.runOptional((request.body \ "project").asOpt[String])(ObjectId.fromString)
       taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids =>
-        Fox.serialCombined(ids)(ObjectId.parse))
-      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse)
+        Fox.serialCombined(ids)(ObjectId.fromString))
+      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.fromString)
       randomizeOpt = (request.body \ "random").asOpt[Boolean]
       tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectIdOpt,
                                                                 taskTypeIdOpt,

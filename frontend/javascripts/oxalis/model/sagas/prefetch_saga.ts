@@ -6,6 +6,7 @@ import {
   PrefetchStrategyVolume,
   ContentTypes as PrefetchContentTypes,
 } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
+import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { throttle, call, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -107,6 +108,7 @@ export function* prefetchForPlaneMode(
   const resolutionInfo = getResolutionInfo(layer.resolutions);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
+  const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
   const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
   const resolutions = yield* select((state) => getResolutions(state.dataset));
@@ -125,8 +127,8 @@ export function* prefetchForPlaneMode(
     for (const strategy of prefetchStrategiesPlane) {
       if (
         strategy.forContentType(tracingTypes) &&
-        strategy.inVelocityRange(layer.connectionInfo.bandwidth) &&
-        strategy.inRoundTripTimeRange(layer.connectionInfo.roundTripTime)
+        strategy.inVelocityRange(lastConnectionStats.avgDownloadSpeedInBytesPerS) &&
+        strategy.inRoundTripTimeRange(lastConnectionStats.avgRoundTripTime)
       ) {
         const buckets = strategy.prefetch(
           layer.cube,
@@ -177,7 +179,8 @@ export function* prefetchForArbitraryMode(
   );
   const { currentBucketPickerTick } = layerRenderingManager;
   const { lastMatrix, lastZoomStep, lastBucketPickerTick } = previousProperties;
-  const { connectionInfo, pullQueue, cube } = Model.dataLayers[layer.name];
+  const { pullQueue, cube } = Model.dataLayers[layer.name];
+  const lastConnectionStats = getGlobalDataConnectionInfo().lastStats;
 
   if (
     currentBucketPickerTick !== lastBucketPickerTick &&
@@ -186,8 +189,8 @@ export function* prefetchForArbitraryMode(
     for (const strategy of prefetchStrategiesArbitrary) {
       if (
         strategy.forContentType(tracingTypes) &&
-        strategy.inVelocityRange(connectionInfo.bandwidth) &&
-        strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
+        strategy.inVelocityRange(lastConnectionStats.avgDownloadSpeedInBytesPerS) &&
+        strategy.inRoundTripTimeRange(lastConnectionStats.avgRoundTripTime)
       ) {
         const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions, resolutionInfo);
 

@@ -26,6 +26,7 @@ import {
   getSegmentationLayerByName,
   getSegmentationLayers,
   getVisibleSegmentationLayer,
+  getDataLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -91,7 +92,19 @@ export function getReadableNameByVolumeTracingId(
   tracingId: string,
 ) {
   const volumeDescriptor = getVolumeDescriptorById(tracing, tracingId);
-  return volumeDescriptor.name || "Volume Layer";
+  return volumeDescriptor.name || "Volume";
+}
+
+export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) {
+  const allReadableLayerNames = getDataLayers(dataset).map((currentLayer) =>
+    "tracingId" in currentLayer && currentLayer.tracingId != null
+      ? getReadableNameByVolumeTracingId(tracing, currentLayer.tracingId)
+      : currentLayer.name,
+  );
+  if (tracing.skeleton != null) {
+    allReadableLayerNames.push("Skeleton");
+  }
+  return allReadableLayerNames;
 }
 
 function getSegmentationLayerForTracing(
@@ -265,7 +278,7 @@ export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
   const tracing = getActiveSegmentationTracing(state);
 
   if (tracing == null) {
-    throw new Error("No volume tracing is available or enabled.");
+    throw new Error("No volume annotation is available or enabled.");
   }
 
   return tracing;
@@ -416,6 +429,45 @@ export function getMappingInfoForVolumeTracing(
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
 }
 
+export function hasEditableMapping(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  if (layerName != null) {
+    // This needs to be checked before calling getRequestedOrDefaultSegmentationTracingLayer,
+    // as the function will throw an error if layerName is given but not a tracing layer
+    const layer = getSegmentationLayerByName(state.dataset, layerName);
+    const tracing = getTracingForSegmentationLayer(state, layer);
+
+    if (tracing == null) return false;
+  }
+
+  const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
+
+  if (volumeTracing == null) return false;
+
+  return !!volumeTracing.mappingIsEditable;
+}
+
+export function isMappingActivationAllowed(
+  state: OxalisState,
+  mappingName: string | null | undefined,
+  layerName?: string | null | undefined,
+): boolean {
+  const isEditableMappingActive = hasEditableMapping(state, layerName);
+
+  if (!isEditableMappingActive) return true;
+
+  const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
+
+  // This should never be the case, since editable mappings can only be active for volume tracings
+  if (volumeTracing == null) return false;
+
+  // Only allow mapping activations of the editable mapping itself if an editable mapping is saved
+  // in the volume tracing. Editable mappings cannot be disabled or switched for now.
+  return mappingName === volumeTracing.mappingName;
+}
+
 export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | undefined {
   return volumeTracing.lastLabelActions[0];
 }
@@ -433,6 +485,6 @@ export function getLabelActionFromPreviousSlice(
   const position = adapt(getFlooredPosition(state.flycam));
 
   return volumeTracing.lastLabelActions.find(
-    (el) => Math.floor(adapt(el.centroid)[dim]) != position[dim],
+    (el) => Math.floor(adapt(el.centroid)[dim]) !== position[dim],
   );
 }

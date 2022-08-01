@@ -14,9 +14,9 @@ class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle with FoxImplicits {
 
   def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
-    val blockOffsetX = bucket.x % numBlocksPerCubeDimension
-    val blockOffsetY = bucket.y % numBlocksPerCubeDimension
-    val blockOffsetZ = bucket.z % numBlocksPerCubeDimension
+    val blockOffsetX = bucket.bucketX % numBlocksPerCubeDimension
+    val blockOffsetY = bucket.bucketY % numBlocksPerCubeDimension
+    val blockOffsetZ = bucket.bucketZ % numBlocksPerCubeDimension
     Fox(Future.successful(wkwFile.readBlock(blockOffsetX, blockOffsetY, blockOffsetZ)))
   }
 

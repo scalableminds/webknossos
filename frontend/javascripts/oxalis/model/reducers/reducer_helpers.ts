@@ -103,6 +103,8 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tracingStore,
     meshes,
     owner,
+    contributors,
+    othersMayEdit,
     annotationLayers,
   } = annotation;
   const restrictions = { ...annotation.restrictions, ...annotation.settings };
@@ -117,12 +119,14 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tracingStore,
     meshes,
     owner,
+    contributors,
+    othersMayEdit,
     annotationLayers,
   };
 }
 export function getNextTool(state: OxalisState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
-  const tools = Object.keys(AnnotationToolEnum);
+  const tools = Object.keys(AnnotationToolEnum) as AnnotationTool[];
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
 
   // Search for the next tool which is not disabled.
@@ -133,9 +137,7 @@ export function getNextTool(state: OxalisState): AnnotationTool | null {
   ) {
     const newTool = tools[newToolIndex % tools.length];
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     if (!disabledToolInfo[newTool].isDisabled) {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type '"TRACE" |... Remove this comment to see the full error message
       return newTool;
     }
   }

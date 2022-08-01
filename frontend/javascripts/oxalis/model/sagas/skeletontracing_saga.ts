@@ -70,7 +70,7 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { getAgglomerateSkeleton } from "admin/admin_rest_api";
+import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import createProgressCallback from "libs/progress_callback";
 import {
@@ -232,37 +232,67 @@ function* getAgglomerateSkeletonTracing(
   agglomerateId: number,
 ): Saga<ServerSkeletonTracing> {
   const dataset = yield* select((state) => state.dataset);
+  const annotation = yield* select((state) => state.tracing);
   const layerInfo = getLayerByName(dataset, layerName);
-  // If there is a fallbackLayer, request the agglomerate for that instead of the tracing segmentation layer
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
-  const effectiveLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerName;
+
+  const editableMapping = annotation.mappings.find(
+    (mapping) => mapping.mappingName === mappingName,
+  );
 
   try {
-    const nmlProtoBuffer = yield* call(
-      getAgglomerateSkeleton,
-      dataset.dataStore.url,
-      dataset,
-      effectiveLayerName,
-      mappingName,
-      agglomerateId,
-    );
+    let nmlProtoBuffer;
+    if (editableMapping == null) {
+      // If there is a fallbackLayer, request the agglomerate for that instead of the tracing segmentation layer
+      const effectiveLayerName =
+        // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
+        layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerName;
+      nmlProtoBuffer = yield* call(
+        getAgglomerateSkeleton,
+        dataset.dataStore.url,
+        dataset,
+        effectiveLayerName,
+        mappingName,
+        agglomerateId,
+      );
+    } else {
+      nmlProtoBuffer = yield* call(
+        getEditableAgglomerateSkeleton,
+        annotation.tracingStore.url,
+        editableMapping.tracingId,
+        agglomerateId,
+      );
+    }
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
     if (!("trees" in parsedTracing)) {
-      // This check is only for flow to realize that we have a skeleton tracing
+      // This check is only for typescript to realize that we have a skeleton tracing
       // on our hands.
       throw new Error("Skeleton tracing doesn't contain trees");
     }
+
+    if (parsedTracing.trees.length !== 1) {
+      throw new Error(
+        `Agglomerate skeleton response does not contain exactly one tree, but ${parsedTracing.trees.length} instead.`,
+      );
+    }
+
+    // Make sure the tree is named as expected
+    parsedTracing.trees[0].name = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
 
     return parsedTracing;
   } catch (e) {
     // @ts-ignore
     if (e.messages != null) {
       // Enhance the error message for agglomerates that are too large
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'message' implicitly has an 'any' type.
-      const agglomerateTooLargeMessages = e.messages.filter((message) =>
-        message.chain != null ? message.chain.includes("too many") : false,
-      );
+      // @ts-ignore
+      const agglomerateTooLargeMessages = e.messages
+        .filter(
+          (message: Message) =>
+            message.chain?.includes("too many") || message.error?.includes("too many"),
+        )
+        // Demote error message to chain message so that it is shown in conjunction with the newly
+        // introduced error (as the chain). Otherwise there would be two toasts.
+        .map((message: Message) => (message.error != null ? { chain: message.error } : message));
 
       if (agglomerateTooLargeMessages.length > 0) {
         throw {
@@ -299,14 +329,27 @@ function handleAgglomerateLoadingError(
   ErrorHandling.notify(e);
 }
 
-function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
+export function* loadAgglomerateSkeletonWithId(
+  action: LoadAgglomerateSkeletonAction,
+): Saga<string | null> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
+  if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
 
   if (agglomerateId === 0) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
-    return;
+    return null;
+  }
+
+  const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+  const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
+  const maybeTree = findTreeByName(trees, treeName).getOrElse(null);
+
+  if (maybeTree != null) {
+    console.warn(
+      `Skeleton for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${treeName}".`,
+    );
+    return treeName;
   }
 
   const progressCallback = createProgressCallback({
@@ -337,10 +380,11 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
     hideFn();
     // @ts-ignore
     handleAgglomerateLoadingError(e);
-    return;
+    return null;
   }
 
   yield* call(progressCallback, true, "Skeleton generation done.");
+  return treeName;
 }
 
 function* loadConnectomeAgglomerateSkeletonWithId(

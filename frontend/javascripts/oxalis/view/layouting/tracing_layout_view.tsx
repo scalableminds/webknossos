@@ -8,7 +8,7 @@ import _ from "lodash";
 import Request from "libs/request";
 import type { ViewMode, Vector3, OrthoView } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
+import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -40,12 +40,15 @@ import {
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
+import { APICompoundType } from "types/api_flow_types";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { determineLayout } from "./default_layout_configs";
+
 const { Sider } = Layout;
+
 type OwnProps = {
-  initialAnnotationType: AnnotationType;
+  initialMaybeCompoundType: APICompoundType | null;
   initialCommandType: TraceOrViewCommand;
 };
 type StateProps = {
@@ -76,7 +79,7 @@ type State = {
   contextMenuPosition: [number, number] | null | undefined;
   clickedNodeId: number | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
-  contextMenuGlobalPosition: Vector3;
+  contextMenuGlobalPosition: Vector3 | null | undefined;
   contextMenuViewport: OrthoView | null | undefined;
   model: Record<string, any>;
 };
@@ -107,7 +110,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       contextMenuPosition: null,
       clickedNodeId: null,
       clickedBoundingBoxId: null,
-      contextMenuGlobalPosition: [0, 0, 0],
+      contextMenuGlobalPosition: null,
       contextMenuViewport: null,
       model: layout,
     };
@@ -160,7 +163,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     yPos: number,
     nodeId: number | null | undefined,
     boundingBoxId: number | null | undefined,
-    globalPosition: Vector3,
+    globalPosition: Vector3 | null | undefined,
     viewport: OrthoView,
   ) => {
     // On Windows the right click to open the context menu is also triggered for the overlay
@@ -185,7 +188,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       contextMenuPosition: null,
       clickedNodeId: null,
       clickedBoundingBoxId: null,
-      contextMenuGlobalPosition: [0, 0, 0],
+      contextMenuGlobalPosition: null,
       contextMenuViewport: null,
     });
   };
@@ -302,7 +305,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         >
           <TabTitle title={this.getTabTitle()} />
           <OxalisController
-            initialAnnotationType={this.props.initialAnnotationType}
+            initialMaybeCompoundType={this.props.initialMaybeCompoundType}
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
             setControllerStatus={this.setControllerStatus}

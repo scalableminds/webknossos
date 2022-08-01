@@ -17,22 +17,13 @@ import com.scalableminds.webknossos.datastore.models._
 
 import scala.concurrent.duration._
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.{
-  BinaryDataService,
-  IsosurfaceRequest,
-  IsosurfaceService,
-  IsosurfaceServiceHolder
-}
+import com.scalableminds.webknossos.datastore.services.{BinaryDataService, IsosurfaceRequest, IsosurfaceService, IsosurfaceServiceHolder}
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  KeyValueStoreImplicits,
-  TracingDataStore,
-  VersionedKeyValuePair
-}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, VersionedKeyValuePair}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Empty, Full}
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -49,6 +40,17 @@ case class UnmappedRemoteDataKey(
     dataRequests: List[WebKnossosDataRequest],
     userToken: Option[String]
 )
+
+case class MinCutParameters(
+  position1: Vec3Int,
+  position2: Vec3Int,
+  agglomerateId: Long,
+  editableMappingId: String
+)
+
+object MinCutParameters {
+  implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
+}
 
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
@@ -564,5 +566,11 @@ class EditableMappingService @Inject()(
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result
+
+
+  def agglomerateGraphMinCut(parameters: MinCutParameters, userToken: Option[String]): Fox[List[(Long, Long)]] = {
+
+    Fox.successful(List.empty)
+  }
 
 }

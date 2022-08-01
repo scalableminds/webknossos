@@ -32,8 +32,8 @@ export function NewVolumeLayerSelection({
 }: {
   segmentationLayers: Array<APISegmentationLayer>;
   dataset: APIDataset;
-  selectedSegmentationLayerName: string | null | undefined;
-  setSelectedSegmentationLayerName: (arg0: string | null | undefined) => void;
+  selectedSegmentationLayerName: string | undefined;
+  setSelectedSegmentationLayerName: (arg0: string | undefined) => void;
   disableLayerSelection: boolean | undefined;
 }) {
   const selectedSegmentationLayerIndex =
@@ -58,7 +58,9 @@ export function NewVolumeLayerSelection({
       <Radio.Group
         onChange={(e) => {
           const index = parseInt(e.target.value);
-          setSelectedSegmentationLayerName(index !== -1 ? segmentationLayers[index].name : null);
+          setSelectedSegmentationLayerName(
+            index !== -1 ? segmentationLayers[index].name : undefined,
+          );
         }}
         value={selectedSegmentationLayerIndex}
         disabled={disableLayerSelection ?? false}
@@ -164,7 +166,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
   const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
   const [annotationType, setAnnotationType] = useState("hybrid");
   const [userDefinedResolutionIndices, setUserDefinedResolutionIndices] = useState([0, 10000]);
-  const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState(null);
+  const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState(undefined);
   let modalContent = <Spin />;
 
   if (dataset !== null) {

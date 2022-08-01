@@ -90,7 +90,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
     for {
       rList <- run(sql"select _id from webknossos.organizationTeams where _organization = ${o.id}".as[String])
       r <- rList.headOption.toFox
-      parsed <- ObjectId.parse(r)
+      parsed <- ObjectId.fromString(r)
     } yield parsed
 
   def findOrganizationNameForAnnotation(annotationId: ObjectId): Fox[String] =

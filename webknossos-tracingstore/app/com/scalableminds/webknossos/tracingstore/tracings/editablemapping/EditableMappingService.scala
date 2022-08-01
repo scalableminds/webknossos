@@ -30,7 +30,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Empty, Full}
+import net.liftweb.common.{Box, Empty, Full}
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
@@ -588,10 +588,12 @@ class EditableMappingService @Inject()(
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition2, parameters.mag, userToken)
       mapping <- get(parameters.editableMappingId, remoteFallbackLayer, userToken)
       agglomerateGraph <- agglomerateGraphForId(mapping, parameters.agglomerateId, remoteFallbackLayer, userToken)
-      edgesToCut = minCut(agglomerateGraph, segmentId1, segmentId2)
+      edgesToCut <- minCut(agglomerateGraph, segmentId1, segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
     } yield edgesToCut
 
-  private def minCut(agglomerateGraph: AgglomerateGraph, segmentId1: Long, segmentId2: Long): List[(Long, Long)] = {
+  private def minCut(agglomerateGraph: AgglomerateGraph,
+                     segmentId1: Long,
+                     segmentId2: Long): Box[List[(Long, Long)]] = {
     val g = new SimpleWeightedGraph[Long, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
     agglomerateGraph.segments.foreach { segmentId =>
       g.addVertex(segmentId)
@@ -601,10 +603,12 @@ class EditableMappingService @Inject()(
         val e = g.addEdge(edge.source, edge.target)
         g.setEdgeWeight(e, affinity)
     }
-    val minCutImpl = new PushRelabelMFImpl(g)
-    minCutImpl.calculateMinCut(segmentId1, segmentId2)
-    val minCutEdges: util.Set[DefaultWeightedEdge] = minCutImpl.getCutEdges
-    minCutEdges.asScala.toList.map(e => (g.getEdgeSource(e), g.getEdgeTarget(e)))
+    tryo {
+      val minCutImpl = new PushRelabelMFImpl(g)
+      minCutImpl.calculateMinCut(segmentId1, segmentId2)
+      val minCutEdges: util.Set[DefaultWeightedEdge] = minCutImpl.getCutEdges
+      minCutEdges.asScala.toList.map(e => (g.getEdgeSource(e), g.getEdgeTarget(e)))
+    }
   }
 
 }

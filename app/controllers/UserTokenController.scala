@@ -198,7 +198,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
     else {
       for {
-        jobIdValidated <- ObjectId.parse(jobId)
+        jobIdValidated <- ObjectId.fromString(jobId)
         jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox
         answer = jobBox match {
           case Full(_) => UserAccessAnswer(granted = true)

@@ -2,11 +2,17 @@ import * as THREE from "three";
 import { document } from "libs/window";
 import _ from "lodash";
 
-const getCachedCanvas = _.memoize((width, height) => {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  return canvas;
+const canvas = document.createElement("canvas");
+canvas.width = 1;
+canvas.height = 1;
+
+const getImageData = _.memoize((width, height) => {
+  const ctx = canvas.getContext("2d");
+  if (ctx == null) {
+    throw new Error("Could nto get context for texture.");
+  }
+  const imageData = ctx.createImageData(width, height);
+  return imageData;
 });
 
 class UpdatableTexture extends THREE.Texture {
@@ -30,8 +36,21 @@ class UpdatableTexture extends THREE.Texture {
     anisotropy?: number,
     encoding?: THREE.TextureEncoding,
   ) {
-    const canvas = getCachedCanvas(width, height);
-    super(canvas, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy, encoding);
+    const imageData = getImageData(width, height);
+
+    // @ts-ignore
+    super(
+      imageData,
+      mapping,
+      wrapS,
+      wrapT,
+      magFilter,
+      minFilter,
+      format,
+      type,
+      anisotropy,
+      encoding,
+    );
 
     this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
     this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;

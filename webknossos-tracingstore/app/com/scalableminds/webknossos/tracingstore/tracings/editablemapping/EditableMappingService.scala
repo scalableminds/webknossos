@@ -42,10 +42,11 @@ case class UnmappedRemoteDataKey(
 )
 
 case class MinCutParameters(
-  position1: Vec3Int,
-  position2: Vec3Int,
-  agglomerateId: Long,
-  editableMappingId: String
+    segmentPosition1: Vec3Int,
+    segmentPosition2: Vec3Int,
+    mag: Vec3Int,
+    agglomerateId: Long,
+    editableMappingId: String
 )
 
 object MinCutParameters {
@@ -568,9 +569,18 @@ class EditableMappingService @Inject()(
     } yield result
 
 
-  def agglomerateGraphMinCut(parameters: MinCutParameters, userToken: Option[String]): Fox[List[(Long, Long)]] = {
+  def agglomerateGraphMinCut(parameters: MinCutParameters, remoteFallbackLayer: RemoteFallbackLayer, userToken: Option[String]): Fox[List[(Long, Long)]] = {
+    for {
+      segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
+      segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
+      mapping <- get(parameters.editableMappingId, remoteFallbackLayer, userToken)
+      agglomerateGraph <- agglomerateGraphForId(mapping, parameters.agglomerateId, remoteFallbackLayer, userToken)
+      edgesToCut = minCut(agglomerateGraph, segmentId1, segmentId2)
+    } yield edgesToCut
+  }
 
-    Fox.successful(List.empty)
+  private def minCut(agglomerateGraph: AgglomerateGraph, segmentId1: Long, segmentId2: Long): List[(Long, Long)] = {
+    List.empty
   }
 
 }

@@ -117,7 +117,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
     for {
       rList <- run(sql"select _annotation from webknossos.annotation_layers where tracingId = $tracingId".as[String])
       head: String <- rList.headOption.toFox
-      parsed <- ObjectId.parse(head)
+      parsed <- ObjectId.fromString(head)
     } yield parsed
 
   def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String): Fox[Unit] =
@@ -285,7 +285,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     for {
       r <- run(sql"""select _task from #$existingCollectionName
              where _user = ${userId.id} and typ = '#${AnnotationType.Task.toString}' and #$stateQuery""".as[String])
-      r <- Fox.serialCombined(r.toList)(ObjectId.parse(_))
+      r <- Fox.serialCombined(r.toList)(ObjectId.fromString(_))
     } yield r
 
   }

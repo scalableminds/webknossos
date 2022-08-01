@@ -18,7 +18,7 @@ case class CachedMapping(
 
 object CachedMapping {
 
-  def from(mappingRequest: DataServiceMappingRequest): CachedMapping =
+  def fromMappingRequest(mappingRequest: DataServiceMappingRequest): CachedMapping =
     storage.CachedMapping(mappingRequest.dataSource.id.team,
                           mappingRequest.dataSource.id.name,
                           mappingRequest.dataLayer.name,
@@ -32,7 +32,7 @@ class ParsedMappingCache(val maxEntries: Int)
   def withCache[T](mappingRequest: DataServiceMappingRequest)(
       loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T): Fox[T] = {
 
-    val cachedMappingInfo = CachedMapping.from(mappingRequest)
+    val cachedMappingInfo = CachedMapping.fromMappingRequest(mappingRequest)
 
     def handleUncachedMapping() = {
       val mappingFox = loadFn(mappingRequest).futureBox.map {

@@ -43,8 +43,8 @@ object TimeSpan {
         timeSpan.createdAsDateTime.getMonthOfYear,
         timeSpan.createdAsDateTime.getYear)
 
-  def createFrom(start: Long, end: Long, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
-    TimeSpan(ObjectId.generate, _user, _annotation, time = end - start, lastUpdate = end, created = start)
+  def fromTimestamp(timestamp: Long, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
+    TimeSpan(ObjectId.generate, _user, _annotation, time = 0L, lastUpdate = timestamp, created = timestamp)
 
 }
 

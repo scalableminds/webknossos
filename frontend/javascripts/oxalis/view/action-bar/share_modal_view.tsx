@@ -185,6 +185,14 @@ function _ShareModalView(props: Props) {
     });
   };
 
+  const reportFailedChange = () => {
+    const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);
+    Toast.error(messages["annotation.shared_teams_edited_failed"], {
+      timeout: 3500,
+      key: randomKeyToAllowDuplicates,
+    });
+  };
+
   const handleCheckboxChange = async (event: RadioChangeEvent) => {
     const newVisibility = event.target.value as any as APIAnnotationVisibility;
     if (newVisibility === visibility || !hasUpdatePermissions) {
@@ -192,30 +200,48 @@ function _ShareModalView(props: Props) {
     }
     setIsChangingInProgress(true);
     setVisibility(newVisibility as any as APIAnnotationVisibility);
-    await editAnnotation(annotationId, annotationType, {
-      visibility: newVisibility,
-    });
-    Store.dispatch(setAnnotationVisibilityAction(newVisibility));
-    setIsChangingInProgress(false);
-    reportSuccessfulChange(newVisibility);
+    try {
+      await editAnnotation(annotationId, annotationType, {
+        visibility: newVisibility,
+      });
+      debugger;
+      Store.dispatch(setAnnotationVisibilityAction(newVisibility));
+      reportSuccessfulChange(newVisibility);
+    } catch (e) {
+      debugger;
+      console.error("Failed to update the annotations visibility.", e);
+      // Resetting the visibility to the old value as the request failed
+      // so the user still sees the settings currently saved in the backend.
+      setVisibility(visibility as any as APIAnnotationVisibility);
+      reportFailedChange();
+    } finally {
+      setIsChangingInProgress(false);
+    }
   };
 
   const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
     const newTeams = _.flatten([value]);
-    if (_.isEqual(newTeams, sharedTeams) || !hasUpdatePermissions) {
+    if (_.isEqual(newTeams, sharedTeams)) {
       return;
     }
     setIsChangingInProgress(true);
     setSharedTeams(newTeams);
-    if (visibility !== "Private") {
+    try {
       await updateTeamsForSharedAnnotation(
         annotationType,
         annotationId,
         newTeams.map((team) => team.id),
       );
+      reportSuccessfulChange(visibility);
+    } catch (e) {
+      console.error("Failed to update the annotations shared teams.", e);
+      // Resetting the shared teams to the old value as the request failed
+      // so the user still sees the settings currently saved in the backend.
+      setSharedTeams(sharedTeams);
+      reportFailedChange();
+    } finally {
+      setIsChangingInProgress(false);
     }
-    setIsChangingInProgress(false);
-    reportSuccessfulChange(visibility);
   };
 
   const handleOthersMayEditCheckboxChange = async (event: RadioChangeEvent) => {
@@ -227,11 +253,20 @@ function _ShareModalView(props: Props) {
     setIsChangingInProgress(true);
     setNewOthersMayEdit(value);
     if (value !== othersMayEdit) {
-      await setOthersMayEditForAnnotation(annotationId, annotationType, value);
-      Store.dispatch(setOthersMayEditForAnnotationAction(value));
+      try {
+        await setOthersMayEditForAnnotation(annotationId, annotationType, value);
+        Store.dispatch(setOthersMayEditForAnnotationAction(value));
+        reportSuccessfulChange(visibility);
+      } catch (e) {
+        console.error("Failed to update the edit option for others.", e);
+        // Resetting the others may edit option to the old value as the request failed
+        // so the user still sees the settings currently saved in the backend.
+        setNewOthersMayEdit(newOthersMayEdit);
+        reportFailedChange();
+      } finally {
+        setIsChangingInProgress(false);
+      }
     }
-    setIsChangingInProgress(false);
-    reportSuccessfulChange(visibility);
   };
 
   const maybeShowWarning = () => {
@@ -272,13 +307,7 @@ function _ShareModalView(props: Props) {
   const includeToken = !dataset.isPublic && visibility === "Public";
   const url = getUrl(sharingToken, includeToken);
   return (
-    <Modal
-      title="Share this annotation"
-      visible={isVisible}
-      width={800}
-      onOk={onOk}
-      onCancel={onOk}
-    >
+    <Modal title="Share this annotation" visible={isVisible} width={800} onOk={onOk}>
       <Row>
         <Col
           span={6}

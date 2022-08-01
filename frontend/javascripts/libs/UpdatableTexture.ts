@@ -1,5 +1,13 @@
 import * as THREE from "three";
 import { document } from "libs/window";
+import _ from "lodash";
+
+const getCachedCanvas = _.memoize((width, height) => {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+});
 
 class UpdatableTexture extends THREE.Texture {
   isUpdatableTexture: boolean;
@@ -22,9 +30,7 @@ class UpdatableTexture extends THREE.Texture {
     anisotropy?: number,
     encoding?: THREE.TextureEncoding,
   ) {
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
+    const canvas = getCachedCanvas(width, height);
     super(canvas, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy, encoding);
 
     this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;

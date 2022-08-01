@@ -572,7 +572,7 @@ class EditableMappingService @Inject()(
   def agglomerateGraphMinCut(parameters: MinCutParameters, remoteFallbackLayer: RemoteFallbackLayer, userToken: Option[String]): Fox[List[(Long, Long)]] = {
     for {
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
-      segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
+      segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition2, parameters.mag, userToken)
       mapping <- get(parameters.editableMappingId, remoteFallbackLayer, userToken)
       agglomerateGraph <- agglomerateGraphForId(mapping, parameters.agglomerateId, remoteFallbackLayer, userToken)
       edgesToCut = minCut(agglomerateGraph, segmentId1, segmentId2)

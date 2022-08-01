@@ -103,7 +103,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     var timeSpansToUpdate: List[(TimeSpan, Long)] = List()
 
     def createNewTimeSpan(timestamp: Long, _user: ObjectId, annotation: Option[Annotation]) = {
-      val timeSpan = TimeSpan.createFrom(timestamp, timestamp, _user, annotation.map(_._id))
+      val timeSpan = TimeSpan.fromTimestamp(timestamp, _user, annotation.map(_._id))
       timeSpansToInsert = timeSpan :: timeSpansToInsert
       timeSpan
     }

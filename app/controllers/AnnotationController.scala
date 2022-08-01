@@ -402,7 +402,7 @@ class AnnotationController @Inject()(
   def annotationsForTask(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        taskIdValidated <- ObjectId.parse(taskId)
+        taskIdValidated <- ObjectId.fromString(taskId)
         task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
         project <- projectDAO.findOne(task._project)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
@@ -446,7 +446,7 @@ class AnnotationController @Inject()(
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
       _ <- restrictions.allowFinish(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       newUserId <- (request.body \ "userId").asOpt[String].toFox ?~> "user.id.notFound" ~> NOT_FOUND
-      newUserIdValidated <- ObjectId.parse(newUserId)
+      newUserIdValidated <- ObjectId.fromString(newUserId)
       updated <- annotationService.transferAnnotationToUser(typ, id, newUserIdValidated, request.identity)
       json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
     } yield JsonOk(json)
@@ -515,7 +515,7 @@ class AnnotationController @Inject()(
           annotation <- provider.provideAnnotation(typ, id, request.identity)
           _ <- bool2Fox(
             annotation._user == request.identity._id && annotation.visibility != AnnotationVisibility.Private) ?~> "notAllowed" ~> FORBIDDEN
-          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse)
+          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString)
           _ <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_)) ?~> "updateSharedTeams.failed.accessingTeam"
           _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
         } yield Ok(Json.toJson(teamIdsValidated))

@@ -453,7 +453,7 @@ Expects:
       m: MessagesProvider) =
     for {
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      projectIdValidated <- ObjectId.parse(projectId)
+      projectIdValidated <- ObjectId.fromString(projectId)
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
@@ -500,7 +500,7 @@ Expects:
 
     for {
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+      taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
       zip <- createTaskTypeZip(taskType)

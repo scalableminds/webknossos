@@ -134,8 +134,6 @@ class Cube {
 
     this.initialized = true;
     this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
-    this.crossSections[OrthoViews.PLANE_XZ].geometry.computeBoundingSphere();
-    this.crossSections[OrthoViews.PLANE_XZ].geometry.attributes.position.needsUpdate = true;
 
     app.vent.trigger("rerender");
   }

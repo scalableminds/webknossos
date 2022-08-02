@@ -9,7 +9,7 @@ canvas.height = 1;
 const getImageData = _.memoize((width: number, height: number): ImageData => {
   const ctx = canvas.getContext("2d");
   if (ctx == null) {
-    throw new Error("Could nto get context for texture.");
+    throw new Error("Could not get context for texture.");
   }
   const imageData = ctx.createImageData(width, height);
 
@@ -125,6 +125,7 @@ class UpdatableTexture extends THREE.Texture {
       src,
     );
     this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
+    this.image = null;
   }
 }
 export default UpdatableTexture;

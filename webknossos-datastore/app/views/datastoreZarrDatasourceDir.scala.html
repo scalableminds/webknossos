@@ -37,15 +37,11 @@
     </style>
   </head>
   <body>
-    <a href="." id="wkLink">
-      <img src="https://static.webknossos.org/images/oxalis.svg" alt="" />
-      <span>Go to webKnossos</span>
-    </a>
     <p id="hint">This is the webKnossos @(kind) “@(name)” folder.</p>
     <p>The following are the contents of the folder:</p>
     <ul>
       @folderContents.map { case (name, link) =>
-        <li><a href=@link>@name</a>: @link</li>
+        <li><a href="@link">@name</a>: @link</li>
       }
     </ul>
   </body>

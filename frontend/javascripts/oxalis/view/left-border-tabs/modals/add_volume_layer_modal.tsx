@@ -95,7 +95,7 @@ export default function AddVolumeLayerModal({
   disableLayerSelection: boolean | undefined;
 }) {
   const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState<
-    string | null | undefined
+    string | undefined
   >(preselectedLayerName);
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, tracing),
@@ -130,7 +130,11 @@ export default function AddVolumeLayerModal({
   let selectedSegmentationLayer = null;
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
-    const validationResult = validateReadableLayerName(newLayerName, allReadableLayerNames);
+    const validationResult = validateReadableLayerName(
+      newLayerName,
+      allReadableLayerNames,
+      selectedSegmentationLayerName,
+    );
     if (!validationResult.isValid) {
       Toast.error(validationResult.message);
       return;

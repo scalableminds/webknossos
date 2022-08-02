@@ -32,6 +32,8 @@ import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } 
 
 export const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
+const justCopy = true;
+
 export function getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
   const volumeTracing = getActiveSegmentationTracing(state);
@@ -85,7 +87,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
 
     if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
       disabledExplanation = `${explanationPrefix} last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH}).`;
-    } else if (interpolationDepth < 2) {
+    } else if (interpolationDepth < 2 && !justCopy) {
       disabledExplanation = `${explanationPrefix} last labeled slice should be at least 2 slices away.`;
     } else {
       tooltipAddendum = `Labels ${interpolationDepth - 1} ${pluralize(
@@ -299,8 +301,25 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
+  const adaptedInterpolationRange = justCopy
+    ? directionFactor > 0
+      ? [1, interpolationDepth + 1]
+      : [0, interpolationDepth]
+    : [1, interpolationDepth];
+
   const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
-  for (let targetOffsetW = 1; targetOffsetW < interpolationDepth; targetOffsetW++) {
+  for (
+    let targetOffsetW = adaptedInterpolationRange[0];
+    targetOffsetW < adaptedInterpolationRange[1];
+    targetOffsetW++
+  ) {
+    // if (justCopy) {
+    //   if (directionFactor > 0 && targetOffsetW === adaptedInterpolationRange[0]) {
+    //     continue;
+    //   } else if (directionFactor < 0 && targetOffsetW === adaptedInterpolationRange[1] - 1) {
+    //     continue;
+    //   }
+    // }
     const interpolationLayer = yield* call(
       createVolumeLayer,
       volumeTracing,
@@ -319,11 +338,21 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     );
   }
 
-  const firstSlice = inputNd.pick(null, null, 0);
-  const lastSlice = inputNd.pick(null, null, interpolationDepth);
+  let firstSlice = inputNd.pick(null, null, 0);
+  let lastSlice = inputNd.pick(null, null, interpolationDepth);
 
+  // Calculate firstSlice = firstSlice[...] == activeCellId
   isEqual(firstSlice, activeCellId);
+  // Calculate lastSlice = lastSlice[...] == activeCellId
   isEqual(lastSlice, activeCellId);
+
+  if (justCopy) {
+    if (directionFactor > 0) {
+      lastSlice = firstSlice;
+    } else {
+      firstSlice = lastSlice;
+    }
+  }
 
   if (!isNonZero(firstSlice) || !isNonZero(lastSlice)) {
     Toast.warning(
@@ -332,6 +361,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
 
+  // const firstSliceDists = justCopy ? firstSlice : signedDist(firstSlice);
+  // const lastSliceDists = justCopy ? lastSlice : signedDist(lastSlice);
   const firstSliceDists = signedDist(firstSlice);
   const lastSliceDists = signedDist(lastSlice);
 
@@ -339,7 +370,11 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     for (let v = 0; v < size[secondDim]; v++) {
       const firstVal = firstSliceDists.get(u, v);
       const lastVal = lastSliceDists.get(u, v);
-      for (let targetOffsetW = 1; targetOffsetW < interpolationDepth; targetOffsetW++) {
+      for (
+        let targetOffsetW = adaptedInterpolationRange[0];
+        targetOffsetW < adaptedInterpolationRange[1];
+        targetOffsetW++
+      ) {
         const k = targetOffsetW / interpolationDepth;
         const weightedAverage = firstVal * (1 - k) + lastVal * k;
         if (weightedAverage < 0) {

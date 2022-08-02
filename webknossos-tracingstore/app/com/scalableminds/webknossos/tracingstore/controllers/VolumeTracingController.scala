@@ -8,7 +8,11 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{
+  ZarrCoordinatesParser,
+  ZarrMag,
+  ZarrSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
@@ -33,7 +37,6 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
-import net.liftweb.common.{Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -261,6 +264,21 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  def volumeTracingFolderContentJson(token: Option[String], tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
+          existingMags = tracing.resolutions.map(vec3IntFromProto)
+        } yield
+          Ok(
+            Json.toJson(Map(tracingId -> ".") ++ existingMags.map { mag =>
+              (mag.toMagLiteral(allowScalar = true), mag.toMagLiteral(allowScalar = true))
+            }.toMap)
+          )
+      }
+    }
+
   def volumeTracingMagFolderContent(token: Option[String], tracingId: String, mag: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
@@ -277,6 +295,19 @@ class VolumeTracingController @Inject()(
               "%s".format(tracingId),
               Map(mag -> ".")
             )).withHeaders()
+      }
+    }
+
+  def volumeTracingMagFolderContentJson(token: Option[String], tracingId: String, mag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
+
+          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
+          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
+        } yield Ok(Json.obj(mag -> "."))
       }
     }
 
@@ -311,20 +342,7 @@ class VolumeTracingController @Inject()(
                                   compressor = compressor,
                                   dtype = dtype,
                                   order = ArrayOrder.F)
-        } yield
-          Ok(
-            // Json.toJson doesn't work on zarrHeader at the moment, because it doesn't write None values in Options
-            Json.obj(
-              "dtype" -> zarrHeader.dtype,
-              "fill_value" -> 0,
-              "zarr_format" -> zarrHeader.zarr_format,
-              "order" -> zarrHeader.order,
-              "chunks" -> zarrHeader.chunks,
-              "compressor" -> compressor,
-              "filters" -> None,
-              "shape" -> zarrHeader.shape,
-              "dimension_seperator" -> zarrHeader.dimension_separator
-            ))
+        } yield Ok(Json.toJson(zarrHeader))
       }
   }
 
@@ -354,6 +372,24 @@ class VolumeTracingController @Inject()(
                                                         dataSourceScale = dataSource.scale,
                                                         mags = existingMags.toList)
       } yield Ok(Json.toJson(omeNgffHeader))
+    }
+  }
+
+  def zarrSource(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+      for {
+        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
+
+        zarrLayer = ZarrSegmentationLayer(
+          name = tracingId,
+          largestSegmentId = tracing.segments.maxBy(_.segmentId).segmentId,
+          boundingBox = tracing.boundingBox,
+          elementClass = tracing.elementClass,
+          mags = tracing.resolutions.toList.map(x => ZarrMag(x, None, None)),
+          mappings = None,
+          numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
+        )
+      } yield Ok(Json.toJson(zarrLayer))
     }
   }
 

@@ -1,24 +1,15 @@
 package com.scalableminds.webknossos.datastore.services
 
-import akka.actor.ActorSystem
 import com.google.inject.Inject
-import com.google.inject.name.Named
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
-import com.scalableminds.webknossos.datastore.jzarr.ZarrHeader
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrSegmentationLayer
+import com.scalableminds.webknossos.datastore.jzarr.{OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsObject, Json, OFormat}
-import play.api.libs.ws.WSResponse
+import play.api.libs.json.JsObject
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 
 class DSRemoteTracingstoreClient @Inject()(
     rpc: RPC,
@@ -29,35 +20,56 @@ class DSRemoteTracingstoreClient @Inject()(
 
   // TODO key check in tracing store
   private val dataStoreKey: String = config.Datastore.key
-  private val dataStoreName: String = config.Datastore.name
-  private val dataStoreUri: String = config.Http.uri
 
   def getZArray(tracingId: String, mag: String, tracingStoreUri: String, accessId: String): Fox[ZarrHeader] =
-    rpc(s"$tracingStoreUri/volume/zarr/$tracingId/$mag/.zarray")
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/.zarray")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("token" -> accessId)
       .getWithJsonResponse[ZarrHeader]
 
-  def getRawZarrCube(tracingId: String, mag: String, cxyz: String, tracingStoreUri: String, accessId: String): Fox[Array[Byte]] =
-    rpc(s"$tracingStoreUri/volume/zarr/$tracingId/$mag/$cxyz")
+  def getVolumeLayerAsZarrLayer(tracingId: String,
+                                tracingStoreUri: String,
+                                accessId: String): Fox[ZarrSegmentationLayer] =
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/zarrSource")
+      .addQueryString("key" -> dataStoreKey)
+      .addQueryString("token" -> accessId)
+      .getWithJsonResponse[ZarrSegmentationLayer]
+
+  def getOmeNgffHeader(tracingId: String, tracingStoreUri: String, accessId: String): Fox[OmeNgffHeader] =
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zattrs")
+      .addQueryString("key" -> dataStoreKey)
+      .addQueryString("token" -> accessId)
+      .getWithJsonResponse[OmeNgffHeader]
+
+  def getRawZarrCube(tracingId: String,
+                     mag: String,
+                     cxyz: String,
+                     tracingStoreUri: String,
+                     accessId: String): Fox[Array[Byte]] =
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("token" -> accessId)
       .getWithBytesResponse
 
-  def getDataLayerMagFolderContents(tracingId: String, mag: String, tracingStoreUri: String, accessId: String): Fox[JsObject] =
-    rpc(s"$tracingStoreUri/volume/zarr/$tracingId/$mag")
+  def getDataLayerMagFolderContents(tracingId: String,
+                                    mag: String,
+                                    tracingStoreUri: String,
+                                    accessId: String): Fox[Map[String, String]] =
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/json/$tracingId/$mag")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("token" -> accessId)
-      .getWithJsonResponse[JsObject]
+      .getWithJsonResponse[Map[String, String]]
 
-  def getDataLayerFolderContents(tracingId: String, tracingStoreUri: String, accessId: String): Fox[JsObject] =
-    rpc(s"$tracingStoreUri/volume/zarr/$tracingId")
+  def getDataLayerFolderContents(tracingId: String,
+                                 tracingStoreUri: String,
+                                 accessId: String): Fox[Map[String, String]] =
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/json/$tracingId")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("token" -> accessId)
-      .getWithJsonResponse[JsObject]
+      .getWithJsonResponse[Map[String, String]]
 
   def getZGroup(tracingId: String, tracingStoreUri: String, accessId: String): Fox[JsObject] =
-    rpc(s"$tracingStoreUri/volume/zarr/$tracingId/.zgroup")
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zgroup")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("token" -> accessId)
       .getWithJsonResponse[JsObject]

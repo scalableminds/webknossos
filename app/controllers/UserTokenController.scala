@@ -13,12 +13,13 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
 import io.swagger.annotations._
+
 import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreService}
 import models.job.JobDAO
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, EmptyBox, Full}
 import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
@@ -40,6 +41,7 @@ object RpcTokenHolder {
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataSetService: DataSetService,
                                     annotationDAO: AnnotationDAO,
+                                    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
                                     userService: UserService,
                                     annotationStore: AnnotationStore,
                                     annotationInformationProvider: AnnotationInformationProvider,
@@ -88,9 +90,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
-      implicit ec: ExecutionContext): Fox[Result] = {
-    println(s"token: $token")
-
+      implicit ec: ExecutionContext): Fox[Result] =
     if (token.contains(RpcTokenHolder.webKnossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
@@ -101,7 +101,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
+            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox, token)
           case AccessResourceType.jobExport =>
             handleJobExportAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
           case _ =>
@@ -111,7 +111,6 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         Ok(Json.toJson(answer))
       }
     }
-  }
 
   private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(
       implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
@@ -162,7 +161,10 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  private def handleTracingAccess(tracingId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] = {
+  private def handleTracingAccess(tracingId: String,
+                                  mode: AccessMode,
+                                  userBox: Box[User],
+                                  token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
 
     def findAnnotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
@@ -185,11 +187,19 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       }
 
     if (tracingId == TracingIds.dummyTracingId) return Fox.successful(UserAccessAnswer(granted = true))
+
     for {
       annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+      annotationAccessByToken <- token
+        .map(annotationPrivateLinkDAO.findOneByAccessId(_)(GlobalAccessContext))
+        .getOrElse(Fox.empty)
+        .futureBox
+
+      allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
       restrictions <- annotationInformationProvider.restrictionsFor(
         AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
-      allowed <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+      allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+      allowed = allowedByToken || allowedByUser
     } yield {
       if (allowed) UserAccessAnswer(granted = true)
       else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))

@@ -413,7 +413,6 @@ CREATE TABLE webknossos.invites(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-
 CREATE TABLE webknossos.annotation_private_links(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _annotation CHAR(24) NOT NULL,

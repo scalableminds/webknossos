@@ -50,5 +50,8 @@ object OmeNgffHeader {
     OmeNgffHeader(multiscales = List(OmeNgffOneHeader(name = dataLayerName, datasets = datasets)))
   }
 
+  def mergeHeaders(one: OmeNgffHeader, two: OmeNgffHeader): OmeNgffHeader =
+    OmeNgffHeader(multiscales = one.multiscales ++ two.multiscales)
+
   implicit val jsonFormat: OFormat[OmeNgffHeader] = Json.format[OmeNgffHeader]
 }

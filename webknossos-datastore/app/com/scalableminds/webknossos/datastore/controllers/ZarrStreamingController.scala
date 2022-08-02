@@ -6,9 +6,15 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrMag, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{
+  ZarrDataLayer,
+  ZarrLayer,
+  ZarrMag,
+  ZarrSegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.jzarr.{OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
@@ -65,6 +71,31 @@ class ZarrStreamingController @Inject()(
     }
   }
 
+  def zAttrsWithAnnotationPrivateLink(accessId: String, dataLayerName: String = ""): Action[AnyContent] = Action.async {
+    implicit request =>
+      for {
+        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessId)
+        annotationLayer = annotationSource.getAnnotationLayer(dataLayerName)
+
+        omeNgffHeader <- annotationLayer match {
+          case Some(layer) =>
+            remoteTracingstoreClient.getOmeNgffHeader(layer.tracingId, annotationSource.tracingStoreUrl, accessId)
+          case None =>
+            for {
+              (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
+                annotationSource.organizationName,
+                annotationSource.dataSetName,
+                dataLayerName) ?~> Messages("dataSource.notFound") ~> 404
+              existingMags = dataLayer.resolutions
+
+              dataSourceOmeNgffHeader = OmeNgffHeader.fromDataLayerName(dataLayerName,
+                                                                        dataSourceScale = dataSource.scale,
+                                                                        mags = existingMags)
+            } yield dataSourceOmeNgffHeader
+        }
+      } yield Ok(Json.toJson(omeNgffHeader))
+  }
+
   /**
     * Zarr-specific datasource-properties.json file for a datasource. Note that the result here is not necessarily equal to the file used in the underlying storage.
     */
@@ -74,53 +105,73 @@ class ZarrStreamingController @Inject()(
       dataSetName: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      urlOrHeaderToken(token, request)) {
+                                      token) {
       for {
         dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ~> 404
         dataLayers = dataSource.dataLayers
-        zarrLayers = dataLayers.collect({
-          case d: WKWDataLayer =>
-            ZarrDataLayer(
-              d.name,
-              d.category,
-              d.boundingBox,
-              d.elementClass,
-              d.resolutions.map(x => ZarrMag(x, None, None)),
-              numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
-            )
-          case s: WKWSegmentationLayer =>
-            ZarrSegmentationLayer(
-              s.name,
-              s.boundingBox,
-              s.elementClass,
-              s.resolutions.map(x => ZarrMag(x, None, None)),
-              mappings = s.mappings,
-              largestSegmentId = s.largestSegmentId,
-              numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
-            )
-          case z: ZarrDataLayer =>
-            ZarrDataLayer(
-              z.name,
-              z.category,
-              z.boundingBox,
-              z.elementClass,
-              z.resolutions.map(x => ZarrMag(x, None, None)),
-              numChannels = Some(if (z.elementClass == ElementClass.uint24) 3 else 1)
-            )
-          case zs: ZarrSegmentationLayer =>
-            ZarrSegmentationLayer(
-              zs.name,
-              zs.boundingBox,
-              zs.elementClass,
-              zs.resolutions.map(x => ZarrMag(x, None, None)),
-              mappings = zs.mappings,
-              largestSegmentId = zs.largestSegmentId,
-              numChannels = Some(if (zs.elementClass == ElementClass.uint24) 3 else 1)
-            )
-        })
+        zarrLayers = dataLayers.map(convertLayerToZarrLayer)
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
     }
+  }
+
+  // TODO access validation
+  private def convertLayerToZarrLayer(layer: DataLayer): ZarrLayer =
+    layer match {
+      case d: WKWDataLayer =>
+        ZarrDataLayer(
+          d.name,
+          d.category,
+          d.boundingBox,
+          d.elementClass,
+          d.resolutions.map(x => ZarrMag(x, None, None)),
+          numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
+        )
+      case s: WKWSegmentationLayer =>
+        ZarrSegmentationLayer(
+          s.name,
+          s.boundingBox,
+          s.elementClass,
+          s.resolutions.map(x => ZarrMag(x, None, None)),
+          mappings = s.mappings,
+          largestSegmentId = s.largestSegmentId,
+          numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
+        )
+      case z: ZarrDataLayer =>
+        ZarrDataLayer(
+          z.name,
+          z.category,
+          z.boundingBox,
+          z.elementClass,
+          z.resolutions.map(x => ZarrMag(x, None, None)),
+          numChannels = Some(if (z.elementClass == ElementClass.uint24) 3 else 1)
+        )
+      case zs: ZarrSegmentationLayer =>
+        ZarrSegmentationLayer(
+          zs.name,
+          zs.boundingBox,
+          zs.elementClass,
+          zs.resolutions.map(x => ZarrMag(x, None, None)),
+          mappings = zs.mappings,
+          largestSegmentId = zs.largestSegmentId,
+          numChannels = Some(if (zs.elementClass == ElementClass.uint24) 3 else 1)
+        )
+    }
+
+  def dataSourceWithAnnotationPrivateLink(accessId: String): Action[AnyContent] = Action.async { implicit request =>
+    for {
+      annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessId)
+      volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
+
+      dataSource <- dataSourceRepository
+        .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
+        .toFox ~> 404
+      dataSourceLayers = dataSource.dataLayers.map(convertLayerToZarrLayer)
+      annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(l =>
+        remoteTracingstoreClient.getVolumeLayerAsZarrLayer(l.tracingId, annotationSource.tracingStoreUrl, accessId))
+      allLayer = dataSourceLayers ++ annotationLayers
+      zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
+    } yield Ok(Json.toJson(zarrSource))
   }
 
   /**
@@ -288,7 +339,14 @@ class ZarrStreamingController @Inject()(
           case Some(annotationLayer) =>
             remoteTracingstoreClient
               .getDataLayerMagFolderContents(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, accessId)
-              .map(Ok(_))
+              .map(
+                layers =>
+                  Ok(
+                    views.html.datastoreZarrDatasourceDir(
+                      "Tracingstore",
+                      s"${annotationLayer.tracingId}",
+                      layers
+                    )).withHeaders())
           case None =>
             dataLayerMagFolderContents(Some(accessId),
                                        annotationSource.organizationName,
@@ -339,7 +397,14 @@ class ZarrStreamingController @Inject()(
           case Some(annotationLayer) =>
             remoteTracingstoreClient
               .getDataLayerFolderContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, accessId)
-              .map(Ok(_))
+              .map(
+                layers =>
+                  Ok(
+                    views.html.datastoreZarrDatasourceDir(
+                      "Tracingstore",
+                      s"${annotationLayer.tracingId}",
+                      layers
+                    )).withHeaders())
           case None =>
             dataLayerFolderContents(Some(accessId),
                                     annotationSource.organizationName,
@@ -372,29 +437,32 @@ class ZarrStreamingController @Inject()(
     }
 
   def dataSourceFolderContentsPrivateLink(accessId: String): Action[AnyContent] = Action.async { implicit request =>
-    for {
-      annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessId)
-      _ = println("got annotation for private link")
+    remoteWebKnossosClient.getAnnotationForPrivateLink(accessId).flatMap { annotationSource =>
+      accessTokenService.validateAccess(
+        UserAccessRequest.readDataSources(
+          DataSourceId(annotationSource.dataSetName, annotationSource.organizationName)),
+        Some(accessId)) {
+        for {
+          dataSource <- dataSourceRepository
+            .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
+            .toFox ?~> Messages("dataSource.notFound") ~> 404
 
-      // TODO add
-//      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-//      urlOrHeaderToken(token, request)
-      dataSource <- dataSourceRepository
-        .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
-        .toFox ?~> Messages("dataSource.notFound") ~> 404
-
-      dataSourceLayerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
-      annotationLayerNames = annotationSource.annotationLayers.map(_.name)
-      layerNames = dataSourceLayerNames ++ annotationLayerNames
-    } yield
-      Ok(
-        views.html.datastoreZarrDatasourceDir(
-          "Datastore",
-          s"$accessId",
-          Map(s"$accessId" -> ".") ++ layerNames.map { x =>
-            (x, s"$accessId/$x")
-          }.toMap
-        ))
+          dataSourceLayerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
+          annotationLayerNames = annotationSource.annotationLayers
+            .filter(_.typ == AnnotationLayerType.Volume)
+            .map(_.name)
+          layerNames = dataSourceLayerNames ++ annotationLayerNames
+        } yield
+          Ok(
+            views.html.datastoreZarrDatasourceDir(
+              "Datastore",
+              s"$accessId",
+              Map(s"$accessId" -> ".") ++ layerNames.map { x =>
+                (x, s"$accessId/$x")
+              }.toMap
+            ))
+      }
+    }
   }
 
   def requestZGroup(token: Option[String],

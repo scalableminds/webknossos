@@ -10,12 +10,30 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto, Vec3DoubleProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.geometry.{
+  ColorProto,
+  NamedBoundingBoxProto,
+  Vec3DoubleProto,
+  Vec3IntProto
+}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, AnnotationSource, FetchedAnnotationLayer}
-import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerType,
+  AnnotationSource,
+  FetchedAnnotationLayer
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  ElementClass,
+  DataSourceLike => DataSource,
+  SegmentationLayerLike => SegmentationLayer
+}
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingDefaults, VolumeTracingDownsampling}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ResolutionRestrictions,
+  VolumeTracingDefaults,
+  VolumeTracingDownsampling
+}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
 

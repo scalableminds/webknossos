@@ -6,12 +6,19 @@ const canvas = document.createElement("canvas");
 canvas.width = 1;
 canvas.height = 1;
 
-const getImageData = _.memoize((width, height) => {
+const getImageData = _.memoize((width: number, height: number): ImageData => {
   const ctx = canvas.getContext("2d");
   if (ctx == null) {
     throw new Error("Could nto get context for texture.");
   }
   const imageData = ctx.createImageData(width, height);
+
+  // Explicitly "release" canvas. Necessary for iOS.
+  // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
+  canvas.width = 1;
+  canvas.height = 1;
+  ctx.clearRect(0, 0, 1, 1);
+
   return imageData;
 });
 
@@ -38,8 +45,8 @@ class UpdatableTexture extends THREE.Texture {
   ) {
     const imageData = getImageData(width, height);
 
-    // @ts-ignore
     super(
+      // @ts-ignore
       imageData,
       mapping,
       wrapS,

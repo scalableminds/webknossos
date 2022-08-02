@@ -43,7 +43,6 @@ class UpdatableTexture extends THREE.Texture {
     anisotropy?: number,
     encoding?: THREE.TextureEncoding,
   ) {
-    alert(`UpdatableTexture is being instantiated. ${width}*${height}`);
     const imageData = getImageData(width, height);
 
     super(

@@ -2,11 +2,15 @@ import * as THREE from "three";
 import { document } from "libs/window";
 import _ from "lodash";
 
-const canvas = document.createElement("canvas");
-canvas.width = 1;
-canvas.height = 1;
+const lazyGetCanvas = _.memoize(() => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  return canvas;
+});
 
 const getImageData = _.memoize((width: number, height: number): ImageData => {
+  const canvas = lazyGetCanvas();
   const ctx = canvas.getContext("2d");
   if (ctx == null) {
     throw new Error("Could not get context for texture.");

@@ -29,7 +29,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext}
 import scala.concurrent.duration._
 
 case class AnnotationLayerParameters(typ: AnnotationLayerType,
@@ -523,16 +523,6 @@ class AnnotationController @Inject()(
           _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
         } yield Ok(Json.toJson(teamIdsValidated))
       }
-  }
-
-  @ApiOperation(hidden = true, value = "")
-  def lookupPrivateLink(accessId: String): Action[AnyContent] = sil.UnsecuredAction.async { implicit request =>
-    for {
-      annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessId(accessId)(GlobalAccessContext)
-      _ <- bool2Fox(annotationPrivateLink.expirationDateTime > System.currentTimeMillis()) ?~> "Token expired" ~> 404
-      annotation: Annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
-      writtenAnnotation <- annotationService.writesLayersAndStores(annotation)
-    } yield Ok(writtenAnnotation)
   }
 
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,

@@ -5,7 +5,8 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{AnnotationPrivateLinks, _}
 
 import javax.inject.Inject
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsValue, Json, OFormat}
+import play.api.mvc.PlayBodyParsers
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -17,6 +18,17 @@ case class AnnotationPrivateLink(_id: ObjectId,
                                  value: String,
                                  expirationDateTime: Long = System.currentTimeMillis(),
                                  isDeleted: Boolean = false)
+
+object AnnotationPrivateLink {
+  implicit val jsonFormat: OFormat[AnnotationPrivateLink] = Json.format[AnnotationPrivateLink]
+}
+
+class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers) {
+
+  val DefaultAnnotationListLimit = 1000
+  def publicWrites(annotationPrivateLink: AnnotationPrivateLink): Fox[JsValue] =
+    Fox.successful(Json.toJson(annotationPrivateLink))
+}
 
 class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AnnotationPrivateLink, AnnotationPrivateLinksRow, AnnotationPrivateLinks](sqlClient) {
@@ -43,6 +55,17 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
         sqlu"""insert into webknossos.annotation_private_links(_id, _annotation, value, expirationDateTime, isDeleted)
                          values(${aPL._id.id}, ${aPL._annotation.id}, ${aPL.value}, ${new java.sql.Timestamp(
           aPL.expirationDateTime)}, ${aPL.isDeleted})""")
+    } yield ()
+
+  def updateOne(id: ObjectId,
+                _annotation: ObjectId,
+                value: String,
+                expirationDateTime: Long,
+                isDeleted: Boolean = false)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(sqlu"""update webknossos.annotation_private_links set _annotation = ${_annotation}, value = $value,
+                            expirationDateTime = $expirationDateTime, isDeleted = $isDeleted where _id = $id""")
     } yield ()
 
   def findOneByAccessId(accessId: String)(implicit ctx: DBAccessContext): Fox[AnnotationPrivateLink] =

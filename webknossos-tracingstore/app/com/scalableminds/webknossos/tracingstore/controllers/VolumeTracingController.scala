@@ -8,11 +8,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{
-  ZarrCoordinatesParser,
-  ZarrMag,
-  ZarrSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesParser, ZarrMag, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}

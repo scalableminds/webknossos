@@ -10,7 +10,6 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.JsObject
 
-
 class DSRemoteTracingstoreClient @Inject()(
     rpc: RPC,
     config: DataStoreConfig,

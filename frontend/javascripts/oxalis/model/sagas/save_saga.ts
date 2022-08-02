@@ -12,7 +12,7 @@ import type {
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   VolumeTracingSaveRelevantActions,
-  setSegmentsActions,
+  setSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { UserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -716,7 +716,7 @@ function* applyAndGetRevertingVolumeBatch(
   );
   // The SegmentMap is immutable. So, no need to copy.
   const currentSegments = activeVolumeTracing.segments;
-  yield* put(setSegmentsActions(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
+  yield* put(setSegmentsAction(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
   cube.triggerPushQueue();
   return {
     type: "volume",

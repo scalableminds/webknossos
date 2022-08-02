@@ -7,42 +7,35 @@ export type AdHocIsosurfaceInfo = {
   passive?: boolean | null | undefined;
   preferredQuality?: number | null | undefined;
 };
-export type LoadAdHocMeshAction = {
-  type: "LOAD_AD_HOC_MESH_ACTION";
-  cellId: number;
-  seedPosition: Vector3;
-  extraInfo?: AdHocIsosurfaceInfo;
-  layerName?: string;
-};
-export type LoadPrecomputedMeshAction = {
-  type: "LOAD_PRECOMPUTED_MESH_ACTION";
-  cellId: number;
-  seedPosition: Vector3;
-  meshFileName: string;
-  layerName?: string;
-};
+export type LoadAdHocMeshAction = ReturnType<typeof loadAdHocMeshAction>;
+export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAction>;
+
 export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction;
+
 export const loadAdHocMeshAction = (
   cellId: number,
   seedPosition: Vector3,
   extraInfo?: AdHocIsosurfaceInfo,
   layerName?: string,
-): LoadAdHocMeshAction => ({
-  type: "LOAD_AD_HOC_MESH_ACTION",
-  cellId,
-  seedPosition,
-  extraInfo,
-  layerName,
-});
+) =>
+  ({
+    type: "LOAD_AD_HOC_MESH_ACTION",
+    cellId,
+    seedPosition,
+    extraInfo,
+    layerName,
+  } as const);
+
 export const loadPrecomputedMeshAction = (
   cellId: number,
   seedPosition: Vector3,
   meshFileName: string,
   layerName?: string,
-): LoadPrecomputedMeshAction => ({
-  type: "LOAD_PRECOMPUTED_MESH_ACTION",
-  cellId,
-  seedPosition,
-  meshFileName,
-  layerName,
-});
+) =>
+  ({
+    type: "LOAD_PRECOMPUTED_MESH_ACTION",
+    cellId,
+    seedPosition,
+    meshFileName,
+    layerName,
+  } as const);

@@ -107,13 +107,15 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def parseArrayTuple(literal: String): List[String] = {
     val trimmed = literal.drop(1).dropRight(1)
-    if (trimmed.isEmpty) return List()
-
-    val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
-    split.map { item =>
-      if (item.startsWith("\"") && item.endsWith("\"")) {
-        item.drop(1).dropRight(1)
-      } else item
+    if (trimmed.isEmpty)
+      List.empty
+    else {
+      val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
+      split.map { item =>
+        if (item.startsWith("\"") && item.endsWith("\"")) {
+          item.drop(1).dropRight(1)
+        } else item
+      }
     }
   }
 

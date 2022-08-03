@@ -254,9 +254,7 @@ class VolumeTracingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              existingMags.map( mag =>
-                mag.toMagLiteral(allowScalar = true)
-              )
+              existingMags.map(mag => mag.toMagLiteral(allowScalar = true))
             )).withHeaders()
       }
     }

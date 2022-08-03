@@ -128,7 +128,7 @@ trait VolumeTracingBucketHelper
       case Some(data) => Fox.successful(data)
       case None       => volumeDataStore.get(key, version, mayBeEmpty = Some(true))
     }
-    dataFox.flatMap { versionedVolumeBucket =>
+    val unpackedDataFox = dataFox.flatMap { versionedVolumeBucket =>
       if (isRevertedBucket(versionedVolumeBucket)) Fox.empty
       else {
         val debugInfo =
@@ -137,6 +137,12 @@ trait VolumeTracingBucketHelper
           decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo))
       }
     }
+    dataLayer.tracing.fallbackLayer match {
+      case Some(fallbackLayer) if (dataLayer.includeFallbackDataIfAvailable) =>
+        dataLayer.volumeTracingService.getFallbackDataFor(fallbackLayer)
+      case _ => unpackedDataFox
+    }
+
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer,
@@ -253,3 +259,4 @@ class BucketIterator(prefix: String,
 
   override def hasNext: Boolean = versionedBucketIterator.hasNext
 }
+

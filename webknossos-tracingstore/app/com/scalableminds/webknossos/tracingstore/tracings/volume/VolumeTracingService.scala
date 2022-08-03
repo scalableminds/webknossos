@@ -317,14 +317,15 @@ class VolumeTracingService @Inject()(
 
   private def volumeTracingLayer(tracingId: String,
                                  tracing: VolumeTracing,
-                                 isTemporaryTracing: Boolean = false): VolumeTracingLayer =
+                                 isTemporaryTracing: Boolean = false,
+                                 includeFallbackDataIfAvailable: Boolean = false
+                                ): VolumeTracingLayer =
     VolumeTracingLayer(
-      tracingId,
-      tracing.boundingBox,
-      tracing.elementClass,
-      tracing.largestSegmentId,
-      isTemporaryTracing,
-      volumeResolutions = tracing.resolutions.map(vec3IntFromProto).toList
+      name = tracingId,
+      isTemporaryTracing = isTemporaryTracing,
+      volumeTracingService = this,
+      includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
+      tracing = tracing
     )
 
   def updateActionLog(tracingId: String): Fox[JsValue] = {

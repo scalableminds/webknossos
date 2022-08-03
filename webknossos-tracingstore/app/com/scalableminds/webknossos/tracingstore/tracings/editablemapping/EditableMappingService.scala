@@ -499,10 +499,7 @@ class EditableMappingService @Inject()(
     }
 
   def remoteFallbackLayer(tracing: VolumeTracing): Fox[RemoteFallbackLayer] =
-    for {
-      layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
-      organizationName <- tracing.organizationName.toFox ?~> "This feature is only implemented for volume annotations with an explicit organization name tag, not for legacy volume annotations."
-    } yield RemoteFallbackLayer(organizationName, tracing.dataSetName, layerName, tracing.elementClass)
+
 
   def mapData(unmappedData: Array[UnsignedInteger],
               relevantMapping: Map[Long, Long],

@@ -458,7 +458,7 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId)
           _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Cannot query agglomerate skeleton for volume annotation"
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
-          remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
+          remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(
             mappingName,
             remoteFallbackLayer,

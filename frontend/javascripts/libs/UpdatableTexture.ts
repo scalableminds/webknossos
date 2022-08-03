@@ -1,30 +1,30 @@
 import * as THREE from "three";
 import { document } from "libs/window";
-import _ from "lodash";
+// import _ from "lodash";
 
-const lazyGetCanvas = _.memoize(() => {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1;
-  canvas.height = 1;
-  return canvas;
-});
+// const lazyGetCanvas = _.memoize(() => {
+//   const canvas = document.createElement("canvas");
+//   canvas.width = 1;
+//   canvas.height = 1;
+//   return canvas;
+// });
 
-const getImageData = _.memoize((width: number, height: number): ImageData => {
-  const canvas = lazyGetCanvas();
-  const ctx = canvas.getContext("2d");
-  if (ctx == null) {
-    throw new Error("Could not get context for texture.");
-  }
-  const imageData = ctx.createImageData(width, height);
+// const getImageData = _.memoize((width: number, height: number): ImageData => {
+//   const canvas = lazyGetCanvas();
+//   const ctx = canvas.getContext("2d");
+//   if (ctx == null) {
+//     throw new Error("Could not get context for texture.");
+//   }
+//   const imageData = ctx.createImageData(width, height);
 
-  // Explicitly "release" canvas. Necessary for iOS.
-  // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
-  canvas.width = 1;
-  canvas.height = 1;
-  ctx.clearRect(0, 0, 1, 1);
+//   // Explicitly "release" canvas. Necessary for iOS.
+//   // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
+//   canvas.width = 1;
+//   canvas.height = 1;
+//   ctx.clearRect(0, 0, 1, 1);
 
-  return imageData;
-});
+//   return imageData;
+// });
 
 class UpdatableTexture extends THREE.Texture {
   isUpdatableTexture: boolean;
@@ -47,11 +47,12 @@ class UpdatableTexture extends THREE.Texture {
     anisotropy?: number,
     encoding?: THREE.TextureEncoding,
   ) {
-    const imageData = getImageData(width, height);
-
+    // const imageData = format == THREE.RGFormat ? new Uint8Array(width * height);
+    // imageData.width = width;
+    // imageData.height = height;
     super(
       // @ts-ignore
-      imageData,
+      null,
       mapping,
       wrapS,
       wrapT,
@@ -62,6 +63,9 @@ class UpdatableTexture extends THREE.Texture {
       anisotropy,
       encoding,
     );
+
+    this.isDataTexture = true;
+    this.image = { data: null, width: width, height: height };
 
     this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
     this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;

@@ -50,9 +50,7 @@ class ZarrStreamingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               s"$organizationName/$dataSetName",
-              layerNames.map { x =>
-                (x, s"$dataSetName/$x")
-              }.toMap
+              layerNames
             ))
       }
     }
@@ -73,9 +71,9 @@ class ZarrStreamingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
-              mags.map { mag =>
+              mags.map( mag =>
                 mag.toMagLiteral()
-              }
+              )
             )).withHeaders()
       }
     }

@@ -1,5 +1,4 @@
 import React, { memo, useState, useEffect } from "react";
-import _ from "lodash";
 import { List, Input, Spin } from "antd";
 import { APIPublication } from "types/api_flow_types";
 import PublicationCard from "dashboard/publication_card";

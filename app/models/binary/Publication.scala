@@ -3,12 +3,10 @@ package models.binary
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
-import models.annotation.{Annotation, AnnotationDAO, AnnotationService, TracingStoreDAO, TracingStoreService}
+import javax.inject.Inject
+import models.annotation.{AnnotationDAO, AnnotationService}
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Format.GenericFormat
-import play.api.libs.json.OFormat.oFormatFromReadsAndOWrites
-
-import javax.inject.Inject
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -37,12 +35,9 @@ class CompactPublicationService @Inject()()(implicit ec: ExecutionContext) {
         "created" -> p.created
       ))
 }
+
 class PublicationService @Inject()(dataSetService: DataSetService,
                                    dataSetDAO: DataSetDAO,
-                                   dataStoreDAO: DataStoreDAO,
-                                   dataStoreService: DataStoreService,
-                                   tracingStoreDAO: TracingStoreDAO,
-                                   tracingStoreService: TracingStoreService,
                                    annotationService: AnnotationService,
                                    annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) {
 

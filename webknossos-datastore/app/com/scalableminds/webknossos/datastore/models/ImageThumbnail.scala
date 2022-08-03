@@ -1,9 +1,6 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.helpers.NodeDefaults.boundingBoxFromProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerLike
 import play.api.libs.json.{Json, OFormat}
 

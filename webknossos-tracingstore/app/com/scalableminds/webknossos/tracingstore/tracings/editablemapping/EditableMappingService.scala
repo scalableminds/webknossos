@@ -65,6 +65,17 @@ object MinCutParameters {
   implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
 }
 
+case class EdgeWithPositions(
+    segmentId1: Long,
+    segmentId2: Long,
+    position1: Vec3Int,
+    position2: Vec3Int
+)
+
+object EdgeWithPositions {
+  implicit val jsonFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
+}
+
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
@@ -582,14 +593,15 @@ class EditableMappingService @Inject()(
 
   def agglomerateGraphMinCut(parameters: MinCutParameters,
                              remoteFallbackLayer: RemoteFallbackLayer,
-                             userToken: Option[String]): Fox[List[(Long, Long)]] =
+                             userToken: Option[String]): Fox[List[EdgeWithPositions]] =
     for {
       segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
       segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition2, parameters.mag, userToken)
       mapping <- get(parameters.editableMappingId, remoteFallbackLayer, userToken)
       agglomerateGraph <- agglomerateGraphForId(mapping, parameters.agglomerateId, remoteFallbackLayer, userToken)
       edgesToCut <- minCut(agglomerateGraph, segmentId1, segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
-    } yield edgesToCut
+      edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
+    } yield edgesWithPositions
 
   private def minCut(agglomerateGraph: AgglomerateGraph,
                      segmentId1: Long,
@@ -610,5 +622,21 @@ class EditableMappingService @Inject()(
       minCutEdges.asScala.toList.map(e => (g.getEdgeSource(e), g.getEdgeTarget(e)))
     }
   }
+
+  private def annotateEdgesWithPositions(edges: List[(Long, Long)],
+                                         agglomerateGraph: AgglomerateGraph): List[EdgeWithPositions] =
+    edges.map {
+      case (segmentId1, segmentId2) =>
+        val index1 = agglomerateGraph.segments.indexOf(segmentId1)
+        val index2 = agglomerateGraph.segments.indexOf(segmentId2)
+        val position1 = agglomerateGraph.positions(index1)
+        val position2 = agglomerateGraph.positions(index2)
+        EdgeWithPositions(
+          segmentId1,
+          segmentId2,
+          position1,
+          position2
+        )
+    }
 
 }

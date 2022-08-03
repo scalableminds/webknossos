@@ -563,7 +563,7 @@ export default function ToolbarView() {
       // Forget the last disabled tool as another tool besides the move tool was selected.
       setLastForcefulDisabledTool(null);
     }
-  }, [activeTool, disabledInfoForCurrentTool]);
+  }, [activeTool, disabledInfoForCurrentTool, lastForcefulDisabledTool]);
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
   const isAltPressed = useKeyPress("Alt");

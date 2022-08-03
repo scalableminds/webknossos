@@ -20,12 +20,13 @@ object FileSystemsHolder extends LazyLogging {
 
   private val schemeS3 = "s3"
   private val schemeHttps = "https"
+  private val schemeHttp = "http"
 
   private val fileSystemsCache = new FileSystemsCache(maxEntries = 100)
   private val fileSystemsProvidersCache = new FileSystemsProvidersCache(maxEntries = 100)
 
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
-    List(schemeS3, schemeHttps).contains(uriScheme)
+    List(schemeS3, schemeHttps, schemeHttp).contains(uriScheme)
 
   def getOrCreate(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
     fileSystemsCache.getOrLoadAndPutOptional(remoteSource)(loadFromProvider)

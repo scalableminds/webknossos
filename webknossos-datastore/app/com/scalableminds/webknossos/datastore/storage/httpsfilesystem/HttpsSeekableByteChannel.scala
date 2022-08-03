@@ -15,7 +15,7 @@ class HttpsSeekableByteChannel(path: HttpsPath, openOptions: util.Set[_ <: OpenO
   private val uri: URI = path.asInstanceOf[HttpsPath].toUri
   private val response =
     path.getBasicAuthCredentials.map { credentials =>
-      Http(uri.toString).auth(credentials.user, credentials.password).asBytes
+      Http(uri.toString).timeout(connTimeoutMs = 5000, readTimeoutMs = 30000).auth(credentials.user, credentials.password).asBytes
     }.getOrElse(Http(uri.toString).asBytes)
 
   private var _isOpen: Boolean = true

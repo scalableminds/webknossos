@@ -10,7 +10,11 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingStore, TemporaryVolumeDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  FossilDBClient,
+  TemporaryTracingStore,
+  TemporaryVolumeDataStore
+}
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.concurrent.ExecutionContext
@@ -66,11 +70,13 @@ case class VolumeTracingLayer(
     volumeTracingService: VolumeTracingService,
     isTemporaryTracing: Boolean = false,
     includeFallbackDataIfAvailable: Boolean = false,
-    tracing: VolumeTracing
+    tracing: VolumeTracing,
+    userToken: Option[String],
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,
   implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing])
-    extends SegmentationLayer with ProtoGeometryImplicits {
+    extends SegmentationLayer
+    with ProtoGeometryImplicits {
 
   override val boundingBox: BoundingBox = tracing.boundingBox
   override val elementClass: ElementClass.Value = tracing.elementClass
@@ -93,7 +99,8 @@ case class VolumeTracingLayer(
 
   override val bucketProvider: BucketProvider = volumeBucketProvider
 
-  override val resolutions: List[Vec3Int] = if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int(1, 1, 1))
+  override val resolutions: List[Vec3Int] =
+    if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int(1, 1, 1))
 
   override def containsResolution(resolution: Vec3Int) =
     true // allow requesting buckets of all resolutions. database takes care of missing.

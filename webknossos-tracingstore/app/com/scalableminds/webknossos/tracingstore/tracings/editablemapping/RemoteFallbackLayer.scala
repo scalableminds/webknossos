@@ -13,10 +13,10 @@ case class RemoteFallbackLayer(organizationName: String,
 
 object RemoteFallbackLayer extends FoxImplicits {
 
-  def fromVolumeTracing(tracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[RemoteFallbackLayer] = {
+  def fromVolumeTracing(tracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[RemoteFallbackLayer] =
     for {
       layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
       organizationName <- tracing.organizationName.toFox ?~> "This feature is only implemented for volume annotations with an explicit organization name tag, not for legacy volume annotations."
     } yield RemoteFallbackLayer(organizationName, tracing.dataSetName, layerName, tracing.elementClass)
-  }
+
 }

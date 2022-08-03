@@ -20,7 +20,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
     for {
       editableMappingId <- Fox.successful(layer.name)
       _ <- bool2Fox(layer.doesContainBucket(bucket))
-      remoteFallbackLayer <- layer.editableMappingService.remoteFallbackLayer(layer.tracing)
+      remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(layer.tracing)
       editableMapping <- layer.editableMappingService.get(editableMappingId, remoteFallbackLayer, layer.token)
       dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
@@ -30,7 +30,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         applyAgglomerate = None,
         version = None
       )
-      (unmappedData, indices) <- layer.editableMappingService.getUnmappedDataFromDatastore(remoteFallbackLayer,
+      (unmappedData, indices) <- layer.editableMappingService.getFallbackDataFromDatastore(remoteFallbackLayer,
                                                                                            List(dataRequest),
                                                                                            layer.token)
       _ <- bool2Fox(indices.isEmpty)

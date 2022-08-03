@@ -3,9 +3,10 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
-import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.services.DataConverter
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreImplicits,
@@ -18,6 +19,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.duration._
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
+import net.liftweb.common.{Full, Empty, Failure}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -137,12 +139,32 @@ trait VolumeTracingBucketHelper
           decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo))
       }
     }
-    dataLayer.tracing.fallbackLayer match {
-      case Some(fallbackLayer) if (dataLayer.includeFallbackDataIfAvailable) =>
-        dataLayer.volumeTracingService.getFallbackDataFor(fallbackLayer)
-      case _ => unpackedDataFox
+    unpackedDataFox.futureBox.flatMap {
+      case Full(unpackedData) => Fox.successful(unpackedData)
+      case Empty =>
+        if (dataLayer.includeFallbackDataIfAvailable && dataLayer.tracing.fallbackLayer.nonEmpty) {
+          loadFallbackBucket(dataLayer, bucket)
+        } else Fox.empty
+      case f: Failure => f.toFox
     }
+  }
 
+  private def loadFallbackBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
+    val dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
+      position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
+      mag = bucket.mag,
+      cubeSize = dataLayer.lengthOfUnderlyingCubes(bucket.mag),
+      fourBit = None,
+      applyAgglomerate = dataLayer.tracing.mappingName,
+      version = None
+    )
+    for {
+      remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(dataLayer.tracing)
+      (unmappedData, indices) <- dataLayer.volumeTracingService.getFallbackDataFromDatastore(remoteFallbackLayer,
+                                                                                             List(dataRequest),
+                                                                                             dataLayer.userToken)
+      unmappedDataOrEmpty <- if (indices.isEmpty) Fox.successful(unmappedData) else Fox.empty
+    } yield unmappedDataOrEmpty
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer,
@@ -259,4 +281,3 @@ class BucketIterator(prefix: String,
 
   override def hasNext: Boolean = versionedBucketIterator.hasNext
 }
-

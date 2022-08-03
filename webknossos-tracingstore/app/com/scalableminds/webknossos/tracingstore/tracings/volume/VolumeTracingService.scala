@@ -19,8 +19,12 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossos
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
-import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreRedisStore}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataHelper
+import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteDatastoreClient,
+  TSRemoteWebKnossosClient,
+  TracingStoreRedisStore
+}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.Files
@@ -42,12 +46,13 @@ class VolumeTracingService @Inject()(
     val handledGroupIdStore: TracingStoreRedisStore,
     val uncommittedUpdatesStore: TracingStoreRedisStore,
     val temporaryTracingIdStore: TracingStoreRedisStore,
-    val temporaryFileCreator: TemporaryFileCreator,
-    editableMappingService: EditableMappingService
+    val remoteDatastoreClient: TSRemoteDatastoreClient,
+    val temporaryFileCreator: TemporaryFileCreator
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with VolumeTracingDownsampling
     with WKWDataFormatHelper
+    with FallbackDataHelper
     with DataFinder
     with VolumeDataZipHelper
     with ProtoGeometryImplicits
@@ -318,14 +323,15 @@ class VolumeTracingService @Inject()(
   private def volumeTracingLayer(tracingId: String,
                                  tracing: VolumeTracing,
                                  isTemporaryTracing: Boolean = false,
-                                 includeFallbackDataIfAvailable: Boolean = false
-                                ): VolumeTracingLayer =
+                                 includeFallbackDataIfAvailable: Boolean = false,
+                                 userToken: Option[String] = None): VolumeTracingLayer =
     VolumeTracingLayer(
       name = tracingId,
       isTemporaryTracing = isTemporaryTracing,
       volumeTracingService = this,
       includeFallbackDataIfAvailable = includeFallbackDataIfAvailable,
-      tracing = tracing
+      tracing = tracing,
+      userToken = userToken
     )
 
   def updateActionLog(tracingId: String): Fox[JsValue] = {
@@ -364,10 +370,15 @@ class VolumeTracingService @Inject()(
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
     volumeDataStore.getMultipleKeys(tracingId, Some(tracingId), limit = Some(1))(toBox).isEmpty
 
-  def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
+  def createIsosurface(tracingId: String,
+                       request: WebKnossosIsosurfaceRequest,
+                       userToken: Option[String]): Fox[(Array[Float], List[Int])] =
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"
-      segmentationLayer = volumeTracingLayer(tracingId, tracing)
+      segmentationLayer = volumeTracingLayer(tracingId,
+                                             tracing,
+                                             includeFallbackDataIfAvailable = true,
+                                             userToken = userToken)
       isosurfaceRequest = IsosurfaceRequest(
         None,
         segmentationLayer,

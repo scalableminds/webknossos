@@ -44,18 +44,33 @@ case class EditableMappingKey(
     desiredVersion: Long
 )
 
-case class UnmappedRemoteDataKey(
+case class FallbackDataKey(
     remoteFallbackLayer: RemoteFallbackLayer,
     dataRequests: List[WebKnossosDataRequest],
     userToken: Option[String]
 )
 
+trait FallbackDataHelper {
+  def remoteDatastoreClient: TSRemoteDatastoreClient
+
+  private lazy val fallbackDataCache: AlfuFoxCache[FallbackDataKey, (Array[Byte], List[Int])] =
+    AlfuFoxCache(maxEntries = 3000)
+
+  def getFallbackDataFromDatastore(
+      remoteFallbackLayer: RemoteFallbackLayer,
+      dataRequests: List[WebKnossosDataRequest],
+      userToken: Option[String])(implicit ec: ExecutionContext): Fox[(Array[Byte], List[Int])] =
+    fallbackDataCache.getOrLoad(FallbackDataKey(remoteFallbackLayer, dataRequests, userToken),
+                                k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests, k.userToken))
+}
+
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
-    remoteDatastoreClient: TSRemoteDatastoreClient
+    val remoteDatastoreClient: TSRemoteDatastoreClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
+    with FallbackDataHelper
     with FoxImplicits
     with ProtoGeometryImplicits
     with LazyLogging {
@@ -68,9 +83,6 @@ class EditableMappingService @Inject()(
 
   private lazy val materializedEditableMappingCache: AlfuFoxCache[EditableMappingKey, EditableMapping] = AlfuFoxCache(
     maxEntries = 50)
-
-  private lazy val unmappedRemoteDataCache: AlfuFoxCache[UnmappedRemoteDataKey, (Array[Byte], List[Int])] =
-    AlfuFoxCache(maxEntries = 3000)
 
   def newestMaterializableVersion(editableMappingId: String): Fox[Long] =
     tracingDataStore.editableMappingUpdates.getVersion(editableMappingId,
@@ -486,20 +498,10 @@ class EditableMappingService @Inject()(
     } yield segmentIdsOrdered.zip(agglomerateIdsOrdered).toMap
   }
 
-  def getUnmappedDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer,
-                                   dataRequests: List[WebKnossosDataRequest],
-                                   userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
-    unmappedRemoteDataCache.getOrLoad(
-      UnmappedRemoteDataKey(remoteFallbackLayer, dataRequests, userToken),
-      k => remoteDatastoreClient.getData(k.remoteFallbackLayer, k.dataRequests, k.userToken))
-
   def collectSegmentIds(data: Array[UnsignedInteger]): Set[Long] =
     data.toSet.map { u: UnsignedInteger =>
       u.toPositiveLong
     }
-
-  def remoteFallbackLayer(tracing: VolumeTracing): Fox[RemoteFallbackLayer] =
-
 
   def mapData(unmappedData: Array[UnsignedInteger],
               relevantMapping: Map[Long, Long],

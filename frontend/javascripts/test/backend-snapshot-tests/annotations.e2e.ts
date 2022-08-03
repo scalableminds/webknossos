@@ -190,8 +190,8 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
   const saveQueue = addVersionNumbers(
     createSaveQueueFromUpdateActions(
       [
-        UpdateActions.updateSkeletonTracing(initialSkeleton, [1, 2, 3], [0, 1, 2], 1),
-        UpdateActions.updateSkeletonTracing(initialSkeleton, [2, 3, 4], [1, 2, 3], 2),
+        [UpdateActions.updateSkeletonTracing(initialSkeleton, [1, 2, 3], [0, 1, 2], 1)],
+        [UpdateActions.updateSkeletonTracing(initialSkeleton, [2, 3, 4], [1, 2, 3], 2)],
       ],
       123456789,
     ),
@@ -228,7 +228,7 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
   const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups);
   const saveQueue = addVersionNumbers(
     createSaveQueueFromUpdateActions(
-      [createTreesUpdateActions, updateTreeGroupsUpdateAction],
+      [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
       123456789,
     ),
     0,

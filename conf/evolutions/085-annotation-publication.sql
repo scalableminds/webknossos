@@ -7,6 +7,6 @@ ALTER TABLE webknossos.annotations
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 84;
+UPDATE webknossos.releaseInformation SET schemaVersion = 85;
 
 COMMIT TRANSACTION;

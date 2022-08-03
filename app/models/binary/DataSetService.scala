@@ -329,7 +329,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
       userTeams <- teamDAO.findAllEditable
       userTeamIds = userTeams.map(_._id)
-      teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+      teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
       _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- dataSetDAO.assertUpdateAccess(dataSet._id) ?~> "dataset.initialTeams.forbidden"
       _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, teamIdsValidated)

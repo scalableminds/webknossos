@@ -154,7 +154,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parse(result)
     } yield parsed
 
-  def findFirstByMultiUser(multiUserId: ObjectId)(implicit tx: DBAccessContext): Fox[User] =
+  def findFirstByMultiUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
       resultList <- run(sql"""select #$columns from #$existingCollectionName
@@ -162,6 +162,16 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                                limit 1""".as[UsersRow])
       result <- resultList.headOption.toFox
       parsed <- parse(result)
+    } yield parsed
+
+  def findContributorsForAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
+    for {
+      accessQuery <- readAccessQuery
+      result <- run(
+        sql"""select #$columns from #$existingCollectionName
+                              where _id in (select _user from webknossos.annotation_contributors where _annotation = $annotationId) and #$accessQuery"""
+          .as[UsersRow])
+      parsed <- parseAll(result)
     } yield parsed
 
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
@@ -253,7 +263,7 @@ class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implici
       rows: Seq[(String, String, Boolean)] <- run(query.result)
       teamMemberships <- Fox.combined(rows.toList.map {
         case (teamId, _, isTeamManager) =>
-          ObjectId.parse(teamId).map(teamIdValidated => TeamMembership(teamIdValidated, isTeamManager))
+          ObjectId.fromString(teamId).map(teamIdValidated => TeamMembership(teamIdValidated, isTeamManager))
       })
     } yield teamMemberships
   }

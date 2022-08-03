@@ -30,7 +30,7 @@ class AnnotationInformationProvider @Inject()(
   def provideAnnotation(id: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     // this function only supports task/explorational look ups, not compound annotations
     for {
-      annotationIdValidated <- ObjectId.parse(id)
+      annotationIdValidated <- ObjectId.fromString(id)
       _annotation <- annotationDAO.findOne(annotationIdValidated) ?~> "annotation.notFound"
       typ = if (_annotation._task.isEmpty) AnnotationType.Explorational else AnnotationType.Task
       annotationIdentifier = AnnotationIdentifier(typ, annotationIdValidated)

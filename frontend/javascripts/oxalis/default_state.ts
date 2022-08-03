@@ -147,6 +147,8 @@ const defaultState: OxalisState = {
     mappings: [],
     skeleton: null,
     owner: null,
+    contributors: [],
+    othersMayEdit: false,
     annotationLayers: [],
   },
   save: {

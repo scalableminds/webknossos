@@ -23,7 +23,6 @@ import {
 import {
   pushSaveQueueTransaction,
   setVersionNumberAction,
-  undoAction,
 } from "oxalis/model/actions/save_actions";
 import { splitAgglomerate, mergeAgglomerate } from "oxalis/model/sagas/update_actions";
 import Model from "oxalis/model";
@@ -47,6 +46,7 @@ import { loadAgglomerateSkeletonWithId } from "oxalis/model/sagas/skeletontracin
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree } from "oxalis/store";
 import { APISegmentationLayer } from "types/api_flow_types";
+import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 
 export default function* proofreadMapping(): Saga<any> {
   yield* take("INITIALIZE_SKELETONTRACING");
@@ -279,13 +279,20 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
   if (!isHdf5MappingEnabled) return;
 
+  const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+  if (busyBlockingInfo.isBusy) {
+    console.warn(`Ignoring proofreading action (reason: ${busyBlockingInfo.reason || "null"})`);
+    return;
+  }
+
+  yield* put(setBusyBlockingInfoAction(true, "Proofreading action"));
+
   if (!volumeTracing.mappingIsEditable) {
     try {
       yield* call(createEditableMapping);
     } catch (e) {
       console.error(e);
-      // Undo the last splitting/merging action since the proofreading action did not succeed
-      yield* put(undoAction());
+      yield* put(setBusyBlockingInfoAction(false));
       return;
     }
   }
@@ -305,6 +312,7 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   const targetTree = findTreeByNodeId(trees, targetNodeId).getOrElse(null);
 
   if (sourceTree == null || targetTree == null) {
+    yield* put(setBusyBlockingInfoAction(false));
     return;
   }
 
@@ -330,6 +338,7 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   if (action.type === "MERGE_TREES") {
     if (sourceNodeAgglomerateId === targetNodeAgglomerateId) {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
+      yield* put(setBusyBlockingInfoAction(false));
       return;
     }
     items.push(
@@ -344,6 +353,7 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
   } else if (action.type === "DELETE_EDGE") {
     if (sourceNodeAgglomerateId !== targetNodeAgglomerateId) {
       Toast.error("Segments that should be split need to be in the same agglomerate.");
+      yield* put(setBusyBlockingInfoAction(false));
       return;
     }
     items.push(
@@ -356,7 +366,10 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
     );
   }
 
-  if (items.length === 0) return;
+  if (items.length === 0) {
+    yield* put(setBusyBlockingInfoAction(false));
+    return;
+  }
 
   yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
@@ -372,6 +385,7 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
     volumeTracingWithEditableMapping == null ||
     volumeTracingWithEditableMapping.mappingName == null
   ) {
+    yield* put(setBusyBlockingInfoAction(false));
     return;
   }
 
@@ -411,6 +425,8 @@ function* splitOrMergeAgglomerate(action: MergeTreesAction | DeleteEdgeAction) {
       ),
     );
   }
+
+  yield* put(setBusyBlockingInfoAction(false));
 
   /* Remove old meshes and load updated meshes */
 

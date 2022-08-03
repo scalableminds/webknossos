@@ -68,7 +68,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
   def cancel(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      jobIdValidated <- ObjectId.parse(id)
+      jobIdValidated <- ObjectId.fromString(id)
       job <- jobDAO.findOne(jobIdValidated)
       _ <- jobDAO.updateManualState(jobIdValidated, JobState.CANCELLED)
       js <- jobService.publicWrites(job)

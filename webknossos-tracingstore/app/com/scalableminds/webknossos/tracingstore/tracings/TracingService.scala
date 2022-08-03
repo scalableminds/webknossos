@@ -120,23 +120,25 @@ trait TracingService[T <: GeneratedMessage]
   def find(tracingId: String,
            version: Option[Long] = None,
            useCache: Boolean = true,
-           applyUpdates: Boolean = false): Fox[T] = {
-    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(dummyTracing)
-    val tracingFox = tracingStore.get(tracingId, version)(fromProtoBytes[T]).map(_.value)
-    tracingFox.flatMap { tracing =>
-      val updatedTracing = if (applyUpdates) {
-        applyPendingUpdates(tracing, tracingId, version)
-      } else {
-        Fox.successful(tracing)
+           applyUpdates: Boolean = false): Fox[T] =
+    if (tracingId == TracingIds.dummyTracingId)
+      Fox.successful(dummyTracing)
+    else {
+      val tracingFox = tracingStore.get(tracingId, version)(fromProtoBytes[T]).map(_.value)
+      tracingFox.flatMap { tracing =>
+        val updatedTracing = if (applyUpdates) {
+          applyPendingUpdates(tracing, tracingId, version)
+        } else {
+          Fox.successful(tracing)
+        }
+        migrateTracing(updatedTracing, tracingId)
+      }.orElse {
+        if (useCache)
+          temporaryTracingStore.find(tracingId)
+        else
+          tracingFox
       }
-      migrateTracing(updatedTracing, tracingId)
-    }.orElse {
-      if (useCache)
-        temporaryTracingStore.find(tracingId)
-      else
-        tracingFox
     }
-  }
 
   def findMultiple(selectors: List[Option[TracingSelector]],
                    useCache: Boolean = true,

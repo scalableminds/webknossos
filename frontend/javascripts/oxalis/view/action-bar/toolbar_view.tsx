@@ -515,6 +515,9 @@ export default function ToolbarView() {
     const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
     return (visibleSegmentationLayer?.agglomerates?.length ?? 0) > 0;
   });
+  const [lastForcefulDisabledTool, setLastForcefulDisabledTool] = useState<AnnotationTool | null>(
+    null,
+  );
   const isVolumeModificationAllowed = useSelector(
     (state: OxalisState) => !hasEditableMapping(state),
   );
@@ -546,9 +549,21 @@ export default function ToolbarView() {
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
+      setLastForcefulDisabledTool(activeTool);
       Store.dispatch(setToolAction(AnnotationToolEnum.MOVE));
+    } else if (
+      lastForcefulDisabledTool != null &&
+      !disabledInfosForTools[lastForcefulDisabledTool].isDisabled &&
+      activeTool === AnnotationToolEnum.MOVE
+    ) {
+      // Reenable the tool that was disabled before.
+      setLastForcefulDisabledTool(null);
+      Store.dispatch(setToolAction(lastForcefulDisabledTool));
+    } else if (activeTool !== AnnotationToolEnum.MOVE) {
+      // Forget the last disabled tool as another tool besides the move tool was selected.
+      setLastForcefulDisabledTool(null);
     }
-  }, [activeTool, disabledInfoForCurrentTool]);
+  }, [activeTool, disabledInfoForCurrentTool, lastForcefulDisabledTool]);
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
   const isAltPressed = useKeyPress("Alt");

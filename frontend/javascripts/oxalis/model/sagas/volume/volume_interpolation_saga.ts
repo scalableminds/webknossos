@@ -38,6 +38,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
   const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
   const volumeTracing = getActiveSegmentationTracing(state);
   let interpolationDepth = 0;
+  let directionFactor = 1;
   if (!volumeTracing) {
     // Return dummy values, since the feature should be disabled, anyway
     return {
@@ -49,6 +50,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
       labeledResolution: [1, 1, 1] as Vector3,
       labeledZoomStep: 0,
       interpolationDepth,
+      directionFactor,
     };
   }
   const mostRecentLabelAction = getLastLabelAction(volumeTracing);
@@ -79,11 +81,11 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
     // For example, in mag 8-8-2, the z distance needs to be divided by two, since it is measured
     // in global coordinates.
     const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, labeledResolution, thirdDim);
-    interpolationDepth = Math.floor(
-      Math.abs(
-        V3.sub(adapt(previousCentroid), adapt(position))[thirdDim] / labeledResolution[thirdDim],
-      ),
+    const signedInterpolationDepth = Math.floor(
+      V3.sub(adapt(position), adapt(previousCentroid))[thirdDim] / labeledResolution[thirdDim],
     );
+    directionFactor = Math.sign(signedInterpolationDepth);
+    interpolationDepth = Math.abs(signedInterpolationDepth);
 
     if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
       disabledExplanation = `${explanationPrefix} last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH}).`;
@@ -115,6 +117,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
     labeledResolution,
     labeledZoomStep,
     interpolationDepth,
+    directionFactor,
   };
 }
 
@@ -250,6 +253,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     labeledResolution,
     labeledZoomStep,
     interpolationDepth,
+    directionFactor,
   } = yield* select((state) =>
     getInterpolationInfo(state, "Could not interpolate segment because"),
   );
@@ -259,9 +263,6 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const position = yield* select((state) => getFlooredPosition(state.flycam));
   const activeCellId = volumeTracing.activeCellId;
-
-  const spaceDirectionOrtho = yield* select((state) => state.flycam.spaceDirectionOrtho);
-  const directionFactor = spaceDirectionOrtho[thirdDim];
 
   const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
   if (volumeTracingLayer == null) {
@@ -361,10 +362,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
 
-  // const firstSliceDists = justCopy ? firstSlice : signedDist(firstSlice);
-  // const lastSliceDists = justCopy ? lastSlice : signedDist(lastSlice);
-  const firstSliceDists = signedDist(firstSlice);
-  const lastSliceDists = signedDist(lastSlice);
+  const firstSliceDists = justCopy ? firstSlice : signedDist(firstSlice);
+  const lastSliceDists = justCopy ? lastSlice : signedDist(lastSlice);
 
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
@@ -377,7 +376,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
       ) {
         const k = targetOffsetW / interpolationDepth;
         const weightedAverage = firstVal * (1 - k) + lastVal * k;
-        if (weightedAverage < 0) {
+        const shouldDraw = justCopy ? weightedAverage > 0 : weightedAverage < 0;
+        if (shouldDraw) {
           const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetW];
           voxelBuffer2D.setValue(u, v, 1);
         }

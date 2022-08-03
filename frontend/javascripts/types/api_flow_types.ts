@@ -88,13 +88,21 @@ export type APITeam = {
   readonly name: string;
   readonly organization: string;
 };
-type APIPublication = {
-  readonly created: number;
-  readonly description: string;
+export type APIPublicationAnnotation = {
+  readonly id: { id: string };
+  readonly name: string;
+  readonly tracingStore: APITracingStore;
+  readonly dataSet: APIDataset;
+};
+export type APIPublication = {
   readonly id: string;
-  readonly imageUrl: string;
   readonly publicationDate: number;
+  readonly imageUrl: string;
   readonly title: string;
+  readonly description: string;
+  readonly created: number;
+  readonly datasets: Array<APIDataset>;
+  readonly annotations: Array<APIPublicationAnnotation>;
 };
 export type MutableAPIDatasetId = {
   owningOrganization: string;
@@ -122,7 +130,6 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   jobsEnabled: boolean;
   sortingKey: number;
   owningOrganization: string;
-  publication: APIPublication | null | undefined;
   tags: Array<string>;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;

@@ -233,6 +233,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             writer.writeAttribute("anchorPositionY", a.y.toString)
             writer.writeAttribute("anchorPositionZ", a.z.toString)
           }
+          s.color.foreach(_ => writeColor(s.color))
         }
       }
     }

@@ -20,6 +20,7 @@ import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";
+
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
 // setActiveBuckets can be called with an array of buckets, which will be
@@ -30,10 +31,12 @@ import type { ElementClass } from "types/api_flow_types";
 // A bucket is considered "committed" if it is indeed in the data texture.
 // Active buckets will be pushed into a writerQueue which is processed by
 // writing buckets to the data texture (i.e., "committing the buckets").
-// At the moment, we only store one float f per bucket.
-// If f >= 0, f denotes the index in the data texture where the bucket is stored.
-// If f == -1, the bucket is not yet committed
-// If f == -2, the bucket is not supposed to be rendered. Out of bounds.
+// At the moment, we store two floats per bucket.
+// The first value f denotes the following:
+//   If f >= 0, f denotes the index in the data texture where the bucket is stored.
+//   If f == -1, the bucket is not yet committed
+//   If f == -2, the bucket is not supposed to be rendered. Out of bounds.
+// The second value v denotes the magnification value of the addressed bucket.
 export const channelCountForLookupBuffer = 2;
 
 function getSomeValue<T>(set: Set<T>): T {
@@ -46,11 +49,31 @@ function getSomeValue<T>(set: Set<T>): T {
   return value;
 }
 
+const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
+function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementClass) {
+  if (elementClass !== "uint24") {
+    return src;
+  }
+
+  // Copy the RGB data to an RGBA buffer, since ThreeJS does not support RGB textures
+  // since r137.
+  let idx = 0;
+  let srcIdx = 0;
+  while (srcIdx < 3 * constants.BUCKET_SIZE) {
+    tmpPaddingBuffer[idx++] = src[srcIdx++];
+    tmpPaddingBuffer[idx++] = src[srcIdx++];
+    tmpPaddingBuffer[idx++] = src[srcIdx++];
+    idx++;
+  }
+
+  return tmpPaddingBuffer;
+}
+
 export default class TextureBucketManager {
-  dataTextures: Array<typeof UpdatableTexture>;
+  dataTextures: Array<UpdatableTexture>;
   lookUpBuffer: Float32Array;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lookUpTexture' has no initializer and is... Remove this comment to see the full error message
-  lookUpTexture: THREE.DataTexture;
+  // @ts-expect-error missing initializer
+  lookUpTexture: UpdatableTexture;
   // Holds the index for each active bucket, to which it should (or already
   // has been was) written in the data texture.
   activeBucketToIndexMap: Map<DataBucket, number> = new Map();
@@ -98,7 +121,6 @@ export default class TextureBucketManager {
 
   async startRAFLoops() {
     await waitForCondition(
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'isInitialized' does not exist on type 'D... Remove this comment to see the full error message
       () => this.lookUpTexture.isInitialized() && this.dataTextures[0].isInitialized(),
     );
     this.keepLookUpBufferUpToDate();
@@ -227,13 +249,17 @@ export default class TextureBucketManager {
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
       const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof U... Remove this comment to see the full error message
+
+      const rawSrc = new TypedArrayClass(
+        data.buffer,
+        data.byteOffset,
+        data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+      );
+
+      const src = maybePadRgbData(rawSrc, this.elementClass);
+
       this.dataTextures[dataTextureIndex].update(
-        new TypedArrayClass(
-          data.buffer,
-          data.byteOffset,
-          data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-        ),
+        src,
         0,
         bucketHeightInTexture * indexInDataTexture,
         this.textureWidth,
@@ -252,7 +278,7 @@ export default class TextureBucketManager {
     });
   }
 
-  getTextures(): Array<THREE.DataTexture | typeof UpdatableTexture> {
+  getTextures(): Array<THREE.DataTexture | UpdatableTexture> {
     // @ts-ignore
     return [this.lookUpTexture].concat(this.dataTextures);
   }
@@ -276,7 +302,6 @@ export default class TextureBucketManager {
       THREE.FloatType,
       getRenderer(),
     );
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'typeof UpdatableTexture' is not assignable t... Remove this comment to see the full error message
     this.lookUpTexture = lookUpTexture;
     this.startRAFLoops();
   }
@@ -344,6 +369,7 @@ export default class TextureBucketManager {
      *     the positions of the look up buffer which map to that fallback bucket (in an isotropic case, that's 8
      *     positions).
      */
+
     this.lookUpBuffer.fill(-2);
     const maxZoomStepDiff = getMaxZoomStepDiff(
       Store.getState().datasetConfiguration.loadingStrategy,
@@ -435,7 +461,6 @@ export default class TextureBucketManager {
       }
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof D... Remove this comment to see the full error message
     this.lookUpTexture.update(
       this.lookUpBuffer,
       0,
@@ -443,6 +468,7 @@ export default class TextureBucketManager {
       this.lookUpBufferWidth,
       this.lookUpBufferWidth,
     );
+
     this.isRefreshBufferOutOfDate = false;
     // @ts-ignore
     window.needsRerender = true;

@@ -59,16 +59,17 @@ class TaskService @Inject()(conf: WkConf,
       )
     }
 
-  def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext,
-                                             m: MessagesProvider): Fox[List[ObjectId]] = {
-    if (user.isAdmin) return teamDAO.findAllIdsByOrganization(user._organization)
-    for {
-      numberOfOpen <- countOpenNonAdminTasks(user)
-      teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
-      else userService.teamManagerTeamIdsFor(user._id)
-      _ <- bool2Fox(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
-    } yield teams
-  }
+  def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[ObjectId]] =
+    if (user.isAdmin)
+      teamDAO.findAllIdsByOrganization(user._organization)
+    else {
+      for {
+        numberOfOpen <- countOpenNonAdminTasks(user)
+        teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
+        else userService.teamManagerTeamIdsFor(user._id)
+        _ <- bool2Fox(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
+      } yield teams
+    }
 
   private def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
     for {

@@ -222,7 +222,7 @@ function _getFlooredPosition(flycam: Flycam): Vector3 {
 function _getRotation(flycam: Flycam): Vector3 {
   const object = new THREE.Object3D();
   const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
-  object.applyMatrix(matrix);
+  object.applyMatrix4(matrix);
   const rotation: Vector3 = [object.rotation.x, object.rotation.y, object.rotation.z - Math.PI];
   return [
     mod((180 / Math.PI) * rotation[0], 360),

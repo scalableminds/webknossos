@@ -149,6 +149,7 @@ function _ShareModalView(props: Props) {
 
   const annotationVisibility = tracing.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
+  const [isChangingInProgress, setIsChangingInProgress] = useState(false);
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
 
@@ -164,6 +165,7 @@ function _ShareModalView(props: Props) {
       return;
     }
     const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId);
+    console.log("fetchedSharedTeams", fetchedSharedTeams);
     setSharedTeams(fetchedSharedTeams);
   };
 
@@ -171,43 +173,98 @@ function _ShareModalView(props: Props) {
     fetchAndSetSharedTeams();
   }, [annotationType, annotationId, activeUser]);
 
-  const handleCheckboxChange = (event: RadioChangeEvent) => {
-    setVisibility(event.target.value as any as APIAnnotationVisibility);
+  const reportSuccessfulChange = (newVisibility: APIAnnotationVisibility) => {
+    const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);
+    Toast.success(messages["annotation.shared_teams_edited"], {
+      timeout: 3500,
+      key: randomKeyToAllowDuplicates,
+    });
+
+    sendAnalyticsEvent("share_annotation", {
+      visibility: newVisibility,
+    });
   };
 
-  const handleOthersMayEditCheckboxChange = (event: RadioChangeEvent) => {
+  const reportFailedChange = () => {
+    const randomKeyToAllowDuplicates = Math.random().toString(36).substring(0, 5);
+    Toast.error(messages["annotation.shared_teams_edited_failed"], {
+      timeout: 3500,
+      key: randomKeyToAllowDuplicates,
+    });
+  };
+
+  const handleCheckboxChange = async (event: RadioChangeEvent) => {
+    const newVisibility = event.target.value as any as APIAnnotationVisibility;
+    if (newVisibility === visibility || !hasUpdatePermissions) {
+      return;
+    }
+    setIsChangingInProgress(true);
+    setVisibility(newVisibility as any as APIAnnotationVisibility);
+    try {
+      await editAnnotation(annotationId, annotationType, {
+        visibility: newVisibility,
+      });
+      Store.dispatch(setAnnotationVisibilityAction(newVisibility));
+      reportSuccessfulChange(newVisibility);
+    } catch (e) {
+      console.error("Failed to update the annotations visibility.", e);
+      // Resetting the visibility to the old value as the request failed
+      // so the user still sees the settings currently saved in the backend.
+      setVisibility(visibility as any as APIAnnotationVisibility);
+      reportFailedChange();
+    } finally {
+      setIsChangingInProgress(false);
+    }
+  };
+
+  const handleSharedTeamsChange = async (value: APITeam | APITeam[]) => {
+    const newTeams = _.flatten([value]);
+    if (_.isEqual(newTeams, sharedTeams)) {
+      return;
+    }
+    setIsChangingInProgress(true);
+    setSharedTeams(newTeams);
+    try {
+      await updateTeamsForSharedAnnotation(
+        annotationType,
+        annotationId,
+        newTeams.map((team) => team.id),
+      );
+      reportSuccessfulChange(visibility);
+    } catch (e) {
+      console.error("Failed to update the annotations shared teams.", e);
+      // Resetting the shared teams to the old value as the request failed
+      // so the user still sees the settings currently saved in the backend.
+      setSharedTeams(sharedTeams);
+      reportFailedChange();
+    } finally {
+      setIsChangingInProgress(false);
+    }
+  };
+
+  const handleOthersMayEditCheckboxChange = async (event: RadioChangeEvent) => {
     const value = event.target.value;
     if (typeof value !== "boolean") {
       throw new Error("Form element should return boolean value.");
     }
 
+    setIsChangingInProgress(true);
     setNewOthersMayEdit(value);
-  };
-
-  const handleOk = async () => {
-    await editAnnotation(annotationId, annotationType, {
-      visibility,
-    });
-    Store.dispatch(setAnnotationVisibilityAction(visibility));
-
-    if (visibility !== "Private") {
-      await updateTeamsForSharedAnnotation(
-        annotationType,
-        annotationId,
-        sharedTeams.map((team) => team.id),
-      );
-      Toast.success(messages["annotation.shared_teams_edited"]);
+    if (value !== othersMayEdit) {
+      try {
+        await setOthersMayEditForAnnotation(annotationId, annotationType, value);
+        Store.dispatch(setOthersMayEditForAnnotationAction(value));
+        reportSuccessfulChange(visibility);
+      } catch (e) {
+        console.error("Failed to update the edit option for others.", e);
+        // Resetting the others may edit option to the old value as the request failed
+        // so the user still sees the settings currently saved in the backend.
+        setNewOthersMayEdit(newOthersMayEdit);
+        reportFailedChange();
+      } finally {
+        setIsChangingInProgress(false);
+      }
     }
-
-    if (newOthersMayEdit !== othersMayEdit) {
-      await setOthersMayEditForAnnotation(annotationId, annotationType, newOthersMayEdit);
-      Store.dispatch(setOthersMayEditForAnnotationAction(newOthersMayEdit));
-    }
-
-    sendAnalyticsEvent("share_annotation", {
-      visibility,
-    });
-    onOk();
   };
 
   const maybeShowWarning = () => {
@@ -252,9 +309,8 @@ function _ShareModalView(props: Props) {
       title="Share this annotation"
       visible={isVisible}
       width={800}
-      okText={hasUpdatePermissions ? "Save" : "Ok"}
-      onOk={hasUpdatePermissions ? handleOk : onOk}
-      onCancel={onOk}
+      onOk={onOk}
+      cancelButtonProps={{ style: { display: "none" } }}
     >
       <Row>
         <Col
@@ -312,7 +368,11 @@ function _ShareModalView(props: Props) {
           Who can view this annotation?
         </Col>
         <Col span={18}>
-          <RadioGroup onChange={handleCheckboxChange} value={visibility}>
+          <RadioGroup
+            onChange={handleCheckboxChange}
+            value={visibility}
+            disabled={isChangingInProgress}
+          >
             <Radio style={radioStyle} value="Private" disabled={!hasUpdatePermissions}>
               Private
             </Radio>
@@ -372,8 +432,8 @@ function _ShareModalView(props: Props) {
             mode="multiple"
             allowNonEditableTeams
             value={sharedTeams}
-            onChange={(value) => setSharedTeams(_.flatten([value]))}
-            disabled={!hasUpdatePermissions || visibility === "Private"}
+            onChange={handleSharedTeamsChange}
+            disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
           />
           <Hint
             style={{
@@ -396,7 +456,11 @@ function _ShareModalView(props: Props) {
           Are other users allowed to edit this annotation?
         </Col>
         <Col span={18}>
-          <RadioGroup onChange={handleOthersMayEditCheckboxChange} value={newOthersMayEdit}>
+          <RadioGroup
+            onChange={handleOthersMayEditCheckboxChange}
+            value={newOthersMayEdit}
+            disabled={isChangingInProgress}
+          >
             <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
               No, keep it read-only
             </Radio>

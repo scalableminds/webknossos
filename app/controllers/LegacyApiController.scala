@@ -471,22 +471,21 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   private def replaceInResult(replacement: JsObject => Fox[JsObject])(result: Result): Fox[Result] =
     if (result.header.status == 200) {
-      val bodyJsonValue = result.body match {
-        case HttpEntity.Strict(data, _) => Json.parse(data.decodeString("utf-8"))
-        case _                          => return Fox.successful(BadRequest)
+      result.body match {
+        case HttpEntity.Strict(data, _) =>
+          val bodyJsonValue: JsValue = Json.parse(data.decodeString("utf-8"))
+          val newJsonFox: Fox[JsValue] = bodyJsonValue match {
+            case JsArray(value) =>
+              for { valueList <- Fox.serialCombined(value.toList)(el => replacement(el.as[JsObject])) } yield
+                Json.toJson(valueList)
+            case jsObj: JsObject => replacement(jsObj)
+            case v: JsValue      => Fox.successful(v)
+          }
+          for {
+            newJson <- newJsonFox
+          } yield Ok(Json.toJson(newJson)).copy(header = result.header)
+        case _ => Fox.successful(BadRequest)
       }
-
-      val newJsonFox = bodyJsonValue match {
-        case JsArray(value) =>
-          for { valueList <- Fox.serialCombined(value.toList)(el => replacement(el.as[JsObject])) } yield
-            Json.toJson(valueList)
-        case jsObj: JsObject => replacement(jsObj)
-        case _               => return Fox.successful(BadRequest)
-      }
-
-      for {
-        newJson <- newJsonFox
-      } yield Ok(Json.toJson(newJson)).copy(header = result.header)
     } else Fox.successful(result)
 
   private def logVersioned(request: SecuredRequest[WkEnv, _]): Unit =

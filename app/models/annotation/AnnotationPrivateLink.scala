@@ -2,7 +2,7 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{AnnotationPrivateLinks, _}
+import com.scalableminds.webknossos.schema.Tables.{AnnotationPrivatelinks, _}
 
 import javax.inject.Inject
 import play.api.libs.json.{JsValue, Json, OFormat}
@@ -37,14 +37,14 @@ class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext, va
 }
 
 class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
-    extends SQLDAO[AnnotationPrivateLink, AnnotationPrivateLinksRow, AnnotationPrivateLinks](sqlClient) {
-  val collection = AnnotationPrivateLinks
+    extends SQLDAO[AnnotationPrivateLink, AnnotationPrivatelinksRow, AnnotationPrivatelinks](sqlClient) {
+  val collection = AnnotationPrivatelinks
 
-  def idColumn(x: AnnotationPrivateLinks): Rep[String] = x._Id
+  def idColumn(x: AnnotationPrivatelinks): Rep[String] = x._Id
 
-  def isDeletedColumn(x: AnnotationPrivateLinks): Rep[Boolean] = x.isdeleted
+  def isDeletedColumn(x: AnnotationPrivatelinks): Rep[Boolean] = x.isdeleted
 
-  def parse(r: AnnotationPrivateLinksRow): Fox[AnnotationPrivateLink] =
+  def parse(r: AnnotationPrivatelinksRow): Fox[AnnotationPrivateLink] =
     Fox.successful(
       AnnotationPrivateLink(
         ObjectId(r._Id),
@@ -60,7 +60,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
 
     for {
       _ <- run(
-        sqlu"""insert into webknossos.annotation_private_links(_id, _annotation, accessToken, expirationDateTime, isDeleted)
+        sqlu"""insert into webknossos.annotation_privateLinks(_id, _annotation, accessToken, expirationDateTime, isDeleted)
                          values(${aPL._id.id}, ${aPL._annotation.id}, ${aPL.accessToken}, ${time}, ${aPL.isDeleted})""")
     } yield ()
   }
@@ -69,7 +69,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"""update webknossos.annotation_private_links set _annotation = ${_annotation},
+      _ <- run(sqlu"""update webknossos.annotation_privateLinks set _annotation = ${_annotation},
                             expirationDateTime = $expirationDateTime where _id = $id""")
     } yield ()
 
@@ -78,7 +78,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
       accessQuery <- readAccessQuery
       r <- run(
         sql"select #$columns from #$existingCollectionName where accessToken = ${accessToken} and #$accessQuery"
-          .as[AnnotationPrivateLinksRow])
+          .as[AnnotationPrivatelinksRow])
       parsed <- parseFirst(r, accessToken)
     } yield parsed
 }

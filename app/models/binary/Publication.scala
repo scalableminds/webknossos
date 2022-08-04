@@ -22,20 +22,6 @@ case class Publication(_id: ObjectId,
                        created: Long = System.currentTimeMillis(),
                        isDeleted: Boolean = false)
 
-class CompactPublicationService @Inject()()(implicit ec: ExecutionContext) {
-  // TODO Does the dataset need to know the publication?
-  def publicWrites(p: Publication): Fox[JsObject] =
-    Fox.successful(
-      Json.obj(
-        "id" -> p._id.id,
-        "publicationDate" -> p.publicationDate,
-        "imageUrl" -> p.imageUrl,
-        "title" -> p.title,
-        "description" -> p.description,
-        "created" -> p.created
-      ))
-}
-
 class PublicationService @Inject()(dataSetService: DataSetService,
                                    dataSetDAO: DataSetDAO,
                                    annotationService: AnnotationService,

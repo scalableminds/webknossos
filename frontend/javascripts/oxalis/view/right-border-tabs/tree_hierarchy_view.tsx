@@ -393,7 +393,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       <div>
         <Dropdown
           overlay={createMenu}
-          placement="bottomCenter" // The overlay is generated lazily. By default, this would make the overlay
+          placement="bottom" // The overlay is generated lazily. By default, this would make the overlay
           // re-render on each parent's render() after it was shown for the first time.
           // The reason for this is that it's not destroyed after closing.
           // Therefore, autoDestroy is passed.
@@ -533,7 +533,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
             // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
             autoDestroy
-            placement="bottomCenter"
+            placement="bottom"
             visible={this.state.activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
             onVisibleChange={(isVisible) =>
               this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)

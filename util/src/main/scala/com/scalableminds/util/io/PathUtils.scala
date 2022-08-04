@@ -161,8 +161,9 @@ trait PathUtils extends LazyLogging {
 
   def deleteDirectoryRecursively(path: Path): Box[Unit] = {
     val directory = new Directory(new File(path.toString))
-    if (!directory.exists) return Full(())
-    if (directory.deleteRecursively()) {
+    if (!directory.exists)
+      Full(())
+    else if (directory.deleteRecursively()) {
       Full(())
     } else Failure(f"Failed to delete directory $path")
   }

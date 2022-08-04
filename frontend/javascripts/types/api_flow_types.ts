@@ -88,13 +88,22 @@ export type APITeam = {
   readonly name: string;
   readonly organization: string;
 };
-type APIPublication = {
-  readonly created: number;
-  readonly description: string;
+export type APIPublicationAnnotation = {
   readonly id: string;
-  readonly imageUrl: string;
+  readonly name: string;
+  readonly description: string;
+  readonly tracingStore: APITracingStore;
+  readonly dataSet: APIDataset;
+};
+export type APIPublication = {
+  readonly id: string;
   readonly publicationDate: number;
+  readonly imageUrl: string;
   readonly title: string;
+  readonly description: string;
+  readonly created: number;
+  readonly datasets: Array<APIDataset>;
+  readonly annotations: Array<APIPublicationAnnotation>;
 };
 export type MutableAPIDatasetId = {
   owningOrganization: string;
@@ -122,7 +131,6 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   jobsEnabled: boolean;
   sortingKey: number;
   owningOrganization: string;
-  publication: APIPublication | null | undefined;
   tags: Array<string>;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
@@ -203,6 +211,7 @@ export type APIRestrictions = {
   readonly allowUpdate: boolean;
   readonly allowFinish: boolean;
   readonly allowDownload: boolean;
+  // allowSave might be false even though allowUpdate is true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight" | "volume";
@@ -346,6 +355,7 @@ export type APIAnnotationCompact = {
   // or due to missing permissions).
   readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
+  readonly othersMayEdit: boolean;
 };
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCompact {
@@ -366,6 +376,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     typ,
     owner,
     teams,
+    othersMayEdit,
   } = annotation;
 
   return {
@@ -385,6 +396,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     typ,
     owner,
     teams,
+    othersMayEdit,
   };
 }
 
@@ -417,6 +429,8 @@ type APIAnnotationBase = APIAnnotationCompact & {
   readonly owner?: APIUserBase;
   // This `user` attribute is deprecated and should not be used, anymore. It only exists to satisfy e2e type checks
   readonly user?: APIUserBase;
+  readonly contributors: APIUserBase[];
+  readonly othersMayEdit: boolean;
   readonly meshes: Array<MeshMetaData>;
 };
 export type APIAnnotation = APIAnnotationBase & {
@@ -554,6 +568,7 @@ export type APIJob = {
   readonly datasetName: string | null | undefined;
   readonly exportFileName: string | null | undefined;
   readonly layerName: string | null | undefined;
+  readonly annotationLayerName: string | null | undefined;
   readonly tracingId: string | null | undefined;
   readonly annotationId: string | null | undefined;
   readonly annotationType: string | null | undefined;

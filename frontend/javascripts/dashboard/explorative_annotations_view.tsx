@@ -503,7 +503,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   isTracingEditable(tracing: APIAnnotationCompact): boolean {
-    return tracing.owner?.id === this.props.activeUser.id;
+    return tracing.owner?.id === this.props.activeUser.id || tracing.othersMayEdit;
   }
 
   renderTable() {

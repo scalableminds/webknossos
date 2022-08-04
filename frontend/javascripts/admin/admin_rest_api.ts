@@ -31,6 +31,7 @@ import type {
   APIProjectProgressReport,
   APIProjectUpdater,
   APIProjectWithAssignments,
+  APIPublication,
   APIResolutionRestrictions,
   APIScript,
   APIScriptCreator,
@@ -408,6 +409,7 @@ export async function increaseProjectTaskInstances(
   );
   return transformProject(project);
 }
+
 export function deleteProject(projectId: string): Promise<void> {
   return Request.receiveJSON(`/api/projects/${projectId}`, {
     method: "DELETE",
@@ -621,6 +623,19 @@ export function editAnnotation(
     data,
     method: "PATCH",
   });
+}
+
+export function setOthersMayEditForAnnotation(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  othersMayEdit: boolean,
+): Promise<void> {
+  return Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/othersMayEdit?othersMayEdit=${othersMayEdit}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 export function updateAnnotationLayer(
@@ -874,6 +889,18 @@ export function getUpdateActionLog(
   );
 }
 
+export function getNewestVersionForTracing(
+  tracingStoreUrl: string,
+  tracingId: string,
+  tracingType: "skeleton" | "volume",
+): Promise<number> {
+  return doWithToken((token) =>
+    Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
+    ).then((obj) => obj.version),
+  );
+}
+
 export async function importVolumeTracing(
   tracing: Tracing,
   volumeTracing: VolumeTracing,
@@ -977,6 +1004,7 @@ export async function getJobs(): Promise<APIJob[]> {
     datasetName: job.commandArgs.dataset_name,
     organizationName: job.commandArgs.organization_name,
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
+    annotationLayerName: job.commandArgs.annotation_layer_name,
     boundingBox: job.commandArgs.bbox,
     exportFileName: job.commandArgs.export_file_name,
     tracingId: job.commandArgs.volume_tracing_id,
@@ -1643,6 +1671,18 @@ export async function getMeanAndStdDevFromDataset(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/colorStatistics?token=${token}`,
     ),
   );
+}
+
+// #### Publications
+export async function getPublications(): Promise<Array<APIPublication>> {
+  const publications = await Request.receiveJSON("/api/publications");
+  assertResponseLimit(publications);
+  return publications;
+}
+
+export async function getPublication(id: string): Promise<APIPublication> {
+  const publication = await Request.receiveJSON(`/api/publications/${id}`);
+  return publication;
 }
 
 // #### Datastores

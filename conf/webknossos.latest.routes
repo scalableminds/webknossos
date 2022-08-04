@@ -139,6 +139,7 @@ GET           /annotations/shared                                               
 GET           /annotations/readable                                                     controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.getSharedTeams(typ: String, id: String)
 PATCH         /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.updateSharedTeams(typ: String, id: String)
+PATCH         /annotations/:typ/:id/othersMayEdit                                       controllers.AnnotationController.updateOthersMayEdit(typ: String, id: String, othersMayEdit: Boolean)
 
 # Annotation Private Links
 GET           /annotations/zarr_private/byAccessToken/:accessId                         controllers.AnnotationPrivateLinkController.lookupPrivateLink(accessId: String)
@@ -229,3 +230,7 @@ POST          /jobs/run/materializeVolumeAnnotation/:organizationName/:dataSetNa
 GET           /jobs/:id                                                                 controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                          controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                          controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)
+
+# Publications
+GET           /publications                                                             controllers.PublicationController.listPublications()
+GET           /publications/:id                                                         controllers.PublicationController.read(id: String)

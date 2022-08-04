@@ -108,7 +108,7 @@ const viewOverrides: Record<string, string> = {
   "test-agglomerate-file-with-meshes":
     '{"position":[63,67,118],"mode":"orthogonal","zoomStep":0.826,"stateByLayer":{"segmentation":{"meshInfo":{"meshFileName":"meshfile-with-name","meshes":[{"segmentId":4,"seedPosition":[64,75,118],"isPrecomputed":true,"meshFileName":"meshfile-with-name"},{"segmentId":12,"seedPosition":[107,125,118],"isPrecomputed":false,"mappingName":"agglomerate_view_70","mappingType":"HDF5"},{"segmentId":79,"seedPosition":[110,78,118],"isPrecomputed":false,"mappingName":null,"mappingType":null}]}}}}',
   connectome_file_test_dataset:
-    '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.734,"stateByLayer":{"segmentation":{"connectomeInfo":{"connectomeName":"connectome","agglomerateIdsToImport":[1]}}}}',
+    '{"position":[102,109,60],"mode":"orthogonal","zoomStep":0.734,"stateByLayer":{"segmentation":{"connectomeInfo":{"connectomeName":"connectome","agglomerateIdsToImport":[1]}}}}',
 };
 const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
   ROI2017_wkw_fallback: {
@@ -195,7 +195,7 @@ datasetNames.map(async (datasetName) => {
 annotationSpecs.map(async (annotationSpec) => {
   const [datasetName, fallbackLayerName] = annotationSpec;
 
-  test.serial.only(
+  test.serial(
     `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
     async (t) => {
       console.log(

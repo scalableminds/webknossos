@@ -42,7 +42,7 @@ class TeamController @Inject()(teamDAO: TeamDAO,
   @ApiOperation(hidden = true, value = "")
   def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      teamIdValidated <- ObjectId.parse(id)
+      teamIdValidated <- ObjectId.fromString(id)
       _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
       team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
       _ <- bool2Fox(!team.isOrganizationTeam) ?~> "team.delete.organizationTeam" ~> FORBIDDEN

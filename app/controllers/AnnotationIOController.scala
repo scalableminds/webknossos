@@ -144,11 +144,12 @@ Expects:
 
   private def mergeAndSaveVolumeLayers(volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
-                                       otherFiles: Map[String, File]): Fox[List[AnnotationLayer]] = {
-    if (volumeLayersGrouped.isEmpty) return Fox.successful(List())
-    if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
-      return Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
-    if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
+                                       otherFiles: Map[String, File]): Fox[List[AnnotationLayer]] =
+    if (volumeLayersGrouped.isEmpty)
+      Fox.successful(List())
+    else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
+      Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
+    else if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
       Fox.serialCombined(volumeLayersGrouped.toList.flatten.zipWithIndex) { volumeLayerWithIndex =>
         val uploadedVolumeLayer = volumeLayerWithIndex._1
         val idx = volumeLayerWithIndex._2
@@ -178,18 +179,19 @@ Expects:
             AnnotationLayer.defaultVolumeLayerName
           ))
     }
-  }
 
   private def mergeAndSaveSkeletonLayers(skeletonTracings: List[SkeletonTracing],
-                                         tracingStoreClient: WKRemoteTracingStoreClient): Fox[List[AnnotationLayer]] = {
-    if (skeletonTracings.isEmpty) return Fox.successful(List())
-    for {
-      mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
-        SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
-        persistTracing = true)
-    } yield
-      List(AnnotationLayer(mergedTracingId, AnnotationLayerType.Skeleton, AnnotationLayer.defaultSkeletonLayerName))
-  }
+                                         tracingStoreClient: WKRemoteTracingStoreClient): Fox[List[AnnotationLayer]] =
+    if (skeletonTracings.isEmpty)
+      Fox.successful(List())
+    else {
+      for {
+        mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
+          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
+          persistTracing = true)
+      } yield
+        List(AnnotationLayer(mergedTracingId, AnnotationLayerType.Skeleton, AnnotationLayer.defaultSkeletonLayerName))
+    }
 
   private def assertNonEmpty(parseSuccesses: List[NmlParseSuccess]) =
     bool2Fox(parseSuccesses.exists(p => p.skeletonTracing.nonEmpty || p.volumeLayers.nonEmpty)) ?~> "nml.file.noFile"
@@ -458,7 +460,7 @@ Expects:
       m: MessagesProvider) =
     for {
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      projectIdValidated <- ObjectId.parse(projectId)
+      projectIdValidated <- ObjectId.fromString(projectId)
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
@@ -505,7 +507,7 @@ Expects:
 
     for {
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+      taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
       zip <- createTaskTypeZip(taskType)

@@ -38,11 +38,11 @@ export function setupGlobalMappingsObject() {
 class Mappings {
   layerName: string;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'mappingTexture' has no initializer and i... Remove this comment to see the full error message
-  mappingTexture: typeof UpdatableTexture;
+  mappingTexture: UpdatableTexture;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'mappingLookupTexture' has no initializer... Remove this comment to see the full error message
-  mappingLookupTexture: typeof UpdatableTexture;
+  mappingLookupTexture: UpdatableTexture;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'mappingColorTexture' has no initializer ... Remove this comment to see the full error message
-  mappingColorTexture: typeof UpdatableTexture;
+  mappingColorTexture: UpdatableTexture;
 
   constructor(layerName: string) {
     this.layerName = layerName;
@@ -105,7 +105,6 @@ class Mappings {
     // Initialize the array with -1
     float32Colors.fill(-1);
     float32Colors.set(mappingColors.slice(0, maxNumberOfColors));
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof U... Remove this comment to see the full error message
     this.mappingColorTexture.update(
       float32Colors,
       0,
@@ -139,7 +138,6 @@ class Mappings {
       throw new Error(messages["mapping.too_big"]);
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof U... Remove this comment to see the full error message
     this.mappingLookupTexture.update(
       uint8Keys,
       0,
@@ -147,7 +145,6 @@ class Mappings {
       MAPPING_TEXTURE_WIDTH,
       uint8Keys.length / MAPPING_TEXTURE_WIDTH / 4,
     );
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'update' does not exist on type 'typeof U... Remove this comment to see the full error message
     this.mappingTexture.update(
       uint8Values,
       0,

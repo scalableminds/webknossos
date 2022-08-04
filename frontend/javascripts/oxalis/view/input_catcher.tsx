@@ -134,18 +134,23 @@ function InputCatcher({
   );
 
   return (
-    <div className="flexlayout-dont-overflow">
+    <div
+      className="flexlayout-dont-overflow"
+      onContextMenu={ignoreContextMenu}
+      style={{ cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool] }}
+    >
       <div
         id={`inputcatcher_${viewportID}`}
         ref={(domElement) => {
           domElementRef.current = domElement;
         }}
-        onContextMenu={ignoreContextMenu}
         data-value={viewportID}
         className={`inputcatcher ${viewportID}`}
         style={{
           position: "relative",
-          cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool],
+          // Disable inputs while wk is busy. However, keep the custom cursor and the ignoreContextMenu handler
+          // which is why those are defined at the outer element.
+          pointerEvents: busyBlockingInfo.isBusy ? "none" : "auto",
         }}
       >
         <ViewportStatusIndicator />

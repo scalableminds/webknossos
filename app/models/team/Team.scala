@@ -134,7 +134,7 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       r <- run(
         sql"select _id from #$existingCollectionName where _organization = ${organizationId.id} and #$accessQuery"
           .as[String])
-      parsed <- Fox.serialCombined(r.toList)(col => ObjectId.parse(col))
+      parsed <- Fox.serialCombined(r.toList)(col => ObjectId.fromString(col))
     } yield parsed
 
   def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =

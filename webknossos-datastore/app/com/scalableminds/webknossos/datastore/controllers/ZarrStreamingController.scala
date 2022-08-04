@@ -286,6 +286,54 @@ class ZarrStreamingController @Inject()(
       } yield Ok(Json.toJson(zarrHeader))
     }
 
+  // TODO
+  def zArray(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String, mag: String,
+            ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      urlOrHeaderToken(token, request)) {
+      for {
+        (_, dataLayer) <- dataSourceRepository
+          .getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages("dataSource.notFound") ~> 404
+        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
+        _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        cubeLength = DataLayer.bucketLength
+        (channels, dtype) = ElementClass.toChannelAndZarrString(dataLayer.elementClass)
+        // data request method always decompresses before sending
+        compressor = None
+
+        shape = Array(
+          channels,
+          // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+          (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / magParsed.x,
+          (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / magParsed.y,
+          (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / magParsed.z
+        )
+
+        chunks = Array(channels, cubeLength, cubeLength, cubeLength)
+
+        zarrHeader = ZarrHeader(zarr_format = 2,
+          shape = shape,
+          chunks = chunks,
+          compressor = compressor,
+          dtype = dtype,
+          order = ArrayOrder.F)
+      } yield
+        Ok(
+          // Json.toJson doesn't work on zarrHeader at the moment, because it doesn't write None values in Options
+          Json.obj(
+            "dtype" -> zarrHeader.dtype,
+            "fill_value" -> 0,
+            "zarr_format" -> zarrHeader.zarr_format,
+            "order" -> zarrHeader.order,
+            "chunks" -> zarrHeader.chunks,
+            "compressor" -> compressor,
+            "filters" -> None,
+            "shape" -> zarrHeader.shape,
+            "dimension_seperator" -> zarrHeader.dimension_separator
+          ))
+    }
+  }
+
   def zArrayPrivateLink(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] = Action.async {
     implicit request =>
       for {
@@ -340,6 +388,29 @@ class ZarrStreamingController @Inject()(
             "%s/%s/%s/%s".format(organizationName, dataSetName, dataLayerName, mag),
             Map(mag -> ".")
           )).withHeaders()
+    }
+
+  // TODO
+  def dataLayerMagFolderContents(token: Option[String],
+                                 organizationName: String,
+                                 dataSetName: String,
+                                 dataLayerName: String,
+                                 mag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+        urlOrHeaderToken(token, request)) {
+        for {
+          (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ~> 404
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
+          _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        } yield
+          Ok(
+            views.html.datastoreZarrDatasourceDir(
+              "Datastore",
+              "%s/%s/%s/%s".format(organizationName, dataSetName, dataLayerName, mag),
+              List.empty
+            )).withHeaders()
+      }
     }
 
   def dataLayerMagFolderContentsPrivateLink(accessToken: String,
@@ -405,6 +476,28 @@ class ZarrStreamingController @Inject()(
           )).withHeaders()
     }
 
+  // TODO
+  def dataLayerFolderContents(token: Option[String],
+                              organizationName: String,
+                              dataSetName: String,
+                              dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+        urlOrHeaderToken(token, request)) {
+        for {
+          (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
+            "dataSource.notFound") ~> 404
+          mags = dataLayer.resolutions
+        } yield
+          Ok(
+            views.html.datastoreZarrDatasourceDir(
+              "Datastore",
+              "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
+              mags.map(_.toMagLiteral())
+            )).withHeaders()
+      }
+    }
+
   def dataLayerFolderContentsPrivateLink(accessToken: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
@@ -450,6 +543,26 @@ class ZarrStreamingController @Inject()(
               Map(s"$dataSetName" -> ".") ++ layerNames.map { x =>
                 (x, s"$dataSetName/$x")
               }.toMap
+            ))
+      }
+    }
+  // TODO
+  def dataSourceFolderContents(token: Option[String],
+                               organizationName: String,
+                               dataSetName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+        urlOrHeaderToken(token, request)) {
+        for {
+          dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
+            "dataSource.notFound") ~> 404
+          layerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
+        } yield
+          Ok(
+            views.html.datastoreZarrDatasourceDir(
+              "Datastore",
+              s"$organizationName/$dataSetName",
+              layerNames
             ))
       }
     }
@@ -501,7 +614,6 @@ class ZarrStreamingController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       Future(Ok(Json.obj("zarr_format" -> 2)))
-
     }
 
   def zGroupPrivateLink(accessToken: String, dataLayerName: String): Action[AnyContent] = Action.async {

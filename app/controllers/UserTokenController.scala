@@ -13,7 +13,6 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
 import io.swagger.annotations._
-
 import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreService}
@@ -186,23 +185,25 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         case _                => Fox.successful(false)
       }
 
-    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(UserAccessAnswer(granted = true))
+    if (tracingId == TracingIds.dummyTracingId)
+      Fox.successful(UserAccessAnswer(granted = true))
+    else {
+      for {
+        annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+        annotationAccessByToken <- token
+          .map(annotationPrivateLinkDAO.findOneByAccessToken(_)(GlobalAccessContext))
+          .getOrElse(Fox.empty)
+          .futureBox
 
-    for {
-      annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
-      annotationAccessByToken <- token
-        .map(annotationPrivateLinkDAO.findOneByAccessToken(_)(GlobalAccessContext))
-        .getOrElse(Fox.empty)
-        .futureBox
-
-      allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
-      restrictions <- annotationInformationProvider.restrictionsFor(
-        AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
-      allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
-      allowed = allowedByToken || allowedByUser
-    } yield {
-      if (allowed) UserAccessAnswer(granted = true)
-      else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
+        allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
+        restrictions <- annotationInformationProvider.restrictionsFor(
+          AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
+        allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+        allowed = allowedByToken || allowedByUser
+      } yield {
+        if (allowed) UserAccessAnswer(granted = true)
+        else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
+      }
     }
   }
 
@@ -211,7 +212,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
     else {
       for {
-        jobIdValidated <- ObjectId.parse(jobId)
+        jobIdValidated <- ObjectId.fromString(jobId)
         jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox
         answer = jobBox match {
           case Full(_) => UserAccessAnswer(granted = true)

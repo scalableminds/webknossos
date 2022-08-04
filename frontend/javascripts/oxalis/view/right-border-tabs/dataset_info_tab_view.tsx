@@ -7,27 +7,18 @@ import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
-import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
-import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import {
-  getDatasetExtentAsString,
-  getResolutions,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getDatasetExtentAsString, getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import { location } from "libs/window";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
-import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import Model from "oxalis/model";
 import features from "features";
 import type { OxalisState, Task, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
@@ -35,6 +26,7 @@ import {
   NucleiInferralModal,
   NeuronInferralModal,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -402,7 +394,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     if (isDatasetViewMode) return null;
     let annotationTypeLabel;
     const { annotationType, name } = this.props.tracing;
-    const tracingName = name || "[untitled]";
+    const tracingName = name || "[unnamed]";
 
     if (this.props.task != null) {
       // In case we have a task display its id
@@ -476,73 +468,34 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  handleConvertToHybrid = async () => {
-    await Model.ensureSavedState();
-    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
-    await convertToHybridTracing(
-      this.props.tracing.annotationId,
-      maybeSegmentationLayer != null ? maybeSegmentationLayer.name : null,
-    );
-    location.reload();
-  };
-
-  getTracingType(isDatasetViewMode: boolean) {
-    if (isDatasetViewMode) return null;
-    const isSkeleton = this.props.tracing.skeleton != null;
-    const isVolume = this.props.tracing.volumes.length > 0;
-    const isHybrid = isSkeleton && isVolume;
-    const { allowUpdate } = this.props.tracing.restrictions;
-    const isExplorational =
-      this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational;
-
-    if (isHybrid) {
-      return (
-        <p>
-          Annotation Type:{" "}
-          <Tooltip title="Skeleton and Volume">
-            Hybrid <InfoCircleOutlined />
-          </Tooltip>
-        </p>
-      );
-    } else {
-      return (
-        <p>
-          Annotation Type: {isVolume ? "Volume" : "Skeleton"}
-          {allowUpdate && isExplorational ? (
-            <ButtonComponent
-              style={{
-                marginLeft: 10,
-              }}
-              size="small"
-              onClick={this.handleConvertToHybrid}
-              title="Skeleton and Volume"
-            >
-              Convert to Hybrid
-            </ButtonComponent>
-          ) : null}
-        </p>
-      );
-    }
-  }
-
-  maybePrintOwner() {
+  maybePrintOwnerAndContributors() {
     const { activeUser } = this.props;
-    const { owner } = this.props.tracing;
+    const { owner, contributors } = this.props.tracing;
 
     if (!owner) {
       return null;
     }
 
-    if (!activeUser || owner.id !== activeUser.id) {
-      return (
-        <span>
-          Owner: {owner.firstName} {owner.lastName}
-        </span>
-      );
-    }
+    const contributorsString =
+      contributors.length > 0
+        ? contributors.map((user) => formatUserName(activeUser, user)).join(", ")
+        : "none";
 
-    // Active user is owner
-    return null;
+    return (
+      <div>
+        <div>Owner: {formatUserName(activeUser, owner)}</div>
+        <div>
+          Contributors: {contributorsString}
+          <Tooltip title='If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.'>
+            <InfoCircleOutlined
+              style={{
+                marginLeft: 6,
+              }}
+            />
+          </Tooltip>
+        </div>
+      </div>
+    );
   }
 
   renderSelectedStartingJobsModal() {
@@ -614,9 +567,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="flex-overflow padded-tab-content">
         <div className="info-tab-block">
           {this.getTracingName(isDatasetViewMode)}
-          {this.getTracingType(isDatasetViewMode)}
           {this.getDatasetName(isDatasetViewMode)}
-          {this.maybePrintOwner()}
+          {this.maybePrintOwnerAndContributors()}
         </div>
 
         <div className="info-tab-block">

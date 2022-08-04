@@ -131,7 +131,6 @@ const defaultState: OxalisState = {
     isForeign: false,
     jobsEnabled: false,
     sortingKey: 123,
-    publication: null,
   },
   tracing: {
     ...initialAnnotationInfo,
@@ -147,6 +146,8 @@ const defaultState: OxalisState = {
     mappings: [],
     skeleton: null,
     owner: null,
+    contributors: [],
+    othersMayEdit: false,
     annotationLayers: [],
   },
   save: {

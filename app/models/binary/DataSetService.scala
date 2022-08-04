@@ -37,7 +37,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                teamDAO: TeamDAO,
                                workerDAO: WorkerDAO,
                                publicationDAO: PublicationDAO,
-                               publicationService: PublicationService,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
@@ -329,7 +328,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
       userTeams <- teamDAO.findAllEditable
       userTeamIds = userTeams.map(_._id)
-      teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+      teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
       _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- dataSetDAO.assertUpdateAccess(dataSet._id) ?~> "dataset.initialTeams.forbidden"
       _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, teamIdsValidated)
@@ -343,12 +342,18 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def publicWrites(dataSet: DataSet,
                    requestingUserOpt: Option[User],
-                   organization: Organization,
-                   dataStore: DataStore,
+                   organization: Option[Organization],
+                   dataStore: Option[DataStore],
                    skipResolutions: Boolean = false,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
       implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
+      organization <- Fox.fillOption(organization) {
+        organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      }
+      dataStore <- Fox.fillOption(dataStore) {
+        dataStoreFor(dataSet)
+      }
       teams <- allowedTeamsFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
       logoUrl <- logoUrlFor(dataSet, Some(organization)) ?~> "dataset.list.fetchLogoUrlFailed"
@@ -356,8 +361,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions) ?~> "dataset.list.fetchDataSourceFailed"
-      publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_)) ?~> "dataset.list.fetchPublicationFailed"
-      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites) ?~> "dataset.list.publicationWritesFailed"
       worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
       jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
     } yield {
@@ -377,7 +380,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "logoUrl" -> logoUrl,
         "sortingKey" -> dataSet.sortingKey,
         "details" -> dataSet.details,
-        "publication" -> publicationJson,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
         "isForeign" -> dataStore.isForeign,
         "jobsEnabled" -> jobsEnabled,

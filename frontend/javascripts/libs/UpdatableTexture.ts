@@ -1,106 +1,135 @@
-// @ts-nocheck
 import * as THREE from "three";
 import { document } from "libs/window";
+import _ from "lodash";
 
-function UpdatableTexture(
-  this: THREE.Texture,
-  width: number,
-  height: number,
-  format,
-  type,
-  mapping,
-  wrapS,
-  wrapT,
-  magFilter,
-  minFilter,
-  anisotropy,
-  encoding,
-) {
-  THREE.Texture.call(
-    this,
-    null,
-    mapping,
-    wrapS,
-    wrapT,
-    magFilter,
-    minFilter,
-    format,
-    type,
-    anisotropy,
-    encoding,
-  );
+const lazyGetCanvas = _.memoize(() => {
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = 1;
+  canvas.height = 1;
+  return canvas;
+});
+
+const getImageData = _.memoize((width: number, height: number): ImageData => {
+  const canvas = lazyGetCanvas();
   const ctx = canvas.getContext("2d");
-  const imageData = ctx.createImageData(1, 1);
-  this.image = imageData;
-  this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
-  this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;
-  this.generateMipmaps = false;
-  this.flipY = false;
-  this.unpackAlignment = 1;
-  this.needsUpdate = true;
-}
+  if (ctx == null) {
+    throw new Error("Could not get context for texture.");
+  }
+  const imageData = ctx.createImageData(width, height);
 
-UpdatableTexture.prototype = Object.create(THREE.Texture.prototype);
-UpdatableTexture.prototype.constructor = UpdatableTexture;
-UpdatableTexture.prototype.isUpdatableTexture = true;
+  // Explicitly "release" canvas. Necessary for iOS.
+  // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
+  canvas.width = 1;
+  canvas.height = 1;
+  ctx.clearRect(0, 0, 1, 1);
 
-UpdatableTexture.prototype.setRenderer = function setRenderer(renderer) {
-  this.renderer = renderer;
-  this.gl = this.renderer.getContext();
-  this.utils = THREE.WebGLUtils(this.gl, this.renderer.extensions, this.renderer.capabilities);
-};
+  return imageData;
+});
 
-UpdatableTexture.prototype.setSize = function setSize(width, height) {
-  if (width === this.width && height === this.height) return;
-  if (!this.isInitialized()) return;
-  this.width = width;
-  this.height = height;
-  const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
-  const textureProperties = this.renderer.properties.get(this);
-  this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
-  if (!this.isInitialized()) this.width = null;
-  this.gl.texImage2D(
-    this.gl.TEXTURE_2D,
-    0,
-    this.utils.convert(this.format),
-    width,
-    height,
-    0,
-    this.utils.convert(this.format),
-    this.utils.convert(this.type),
-    null,
-  );
-  this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
-};
+class UpdatableTexture extends THREE.Texture {
+  isUpdatableTexture: boolean;
+  renderer!: THREE.WebGLRenderer;
+  gl: any;
+  utils!: THREE.WebGLUtils;
+  width: number | undefined;
+  height: number | undefined;
 
-UpdatableTexture.prototype.isInitialized = function isInitialized() {
-  return this.renderer.properties.get(this).__webglTexture != null;
-};
+  constructor(
+    width: number,
+    height: number,
+    format?: THREE.PixelFormat,
+    type?: THREE.TextureDataType,
+    mapping?: THREE.Mapping,
+    wrapS?: THREE.Wrapping,
+    wrapT?: THREE.Wrapping,
+    magFilter?: THREE.TextureFilter,
+    minFilter?: THREE.TextureFilter,
+    anisotropy?: number,
+    encoding?: THREE.TextureEncoding,
+  ) {
+    const imageData = getImageData(width, height);
 
-UpdatableTexture.prototype.update = function update(src, x, y, width, height) {
-  if (!this.isInitialized()) {
-    this.renderer.initTexture(this);
+    super(
+      // @ts-ignore
+      imageData,
+      mapping,
+      wrapS,
+      wrapT,
+      magFilter,
+      minFilter,
+      format,
+      type,
+      anisotropy,
+      encoding,
+    );
+
+    this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
+    this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;
+    this.generateMipmaps = false;
+    this.flipY = false;
+    this.unpackAlignment = 1;
+    this.needsUpdate = true;
+    this.isUpdatableTexture = true;
   }
 
-  this.setSize(width, width);
-  const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
-  const textureProperties = this.renderer.properties.get(this);
-  this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
-  this.gl.texSubImage2D(
-    this.gl.TEXTURE_2D,
-    0,
-    x,
-    y,
-    width,
-    height,
-    this.utils.convert(this.format),
-    this.utils.convert(this.type),
-    src,
-  );
-  this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
-};
+  setRenderer(renderer: THREE.WebGLRenderer) {
+    this.renderer = renderer;
+    this.gl = this.renderer.getContext();
+    this.utils = new THREE.WebGLUtils(
+      this.gl,
+      this.renderer.extensions,
+      this.renderer.capabilities,
+    );
+  }
 
+  setSize(width: number, height: number) {
+    if (width === this.width && height === this.height) return;
+    if (!this.isInitialized()) return;
+    this.width = width;
+    this.height = height;
+    const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
+    const textureProperties = this.renderer.properties.get(this);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
+    if (!this.isInitialized()) this.width = undefined;
+
+    this.gl.texImage2D(
+      this.gl.TEXTURE_2D,
+      0,
+      this.utils.convert(this.format),
+      width,
+      height,
+      0,
+      this.utils.convert(this.format),
+      this.utils.convert(this.type),
+      null,
+    );
+    this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
+  }
+
+  isInitialized() {
+    return this.renderer.properties.get(this).__webglTexture != null;
+  }
+
+  update(src: Float32Array | Uint8Array, x: number, y: number, width: number, height: number) {
+    if (!this.isInitialized()) {
+      this.renderer.initTexture(this);
+    }
+    const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
+    const textureProperties = this.renderer.properties.get(this);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
+    this.gl.texSubImage2D(
+      this.gl.TEXTURE_2D,
+      0,
+      x,
+      y,
+      width,
+      height,
+      this.utils.convert(this.format),
+      this.utils.convert(this.type),
+      src,
+    );
+    this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
+    this.image = null;
+  }
+}
 export default UpdatableTexture;

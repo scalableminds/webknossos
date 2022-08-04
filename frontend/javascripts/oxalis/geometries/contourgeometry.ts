@@ -58,11 +58,9 @@ class ContourGeometry {
       const positionAttribute = new THREE.BufferAttribute(mesh.vertexBuffer.getBuffer(), 3);
       positionAttribute.setUsage(THREE.DynamicDrawUsage);
       mesh.geometry.dispose();
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAttribute' does not exist on type 'Bu... Remove this comment to see the full error message
       mesh.geometry.setAttribute("position", positionAttribute);
     }
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'attributes' does not exist on type 'Buff... Remove this comment to see the full error message
     mesh.geometry.attributes.position.needsUpdate = true;
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setDrawRange' does not exist on type 'Bu... Remove this comment to see the full error message
     mesh.geometry.setDrawRange(0, mesh.vertexBuffer.getLength());

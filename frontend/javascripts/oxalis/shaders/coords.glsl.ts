@@ -48,7 +48,7 @@ export const getWorldCoordUVW: ShaderModule = {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
 
       if (isFlightMode()) {
-        vec4 modelCoords = inverse(savedModelMatrix) * worldCoord;
+        vec4 modelCoords = inverseMatrix(savedModelMatrix) * worldCoord;
         float sphericalRadius = sphericalCapRadius;
 
         vec4 centerVertex = vec4(0.0, 0.0, -sphericalRadius, 0.0);

@@ -18,7 +18,7 @@ test("getScripts()", async (t) => {
     id: "scripts-getScripts",
   });
 });
-test.only("getScript()", async (t) => {
+test("getScript()", async (t) => {
   const scripts = await api.getScripts();
   const firstScript = scripts[0];
   const script = await api.getScript(firstScript.id);

@@ -440,7 +440,7 @@ export function isRgb(dataset: APIDataset, layerName: string): boolean {
   );
 }
 export function getByteCountFromLayer(layerInfo: DataLayerType): number {
-  return getBitDepth(layerInfo) >> 3;
+  return getBitDepth(layerInfo) / 8;
 }
 export function getByteCount(dataset: APIDataset, layerName: string): number {
   return getByteCountFromLayer(getLayerByName(dataset, layerName));

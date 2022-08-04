@@ -7,7 +7,7 @@
     "plugin:react/recommended",
     "prettier"
   ],
-  "plugins": ["@typescript-eslint", "react", "react-hooks", "import"],
+  "plugins": ["@typescript-eslint", "react", "react-hooks", "import", "ava"],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 8,
@@ -102,6 +102,7 @@
         ]
       }
     ],
+    "ava/no-only-test": "error",
 
     // reconsider rules after finishing Typescript conversion
     "react/static-property-placement": "off",

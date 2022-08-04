@@ -32,7 +32,7 @@ class PublicationController @Inject()(publicationService: PublicationService,
     sil.UserAwareAction.async { implicit request =>
       for {
         publication <- publicationDAO.findOne(ObjectId(publicationId)) ?~> "publication.notFound" ~> NOT_FOUND
-        js <- publicationService.publicWritesWithDatasetsAndAnnotations(publication)
+        js <- publicationService.publicWrites(publication)
       } yield Ok(js)
     }
 
@@ -40,7 +40,7 @@ class PublicationController @Inject()(publicationService: PublicationService,
     {
       for {
         publications <- publicationDAO.findAll ?~> "publication.notFound" ~> NOT_FOUND
-        jsResult <- Fox.serialCombined(publications)(publicationService.publicWritesWithDatasetsAndAnnotations)
+        jsResult <- Fox.serialCombined(publications)(publicationService.publicWrites)
       } yield Ok(Json.toJson(jsResult))
     }
   }

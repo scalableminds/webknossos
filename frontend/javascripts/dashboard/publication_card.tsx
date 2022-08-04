@@ -40,17 +40,14 @@ type AnnotationOrDatasetItem =
   | { type: AnnotationOrDataset.DATASET; dataset: APIDataset };
 
 function getDisplayName(item: AnnotationOrDatasetItem): string {
-  let displayName = "";
   if (item.type === AnnotationOrDataset.ANNOTATION) {
-    displayName = item.annotation.name ?? "";
+    return item.annotation.name == null || item.annotation.name === ""
+      ? "Unnamed annotation"
+      : item.annotation.name;
   }
-  if (displayName === "") {
-    displayName = item.dataset.displayName ?? "";
-  }
-  if (displayName === "") {
-    displayName = item.dataset.name;
-  }
-  return displayName;
+  return item.dataset.displayName == null || item.dataset.displayName === ""
+    ? item.dataset.name
+    : item.dataset.displayName;
 }
 
 function getDetails(item: AnnotationOrDatasetItem): ExtendedDatasetDetails {
@@ -185,17 +182,21 @@ type Props = {
 
 function PublicationCard({ publication, showDetailedLink }: Props) {
   const sortedItems: Array<AnnotationOrDatasetItem> = [
-    ...publication.datasets.map(
-      (dataset) => ({ type: AnnotationOrDataset.DATASET, dataset } as AnnotationOrDatasetItem),
-    ),
-    ...publication.annotations.map(
-      (annotation) =>
-        ({
-          type: AnnotationOrDataset.ANNOTATION,
-          annotation,
-          dataset: annotation.dataSet,
-        } as AnnotationOrDatasetItem),
-    ),
+    ...publication.datasets
+      .filter((dataset) => dataset.isActive)
+      .map(
+        (dataset) => ({ type: AnnotationOrDataset.DATASET, dataset } as AnnotationOrDatasetItem),
+      ),
+    ...publication.annotations
+      .filter((annotation) => annotation.dataSet.isActive)
+      .map(
+        (annotation) =>
+          ({
+            type: AnnotationOrDataset.ANNOTATION,
+            annotation,
+            dataset: annotation.dataSet,
+          } as AnnotationOrDatasetItem),
+      ),
   ];
   sortedItems.sort(
     compareBy([] as Array<AnnotationOrDatasetItem>, (item) => item.dataset.sortingKey),

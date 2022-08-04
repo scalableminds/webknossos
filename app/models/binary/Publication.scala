@@ -27,7 +27,7 @@ class PublicationService @Inject()(dataSetService: DataSetService,
                                    annotationService: AnnotationService,
                                    annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) {
 
-  def publicWritesWithDatasetsAndAnnotations(publication: Publication): Fox[JsObject] = {
+  def publicWrites(publication: Publication): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       dataSets <- dataSetDAO.findAllByPublication(publication._id) ?~> "not found" ~> NOT_FOUND

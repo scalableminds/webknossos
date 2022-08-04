@@ -12,3 +12,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [084-annotation-contributors.sql](conf/evolutions/084-annotation-contributors.sql)
+- [085-add-annotations-publicationforeignkey](conf/evolutions/085-add-annotations-publicationforeignkey.sql)

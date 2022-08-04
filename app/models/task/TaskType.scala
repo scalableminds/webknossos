@@ -59,7 +59,7 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
     Fox
       .serialCombined(taskTypeIds) { taskTypeId =>
         for {
-          taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+          taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
           taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         } yield taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid
       }

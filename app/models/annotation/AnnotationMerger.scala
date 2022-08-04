@@ -70,12 +70,18 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
                                                        skeletonLayers.map(_.tracingId),
                                                        persistTracing)
       mergedVolumeTracingId <- mergeVolumeTracings(tracingStoreClient, volumeLayers.map(_.tracingId), persistTracing)
-      mergedSkeletonName = allEqual(skeletonLayers.flatMap(_.name))
-      mergedVolumeName = allEqual(volumeLayers.flatMap(_.name))
-      mergedSkeletonLayer = mergedSkeletonTracingId.map(id =>
-        AnnotationLayer(id, AnnotationLayerType.Skeleton, mergedSkeletonName))
-      mergedVolumeLayer = mergedVolumeTracingId.map(id =>
-        AnnotationLayer(id, AnnotationLayerType.Volume, mergedVolumeName))
+      mergedSkeletonName = allEqual(skeletonLayers.map(_.name))
+      mergedVolumeName = allEqual(volumeLayers.map(_.name))
+      mergedSkeletonLayer = mergedSkeletonTracingId.map(
+        id =>
+          AnnotationLayer(id,
+                          AnnotationLayerType.Skeleton,
+                          mergedSkeletonName.getOrElse(AnnotationLayer.defaultSkeletonLayerName)))
+      mergedVolumeLayer = mergedVolumeTracingId.map(
+        id =>
+          AnnotationLayer(id,
+                          AnnotationLayerType.Volume,
+                          mergedVolumeName.getOrElse(AnnotationLayer.defaultVolumeLayerName)))
     } yield List(mergedSkeletonLayer, mergedVolumeLayer).flatten
 
   private def allEqual(str: List[String]): Option[String] =

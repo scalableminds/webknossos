@@ -5,7 +5,12 @@ import Markdown from "react-remarkable";
 import React, { useState } from "react";
 import classNames from "classnames";
 import { Link } from "react-router-dom";
-import type { APIDataset, APIDatasetDetails } from "types/api_flow_types";
+import type {
+  APIDataset,
+  APIDatasetDetails,
+  APIPublication,
+  APIPublicationAnnotation,
+} from "types/api_flow_types";
 import { formatScale } from "libs/format_utils";
 import {
   getThumbnailURL,
@@ -21,26 +26,47 @@ type ExtendedDatasetDetails = APIDatasetDetails & {
 };
 const thumbnailDimension = 500;
 const miniThumbnailDimension = 75;
-const blacklistedSegmentationNames = ["2012-09-28_ex145_07x2_ROI2017"];
 
-function getDisplayName(dataset: APIDataset): string {
-  return dataset.displayName != null && dataset.displayName !== ""
-    ? dataset.displayName
-    : dataset.name;
+enum PublicationItemType {
+  ANNOTATION = "ANNOTATION",
+  DATASET = "DATASET",
+}
+type PublicationItem =
+  | {
+      type: PublicationItemType.ANNOTATION;
+      annotation: APIPublicationAnnotation;
+      dataset: APIDataset;
+    }
+  | { type: PublicationItemType.DATASET; dataset: APIDataset };
+
+function getDisplayName(item: PublicationItem): string {
+  if (item.type === PublicationItemType.ANNOTATION) {
+    return item.annotation.name == null || item.annotation.name === ""
+      ? "Unnamed annotation"
+      : item.annotation.name;
+  }
+  return item.dataset.displayName == null || item.dataset.displayName === ""
+    ? item.dataset.name
+    : item.dataset.displayName;
 }
 
-function getDetails(dataset: APIDataset): ExtendedDatasetDetails {
-  const { dataSource, details } = dataset;
+function getDetails(item: PublicationItem): ExtendedDatasetDetails {
+  const { dataSource, details } = item.dataset;
   return {
     ...details,
     scale: formatScale(dataSource.scale, 0),
-    name: getDisplayName(dataset),
-    extent: getDatasetExtentAsString(dataset, false),
+    name: getDisplayName(item),
+    extent: getDatasetExtentAsString(item.dataset, false),
   };
 }
 
-// @ts-expect-error ts-migrate(7031) FIXME: Binding element 'details' implicitly has an 'any' ... Remove this comment to see the full error message
-function ThumbnailOverlay({ details }) {
+function getUrl(item: PublicationItem): string {
+  return item.type === PublicationItemType.ANNOTATION
+    ? `/annotations/${item.annotation.id}`
+    : `/datasets/${item.dataset.owningOrganization}/${item.dataset.name}`;
+}
+
+function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
   return (
     <div className="dataset-thumbnail-overlay">
       <div>
@@ -93,14 +119,14 @@ function ThumbnailOverlay({ details }) {
 }
 
 type PublishedDatasetsOverlayProps = {
-  datasets: APIDataset[];
-  activeDataset: APIDataset;
-  setActiveDataset: React.Dispatch<any>;
+  items: Array<PublicationItem>;
+  activeItem: PublicationItem;
+  setActiveItem: React.Dispatch<any>;
 };
 function PublishedDatasetsOverlay({
-  datasets,
-  activeDataset,
-  setActiveDataset,
+  items,
+  activeItem,
+  setActiveItem,
 }: PublishedDatasetsOverlayProps) {
   return (
     <div className="datasets-scrollbar-spacer">
@@ -111,35 +137,33 @@ function PublishedDatasetsOverlay({
             gridTemplateColumns: miniThumbnailDimension,
           }}
         >
-          {datasets.map((dataset) => {
-            const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
+          {items.map((item) => {
+            const url = getUrl(item);
             return (
-              <Link to={`/datasets/${datasetIdString}/view`} key={datasetIdString}>
+              <Link to={url} key={url}>
                 <div>
                   <Button
                     className={classNames("mini-dataset-thumbnail", {
-                      active: dataset.name === activeDataset.name,
+                      active: url === getUrl(activeItem),
                     })}
                     title="Click To View"
                     style={{
                       background: `url('${getThumbnailURL(
-                        dataset,
+                        item.dataset,
                       )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
                       width: `${miniThumbnailDimension}px`,
                       height: `${miniThumbnailDimension}px`,
                     }}
-                    onMouseEnter={() => setActiveDataset(dataset)}
+                    onMouseEnter={() => setActiveItem(item)}
                   >
-                    {!blacklistedSegmentationNames.includes(dataset.name) && (
-                      <div
-                        className="mini-dataset-thumbnail absolute segmentation"
-                        style={{
-                          background: `url('${getSegmentationThumbnailURL(
-                            dataset,
-                          )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                        }}
-                      />
-                    )}
+                    <div
+                      className="mini-dataset-thumbnail absolute segmentation"
+                      style={{
+                        background: `url('${getSegmentationThumbnailURL(
+                          item.dataset,
+                        )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                      }}
+                    />
                   </Button>
                 </div>
               </Link>
@@ -151,23 +175,36 @@ function PublishedDatasetsOverlay({
   );
 }
 
-const typeHint: Array<APIDataset> = [];
 type Props = {
-  datasets: Array<APIDataset>;
+  publication: APIPublication;
   showDetailedLink: boolean;
 };
 
-function PublicationCard({ datasets, showDetailedLink }: Props) {
-  const sortedDatasets = datasets.sort(compareBy(typeHint, (dataset) => dataset.sortingKey));
-  const [activeDataset, setActiveDataset] = useState<APIDataset>(sortedDatasets[0]);
-  const { publication } = activeDataset;
+function PublicationCard({ publication, showDetailedLink }: Props) {
+  const sortedItems: Array<PublicationItem> = [
+    ...publication.datasets
+      .filter((dataset) => dataset.isActive)
+      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset } as PublicationItem)),
+    ...publication.annotations
+      .filter((annotation) => annotation.dataSet.isActive)
+      .map(
+        (annotation) =>
+          ({
+            type: PublicationItemType.ANNOTATION,
+            annotation,
+            dataset: annotation.dataSet,
+          } as PublicationItem),
+      ),
+  ];
+  sortedItems.sort(compareBy([] as Array<PublicationItem>, (item) => item.dataset.sortingKey));
+  const [activeItem, setActiveItem] = useState<PublicationItem>(sortedItems[0]);
   // This method will only be called for datasets with a publication, but Flow doesn't know that
   if (publication == null) throw Error("Assertion Error: Dataset has no associated publication.");
-  const thumbnailURL = getThumbnailURL(activeDataset);
-  const segmentationThumbnailURL = hasSegmentation(activeDataset)
-    ? getSegmentationThumbnailURL(activeDataset)
+  const thumbnailURL = getThumbnailURL(activeItem.dataset);
+  const segmentationThumbnailURL = hasSegmentation(activeItem.dataset)
+    ? getSegmentationThumbnailURL(activeItem.dataset)
     : null;
-  const details = getDetails(activeDataset);
+  const details = getDetails(activeItem);
   return (
     <Card
       bodyStyle={{
@@ -186,7 +223,7 @@ function PublicationCard({ datasets, showDetailedLink }: Props) {
           <h3 className="container-with-hidden-icon">
             {publication.title}
             {showDetailedLink ? (
-              <Link to={`/publication/${publication.id}`}>
+              <Link to={`/publications/${publication.id}`}>
                 <Tooltip title="Open permalink">
                   <LinkOutlined
                     style={{
@@ -221,10 +258,7 @@ function PublicationCard({ datasets, showDetailedLink }: Props) {
               alignItems: "flex-end",
             }}
           >
-            <Link
-              to={`/datasets/${activeDataset.owningOrganization}/${activeDataset.name}/view`}
-              className="absolute"
-            >
+            <Link to={getUrl(activeItem)} className="absolute">
               <div className="dataset-click-hint absolute">Click To View</div>
             </Link>
             <div
@@ -233,21 +267,20 @@ function PublicationCard({ datasets, showDetailedLink }: Props) {
                 backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
               }}
             />
-            {!blacklistedSegmentationNames.includes(activeDataset.name) &&
-            segmentationThumbnailURL ? (
+            {segmentationThumbnailURL != null && (
               <div
                 className="dataset-thumbnail-image absolute segmentation"
                 style={{
                   backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
                 }}
               />
-            ) : null}
+            )}
             <ThumbnailOverlay details={details} />
-            {sortedDatasets.length > 1 && (
+            {sortedItems.length > 1 && (
               <PublishedDatasetsOverlay
-                datasets={sortedDatasets}
-                activeDataset={activeDataset}
-                setActiveDataset={setActiveDataset}
+                items={sortedItems}
+                activeItem={activeItem}
+                setActiveItem={setActiveItem}
               />
             )}
           </div>

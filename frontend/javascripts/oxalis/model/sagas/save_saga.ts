@@ -12,7 +12,7 @@ import type {
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   VolumeTracingSaveRelevantActions,
-  setSegmentsActions,
+  setSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { UserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -77,7 +77,7 @@ import {
 } from "oxalis/model/helpers/bucket_compression";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
-import { doWithToken } from "admin/admin_rest_api";
+import { doWithToken, getNewestVersionForTracing } from "admin/admin_rest_api";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getVolumeTracingById,
@@ -103,7 +103,11 @@ import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import _ from "lodash";
+import { sleep } from "libs/utils";
 import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
+
+const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
 // This function is needed so that Flow is satisfied
 // with how a mere promise is awaited within a saga.
@@ -712,7 +716,7 @@ function* applyAndGetRevertingVolumeBatch(
   );
   // The SegmentMap is immutable. So, no need to copy.
   const currentSegments = activeVolumeTracing.segments;
-  yield* put(setSegmentsActions(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
+  yield* put(setSegmentsAction(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
   cube.triggerPushQueue();
   return {
     type: "volume",
@@ -813,6 +817,10 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
+// The value for this boolean does not need to be restored to false
+// at any time, because the browser page is reloaded after the message is shown, anyway.
+let didShowFailedSimultaneousTracingError = false;
+
 export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: string): Saga<void> {
   const fullSaveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
@@ -901,9 +909,22 @@ export function* sendRequestToServer(saveQueueType: SaveQueueType, tracingId: st
           [ErrorHandling, ErrorHandling.notify],
           new Error("Saving failed due to '409' status code"),
         );
-        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
-        location.reload();
-        return;
+        if (!didShowFailedSimultaneousTracingError) {
+          // If the saving fails for one tracing (e.g., skeleton), it can also
+          // fail for another tracing (e.g., volume). The message simply tells the
+          // user that the saving in general failed. So, there is no sense in showing
+          // the message multiple times.
+          yield* call(alert, messages["save.failed_simultaneous_tracing"]);
+          location.reload();
+          didShowFailedSimultaneousTracingError = true;
+        }
+
+        // Wait "forever" to avoid that the caller initiates other save calls afterwards (e.g.,
+        // can happen if the caller tries to force-flush the save queue).
+        // The reason we don't throw an error immediately is that this would immediately
+        // crash all sagas (including saving other tracings).
+        yield* call(sleep, ONE_YEAR_MS);
+        throw new Error("Saving failed due to conflict.");
       }
 
       yield* race({
@@ -1082,4 +1103,89 @@ export function* setupSavingForTracingType(
     prevTdCamera = tdCamera;
   }
 }
-export default [saveTracingAsync, collectUndoStates];
+
+const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
+const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
+const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
+
+function* watchForSaveConflicts() {
+  function* checkForNewVersion() {
+    const allowSave = yield* select((state) => state.tracing.restrictions.allowSave);
+
+    const maybeSkeletonTracing = yield* select((state) => state.tracing.skeleton);
+    const volumeTracings = yield* select((state) => state.tracing.volumes);
+    const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+
+    const tracings: Array<SkeletonTracing | VolumeTracing> = _.compact([
+      ...volumeTracings,
+      maybeSkeletonTracing,
+    ]);
+
+    for (const tracing of tracings) {
+      const version = yield* call(
+        getNewestVersionForTracing,
+        tracingStoreUrl,
+        tracing.tracingId,
+        tracing.type,
+      );
+
+      if (version > tracing.version) {
+        // The latest version on the server is greater than the most-recently
+        // stored version.
+
+        const saveQueue = yield* select((state) =>
+          selectQueue(state, tracing.type, tracing.tracingId),
+        );
+
+        let msg = "";
+        if (!allowSave) {
+          msg =
+            "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
+        } else if (saveQueue.length > 0) {
+          msg =
+            "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved, anymore.";
+        } else {
+          msg =
+            "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved, anymore.";
+        }
+        Toast.warning(msg, {
+          sticky: true,
+          key: "save_conflicts_warning",
+        });
+      }
+    }
+  }
+
+  function* getPollInterval(): Saga<number> {
+    const allowSave = yield* select((state) => state.tracing.restrictions.allowSave);
+    if (!allowSave) {
+      // The current user may not edit/save the annotation.
+      return VERSION_POLL_INTERVAL_READ_ONLY;
+    }
+
+    const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
+    if (othersMayEdit) {
+      // Other users may edit the annotation.
+      return VERSION_POLL_INTERVAL_COLLAB;
+    }
+
+    // The current user is the only one who can edit the annotation.
+    return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
+  }
+
+  while (true) {
+    const interval = yield* call(getPollInterval);
+    yield* call(sleep, interval);
+    try {
+      yield* call(checkForNewVersion);
+    } catch (exception) {
+      // If the version check fails for some reason, we don't want to crash the entire
+      // saga.
+      console.warn(exception);
+      // @ts-ignore
+      ErrorHandling.notify(exception);
+    }
+  }
+}
+
+export default [saveTracingAsync, collectUndoStates, watchForSaveConflicts];

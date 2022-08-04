@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
+
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
@@ -33,7 +34,6 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
-import net.liftweb.common.{Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -254,9 +254,7 @@ class VolumeTracingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              Map(tracingId -> ".") ++ existingMags.map { mag =>
-                (mag.toMagLiteral(allowScalar = true), mag.toMagLiteral(allowScalar = true))
-              }.toMap
+              existingMags.map(_.toMagLiteral(allowScalar = true))
             )).withHeaders()
       }
     }
@@ -275,7 +273,7 @@ class VolumeTracingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              Map(mag -> ".")
+              List.empty
             )).withHeaders()
       }
     }
@@ -484,6 +482,7 @@ class VolumeTracingController @Inject()(
               tracingId,
               UpdateActionGroup[VolumeTracing](tracing.version + 1,
                                                System.currentTimeMillis(),
+                                               None,
                                                List(volumeUpdate),
                                                None,
                                                None,

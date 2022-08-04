@@ -166,7 +166,7 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          jobIdValidated <- ObjectId.parse(jobId)
+          jobIdValidated <- ObjectId.fromString(jobId)
           job <- jobDAO.findOne(jobIdValidated)(GlobalAccessContext)
           jobOwner <- userDAO.findOne(job._owner)(GlobalAccessContext)
           organization <- organizationDAO.findOne(jobOwner._organization)(GlobalAccessContext)

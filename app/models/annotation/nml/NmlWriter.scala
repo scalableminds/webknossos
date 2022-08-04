@@ -4,6 +4,7 @@ import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.VolumeTracing.Segment
 import com.scalableminds.webknossos.datastore.geometry._
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import javax.inject.Inject
@@ -200,17 +201,38 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                         volumeFilename: Option[String],
                         skipVolumeData: Boolean)(implicit writer: XMLStreamWriter): Unit =
     if (skipVolumeData) {
-      val nameLabel = volumeLayer.name.map(n => f"named $n ").getOrElse("")
       writer.writeComment(
-        f"A volume layer $nameLabel(id = $index) was omitted here while downloading this annotation without volume data.")
+        f"A volume layer named ${volumeLayer.name} (id = $index) was omitted here while downloading this annotation without volume data.")
     } else {
       Xml.withinElementSync("volume") {
         writer.writeAttribute("id", index.toString)
         writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index, isSingle)))
-        volumeLayer.name.foreach(n => writer.writeAttribute("name", n))
+        writer.writeAttribute("name", volumeLayer.name)
         volumeLayer.tracing match {
-          case Right(volumeTracing) => volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
-          case _                    => ()
+          case Right(volumeTracing) =>
+            volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
+            writeVolumeSegmentMetadata(volumeTracing.segments)
+          case _ => ()
+        }
+      }
+    }
+
+  def writeVolumeSegmentMetadata(segments: Seq[Segment])(implicit writer: XMLStreamWriter): Unit =
+    Xml.withinElementSync("segments") {
+      segments.foreach { s =>
+        Xml.withinElementSync("segment") {
+          writer.writeAttribute("id", s.segmentId.toString)
+          s.name.foreach { n =>
+            writer.writeAttribute("name", n)
+          }
+          s.creationTime.foreach { t =>
+            writer.writeAttribute("created", t.toString)
+          }
+          s.anchorPosition.foreach { a =>
+            writer.writeAttribute("anchorPositionX", a.x.toString)
+            writer.writeAttribute("anchorPositionY", a.y.toString)
+            writer.writeAttribute("anchorPositionZ", a.z.toString)
+          }
         }
       }
     }

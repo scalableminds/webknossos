@@ -28,6 +28,7 @@ class NodeShader {
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
       transparent: true,
+      glslVersion: THREE.GLSL3,
     });
     shaderEditor.addMaterial("nodeFragment", this.material);
   }
@@ -112,7 +113,7 @@ class NodeShader {
 precision highp float;
 precision highp int;
 
-varying vec3 color;
+out vec3 color;
 
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
@@ -130,18 +131,18 @@ uniform float viewMode;
 
 uniform sampler2D treeColors;
 
-attribute float radius;
-attribute vec3 position;
-attribute float type;
-attribute float isCommented;
+in float radius;
+in vec3 position;
+in float type;
+in float isCommented;
 // Since attributes are only supported in vertex shader, we pass the attribute into a
-// varying to use in the fragment shader
-varying float v_isHighlightedCommented;
-varying float v_isActiveNode;
-varying float v_innerPointSize;
-varying float v_outerPointSize;
-attribute float nodeId;
-attribute float treeId;
+// out variable to use in the fragment shader
+out float v_isHighlightedCommented;
+out float v_isActiveNode;
+out float v_innerPointSize;
+out float v_outerPointSize;
+in float nodeId;
+in float treeId;
 
 // https://www.shadertoy.com/view/XljGzV
 vec3 rgb2hsv(vec3 color) {
@@ -173,8 +174,8 @@ void main() {
       treeId / (${COLOR_TEXTURE_WIDTH_FIXED} * ${COLOR_TEXTURE_WIDTH_FIXED}
     ));
 
-    color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
-    bool isVisible = texture2D(treeColors, treeIdToTextureCoordinate).a == 1.0;
+    color = texture(treeColors, treeIdToTextureCoordinate).rgb;
+    bool isVisible = texture(treeColors, treeIdToTextureCoordinate).a == 1.0;
 
     // DELETED OR INVISIBLE NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)} || !isVisible) {
@@ -250,21 +251,24 @@ precision highp float;
 
 uniform float viewMode;
 
-varying vec3 color;
-varying float v_isHighlightedCommented;
-varying float v_isActiveNode;
-varying float v_innerPointSize;
-varying float v_outerPointSize;
+in vec3 color;
+in float v_isHighlightedCommented;
+in float v_isActiveNode;
+in float v_innerPointSize;
+in float v_outerPointSize;
+
+out vec4 outputColor;
+
 
 void main()
 {
-    gl_FragColor = vec4(color, 1.0);
+    outputColor = vec4(color, 1.0);
 
     // Add border to nodes with comments
     vec2 centerDistance = abs(gl_PointCoord - vec2(0.5));
     bool isWithinBorder = centerDistance.x < 0.20 && centerDistance.y < 0.20;
     if (v_isHighlightedCommented > 0.0 && isWithinBorder) {
-      gl_FragColor  = vec4(1.0);
+      outputColor  = vec4(1.0);
     };
 
     // Give active node a "halo"
@@ -281,30 +285,28 @@ void main()
       r = dot(cxy, cxy);
       float relativeInnerNodeRadius = 0.5 * v_innerPointSize / v_outerPointSize;
 
-      #ifdef GL_OES_standard_derivatives
-        delta = fwidth(r);
+      delta = fwidth(r);
 
-        if (isOrthogonalMode) {
-          // Make the inner node a square so that it looks exactly as a non-active node. The halo
-          // will ensure that the active node is recognizable.
-          float maxCenterDistance = max(centerDistance.x, centerDistance.y);
-          alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, maxCenterDistance / relativeInnerNodeRadius);
-          alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
-        } else {
-          // In non-ortho mode, we do not show a halo. Therefore, make the active node round
-          // to give at least a slight clue, which node is active.
-          alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r / relativeInnerNodeRadius);
-          alphaOuter = 0.0;
-        }
+      if (isOrthogonalMode) {
+        // Make the inner node a square so that it looks exactly as a non-active node. The halo
+        // will ensure that the active node is recognizable.
+        float maxCenterDistance = max(centerDistance.x, centerDistance.y);
+        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, maxCenterDistance / relativeInnerNodeRadius);
+        alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
+      } else {
+        // In non-ortho mode, we do not show a halo. Therefore, make the active node round
+        // to give at least a slight clue, which node is active.
+        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r / relativeInnerNodeRadius);
+        alphaOuter = 0.0;
+      }
 
-        alphaOuter = max(0.0, alphaOuter - alphaInner);
-      #endif
+      alphaOuter = max(0.0, alphaOuter - alphaInner);
 
       vec4 inner = vec4(color, alphaInner);
       vec4 outer = vec4(color, alphaOuter);
-      gl_FragColor = mix(inner, outer, alphaOuter);
+      outputColor = mix(inner, outer, alphaOuter);
 
-      if (gl_FragColor.a == 0.0) {
+      if (outputColor.a == 0.0) {
         // Discard that texel to avoid that the transparent halo content
         // overwrites other nodes.
         discard;

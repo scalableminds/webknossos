@@ -146,7 +146,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
              where m._id = $multiUserId
              and not u.isDeactivated
              group by m._id
-             """.as[Long])
-      head <- lastActivityList.headOption
-    } yield head
+             """.as[java.sql.Timestamp])
+      head <- lastActivityList.headOption.toFox
+    } yield head.getTime
 }

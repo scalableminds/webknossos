@@ -86,7 +86,7 @@ For non-localhost deployments, check out the [installation guide in the document
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [Blosc](https://github.com/Blosc/c-blosc)
-* [node.js 12+](http://nodejs.org/download/)
+* [node.js 16+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
@@ -175,7 +175,7 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **12+ is required**
+* node version **16+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally

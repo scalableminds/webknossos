@@ -32,14 +32,14 @@ case class ObjectId(id: String) {
 object ObjectId extends FoxImplicits {
   implicit val jsonFormat: OFormat[ObjectId] = Json.format[ObjectId]
   def generate: ObjectId = fromBsonId(BSONObjectID.generate)
-  def parse(input: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
-    parseSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
+  def fromString(input: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
+    fromStringSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
-  private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
+  private def fromStringSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
   def dummyId: ObjectId = ObjectId("dummyObjectId")
 
   def stringObjectIdReads(key: String): Reads[String] =
-    Reads.filter[String](JsonValidationError("bsonid.invalid", key))(parseSync(_).isDefined)
+    Reads.filter[String](JsonValidationError("bsonid.invalid", key))(fromStringSync(_).isDefined)
 }
 
 trait SQLTypeImplicits {
@@ -107,13 +107,15 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def parseArrayTuple(literal: String): List[String] = {
     val trimmed = literal.drop(1).dropRight(1)
-    if (trimmed.isEmpty) return List()
-
-    val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
-    split.map { item =>
-      if (item.startsWith("\"") && item.endsWith("\"")) {
-        item.drop(1).dropRight(1)
-      } else item
+    if (trimmed.isEmpty)
+      List.empty
+    else {
+      val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
+      split.map { item =>
+        if (item.startsWith("\"") && item.endsWith("\"")) {
+          item.drop(1).dropRight(1)
+        } else item
+      }
     }
   }
 

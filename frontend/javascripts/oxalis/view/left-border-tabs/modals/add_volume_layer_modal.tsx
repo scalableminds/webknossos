@@ -12,6 +12,7 @@ import type { Tracing } from "oxalis/store";
 import { addAnnotationLayer } from "admin/admin_rest_api";
 import {
   getDatasetResolutionInfo,
+  getLayerByName,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -36,9 +37,9 @@ export function checkForLayerNameDuplication(
 }
 
 export function checkLayerNameForInvalidCharacters(readableLayerName: string): ValidationResult {
-  const uriSaveCharactersRegex = /[0-9a-zA-Z-._~]+/g;
-  // Removing all URISaveCharacters from readableLayerName. The left over chars are all invalid.
-  const allInvalidChars = readableLayerName.replace(uriSaveCharactersRegex, "");
+  const uriSafeCharactersRegex = /[0-9a-zA-Z-._]+/g;
+  // Removing all URISaveCharacters from readableLayerName. The leftover chars are all invalid.
+  const allInvalidChars = readableLayerName.replace(uriSafeCharactersRegex, "");
   const allUniqueInvalidCharsAsSet = new Set(allInvalidChars);
   const allUniqueInvalidCharsAsString = "".concat(...allUniqueInvalidCharsAsSet.values());
   const isValid = allUniqueInvalidCharsAsString.length === 0;
@@ -84,19 +85,26 @@ export default function AddVolumeLayerModal({
   dataset,
   onCancel,
   tracing,
+  preselectedLayerName,
+  disableLayerSelection,
 }: {
   dataset: APIDataset;
   onCancel: () => void;
   tracing: Tracing;
+  preselectedLayerName: string | undefined;
+  disableLayerSelection: boolean | undefined;
 }) {
-  const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState<
-    number | null | undefined
-  >(null);
+  const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState<
+    string | undefined
+  >(preselectedLayerName);
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, tracing),
     [dataset, tracing],
   );
   const initialNewLayerName = useMemo(() => {
+    if (preselectedLayerName) {
+      return preselectedLayerName;
+    }
     if (allReadableLayerNames.indexOf("Volume") === -1) {
       return "Volume";
     } else {
@@ -125,7 +133,11 @@ export default function AddVolumeLayerModal({
   let selectedSegmentationLayer = null;
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
-    const validationResult = validateReadableLayerName(newLayerName, allReadableLayerNames);
+    const validationResult = validateReadableLayerName(
+      newLayerName,
+      allReadableLayerNames,
+      selectedSegmentationLayerName,
+    );
     if (!validationResult.isValid) {
       Toast.error(validationResult.message);
       return;
@@ -137,7 +149,7 @@ export default function AddVolumeLayerModal({
       ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[1]),
     );
 
-    if (selectedSegmentationLayerIndex == null) {
+    if (selectedSegmentationLayerName == null) {
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
         name: newLayerName,
@@ -148,7 +160,7 @@ export default function AddVolumeLayerModal({
         },
       });
     } else {
-      selectedSegmentationLayer = availableSegmentationLayers[selectedSegmentationLayerIndex];
+      selectedSegmentationLayer = getLayerByName(dataset, selectedSegmentationLayerName);
       const fallbackLayerName = selectedSegmentationLayer.name;
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
@@ -188,8 +200,9 @@ export default function AddVolumeLayerModal({
         <NewVolumeLayerSelection
           dataset={dataset}
           segmentationLayers={availableSegmentationLayers}
-          selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
-          setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
+          selectedSegmentationLayerName={selectedSegmentationLayerName}
+          setSelectedSegmentationLayerName={setSelectedSegmentationLayerName}
+          disableLayerSelection={disableLayerSelection ?? false}
         />
       ) : null}
       <RestrictResolutionSlider

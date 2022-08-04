@@ -175,6 +175,15 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- parseAll(r)
     } yield parsed
 
+  def findAllByPublication(publicationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _publication = $publicationId and #$accessQuery"
+          .as[DatasetsRow]).map(_.toList)
+      parsed <- parseAll(r)
+    } yield parsed
+
   /* Disambiguation method for legacy URLs and NMLs: if the user has access to multiple datasets of the same name, use the oldest.
    * This is reasonable, because the legacy URL/NML was likely created before this ambiguity became possible */
   def getOrganizationForDataSet(dataSetName: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
@@ -184,7 +193,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         sql"select _organization from #$existingCollectionName where name = $dataSetName and #$accessQuery order by created asc"
           .as[String])
       r <- rList.headOption.toFox
-      parsed <- ObjectId.parse(r)
+      parsed <- ObjectId.fromString(r)
     } yield parsed
 
   def getIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
@@ -503,7 +512,7 @@ class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       (_, team) <- DatasetAllowedteams.filter(_._Dataset === dataSetId.id) join Teams on (_._Team === _._Id)
     } yield team._Id
 
-    run(query.result).flatMap(rows => Fox.serialCombined(rows.toList)(ObjectId.parse(_)))
+    run(query.result).flatMap(rows => Fox.serialCombined(rows.toList)(ObjectId.fromString(_)))
   }
 
   def updateAllowedTeamsForDataSet(_id: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {

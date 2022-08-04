@@ -157,6 +157,7 @@ export const annotation: APIAnnotation = {
   visibility: "Internal",
   modified: 1529066010230,
   name: "",
+  teams: [],
   typ: "Explorational",
   task: null,
   stats: {},
@@ -200,4 +201,6 @@ export const annotation: APIAnnotation = {
   tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,
   meshes: [],
+  contributors: [],
+  othersMayEdit: false,
 };

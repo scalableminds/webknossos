@@ -7,7 +7,7 @@
     "plugin:react/recommended",
     "prettier"
   ],
-  "plugins": ["@typescript-eslint", "react", "react-hooks", "import"],
+  "plugins": ["@typescript-eslint", "react", "react-hooks", "import", "ava"],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 8,
@@ -102,6 +102,7 @@
         ]
       }
     ],
+    "ava/no-only-test": "error",
 
     // reconsider rules after finishing Typescript conversion
     "react/static-property-placement": "off",
@@ -123,7 +124,7 @@
     "react/no-unstable-nested-components": "warn", // probably should do something about it
     "react/no-array-index-key": "error", // maybe sensible, maybe not
     "prefer-exponentiation-operator": "off", // I find Math.pow() more readble than **
-    "eqeqeq": "warn", // == vs ===
+    "eqeqeq": "error", // == vs ===
     "react/jsx-no-bind": "off", // no opinion
     "react/function-component-definition": "warn", // probably should do this. can be autofixed with eslint --fix
     "@typescript-eslint/no-throw-literal": "warn" // probably should do this.

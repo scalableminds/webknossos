@@ -37,7 +37,7 @@ type UnrenderableLayersInfos = {
 
 function maxValue(array: Array<number>): number {
   const value = _.max(array);
-  if (value == undefined) {
+  if (value == null) {
     throw Error(`Max of empty array: ${array}`);
   }
   return value;
@@ -45,7 +45,7 @@ function maxValue(array: Array<number>): number {
 
 function minValue(array: Array<number>): number {
   const value = _.min(array);
-  if (value == undefined) {
+  if (value == null) {
     throw Error(`Min of empty array: ${array}`);
   }
   return value;
@@ -440,7 +440,7 @@ export function isRgb(dataset: APIDataset, layerName: string): boolean {
   );
 }
 export function getByteCountFromLayer(layerInfo: DataLayerType): number {
-  return getBitDepth(layerInfo) >> 3;
+  return getBitDepth(layerInfo) / 8;
 }
 export function getByteCount(dataset: APIDataset, layerName: string): number {
   return getByteCountFromLayer(getLayerByName(dataset, layerName));

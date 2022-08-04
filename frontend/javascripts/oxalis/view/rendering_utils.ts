@@ -59,7 +59,7 @@ export function renderToTexture(
     const isArbitraryMode = constants.MODES_ARBITRARY.includes(
       state.temporaryConfiguration.viewMode,
     );
-    camera = camera.clone();
+    camera = camera.clone() as THREE.OrthographicCamera;
     camera.far = isArbitraryMode
       ? state.userConfiguration.clippingDistanceArbitrary
       : state.userConfiguration.clippingDistance;

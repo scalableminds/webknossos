@@ -1,5 +1,5 @@
 import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, Menu } from "antd";
-import { CopyOutlined, DownOutlined, ExportOutlined } from "@ant-design/icons";
+import { DownOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useState } from "react";
 
@@ -53,7 +53,6 @@ import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
-import { updateUserConfiguration } from "admin/admin_rest_api";
 
 const narrowButtonStyle = {
   paddingLeft: 10,

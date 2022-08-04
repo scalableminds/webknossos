@@ -27,20 +27,20 @@ type ExtendedDatasetDetails = APIDatasetDetails & {
 const thumbnailDimension = 500;
 const miniThumbnailDimension = 75;
 
-enum AnnotationOrDataset {
+enum PublicationItemType {
   ANNOTATION = "ANNOTATION",
   DATASET = "DATASET",
 }
-type AnnotationOrDatasetItem =
+type PublicationItem =
   | {
-      type: AnnotationOrDataset.ANNOTATION;
+      type: PublicationItemType.ANNOTATION;
       annotation: APIPublicationAnnotation;
       dataset: APIDataset;
     }
-  | { type: AnnotationOrDataset.DATASET; dataset: APIDataset };
+  | { type: PublicationItemType.DATASET; dataset: APIDataset };
 
-function getDisplayName(item: AnnotationOrDatasetItem): string {
-  if (item.type === AnnotationOrDataset.ANNOTATION) {
+function getDisplayName(item: PublicationItem): string {
+  if (item.type === PublicationItemType.ANNOTATION) {
     return item.annotation.name == null || item.annotation.name === ""
       ? "Unnamed annotation"
       : item.annotation.name;
@@ -50,7 +50,7 @@ function getDisplayName(item: AnnotationOrDatasetItem): string {
     : item.dataset.displayName;
 }
 
-function getDetails(item: AnnotationOrDatasetItem): ExtendedDatasetDetails {
+function getDetails(item: PublicationItem): ExtendedDatasetDetails {
   const { dataSource, details } = item.dataset;
   return {
     ...details,
@@ -60,8 +60,8 @@ function getDetails(item: AnnotationOrDatasetItem): ExtendedDatasetDetails {
   };
 }
 
-function getUrl(item: AnnotationOrDatasetItem): string {
-  return item.type === AnnotationOrDataset.ANNOTATION
+function getUrl(item: PublicationItem): string {
+  return item.type === PublicationItemType.ANNOTATION
     ? `/annotations/${item.annotation.id}`
     : `/datasets/${item.dataset.owningOrganization}/${item.dataset.name}`;
 }
@@ -119,8 +119,8 @@ function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
 }
 
 type PublishedDatasetsOverlayProps = {
-  items: Array<AnnotationOrDatasetItem>;
-  activeItem: AnnotationOrDatasetItem;
+  items: Array<PublicationItem>;
+  activeItem: PublicationItem;
   setActiveItem: React.Dispatch<any>;
 };
 function PublishedDatasetsOverlay({
@@ -181,27 +181,23 @@ type Props = {
 };
 
 function PublicationCard({ publication, showDetailedLink }: Props) {
-  const sortedItems: Array<AnnotationOrDatasetItem> = [
+  const sortedItems: Array<PublicationItem> = [
     ...publication.datasets
       .filter((dataset) => dataset.isActive)
-      .map(
-        (dataset) => ({ type: AnnotationOrDataset.DATASET, dataset } as AnnotationOrDatasetItem),
-      ),
+      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset } as PublicationItem)),
     ...publication.annotations
       .filter((annotation) => annotation.dataSet.isActive)
       .map(
         (annotation) =>
           ({
-            type: AnnotationOrDataset.ANNOTATION,
+            type: PublicationItemType.ANNOTATION,
             annotation,
             dataset: annotation.dataSet,
-          } as AnnotationOrDatasetItem),
+          } as PublicationItem),
       ),
   ];
-  sortedItems.sort(
-    compareBy([] as Array<AnnotationOrDatasetItem>, (item) => item.dataset.sortingKey),
-  );
-  const [activeItem, setActiveItem] = useState<AnnotationOrDatasetItem>(sortedItems[0]);
+  sortedItems.sort(compareBy([] as Array<PublicationItem>, (item) => item.dataset.sortingKey));
+  const [activeItem, setActiveItem] = useState<PublicationItem>(sortedItems[0]);
   // This method will only be called for datasets with a publication, but Flow doesn't know that
   if (publication == null) throw Error("Assertion Error: Dataset has no associated publication.");
   const thumbnailURL = getThumbnailURL(activeItem.dataset);

@@ -34,6 +34,7 @@ GET         /mapping/:tracingId                                 @com.scalablemin
 
 # Zarr endpoints for volume annotations
 GET         /volume/zarr/:tracingId                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.volumeTracingFolderContent(token: Option[String], tracingId: String)
+GET         /volume/zarr/:tracingId/                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.volumeTracingFolderContent(token: Option[String], tracingId: String)
 GET         /volume/zarr/:tracingId/.zgroup                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.zGroup(token: Option[String], tracingId: String)
 GET         /volume/zarr/:tracingId/.zattrs                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.zAttrs(token: Option[String], tracingId: String)
 GET         /volume/zarr/:tracingId/:mag                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.volumeTracingMagFolderContent(token: Option[String], tracingId: String, mag: String)

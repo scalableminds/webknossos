@@ -254,12 +254,19 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     } yield mag
   }
 
+  /*
+   * Guesses the voxel size from all transforms of an ngff multiscale object.
+   * Note: the returned voxel size is in axis units and should later be combined with those units
+   *   to get a webKnossos-typical voxel size in nanometers.
+   * Note: allCoordinateTransforms is nested: the inner list has all transforms of one ngff “dataset” (mag in our terminology),
+   *   the outer list gathers these for all such “datasets” (mags) of one “multiscale object” (layer)
+   */
   private def extractVoxelSizeInAxisUnits(allCoordinateTransforms: List[List[OmeNgffCoordinateTransformation]],
                                           axisOrder: AxisOrder)(implicit ec: ExecutionContext): Fox[Vec3Double] = {
     val scales = allCoordinateTransforms.map(t => extractAndCombineScaleTransforms(t, axisOrder))
     val smallestScaleIsUniform = scales.minBy(_.x) == scales.minBy(_.y) && scales.minBy(_.y) == scales.minBy(_.z)
     for {
-      _ <- bool2Fox(smallestScaleIsUniform) ?~> "ome scales do not agree on smallest dimension"
+      _ <- bool2Fox(smallestScaleIsUniform) ?~> "ngff scales do not agree on smallest dimension"
       voxelSizeInAxisUnits = scales.minBy(_.x)
     } yield voxelSizeInAxisUnits
   }

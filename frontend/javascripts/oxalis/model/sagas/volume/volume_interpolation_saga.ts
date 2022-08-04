@@ -23,12 +23,13 @@ import {
   getLastLabelAction,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { registerLabelPointAction } from "oxalis/model/actions/volumetracing_actions";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { OxalisState } from "oxalis/store";
-import { call } from "typed-redux-saga";
+import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 
 /*
@@ -409,4 +410,16 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
       activeViewport,
     );
   }
+
+  // Theoretically, the user might extrude (or interpolate, even though this is less likely) multiple
+  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything inbetween manually.
+  // In that case, the interpolation/extrusion would always start from slice 0 which is unexpected and leads
+  // to additional performance overhead (also the maximum interpolation depth will be exceeded at some point).
+  // As a counter measure, we simply use the current position to update the current direction (and with it
+  // the last label actions).
+  // Strictly speaking, the current position is not necessarily the centroid of the label action. However,
+  // calculating the actual centroid seems like overkill here (especially, for the interpolation case).
+  // For the purposes of how this position is currently used in wK, passing the centered position is completely
+  // sufficient.
+  yield* put(registerLabelPointAction(position));
 }

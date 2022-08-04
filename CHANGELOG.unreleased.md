@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The owner of an annotation can allow other users, who may see the annotation, to also edit it. Note that parallel writes are not supported and would lead to conflicts. [#6236](https://github.com/scalableminds/webknossos/pull/6236)
 - Segmentation layers which were not previously editable now show an (un)lock icon button which shortcuts to the Add Volume Layer modal with the layer being preselected. [#6330](https://github.com/scalableminds/webknossos/pull/6330)
 - The NML file in volume annotation download now includes segment metadata like names and anchor positions. [#6347](https://github.com/scalableminds/webknossos/pull/6347)
+- Add an "extrude segment" feature which is similar to the old "copy from previous slice" feature. The segment interpolation and the new segment extrusion feature are both available via the toolbar (see the dropdown icon which was added to the old interpolation button). [#6370](https://github.com/scalableminds/webknossos/pull/6370)
 
 ### Changed
 - The sharing modal now automatically saves changes of the sharing options. [#6314](https://github.com/scalableminds/webknossos/pull/6314)

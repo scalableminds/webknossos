@@ -7,7 +7,7 @@ import io.swagger.annotations._
 
 import javax.inject.Inject
 import models.annotation._
-import oxalis.security.WkEnv
+import oxalis.security.{RandomIDGenerator, WkEnv}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
@@ -26,7 +26,7 @@ class AnnotationPrivateLinkController @Inject()(
   def lookupPrivateLink(accessId: String): Action[AnyContent] = sil.UnsecuredAction.async { implicit request =>
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessId(accessId)(GlobalAccessContext)
-      _ <- bool2Fox(annotationPrivateLink.expirationDateTime > System.currentTimeMillis()) ?~> "Token expired" ~> 404
+      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> 404
       annotation: Annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
       writtenAnnotation <- annotationService.writesLayersAndStores(annotation)
     } yield Ok(writtenAnnotation)
@@ -37,7 +37,7 @@ class AnnotationPrivateLinkController @Inject()(
       idValidated <- ObjectId.parse(id)
 
       annotationPrivateLink <- annotationPrivateLinkDAO.findOne(idValidated)(GlobalAccessContext)
-      _ <- bool2Fox(annotationPrivateLink.expirationDateTime > System.currentTimeMillis()) ?~> "Token expired" ~> 404
+      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> 404
       _ <- annotationDAO
         .findOne(annotationPrivateLink._annotation)(GlobalAccessContext) ?~> "annotation.notFound" ~> NOT_FOUND
 
@@ -45,23 +45,24 @@ class AnnotationPrivateLinkController @Inject()(
     } yield Ok(annotationPrivateLinkJs)
   }
 
-  def create: Action[AnnotationPrivateLink] = sil.SecuredAction.async(validateJson[AnnotationPrivateLink]) {
+  def create: Action[AnnotationPrivateLinkParams] = sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) {
     implicit request =>
       val params = request.body
       val _id = ObjectId.generate
+      val accessId = RandomIDGenerator.generateBlocking(24)
       for {
         _ <- annotationDAO.assertUpdateAccess(params._annotation) ?~> "notAllowed" ~> FORBIDDEN
         _ <- annotationPrivateLinkDAO.insertOne(AnnotationPrivateLink(
           _id,
           params._annotation,
-          params.value,
-          params.expirationDateTime)) ?~> "mesh.create.failed"
+          accessId,
+          params.expirationDateTime)) ?~> "create.failed"
         inserted <- annotationPrivateLinkDAO.findOne(_id)
         js <- annotationPrivateLinkService.publicWrites(inserted)
       } yield Ok(js)
   }
 
-  def update(id: String): Action[AnnotationPrivateLink] = sil.SecuredAction.async(validateJson[AnnotationPrivateLink]) {
+  def update(id: String): Action[AnnotationPrivateLinkParams] = sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) {
     implicit request =>
       val params = request.body
       for {
@@ -71,9 +72,7 @@ class AnnotationPrivateLinkController @Inject()(
         _ <- annotationDAO.assertUpdateAccess(params._annotation) ?~> "notAllowed" ~> FORBIDDEN
         _ <- annotationPrivateLinkDAO.updateOne(idValidated,
                                                 params._annotation,
-                                                params.value,
-                                                params.expirationDateTime,
-                                                params.isDeleted) ?~> "mesh.update.failed"
+                                                params.expirationDateTime) ?~> "update.failed"
         updated <- annotationPrivateLinkDAO.findOne(idValidated) ?~> "not Found"
         js <- annotationPrivateLinkService.publicWrites(updated) ?~> "write failed"
       } yield Ok(js)

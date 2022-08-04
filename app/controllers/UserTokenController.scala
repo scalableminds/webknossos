@@ -34,7 +34,7 @@ object RpcTokenHolder {
    * The token is refreshed on every wK restart.
    * Keep it secret!
    */
-  lazy val webKnossosToken: String = CompactRandomIDGenerator.generateBlocking()
+  lazy val webKnossosToken: String = RandomIDGenerator.generateBlocking()
 }
 
 @Api

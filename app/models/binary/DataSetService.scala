@@ -18,7 +18,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import oxalis.security.CompactRandomIDGenerator
+import oxalis.security.RandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 import javax.inject.Inject
@@ -230,7 +230,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
     def createAndSaveSharingToken(dataSetName: String)(implicit ctx: DBAccessContext): Fox[String] =
       for {
-        tokenValue <- new CompactRandomIDGenerator().generate
+        tokenValue <- new RandomIDGenerator().generate
         _ <- dataSetDAO.updateSharingTokenByName(dataSetName, organizationId, Some(tokenValue))
       } yield tokenValue
 

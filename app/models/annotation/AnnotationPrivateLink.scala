@@ -15,9 +15,12 @@ import scala.concurrent.ExecutionContext
 
 case class AnnotationPrivateLink(_id: ObjectId,
                                  _annotation: ObjectId,
-                                 value: String,
-                                 expirationDateTime: Long = System.currentTimeMillis(),
+                                 accessToken: String,
+                                 // TODO check everything
+                                 expirationDateTime: Option[Long],
                                  isDeleted: Boolean = false)
+
+case class AnnotationPrivateLinkParams(_annotation: ObjectId, expirationDateTime: Option[Long])
 
 object AnnotationPrivateLink {
   implicit val jsonFormat: OFormat[AnnotationPrivateLink] = Json.format[AnnotationPrivateLink]
@@ -53,19 +56,17 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
     for {
       _ <- run(
         sqlu"""insert into webknossos.annotation_private_links(_id, _annotation, value, expirationDateTime, isDeleted)
-                         values(${aPL._id.id}, ${aPL._annotation.id}, ${aPL.value}, ${new java.sql.Timestamp(
+                         values(${aPL._id.id}, ${aPL._annotation.id}, ${aPL.accessToken}, ${new java.sql.Timestamp(
           aPL.expirationDateTime)}, ${aPL.isDeleted})""")
     } yield ()
 
   def updateOne(id: ObjectId,
                 _annotation: ObjectId,
-                value: String,
-                expirationDateTime: Long,
-                isDeleted: Boolean = false)(implicit ctx: DBAccessContext): Fox[Unit] =
+                expirationDateTime: Option[Long])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"""update webknossos.annotation_private_links set _annotation = ${_annotation}, value = $value,
-                            expirationDateTime = $expirationDateTime, isDeleted = $isDeleted where _id = $id""")
+      _ <- run(sqlu"""update webknossos.annotation_private_links set _annotation = ${_annotation},
+                            expirationDateTime = $expirationDateTime where _id = $id""")
     } yield ()
 
   def findOneByAccessId(accessId: String)(implicit ctx: DBAccessContext): Fox[AnnotationPrivateLink] =

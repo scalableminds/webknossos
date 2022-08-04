@@ -14,8 +14,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
   def listConsistsOfLists[T](joinedList: Seq[T], sublist1: Seq[T], sublist2: Seq[T]): Boolean = {
     // assuming sublist1 & sublist2 are different
     if (joinedList.length != sublist1.length + sublist2.length)
-      return false
-    joinedList.forall(el => sublist1.contains(el) || sublist2.contains(el))
+      false
+    else
+      joinedList.forall(el => sublist1.contains(el) || sublist2.contains(el))
   }
 
   "CreateTreeSkeletonAction" should {

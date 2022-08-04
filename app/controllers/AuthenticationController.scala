@@ -224,7 +224,7 @@ class AuthenticationController @Inject()(
         } yield organization
       case (None, None, Some(annotationId)) =>
         for {
-          annotationObjectId <- ObjectId.parse(annotationId)
+          annotationObjectId <- ObjectId.fromString(annotationId)
           annotation <- annotationDAO.findOne(annotationObjectId) // Note: this does not work for compound annotations.
           user <- userDAO.findOne(annotation._user)
           organization <- organizationDAO.findOne(user._organization)
@@ -268,7 +268,7 @@ class AuthenticationController @Inject()(
 
   private def canAccessAnnotation(user: User, ctx: DBAccessContext, annotationId: String): Fox[Boolean] = {
     val foundFox = for {
-      annotationIdParsed <- ObjectId.parse(annotationId)
+      annotationIdParsed <- ObjectId.fromString(annotationId)
       annotation <- annotationDAO.findOne(annotationIdParsed)(GlobalAccessContext)
       _ <- bool2Fox(annotation.state != Cancelled)
       restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationIdParsed))(ctx)

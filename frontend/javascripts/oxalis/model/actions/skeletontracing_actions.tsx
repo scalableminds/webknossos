@@ -13,210 +13,52 @@ import Store from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-export type InitializeSkeletonTracingAction = {
-  type: "INITIALIZE_SKELETONTRACING";
-  tracing: ServerSkeletonTracing;
-};
-export type CreateNodeAction = {
-  type: "CREATE_NODE";
-  position: Vector3;
-  rotation: Vector3;
-  viewport: number;
-  resolution: number;
-  timestamp: number;
-  treeId?: number | null | undefined;
-  dontActivate?: boolean;
-};
-type DeleteNodeAction = {
-  type: "DELETE_NODE";
-  nodeId?: number;
-  treeId?: number;
-  timestamp: number;
-};
-export type DeleteEdgeAction = {
-  type: "DELETE_EDGE";
-  sourceNodeId: number;
-  targetNodeId: number;
-  timestamp: number;
-};
-type SetActiveNodeAction = {
-  type: "SET_ACTIVE_NODE";
-  nodeId: number;
-  suppressAnimation: boolean;
-};
-type CenterActiveNodeAction = {
-  type: "CENTER_ACTIVE_NODE";
-  suppressAnimation: boolean;
-};
-type SetNodeRadiusAction = {
-  type: "SET_NODE_RADIUS";
-  radius: number;
-  nodeId: number | null | undefined;
-  treeId: number | null | undefined;
-};
-type SetNodePositionAction = {
-  type: "SET_NODE_POSITION";
-  position: Vector3;
-  nodeId: number | null | undefined;
-  treeId: number | null | undefined;
-};
-type CreateBranchPointAction = {
-  type: "CREATE_BRANCHPOINT";
-  nodeId?: number;
-  treeId?: number;
-  timestamp: number;
-};
-type DeleteBranchPointAction = {
-  type: "DELETE_BRANCHPOINT";
-};
-type DeleteBranchpointByIdAction = {
-  type: "DELETE_BRANCHPOINT_BY_ID";
-  nodeId: number;
-  treeId: number;
-};
-type ToggleTreeAction = {
-  type: "TOGGLE_TREE";
-  treeId: number | null | undefined;
-  timestamp: number;
-};
-type SetTreeVisibilityAction = {
-  type: "SET_TREE_VISIBILITY";
-  treeId: number | null | undefined;
-  isVisible: boolean;
-};
-type ToggleAllTreesAction = {
-  type: "TOGGLE_ALL_TREES";
-  timestamp: number;
-};
-type ToggleInactiveTreesAction = {
-  type: "TOGGLE_INACTIVE_TREES";
-  timestamp: number;
-};
-type ToggleTreeGroupAction = {
-  type: "TOGGLE_TREE_GROUP";
-  groupId: number;
-};
-type RequestDeleteBranchPointAction = {
-  type: "REQUEST_DELETE_BRANCHPOINT";
-};
-type CreateTreeAction = {
-  type: "CREATE_TREE";
-  timestamp: number;
-};
-type AddTreesAndGroupsAction = {
-  type: "ADD_TREES_AND_GROUPS";
-  trees: MutableTreeMap;
-  treeGroups: Array<TreeGroup>;
-};
-type DeleteTreeAction = {
-  type: "DELETE_TREE";
-  treeId?: number;
-};
-type ResetSkeletonTracingAction = {
-  type: "RESET_SKELETON_TRACING";
-};
-type SetActiveTreeAction = {
-  type: "SET_ACTIVE_TREE";
-  treeId: number;
-};
-type SetActiveTreeByNameAction = {
-  type: "SET_ACTIVE_TREE_BY_NAME";
-  treeName: string;
-};
-type DeselectActiveTreeAction = {
-  type: "DESELECT_ACTIVE_TREE";
-};
-type SetActiveGroupAction = {
-  type: "SET_ACTIVE_GROUP";
-  groupId: number;
-};
-type DeselectActiveGroupAction = {
-  type: "DESELECT_ACTIVE_GROUP";
-};
-export type MergeTreesAction = {
-  type: "MERGE_TREES";
-  sourceNodeId: number;
-  targetNodeId: number;
-};
-type SetTreeNameAction = {
-  type: "SET_TREE_NAME";
-  name: string | null | undefined;
-  treeId: number | null | undefined;
-};
-type SelectNextTreeAction = {
-  type: "SELECT_NEXT_TREE";
-  forward: boolean | null | undefined;
-};
-type SetTreeColorIndexAction = {
-  type: "SET_TREE_COLOR_INDEX";
-  treeId: number | null | undefined;
-  colorIndex: number;
-};
-type ShuffleTreeColorAction = {
-  type: "SHUFFLE_TREE_COLOR";
-  treeId?: number;
-};
-type SetTreeColorAction = {
-  type: "SET_TREE_COLOR";
-  treeId: number;
-  color: Vector3;
-};
-type ShuffleAllTreeColorsAction = {
-  type: "SHUFFLE_ALL_TREE_COLORS";
-  treeId?: number;
-};
-type CreateCommentAction = {
-  type: "CREATE_COMMENT";
-  commentText: string;
-  nodeId: number | null | undefined;
-  treeId: number | null | undefined;
-};
-type DeleteCommentAction = {
-  type: "DELETE_COMMENT";
-  nodeId: number | null | undefined;
-  treeId?: number;
-};
-type SetTracingAction = {
-  type: "SET_TRACING";
-  tracing: SkeletonTracing;
-};
-type SetTreeGroupsAction = {
-  type: "SET_TREE_GROUPS";
-  treeGroups: Array<TreeGroup>;
-};
-type SetTreeGroupAction = {
-  type: "SET_TREE_GROUP";
-  groupId: number | null | undefined;
-  treeId?: number;
-};
-type SetShowSkeletonsAction = {
-  type: "SET_SHOW_SKELETONS";
-  showSkeletons: boolean;
-};
-type SetMergerModeEnabledAction = {
-  type: "SET_MERGER_MODE_ENABLED";
-  active: boolean;
-};
-type UpdateNavigationListAction = {
-  type: "UPDATE_NAVIGATION_LIST";
-  list: Array<number>;
-  activeIndex: number;
-};
-export type LoadAgglomerateSkeletonAction = {
-  type: "LOAD_AGGLOMERATE_SKELETON";
-  layerName: string;
-  mappingName: string;
-  agglomerateId: number;
-};
-export type RemoveAgglomerateSkeletonAction = {
-  type: "REMOVE_AGGLOMERATE_SKELETON";
-  layerName: string;
-  mappingName: string;
-  agglomerateId: number;
-};
-type NoAction = {
-  type: "NONE";
-};
+
+export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
+export type CreateNodeAction = ReturnType<typeof createNodeAction>;
+type DeleteNodeAction = ReturnType<typeof deleteNodeAction>;
+export type DeleteEdgeAction = ReturnType<typeof deleteEdgeAction>;
+type SetActiveNodeAction = ReturnType<typeof setActiveNodeAction>;
+type CenterActiveNodeAction = ReturnType<typeof centerActiveNodeAction>;
+type SetNodeRadiusAction = ReturnType<typeof setNodeRadiusAction>;
+type SetNodePositionAction = ReturnType<typeof setNodePositionAction>;
+type CreateBranchPointAction = ReturnType<typeof createBranchPointAction>;
+type DeleteBranchPointAction = ReturnType<typeof deleteBranchPointAction>;
+type DeleteBranchpointByIdAction = ReturnType<typeof deleteBranchpointByIdAction>;
+type ToggleTreeAction = ReturnType<typeof toggleTreeAction>;
+type SetTreeVisibilityAction = ReturnType<typeof setTreeVisibilityAction>;
+type ToggleAllTreesAction = ReturnType<typeof toggleAllTreesAction>;
+type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
+type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
+type RequestDeleteBranchPointAction = ReturnType<typeof requestDeleteBranchPointAction>;
+type CreateTreeAction = ReturnType<typeof createTreeAction>;
+type AddTreesAndGroupsAction = ReturnType<typeof addTreesAndGroupsAction>;
+type DeleteTreeAction = ReturnType<typeof deleteTreeAction>;
+type ResetSkeletonTracingAction = ReturnType<typeof resetSkeletonTracingAction>;
+type SetActiveTreeAction = ReturnType<typeof setActiveTreeAction>;
+type SetActiveTreeByNameAction = ReturnType<typeof setActiveTreeByNameAction>;
+type DeselectActiveTreeAction = ReturnType<typeof deselectActiveTreeAction>;
+type SetActiveGroupAction = ReturnType<typeof setActiveGroupAction>;
+type DeselectActiveGroupAction = ReturnType<typeof deselectActiveGroupAction>;
+export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
+type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
+type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
+type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
+type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
+type SetTreeColorAction = ReturnType<typeof setTreeColorAction>;
+type ShuffleAllTreeColorsAction = ReturnType<typeof shuffleAllTreeColorsAction>;
+type CreateCommentAction = ReturnType<typeof createCommentAction>;
+type DeleteCommentAction = ReturnType<typeof deleteCommentAction>;
+type SetTracingAction = ReturnType<typeof setTracingAction>;
+type SetTreeGroupsAction = ReturnType<typeof setTreeGroupsAction>;
+type SetTreeGroupAction = ReturnType<typeof setTreeGroupAction>;
+type SetShowSkeletonsAction = ReturnType<typeof setShowSkeletonsAction>;
+type SetMergerModeEnabledAction = ReturnType<typeof setMergerModeEnabledAction>;
+type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
+export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSkeletonAction>;
+export type RemoveAgglomerateSkeletonAction = ReturnType<typeof removeAgglomerateSkeletonAction>;
+type NoAction = ReturnType<typeof noAction>;
+
 export type SkeletonTracingAction =
   | InitializeSkeletonTracingAction
   | CreateNodeAction
@@ -262,6 +104,7 @@ export type SkeletonTracingAction =
   | UpdateNavigationListAction
   | LoadAgglomerateSkeletonAction
   | RemoveAgglomerateSkeletonAction;
+
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
@@ -297,16 +140,17 @@ export const SkeletonTracingSaveRelevantActions = [
   ...AllUserBoundingBoxActions,
 ];
 
-const noAction = (): NoAction => ({
-  type: "NONE",
-});
+const noAction = () =>
+  ({
+    type: "NONE",
+  } as const);
 
-export const initializeSkeletonTracingAction = (
-  tracing: ServerSkeletonTracing,
-): InitializeSkeletonTracingAction => ({
-  type: "INITIALIZE_SKELETONTRACING",
-  tracing,
-});
+export const initializeSkeletonTracingAction = (tracing: ServerSkeletonTracing) =>
+  ({
+    type: "INITIALIZE_SKELETONTRACING",
+    tracing,
+  } as const);
+
 export const createNodeAction = (
   position: Vector3,
   rotation: Vector3,
@@ -315,239 +159,284 @@ export const createNodeAction = (
   treeId?: number | null | undefined,
   dontActivate: boolean = false,
   timestamp: number = Date.now(),
-): CreateNodeAction => ({
-  type: "CREATE_NODE",
-  position,
-  rotation,
-  viewport,
-  resolution,
-  treeId,
-  dontActivate,
-  timestamp,
-});
+) =>
+  ({
+    type: "CREATE_NODE",
+    position,
+    rotation,
+    viewport,
+    resolution,
+    treeId,
+    dontActivate,
+    timestamp,
+  } as const);
+
 export const deleteNodeAction = (
   nodeId?: number,
   treeId?: number,
   timestamp: number = Date.now(),
-): DeleteNodeAction => ({
-  type: "DELETE_NODE",
-  nodeId,
-  treeId,
-  timestamp,
-});
+) =>
+  ({
+    type: "DELETE_NODE",
+    nodeId,
+    treeId,
+    timestamp,
+  } as const);
+
 export const deleteEdgeAction = (
   sourceNodeId: number,
   targetNodeId: number,
   timestamp: number = Date.now(),
-): DeleteEdgeAction => ({
-  type: "DELETE_EDGE",
-  sourceNodeId,
-  targetNodeId,
-  timestamp,
-});
-export const setActiveNodeAction = (
-  nodeId: number,
-  suppressAnimation: boolean = false,
-): SetActiveNodeAction => ({
-  type: "SET_ACTIVE_NODE",
-  nodeId,
-  suppressAnimation,
-});
-export const centerActiveNodeAction = (
-  suppressAnimation: boolean = false,
-): CenterActiveNodeAction => ({
-  type: "CENTER_ACTIVE_NODE",
-  suppressAnimation,
-});
-export const setNodeRadiusAction = (
-  radius: number,
-  nodeId?: number,
-  treeId?: number,
-): SetNodeRadiusAction => ({
-  type: "SET_NODE_RADIUS",
-  radius,
-  nodeId,
-  treeId,
-});
-export const setNodePositionAction = (
-  position: Vector3,
-  nodeId?: number,
-  treeId?: number,
-): SetNodePositionAction => ({
-  type: "SET_NODE_POSITION",
-  position,
-  nodeId,
-  treeId,
-});
+) =>
+  ({
+    type: "DELETE_EDGE",
+    sourceNodeId,
+    targetNodeId,
+    timestamp,
+  } as const);
+
+export const setActiveNodeAction = (nodeId: number, suppressAnimation: boolean = false) =>
+  ({
+    type: "SET_ACTIVE_NODE",
+    nodeId,
+    suppressAnimation,
+  } as const);
+
+export const centerActiveNodeAction = (suppressAnimation: boolean = false) =>
+  ({
+    type: "CENTER_ACTIVE_NODE",
+    suppressAnimation,
+  } as const);
+
+export const setNodeRadiusAction = (radius: number, nodeId?: number, treeId?: number) =>
+  ({
+    type: "SET_NODE_RADIUS",
+    radius,
+    nodeId,
+    treeId,
+  } as const);
+
+export const setNodePositionAction = (position: Vector3, nodeId?: number, treeId?: number) =>
+  ({
+    type: "SET_NODE_POSITION",
+    position,
+    nodeId,
+    treeId,
+  } as const);
+
 export const createBranchPointAction = (
   nodeId?: number,
   treeId?: number,
   timestamp: number = Date.now(),
-): CreateBranchPointAction => ({
-  type: "CREATE_BRANCHPOINT",
-  nodeId,
-  treeId,
-  timestamp,
-});
-export const deleteBranchPointAction = (): DeleteBranchPointAction => ({
-  type: "DELETE_BRANCHPOINT",
-});
-export const deleteBranchpointByIdAction = (
-  nodeId: number,
-  treeId: number,
-): DeleteBranchpointByIdAction => ({
-  type: "DELETE_BRANCHPOINT_BY_ID",
-  nodeId,
-  treeId,
-});
-export const requestDeleteBranchPointAction = (): RequestDeleteBranchPointAction => ({
-  type: "REQUEST_DELETE_BRANCHPOINT",
-});
-export const createTreeAction = (timestamp: number = Date.now()): CreateTreeAction => ({
-  type: "CREATE_TREE",
-  timestamp,
-});
+) =>
+  ({
+    type: "CREATE_BRANCHPOINT",
+    nodeId,
+    treeId,
+    timestamp,
+  } as const);
+
+export const deleteBranchPointAction = () =>
+  ({
+    type: "DELETE_BRANCHPOINT",
+  } as const);
+
+export const deleteBranchpointByIdAction = (nodeId: number, treeId: number) =>
+  ({
+    type: "DELETE_BRANCHPOINT_BY_ID",
+    nodeId,
+    treeId,
+  } as const);
+
+export const requestDeleteBranchPointAction = () =>
+  ({
+    type: "REQUEST_DELETE_BRANCHPOINT",
+  } as const);
+
+export const createTreeAction = (timestamp: number = Date.now()) =>
+  ({
+    type: "CREATE_TREE",
+    timestamp,
+  } as const);
+
 export const addTreesAndGroupsAction = (
   trees: MutableTreeMap,
   treeGroups: Array<TreeGroup> | null | undefined,
-): AddTreesAndGroupsAction => ({
-  type: "ADD_TREES_AND_GROUPS",
-  trees,
-  treeGroups: treeGroups || [],
-});
-export const deleteTreeAction = (treeId?: number): DeleteTreeAction => ({
-  type: "DELETE_TREE",
-  treeId,
-});
-export const resetSkeletonTracingAction = (): ResetSkeletonTracingAction => ({
-  type: "RESET_SKELETON_TRACING",
-});
+) =>
+  ({
+    type: "ADD_TREES_AND_GROUPS",
+    trees,
+    treeGroups: treeGroups || [],
+  } as const);
+
+export const deleteTreeAction = (treeId?: number) =>
+  ({
+    type: "DELETE_TREE",
+    treeId,
+  } as const);
+
+export const resetSkeletonTracingAction = () =>
+  ({
+    type: "RESET_SKELETON_TRACING",
+  } as const);
+
 export const toggleTreeAction = (
   treeId: number | null | undefined,
   timestamp: number = Date.now(),
-): ToggleTreeAction => ({
-  type: "TOGGLE_TREE",
-  treeId,
-  timestamp,
-});
-export const setTreeVisibilityAction = (
-  treeId: number | null | undefined,
-  isVisible: boolean,
-): SetTreeVisibilityAction => ({
-  type: "SET_TREE_VISIBILITY",
-  treeId,
-  isVisible,
-});
-export const toggleAllTreesAction = (timestamp: number = Date.now()): ToggleAllTreesAction => ({
-  type: "TOGGLE_ALL_TREES",
-  timestamp,
-});
-export const toggleInactiveTreesAction = (
-  timestamp: number = Date.now(),
-): ToggleInactiveTreesAction => ({
-  type: "TOGGLE_INACTIVE_TREES",
-  timestamp,
-});
-export const toggleTreeGroupAction = (groupId: number): ToggleTreeGroupAction => ({
-  type: "TOGGLE_TREE_GROUP",
-  groupId,
-});
-export const setActiveTreeAction = (treeId: number): SetActiveTreeAction => ({
-  type: "SET_ACTIVE_TREE",
-  treeId,
-});
-export const setActiveTreeByNameAction = (treeName: string): SetActiveTreeByNameAction => ({
-  type: "SET_ACTIVE_TREE_BY_NAME",
-  treeName,
-});
-export const deselectActiveTreeAction = (): DeselectActiveTreeAction => ({
-  type: "DESELECT_ACTIVE_TREE",
-});
-export const setActiveGroupAction = (groupId: number): SetActiveGroupAction => ({
-  type: "SET_ACTIVE_GROUP",
-  groupId,
-});
-export const deselectActiveGroupAction = (): DeselectActiveGroupAction => ({
-  type: "DESELECT_ACTIVE_GROUP",
-});
-export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number): MergeTreesAction => ({
-  type: "MERGE_TREES",
-  sourceNodeId,
-  targetNodeId,
-});
+) =>
+  ({
+    type: "TOGGLE_TREE",
+    treeId,
+    timestamp,
+  } as const);
+
+export const setTreeVisibilityAction = (treeId: number | null | undefined, isVisible: boolean) =>
+  ({
+    type: "SET_TREE_VISIBILITY",
+    treeId,
+    isVisible,
+  } as const);
+
+export const toggleAllTreesAction = (timestamp: number = Date.now()) =>
+  ({
+    type: "TOGGLE_ALL_TREES",
+    timestamp,
+  } as const);
+
+export const toggleInactiveTreesAction = (timestamp: number = Date.now()) =>
+  ({
+    type: "TOGGLE_INACTIVE_TREES",
+    timestamp,
+  } as const);
+
+export const toggleTreeGroupAction = (groupId: number) =>
+  ({
+    type: "TOGGLE_TREE_GROUP",
+    groupId,
+  } as const);
+
+export const setActiveTreeAction = (treeId: number) =>
+  ({
+    type: "SET_ACTIVE_TREE",
+    treeId,
+  } as const);
+
+export const setActiveTreeByNameAction = (treeName: string) =>
+  ({
+    type: "SET_ACTIVE_TREE_BY_NAME",
+    treeName,
+  } as const);
+
+export const deselectActiveTreeAction = () =>
+  ({
+    type: "DESELECT_ACTIVE_TREE",
+  } as const);
+
+export const setActiveGroupAction = (groupId: number) =>
+  ({
+    type: "SET_ACTIVE_GROUP",
+    groupId,
+  } as const);
+
+export const deselectActiveGroupAction = () =>
+  ({
+    type: "DESELECT_ACTIVE_GROUP",
+  } as const);
+
+export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number) =>
+  ({
+    type: "MERGE_TREES",
+    sourceNodeId,
+    targetNodeId,
+  } as const);
+
 export const setTreeNameAction = (
   name: string | undefined | null = null,
   treeId?: number | null | undefined,
-): SetTreeNameAction => ({
-  type: "SET_TREE_NAME",
-  name,
-  treeId,
-});
-export const selectNextTreeAction = (
-  forward: boolean | null | undefined = true,
-): SelectNextTreeAction => ({
-  type: "SELECT_NEXT_TREE",
-  forward,
-});
-export const setTreeColorIndexAction = (
-  treeId: number | null | undefined,
-  colorIndex: number,
-): SetTreeColorIndexAction => ({
-  type: "SET_TREE_COLOR_INDEX",
-  treeId,
-  colorIndex,
-});
-export const shuffleTreeColorAction = (treeId: number): ShuffleTreeColorAction => ({
-  type: "SHUFFLE_TREE_COLOR",
-  treeId,
-});
-export const setTreeColorAction = (treeId: number, color: Vector3): SetTreeColorAction => ({
-  type: "SET_TREE_COLOR",
-  treeId,
-  color,
-});
-export const shuffleAllTreeColorsAction = (): ShuffleAllTreeColorsAction => ({
-  type: "SHUFFLE_ALL_TREE_COLORS",
-});
-export const createCommentAction = (
-  commentText: string,
-  nodeId?: number,
-  treeId?: number,
-): CreateCommentAction => ({
-  type: "CREATE_COMMENT",
-  commentText,
-  nodeId,
-  treeId,
-});
-export const deleteCommentAction = (nodeId?: number, treeId?: number): DeleteCommentAction => ({
-  type: "DELETE_COMMENT",
-  nodeId,
-  treeId,
-});
-export const setTracingAction = (tracing: SkeletonTracing): SetTracingAction => ({
-  type: "SET_TRACING",
-  tracing,
-});
-export const setTreeGroupsAction = (treeGroups: Array<TreeGroup>): SetTreeGroupsAction => ({
-  type: "SET_TREE_GROUPS",
-  treeGroups,
-});
-export const setTreeGroupAction = (
-  groupId: number | null | undefined,
-  treeId?: number,
-): SetTreeGroupAction => ({
-  type: "SET_TREE_GROUP",
-  groupId,
-  treeId,
-});
-export const setShowSkeletonsAction = (showSkeletons: boolean): SetShowSkeletonsAction => ({
-  type: "SET_SHOW_SKELETONS",
-  showSkeletons,
-});
-export const setMergerModeEnabledAction = (active: boolean): SetMergerModeEnabledAction => ({
-  type: "SET_MERGER_MODE_ENABLED",
-  active,
-});
+) =>
+  ({
+    type: "SET_TREE_NAME",
+    name,
+    treeId,
+  } as const);
+
+export const selectNextTreeAction = (forward: boolean | null | undefined = true) =>
+  ({
+    type: "SELECT_NEXT_TREE",
+    forward,
+  } as const);
+
+export const setTreeColorIndexAction = (treeId: number | null | undefined, colorIndex: number) =>
+  ({
+    type: "SET_TREE_COLOR_INDEX",
+    treeId,
+    colorIndex,
+  } as const);
+
+export const shuffleTreeColorAction = (treeId: number) =>
+  ({
+    type: "SHUFFLE_TREE_COLOR",
+    treeId,
+  } as const);
+
+export const setTreeColorAction = (treeId: number, color: Vector3) =>
+  ({
+    type: "SET_TREE_COLOR",
+    treeId,
+    color,
+  } as const);
+
+export const shuffleAllTreeColorsAction = () =>
+  ({
+    type: "SHUFFLE_ALL_TREE_COLORS",
+  } as const);
+
+export const createCommentAction = (commentText: string, nodeId?: number, treeId?: number) =>
+  ({
+    type: "CREATE_COMMENT",
+    commentText,
+    nodeId,
+    treeId,
+  } as const);
+
+export const deleteCommentAction = (nodeId?: number, treeId?: number) =>
+  ({
+    type: "DELETE_COMMENT",
+    nodeId,
+    treeId,
+  } as const);
+
+export const setTracingAction = (tracing: SkeletonTracing) =>
+  ({
+    type: "SET_TRACING",
+    tracing,
+  } as const);
+
+export const setTreeGroupsAction = (treeGroups: Array<TreeGroup>) =>
+  ({
+    type: "SET_TREE_GROUPS",
+    treeGroups,
+  } as const);
+
+export const setTreeGroupAction = (groupId: number | null | undefined, treeId?: number) =>
+  ({
+    type: "SET_TREE_GROUP",
+    groupId,
+    treeId,
+  } as const);
+
+export const setShowSkeletonsAction = (showSkeletons: boolean) =>
+  ({
+    type: "SET_SHOW_SKELETONS",
+    showSkeletons,
+  } as const);
+
+export const setMergerModeEnabledAction = (active: boolean) =>
+  ({
+    type: "SET_MERGER_MODE_ENABLED",
+    active,
+  } as const);
+
 // The following actions have the prefix "AsUser" which means that they
 // offer some additional logic which is sensible from a user-centered point of view.
 // For example, the deleteActiveNodeAsUserAction also initiates the deletion of a tree,
@@ -608,31 +497,33 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   // if the user confirms
   return noAction();
 };
-export const updateNavigationListAction = (
-  list: Array<number>,
-  activeIndex: number,
-): UpdateNavigationListAction => ({
-  type: "UPDATE_NAVIGATION_LIST",
-  list,
-  activeIndex,
-});
+export const updateNavigationListAction = (list: Array<number>, activeIndex: number) =>
+  ({
+    type: "UPDATE_NAVIGATION_LIST",
+    list,
+    activeIndex,
+  } as const);
+
 export const loadAgglomerateSkeletonAction = (
   layerName: string,
   mappingName: string,
   agglomerateId: number,
-): LoadAgglomerateSkeletonAction => ({
-  type: "LOAD_AGGLOMERATE_SKELETON",
-  layerName,
-  mappingName,
-  agglomerateId,
-});
+) =>
+  ({
+    type: "LOAD_AGGLOMERATE_SKELETON",
+    layerName,
+    mappingName,
+    agglomerateId,
+  } as const);
+
 export const removeAgglomerateSkeletonAction = (
   layerName: string,
   mappingName: string,
   agglomerateId: number,
-): RemoveAgglomerateSkeletonAction => ({
-  type: "REMOVE_AGGLOMERATE_SKELETON",
-  layerName,
-  mappingName,
-  agglomerateId,
-});
+) =>
+  ({
+    type: "REMOVE_AGGLOMERATE_SKELETON",
+    layerName,
+    mappingName,
+    agglomerateId,
+  } as const);

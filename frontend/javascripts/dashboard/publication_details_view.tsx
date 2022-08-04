@@ -8,21 +8,6 @@ import { handleGenericError } from "libs/error_handling";
 import { Link } from "react-router-dom";
 const { Content } = Layout;
 
-export function SimpleHeader() {
-  return (
-    <div id="oxalis-header">
-      <img
-        src="/assets/images/oxalis.svg"
-        alt="webKnossos Logo"
-        style={{
-          verticalAlign: "middle",
-        }}
-      />
-      webKnossos
-    </div>
-  );
-}
-
 function PublicationDetailView({ publicationId }: { publicationId: string }) {
   const [publication, setPublication] = useState<APIPublication | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,11 +27,10 @@ function PublicationDetailView({ publicationId }: { publicationId: string }) {
 
   return (
     <Layout>
-      <SimpleHeader />
-      <Content className="centered-content">
+      <Content className="centered-content" style={{ marginTop: "4em" }}>
         <Spin size="large" spinning={isLoading}>
           {publication != null && (
-            <React.Fragment>
+            <>
               <Link to="/">
                 <Tooltip title="Back to the frontpage.">
                   <ArrowLeftOutlined
@@ -66,8 +50,9 @@ function PublicationDetailView({ publicationId }: { publicationId: string }) {
                   </div>
                 </Tooltip>
               </Link>
+              <h3>Featured Publication</h3>
               <PublicationCard publication={publication} showDetailedLink={false} />
-            </React.Fragment>
+            </>
           )}
           {!isLoading && publication == null && (
             <p

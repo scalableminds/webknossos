@@ -226,7 +226,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
           <h3 className="container-with-hidden-icon">
             {publication.title}
             {showDetailedLink ? (
-              <Link to={`/publication/${publication.id}`}>
+              <Link to={`/publications/${publication.id}`}>
                 <Tooltip title="Open permalink">
                   <LinkOutlined
                     style={{

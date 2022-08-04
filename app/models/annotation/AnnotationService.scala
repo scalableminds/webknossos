@@ -832,10 +832,14 @@ class AnnotationService @Inject()(
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
       dataSetJs <- dataSetService.publicWrites(dataSet, None, None, None)
     } yield
-      Json.obj("id" -> annotation._id,
-               "typ" -> annotation.typ,
-               "tracingStore" -> tracingStoreJs,
-               "dataSet" -> dataSetJs)
+      Json.obj(
+        "id" -> annotation._id.id,
+        "name" -> annotation.name,
+        "description" -> annotation.description,
+        "typ" -> annotation.typ,
+        "tracingStore" -> tracingStoreJs,
+        "dataSet" -> dataSetJs
+      )
   }
 
   private def userJsonForAnnotation(userId: ObjectId, userOpt: Option[User] = None): Fox[Option[JsObject]] =

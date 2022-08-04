@@ -1680,6 +1680,11 @@ export async function getPublications(): Promise<Array<APIPublication>> {
   return publications;
 }
 
+export async function getPublication(id: string): Promise<APIPublication> {
+  const publication = await Request.receiveJSON(`/api/publications/${id}`);
+  return publication;
+}
+
 // #### Datastores
 export async function getDatastores(): Promise<Array<APIDataStore>> {
   const datastores = await Request.receiveJSON("/api/datastores");

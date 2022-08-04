@@ -65,7 +65,7 @@ function getDetails(item: AnnotationOrDatasetItem): ExtendedDatasetDetails {
 
 function getUrl(item: AnnotationOrDatasetItem): string {
   return item.type === AnnotationOrDataset.ANNOTATION
-    ? `/annotations/${item.annotation.id.id}`
+    ? `/annotations/${item.annotation.id}`
     : `/datasets/${item.dataset.owningOrganization}/${item.dataset.name}`;
 }
 

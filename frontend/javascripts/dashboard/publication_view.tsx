@@ -4,6 +4,7 @@ import { APIPublication } from "types/api_flow_types";
 import PublicationCard from "dashboard/publication_card";
 import * as Utils from "libs/utils";
 import { getPublications } from "admin/admin_rest_api";
+import { handleGenericError } from "libs/error_handling";
 const { Search } = Input;
 export function PublicationViewWithHeader() {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +15,8 @@ export function PublicationViewWithHeader() {
       try {
         setIsLoading(true);
         setPublications(await getPublications());
+      } catch (error) {
+        handleGenericError(error as Error);
       } finally {
         setIsLoading(false);
       }

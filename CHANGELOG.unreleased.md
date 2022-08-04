@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added optional mappingName parameter to `requestRawCuboid` datastore route, which allows to directly apply a specified mapping in the backend. [#6311](https://github.com/scalableminds/webknossos/pull/6311)
 - Added option to use `X-Auth-Token` header instead of query parameter in every datastore and tracingstore route. [#6312](https://github.com/scalableminds/webknossos/pull/6312)
 - Add new backend API routes for working with annotations without having to provide a 'type' argument. Note that these support stored annotations (Task and Explorational), but do not work for CompoundTask/CompoundProject/CompoundTaskType annotations. For the latter, please use the original route variants with explicit type. [#6285](https://github.com/scalableminds/webknossos/pull/6285)
+- Add new backend API routes for using private zarr links to annotations as well as creating them. [#6367](https://github.com/scalableminds/webknossos/pull/6367)
 
 ### Changed
 - Merged the "Shared Annotations" tab into the "Annotations" tab in the user's dashboard. If annotations are shared with you, you can see them in your dashboard. The table can be filtered by owner if you prefer to see only your own annotations. [#6230](https://github.com/scalableminds/webknossos/pull/6230)

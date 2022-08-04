@@ -2,7 +2,7 @@
 
 START TRANSACTION;
 
-CREATE TABLE webknossos.annotation_privateLinks
+CREATE TABLE webknossos.annotation_private_links
 (
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _annotation CHAR(24) NOT NULL,
@@ -11,17 +11,17 @@ CREATE TABLE webknossos.annotation_privateLinks
   isDeleted          BOOLEAN     NOT NULL DEFAULT false
 );
 
-CREATE INDEX ON webknossos.annotations_privateLinks(accessToken);
+CREATE INDEX ON webknossos.annotation_private_links(accessToken);
 
-ALTER TABLE webknossos.annotation_privateLinks
+ALTER TABLE webknossos.annotation_private_links
   ADD CONSTRAINT annotation_ref FOREIGN KEY (_annotation) REFERENCES webknossos.annotations (_id) DEFERRABLE;
 
-CREATE VIEW webknossos.annotation_privateLinks_ as
+CREATE VIEW webknossos.annotation_private_links_ as
 SELECT *
-FROM webknossos.annotation_privateLinks
+FROM webknossos.annotation_private_links
 WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation
-SET schemaVersion = 84;
+SET schemaVersion = 86;
 
 COMMIT TRANSACTION;

@@ -118,7 +118,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
           s" or sharingToken = '$t' or _id in (select _dataset " +
             s"from webknossos.annotation_private_links_ apl " +
             s"join webknossos.annotations_ ans ON apl._annotation = ans._id " +
-            s"where apl.value = '$t')")
+            s"where apl.accessToken = '$t')")
       .getOrElse("")
 
   override def readAccessQ(requestingUserId: ObjectId) =

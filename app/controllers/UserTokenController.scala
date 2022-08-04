@@ -19,7 +19,7 @@ import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreService}
 import models.job.JobDAO
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, EmptyBox, Full}
+import net.liftweb.common.{Box, Full}
 import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
@@ -191,7 +191,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     for {
       annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
       annotationAccessByToken <- token
-        .map(annotationPrivateLinkDAO.findOneByAccessId(_)(GlobalAccessContext))
+        .map(annotationPrivateLinkDAO.findOneByAccessToken(_)(GlobalAccessContext))
         .getOrElse(Fox.empty)
         .futureBox
 

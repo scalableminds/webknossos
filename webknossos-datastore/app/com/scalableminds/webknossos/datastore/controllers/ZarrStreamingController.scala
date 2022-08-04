@@ -71,8 +71,8 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  def zAttrsWithAnnotationPrivateLink(accessToken: String, dataLayerName: String = ""): Action[AnyContent] = Action.async {
-    implicit request =>
+  def zAttrsWithAnnotationPrivateLink(accessToken: String, dataLayerName: String = ""): Action[AnyContent] =
+    Action.async { implicit request =>
       for {
         annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
         annotationLayer = annotationSource.getAnnotationLayer(dataLayerName)
@@ -94,7 +94,7 @@ class ZarrStreamingController @Inject()(
             } yield dataSourceOmeNgffHeader
         }
       } yield Ok(Json.toJson(omeNgffHeader))
-  }
+    }
 
   /**
     * Zarr-specific datasource-properties.json file for a datasource. Note that the result here is not necessarily equal to the file used in the underlying storage.
@@ -115,7 +115,6 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  // TODO access validation
   private def convertLayerToZarrLayer(layer: DataLayer): ZarrLayer =
     layer match {
       case d: WKWDataLayer =>
@@ -163,6 +162,13 @@ class ZarrStreamingController @Inject()(
       annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
       volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
 
+      _ <- accessTokenService.validateAccess(
+        UserAccessRequest.readDataSources(
+          DataSourceId(annotationSource.dataSetName, annotationSource.organizationName)),
+        Some(accessToken)) {
+        Future.successful(Ok("Ok"))
+      } ?~> "Access Denied" ~> 404
+
       dataSource <- dataSourceRepository
         .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
         .toFox ~> 404
@@ -190,7 +196,10 @@ class ZarrStreamingController @Inject()(
     } yield result
   }
 
-  def rawZarrCubePrivateLink(accessToken: String, dataLayerName: String, mag: String, cxyz: String): Action[AnyContent] =
+  def rawZarrCubePrivateLink(accessToken: String,
+                             dataLayerName: String,
+                             mag: String,
+                             cxyz: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
         annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
@@ -289,7 +298,11 @@ class ZarrStreamingController @Inject()(
               .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, accessToken)
               .map(z => Ok(Json.toJson(z)))
           case None =>
-            zArray(Some(accessToken), annotationSource.organizationName, annotationSource.dataSetName, dataLayerName, mag)
+            zArray(Some(accessToken),
+                   annotationSource.organizationName,
+                   annotationSource.dataSetName,
+                   dataLayerName,
+                   mag)
         }
       } yield result
   }
@@ -329,7 +342,9 @@ class ZarrStreamingController @Inject()(
           )).withHeaders()
     }
 
-  def dataLayerMagFolderContentsPrivateLink(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] =
+  def dataLayerMagFolderContentsPrivateLink(accessToken: String,
+                                            dataLayerName: String,
+                                            mag: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
         annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
@@ -338,7 +353,10 @@ class ZarrStreamingController @Inject()(
         result <- layer match {
           case Some(annotationLayer) =>
             remoteTracingstoreClient
-              .getDataLayerMagFolderContents(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, accessToken)
+              .getDataLayerMagFolderContents(annotationLayer.tracingId,
+                                             mag,
+                                             annotationSource.tracingStoreUrl,
+                                             accessToken)
               .map(
                 layers =>
                   Ok(

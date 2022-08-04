@@ -16,15 +16,19 @@ import scala.concurrent.ExecutionContext
 case class AnnotationPrivateLink(_id: ObjectId,
                                  _annotation: ObjectId,
                                  accessToken: String,
-                                 // TODO check everything
                                  expirationDateTime: Option[Long],
                                  isDeleted: Boolean = false)
-
-case class AnnotationPrivateLinkParams(_annotation: ObjectId, expirationDateTime: Option[Long])
 
 object AnnotationPrivateLink {
   implicit val jsonFormat: OFormat[AnnotationPrivateLink] = Json.format[AnnotationPrivateLink]
 }
+
+case class AnnotationPrivateLinkParams(_annotation: String, expirationDateTime: Option[Long])
+
+object AnnotationPrivateLinkParams {
+  implicit val jsonFormat: OFormat[AnnotationPrivateLinkParams] = Json.format[AnnotationPrivateLinkParams]
+}
+
 
 class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers) {
 
@@ -46,19 +50,21 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
       AnnotationPrivateLink(
         ObjectId(r._Id),
         ObjectId(r._Annotation),
-        r.value,
-        r.expirationdatetime.getTime,
+        r.accesstoken,
+        r.expirationdatetime.map(_.getTime),
         r.isdeleted
       )
     )
 
-  def insertOne(aPL: AnnotationPrivateLink): Fox[Unit] =
+  def insertOne(aPL: AnnotationPrivateLink): Fox[Unit] = {
+    val time = aPL.expirationDateTime.map(new java.sql.Timestamp(_))
+
     for {
       _ <- run(
-        sqlu"""insert into webknossos.annotation_private_links(_id, _annotation, value, expirationDateTime, isDeleted)
-                         values(${aPL._id.id}, ${aPL._annotation.id}, ${aPL.accessToken}, ${new java.sql.Timestamp(
-          aPL.expirationDateTime)}, ${aPL.isDeleted})""")
+        sqlu"""insert into webknossos.annotation_private_links(_id, _annotation, accessToken, expirationDateTime, isDeleted)
+                         values(${aPL._id.id}, ${aPL._annotation.id}, ${aPL.accessToken}, ${time}, ${aPL.isDeleted})""")
     } yield ()
+  }
 
   def updateOne(id: ObjectId,
                 _annotation: ObjectId,
@@ -69,12 +75,12 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
                             expirationDateTime = $expirationDateTime where _id = $id""")
     } yield ()
 
-  def findOneByAccessId(accessId: String)(implicit ctx: DBAccessContext): Fox[AnnotationPrivateLink] =
+  def findOneByAccessToken(accessToken: String)(implicit ctx: DBAccessContext): Fox[AnnotationPrivateLink] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where value = ${accessId} and #$accessQuery"
+        sql"select #$columns from #$existingCollectionName where accessToken = ${accessToken} and #$accessQuery"
           .as[AnnotationPrivateLinksRow])
-      parsed <- parseFirst(r, accessId)
+      parsed <- parseFirst(r, accessToken)
     } yield parsed
 }

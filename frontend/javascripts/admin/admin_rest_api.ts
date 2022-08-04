@@ -31,6 +31,7 @@ import type {
   APIProjectProgressReport,
   APIProjectUpdater,
   APIProjectWithAssignments,
+  APIPublication,
   APIResolutionRestrictions,
   APIScript,
   APIScriptCreator,
@@ -1670,6 +1671,18 @@ export async function getMeanAndStdDevFromDataset(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/colorStatistics?token=${token}`,
     ),
   );
+}
+
+// #### Publications
+export async function getPublications(): Promise<Array<APIPublication>> {
+  const publications = await Request.receiveJSON("/api/publications");
+  assertResponseLimit(publications);
+  return publications;
+}
+
+export async function getPublication(id: string): Promise<APIPublication> {
+  const publication = await Request.receiveJSON(`/api/publications/${id}`);
+  return publication;
 }
 
 // #### Datastores

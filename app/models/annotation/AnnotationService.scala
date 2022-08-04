@@ -1,7 +1,6 @@
 package models.annotation
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
-
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
@@ -31,6 +30,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
+
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
@@ -98,7 +98,8 @@ class AnnotationService @Inject()(
     temporaryFileCreator: TemporaryFileCreator,
     meshDAO: MeshDAO,
     meshService: MeshService,
-    sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext, val materializer: Materializer)
+    sharedAnnotationsDAO: SharedAnnotationsDAO
+)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
     with ProtoGeometryImplicits
@@ -821,6 +822,24 @@ class AnnotationService @Inject()(
         "othersMayEdit" -> annotation.othersMayEdit
       )
     }
+  }
+
+  def writesWithDataset(annotation: Annotation): Fox[JsObject] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      tracingStore <- tracingStoreDAO.findFirst
+      tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+      dataSetJs <- dataSetService.publicWrites(dataSet, None, None, None)
+    } yield
+      Json.obj(
+        "id" -> annotation._id.id,
+        "name" -> annotation.name,
+        "description" -> annotation.description,
+        "typ" -> annotation.typ,
+        "tracingStore" -> tracingStoreJs,
+        "dataSet" -> dataSetJs
+      )
   }
 
   private def userJsonForAnnotation(userId: ObjectId, userOpt: Option[User] = None): Fox[Option[JsObject]] =

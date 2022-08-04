@@ -175,6 +175,15 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- parseAll(r)
     } yield parsed
 
+  def findAllByPublication(publicationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _publication = $publicationId and #$accessQuery"
+          .as[DatasetsRow]).map(_.toList)
+      parsed <- parseAll(r)
+    } yield parsed
+
   /* Disambiguation method for legacy URLs and NMLs: if the user has access to multiple datasets of the same name, use the oldest.
    * This is reasonable, because the legacy URL/NML was likely created before this ambiguity became possible */
   def getOrganizationForDataSet(dataSetName: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =

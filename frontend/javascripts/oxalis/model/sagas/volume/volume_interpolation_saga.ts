@@ -324,11 +324,16 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
+  // eslint-disable-next-line no-nested-ternary
   const adaptedInterpolationRange = onlyExtrude
-    ? directionFactor > 0
-      ? [1, interpolationDepth + 1]
-      : [0, interpolationDepth]
-    : [1, interpolationDepth];
+    ? // When extruding and...
+      directionFactor > 0
+      ? // ...tracing forwards, the latest (== current) slice also has to be labeled
+        [1, interpolationDepth + 1]
+      : // ...tracing backwards, the first (== current) slice also has to be labeled
+        [0, interpolationDepth]
+    : // When interpolating, only the slices between start and end slice have to be labeled
+      [1, interpolationDepth];
 
   const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
   for (

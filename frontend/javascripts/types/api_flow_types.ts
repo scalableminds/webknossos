@@ -91,6 +91,7 @@ export type APITeam = {
 export type APIPublicationAnnotation = {
   readonly id: string;
   readonly name: string;
+  readonly description: string;
   readonly tracingStore: APITracingStore;
   readonly dataSet: APIDataset;
 };

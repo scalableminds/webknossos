@@ -362,8 +362,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions) ?~> "dataset.list.fetchDataSourceFailed"
-      publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_)) ?~> "dataset.list.fetchPublicationFailed"
-      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites) ?~> "dataset.list.publicationWritesFailed"
       worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
       jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
     } yield {
@@ -383,7 +381,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "logoUrl" -> logoUrl,
         "sortingKey" -> dataSet.sortingKey,
         "details" -> dataSet.details,
-        "publication" -> publicationJson,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
         "isForeign" -> dataStore.isForeign,
         "jobsEnabled" -> jobsEnabled,

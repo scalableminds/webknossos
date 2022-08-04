@@ -168,13 +168,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         case (Some(x), Some(y), Some(z)) => Some(Vec3IntProto(x.toInt, y.toInt, z.toInt))
         case _                           => None
       }
-      val color = parseColorOpt(node)
       Segment(
         segmentId = getSingleAttribute(node, "id").toLong,
         anchorPosition = anchorPosition,
         name = getSingleAttributeOpt(node, "name"),
         creationTime = getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt),
-        color = color
+        color = parseColorOpt(node)
       )
     })
 

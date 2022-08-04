@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a regression where the mapping activation confirmation dialog was never shown. [#6346](https://github.com/scalableminds/webknossos/pull/6346)
 - Fixed an error if multiple proofreading actions were performed in rapid succession. If webKnossos is busy, inputs to the viewports are disabled from now on. [#6325](https://github.com/scalableminds/webknossos/pull/6325)
 - Fixed that ad-hoc meshing would terminate early for large segments. [#6352](https://github.com/scalableminds/webknossos/pull/6352)
+- Fixed a bug where the largestSegmentId of zarr segmentation layers was not propagated from the datasource-properties.json, which broke annotating based on these layers. [#6363](https://github.com/scalableminds/webknossos/pull/6363)
 
 ### Removed
 - Annotation Type was removed from the info tab. [#6330](https://github.com/scalableminds/webknossos/pull/6330)

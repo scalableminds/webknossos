@@ -4,21 +4,18 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import io.swagger.annotations._
-import models.annotation.AnnotationDAO
-import models.binary.{DataSetDAO, PublicationDAO, PublicationService}
+import javax.inject.Inject
+import models.binary.{PublicationDAO, PublicationService}
 import oxalis.security.WkEnv
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import utils.ObjectId
 
-import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 @Api
 class PublicationController @Inject()(publicationService: PublicationService,
                                       publicationDAO: PublicationDAO,
-                                      dataSetDAO: DataSetDAO,
-                                      annotationDAO: AnnotationDAO,
                                       sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with ProtoGeometryImplicits

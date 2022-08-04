@@ -29,12 +29,10 @@ import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
-import models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.organization.OrganizationDAO
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.{ExecutionContext}
 import scala.concurrent.duration._
 
 case class AnnotationLayerParameters(typ: AnnotationLayerType,

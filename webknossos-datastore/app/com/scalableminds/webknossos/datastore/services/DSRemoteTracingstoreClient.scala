@@ -53,19 +53,17 @@ class DSRemoteTracingstoreClient @Inject()(
   def getDataLayerMagFolderContents(tracingId: String,
                                     mag: String,
                                     tracingStoreUri: String,
-                                    accessId: String): Fox[Map[String, String]] =
+                                    accessId: String): Fox[List[String]] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/json/$tracingId/$mag")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("token" -> accessId)
-      .getWithJsonResponse[Map[String, String]]
+      .getWithJsonResponse[List[String]]
 
-  def getDataLayerFolderContents(tracingId: String,
-                                 tracingStoreUri: String,
-                                 accessId: String): Fox[Map[String, String]] =
+  def getDataLayerFolderContents(tracingId: String, tracingStoreUri: String, accessId: String): Fox[List[String]] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/json/$tracingId")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("token" -> accessId)
-      .getWithJsonResponse[Map[String, String]]
+      .getWithJsonResponse[List[String]]
 
   def getZGroup(tracingId: String, tracingStoreUri: String, accessId: String): Fox[JsObject] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zgroup")

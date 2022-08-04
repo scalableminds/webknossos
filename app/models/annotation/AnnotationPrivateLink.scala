@@ -29,7 +29,6 @@ object AnnotationPrivateLinkParams {
   implicit val jsonFormat: OFormat[AnnotationPrivateLinkParams] = Json.format[AnnotationPrivateLinkParams]
 }
 
-
 class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers) {
 
   val DefaultAnnotationListLimit = 1000
@@ -66,9 +65,8 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
     } yield ()
   }
 
-  def updateOne(id: ObjectId,
-                _annotation: ObjectId,
-                expirationDateTime: Option[Long])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(id: ObjectId, _annotation: ObjectId, expirationDateTime: Option[Long])(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(sqlu"""update webknossos.annotation_private_links set _annotation = ${_annotation},

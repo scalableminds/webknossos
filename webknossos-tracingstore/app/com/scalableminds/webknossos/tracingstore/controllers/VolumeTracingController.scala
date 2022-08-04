@@ -264,13 +264,8 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
-        } yield
-          Ok(
-            Json.toJson(Map(tracingId -> ".") ++ existingMags.map { mag =>
-              (mag.toMagLiteral(allowScalar = true), mag.toMagLiteral(allowScalar = true))
-            }.toMap)
-          )
+          existingMags = tracing.resolutions.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
+        } yield Ok(Json.toJson(existingMags))
       }
     }
 
@@ -302,7 +297,7 @@ class VolumeTracingController @Inject()(
           existingMags = tracing.resolutions.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
-        } yield Ok(Json.obj(mag -> "."))
+        } yield Ok(Json.toJson(List.empty))
       }
     }
 

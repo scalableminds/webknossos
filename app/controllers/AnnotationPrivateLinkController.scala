@@ -34,7 +34,7 @@ class AnnotationPrivateLinkController @Inject()(
 
   def get(id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
-      idValidated <- ObjectId.parse(id)
+      idValidated <- ObjectId.fromString(id)
 
       annotationPrivateLink <- annotationPrivateLinkDAO.findOne(idValidated)(GlobalAccessContext)
       _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> 404
@@ -54,36 +54,31 @@ class AnnotationPrivateLinkController @Inject()(
       val annotationId = ObjectId(params._annotation)
       for {
         _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- annotationPrivateLinkDAO.insertOne(AnnotationPrivateLink(
-          _id,
-          annotationId,
-          accessToken,
-          params.expirationDateTime)) ?~> "create.failed"
+        _ <- annotationPrivateLinkDAO.insertOne(
+          AnnotationPrivateLink(_id, annotationId, accessToken, params.expirationDateTime)) ?~> "create.failed"
         inserted <- annotationPrivateLinkDAO.findOne(_id)
         js <- annotationPrivateLinkService.publicWrites(inserted)
       } yield Ok(js)
   }
 
-  def update(id: String): Action[AnnotationPrivateLinkParams] = sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) {
-    implicit request =>
+  def update(id: String): Action[AnnotationPrivateLinkParams] =
+    sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) { implicit request =>
       val params = request.body
       val annotationId = ObjectId(params._annotation)
       for {
-        idValidated <- ObjectId.parse(id)
+        idValidated <- ObjectId.fromString(id)
         aPLInfo <- annotationPrivateLinkDAO.findOne(idValidated) ?~> "annotation private link not found" ~> NOT_FOUND
         _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
         _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- annotationPrivateLinkDAO.updateOne(idValidated,
-          annotationId,
-                                                params.expirationDateTime) ?~> "update.failed"
+        _ <- annotationPrivateLinkDAO.updateOne(idValidated, annotationId, params.expirationDateTime) ?~> "update.failed"
         updated <- annotationPrivateLinkDAO.findOne(idValidated) ?~> "not Found"
         js <- annotationPrivateLinkService.publicWrites(updated) ?~> "write failed"
       } yield Ok(js)
-  }
+    }
 
   def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      idValidated <- ObjectId.parse(id)
+      idValidated <- ObjectId.fromString(id)
       aPLInfo <- annotationPrivateLinkDAO.findOne(idValidated) ?~> "notFound" ~> NOT_FOUND
       _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
       _ <- annotationPrivateLinkDAO.deleteOne(idValidated) ?~> "delete failed"

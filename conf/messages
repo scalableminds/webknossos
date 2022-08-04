@@ -363,6 +363,8 @@ job.meshFile.notAllowed.organization = Calculating mesh files is only allowed fo
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
 
+publication.notFound = Publication could not be found.
+
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 
 unexpectedReturn=Unexpected return of parameters

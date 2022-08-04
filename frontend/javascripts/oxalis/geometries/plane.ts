@@ -53,18 +53,23 @@ class Plane {
       .getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
     // create crosshair
-    const crosshairGeometries = new Array(2);
+    const crosshairGeometries = [];
     this.crosshair = new Array(2);
 
     for (let i = 0; i <= 1; i++) {
-      crosshairGeometries[i] = new THREE.Geometry();
-      crosshairGeometries[i].vertices.push(
-        new THREE.Vector3((-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0),
-      );
-      crosshairGeometries[i].vertices.push(new THREE.Vector3(-25 * i, -25 * (1 - i), 0));
-      crosshairGeometries[i].vertices.push(new THREE.Vector3(25 * i, 25 * (1 - i), 0));
-      crosshairGeometries[i].vertices.push(
-        new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0),
+      crosshairGeometries.push(new THREE.BufferGeometry());
+
+      // prettier-ignore
+      const crosshairVertices = new Float32Array([
+        (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
+        -25 * i, -25 * (1 - i), 0,
+        25 * i, 25 * (1 - i), 0,
+        (pWidth / 2) * i, (pWidth / 2) * (1 - i), 0,
+      ]);
+
+      crosshairGeometries[i].setAttribute(
+        "position",
+        new THREE.BufferAttribute(crosshairVertices, 3),
       );
       this.crosshair[i] = new THREE.LineSegments(
         crosshairGeometries[i],
@@ -77,14 +82,16 @@ class Plane {
     }
 
     // create borders
-    const TDViewBordersGeo = new THREE.Geometry();
-    TDViewBordersGeo.vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
-    TDViewBordersGeo.vertices.push(new THREE.Vector3(-pWidth / 2, pWidth / 2, 0));
-    TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, pWidth / 2, 0));
-    TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, -pWidth / 2, 0));
-    TDViewBordersGeo.vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
+    const vertices = [];
+    vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
+    vertices.push(new THREE.Vector3(-pWidth / 2, pWidth / 2, 0));
+    vertices.push(new THREE.Vector3(pWidth / 2, pWidth / 2, 0));
+    vertices.push(new THREE.Vector3(pWidth / 2, -pWidth / 2, 0));
+    vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
+    const tdViewBordersGeo = new THREE.BufferGeometry().setFromPoints(vertices);
+
     this.TDViewBorders = new THREE.Line(
-      TDViewBordersGeo,
+      tdViewBordersGeo,
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
   }

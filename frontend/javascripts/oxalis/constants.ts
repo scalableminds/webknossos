@@ -56,7 +56,7 @@ export const enum OrthoViewsToName {
   TDView = "3D",
 }
 export type OrthoView = keyof typeof OrthoViews;
-export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, OrthoViews.TDView>;
+export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, "TDView">;
 
 export type OrthoViewMap<T> = Record<OrthoView, T>;
 export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
@@ -85,7 +85,7 @@ export const OrthoViewIndices = {
   PLANE_XZ: OrthoViewValues.indexOf("PLANE_XZ"),
   TDView: OrthoViewValues.indexOf("TDView"),
 };
-export const OrthoViewValuesWithoutTDView = [
+export const OrthoViewValuesWithoutTDView: Array<OrthoViewWithoutTD> = [
   OrthoViews.PLANE_XY,
   OrthoViews.PLANE_YZ,
   OrthoViews.PLANE_XZ,

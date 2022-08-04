@@ -212,6 +212,12 @@ export enum OverwriteModeEnum {
   OVERWRITE_EMPTY = "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
 }
 export type OverwriteMode = keyof typeof OverwriteModeEnum;
+
+export enum InterpolationModeEnum {
+  INTERPOLATE = "INTERPOLATE",
+  EXTRUDE = "EXTRUDE",
+}
+export type InterpolationMode = keyof typeof InterpolationModeEnum;
 export enum FillModeEnum {
   // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.

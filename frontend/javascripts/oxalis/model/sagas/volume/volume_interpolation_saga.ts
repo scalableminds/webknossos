@@ -7,6 +7,7 @@ import ndarray, { NdArray } from "ndarray";
 import api from "oxalis/api/internal_api";
 import {
   ContourModeEnum,
+  InterpolationModeEnum,
   OrthoViews,
   ToolsWithInterpolationCapabilities,
   Vector3,
@@ -30,19 +31,32 @@ import { OxalisState } from "oxalis/store";
 import { call } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 
-export const MAXIMUM_INTERPOLATION_DEPTH = 100;
+/*
+ * This saga is capable of doing segment interpolation between two slices.
+ * Additionally, it also provides means to do a segment extrusion (in other words,
+ * a segment is simply copied from one slice to n other slices).
+ * Since the interpolation mechanism is a super set of the extrusion, this module
+ * can do both operations and switches between them via the interpolationMode.
+ * Beware of the following differences:
+ * - for extrusion, only the segment only has to be labeled on _one_ slice (for interpolation,
+ *   two input slices are necessary)
+ * - for extrusion, the active slice (active when triggering the operation) also has to be labeled
+ *   (for interpolation, the active slice is assumed to already have the segment labeled)
+ * - for extrusion, no distance transform is necessary (since a simple copy operation is done)
+ */
 
-const justCopy = true;
+export const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
 export function getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
+  const onlyExtrude = state.userConfiguration.interpolationMode === InterpolationModeEnum.EXTRUDE;
   const volumeTracing = getActiveSegmentationTracing(state);
   let interpolationDepth = 0;
   let directionFactor = 1;
   if (!volumeTracing) {
     // Return dummy values, since the feature should be disabled, anyway
     return {
-      tooltipTitle: "Volume Interpolation",
+      tooltipTitle: "Volume Interpolation/Extrusion",
       disabledExplanation: "Only available when a volume annotation exists.",
       isDisabled: true,
       activeViewport: OrthoViews.PLANE_XY,
@@ -51,6 +65,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
       labeledZoomStep: 0,
       interpolationDepth,
       directionFactor,
+      onlyExtrude,
     };
   }
   const mostRecentLabelAction = getLastLabelAction(volumeTracing);
@@ -89,12 +104,13 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
 
     if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
       disabledExplanation = `${explanationPrefix} last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH}).`;
-    } else if (interpolationDepth < 2 && !justCopy) {
+    } else if (interpolationDepth < 2 && !onlyExtrude) {
       disabledExplanation = `${explanationPrefix} last labeled slice should be at least 2 slices away.`;
     } else {
-      tooltipAddendum = `Labels ${interpolationDepth - 1} ${pluralize(
+      const labelCount = onlyExtrude ? interpolationDepth : interpolationDepth - 1;
+      tooltipAddendum = `Labels ${labelCount} ${pluralize(
         "slice",
-        interpolationDepth - 1,
+        labelCount,
       )} along ${Dimensions.dimensionNameForIndex(thirdDim)}`;
     }
   } else {
@@ -104,9 +120,12 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
   const isPossible = disabledExplanation == null;
   tooltipAddendum = disabledExplanation || tooltipAddendum;
 
+  const tooltipMain = onlyExtrude
+    ? "Extrude current segment from last labeled until current slice (V)"
+    : "Interpolate current segment between last labeled and current slice (V)";
   const tooltipTitle = isAllowed
-    ? `Interpolate current segment between last labeled and current slice (V) – ${tooltipAddendum}`
-    : "Volume Interpolation was disabled for this annotation.";
+    ? `${tooltipMain} – ${tooltipAddendum}`
+    : "Volume Interpolation/Extrusion was disabled for this annotation.";
   const isDisabled = !(isAllowed && isPossible);
   return {
     tooltipTitle,
@@ -118,6 +137,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
     labeledZoomStep,
     interpolationDepth,
     directionFactor,
+    onlyExtrude,
   };
 }
 
@@ -254,6 +274,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     labeledZoomStep,
     interpolationDepth,
     directionFactor,
+    onlyExtrude,
   } = yield* select((state) =>
     getInterpolationInfo(state, "Could not interpolate segment because"),
   );
@@ -302,7 +323,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
-  const adaptedInterpolationRange = justCopy
+  const adaptedInterpolationRange = onlyExtrude
     ? directionFactor > 0
       ? [1, interpolationDepth + 1]
       : [0, interpolationDepth]
@@ -314,13 +335,6 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     targetOffsetW < adaptedInterpolationRange[1];
     targetOffsetW++
   ) {
-    // if (justCopy) {
-    //   if (directionFactor > 0 && targetOffsetW === adaptedInterpolationRange[0]) {
-    //     continue;
-    //   } else if (directionFactor < 0 && targetOffsetW === adaptedInterpolationRange[1] - 1) {
-    //     continue;
-    //   }
-    // }
     const interpolationLayer = yield* call(
       createVolumeLayer,
       volumeTracing,
@@ -347,7 +361,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   // Calculate lastSlice = lastSlice[...] == activeCellId
   isEqual(lastSlice, activeCellId);
 
-  if (justCopy) {
+  if (onlyExtrude) {
     if (directionFactor > 0) {
       lastSlice = firstSlice;
     } else {
@@ -362,8 +376,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
 
-  const firstSliceDists = justCopy ? firstSlice : signedDist(firstSlice);
-  const lastSliceDists = justCopy ? lastSlice : signedDist(lastSlice);
+  const firstSliceDists = onlyExtrude ? firstSlice : signedDist(firstSlice);
+  const lastSliceDists = onlyExtrude ? lastSlice : signedDist(lastSlice);
 
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
@@ -376,7 +390,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
       ) {
         const k = targetOffsetW / interpolationDepth;
         const weightedAverage = firstVal * (1 - k) + lastVal * k;
-        const shouldDraw = justCopy ? weightedAverage > 0 : weightedAverage < 0;
+        const shouldDraw = onlyExtrude ? weightedAverage > 0 : weightedAverage < 0;
         if (shouldDraw) {
           const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetW];
           voxelBuffer2D.setValue(u, v, 1);

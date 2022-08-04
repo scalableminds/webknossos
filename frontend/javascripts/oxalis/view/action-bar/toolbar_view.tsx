@@ -1,5 +1,5 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent } from "antd";
-import { ExportOutlined } from "@ant-design/icons";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, Menu } from "antd";
+import { CopyOutlined, DownOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useState } from "react";
 
@@ -44,6 +44,8 @@ import {
   AnnotationTool,
   OverwriteMode,
   ToolsWithInterpolationCapabilities,
+  InterpolationModeEnum,
+  InterpolationMode,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
@@ -51,6 +53,7 @@ import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { updateUserConfiguration } from "admin/admin_rest_api";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -233,10 +236,18 @@ function OverwriteModeSwitch({
   );
 }
 
+const INTERPOLATION_ICON = {
+  [InterpolationModeEnum.INTERPOLATE]: <i className="fas fa-align-center fa-rotate-90" />,
+  [InterpolationModeEnum.EXTRUDE]: <i className="fas fa-align-justify fa-rotate-90" />,
+};
 function VolumeInterpolationButton() {
   const dispatch = useDispatch();
+  const interpolationMode = useSelector(
+    (state: OxalisState) => state.userConfiguration.interpolationMode,
+  );
 
-  const onClick = () => {
+  const onInterpolateClick = (e: React.MouseEvent<HTMLButtonElement> | null) => {
+    e?.currentTarget.blur();
     dispatch(interpolateSegmentationLayerAction());
   };
 
@@ -244,14 +255,42 @@ function VolumeInterpolationButton() {
     getInterpolationInfo(state, "Not available since"),
   );
 
-  return (
-    <ButtonComponent
-      disabled={isDisabled}
-      title={tooltipTitle}
-      icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
-      onClick={onClick}
-      style={{ marginLeft: 12 }}
+  const menu = (
+    <Menu
+      onClick={(e) => {
+        dispatch(updateUserSettingAction("interpolationMode", e.key as InterpolationMode));
+        onInterpolateClick(null);
+      }}
+      items={[
+        {
+          label: "Interpolate current segment",
+          key: InterpolationModeEnum.INTERPOLATE,
+          icon: <i className="fas fa-align-center fa-rotate-90" />,
+        },
+        {
+          label: "Extrude current segment",
+          key: InterpolationModeEnum.EXTRUDE,
+          icon: <i className="fas fa-align-justify fa-rotate-90" />,
+        },
+      ]}
     />
+  );
+
+  return (
+    <Dropdown.Button
+      icon={<DownOutlined />}
+      overlay={menu}
+      onClick={onInterpolateClick}
+      style={{ padding: "0 5px 0 6px" }}
+      buttonsRender={([leftButton, rightButton]) => [
+        <Tooltip title={tooltipTitle} key="leftButton">
+          {React.cloneElement(leftButton as React.ReactElement<any, string>, { isDisabled })}
+        </Tooltip>,
+        rightButton,
+      ]}
+    >
+      {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
+    </Dropdown.Button>
   );
 }
 

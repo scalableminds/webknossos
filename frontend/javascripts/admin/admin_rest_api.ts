@@ -791,10 +791,10 @@ export function createExplorational(
     layers = [
       {
         typ: "Volume",
-        name: "Volume",
+        name: fallbackLayerName || "Volume",
         fallbackLayerName,
         resolutionRestrictions,
-      }, // { typ: "Volume", name: "Volume 2" },
+      },
     ];
   } else {
     layers = [
@@ -804,10 +804,10 @@ export function createExplorational(
       },
       {
         typ: "Volume",
-        name: "Volume",
+        name: fallbackLayerName || "Volume",
         fallbackLayerName,
         resolutionRestrictions,
-      }, // { typ: "Volume", name: "Volume 2" },
+      },
     ];
   }
 

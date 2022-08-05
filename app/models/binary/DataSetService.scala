@@ -26,7 +26,6 @@ import play.api.i18n.MessagesProvider
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
@@ -49,7 +48,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   val unreportedStatus = "No longer available on datastore."
   val notYetUploadedStatus = "Not yet fully uploaded."
   val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
-  val initialTeamsTimeout: FiniteDuration = 1 day
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")

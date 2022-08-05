@@ -264,12 +264,12 @@ function VolumeInterpolationButton() {
         {
           label: "Interpolate current segment",
           key: InterpolationModeEnum.INTERPOLATE,
-          icon: <i className="fas fa-align-center fa-rotate-90" />,
+          icon: INTERPOLATION_ICON[InterpolationModeEnum.INTERPOLATE],
         },
         {
           label: "Extrude current segment",
           key: InterpolationModeEnum.EXTRUDE,
-          icon: <i className="fas fa-align-justify fa-rotate-90" />,
+          icon: INTERPOLATION_ICON[InterpolationModeEnum.EXTRUDE],
         },
       ]}
     />

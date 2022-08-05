@@ -39,7 +39,7 @@ import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } 
  * Since the interpolation mechanism is a super set of the extrusion, this module
  * can do both operations and switches between them via the interpolationMode.
  * Beware of the following differences:
- * - for extrusion, only the segment only has to be labeled on _one_ slice (for interpolation,
+ * - for extrusion, the segment only has to be labeled on _one_ slice (for interpolation,
  *   two input slices are necessary)
  * - for extrusion, the active slice (active when triggering the operation) also has to be labeled
  *   (for interpolation, the active slice is assumed to already have the segment labeled)
@@ -382,6 +382,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
 
+  // In the extrusion case, we don't need any distance transforms. The binary
+  // masks are enough to decide whether a voxel needs to be written.
   const firstSliceDists = onlyExtrude ? firstSlice : signedDist(firstSlice);
   const lastSliceDists = onlyExtrude ? lastSlice : signedDist(lastSlice);
 

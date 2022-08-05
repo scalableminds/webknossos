@@ -65,13 +65,14 @@ export const getRgbaAtXYIndex: ShaderModule = {
 
         <% if (dataTextureCountPerLayer === 1) { %>
             // Don't use if-else when there is only one data texture anyway
-            return texture2D(<%= name + "_textures" %>[0], accessPoint).rgba;
+
+            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
         <% } else { %>
           if (textureIdx == 0.0) {
-            return texture2D(<%= name + "_textures" %>[0], accessPoint).rgba;
+            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
           } <% _.range(1, dataTextureCountPerLayer).forEach(textureIndex => { %>
           else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            return texture2D(<%= name + "_textures" %>[<%= textureIndex %>], accessPoint).rgba;
+            return texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba;
           }
           <% }) %>
           return vec4(0.5, 0.0, 0.0, 0.0);
@@ -210,6 +211,20 @@ export const getColorForCoords: ShaderModule = {
         x,
         y
       );
+
+      // vec4 bucketColor = texelFetch(someUniformSampler, ivec2(pixelX, pixelY), intMipLevel);
+
+      if (packingDegree == 0.5) {
+        vec4 bucketColor2 = getRgbaAtXYIndex(
+          layerIndex,
+          textureIndex,
+          d_texture_width,
+          x + 1.0,
+          y
+        );
+
+        return bucketColor + bucketColor2;
+      }
 
       if (packingDegree == 1.0) {
         return max(bucketColor, 0.0);

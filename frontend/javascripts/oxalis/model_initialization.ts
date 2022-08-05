@@ -404,7 +404,7 @@ function initializeDataset(
     const { elementClass } = dataLayer;
 
     if (dataLayer.category === "segmentation") {
-      const adjustedElementClass = elementClass === "uint64" ? "uint32" : elementClass;
+      const adjustedElementClass = elementClass; //  === "uint64" ? "uint32" : elementClass;
       return {
         ...dataLayer,
         originalElementClass: elementClass,

@@ -27,7 +27,12 @@ export const enum BucketStateEnum {
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
-export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
+export type BucketDataArray =
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | Float32Array
+  | BigUint64Array;
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
   visualizeBucketsOnGPU: false,
@@ -80,7 +85,13 @@ export class NullBucket {
 export const getConstructorForElementClass = (
   type: ElementClass,
 ): [
-  Uint8ArrayConstructor | Uint16ArrayConstructor | Uint32ArrayConstructor | Float32ArrayConstructor,
+  (
+    | Uint8ArrayConstructor
+    | Uint16ArrayConstructor
+    | Uint32ArrayConstructor
+    | Float32ArrayConstructor
+    | BigUint64ArrayConstructor
+  ),
   number,
 ] => {
   switch (type) {
@@ -102,6 +113,10 @@ export const getConstructorForElementClass = (
 
     case "float":
       return [Float32Array, 1];
+
+    case "int64":
+    case "uint64":
+      return [BigUint64Array, 1];
 
     default:
       throw new Error(`This type is not supported by the DataBucket class: ${type}`);

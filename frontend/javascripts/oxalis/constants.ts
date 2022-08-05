@@ -307,6 +307,7 @@ const Constants = {
 };
 export default Constants;
 
+export type NumberOrBig = number | bigint;
 export type TypedArray =
   | Int8Array
   | Uint8Array
@@ -316,4 +317,5 @@ export type TypedArray =
   | Int32Array
   | Uint32Array
   | Float32Array
-  | Float64Array;
+  | Float64Array
+  | BigUint64Array;

@@ -41,6 +41,7 @@ import type {
   AnnotationTool,
   MappingStatus,
   OrthoViewWithoutTD,
+  NumberOrBig,
 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -503,7 +504,7 @@ export type OxalisState = {
   readonly localSegmentationData: Record<
     string,
     {
-      readonly isosurfaces: Record<number, IsosurfaceInformation>;
+      readonly isosurfaces: Record<NumberOrBig, IsosurfaceInformation>;
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
       readonly currentMeshFile: APIMeshFile | null | undefined;
       // Note that for a volume tracing, this information should be stored

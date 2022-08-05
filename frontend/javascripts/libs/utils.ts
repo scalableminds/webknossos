@@ -732,7 +732,8 @@ export function waitForElementWithId(elementId: string): Promise<any> {
 
   return new Promise(tryToResolve);
 }
-export function convertDecToBase256(num: number): Vector4 {
+export function convertDecToBase256(_num: number | bigint): Vector4 {
+  const num = Number(_num);
   const divMod = (n: number) => [Math.floor(n / 256), n % 256];
 
   let tmp = num;

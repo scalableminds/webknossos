@@ -1,7 +1,7 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { takeEvery, put, call, all } from "typed-redux-saga";
 import { select, take } from "oxalis/model/sagas/effect-generators";
-import { AnnotationToolEnum, MappingStatusEnum, Vector3 } from "oxalis/constants";
+import { AnnotationToolEnum, MappingStatusEnum, NumberOrBig, Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 import {
   DeleteEdgeAction,
@@ -79,7 +79,7 @@ function proofreadSegmentProximityNm(): number {
   // @ts-ignore
   return window.__proofreadProximityNm != null ? window.__proofreadProximityNm : 0;
 }
-let oldSegmentIdsInProximity: number[] | null = null;
+let oldSegmentIdsInProximity: NumberOrBig[] | null = null;
 
 function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
   const mappingInfo = yield* select((state) =>

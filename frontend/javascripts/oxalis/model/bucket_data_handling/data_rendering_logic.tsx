@@ -109,6 +109,7 @@ export function getPackingDegree(byteCount: number, elementClass: ElementClass) 
   // Float textures can hold a float per channel, adjust the packing degree accordingly
   if (byteCount === 1 || elementClass === "float") return 4;
   if (byteCount === 2) return 2;
+  if (byteCount === 8) return 0.5;
   return 1;
 }
 export function getChannelCount(

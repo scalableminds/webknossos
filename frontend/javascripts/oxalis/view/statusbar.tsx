@@ -242,14 +242,14 @@ function ShortcutsInfo() {
 }
 
 function getCellInfo(globalMousePosition: Vector3 | null | undefined) {
-  const getSegmentIdString = () => {
+  const getSegmentIdString = (): string => {
     const hoveredCellInfo = Model.getHoveredCellId(globalMousePosition);
 
     if (!hoveredCellInfo) {
       return "-";
     }
 
-    return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : hoveredCellInfo.id;
+    return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : `${hoveredCellInfo.id}`;
   };
 
   return <span className="info-element">Segment {getSegmentIdString()}</span>;

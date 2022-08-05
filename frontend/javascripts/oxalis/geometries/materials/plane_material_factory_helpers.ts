@@ -7,6 +7,7 @@ export const channelCountToFormat = {
   // from RGB to RGBA before uploading the data to the GPU.
   "3": THREE.RGBAFormat,
   "4": THREE.RGBAFormat,
+  "8": THREE.RGBAFormat,
 };
 // This function has to be in its own file as non-resolvable cycles are created otherwise
 export function createUpdatableTexture(

@@ -13,7 +13,7 @@ import type {
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
 } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import type { NumberOrBig, Vector3 } from "oxalis/constants";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
@@ -285,7 +285,7 @@ export const importIsosurfaceFromStlAction = (layerName: string, buffer: ArrayBu
     buffer,
   } as const);
 
-export const removeIsosurfaceAction = (layerName: string, cellId: number) =>
+export const removeIsosurfaceAction = (layerName: string, cellId: NumberOrBig) =>
   ({
     type: "REMOVE_ISOSURFACE",
     layerName,

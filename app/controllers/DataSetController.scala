@@ -150,23 +150,25 @@ class DataSetController @Inject()(userService: UserService,
       Filter(
         "isEditable",
         (value: Boolean, el: DataSet) =>
-          for { isEditable <- dataSetService.isEditableBy(el, request.identity) }
-            yield isEditable && value || !isEditable && !value
+          for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield
+            isEditable && value || !isEditable && !value
       ),
       Filter(
-        "organizationName", (value: String, el: DataSet) =>
-          for {organization <- organizationDAO.findOneByName(value)(GlobalAccessContext) ?~> "organization.notFound"}
-            yield el._organization == organization._id
+        "organizationName",
+        (value: String, el: DataSet) =>
+          for { organization <- organizationDAO.findOneByName(value)(GlobalAccessContext) ?~> "organization.notFound" } yield
+            el._organization == organization._id
       ),
       Filter(
-        "onlyMyOrganization", (value: Boolean, el: DataSet) =>
-          for {organizationId <- request.identity.map(_._organization) ?~> "organization.notFound"}
-            yield !value || el._organization == organizationId
+        "onlyMyOrganization",
+        (value: Boolean, el: DataSet) =>
+          for { organizationId <- request.identity.map(_._organization) ?~> "organization.notFound" } yield
+            !value || el._organization == organizationId
       ),
       Filter(
-        "uploaderId", (value: String, el: DataSet) =>
-          for {uploaderIdValidated <- ObjectId.fromString(value)}
-            yield el._uploader.contains(uploaderIdValidated)
+        "uploaderId",
+        (value: String, el: DataSet) =>
+          for { uploaderIdValidated <- ObjectId.fromString(value) } yield el._uploader.contains(uploaderIdValidated)
       )
     ) { filter =>
       for {

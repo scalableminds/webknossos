@@ -202,7 +202,11 @@ class PlaneMaterialFactory {
         type: "v3",
         value: new THREE.Vector3(...addressSpaceDimensions),
       },
-      hoveredSegmentId: {
+      hoveredSegmentIdLow: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      hoveredSegmentIdHigh: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
@@ -513,9 +517,19 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
-          (hoveredSegmentId) => {
-            const [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentId);
-            this.uniforms.hoveredSegmentId.value.set(r, g, b, a);
+          (_hoveredSegmentId) => {
+            const hoveredSegmentId = BigInt(_hoveredSegmentId);
+            {
+              const hoveredSegmentIdLow = Number((2n ** 32n - 1n) & hoveredSegmentId);
+              let [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentIdLow);
+              this.uniforms.hoveredSegmentIdLow.value.set(r, g, b, a);
+            }
+
+            {
+              const hoveredSegmentIdHigh = Number(hoveredSegmentId >> 32n);
+              let [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentIdHigh);
+              this.uniforms.hoveredSegmentIdHigh.value.set(r, g, b, a);
+            }
           },
         ),
       );

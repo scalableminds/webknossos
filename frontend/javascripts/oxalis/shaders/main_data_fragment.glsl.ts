@@ -85,7 +85,8 @@ uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float planeID;
 uniform vec3 addressSpaceDimensions;
-uniform vec4 hoveredSegmentId;
+uniform vec4 hoveredSegmentIdLow;
+uniform vec4 hoveredSegmentIdHigh;
 
 varying vec4 worldCoord;
 varying vec4 modelCoord;
@@ -133,15 +134,17 @@ void main() {
   vec3 data_color = vec3(0.0);
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    vec4 <%= segmentationName%>_id = vec4(0.);
-    vec4 <%= segmentationName%>_cellIdUnderMouse = vec4(0.);
+    vec4 <%= segmentationName%>_id_low = vec4(0.);
+    vec4 <%= segmentationName%>_id_high = vec4(0.);
+    // vec4 <%= segmentationName%>_cellIdUnderMouse = vec4(0.);
     float <%= segmentationName%>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
 
     if (<%= segmentationName%>_effective_alpha > 0.) {
-      <%= segmentationName%>_id = getSegmentationId_<%= segmentationName%>(worldCoordUVW);
+      vec4[2] segmentationId = getSegmentationId_<%= segmentationName%>(worldCoordUVW);
+      <%= segmentationName%>_id_low = segmentationId[1];
+      <%= segmentationName%>_id_high = segmentationId[0];
 
-      vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
-      <%= segmentationName%>_cellIdUnderMouse = hoveredSegmentId;
+      // <%= segmentationName%>_cellIdUnderMouse = hoveredSegmentId;
     }
 
   <% }) %>
@@ -190,14 +193,21 @@ void main() {
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
      // Color map (<= to fight rounding mistakes)
-     if ( length(<%= segmentationName%>_id) > 0.1 ) {
+     if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
        // Increase cell opacity when cell is hovered
+       // float hoverAlphaIncrement =
+       //   // Hover cell only if it's the active one, if the feature is enabled
+       //   // and if segmentation opacity is not zero
+       //   <%= segmentationName%>_cellIdUnderMouse == <%= segmentationName%>_id && <%= segmentationName%>_alpha > 0.0
+       //     ? 0.2 : 0.0;
+
        float hoverAlphaIncrement =
          // Hover cell only if it's the active one, if the feature is enabled
          // and if segmentation opacity is not zero
-         <%= segmentationName%>_cellIdUnderMouse == <%= segmentationName%>_id && <%= segmentationName%>_alpha > 0.0
+         hoveredSegmentIdLow == <%= segmentationName%>_id_low && hoveredSegmentIdHigh == <%= segmentationName%>_id_high && <%= segmentationName%>_alpha > 0.0
            ? 0.2 : 0.0;
-       gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(<%= segmentationName%>_id), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
+
+       gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(<%= segmentationName%>_id_low + <%= segmentationName%>_id_high), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
      }
 
      vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);

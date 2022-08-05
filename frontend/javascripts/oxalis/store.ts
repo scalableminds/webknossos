@@ -349,7 +349,7 @@ export type TemporaryConfiguration = {
   readonly flightmodeRecording: boolean;
   readonly controlMode: ControlMode;
   readonly mousePosition: Vector2 | null | undefined;
-  readonly hoveredSegmentId: number;
+  readonly hoveredSegmentId: NumberOrBig;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly isMergerModeEnabled: boolean;
   readonly gpuSetup: {

@@ -181,15 +181,18 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         case _                => Fox.successful(false)
       }
 
-    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(UserAccessAnswer(granted = true))
-    for {
-      annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
-      restrictions <- annotationInformationProvider.restrictionsFor(
-        AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
-      allowed <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
-    } yield {
-      if (allowed) UserAccessAnswer(granted = true)
-      else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
+    if (tracingId == TracingIds.dummyTracingId)
+      Fox.successful(UserAccessAnswer(granted = true))
+    else {
+      for {
+        annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+        restrictions <- annotationInformationProvider.restrictionsFor(
+          AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
+        allowed <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+      } yield {
+        if (allowed) UserAccessAnswer(granted = true)
+        else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
+      }
     }
   }
 

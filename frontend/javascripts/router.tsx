@@ -597,11 +597,12 @@ class ReactRouter extends React.Component<Props> {
                 render={this.tracingViewMode}
               />
               <Route
-                path="/publication/:id"
+                path="/publications/:id"
                 render={({ match }: ContextRouter) => (
                   <PublicationDetailView publicationId={match.params.id || ""} />
                 )}
               />
+              <Redirect from="/publication/:id" to="/publications/:id" />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
               <Route path="/workflows" component={RedirectToWorkflowViewer} />

@@ -66,16 +66,18 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
     rpc(uri).silent.withBasicAuth(conf.user, conf.password).post(tagBody)
   }
 
-  def tagsForMultiUser(multiUser: MultiUser)(implicit ec: ExecutionContext): Fox[List[MailchimpTag]] = {
-    if (conf.host.isEmpty) return Fox.successful(List.empty)
-    val emailMd5 = SCrypt.md5(multiUser.email)
-    val uri = s"${conf.host}/lists/${conf.listId}/members/$emailMd5/tags"
-    for {
-      response: MailchimpTagsResponse <- rpc(uri).silent
-        .withBasicAuth(conf.user, conf.password)
-        .getWithJsonResponse[MailchimpTagsResponse]
-    } yield response.tags.flatMap(t => MailchimpTag.fromString(t.name))
-  }
+  def tagsForMultiUser(multiUser: MultiUser)(implicit ec: ExecutionContext): Fox[List[MailchimpTag]] =
+    if (conf.host.isEmpty)
+      Fox.successful(List.empty)
+    else {
+      val emailMd5 = SCrypt.md5(multiUser.email)
+      val uri = s"${conf.host}/lists/${conf.listId}/members/$emailMd5/tags"
+      for {
+        response: MailchimpTagsResponse <- rpc(uri).silent
+          .withBasicAuth(conf.user, conf.password)
+          .getWithJsonResponse[MailchimpTagsResponse]
+      } yield response.tags.flatMap(t => MailchimpTag.fromString(t.name))
+    }
 
 }
 

@@ -1,16 +1,26 @@
-import React, { memo, useContext, useState, useEffect } from "react";
-import _ from "lodash";
+import React, { memo, useState, useEffect } from "react";
 import { List, Input, Spin } from "antd";
-import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_flow_types";
+import { APIPublication } from "types/api_flow_types";
 import PublicationCard from "dashboard/publication_card";
-import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
+import { getPublications } from "admin/admin_rest_api";
+import { handleGenericError } from "libs/error_handling";
 const { Search } = Input;
 export function PublicationViewWithHeader() {
-  const context = useContext(DatasetCacheContext);
+  const [isLoading, setIsLoading] = useState(false);
+  const [publications, setPublications] = useState<Array<APIPublication>>([]);
   const [searchQuery, setSearchQuery] = useState("");
   useEffect(() => {
-    context.fetchDatasets();
+    (async () => {
+      try {
+        setIsLoading(true);
+        setPublications(await getPublications());
+      } catch (error) {
+        handleGenericError(error as Error);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
   function handleSearch(event: React.SyntheticEvent<HTMLInputElement>) {
@@ -32,14 +42,14 @@ export function PublicationViewWithHeader() {
   );
   return (
     <div>
-      <div className="pull-right">{context.datasets.length > 0 && search}</div>
+      <div className="pull-right">{publications.length > 0 && search}</div>
       <div
         className="clearfix"
         style={{
           margin: "20px 0px",
         }}
       />
-      <Spin size="large" spinning={context.isLoading}>
+      <Spin size="large" spinning={isLoading}>
         <div
           style={{
             minHeight: "100px",
@@ -47,59 +57,45 @@ export function PublicationViewWithHeader() {
             paddingRight: 10,
           }}
         >
-          <PublicationView datasets={context.datasets} searchQuery={searchQuery} />
+          <PublicationView publications={publications} searchQuery={searchQuery} />
         </div>
       </Spin>
     </div>
   );
 }
 type Props = {
-  datasets: Array<APIMaybeUnimportedDataset>;
+  publications: Array<APIPublication>;
   searchQuery: string;
 };
 
 function PublicationView(props: Props) {
-  const activeDatasets: APIDataset[] = props.datasets.filter((ds) => ds.isActive) as APIDataset[];
-  const filteredDatasets = Utils.filterWithSearchQueryAND(
-    activeDatasets,
+  const filteredPublications = Utils.filterWithSearchQueryAND(
+    props.publications,
     [
-      (model) => (model.publication != null ? model.publication.description : ""),
-      (model) => (model.publication != null ? model.publication.title : ""),
-      "name",
-      "description",
-      "details",
+      (model) => model.description,
+      (model) => model.title,
+      (model) =>
+        model.datasets.flatMap((dataset) => [dataset.name, dataset.description, dataset.details]),
     ],
     props.searchQuery,
+  ).sort(
+    Utils.compareBy(
+      [] as Array<APIPublication>,
+      (publication) => publication.publicationDate,
+      false,
+    ),
   );
-
-  const datasetsByPublication = _.chain(filteredDatasets)
-    .filter((dataset) => dataset.publication != null)
-    .groupBy("publication.id")
-    .values()
-    .sort(
-      // Sort publication groups by publication creation date
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Comparator<APIDataset>' is not a... Remove this comment to see the full error message
-      Utils.compareBy(
-        [] as Array<APIDataset>,
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-        (datasets) => datasets[0].publication.publicationDate,
-        false,
-      ),
-    );
 
   return (
     <List
-      // @ts-expect-error ts-migrate(2740) FIXME: Type 'CollectionChain<APIDataset[]>' is missing th... Remove this comment to see the full error message
-      dataSource={datasetsByPublication}
+      dataSource={filteredPublications}
       locale={{
         emptyText: "No featured publications.",
       }}
       className="antd-no-border-list"
-      renderItem={(datasets) => (
-        // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-        <List.Item key={datasets[0].publication.id}>
-          {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'unknown' is not assignable to type 'APIDatas... Remove this comment to see the full error message */}
-          <PublicationCard className="dataset-panel" datasets={datasets} showDetailedLink />
+      renderItem={(publication) => (
+        <List.Item key={publication.id}>
+          <PublicationCard publication={publication} showDetailedLink />
         </List.Item>
       )}
     />

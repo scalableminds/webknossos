@@ -36,7 +36,7 @@ function LoginView({ history, redirect }: Props) {
       }}
       align="middle"
     >
-      <Col span={8}>
+      <Col xs={24} sm={16} md={8}>
         <h3>Login</h3>
         <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
       </Col>

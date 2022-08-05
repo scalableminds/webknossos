@@ -8,7 +8,7 @@ import constants, { ViewModeValuesIndices, OrthoViewIndices } from "oxalis/const
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
-import { inverse, round, div, isNan, transDim, isFlightMode } from "./utils.glsl";
+import { inverse, div, isNan, transDim, isFlightMode } from "./utils.glsl";
 import compileShader from "./shader_module_system";
 type Params = {
   colorLayerNames: string[];
@@ -105,7 +105,6 @@ const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 ${compileShader(
   inverse,
   div,
-  round,
   isNan,
   isFlightMode,
   transDim,
@@ -204,6 +203,7 @@ void main() {
      vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
      <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellId);
      gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
+     gl_FragColor.a = 1.0;
   <% }) %>
   <% } %>
 }

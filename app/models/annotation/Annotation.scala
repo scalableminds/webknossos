@@ -344,6 +344,15 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       parsed <- parseAll(r)
     } yield parsed
 
+  def findAllByPublication(publicationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _publication = $publicationId and #$accessQuery"
+          .as[AnnotationsRow]).map(_.toList)
+      parsed <- parseAll(r)
+    } yield parsed
+
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationId <- annotationLayerDAO.findAnnotationIdByTracingId(tracingId)

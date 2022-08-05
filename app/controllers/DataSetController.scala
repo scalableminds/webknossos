@@ -150,9 +150,23 @@ class DataSetController @Inject()(userService: UserService,
       Filter(
         "isEditable",
         (value: Boolean, el: DataSet) =>
-          for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield {
-            isEditable && value || !isEditable && !value
-        }
+          for { isEditable <- dataSetService.isEditableBy(el, request.identity) }
+            yield isEditable && value || !isEditable && !value
+      ),
+      Filter(
+        "organizationName", (value: String, el: DataSet) =>
+          for {organization <- organizationDAO.findOneByName(value)(GlobalAccessContext) ?~> "organization.notFound"}
+            yield el._organization == organization._id
+      ),
+      Filter(
+        "onlyMyOrganization", (value: Boolean, el: DataSet) =>
+          for {organizationId <- request.identity.map(_._organization) ?~> "organization.notFound"}
+            yield !value || el._organization == organizationId
+      ),
+      Filter(
+        "uploaderId", (value: String, el: DataSet) =>
+          for {uploaderIdValidated <- ObjectId.fromString(value)}
+            yield el._uploader.contains(uploaderIdValidated)
       )
     ) { filter =>
       for {
@@ -335,7 +349,7 @@ Expects:
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyAs[List[String]] { teams =>
         for {
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
+          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
           teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
@@ -362,7 +376,9 @@ Expects:
                       @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        token <- dataSetService.getSharingToken(dataSetName, request.identity._organization)
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        token <- dataSetService.getSharingToken(dataSetName, organization._id)
       } yield Ok(Json.obj("sharingToken" -> token.trim))
     }
 
@@ -370,7 +386,9 @@ Expects:
   def deleteSharingToken(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        _ <- dataSetDAO.updateSharingTokenByName(dataSetName, request.identity._organization, None)
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        _ <- dataSetDAO.updateSharingTokenByName(dataSetName, organization._id, None)
       } yield Ok
   }
 
@@ -388,8 +406,10 @@ Expects:
                      @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
         _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
-        _ <- dataSetService.assertNewDataSetName(dataSetName, request.identity._organization) ?~> "dataSet.name.alreadyTaken"
+        _ <- dataSetService.assertNewDataSetName(dataSetName, organization._id) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
     }
 

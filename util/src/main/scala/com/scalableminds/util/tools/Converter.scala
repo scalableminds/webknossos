@@ -10,6 +10,10 @@ object DefaultConverters {
       }
   }
 
+  implicit object StringToString extends Converter[String, String] {
+    def convert(s: String): Option[String] = Some(s)
+  }
+
   implicit object StringToInt extends Converter[String, Int] {
     def convert(s: String): Option[Int] =
       try {

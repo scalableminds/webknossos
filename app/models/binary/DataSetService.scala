@@ -15,16 +15,16 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
+import models.job.WorkerDAO
+import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security.CompactRandomIDGenerator
+import play.api.i18n.MessagesProvider
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
-import javax.inject.Inject
-import models.job.WorkerDAO
-import models.organization.{Organization, OrganizationDAO}
-import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -310,6 +310,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         } yield
           (user.isAdminOf(dataSet._organization)
             || user.isDatasetManager
+            || dataSet._uploader.contains(user._id)
             || teamManagerMemberships.map(_.teamId).intersect(dataSetAllowedTeams).nonEmpty)
       case _ => Fox.successful(false)
     }
@@ -319,11 +320,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext,
                                                              m: MessagesProvider): Fox[Unit] =
     for {
-      now <- Fox.successful(System.currentTimeMillis())
-      _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeout.toMillis) ?~> Messages(
-        "dataset.initialTeams.timeout",
-        now,
-        dataSet.created)
       previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
       userTeams <- teamDAO.findAllEditable

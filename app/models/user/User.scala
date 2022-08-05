@@ -130,7 +130,6 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r <- run(sql"""select #${columnsWithPrefix("u.")}
                          from (select #$columns from #$existingCollectionName where #$accessQuery) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
-                               and not u.isUnlisted
                                and not u.isDeactivated
                          order by _id""".as[UsersRow])
         parsed <- parseAll(r)

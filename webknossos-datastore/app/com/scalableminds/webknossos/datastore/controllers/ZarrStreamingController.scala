@@ -212,7 +212,8 @@ class ZarrStreamingController @Inject()(
           ),
           DataServiceRequestSettings(halfByte = false)
         )
-        (data, _) <- binaryDataService.handleDataRequests(List(request))
+        (data, notFoundIndices) <- binaryDataService.handleDataRequests(List(request))
+        _ <- bool2Fox(notFoundIndices.size == 0) ~> "zarr.chunkNotFound" ~> 404
       } yield Ok(data)
     }
   }

@@ -469,8 +469,8 @@ Expects:
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
         for {
-          dataSource <- bool2Fox(dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).isEmpty) ?~> Messages(
-            "dataSource.alreadyPresent") ~> 404
+          _ <- bool2Fox(dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).isEmpty) ?~> Messages(
+            "dataSource.alreadyPresent")
           _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(dataSetName, organizationName)),
                                                   expectExisting = false)
         } yield Ok

@@ -161,6 +161,7 @@ class DataSourceService @Inject()(
       dataSourcePath = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath))
+      _ <- Fox.runIf(!expectExisting)(bool2Fox(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
       _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath)) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)

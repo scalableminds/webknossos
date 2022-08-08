@@ -466,7 +466,7 @@ export class DataBucket {
 
   applyVoxelMap(
     voxelMap: Uint8Array,
-    cellId: number,
+    segmentId: number,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
     sliceCount: number,
     thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
@@ -485,7 +485,7 @@ export class DataBucket {
         this._applyVoxelMapInPlace(
           _data,
           voxelMap,
-          cellId,
+          segmentId,
           get3DAddress,
           sliceCount,
           thirdDimensionIndex,
@@ -498,7 +498,7 @@ export class DataBucket {
     this._applyVoxelMapInPlace(
       data,
       voxelMap,
-      cellId,
+      segmentId,
       get3DAddress,
       sliceCount,
       thirdDimensionIndex,
@@ -510,7 +510,7 @@ export class DataBucket {
   _applyVoxelMapInPlace(
     data: BucketDataArray,
     voxelMap: Uint8Array,
-    cellId: number,
+    uncastSegmentId: number,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
     sliceCount: number,
     thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
@@ -519,6 +519,8 @@ export class DataBucket {
     overwritableValue: number = 0,
   ) {
     const out = new Float32Array(3);
+
+    const segmentId = data instanceof BigUint64Array ? BigInt(uncastSegmentId) : uncastSegmentId;
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
@@ -532,7 +534,7 @@ export class DataBucket {
           const currentSegmentId = data[voxelAddress];
 
           if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
-            data[voxelAddress] = cellId;
+            data[voxelAddress] = segmentId;
           }
         }
       }

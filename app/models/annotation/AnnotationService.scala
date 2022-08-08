@@ -1,7 +1,6 @@
 package models.annotation
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
-
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
@@ -31,6 +30,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
+
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
@@ -98,7 +98,8 @@ class AnnotationService @Inject()(
     temporaryFileCreator: TemporaryFileCreator,
     meshDAO: MeshDAO,
     meshService: MeshService,
-    sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext, val materializer: Materializer)
+    sharedAnnotationsDAO: SharedAnnotationsDAO
+)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
     with ProtoGeometryImplicits
@@ -776,7 +777,7 @@ class AnnotationService @Inject()(
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
-      userJson <- userJsonForAnnotation(annotation._user, requestingUser)
+      userJson <- userJsonForAnnotation(annotation._user)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
         restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)),
@@ -789,6 +790,8 @@ class AnnotationService @Inject()(
       teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_))
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+      contributors <- userDAO.findContributorsForAnnotation(annotation._id)
+      contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, Some(c)))
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -814,22 +817,39 @@ class AnnotationService @Inject()(
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "user" -> userJson,
         "owner" -> userJson,
-        "meshes" -> meshesJs
+        "meshes" -> meshesJs,
+        "contributors" -> contributorsJs,
+        "othersMayEdit" -> annotation.othersMayEdit
       )
     }
   }
 
-  private def userJsonForAnnotation(userId: ObjectId, requestingUser: Option[User]): Fox[Option[JsObject]] =
+  def writesWithDataset(annotation: Annotation): Fox[JsObject] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      tracingStore <- tracingStoreDAO.findFirst
+      tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+      dataSetJs <- dataSetService.publicWrites(dataSet, None, None, None)
+    } yield
+      Json.obj(
+        "id" -> annotation._id.id,
+        "name" -> annotation.name,
+        "description" -> annotation.description,
+        "typ" -> annotation.typ,
+        "tracingStore" -> tracingStoreJs,
+        "dataSet" -> dataSetJs
+      )
+  }
+
+  private def userJsonForAnnotation(userId: ObjectId, userOpt: Option[User] = None): Fox[Option[JsObject]] =
     if (userId == ObjectId.dummyId) {
       Fox.successful(None)
     } else {
       for {
-        user <- userService.findOneById(userId, useCache = true)(GlobalAccessContext)
-        isTeamManagerOrAdminOfOwner <- Fox.runOptional(requestingUser)(requester =>
-          userService.isTeamManagerOrAdminOf(requester, user))
-        userJson <- if (isTeamManagerOrAdminOfOwner.getOrElse(false)) userService.compactWrites(user).map(Some(_))
-        else Fox.successful(None)
-      } yield userJson
+        user <- Fox.fillOption(userOpt)(userService.findOneById(userId, useCache = true)(GlobalAccessContext))
+        userJson <- userService.compactWrites(user)
+      } yield Some(userJson)
     }
 
   //for Explorative Annotations list
@@ -863,7 +883,8 @@ class AnnotationService @Inject()(
         "tracingTime" -> annotation.tracingTime,
         "teams" -> teamsJson,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "owner" -> userJson
+        "owner" -> userJson,
+        "othersMayEdit" -> annotation.othersMayEdit
       )
     }
   }

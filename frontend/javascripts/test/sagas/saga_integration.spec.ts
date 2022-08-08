@@ -10,6 +10,9 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import dummyUser from "test/fixtures/dummy_user";
+import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 
 const {
   createTreeMapFromTreeArray,
@@ -25,9 +28,16 @@ test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
+  Store.dispatch(setActiveUserAction(dummyUser));
   await __setupOxalis(t, "task");
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
+});
+test.afterEach(async (t) => {
+  // Saving after each test and checking that the root saga didn't crash,
+  // ensures that each test is cleanly exited. Without it weird output can
+  // occur (e.g., a promise gets resolved which interferes with the next test).
+  t.false(hasRootSagaCrashed());
 });
 test.serial(
   "watchTreeNames saga should rename empty trees in tasks and these updates should be persisted",

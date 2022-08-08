@@ -25,12 +25,12 @@ export const linearizeVec3ToIndexWithMod: ShaderModule = {
 };
 export const getRgbaAtIndex: ShaderModule = {
   code: `
-    vec4 getRgbaAtIndex(sampler2D texture, float textureWidth, float idx) {
+    vec4 getRgbaAtIndex(sampler2D dtexture, float textureWidth, float idx) {
       float finalPosX = mod(idx, textureWidth);
       float finalPosY = div(idx, textureWidth);
 
       return texture2D(
-          texture,
+          dtexture,
           vec2(
             (floor(finalPosX) + 0.5) / textureWidth,
             (floor(finalPosY) + 0.5) / textureWidth
@@ -41,9 +41,9 @@ export const getRgbaAtIndex: ShaderModule = {
 };
 export const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    vec4 getRgbaAtXYIndex(sampler2D texture, float textureWidth, float x, float y) {
+    vec4 getRgbaAtXYIndex(sampler2D dtexture, float textureWidth, float x, float y) {
       return texture2D(
-          texture,
+          dtexture,
           vec2(
             (floor(x) + 0.5) / textureWidth,
             (floor(y) + 0.5) / textureWidth
@@ -135,7 +135,7 @@ export const getColorForCoords: ShaderModule = {
         lookUpTexture,
         l_texture_width,
         bucketIdx
-      ).ra;
+      ).rg;
 
       float bucketAddress = bucketAddressWithZoomStep.x;
       float renderedZoomStep = bucketAddressWithZoomStep.y;

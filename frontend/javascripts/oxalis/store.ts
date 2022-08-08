@@ -182,6 +182,8 @@ export type Annotation = {
   // the support is about to end. See webknossos/#5633.
   readonly meshes: Array<MeshMetaData>;
   readonly owner: APIUserBase | null | undefined;
+  readonly contributors: APIUserBase[];
+  readonly othersMayEdit: boolean;
 };
 type TracingBase = {
   readonly createdTimestamp: number;
@@ -367,6 +369,7 @@ export type Task = APITask;
 export type SaveQueueEntry = {
   version: number;
   timestamp: number;
+  authorId: string;
   actions: Array<UpdateAction>;
   transactionId: string;
   transactionGroupCount: number;

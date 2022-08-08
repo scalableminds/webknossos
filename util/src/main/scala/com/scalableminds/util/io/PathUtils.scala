@@ -161,12 +161,11 @@ trait PathUtils extends LazyLogging {
 
   def deleteDirectoryRecursively(path: Path): Box[Unit] = {
     val directory = new Directory(new File(path.toString))
-    if (!directory.exists) Full(())
-    else {
-      if (directory.deleteRecursively()) {
-        Full(())
-      } else Failure(f"Failed to delete directory $path")
-    }
+    if (!directory.exists)
+      Full(())
+    else if (directory.deleteRecursively()) {
+      Full(())
+    } else Failure(f"Failed to delete directory $path")
   }
 
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory

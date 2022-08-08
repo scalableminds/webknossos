@@ -97,12 +97,9 @@ export default {
   "datastore.version.too_old": _.template(
     "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
-  "save.failed_simultaneous_tracing": `The annotation couldn't be processed correctly.
+  "save.failed_simultaneous_tracing": `The annotation couldn't be saved because there was a conflict (annotation was edited either by someone else or in another browser tab).
 
-This might be caused by editing the annotation simultaneously in different windows.
-Editing should be done in a single window only.
-
-In order to restore the current window, a reload is necessary.`,
+A reload is necessary to return to a valid state.`,
   "react.rendering_error":
     "Unfortunately, webKnossos encountered an error during rendering. Your latest changes may not have been saved. Please reload the page to try again.",
   "save.leave_page_unfinished":
@@ -305,6 +302,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.was_edited": "Successfully updated annotation",
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
+  "annotation.shared_teams_edited_failed":
+    "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
   "annotation.download": "The following annotation data is available for download immediately.",
   "annotation.export":
     "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the ",

@@ -1,6 +1,6 @@
 import type { Dispatch } from "redux";
 import { Tooltip, Button, Dropdown, Menu } from "antd";
-import { SettingOutlined, StarOutlined } from "@ant-design/icons";
+import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
@@ -26,6 +26,7 @@ import {
   NucleiInferralModal,
   NeuronInferralModal,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -393,7 +394,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     if (isDatasetViewMode) return null;
     let annotationTypeLabel;
     const { annotationType, name } = this.props.tracing;
-    const tracingName = name || "[untitled]";
+    const tracingName = name || "[unnamed]";
 
     if (this.props.task != null) {
       // In case we have a task display its id
@@ -467,24 +468,34 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  maybePrintOwner() {
+  maybePrintOwnerAndContributors() {
     const { activeUser } = this.props;
-    const { owner } = this.props.tracing;
+    const { owner, contributors } = this.props.tracing;
 
     if (!owner) {
       return null;
     }
 
-    if (!activeUser || owner.id !== activeUser.id) {
-      return (
-        <span>
-          Owner: {owner.firstName} {owner.lastName}
-        </span>
-      );
-    }
+    const contributorsString =
+      contributors.length > 0
+        ? contributors.map((user) => formatUserName(activeUser, user)).join(", ")
+        : "none";
 
-    // Active user is owner
-    return null;
+    return (
+      <div>
+        <div>Owner: {formatUserName(activeUser, owner)}</div>
+        <div>
+          Contributors: {contributorsString}
+          <Tooltip title='If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.'>
+            <InfoCircleOutlined
+              style={{
+                marginLeft: 6,
+              }}
+            />
+          </Tooltip>
+        </div>
+      </div>
+    );
   }
 
   renderSelectedStartingJobsModal() {
@@ -557,7 +568,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         <div className="info-tab-block">
           {this.getTracingName(isDatasetViewMode)}
           {this.getDatasetName(isDatasetViewMode)}
-          {this.maybePrintOwner()}
+          {this.maybePrintOwnerAndContributors()}
         </div>
 
         <div className="info-tab-block">

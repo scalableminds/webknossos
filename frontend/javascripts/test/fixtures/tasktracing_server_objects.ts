@@ -163,6 +163,8 @@ export const annotation: APIAnnotation = {
     ],
   },
   meshes: [],
+  contributors: [],
+  othersMayEdit: false,
   teams: [
     {
       id: "5b1e45f9a00000a000abc2c3",

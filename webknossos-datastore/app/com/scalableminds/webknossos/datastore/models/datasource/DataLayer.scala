@@ -179,10 +179,11 @@ object DataLayer {
         dataFormat <- json.validate((JsPath \ "dataFormat").read[DataFormat.Value])
         category <- json.validate((JsPath \ "category").read[Category.Value])
         layer <- (dataFormat, category) match {
-          case (DataFormat.wkw, Category.segmentation) => json.validate[WKWSegmentationLayer]
-          case (DataFormat.wkw, _)                     => json.validate[WKWDataLayer]
-          case (DataFormat.zarr, _)                    => json.validate[ZarrDataLayer]
-          case _                                       => json.validate[WKWDataLayer]
+          case (DataFormat.wkw, Category.segmentation)  => json.validate[WKWSegmentationLayer]
+          case (DataFormat.wkw, _)                      => json.validate[WKWDataLayer]
+          case (DataFormat.zarr, Category.segmentation) => json.validate[ZarrSegmentationLayer]
+          case (DataFormat.zarr, _)                     => json.validate[ZarrDataLayer]
+          case _                                        => json.validate[WKWDataLayer]
         }
       } yield {
         layer

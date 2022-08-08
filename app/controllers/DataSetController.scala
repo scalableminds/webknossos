@@ -212,8 +212,8 @@ class DataSetController @Inject()(userService: UserService,
                 dataSetService.publicWrites(
                   d,
                   requestingUser,
-                  organization,
-                  dataStore,
+                  Some(organization),
+                  Some(dataStore),
                   skipResolutions = true,
                   requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
               }
@@ -261,7 +261,7 @@ class DataSetController @Inject()(userService: UserService,
             dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
-          js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
+          js <- dataSetService.publicWrites(dataSet, request.identity, Some(organization), Some(dataStore))
           _ = request.identity.map { user =>
             analyticsService.track(OpenDatasetEvent(user, dataSet))
             if (dataSet.isPublic) {
@@ -335,7 +335,7 @@ Expects:
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             organization <- organizationDAO.findOne(updated._organization)(GlobalAccessContext)
             dataStore <- dataSetService.dataStoreFor(updated)
-            js <- dataSetService.publicWrites(updated, Some(request.identity), organization, dataStore)
+            js <- dataSetService.publicWrites(updated, Some(request.identity), Some(organization), Some(dataStore))
           } yield Ok(Json.toJson(js))
       }
     }
@@ -366,7 +366,7 @@ Expects:
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
           includeMemberOnlyTeams = request.identity.isDatasetManager
           userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
           oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)

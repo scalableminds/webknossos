@@ -69,19 +69,15 @@ class Crosshair {
 
   createMesh(): THREE.Group {
     const createCircle = (radius: number) => {
-      const segments = 64;
-      const material = new THREE.LineBasicMaterial({
-        color: this.COLOR,
-      });
-      const geometry = new THREE.CircleGeometry(radius, segments);
-      // Remove center vertex
-      geometry.vertices.shift();
-      return new THREE.LineLoop(geometry, material);
+      const geometry = new THREE.RingGeometry(radius, radius + 4, 64);
+      const material = new THREE.MeshBasicMaterial({ color: this.COLOR, side: THREE.DoubleSide });
+      return new THREE.Mesh(geometry, material);
     };
 
     const outerCircle = createCircle(this.WIDTH / 2);
     const innerCircle = createCircle(4);
     const mesh = new THREE.Group();
+
     mesh.add(outerCircle);
     mesh.add(innerCircle);
     mesh.rotation.x = Math.PI;

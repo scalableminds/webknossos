@@ -308,7 +308,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const updateCameraTDView = (tweenState: TweenState, t: number) => {
     const { left, right, top, bottom } = tweenState;
     const tweenedQuat = new THREE.Quaternion();
-    THREE.Quaternion.slerp(startQuaternion, targetQuaternion, tweenedQuat, t);
+    tweenedQuat.slerpQuaternions(startQuaternion, targetQuaternion, t);
     const tweened = getCameraFromQuaternion(tweenedQuat);
     // Use forward vector and currentFlycamPos (lookAt target) to calculate the current
     // camera's position which should be on a sphere (center=currentFlycamPos, radius=centerDistance).

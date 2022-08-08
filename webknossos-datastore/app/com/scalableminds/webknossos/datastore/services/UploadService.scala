@@ -412,22 +412,25 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def cleanUpOrphanUploadsForOrga(organizationDir: Path): Fox[Unit] = {
     val orgaUploadingDir: Path = organizationDir.resolve(uploadingDir)
-    if (!Files.exists(orgaUploadingDir)) return Fox.successful(())
-    for {
-      uploadDirs <- PathUtils.listDirectories(orgaUploadingDir).toFox
-      _ <- Fox.serialCombined(uploadDirs) { uploadDir =>
-        isKnownUpload(uploadDir.getFileName.toString).map {
-          case false =>
-            val deleteResult = PathUtils.deleteDirectoryRecursively(uploadDir)
-            if (deleteResult.isDefined) {
-              logger.info(f"Deleted orphan dataset upload at $uploadDir")
-            } else {
-              logger.warn(f"Failed to delete orphan dataset upload at $uploadDir")
-            }
-          case true => ()
+    if (!Files.exists(orgaUploadingDir))
+      Fox.successful(())
+    else {
+      for {
+        uploadDirs <- PathUtils.listDirectories(orgaUploadingDir).toFox
+        _ <- Fox.serialCombined(uploadDirs) { uploadDir =>
+          isKnownUpload(uploadDir.getFileName.toString).map {
+            case false =>
+              val deleteResult = PathUtils.deleteDirectoryRecursively(uploadDir)
+              if (deleteResult.isDefined) {
+                logger.info(f"Deleted orphan dataset upload at $uploadDir")
+              } else {
+                logger.warn(f"Failed to delete orphan dataset upload at $uploadDir")
+              }
+            case true => ()
+          }
         }
-      }
-    } yield ()
+      } yield ()
+    }
   }
 
   private def getObjectFromRedis[T: Reads](key: String): Fox[T] =

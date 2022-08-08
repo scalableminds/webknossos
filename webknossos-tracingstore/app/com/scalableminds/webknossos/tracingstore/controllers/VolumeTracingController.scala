@@ -233,7 +233,7 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
             editableMappingService.createIsosurface(tracing, request.body, urlOrHeaderToken(token, request))
-          else tracingService.createIsosurface(tracingId, request.body)
+          else tracingService.createIsosurface(tracingId, request.body, urlOrHeaderToken(token, request))
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
@@ -457,7 +457,7 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId)
           _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Cannot query agglomerate skeleton for volume annotation"
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
-          remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
+          remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(
             mappingName,
             remoteFallbackLayer,
@@ -538,7 +538,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
-            remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
+            remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
             editableMapping <- editableMappingService.get(mappingName,
                                                           remoteFallbackLayer,
                                                           urlOrHeaderToken(token, request))

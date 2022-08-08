@@ -181,6 +181,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getReloadDataButton = (layerName: string) => {
+    if (!this.props.dataset.isEditable) {
+      return null;
+    }
     const tooltipText =
       "Reload the data from the server. Use this when the data on the server changed.";
     return (

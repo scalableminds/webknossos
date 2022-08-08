@@ -84,6 +84,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { SaveQueueType } from "oxalis/model/actions/save_actions";
+import { DatasourceConfiguration } from "types/schemas/datasource.types";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -1431,6 +1432,28 @@ export async function addForeignDataSet(
   });
   return result;
 }
+
+export async function exploreRemoteDataset(remoteUris: string[]): Promise<DatasourceConfiguration> {
+  return await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
+    data: remoteUris.map((uri) => ({ remoteUri: uri })),
+  });
+}
+
+export async function putDataset(
+  datasetName: string,
+  organizationName: string,
+  datasource: string,
+): Promise<Response> {
+  console.log(datasource);
+  return doWithToken((token) =>
+    fetch(`/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: datasource,
+    }),
+  );
+}
+
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
 export async function isDatasetNameValid(
   datasetId: APIDatasetId,

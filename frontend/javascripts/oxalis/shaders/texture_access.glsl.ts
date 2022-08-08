@@ -101,6 +101,7 @@ export const getColorForCoords: ShaderModule = {
       // The data will be clamped to be non-negative, since negative data
       // is reserved for missing buckets.
 
+      // Will hold [highValue, lowValue];
       vec4 returnValue[2];
 
       vec3 coords = floor(getRelativeCoords(worldPositionUVW, zoomStep));

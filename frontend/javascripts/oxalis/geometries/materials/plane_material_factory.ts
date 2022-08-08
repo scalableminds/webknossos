@@ -521,6 +521,8 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
           (_hoveredSegmentId) => {
+            // Cast to BigInt as bit-wise operations only work with 32 bits,
+            // even though Number uses 53 bits.
             const hoveredSegmentId = BigInt(_hoveredSegmentId);
             {
               const hoveredSegmentIdLow = Number((2n ** 32n - 1n) & hoveredSegmentId);

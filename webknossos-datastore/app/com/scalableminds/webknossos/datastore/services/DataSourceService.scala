@@ -7,6 +7,7 @@ import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
@@ -154,12 +155,13 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource): Fox[Unit] =
+  def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] =
     for {
       _ <- validateDataSource(dataSource).toFox
       dataSourcePath = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
-      _ <- backupPreviousProperties(dataSourcePath) ?~> "Could not update datasource-properties.json"
+      _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath))
+      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath)) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()

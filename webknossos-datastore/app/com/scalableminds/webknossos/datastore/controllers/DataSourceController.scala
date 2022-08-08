@@ -459,7 +459,7 @@ Expects:
           _ <- Fox.successful(())
           dataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
             "dataSource.notFound") ~> 404
-          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
+          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id), expectExisting = true)
         } yield Ok
       }
     }
@@ -471,7 +471,8 @@ Expects:
         for {
           dataSource <- bool2Fox(dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).isEmpty) ?~> Messages(
             "dataSource.alreadyPresent") ~> 404
-          _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(dataSetName, organizationName)))
+          _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(dataSetName, organizationName)),
+                                                  expectExisting = false)
         } yield Ok
       }
     }

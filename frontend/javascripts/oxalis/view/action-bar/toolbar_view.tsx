@@ -267,7 +267,7 @@ function VolumeInterpolationButton() {
           icon: INTERPOLATION_ICON[InterpolationModeEnum.INTERPOLATE],
         },
         {
-          label: "Extrude current segment",
+          label: "Extrude (copy) current segment",
           key: InterpolationModeEnum.EXTRUDE,
           icon: INTERPOLATION_ICON[InterpolationModeEnum.EXTRUDE],
         },

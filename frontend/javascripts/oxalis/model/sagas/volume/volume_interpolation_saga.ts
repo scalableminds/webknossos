@@ -122,7 +122,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
   tooltipAddendum = disabledExplanation || tooltipAddendum;
 
   const tooltipMain = onlyExtrude
-    ? "Extrude current segment from last labeled until current slice (V)"
+    ? "Extrude (copy) current segment from last labeled until current slice (V)"
     : "Interpolate current segment between last labeled and current slice (V)";
   const tooltipTitle = isAllowed
     ? `${tooltipMain} – ${tooltipAddendum}`

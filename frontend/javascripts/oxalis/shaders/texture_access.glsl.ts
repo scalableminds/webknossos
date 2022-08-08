@@ -198,6 +198,7 @@ export const getColorForCoords: ShaderModule = {
         div(pixelIdxInBucket, d_texture_width) +
         div(packedBucketSize * bucketAddress, d_texture_width);
 
+      // The lower 32-bit of the value.
       vec4 bucketColor = getRgbaAtXYIndex(
         layerIndex,
         textureIndex,
@@ -206,15 +207,20 @@ export const getColorForCoords: ShaderModule = {
       );
 
       if (packingDegree == 0.5) {
-        vec4 bucketColor2 = getRgbaAtXYIndex(
+        vec4 bucketColorHigh = getRgbaAtXYIndex(
           layerIndex,
           textureIndex,
+          // x + 1.0 will never exceed the texture width because
+          // - the texture width is even
+          // - and x is guaranteed to be even, too (due dividing by
+          //   packingDegree=0.5)
           x + 1.0,
-          // todo: test that this case works correctly
-          y + ((x + 1.0) == d_texture_width ? 1.0 : 0.0)
+          // Since x + 1.0 won't "overflow", y doesn't need to be
+          // adapted, either.
+          y
         );
 
-        returnValue[0] =  bucketColor2;
+        returnValue[0] =  bucketColorHigh;
         returnValue[1] = bucketColor;
         return returnValue;
       }

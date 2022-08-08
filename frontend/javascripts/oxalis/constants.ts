@@ -313,7 +313,6 @@ const Constants = {
 };
 export default Constants;
 
-export type NumberOrBig = number | bigint;
 export type TypedArray =
   | Int8Array
   | Uint8Array

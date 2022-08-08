@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The Layers tab now displays an Add Skeleton Annotation Layer button with which volume-only annotations can be converted to hybrid annotations. [#6330](https://github.com/scalableminds/webknossos/pull/6330)
 - The Zarr directory listings no longer include the current directory “.”. [6359](https://github.com/scalableminds/webknossos/pull/6359)
 - The default name for volume annotation layers with fallback segmentations is now set to the name of their fallback segmentation layer, no longer “Volume”. [#6373](https://github.com/scalableminds/webknossos/pull/6373)
+- The “reload data” button for dataset and annotation layers is now only shown to users who have administrative permissions for the dataset (because the button clears server caches and file handles). [#6380](https://github.com/scalableminds/webknossos/pull/6380)
 
 ### Fixed
 - Fixed a regression where the mapping activation confirmation dialog was never shown. [#6346](https://github.com/scalableminds/webknossos/pull/6346)

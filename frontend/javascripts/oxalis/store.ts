@@ -41,7 +41,6 @@ import type {
   AnnotationTool,
   MappingStatus,
   OrthoViewWithoutTD,
-  NumberOrBig,
 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -349,7 +348,7 @@ export type TemporaryConfiguration = {
   readonly flightmodeRecording: boolean;
   readonly controlMode: ControlMode;
   readonly mousePosition: Vector2 | null | undefined;
-  readonly hoveredSegmentId: NumberOrBig;
+  readonly hoveredSegmentId: number;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly isMergerModeEnabled: boolean;
   readonly gpuSetup: {
@@ -504,7 +503,7 @@ export type OxalisState = {
   readonly localSegmentationData: Record<
     string,
     {
-      readonly isosurfaces: Record<NumberOrBig, IsosurfaceInformation>;
+      readonly isosurfaces: Record<number, IsosurfaceInformation>;
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
       readonly currentMeshFile: APIMeshFile | null | undefined;
       // Note that for a volume tracing, this information should be stored

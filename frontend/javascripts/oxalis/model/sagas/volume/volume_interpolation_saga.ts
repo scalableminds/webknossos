@@ -9,6 +9,7 @@ import {
   ContourModeEnum,
   OrthoViews,
   ToolsWithInterpolationCapabilities,
+  TypedArray,
   Vector3,
 } from "oxalis/constants";
 import Model from "oxalis/model";
@@ -116,14 +117,16 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
   };
 }
 
-const isEqual = cwise({
+// @ts-ignore
+const isEqual: (a: NdArray<TypedArray>, b: number) => void = cwise({
   args: ["array", "scalar"],
   body: function body(a: number, b: number) {
     a = a === b ? 1 : 0;
   },
 });
 
-const isNonZero = cwise({
+// @ts-ignore
+const isNonZero: (a: NdArray<TypedArray>) => boolean = cwise({
   args: ["array"],
   // The following function is parsed by cwise which is why
   // the shorthand syntax is not supported.
@@ -151,7 +154,8 @@ const mul = cwise({
   },
 });
 
-const absMax = cwise({
+// @ts-ignore
+const absMax: (a: NdArray<TypedArray>, b: NdArray<TypedArray>) => void = cwise({
   args: ["array", "array"],
   body: function body(a: number, b: number) {
     a = Math.abs(a) > Math.abs(b) ? a : b;
@@ -188,10 +192,12 @@ function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarr
 /*
  * Computes a signed distance transform for an input nd array.
  */
-function signedDist(arr: ndarray.NdArray) {
+function signedDist(arr: ndarray.NdArray<TypedArray>) {
   // Copy the input twice to avoid mutating it
-  arr = copy(Float32Array, arr);
-  const negatedArr = copy(Float32Array, arr);
+  // @ts-ignore
+  arr = copy(Float32Array, arr) as NdArray<Float32Array>;
+  // @ts-ignore
+  const negatedArr = copy(Float32Array, arr) as NdArray<Float32Array>;
 
   // Normal distance transform for arr
   distanceTransform(arr);
@@ -319,8 +325,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     );
   }
 
-  const firstSlice = inputNd.pick(null, null, 0);
-  const lastSlice = inputNd.pick(null, null, interpolationDepth);
+  const firstSlice = inputNd.pick(null, null, 0) as NdArray<TypedArray>;
+  const lastSlice = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArray>;
 
   isEqual(firstSlice, activeCellId);
   isEqual(lastSlice, activeCellId);
@@ -337,8 +343,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
-      const firstVal = firstSliceDists.get(u, v);
-      const lastVal = lastSliceDists.get(u, v);
+      const firstVal = Number(firstSliceDists.get(u, v));
+      const lastVal = Number(lastSliceDists.get(u, v));
       for (let targetOffsetW = 1; targetOffsetW < interpolationDepth; targetOffsetW++) {
         const k = targetOffsetW / interpolationDepth;
         const weightedAverage = firstVal * (1 - k) + lastVal * k;

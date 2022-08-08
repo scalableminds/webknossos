@@ -443,7 +443,7 @@ function* tryMinCutAtMag(
     return;
   }
 
-  const segmentId = inputData[ll(seedA)];
+  const segmentId = Number(inputData[ll(seedA)]);
   // We calculate the latest time at which the min cut may still
   // be executed. The min-cut algorithm will check from time to
   // time whether the threshold is violated.

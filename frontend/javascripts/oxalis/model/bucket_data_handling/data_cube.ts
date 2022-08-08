@@ -781,7 +781,7 @@ class DataCube {
 
     if (bucket.hasData()) {
       const data = bucket.getData();
-      const dataValue = data[voxelIndex];
+      const dataValue = Number(data[voxelIndex]);
 
       if (mapping) {
         const mappedValue = mapping[dataValue];

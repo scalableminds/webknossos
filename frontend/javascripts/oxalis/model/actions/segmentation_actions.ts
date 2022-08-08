@@ -1,4 +1,4 @@
-import type { NumberOrBig, Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import type { MappingType } from "oxalis/store";
 export type AdHocIsosurfaceInfo = {
   mappingName: string | null | undefined;
@@ -13,7 +13,7 @@ export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAct
 export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction;
 
 export const loadAdHocMeshAction = (
-  cellId: NumberOrBig,
+  cellId: number,
   seedPosition: Vector3,
   extraInfo?: AdHocIsosurfaceInfo,
   layerName?: string,

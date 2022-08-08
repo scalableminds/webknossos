@@ -398,23 +398,6 @@ function initializeDataset(
     dataSet: dataset.dataSource.id.name,
   });
   const mutableDataset = dataset as any as MutableAPIDataset;
-  // Add the originalElementClass property to the segmentation layer if it exists.
-  // Also set the elementClass to uint32 because uint64 segmentation data is truncated to uint32 by the backend.
-  const updatedDataLayers = mutableDataset.dataSource.dataLayers.map((dataLayer) => {
-    const { elementClass } = dataLayer;
-
-    if (dataLayer.category === "segmentation") {
-      const adjustedElementClass = elementClass; //  === "uint64" ? "uint32" : elementClass;
-      return {
-        ...dataLayer,
-        originalElementClass: elementClass,
-        elementClass: adjustedElementClass,
-      };
-    } else {
-      return dataLayer;
-    }
-  });
-  mutableDataset.dataSource.dataLayers = updatedDataLayers;
   const volumeTracings = getServerVolumeTracings(serverTracings);
 
   if (volumeTracings.length > 0) {

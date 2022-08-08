@@ -41,24 +41,12 @@ export const getRgbaAtIndex: ShaderModule = {
 };
 export const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    vec4 getRgbaAtXYIndex(sampler2D dtexture, float textureWidth, float x, float y) {
-      return texture2D(
-          dtexture,
-          vec2(
-            (floor(x) + 0.5) / textureWidth,
-            (floor(y) + 0.5) / textureWidth
-          )
-        ).rgba;
-    }
-
     // Define this function for each segmentation and color layer, since iOS cannot handle
     // sampler2D textures[dataTextureCountPerLayer]
     // as a function parameter properly
 
     <% _.each(layerNamesWithSegmentation, (name) => { %>
-      vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float textureWidth, float x, float y) {
-        vec2 accessPoint = (floor(vec2(x, y)) + 0.5) / textureWidth;
-
+      vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
         // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
@@ -80,12 +68,12 @@ export const getRgbaAtXYIndex: ShaderModule = {
       }
     <% }); %>
 
-    vec4 getRgbaAtXYIndex(float layerIndex, float textureIdx, float textureWidth, float x, float y) {
+    vec4 getRgbaAtXYIndex(float layerIndex, float textureIdx, float x, float y) {
       if (layerIndex == 0.0) {
-        return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, textureWidth, x, y);
+        return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, x, y);
       } <% _.each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
         else if (layerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
-          return getRgbaAtXYIndex_<%= name %>(textureIdx, textureWidth, x, y);
+          return getRgbaAtXYIndex_<%= name %>(textureIdx, x, y);
         }
       <% }); %>
       return vec4(0.0);
@@ -212,7 +200,6 @@ export const getColorForCoords: ShaderModule = {
       vec4 bucketColor = getRgbaAtXYIndex(
         layerIndex,
         textureIndex,
-        d_texture_width,
         x,
         y
       );
@@ -221,7 +208,6 @@ export const getColorForCoords: ShaderModule = {
         vec4 bucketColor2 = getRgbaAtXYIndex(
           layerIndex,
           textureIndex,
-          d_texture_width,
           x + 1.0,
           // todo: test that this case works correctly
           y + ((x + 1.0) == d_texture_width ? 1.0 : 0.0)

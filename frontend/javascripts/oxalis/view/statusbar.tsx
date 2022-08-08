@@ -308,7 +308,7 @@ function Infos() {
   );
   const hasUint64Segmentation = useSelector((state: OxalisState) => {
     const segmentationLayer = getVisibleSegmentationLayer(state);
-    return segmentationLayer ? segmentationLayer.originalElementClass === "uint64" : false;
+    return segmentationLayer ? segmentationLayer.elementClass === "uint64" : false;
   });
   const globalMousePosition = useSelector((state: OxalisState) => {
     const { activeViewport } = state.viewModeData.plane;

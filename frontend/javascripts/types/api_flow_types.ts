@@ -42,7 +42,6 @@ type APIColorLayer = APIDataLayerBase & {
 export type APISegmentationLayer = APIDataLayerBase & {
   readonly category: "segmentation";
   readonly largestSegmentId: number;
-  readonly originalElementClass?: ElementClass;
   readonly mappings?: Array<string>;
   readonly agglomerates?: Array<string>;
   readonly fallbackLayer?: string | null | undefined;

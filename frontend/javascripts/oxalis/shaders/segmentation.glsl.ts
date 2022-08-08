@@ -191,36 +191,35 @@ export const getSegmentationId: ShaderModule = {
       // which should be ignored (in the binary search as well as when comparing
       // a cell id with the hovered cell passed via uniforms, for example).
 
-      // <% if (packingDegreeLookup[segmentationName] === 4) { %>
-      //   volume_color = vec4(volume_color.r, 0.0, 0.0, 0.0);
-      // <% } else if (packingDegreeLookup[segmentationName] === 2) { %>
-      //   volume_color = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
-      // <% } %>
+      <% if (packingDegreeLookup[segmentationName] === 4) { %>
+        volume_color[1] = vec4(volume_color.r, 0.0, 0.0, 0.0);
+      <% } else if (packingDegreeLookup[segmentationName] === 2) { %>
+        volume_color[1] = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
+      <% } %>
 
-      // <% if (isMappingSupported) { %>
-      //   if (isMappingEnabled) {
+      <% if (isMappingSupported) { %>
+        if (isMappingEnabled) {
 
-      //     float index = binarySearchIndex(
-      //       segmentation_mapping_lookup_texture,
-      //       mappingSize,
-      //       volume_color
-      //     );
-      //     if (index != -1.0) {
-      //       volume_color = getRgbaAtIndex(
-      //         segmentation_mapping_texture,
-      //         <%= mappingTextureWidth %>,
-      //         index
-      //       );
-      //     } else if (hideUnmappedIds) {
-      //       volume_color = vec4(0.0);
-      //     }
-      //   }
-      // <% } %>
+          float index = binarySearchIndex(
+            segmentation_mapping_lookup_texture,
+            mappingSize,
+            volume_color[1]
+          );
+          if (index != -1.0) {
+            volume_color[1] = getRgbaAtIndex(
+              segmentation_mapping_texture,
+              <%= mappingTextureWidth %>,
+              index
+            );
+          } else if (hideUnmappedIds) {
+            volume_color[1] = vec4(0.0);
+          }
+        }
+      <% } %>
 
-      // todo: find out why?
       volume_color[0] *= 255.0;
       volume_color[1] *= 255.0;
-      return volume_color; // * 255.0;
+      return volume_color;
     }
 <% }) %>
   `,

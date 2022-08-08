@@ -81,6 +81,11 @@ Note that it is recommended to proof-read the interpolated slices afterwards, si
 
 ![Video: Volume Interpolation](https://www.youtube.com/watch?v=QqU72vHRR2I)
 
+### Volume Extrusion
+Similar to the above interpolation feature, you can also extrude the currently active segment.
+This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12).
+The extrusion can be triggered by using the extrude button in the toolbar (also available as a dropdown next to the interpolation/extrusion button).
+
 ### Mappings / On-Demand Agglomeration
 With webKnossos it is possible to apply a precomputed agglomeration file to re-map/combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation. 
 

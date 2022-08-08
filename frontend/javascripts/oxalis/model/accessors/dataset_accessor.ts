@@ -662,8 +662,6 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
     case "uint64":
       return true;
 
-    case "int64":
-    case "uint64":
     case "double":
     default:
       return false;

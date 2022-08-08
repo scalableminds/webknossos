@@ -521,13 +521,13 @@ class PlaneMaterialFactory {
             const hoveredSegmentId = BigInt(_hoveredSegmentId);
             {
               const hoveredSegmentIdLow = Number((2n ** 32n - 1n) & hoveredSegmentId);
-              let [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentIdLow);
+              const [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentIdLow);
               this.uniforms.hoveredSegmentIdLow.value.set(r, g, b, a);
             }
 
             {
               const hoveredSegmentIdHigh = Number(hoveredSegmentId >> 32n);
-              let [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentIdHigh);
+              const [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentIdHigh);
               this.uniforms.hoveredSegmentIdHigh.value.set(r, g, b, a);
             }
           },

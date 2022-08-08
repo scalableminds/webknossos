@@ -247,7 +247,7 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto)
         } yield
           Ok(
@@ -263,11 +263,11 @@ class VolumeTracingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
-          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
@@ -282,11 +282,12 @@ class VolumeTracingController @Inject()(
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
-          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
+          magParsed <- Vec3Int
+            .fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
 
           cubeLength = DataLayer.bucketLength
           (channels, dtype) = ElementClass.toChannelAndZarrString(tracing.elementClass)
@@ -343,10 +344,10 @@ class VolumeTracingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       for {
-        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
+        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
-        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName) ~> 404
+        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName) ~> NOT_FOUND
 
         omeNgffHeader = OmeNgffHeader.fromDataLayerName(tracingId,
                                                         dataSourceScale = dataSource.scale,
@@ -360,14 +361,14 @@ class VolumeTracingController @Inject()(
       {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
             existingMags = tracing.resolutions.map(vec3IntFromProto)
-            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
-            _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
+            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+            _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
 
-            (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> 404
-            _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> 404
+            (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
+            _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> NOT_FOUND
             cubeSize = DataLayer.bucketLength
             wkRequest = WebKnossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,
@@ -387,7 +388,7 @@ class VolumeTracingController @Inject()(
               magParsed,
               Vec3Int(x, y, z),
               cubeSize,
-              urlOrHeaderToken(token, request)) ?~> "Getting fallback layer data failed" ~> 404
+              urlOrHeaderToken(token, request)) ?~> "Getting fallback layer data failed" ~> NOT_FOUND
           } yield Ok(dataWithFallback).withHeaders()
         }
       }

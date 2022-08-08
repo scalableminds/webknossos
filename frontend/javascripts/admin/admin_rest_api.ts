@@ -1434,9 +1434,10 @@ export async function addForeignDataSet(
 }
 
 export async function exploreRemoteDataset(remoteUris: string[]): Promise<DatasourceConfiguration> {
-  return await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
+  const { dataSource, log } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
     data: remoteUris.map((uri) => ({ remoteUri: uri })),
   });
+  return dataSource;
 }
 
 export async function putDataset(

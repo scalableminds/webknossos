@@ -288,6 +288,9 @@ export const getColorForCoords: ShaderModule = {
       float packingDegree,
       vec3 worldPositionUVW
     ) {
+      // The potential overhead of delegating to the 64-bit variant (instead of using a specialized
+      // 32-bit variant) was measured by rendering 600 times consecutively (without throttling).
+      // No clear negative impact could be measured which is why this delegation should be ok.
       vec4[2] retVal = getColorForCoords64(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
       return retVal[1];
     }

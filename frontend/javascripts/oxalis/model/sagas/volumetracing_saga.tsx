@@ -63,7 +63,7 @@ import type {
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   finishAnnotationStrokeAction,
-  updateDirectionAction,
+  registerLabelPointAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -485,7 +485,7 @@ export function* finishLayer(
     );
   }
 
-  yield* put(updateDirectionAction(layer.getUnzoomedCentroid()));
+  yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
 }
 export function* ensureToolIsAllowedInResolution(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");

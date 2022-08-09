@@ -254,7 +254,7 @@ Expects:
         urlOrHeaderToken(token, request)) {
         for {
           previousDataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)) ?~ Messages(
-            "dataSource.notFound") ~> 404
+            "dataSource.notFound") ~> NOT_FOUND
           (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id,
                                                                         previousDataSource.toUsable)
           previousDataSourceJson = previousDataSource match {
@@ -458,7 +458,7 @@ Expects:
         for {
           _ <- Fox.successful(())
           dataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-            "dataSource.notFound") ~> 404
+            "dataSource.notFound") ~> NOT_FOUND
           _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
         } yield {
           Ok

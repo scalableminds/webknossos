@@ -4,7 +4,6 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Filter
-import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import io.swagger.annotations._
 import javax.inject.Inject
@@ -143,30 +142,54 @@ class DataSetController @Inject()(userService: UserService,
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON list containing one object per resulting dataset."),
           new ApiResponse(code = 400, message = badRequestLabel)))
-  def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def list(
+      @ApiParam(value = "Optional filtering: If true, list only active datasets, if false, list only inactive datasets",
+                defaultValue = "None")
+      isActive: Option[Boolean],
+      @ApiParam(
+        value =
+          "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets",
+        defaultValue = "None"
+      )
+      isUnreported: Option[Boolean],
+      @ApiParam(
+        value =
+          "Optional filtering: If true, list only datasets the requesting user is allowed to edit, if false, list only datasets the requesting user is not allowed to edit",
+        defaultValue = "None"
+      )
+      isEditable: Option[Boolean],
+      @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name",
+                defaultValue = "None",
+                example = "sample_organization")
+      organizationName: Option[String],
+      @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization",
+                defaultValue = "None")
+      onlyMyOrganization: Option[Boolean],
+      @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id",
+                defaultValue = "None")
+      uploaderId: Option[String]
+  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
-      Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
-      Filter("isUnreported", (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
+      Filter(isActive, (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
+      Filter(isUnreported, (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
+      Filter(isEditable,
+             (value: Boolean, el: DataSet) =>
+               for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield
+                 isEditable && value || !isEditable && !value),
       Filter(
-        "isEditable",
-        (value: Boolean, el: DataSet) =>
-          for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield
-            isEditable && value || !isEditable && !value
-      ),
-      Filter(
-        "organizationName",
+        organizationName,
         (value: String, el: DataSet) =>
           for { organization <- organizationDAO.findOneByName(value)(GlobalAccessContext) ?~> "organization.notFound" } yield
             el._organization == organization._id
       ),
       Filter(
-        "onlyMyOrganization",
+        onlyMyOrganization,
         (value: Boolean, el: DataSet) =>
           for { organizationId <- request.identity.map(_._organization) ?~> "organization.notFound" } yield
             !value || el._organization == organizationId
       ),
       Filter(
-        "uploaderId",
+        uploaderId,
         (value: String, el: DataSet) =>
           for { uploaderIdValidated <- ObjectId.fromString(value) } yield el._uploader.contains(uploaderIdValidated)
       )

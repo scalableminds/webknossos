@@ -3,7 +3,6 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.mvc.Filter
-import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations._
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
@@ -96,7 +95,7 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Task,
                                                 limit.getOrElse(annotationService.DefaultAnnotationListLimit),
                                                 pageNumber.getOrElse(0))
-        annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
         _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
@@ -183,7 +182,7 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Explorational,
                                                 limit.getOrElse(annotationService.DefaultAnnotationListLimit),
                                                 pageNumber.getOrElse(0))
-        annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Explorational))
         jsonList <- Fox.serialCombined(annotations)(annotationService.compactWrites)
       } yield {
@@ -211,7 +210,7 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Task,
                                                 limit.getOrElse(annotationService.DefaultAnnotationListLimit),
                                                 pageNumber.getOrElse(0))
-        annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+        annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Task))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
       } yield {
@@ -237,19 +236,40 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  @ApiOperation(value = "List all users of whom the requesting user is admin or team-manager.", nickname = "userList")
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  @ApiOperation(
+    value =
+      "List all users the requesting user is allowed to see (themself and users of whom they are admin or team-manager).",
+    nickname = "userList")
+  def list(
+      @ApiParam(
+        value =
+          "Optional filtering: If true, list only users the requesting user is allowed to administrate, if false, list only datasets the requesting user is not allowed to administrate",
+        defaultValue = "None"
+      )
+      isEditable: Option[Boolean],
+      @ApiParam(
+        value =
+          "Optional filtering: If true, list only users who are team manager or admin, if false, list only users who are neither team manager nor admin",
+        defaultValue = "None"
+      )
+      isTeamManagerOrAdmin: Option[Boolean],
+      @ApiParam(
+        value =
+          "Optional filtering: If true, list only users who are admin, if false, list only users who are not admin",
+        defaultValue = "None")
+      isAdmin: Option[Boolean]
+  ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     UsingFilters(
-      Filter("isEditable",
+      Filter(isEditable,
              (value: Boolean, el: User) =>
                for { isEditable <- userService.isEditableBy(el, request.identity) } yield isEditable == value),
       Filter(
-        "isTeamManagerOrAdmin",
+        isTeamManagerOrAdmin,
         (value: Boolean, el: User) =>
           for { isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(el, request.identity._organization) } yield
             isTeamManagerOrAdmin == value
       ),
-      Filter("isAdmin", (value: Boolean, el: User) => Fox.successful(el.isAdmin == value))
+      Filter(isAdmin, (value: Boolean, el: User) => Fox.successful(el.isAdmin == value))
     ) { filter =>
       for {
         users <- userDAO.findAll

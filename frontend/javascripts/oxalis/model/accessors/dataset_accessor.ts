@@ -768,10 +768,7 @@ export function doesSupportVolumeWithFallback(
     return false;
   }
 
-  const isUint64 =
-    segmentationLayer.elementClass === "uint64" || segmentationLayer.elementClass === "int64";
-  const isFallbackSupported = !isUint64;
-  return isFallbackSupported;
+  return true;
 }
 export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter((dataLayer) => isColorLayer(dataset, dataLayer.name));

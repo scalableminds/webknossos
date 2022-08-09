@@ -531,7 +531,7 @@ export class DataBucket {
             (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
           // The voxelToLabel is already within the bucket and in the correct resolution.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
-          const currentSegmentId = data[voxelAddress];
+          const currentSegmentId = Number(data[voxelAddress]);
 
           if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
             data[voxelAddress] = segmentId;

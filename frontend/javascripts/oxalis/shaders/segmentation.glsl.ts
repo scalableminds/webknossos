@@ -31,7 +31,7 @@ export const convertCellIdToRGB: ShaderModule = {
       The patterns are still painted on top of these, though.
       */
 
-      // Since there are bound to be collisions of ids, using 64 bit as the input is not
+      // Since collisions of ids are bound to happen, using all 64 bits is not
       // necessary, which is why we simply combine the 32-bit tuple into one 32-bit value.
       vec4 id = idHigh + idLow;
       float lastEightBits = id.r;
@@ -202,6 +202,8 @@ export const getSegmentationId: ShaderModule = {
 
       <% if (isMappingSupported) { %>
         if (isMappingEnabled) {
+          // Note that currently only the lower 32 bits of the segmentation
+          // are used for applying the JSON mapping.
 
           float index = binarySearchIndex(
             segmentation_mapping_lookup_texture,

@@ -227,11 +227,9 @@ function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarr
 /*
  * Computes a signed distance transform for an input nd array.
  */
-function signedDist(arr: ndarray.NdArray<TypedArrayWithoutBigInt>) {
+function signedDist(arr: ndarray.NdArray) {
   // Copy the input twice to avoid mutating it
-  // @ts-ignore
   arr = copy(Float32Array, arr) as NdArray<Float32Array>;
-  // @ts-ignore
   const negatedArr = copy(Float32Array, arr) as NdArray<Float32Array>;
 
   // Normal distance transform for arr
@@ -387,8 +385,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     // cares about voxel distances. Also, the actual IDs are discarded by creating a binary
     // mask as the very first step (see below).
 
-    const firstSliceBigInt = inputNd.pick(null, null, 0) as NdArray<TypedArray>;
-    const lastSliceBigInt = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArray>;
+    const firstSliceBigInt = inputNd.pick(null, null, 0);
+    const lastSliceBigInt = inputNd.pick(null, null, interpolationDepth);
 
     // Prepare empty output arrays in Float32
     firstSlice = ndarray(new Float32Array(firstSliceBigInt.size), firstSliceBigInt.shape);

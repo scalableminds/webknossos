@@ -162,14 +162,6 @@ class PlaneMaterialFactory {
         type: "f",
         value: 40,
       },
-      activeCellIdHigh: {
-        type: "v4",
-        value: new THREE.Vector4(0, 0, 0, 0),
-      },
-      activeCellIdLow: {
-        type: "v4",
-        value: new THREE.Vector4(0, 0, 0, 0),
-      },
       isMouseInActiveViewport: {
         type: "b",
         value: false,
@@ -214,6 +206,15 @@ class PlaneMaterialFactory {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
       hoveredSegmentIdLow: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      // The same is done for the active cell id.
+      activeCellIdHigh: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      activeCellIdLow: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },

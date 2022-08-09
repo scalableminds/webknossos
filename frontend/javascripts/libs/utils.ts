@@ -749,6 +749,27 @@ export function convertDecToBase256(num: number): Vector4 {
   // Big endian
   return [a, b, g, r];
 }
+
+export function convertNumberTo64Bit(num: number): [Vector4, Vector4] {
+  // Cast to BigInt as bit-wise operations only work with 32 bits,
+  // even though Number uses 53 bits.
+  const hoveredSegmentId = BigInt(num);
+  let low, high;
+  {
+    const hoveredSegmentIdLow = Number((2n ** 32n - 1n) & hoveredSegmentId);
+    const [a, b, g, r] = convertDecToBase256(hoveredSegmentIdLow);
+    low = [r, g, b, a] as Vector4;
+  }
+
+  {
+    const hoveredSegmentIdHigh = Number(hoveredSegmentId >> 32n);
+    const [a, b, g, r] = convertDecToBase256(hoveredSegmentIdHigh);
+    high = [r, g, b, a] as Vector4;
+  }
+
+  return [high, low];
+}
+
 export async function promiseAllWithErrors<T>(promises: Array<Promise<T>>): Promise<{
   successes: Array<T>;
   errors: Array<Error>;

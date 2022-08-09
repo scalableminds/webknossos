@@ -14,7 +14,7 @@ import { getRgbaAtIndex } from "./texture_access.glsl";
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex, getElementOfPermutation, aaStep, colormapJet],
   code: `
-    vec3 convertCellIdToRGB(vec4 id) {
+    vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
       /*
       This function maps from a segment id to a color with a pattern.
       For the color, the jet color map is used. For the patterns, we employ the following
@@ -31,6 +31,9 @@ export const convertCellIdToRGB: ShaderModule = {
       The patterns are still painted on top of these, though.
       */
 
+      // Since there are bound to be collisions of ids, using 64 bit as the input is not
+      // necessary, which is why we simply combine the 32-bit tuple into one 32-bit value.
+      vec4 id = idHigh + idLow;
       float lastEightBits = id.r;
       float significantSegmentIndex = 256.0 * id.g + id.r;
 

@@ -53,7 +53,8 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% }) %>
 
 <% if (hasSegmentation) { %>
-  uniform vec4 activeCellId;
+  uniform vec4 activeCellIdHigh;
+  uniform vec4 activeCellIdLow;
   uniform bool isMouseInActiveViewport;
   uniform bool showBrush;
   uniform float segmentationPatternOpacity;
@@ -200,11 +201,11 @@ void main() {
           && <%= segmentationName%>_alpha > 0.0
          ? 0.2 : 0.0;
 
-       gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(<%= segmentationName%>_id_low + <%= segmentationName%>_id_high), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
+       gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
      }
 
      vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-     <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellId);
+     <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
      gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
      gl_FragColor.a = 1.0;
   <% }) %>

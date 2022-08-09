@@ -162,7 +162,11 @@ class PlaneMaterialFactory {
         type: "f",
         value: 40,
       },
-      activeCellId: {
+      activeCellIdHigh: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      activeCellIdLow: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
@@ -520,21 +524,11 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
-          (_hoveredSegmentId) => {
-            // Cast to BigInt as bit-wise operations only work with 32 bits,
-            // even though Number uses 53 bits.
-            const hoveredSegmentId = BigInt(_hoveredSegmentId);
-            {
-              const hoveredSegmentIdLow = Number((2n ** 32n - 1n) & hoveredSegmentId);
-              const [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentIdLow);
-              this.uniforms.hoveredSegmentIdLow.value.set(r, g, b, a);
-            }
+          (hoveredSegmentId) => {
+            const [high, low] = Utils.convertNumberTo64Bit(hoveredSegmentId);
 
-            {
-              const hoveredSegmentIdHigh = Number(hoveredSegmentId >> 32n);
-              const [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentIdHigh);
-              this.uniforms.hoveredSegmentIdHigh.value.set(r, g, b, a);
-            }
+            this.uniforms.hoveredSegmentIdLow.value.set(...low);
+            this.uniforms.hoveredSegmentIdHigh.value.set(...high);
           },
         ),
       );
@@ -593,9 +587,11 @@ class PlaneMaterialFactory {
     }
 
     const mappedActiveCellId = segmentationLayer.cube.mapId(activeCellId);
-    // Convert the id into 4 bytes (little endian)
-    const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);
-    this.uniforms.activeCellId.value.set(r, g, b, a);
+
+    const [high, low] = Utils.convertNumberTo64Bit(mappedActiveCellId);
+
+    this.uniforms.activeCellIdLow.value.set(...low);
+    this.uniforms.activeCellIdHigh.value.set(...high);
   }
 
   updateUniformsForLayer(

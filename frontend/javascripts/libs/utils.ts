@@ -747,8 +747,8 @@ export function convertDecToBase256(num: number): Vector4 {
 
   [tmp, a] = divMod(tmp); // eslint-disable-line prefer-const
 
-  // Big endian
-  return [a, b, g, r];
+  // Little endian
+  return [r, g, b, a];
 }
 
 export function castForArrayType(uncastNumber: number, data: TypedArray): number | bigint {
@@ -763,14 +763,12 @@ export function convertNumberTo64Bit(num: number): [Vector4, Vector4] {
   let high;
   {
     const hoveredSegmentIdLow = Number((2n ** 32n - 1n) & hoveredSegmentId);
-    const [a, b, g, r] = convertDecToBase256(hoveredSegmentIdLow);
-    low = [r, g, b, a] as Vector4;
+    low = convertDecToBase256(hoveredSegmentIdLow);
   }
 
   {
     const hoveredSegmentIdHigh = Number(hoveredSegmentId >> 32n);
-    const [a, b, g, r] = convertDecToBase256(hoveredSegmentIdHigh);
-    high = [r, g, b, a] as Vector4;
+    high = convertDecToBase256(hoveredSegmentIdHigh);
   }
 
   return [high, low];

@@ -11,6 +11,7 @@ import type {
   BoundingBoxType,
   Point3,
   ColorObject,
+  TypedArray,
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
 
@@ -748,6 +749,10 @@ export function convertDecToBase256(num: number): Vector4 {
 
   // Big endian
   return [a, b, g, r];
+}
+
+export function castForArrayType(uncastNumber: number, data: TypedArray): number | BigInt {
+  return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
 }
 
 export function convertNumberTo64Bit(num: number): [Vector4, Vector4] {

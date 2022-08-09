@@ -152,6 +152,26 @@ const isEqual: (a: NdArray<TypedArray>, b: number) => void = cwise({
 });
 
 // @ts-ignore
+const _isEqualFromBigUint64: (
+  output: NdArray<TypedArray>,
+  a: NdArray<TypedArray>,
+  b: number | BigInt,
+) => void = cwise({
+  args: ["array", "array", "scalar"],
+  body: function body(output: NdArray<TypedArray>, a: number, b: number) {
+    output = a === b ? 1 : 0;
+  },
+});
+
+function isEqualFromBigUint64(
+  output: NdArray<TypedArray>,
+  a: NdArray<TypedArray>,
+  b: number,
+): void {
+  return _isEqualFromBigUint64(output, a, BigInt(b));
+}
+
+// @ts-ignore
 const isNonZero: (a: NdArray<TypedArray>) => boolean = cwise({
   args: ["array"],
   // The following function is parsed by cwise which is why
@@ -365,13 +385,29 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     );
   }
 
-  let firstSlice = inputNd.pick(null, null, 0) as NdArray<TypedArray>;
-  let lastSlice = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArray>;
+  const isBigUint64 = inputNd.data instanceof BigUint64Array;
+  let firstSliceMaybeBig = inputNd.pick(null, null, 0) as NdArray<TypedArray>;
+  let lastSliceMaybeBig = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArray>;
+  let firstSlice;
+  let lastSlice;
 
-  // Calculate firstSlice = firstSlice[...] == activeCellId
-  isEqual(firstSlice, activeCellId);
-  // Calculate lastSlice = lastSlice[...] == activeCellId
-  isEqual(lastSlice, activeCellId);
+  if (isBigUint64) {
+    firstSlice = ndarray(new Float32Array(firstSliceMaybeBig.size), firstSliceMaybeBig.shape);
+    lastSlice = ndarray(new Float32Array(lastSliceMaybeBig.size), lastSliceMaybeBig.shape);
+
+    // Calculate firstSlice = firstSliceMaybeBig[...] == activeCellId
+    isEqualFromBigUint64(firstSlice, firstSliceMaybeBig, activeCellId);
+    // Calculate lastSlice = lastSliceMaybeBig[...] == activeCellId
+    isEqualFromBigUint64(lastSlice, lastSliceMaybeBig, activeCellId);
+  } else {
+    firstSlice = firstSliceMaybeBig;
+    lastSlice = lastSliceMaybeBig;
+
+    // Calculate firstSlice = firstSlice[...] == activeCellId
+    isEqual(firstSlice, activeCellId);
+    // Calculate lastSlice = lastSliceMaybeBig[...] == activeCellId
+    isEqual(lastSlice, activeCellId);
+  }
 
   if (onlyExtrude) {
     if (directionFactor > 0) {

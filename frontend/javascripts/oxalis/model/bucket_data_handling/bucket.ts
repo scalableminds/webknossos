@@ -11,7 +11,7 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { mod } from "libs/utils";
+import { castForArrayType, mod } from "libs/utils";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -22,8 +22,7 @@ import window from "libs/window";
 export const enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
   REQUESTED = "REQUESTED",
-  MISSING = "MISSING",
-  // Missing means that the bucket couldn't be found on the data store
+  MISSING = "MISSING", // Missing means that the bucket couldn't be found on the data store
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
@@ -520,7 +519,7 @@ export class DataBucket {
   ) {
     const out = new Float32Array(3);
 
-    const segmentId = data instanceof BigUint64Array ? BigInt(uncastSegmentId) : uncastSegmentId;
+    const segmentId = castForArrayType(uncastSegmentId, data);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {

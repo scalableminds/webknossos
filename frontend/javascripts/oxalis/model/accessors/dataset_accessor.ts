@@ -698,6 +698,12 @@ export function getVisibleOrLastSegmentationLayer(
 
   return null;
 }
+
+export function hasVisibleUint64Segmentation(state: OxalisState) {
+  const segmentationLayer = getVisibleSegmentationLayer(state);
+  return segmentationLayer ? segmentationLayer.elementClass === "uint64" : false;
+}
+
 export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegmentationLayer> {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;

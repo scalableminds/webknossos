@@ -10,7 +10,6 @@ import {
   InterpolationModeEnum,
   OrthoViews,
   ToolsWithInterpolationCapabilities,
-  TypedArray,
   TypedArrayWithoutBigInt,
   Vector3,
 } from "oxalis/constants";

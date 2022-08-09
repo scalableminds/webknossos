@@ -1,18 +1,14 @@
 import * as React from "react";
 import { Modal, Button, Spin, Tooltip, Alert } from "antd";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { hasVisibleUint64Segmentation } from "oxalis/model/accessors/dataset_accessor";
 type Props = {
   isCloseable: boolean;
   onClose: () => void;
   progress: number;
 };
 export default function MergerModeModalView({ isCloseable, onClose, progress }: Props) {
-  const hasUint64Segmentation = useSelector((state: OxalisState) => {
-    const segmentationLayer = getVisibleSegmentationLayer(state);
-    return segmentationLayer ? segmentationLayer.elementClass === "uint64" : false;
-  });
+  const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
 
   const closeButton = (
     <Button type="primary" onClick={onClose} disabled={!isCloseable}>
@@ -38,7 +34,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
         </div>
       }
     >
-      {hasUint64Segmentation && (
+      {isUint64SegmentationVisible && (
         <Alert
           style={{ marginBottom: 12 }}
           message="Warning"
@@ -46,7 +42,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
           64 bits. The rendering of segment ids larger than 2^32 will be incorrect."
           type="warning"
           showIcon
-        ></Alert>
+        />
       )}
       You just enabled the merger mode. This mode allows to merge segmentation cells by creating
       trees and nodes. Each tree maps the marked segments (the ones where nodes were created in) to

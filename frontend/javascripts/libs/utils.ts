@@ -754,7 +754,8 @@ export function convertNumberTo64Bit(num: number): [Vector4, Vector4] {
   // Cast to BigInt as bit-wise operations only work with 32 bits,
   // even though Number uses 53 bits.
   const hoveredSegmentId = BigInt(num);
-  let low, high;
+  let low;
+  let high;
   {
     const hoveredSegmentIdLow = Number((2n ** 32n - 1n) & hoveredSegmentId);
     const [a, b, g, r] = convertDecToBase256(hoveredSegmentIdLow);

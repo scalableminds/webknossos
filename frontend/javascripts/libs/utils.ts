@@ -751,7 +751,7 @@ export function convertDecToBase256(num: number): Vector4 {
   return [a, b, g, r];
 }
 
-export function castForArrayType(uncastNumber: number, data: TypedArray): number | BigInt {
+export function castForArrayType(uncastNumber: number, data: TypedArray): number | bigint {
   return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
 }
 

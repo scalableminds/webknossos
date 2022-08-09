@@ -324,3 +324,5 @@ export type TypedArray =
   | Float32Array
   | Float64Array
   | BigUint64Array;
+
+export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;

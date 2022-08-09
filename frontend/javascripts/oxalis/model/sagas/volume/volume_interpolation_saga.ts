@@ -11,6 +11,7 @@ import {
   OrthoViews,
   ToolsWithInterpolationCapabilities,
   TypedArray,
+  TypedArrayWithoutBigInt,
   Vector3,
 } from "oxalis/constants";
 import Model from "oxalis/model";
@@ -144,7 +145,7 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
 }
 
 // @ts-ignore
-const isEqual: (a: NdArray<TypedArray>, b: number) => void = cwise({
+const isEqual: (a: NdArray<TypedArrayWithoutBigInt>, b: number) => void = cwise({
   args: ["array", "scalar"],
   body: function body(a: number, b: number) {
     a = a === b ? 1 : 0;
@@ -153,26 +154,26 @@ const isEqual: (a: NdArray<TypedArray>, b: number) => void = cwise({
 
 // @ts-ignore
 const _isEqualFromBigUint64: (
-  output: NdArray<TypedArray>,
-  a: NdArray<TypedArray>,
+  output: NdArray<TypedArrayWithoutBigInt>,
+  a: NdArray<BigUint64Array>,
   b: number | BigInt,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: NdArray<TypedArray>, a: number, b: number) {
+  body: function body(output: number, a: number, b: number) {
     output = a === b ? 1 : 0;
   },
 });
 
 function isEqualFromBigUint64(
-  output: NdArray<TypedArray>,
-  a: NdArray<TypedArray>,
+  output: NdArray<TypedArrayWithoutBigInt>,
+  a: NdArray<BigUint64Array>,
   b: number,
 ): void {
   return _isEqualFromBigUint64(output, a, BigInt(b));
 }
 
 // @ts-ignore
-const isNonZero: (a: NdArray<TypedArray>) => boolean = cwise({
+const isNonZero: (a: NdArray<TypedArrayWithoutBigInt>) => boolean = cwise({
   args: ["array"],
   // The following function is parsed by cwise which is why
   // the shorthand syntax is not supported.
@@ -201,12 +202,13 @@ const mul = cwise({
 });
 
 // @ts-ignore
-const absMax: (a: NdArray<TypedArray>, b: NdArray<TypedArray>) => void = cwise({
-  args: ["array", "array"],
-  body: function body(a: number, b: number) {
-    a = Math.abs(a) > Math.abs(b) ? a : b;
-  },
-});
+const absMax: (a: NdArray<TypedArrayWithoutBigInt>, b: NdArray<TypedArrayWithoutBigInt>) => void =
+  cwise({
+    args: ["array", "array"],
+    body: function body(a: number, b: number) {
+      a = Math.abs(a) > Math.abs(b) ? a : b;
+    },
+  });
 
 const assign = cwise({
   args: ["array", "array"],
@@ -238,7 +240,7 @@ function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarr
 /*
  * Computes a signed distance transform for an input nd array.
  */
-function signedDist(arr: ndarray.NdArray<TypedArray>) {
+function signedDist(arr: ndarray.NdArray<TypedArrayWithoutBigInt>) {
   // Copy the input twice to avoid mutating it
   // @ts-ignore
   arr = copy(Float32Array, arr) as NdArray<Float32Array>;
@@ -396,12 +398,12 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     lastSlice = ndarray(new Float32Array(lastSliceMaybeBig.size), lastSliceMaybeBig.shape);
 
     // Calculate firstSlice = firstSliceMaybeBig[...] == activeCellId
-    isEqualFromBigUint64(firstSlice, firstSliceMaybeBig, activeCellId);
+    isEqualFromBigUint64(firstSlice, firstSliceMaybeBig as NdArray<BigUint64Array>, activeCellId);
     // Calculate lastSlice = lastSliceMaybeBig[...] == activeCellId
-    isEqualFromBigUint64(lastSlice, lastSliceMaybeBig, activeCellId);
+    isEqualFromBigUint64(lastSlice, lastSliceMaybeBig as NdArray<BigUint64Array>, activeCellId);
   } else {
-    firstSlice = firstSliceMaybeBig;
-    lastSlice = lastSliceMaybeBig;
+    firstSlice = firstSliceMaybeBig as NdArray<TypedArrayWithoutBigInt>;
+    lastSlice = lastSliceMaybeBig as NdArray<TypedArrayWithoutBigInt>;
 
     // Calculate firstSlice = firstSlice[...] == activeCellId
     isEqual(firstSlice, activeCellId);

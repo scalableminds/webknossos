@@ -12,6 +12,8 @@ import net.liftweb.common.{Box, Failure, Full}
 
 object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
+  val FILENAME_HEADER_WKW = "header.wkw"
+
   def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(
       implicit report: DataSourceImportReport[Path]): Box[DataLayer] =
     (for {
@@ -60,7 +62,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     PathUtils.listDirectories(baseDir, magDirFilter).flatMap { resolutionDirs =>
       val resolutionHeaders = resolutionDirs.sortBy(magDirSortingKey).map { resolutionDir =>
         val resolution = magFromPath(resolutionDir).get
-        WKWHeader(resolutionDir.resolve("header.wkw").toFile).map { header =>
+        WKWHeader(resolutionDir.resolve(FILENAME_HEADER_WKW).toFile).map { header =>
           (header, resolution)
         }.passFailure { f =>
           report.error(_ => s"Error processing resolution '$resolution' - ${f.msg}")

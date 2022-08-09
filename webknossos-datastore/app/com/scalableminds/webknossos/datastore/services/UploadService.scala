@@ -2,10 +2,12 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.io.{File, RandomAccessFile}
 import java.nio.file.{Files, Path}
+
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat.FILENAME_HEADER_WKW
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -173,7 +175,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       knownUpload <- isKnownUpload(uploadId)
     } yield
       if (knownUpload) {
-        logger.info(f"Cancelling dataset upload of ${dataSourceId.team}/${dataSourceId.name} with id ${uploadId}...")
+        logger.info(f"Cancelling dataset upload of ${dataSourceId.team}/${dataSourceId.name} with id $uploadId...")
         removeFromRedis(uploadId).flatMap(_ =>
           PathUtils.deleteDirectoryRecursively(uploadDirectory(dataSourceId.team, uploadId)))
       } else {
@@ -324,13 +326,16 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Unit =
     if (Files.exists(dataSourceDir)) {
       for {
-        listing: Seq[Path] <- PathUtils.listDirectories(dataSourceDir)
+        listing: Seq[Path] <- PathUtils.listFilesRecursive(dataSourceDir,
+                                                           maxDepth = 2,
+                                                           filters = p => p.getFileName.toString == FILENAME_HEADER_WKW)
+        listingRelative = listing.map(dataSourceDir.normalize().relativize(_))
       } yield {
-        if (looksLikeMagDir(listing)) {
+        if (looksLikeMagDir(listingRelative)) {
           val targetDir = dataSourceDir.resolve("color").resolve("1")
           logger.info(s"Looks like mag dir. Moving to $targetDir")
           PathUtils.moveDirectoryViaTemp(dataSourceDir, targetDir)
-        } else if (looksLikeLayerDir(listing)) {
+        } else if (looksLikeLayerDir(listingRelative)) {
           val targetDir = dataSourceDir.resolve("color")
           logger.info(s"Looks like layer dir. Moving to $targetDir")
           PathUtils.moveDirectoryViaTemp(dataSourceDir, targetDir)
@@ -338,23 +343,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       }
     }
 
-  private def looksLikeMagDir(children: Seq[Path]): Boolean = {
-    val magDirChildRegex = """z(\d+)""".r
-    children.nonEmpty && children.forall(path =>
-      path.getFileName.toString match {
-        case magDirChildRegex(_*) => true
-        case _                    => false
-    })
-  }
+  private def looksLikeMagDir(headerWkwPaths: Seq[Path]): Boolean =
+    headerWkwPaths.headOption.exists { oneHeaderWkwPath =>
+      pathDepth(oneHeaderWkwPath) == 0
+    }
 
-  private def looksLikeLayerDir(children: Seq[Path]): Boolean = {
-    val layerDirChildRegex = """(\d+)|(\d+-\d+-\d+)""".r
-    children.nonEmpty && children.exists(path =>
-      path.getFileName.toString match {
-        case layerDirChildRegex(_*) => true
-        case _                      => false
-    })
-  }
+  private def pathDepth(path: Path) = path.toString.count(_ == '/')
+
+  private def looksLikeLayerDir(headerWkwPaths: Seq[Path]): Boolean =
+    headerWkwPaths.headOption.exists { oneHeaderWkwPath =>
+      pathDepth(oneHeaderWkwPath) == 1
+    }
 
   private def unpackDataset(uploadDir: Path, unpackToDir: Path): Fox[Unit] =
     for {

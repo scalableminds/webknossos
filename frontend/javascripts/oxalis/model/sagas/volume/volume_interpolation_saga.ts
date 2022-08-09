@@ -144,15 +144,13 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
   };
 }
 
-// @ts-ignore
-const isEqual: (a: NdArray<TypedArrayWithoutBigInt>, b: number) => void = cwise({
+const isEqual = cwise({
   args: ["array", "scalar"],
   body: function body(a: number, b: number) {
     a = a === b ? 1 : 0;
   },
 });
 
-// @ts-ignore
 const isEqualFromBigUint64: (
   output: NdArray<TypedArrayWithoutBigInt>,
   a: NdArray<BigUint64Array>,
@@ -164,8 +162,7 @@ const isEqualFromBigUint64: (
   },
 });
 
-// @ts-ignore
-const isNonZero: (a: NdArray<TypedArrayWithoutBigInt>) => boolean = cwise({
+const isNonZero = cwise({
   args: ["array"],
   // The following function is parsed by cwise which is why
   // the shorthand syntax is not supported.
@@ -193,14 +190,12 @@ const mul = cwise({
   },
 });
 
-// @ts-ignore
-const absMax: (a: NdArray<TypedArrayWithoutBigInt>, b: NdArray<TypedArrayWithoutBigInt>) => void =
-  cwise({
-    args: ["array", "array"],
-    body: function body(a: number, b: number) {
-      a = Math.abs(a) > Math.abs(b) ? a : b;
-    },
-  });
+const absMax = cwise({
+  args: ["array", "array"],
+  body: function body(a: number, b: number) {
+    a = Math.abs(a) > Math.abs(b) ? a : b;
+  },
+});
 
 const assign = cwise({
   args: ["array", "array"],

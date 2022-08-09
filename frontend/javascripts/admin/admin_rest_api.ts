@@ -722,7 +722,7 @@ export function finishAllAnnotations(selectedAnnotationIds: Array<string>): Prom
   );
 }
 
-export function copyAnnotationToUserAccount(
+export function duplicateAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {

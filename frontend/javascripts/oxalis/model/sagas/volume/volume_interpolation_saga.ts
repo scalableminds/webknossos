@@ -153,24 +153,16 @@ const isEqual: (a: NdArray<TypedArrayWithoutBigInt>, b: number) => void = cwise(
 });
 
 // @ts-ignore
-const _isEqualFromBigUint64: (
+const isEqualFromBigUint64: (
   output: NdArray<TypedArrayWithoutBigInt>,
   a: NdArray<BigUint64Array>,
-  b: number | BigInt,
+  b: BigInt,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: number, a: number, b: number) {
+  body: function body(output: number, a: BigInt, b: BigInt) {
     output = a === b ? 1 : 0;
   },
 });
-
-function isEqualFromBigUint64(
-  output: NdArray<TypedArrayWithoutBigInt>,
-  a: NdArray<BigUint64Array>,
-  b: number,
-): void {
-  return _isEqualFromBigUint64(output, a, BigInt(b));
-}
 
 // @ts-ignore
 const isNonZero: (a: NdArray<TypedArrayWithoutBigInt>) => boolean = cwise({
@@ -387,27 +379,38 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     );
   }
 
-  const isBigUint64 = inputNd.data instanceof BigUint64Array;
-  let firstSliceMaybeBig = inputNd.pick(null, null, 0) as NdArray<TypedArray>;
-  let lastSliceMaybeBig = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArray>;
+  // These two variables will be initialized with binary masks (representing whether
+  // a voxel contains the active segment id).
   let firstSlice;
   let lastSlice;
 
+  const isBigUint64 = inputNd.data instanceof BigUint64Array;
   if (isBigUint64) {
-    firstSlice = ndarray(new Float32Array(firstSliceMaybeBig.size), firstSliceMaybeBig.shape);
-    lastSlice = ndarray(new Float32Array(lastSliceMaybeBig.size), lastSliceMaybeBig.shape);
+    // For BigUint64 arrays, we want to convert as early as possible to Float32, since
+    // the cwise operations don't generalize across all members of TypedArray.
+    // Float values are more than enough, because the interpolation process only
+    // cares about voxel distances. Also, the actual IDs are discarded by creating a binary
+    // mask as the very first step (see below).
 
-    // Calculate firstSlice = firstSliceMaybeBig[...] == activeCellId
-    isEqualFromBigUint64(firstSlice, firstSliceMaybeBig as NdArray<BigUint64Array>, activeCellId);
-    // Calculate lastSlice = lastSliceMaybeBig[...] == activeCellId
-    isEqualFromBigUint64(lastSlice, lastSliceMaybeBig as NdArray<BigUint64Array>, activeCellId);
+    const firstSliceBigInt = inputNd.pick(null, null, 0) as NdArray<TypedArray>;
+    const lastSliceBigInt = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArray>;
+
+    // Prepare empty output arrays in Float32
+    firstSlice = ndarray(new Float32Array(firstSliceBigInt.size), firstSliceBigInt.shape);
+    lastSlice = ndarray(new Float32Array(lastSliceBigInt.size), lastSliceBigInt.shape);
+
+    const activeCellIdBig = BigInt(activeCellId);
+    // Calculate firstSlice = firstSliceBigInt[...] == activeCellId
+    isEqualFromBigUint64(firstSlice, firstSliceBigInt as NdArray<BigUint64Array>, activeCellIdBig);
+    // Calculate lastSlice = lastSliceBigInt[...] == activeCellId
+    isEqualFromBigUint64(lastSlice, lastSliceBigInt as NdArray<BigUint64Array>, activeCellIdBig);
   } else {
-    firstSlice = firstSliceMaybeBig as NdArray<TypedArrayWithoutBigInt>;
-    lastSlice = lastSliceMaybeBig as NdArray<TypedArrayWithoutBigInt>;
+    firstSlice = inputNd.pick(null, null, 0) as NdArray<TypedArrayWithoutBigInt>;
+    lastSlice = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArrayWithoutBigInt>;
 
     // Calculate firstSlice = firstSlice[...] == activeCellId
     isEqual(firstSlice, activeCellId);
-    // Calculate lastSlice = lastSliceMaybeBig[...] == activeCellId
+    // Calculate lastSlice = lastSlice[...] == activeCellId
     isEqual(lastSlice, activeCellId);
   }
 

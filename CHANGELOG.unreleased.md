@@ -36,12 +36,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed an error if multiple proofreading actions were performed in rapid succession. If webKnossos is busy, inputs to the viewports are disabled from now on. [#6325](https://github.com/scalableminds/webknossos/pull/6325)
 - Fixed that ad-hoc meshing would terminate early for large segments. [#6352](https://github.com/scalableminds/webknossos/pull/6352)
 - Fixed a bug where the largestSegmentId of zarr segmentation layers was not propagated from the datasource-properties.json, which broke annotating based on these layers. [#6363](https://github.com/scalableminds/webknossos/pull/6363)
-<<<<<<< HEAD
-- Public datasets of other organizations are no longer listed during task creation. [#6377](https://github.com/scalableminds/webknossos/pull/6377)
-||||||| merged common ancestors
-=======
 - Fixed a bug where uploads of wkw datasets with numerical-only layer names would fail. [#6382](https://github.com/scalableminds/webknossos/pull/6382)
->>>>>>> master
+- Public datasets of other organizations are no longer listed during task creation. [#6377](https://github.com/scalableminds/webknossos/pull/6377)
 
 ### Removed
 - Annotation Type was removed from the info tab. [#6330](https://github.com/scalableminds/webknossos/pull/6330)

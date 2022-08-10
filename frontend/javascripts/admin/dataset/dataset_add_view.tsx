@@ -129,6 +129,21 @@ function DatasetAddView({ history }: RouteComponentProps) {
             >
               <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
             </TabPane>
+            <TabPane
+              tab={
+                <span>
+                  <DatabaseOutlined />
+                  Add Zarr Dataset
+                </span>
+              }
+              key="2"
+            >
+              <DatasetAddZarrView
+                datastores={datastores.own}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(datasetOrganization: string, uploadedDatase... Remove this comment to see the full error message
+                onAdded={handleDatasetAdded}
+              />
+            </TabPane>
             {datastores.wkConnect.length > 0 && (
               <TabPane
                 tab={
@@ -137,7 +152,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                     Add Neuroglancer Dataset
                   </span>
                 }
-                key="2"
+                key="3"
               >
                 <DatasetAddNeuroglancerView
                   datastores={datastores.wkConnect}
@@ -154,7 +169,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                     Add BossDB Dataset
                   </span>
                 }
-                key="3"
+                key="4"
               >
                 <DatasetAddBossView
                   datastores={datastores.wkConnect}
@@ -163,24 +178,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                 />
               </TabPane>
             )}
-            {true && (
-              <TabPane
-                tab={
-                  <span>
-                    <DatabaseOutlined />
-                    Add Zarr Dataset
-                  </span>
-                }
-                key="4"
-              >
-                <DatasetAddZarrView
-                  datastores={datastores.own}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(datasetOrganization: string, uploadedDatase... Remove this comment to see the full error message
-                  onAdded={handleDatasetAdded}
-                />
-              </TabPane>
-            )}
-            {true && (
+            {features().addForeignDataset && (
               <TabPane
                 tab={
                   <span>

@@ -14,10 +14,7 @@ import Toast from "libs/toast";
 import DataLayer from "oxalis/model/data_layer";
 import _ from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
-// import { isDatasourceJSONValid } from "types/validation";
 const FormItem = Form.Item;
-// const Option = Select.Option;
-// const { Text } = Typography;
 
 type OwnProps = {
   onAdded: (arg0: string, arg1: string) => Promise<void>;
@@ -31,9 +28,7 @@ function DatasetAddZarrView(props: Props) {
   const { activeUser, onAdded } = props;
   const [datasourceConfig, setDatasourceConfig] = useState<string>();
   // const [exploreLog, setExploreLog] = useState<string>();
-  const [datasourceUrls, setDatasourceUrls] = useState<string[]>([
-    "s3://s3.amazonaws.com/webknossos-zarr/demodata/l4_sample_zarr/color.zarr/1/",
-  ]);
+  const [datasourceUrls, setDatasourceUrls] = useState<string[]>([""]);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
   const [selectedProtocol, setSelectedProtocol] = useState<string>("https://");
@@ -54,7 +49,7 @@ function DatasetAddZarrView(props: Props) {
             (url.indexOf("https://") !== 0 && url.indexOf("s3://") === 0)
           ),
       );
-      
+
       if (faulty.length !== 0) {
         setCanStartExplore(false);
         throw new Error("Dataset URLs must employ either the https:// or s3:// protocol.");
@@ -127,9 +122,9 @@ function DatasetAddZarrView(props: Props) {
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
       <CardContainer title="Add Zarr Dataset">
-        Please enter a URL to identify the kind of Zarr data you would like to import (layer or
-        dataset). Detected datasets can be imported right away. In case of a layer being detected
-        you can add it to the dataset before the final import.
+        Please enter a URL that points to the Zarr data you would like to import. If necessary,
+        specify the credentials for the dataset. More layers can be added to the loaded datasource
+        using the Add button. Once you have approved of the resulting datasource you can import it.
         <Form style={{ marginTop: 20 }} layout="vertical">
           <FormItem
             name="url"
@@ -165,21 +160,9 @@ function DatasetAddZarrView(props: Props) {
               }}
             />
           </FormItem>
-          {datasourceUrls.length > 1 ? (
-            <Hint style={{ marginTop: canStartExplore ? -16 : 0, marginLeft: 12 }}>
-              Please ensure that all URLs can be accessed with the same credentials when adding
-              multiple URLs.
-            </Hint>
-          ) : null}
           <Row gutter={8}>
             <Col span={12}>
-              <FormItem
-                name="username"
-                label={selectedProtocol === "https://" ? "Username" : "Access Key"}
-                hasFeedback
-                rules={[{ required: true }]}
-                validateFirst
-              >
+              <FormItem label={selectedProtocol === "https://" ? "Username" : "Access Key"}>
                 <Input
                   value={usernameOrAccessKey}
                   onChange={(e) => setUsernameOrAccessKey(e.target.value)}
@@ -187,13 +170,7 @@ function DatasetAddZarrView(props: Props) {
               </FormItem>
             </Col>
             <Col span={12}>
-              <FormItem
-                name="password"
-                label={selectedProtocol === "https://" ? "Password" : "Secret Key"}
-                hasFeedback
-                rules={[{ required: true }]}
-                validateFirst
-              >
+              <FormItem label={selectedProtocol === "https://" ? "Password" : "Secret Key"}>
                 <Password
                   value={passwordOrSecretKey}
                   onChange={(e) => setPasswordOrSecretKey(e.target.value)}
@@ -201,6 +178,12 @@ function DatasetAddZarrView(props: Props) {
               </FormItem>
             </Col>
           </Row>
+          {datasourceUrls.length > 1 ? (
+            <Hint style={{ marginTop: canStartExplore ? -16 : 0, marginLeft: 12 }}>
+              Please ensure that all URLs can be accessed with the same credentials when adding
+              multiple URLs.
+            </Hint>
+          ) : null}
           <FormItem style={{ marginBottom: 0 }}>
             <AsyncButton
               size="large"
@@ -212,6 +195,18 @@ function DatasetAddZarrView(props: Props) {
             </AsyncButton>
           </FormItem>
           <Divider />
+          <FormItem label="Datasource">
+            <TextArea
+              rows={4}
+              autoSize={{ minRows: 3, maxRows: 15 }}
+              style={{
+                fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+              }}
+              placeholder="No datasource loaded yet"
+              value={datasourceConfig}
+              onChange={(e) => setDatasourceConfig(e.target.value)}
+            />
+          </FormItem>
           <Row gutter={8}>
             <Col span={12}>
               <FormItem>
@@ -237,18 +232,6 @@ function DatasetAddZarrView(props: Props) {
               </Button>
             </Col>
           </Row>
-          <FormItem>
-            <TextArea
-              rows={4}
-              autoSize={{ minRows: 4, maxRows: 25 }}
-              style={{
-                fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
-              }}
-              placeholder="no data to import"
-              value={datasourceConfig}
-              onChange={(e) => setDatasourceConfig(e.target.value)}
-            />
-          </FormItem>
         </Form>
       </CardContainer>
     </div>

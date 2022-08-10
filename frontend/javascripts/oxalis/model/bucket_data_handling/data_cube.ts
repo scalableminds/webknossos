@@ -12,7 +12,7 @@ import type { ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
-import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
+import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
 import {
   getResolutions,
   ResolutionInfo,
@@ -423,7 +423,7 @@ class DataCube {
 
   async floodFill(
     globalSeedVoxel: Vector3,
-    cellId: number,
+    cellIdNumber: number,
     dimensionIndices: DimensionMap,
     floodfillBoundingBox: BoundingBoxType,
     zoomStep: number,
@@ -476,7 +476,10 @@ class DataCube {
     }
 
     const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
-    const sourceCellId = seedBucket.getOrCreateData()[seedVoxelIndex];
+    const seedBucketData = seedBucket.getOrCreateData();
+    const sourceCellId = seedBucketData[seedVoxelIndex];
+
+    const cellId = castForArrayType(cellIdNumber, seedBucketData);
 
     if (sourceCellId === cellId) {
       return {

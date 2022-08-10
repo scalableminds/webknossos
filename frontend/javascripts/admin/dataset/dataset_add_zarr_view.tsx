@@ -18,11 +18,17 @@ import { Hint } from "oxalis/view/action-bar/download_modal_view";
 const FormItem = Form.Item;
 // const Option = Select.Option;
 // const { Text } = Typography;
-type Props = {
+
+type OwnProps = {
+  onAdded: (arg0: string, arg1: string) => Promise<void>;
+};
+type StateProps = {
   activeUser: APIUser | null | undefined;
 };
+type Props = OwnProps & StateProps;
 
-function DatasetAddZarrView({ activeUser }: Props) {
+function DatasetAddZarrView(props: Props) {
+  const { activeUser, onAdded } = props;
   const [datasourceConfig, setDatasourceConfig] = useState<string>();
   // const [exploreLog, setExploreLog] = useState<string>();
   const [datasourceUrls, setDatasourceUrls] = useState<string[]>([
@@ -85,8 +91,6 @@ function DatasetAddZarrView({ activeUser }: Props) {
           currentDatasource.dataLayers = uniqueLayers;
           currentDatasource.id.name = `merge_${currentDatasource.id.name}_${datasourceToMerge.id.name}`;
           setDatasourceConfig(jsonStringify(currentDatasource));
-          // TODO: refresh datasets in dashboard?
-          // TODO: toast link to new dataset
         } else {
           setDatasourceConfig(jsonStringify(datasourceToMerge));
         }
@@ -114,18 +118,7 @@ function DatasetAddZarrView({ activeUser }: Props) {
       );
       console.log(result);
       if (result) {
-        const href = `/datasets/${activeUser.organization}/${configJSON.id.name}/`;
-        Toast.success(
-          <React.Fragment>
-            The datasource configuration was stored successfully.
-            <br />
-            Click{" "}
-            <a target="_blank" href={href} rel="noopener noreferrer">
-              here
-            </a>{" "}
-            to view the dataset.
-          </React.Fragment>,
-        );
+        onAdded(activeUser.organization, configJSON.id.name);
       }
     }
   }
@@ -262,7 +255,7 @@ function DatasetAddZarrView({ activeUser }: Props) {
   );
 }
 
-const mapStateToProps = (state: OxalisState): Props => ({
+const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 

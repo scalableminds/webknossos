@@ -16,7 +16,7 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
   // The JVM does not support arrays with more than 2^31 elements. We thus limit the dimensions of requested cuboids
   // such that all requests (even for 64-bit data types) can still be handled.
   val hasValidDimensions: Boolean =
-    width > 0 && width <= 512 && height > 0 && height <= 512 && depth > 0 && depth <= 512
+    width > 0 && height > 0 && depth > 0 && volume <= 512 * 512 * 512
 
   def isSingleBucket(bucketLength: Int): Boolean =
     width == bucketLength && height == bucketLength && depth == bucketLength && topLeft == topLeft.toBucket.topLeft

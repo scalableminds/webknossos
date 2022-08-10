@@ -61,6 +61,10 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
         r.isdeleted
       )
     )
+
+  override def updateAccessQ(requestingUserId: ObjectId): String =
+    s"""(select _user from webknossos.annotations_ ant join #$existingCollectionName aPL on ant._id = aPL._annotation where aPL._id = id and ant._user = ${requestingUserId.id})"""
+
   def insertOne(aPL: AnnotationPrivateLink): Fox[Unit] = {
     val time = aPL.expirationDateTime.map(new java.sql.Timestamp(_))
 

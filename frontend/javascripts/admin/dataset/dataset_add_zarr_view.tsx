@@ -13,6 +13,7 @@ import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
 import DataLayer from "oxalis/model/data_layer";
 import _ from "lodash";
+import { Hint } from "oxalis/view/action-bar/download_modal_view";
 // import { isDatasourceJSONValid } from "types/validation";
 const FormItem = Form.Item;
 // const Option = Select.Option;
@@ -25,55 +26,70 @@ function DatasetAddZarrView({ activeUser }: Props) {
   const [datasourceConfig, setDatasourceConfig] = useState<string>();
   // const [exploreLog, setExploreLog] = useState<string>();
   const [datasourceUrls, setDatasourceUrls] = useState<string[]>([
-    "https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0047A/4496763.zarr",
+    "s3://s3.amazonaws.com/webknossos-zarr/demodata/l4_sample_zarr/color.zarr/1/",
   ]);
-  // const [selectedProtocol, setSelectedProtocol] = useState<string>("https://");
-  const [canTryToAddData, setCanTryToAddData] = useState<boolean>(false);
+  const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
+  const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
+  const [selectedProtocol, setSelectedProtocol] = useState<string>("https://");
+  const [canStartExplore, setCanStartExplore] = useState<boolean>(false);
 
-  async function validateUrls(userInput: string) {
-    const urls = userInput
-      .split(",")
-      .map((url) => url.trim())
-      .filter((url) => url !== "");
+  function validateUrls(userInput: string) {
+    if (userInput) {
+      const urls = userInput
+        .split(",")
+        .map((url) => url.trim())
+        .filter((url) => url !== "");
 
-    const faulty = urls.filter(
-      (url) => url.indexOf("https://") === -1 && url.indexOf("s3://") === -1,
-    );
-    console.log("test", faulty);
-    if (faulty.length !== 0) {
-      setCanTryToAddData(false);
-      throw new Error("Protocol not supported.");
-    } else {
-      setCanTryToAddData(true);
+      // any url must begin with one of the accepted protocols
+      const faulty = urls.filter(
+        (url) =>
+          !(
+            (url.indexOf("https://") === 0 && url.indexOf("s3://") !== 0) ||
+            (url.indexOf("https://") !== 0 && url.indexOf("s3://") === 0)
+          ),
+      );
+      
+      if (faulty.length !== 0) {
+        setCanStartExplore(false);
+        throw new Error("Dataset URLs must employ either the https:// or s3:// protocol.");
+      } else {
+        setSelectedProtocol(urls[0].indexOf("https://") === 0 ? "https://" : "s3://");
+        setCanStartExplore(true);
+      }
     }
   }
 
   async function handleExplore() {
     if (datasourceUrls) {
-      const datasourceToMerge = await exploreRemoteDataset(datasourceUrls);
-      // TODO JSON validation
+      const datasourceToMerge = await exploreRemoteDataset(datasourceUrls, {
+        username: usernameOrAccessKey,
+        pass: passwordOrSecretKey,
+      });
       if (datasourceToMerge) {
         if (datasourceConfig) {
           // TODO: check that both datasources have same voxel size else warning
+          let currentDatasource;
           try {
-            const currentDatasource = JSON.parse(datasourceConfig);
-            const layers = currentDatasource.dataLayers.concat(datasourceToMerge.dataLayers);
-            const uniqueLayers = _.uniqBy(layers, (layer: DataLayer) => layer.name);
-            currentDatasource.dataLayers = uniqueLayers;
-            currentDatasource.id.name = `merge_${currentDatasource.id.name}_${datasourceToMerge.id.name}`;
-            setDatasourceConfig(jsonStringify(currentDatasource));
-            Toast.error("The datasource config contains invalid JSON.");
-            // TODO: refresh datasets in dashboard?
-            // TODO: add link to new dataset
+            currentDatasource = JSON.parse(datasourceConfig);
           } catch (e) {
             Toast.error("The loaded datasource config contains invalid JSON.");
+            return;
           }
+          const layers = currentDatasource.dataLayers.concat(datasourceToMerge.dataLayers);
+          const uniqueLayers = _.uniqBy(layers, (layer: DataLayer) => layer.name);
+          currentDatasource.dataLayers = uniqueLayers;
+          currentDatasource.id.name = `merge_${currentDatasource.id.name}_${datasourceToMerge.id.name}`;
+          setDatasourceConfig(jsonStringify(currentDatasource));
+          // TODO: refresh datasets in dashboard?
+          // TODO: toast link to new dataset
         } else {
           setDatasourceConfig(jsonStringify(datasourceToMerge));
         }
       } else {
         Toast.error("Exploring this remote dataset did not return a datasource.");
       }
+    } else {
+      Toast.error("Please provide a valid URL for exploration.");
     }
   }
 
@@ -87,16 +103,6 @@ function DatasetAddZarrView({ activeUser }: Props) {
     }
   }
 
-  // const selectBefore = (
-  //   <Select
-  //     value={selectedProtocol}
-  //     style={{ width: 100 }}
-  //     onChange={(value) => setSelectedProtocol(value)}
-  //   >
-  //     <Option value="https://">https://</Option>
-  //     <Option value="s3://">s3://</Option>
-  //   </Select>
-  // );
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
@@ -115,12 +121,12 @@ function DatasetAddZarrView({ activeUser }: Props) {
                 message: messages["dataset.import.required.url"],
               },
               {
-                validator: (_rule, url) => {
+                validator: (_rule, value) => {
                   try {
-                    validateUrls(url);
+                    validateUrls(value);
                     return Promise.resolve();
-                  } catch (error) {
-                    return Promise.reject(error);
+                  } catch (e) {
+                    return Promise.reject(e);
                   }
                 },
               },
@@ -128,7 +134,6 @@ function DatasetAddZarrView({ activeUser }: Props) {
             validateFirst
           >
             <Input
-              // addonBefore={selectBefore}
               defaultValue={datasourceUrls}
               onChange={(e) => {
                 setDatasourceUrls(
@@ -140,29 +145,39 @@ function DatasetAddZarrView({ activeUser }: Props) {
               }}
             />
           </FormItem>
+          {datasourceUrls.length > 1 ? (
+            <Hint style={{ marginTop: canStartExplore ? -16 : 0, marginLeft: 12 }}>
+              Please ensure that all URLs can be accessed with the same credentials when adding
+              multiple URLs.
+            </Hint>
+          ) : null}
           <Row gutter={8}>
             <Col span={12}>
               <FormItem
                 name="username"
-                label="Username"
-                // label={selectedProtocol === "https://" ? "Username" : "Access Key"}
+                label={selectedProtocol === "https://" ? "Username" : "Access Key"}
                 hasFeedback
                 rules={[{ required: true }]}
                 validateFirst
               >
-                <Input />
+                <Input
+                  value={usernameOrAccessKey}
+                  onChange={(e) => setUsernameOrAccessKey(e.target.value)}
+                />
               </FormItem>
             </Col>
             <Col span={12}>
               <FormItem
                 name="password"
-                label="Password"
-                // label={selectedProtocol === "https://" ? "Password" : "Secret Key"}
+                label={selectedProtocol === "https://" ? "Password" : "Secret Key"}
                 hasFeedback
                 rules={[{ required: true }]}
                 validateFirst
               >
-                <Password />
+                <Password
+                  value={passwordOrSecretKey}
+                  onChange={(e) => setPasswordOrSecretKey(e.target.value)}
+                />
               </FormItem>
             </Col>
           </Row>
@@ -172,7 +187,6 @@ function DatasetAddZarrView({ activeUser }: Props) {
               type="default"
               style={{ width: "100%" }}
               onClick={handleExplore}
-              disabled={!canTryToAddData}
             >
               Add
             </AsyncButton>

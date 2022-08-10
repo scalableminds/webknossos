@@ -1433,10 +1433,20 @@ export async function addForeignDataSet(
   return result;
 }
 
-export async function exploreRemoteDataset(remoteUris: string[]): Promise<DatasourceConfiguration> {
-  const { dataSource, log } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
-    data: remoteUris.map((uri) => ({ remoteUri: uri })),
+export async function exploreRemoteDataset(
+  remoteUris: string[],
+  credentials?: { username: string; pass: string },
+): Promise<DatasourceConfiguration> {
+  const { dataSource, report } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
+    data: credentials
+      ? remoteUris.map((uri) => ({
+          remoteUri: uri,
+          user: credentials.username,
+          password: credentials.pass,
+        }))
+      : remoteUris.map((uri) => ({ remoteUri: uri })),
   });
+  console.log(report);
   return dataSource;
 }
 
@@ -1445,7 +1455,6 @@ export async function putDataset(
   organizationName: string,
   datasource: string,
 ): Promise<Response> {
-  console.log(datasource);
   return doWithToken((token) =>
     fetch(`/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
       method: "PUT",

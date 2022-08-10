@@ -142,7 +142,15 @@ export const jsConvertCellIdToHSLA = (
     const last8Bits = id % 2 ** 8;
     hue = customColors[last8Bits] || 0;
   } else {
-    const significantSegmentIndex = id % 2 ** 16;
+    // The shader always derives the segment color by using a 64-bit id from which
+    // - the lower 16 bits of the lower 32 bits and
+    // - the lower 16 bits of the upper 32 bits
+    // are used to derive the color.
+    // In JS, we do it similarly:
+    const bigId = BigInt(id);
+    const highPart = Number((bigId >> 32n) % 2n ** 16n);
+    const lowPart = id % 2 ** 16;
+    const significantSegmentIndex = highPart + lowPart;
     const colorCount = 19;
     const colorIndex = jsGetElementOfPermutation(significantSegmentIndex, colorCount, 2);
     const colorValueDecimal = (1.0 / colorCount) * colorIndex;

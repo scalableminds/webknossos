@@ -755,7 +755,13 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
   return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
 }
 
-export function convertNumberTo64Bit(num: number): [Vector4, Vector4] {
+export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
+  if (num == null) {
+    return [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+  }
   // Cast to BigInt as bit-wise operations only work with 32 bits,
   // even though Number uses 53 bits.
   const bigNum = BigInt(num);

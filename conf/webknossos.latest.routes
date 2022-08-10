@@ -142,6 +142,7 @@ PATCH         /annotations/:typ/:id/sharedTeams                                 
 PATCH         /annotations/:typ/:id/othersMayEdit                                       controllers.AnnotationController.updateOthersMayEdit(typ: String, id: String, othersMayEdit: Boolean)
 
 # Annotation Private Links
+GET           /annotations/zarr_private                                                 controllers.AnnotationPrivateLinkController.list
 GET           /annotations/zarr_private/byAccessToken/:accessId                         controllers.AnnotationPrivateLinkController.lookupPrivateLink(accessId: String)
 POST          /annotations/zarr_private                                                 controllers.AnnotationPrivateLinkController.create
 PUT           /annotations/zarr_private/:id                                             controllers.AnnotationPrivateLinkController.update(id: String)

@@ -2,8 +2,10 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.FoxImplicits
 import io.swagger.annotations._
+import play.api.libs.json._
 
 import javax.inject.Inject
 import models.annotation._
@@ -30,6 +32,13 @@ class AnnotationPrivateLinkController @Inject()(
       annotation: Annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
       writtenAnnotation <- annotationService.writesLayersAndStores(annotation)
     } yield Ok(writtenAnnotation)
+  }
+
+  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      links <- annotationPrivateLinkDAO.findAll
+      linksJsonList <- Fox.serialCombined(links)(annotationPrivateLinkService.publicWrites)
+    } yield Ok(Json.toJson(linksJsonList))
   }
 
   def get(id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>

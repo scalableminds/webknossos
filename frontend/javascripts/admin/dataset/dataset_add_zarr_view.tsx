@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import React, { useState } from "react";
 import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { exploreRemoteDataset, putDataset } from "admin/admin_rest_api";
+import { exploreRemoteDataset, storeRemoteDataset } from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
 import { CardContainer } from "admin/dataset/dataset_components";
@@ -93,13 +93,35 @@ function DatasetAddZarrView({ activeUser }: Props) {
     }
   }
 
-  async function handleAddDataset() {
+  async function handleStoreDataset() {
     if (datasourceConfig && activeUser) {
-      await putDataset(
-        JSON.parse(datasourceConfig).id.name,
+      let configJSON;
+      try {
+        configJSON = JSON.parse(datasourceConfig);
+      } catch (e) {
+        Toast.error("The loaded datasource config contains invalid JSON.");
+        return;
+      }
+      const result = await storeRemoteDataset(
+        configJSON.id.name,
         activeUser.organization,
         datasourceConfig,
       );
+      console.log(result);
+      if (result) {
+        const href = `/datasets/${activeUser.organization}/${configJSON.id.name}/`;
+        Toast.success(
+          <React.Fragment>
+            The datasource configuration was stored successfully.
+            <br />
+            Click{" "}
+            <a target="_blank" href={href} rel="noopener noreferrer">
+              here
+            </a>{" "}
+            to view the dataset.
+          </React.Fragment>,
+        );
+      }
     }
   }
 
@@ -210,7 +232,7 @@ function DatasetAddZarrView({ activeUser }: Props) {
                 size="large"
                 type="primary"
                 style={{ width: "100%" }}
-                onClick={handleAddDataset}
+                onClick={handleStoreDataset}
                 disabled={!datasourceConfig}
               >
                 Import

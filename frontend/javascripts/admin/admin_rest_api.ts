@@ -1450,7 +1450,7 @@ export async function exploreRemoteDataset(
   return dataSource;
 }
 
-export async function putDataset(
+export async function storeRemoteDataset(
   datasetName: string,
   organizationName: string,
   datasource: string,

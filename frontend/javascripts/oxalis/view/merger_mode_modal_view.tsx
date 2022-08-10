@@ -39,7 +39,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
           style={{ marginBottom: 12 }}
           message="Warning"
           description="The merger mode is limited to 32-bit. However, your current segmentation layer uses
-          64 bits. The rendering of segment ids larger than 2^32 will be incorrect."
+          64 bits. The rendering of segment ids greater than or equal to 2^32 will be incorrect."
           type="warning"
           showIcon
         />

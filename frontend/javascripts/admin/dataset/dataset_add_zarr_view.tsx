@@ -61,10 +61,15 @@ function DatasetAddZarrView({ activeUser }: Props) {
 
   async function handleExplore() {
     if (datasourceUrls) {
-      const datasourceToMerge = await exploreRemoteDataset(datasourceUrls, {
-        username: usernameOrAccessKey,
-        pass: passwordOrSecretKey,
-      });
+      let datasourceToMerge;
+      if (!usernameOrAccessKey || !passwordOrSecretKey) {
+        datasourceToMerge = await exploreRemoteDataset(datasourceUrls);
+      } else {
+        datasourceToMerge = await exploreRemoteDataset(datasourceUrls, {
+          username: usernameOrAccessKey,
+          pass: passwordOrSecretKey,
+        });
+      }
       if (datasourceToMerge) {
         if (datasourceConfig) {
           // TODO: check that both datasources have same voxel size else warning

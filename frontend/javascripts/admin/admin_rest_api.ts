@@ -1447,6 +1447,10 @@ export async function exploreRemoteDataset(
       : remoteUris.map((uri) => ({ remoteUri: uri })),
   });
   console.log(report);
+  if (report[1].indexOf("403 Forbidden") !== -1 || report[1].indexOf("401 Unauthorized") !== -1) {
+    Toast.error("The data could not be accessed. Please verify the credentials!");
+    return dataSource;
+  }
   return dataSource;
 }
 

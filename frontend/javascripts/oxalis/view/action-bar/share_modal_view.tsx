@@ -31,6 +31,7 @@ import {
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ControlModeEnum } from "oxalis/constants";
 import { makeComponentLazy } from "libs/react_helpers";
+import { PrivateLinksView } from "./private_links_view";
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
 type Props = {
@@ -143,6 +144,17 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 
 function _ShareModalView(props: Props) {
   const { isVisible, onOk, annotationType, annotationId } = props;
+  return (
+    <Modal
+      title="Share this annotation"
+      visible={isVisible}
+      width={800}
+      onOk={onOk}
+      cancelButtonProps={{ style: { display: "none" } }}
+    >
+      <PrivateLinksView />
+    </Modal>
+  );
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);

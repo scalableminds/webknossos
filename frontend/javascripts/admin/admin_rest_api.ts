@@ -545,6 +545,29 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
   return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
 }
 
+// ### Private Links
+
+export function createPrivateLink(annotationId: string): Promise<TaskCreationResponseContainer> {
+  return Request.sendJSONReceiveJSON("/api/annotations/zarr_private", {
+    data: {
+      _annotation: annotationId,
+      expirationDateTime: null,
+    },
+  });
+}
+
+export function getPrivateLinks(): Promise<Array<unknown>> {
+  return Request.receiveJSON("/api/annotations/zarr_private");
+}
+
+export function deletePrivateLink(linkId: string): Promise<{
+  messages: Array<Message>;
+}> {
+  return Request.receiveJSON(`/annotations/zarr_private/${linkId}`, {
+    method: "DELETE",
+  });
+}
+
 // ### Annotations
 export function getCompactAnnotations(
   isFinished: boolean,

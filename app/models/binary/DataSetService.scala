@@ -101,26 +101,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     } yield dataSet
   }
 
-  def addForeignDataSet(dataStoreName: String, dataSetName: String, organizationName: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      dataStore <- dataStoreDAO.findOneByName(dataStoreName)
-      foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)
-      _ <- createDataSet(dataStore, organizationName, foreignDataset)
-    } yield ()
-
-  def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] =
-    rpc(s"$dataStoreUrl/data/datasets/$dataSetName/readInboxDataSourceLike")
-      .addQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
-      .getWithJsonResponse[InboxDataSource]
-
-  def addForeignDataStore(name: String, url: String): Fox[Unit] = {
-    val dataStore = DataStore(name, url, url, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
-    for {
-      _ <- dataStoreDAO.insertOne(dataStore)
-    } yield ()
-  }
-
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(
       implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
 
@@ -381,7 +361,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "sortingKey" -> dataSet.sortingKey,
         "details" -> dataSet.details,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
-        "isForeign" -> dataStore.isForeign,
         "jobsEnabled" -> jobsEnabled,
         "tags" -> dataSet.tags
       )

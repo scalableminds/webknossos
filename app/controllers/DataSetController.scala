@@ -119,25 +119,6 @@ class DataSetController @Inject()(userService: UserService,
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def addForeignDataStoreAndDataSet(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      body <- request.body.asJson.toFox
-      url <- (body \ "url").asOpt[String] ?~> "dataSet.url.missing" ~> NOT_FOUND
-      dataStoreName <- (body \ "dataStoreName").asOpt[String].toFox ?~> "dataSet.dataStore.missing" ~> NOT_FOUND
-      dataSetName <- (body \ "dataSetName").asOpt[String] ?~> "dataSet.dataSet.missing" ~> NOT_FOUND
-      _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
-      noDataStoreBox <- dataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
-      _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
-      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
-      _ <- dataSetDAO
-        .findOneByNameAndOrganization(dataSetName, request.identity._organization)
-        .reverse ?~> "dataSet.name.alreadyTaken"
-      organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext).map(_.name)
-      _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
-    } yield Ok
-  }
-
   @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON list containing one object per resulting dataset."),

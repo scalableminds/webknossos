@@ -198,9 +198,9 @@ class PlaneMaterialFactory {
         type: "v3",
         value: new THREE.Vector3(...addressSpaceDimensions),
       },
-      // The segment id is always stored as a 64-bit (8 byte)
+      // The hovered segment id is always stored as a 64-bit (8 byte)
       // value which is why it is spread over two uniforms,
-      // names as `-High` and `-Low`.
+      // named as `-High` and `-Low`.
       hoveredSegmentIdHigh: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),

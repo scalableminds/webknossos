@@ -758,18 +758,13 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
 export function convertNumberTo64Bit(num: number): [Vector4, Vector4] {
   // Cast to BigInt as bit-wise operations only work with 32 bits,
   // even though Number uses 53 bits.
-  const hoveredSegmentId = BigInt(num);
-  let low;
-  let high;
-  {
-    const hoveredSegmentIdLow = Number((2n ** 32n - 1n) & hoveredSegmentId);
-    low = convertDecToBase256(hoveredSegmentIdLow);
-  }
+  const bigNum = BigInt(num);
 
-  {
-    const hoveredSegmentIdHigh = Number(hoveredSegmentId >> 32n);
-    high = convertDecToBase256(hoveredSegmentIdHigh);
-  }
+  const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
+  const bigNumHigh = Number(bigNum >> 32n);
+
+  const low = convertDecToBase256(bigNumLow);
+  const high = convertDecToBase256(bigNumHigh);
 
   return [high, low];
 }

@@ -194,7 +194,7 @@ void main() {
      if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
        // Increase cell opacity when cell is hovered
        float hoverAlphaIncrement =
-         // Hover cell only if it's the active one, if the feature is enabled
+         // Hover cell only if it's the active one
          // and if segmentation opacity is not zero
          hoveredSegmentIdLow == <%= segmentationName%>_id_low
           && hoveredSegmentIdHigh == <%= segmentationName%>_id_high

@@ -428,8 +428,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
-      const firstVal = Number(firstSliceDists.get(u, v));
-      const lastVal = Number(lastSliceDists.get(u, v));
+      const firstVal = firstSliceDists.get(u, v);
+      const lastVal = lastSliceDists.get(u, v);
       for (
         let targetOffsetW = adaptedInterpolationRange[0];
         targetOffsetW < adaptedInterpolationRange[1];

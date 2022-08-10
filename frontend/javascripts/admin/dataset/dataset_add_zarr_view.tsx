@@ -28,45 +28,29 @@ function DatasetAddZarrView(props: Props) {
   const { activeUser, onAdded } = props;
   const [datasourceConfig, setDatasourceConfig] = useState<string>();
   // const [exploreLog, setExploreLog] = useState<string>();
-  const [datasourceUrls, setDatasourceUrls] = useState<string[]>([""]);
+  const [datasourceUrl, setDatasourceUrl] = useState<string>("");
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
   const [selectedProtocol, setSelectedProtocol] = useState<string>("https://");
-  const [canStartExplore, setCanStartExplore] = useState<boolean>(false);
 
   function validateUrls(userInput: string) {
-    if (userInput) {
-      const urls = userInput
-        .split(",")
-        .map((url) => url.trim())
-        .filter((url) => url !== "");
-
-      // any url must begin with one of the accepted protocols
-      const faulty = urls.filter(
-        (url) =>
-          !(
-            (url.indexOf("https://") === 0 && url.indexOf("s3://") !== 0) ||
-            (url.indexOf("https://") !== 0 && url.indexOf("s3://") === 0)
-          ),
-      );
-
-      if (faulty.length !== 0) {
-        setCanStartExplore(false);
-        throw new Error("Dataset URLs must employ either the https:// or s3:// protocol.");
-      } else {
-        setSelectedProtocol(urls[0].indexOf("https://") === 0 ? "https://" : "s3://");
-        setCanStartExplore(true);
-      }
+    if (
+      (userInput.indexOf("https://") === 0 && userInput.indexOf("s3://") !== 0) ||
+      (userInput.indexOf("https://") !== 0 && userInput.indexOf("s3://") === 0)
+    ) {
+      throw new Error("Dataset URL must employ either the https:// or s3:// protocol.");
+    } else {
+      setSelectedProtocol(userInput.indexOf("https://") === 0 ? "https://" : "s3://");
     }
   }
 
   async function handleExplore() {
-    if (datasourceUrls) {
+    if (datasourceUrl) {
       let datasourceToMerge;
       if (!usernameOrAccessKey || !passwordOrSecretKey) {
-        datasourceToMerge = await exploreRemoteDataset(datasourceUrls);
+        datasourceToMerge = await exploreRemoteDataset([datasourceUrl]);
       } else {
-        datasourceToMerge = await exploreRemoteDataset(datasourceUrls, {
+        datasourceToMerge = await exploreRemoteDataset([datasourceUrl], {
           username: usernameOrAccessKey,
           pass: passwordOrSecretKey,
         });
@@ -149,15 +133,8 @@ function DatasetAddZarrView(props: Props) {
             validateFirst
           >
             <Input
-              defaultValue={datasourceUrls}
-              onChange={(e) => {
-                setDatasourceUrls(
-                  e.target.value
-                    .split(",")
-                    .map((url) => url.trim())
-                    .filter((url) => url !== ""),
-                );
-              }}
+              defaultValue={datasourceUrl}
+              onChange={(e) => setDatasourceUrl(e.target.value)}
             />
           </FormItem>
           <Row gutter={8}>
@@ -178,12 +155,6 @@ function DatasetAddZarrView(props: Props) {
               </FormItem>
             </Col>
           </Row>
-          {datasourceUrls.length > 1 ? (
-            <Hint style={{ marginTop: canStartExplore ? -16 : 0, marginLeft: 12 }}>
-              Please ensure that all URLs can be accessed with the same credentials when adding
-              multiple URLs.
-            </Hint>
-          ) : null}
           <FormItem style={{ marginBottom: 0 }}>
             <AsyncButton
               size="large"

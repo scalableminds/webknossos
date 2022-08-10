@@ -372,7 +372,7 @@ class VolumeTracingController @Inject()(
 
         zarrLayer = ZarrSegmentationLayer(
           name = tracingId,
-          largestSegmentId = if (tracing.segments.nonEmpty) tracing.segments.maxBy(_.segmentId).segmentId else 1,
+          largestSegmentId = tracing.largestSegmentId,
           boundingBox = tracing.boundingBox,
           elementClass = tracing.elementClass,
           mags = tracing.resolutions.toList.map(x => ZarrMag(x, None, None)),

@@ -49,7 +49,6 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import com.scalableminds.webknossos.datastore.models
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
@@ -244,7 +243,7 @@ class AnnotationService @Inject()(
             Fox.failure(s"Unknown AnnotationLayerType: ${annotationLayerParameters.typ}")
         }
       } yield
-        models.annotation.AnnotationLayer(tracingId, annotationLayerParameters.typ, annotationLayerParameters.name)
+        AnnotationLayer(tracingId, annotationLayerParameters.typ, annotationLayerParameters.name)
 
     def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
       if (existingAnnotationLayers.isEmpty) Fox.successful(None)
@@ -850,7 +849,7 @@ class AnnotationService @Inject()(
       )
   }
 
-  def writesLayersAndStores(annotation: Annotation): Fox[JsValue] = {
+  def writesAsAnnotationSource(annotation: Annotation): Fox[JsValue] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"

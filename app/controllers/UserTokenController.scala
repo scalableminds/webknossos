@@ -165,6 +165,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                   userBox: Box[User],
                                   token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
+    // Optionally, a accessToken can be provided which explicitly looks up the read right the private link table
 
     def findAnnotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
       val annotationFox = annotationDAO.findOneByTracingId(tracingId)
@@ -191,7 +192,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       for {
         annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
         annotationAccessByToken <- token
-          .map(annotationPrivateLinkDAO.findOneByAccessToken(_)(GlobalAccessContext))
+          .map(annotationPrivateLinkDAO.findOneByAccessToken)
           .getOrElse(Fox.empty)
           .futureBox
 

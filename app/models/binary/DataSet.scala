@@ -115,7 +115,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     "isPublic" + token
       .map(
         t =>
-          " or sharingToken = '$t' or _id in (select _dataset " +
+          " or sharingToken = '$t' or _id in (select ans._dataset " +
             "from webknossos.annotation_privateLinks_ apl " +
             "join webknossos.annotations_ ans ON apl._annotation = ans._id " +
             s"where apl.accessToken = '$t')")

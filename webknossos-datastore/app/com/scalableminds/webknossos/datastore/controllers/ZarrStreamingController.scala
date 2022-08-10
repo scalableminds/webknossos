@@ -361,7 +361,7 @@ class ZarrStreamingController @Inject()(
                 layers =>
                   Ok(
                     views.html.datastoreZarrDatasourceDir(
-                      "Tracingstore",
+                      "Combined Annotation Route",
                       s"${annotationLayer.tracingId}",
                       layers
                     )).withHeaders())
@@ -482,7 +482,7 @@ class ZarrStreamingController @Inject()(
                     dataSetName: String,
                     dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>
     for {
-      result <- zGroup(urlOrHeaderToken(token, request), organizationName, dataSetName, dataLayerName)
+      result <- zGroup(urlOrHeaderToken(token, request), organizationName, dataSetName)
     } yield result
   }
 
@@ -490,7 +490,6 @@ class ZarrStreamingController @Inject()(
       token: Option[String],
       organizationName: String,
       dataSetName: String,
-      dataLayerName: String = "",
   ): Fox[Result] =
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
@@ -509,7 +508,7 @@ class ZarrStreamingController @Inject()(
               .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl, accessToken)
               .map(Ok(_))
           case None =>
-            zGroup(Some(accessToken), annotationSource.organizationName, annotationSource.dataSetName, dataLayerName)
+            zGroup(Some(accessToken), annotationSource.organizationName, annotationSource.dataSetName)
         }
       } yield result
   }

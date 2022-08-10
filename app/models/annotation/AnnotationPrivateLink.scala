@@ -3,10 +3,10 @@ package models.annotation
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{AnnotationPrivatelinks, _}
+import oxalis.security.RandomIDGenerator
 
 import javax.inject.Inject
 import play.api.libs.json.{JsValue, Json, OFormat}
-import play.api.mvc.PlayBodyParsers
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -29,11 +29,18 @@ object AnnotationPrivateLinkParams {
   implicit val jsonFormat: OFormat[AnnotationPrivateLinkParams] = Json.format[AnnotationPrivateLinkParams]
 }
 
-class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers) {
-
-  val DefaultAnnotationListLimit = 1000
+class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext) {
   def publicWrites(annotationPrivateLink: AnnotationPrivateLink): Fox[JsValue] =
-    Fox.successful(Json.toJson(annotationPrivateLink))
+    Fox.successful(Json.obj(
+      "_id" -> annotationPrivateLink._id,
+      "_annotation" -> annotationPrivateLink._annotation.toString,
+      "accessToken" -> annotationPrivateLink.accessToken,
+      "expirationDateTime" -> annotationPrivateLink.expirationDateTime,
+      "isDeleted" -> annotationPrivateLink.isDeleted,
+    ))
+
+
+  def generateToken: String = RandomIDGenerator.generateBlocking(24)
 }
 
 class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -54,7 +61,6 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
         r.isdeleted
       )
     )
-
   def insertOne(aPL: AnnotationPrivateLink): Fox[Unit] = {
     val time = aPL.expirationDateTime.map(new java.sql.Timestamp(_))
 
@@ -73,11 +79,10 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
                             expirationDateTime = $expirationDateTime where _id = $id""")
     } yield ()
 
-  def findOneByAccessToken(accessToken: String)(implicit ctx: DBAccessContext): Fox[AnnotationPrivateLink] =
+  def findOneByAccessToken(accessToken: String): Fox[AnnotationPrivateLink] =
     for {
-      accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where accessToken = ${accessToken} and #$accessQuery"
+        sql"select #$columns from #$existingCollectionName where accessToken = ${accessToken}"
           .as[AnnotationPrivatelinksRow])
       parsed <- parseFirst(r, accessToken)
     } yield parsed

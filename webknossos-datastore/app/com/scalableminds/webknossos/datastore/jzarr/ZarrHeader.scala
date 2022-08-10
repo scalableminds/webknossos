@@ -53,6 +53,10 @@ case class ZarrHeader(
 object ZarrHeader {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
+  /***
+   * This function is used for exposing webknossos layers as zarr layers via the API.
+   * It therefore defaults to the necessary defaults for webknossos data layers.
+   */
   def fromLayer(dataLayer: DataLayer, mag: Vec3Int): ZarrHeader = {
     val cubeLength = DataLayer.bucketLength
     val (channels, dtype) = ElementClass.toChannelAndZarrString(dataLayer.elementClass)
@@ -134,6 +138,4 @@ object ZarrHeader {
         "dimension_seperator" -> zarrHeader.dimension_separator
       )
   }
-
-//  implicit val jsonFormat: OFormat[ZarrHeader] = Json.using[Json.WithDefaultValues].format[ZarrHeader]
 }

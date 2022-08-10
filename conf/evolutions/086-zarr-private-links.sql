@@ -1,14 +1,12 @@
--- Note that this evolution introduces constraints which may not be met by existing data. See migration guide for manual steps
-
 START TRANSACTION;
 
 CREATE TABLE webknossos.annotation_privateLinks
 (
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _annotation CHAR(24) NOT NULL,
-  accessToken              Text        NOT NULL UNIQUE,
+  accessToken Text NOT NULL UNIQUE,
   expirationDateTime TIMESTAMPTZ ,
-  isDeleted          BOOLEAN     NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);

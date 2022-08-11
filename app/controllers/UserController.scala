@@ -243,18 +243,15 @@ class UserController @Inject()(userService: UserService,
   def list(
       @ApiParam(
         value =
-          "Optional filtering: If true, list only users the requesting user is allowed to administrate, if false, list only datasets the requesting user is not allowed to administrate"
-      )
+          "Optional filtering: If true, list only users the requesting user is allowed to administrate, if false, list only datasets the requesting user is not allowed to administrate")
       isEditable: Option[Boolean],
       @ApiParam(
         value =
-          "Optional filtering: If true, list only users who are team manager or admin, if false, list only users who are neither team manager nor admin"
-      )
+          "Optional filtering: If true, list only users who are team manager or admin, if false, list only users who are neither team manager nor admin")
       isTeamManagerOrAdmin: Option[Boolean],
       @ApiParam(
         value =
-          "Optional filtering: If true, list only users who are admin, if false, list only users who are not admin"
-      )
+          "Optional filtering: If true, list only users who are admin, if false, list only users who are not admin")
       isAdmin: Option[Boolean]
   ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     UsingFilters(

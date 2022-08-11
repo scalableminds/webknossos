@@ -147,15 +147,13 @@ class DataSetController @Inject()(userService: UserService,
       isActive: Option[Boolean],
       @ApiParam(
         value =
-          "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets"
-      )
+          "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets")
       isUnreported: Option[Boolean],
       @ApiParam(
         value =
-          "Optional filtering: If true, list only datasets the requesting user is allowed to edit, if false, list only datasets the requesting user is not allowed to edit"
-      )
+          "Optional filtering: If true, list only datasets the requesting user is allowed to edit, if false, list only datasets the requesting user is not allowed to edit")
       isEditable: Option[Boolean],
-      @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name"
+      @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name",
                 example = "sample_organization")
       organizationName: Option[String],
       @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization")

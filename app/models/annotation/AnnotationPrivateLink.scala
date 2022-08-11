@@ -23,7 +23,7 @@ object AnnotationPrivateLink {
   implicit val jsonFormat: OFormat[AnnotationPrivateLink] = Json.format[AnnotationPrivateLink]
 }
 
-case class AnnotationPrivateLinkParams(_annotation: String, expirationDateTime: Option[Long])
+case class AnnotationPrivateLinkParams(annotation: String, expirationDateTime: Option[Long])
 
 object AnnotationPrivateLinkParams {
   implicit val jsonFormat: OFormat[AnnotationPrivateLinkParams] = Json.format[AnnotationPrivateLinkParams]
@@ -74,12 +74,13 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
     } yield ()
   }
 
-  def updateOne(id: ObjectId, _annotation: ObjectId, expirationDateTime: Option[Long])(
+  def updateOne(id: ObjectId, annotationId: ObjectId, expirationDateTime: Option[Long])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"""update webknossos.annotation_privateLinks set _annotation = ${_annotation},
-                            expirationDateTime = $expirationDateTime where _id = $id""")
+      time = expirationDateTime.map(new java.sql.Timestamp(_))
+      _ <- run(sqlu"""update webknossos.annotation_privateLinks set _annotation = ${annotationId},
+                            expirationDateTime = $time where _id = $id""")
     } yield ()
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =

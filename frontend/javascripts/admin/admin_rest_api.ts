@@ -551,7 +551,7 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
 export function createPrivateLink(annotationId: string): Promise<ZarrPrivateLink> {
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
-      _annotation: annotationId,
+      annotation: annotationId,
       expirationDateTime: null,
     },
   });
@@ -563,7 +563,7 @@ export function getPrivateLinks(): Promise<Array<ZarrPrivateLink>> {
 
 export function updatePrivateLink(link: ZarrPrivateLink): Promise<ZarrPrivateLink> {
   return Request.sendJSONReceiveJSON(`/api/zarrPrivateLinks/${link.id}`, {
-    data: { ...link, _annotation: link.annotation },
+    data: { ...link, annotation: link.annotation },
     method: "PUT",
   });
 }

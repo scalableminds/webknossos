@@ -67,7 +67,7 @@ class AnnotationPrivateLinkController @Inject()(
       val _id = ObjectId.generate
       val accessToken = annotationPrivateLinkService.generateToken
       for {
-        annotationId <- ObjectId.fromString(params._annotation)
+        annotationId <- ObjectId.fromString(params.annotation)
         _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> "notAllowed" ~> FORBIDDEN
         _ <- annotationPrivateLinkDAO.insertOne(
           AnnotationPrivateLink(_id, annotationId, accessToken, params.expirationDateTime)) ?~> "create.failed"
@@ -80,7 +80,7 @@ class AnnotationPrivateLinkController @Inject()(
     sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) { implicit request =>
       val params = request.body
       for {
-        annotationId <- ObjectId.fromString(params._annotation)
+        annotationId <- ObjectId.fromString(params.annotation)
         idValidated <- ObjectId.fromString(id)
         aPLInfo <- annotationPrivateLinkDAO.findOne(idValidated) ?~> "annotation private link not found" ~> NOT_FOUND
         _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN

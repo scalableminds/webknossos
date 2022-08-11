@@ -37,7 +37,6 @@ class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext) {
         "annotation" -> annotationPrivateLink._annotation.toString,
         "accessToken" -> annotationPrivateLink.accessToken,
         "expirationDateTime" -> annotationPrivateLink.expirationDateTime,
-        "isDeleted" -> annotationPrivateLink.isDeleted,
       ))
 
   def generateToken: String = RandomIDGenerator.generateBlocking(24)

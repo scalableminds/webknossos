@@ -57,6 +57,7 @@ import type {
   WkConnectDatasetConfig,
   ServerEditableMapping,
   APICompoundType,
+  ZarrPrivateLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -547,7 +548,7 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
 
 // ### Private Links
 
-export function createPrivateLink(annotationId: string): Promise<TaskCreationResponseContainer> {
+export function createPrivateLink(annotationId: string): Promise<ZarrPrivateLink> {
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       _annotation: annotationId,
@@ -556,8 +557,15 @@ export function createPrivateLink(annotationId: string): Promise<TaskCreationRes
   });
 }
 
-export function getPrivateLinks(): Promise<Array<unknown>> {
+export function getPrivateLinks(): Promise<Array<ZarrPrivateLink>> {
   return Request.receiveJSON("/api/zarrPrivateLinks");
+}
+
+export function updatePrivateLink(link: ZarrPrivateLink): Promise<ZarrPrivateLink> {
+  return Request.sendJSONReceiveJSON(`/api/zarrPrivateLinks/${link.id}`, {
+    data: { ...link, _annotation: link.annotation },
+    method: "PUT",
+  });
 }
 
 export function deletePrivateLink(linkId: string): Promise<{

@@ -24,7 +24,7 @@ export type InterpolateSegmentationLayerAction = ReturnType<
 >;
 export type MaybeUnmergedBucketLoadedPromise = null | Promise<BucketDataArray>;
 export type AddBucketToUndoAction = ReturnType<typeof addBucketToUndoAction>;
-type UpdateDirectionAction = ReturnType<typeof updateDirectionAction>;
+type RegisterLabelPointAction = ReturnType<typeof registerLabelPointAction>;
 type ResetContourAction = ReturnType<typeof resetContourAction>;
 export type FinishAnnotationStrokeAction = ReturnType<typeof finishAnnotationStrokeAction>;
 type SetMousePositionAction = ReturnType<typeof setMousePositionAction>;
@@ -46,7 +46,7 @@ export type VolumeTracingAction =
   | FinishEditingAction
   | SetActiveCellAction
   | ClickSegmentAction
-  | UpdateDirectionAction
+  | RegisterLabelPointAction
   | ResetContourAction
   | FinishAnnotationStrokeAction
   | SetMousePositionAction
@@ -165,7 +165,7 @@ export const interpolateSegmentationLayerAction = () =>
     type: "INTERPOLATE_SEGMENTATION_LAYER",
   } as const);
 
-export const updateDirectionAction = (centroid: Vector3) =>
+export const registerLabelPointAction = (centroid: Vector3) =>
   ({
     type: "UPDATE_DIRECTION",
     centroid,

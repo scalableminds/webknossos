@@ -384,6 +384,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isForeign" -> dataStore.isForeign,
         "jobsEnabled" -> jobsEnabled,
         "tags" -> dataSet.tags,
+        // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented
         "publication" -> None
       )
     }

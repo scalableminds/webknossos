@@ -97,6 +97,6 @@ class AnnotationPrivateLinkController @Inject()(
       aPLInfo <- annotationPrivateLinkDAO.findOne(idValidated) ?~> "notFound" ~> NOT_FOUND
       _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
       _ <- annotationPrivateLinkDAO.deleteOne(idValidated) ?~> "delete failed"
-    } yield Ok
+    } yield JsonOk("privateLink deleted")
   }
 }

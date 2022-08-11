@@ -84,6 +84,10 @@ function DatasetAddZarrView(props: Props) {
       }
     } else {
       Toast.error("Please provide a valid URL for exploration.");
+    if (!_.isEqual(loadedDatasource.scale, dataSource.scale)) {
+      Toast.warning(
+        `${messages["dataset.add_zarr_different_scale_warning"]}\n${dataSource.scale.join("\n")}`,
+      );
     }
   }
 

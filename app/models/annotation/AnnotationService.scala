@@ -242,8 +242,7 @@ class AnnotationService @Inject()(
           case _ =>
             Fox.failure(s"Unknown AnnotationLayerType: ${annotationLayerParameters.typ}")
         }
-      } yield
-        AnnotationLayer(tracingId, annotationLayerParameters.typ, annotationLayerParameters.name)
+      } yield AnnotationLayer(tracingId, annotationLayerParameters.typ, annotationLayerParameters.name)
 
     def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
       if (existingAnnotationLayers.isEmpty) Fox.successful(None)

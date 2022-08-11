@@ -41,14 +41,21 @@ class AnnotationPrivateLinkController @Inject()(
     } yield Ok(Json.toJson(linksJsonList))
   }
 
+  def listByAnnotation(annotationId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      annotationIdValidated <- ObjectId.fromString(annotationId)
+      links <- annotationPrivateLinkDAO.findAllByAnnotation(annotationIdValidated)
+      linksJsonList <- Fox.serialCombined(links)(annotationPrivateLinkService.publicWrites)
+    } yield Ok(Json.toJson(linksJsonList))
+  }
+
   def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       idValidated <- ObjectId.fromString(id)
 
       annotationPrivateLink <- annotationPrivateLinkDAO.findOne(idValidated)
       _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> 404
-      _ <- annotationDAO
-        .findOne(annotationPrivateLink._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
+      _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
 
       annotationPrivateLinkJs <- annotationPrivateLinkService.publicWrites(annotationPrivateLink)
     } yield Ok(annotationPrivateLinkJs)

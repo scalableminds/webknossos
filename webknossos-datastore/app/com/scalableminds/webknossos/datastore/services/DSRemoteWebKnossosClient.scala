@@ -106,7 +106,7 @@ class DSRemoteWebKnossosClient @Inject()(
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 
   def getAnnotationForPrivateLink(accessToken: String): Fox[AnnotationSource] =
-    rpc(s"$webKnossosUri/api/annotations/zarr_private/byAccessToken/$accessToken")
+    rpc(s"$webKnossosUri/api/zarrPrivateLinks/byAccessToken/$accessToken")
       .addQueryString("key" -> dataStoreKey)
       .getWithJsonResponse[AnnotationSource]
 }

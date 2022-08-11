@@ -85,7 +85,7 @@ class ZarrStreamingController @Inject()(
               (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
                 annotationSource.organizationName,
                 annotationSource.dataSetName,
-                dataLayerName) ?~> Messages("dataSource.notFound") ~> 404
+                dataLayerName) ?~> Messages("dataSource.notFound") ~> 404 ~> NOT_FOUND
               existingMags = dataLayer.resolutions
 
               dataSourceOmeNgffHeader = OmeNgffHeader.fromDataLayerName(dataLayerName,
@@ -171,7 +171,7 @@ class ZarrStreamingController @Inject()(
 
       dataSource <- dataSourceRepository
         .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
-        .toFox ~> 404
+        .toFox ~> 404 ~> NOT_FOUND
       dataSourceLayers = dataSource.dataLayers.map(convertLayerToZarrLayer)
       annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(l =>
         remoteTracingstoreClient.getVolumeLayerAsZarrLayer(l.tracingId, annotationSource.tracingStoreUrl, accessToken))
@@ -234,11 +234,11 @@ class ZarrStreamingController @Inject()(
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
-                                                                                  dataLayerName) ~> 404
-        (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> 404
-        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
-        _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
-        _ <- bool2Fox(c == 0) ~> "zarr.invalidFirstChunkCoord" ~> 404
+                                                                                  dataLayerName) ~> 404 ~> NOT_FOUND
+        (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> 404 ~> NOT_FOUND
+        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404 ~> NOT_FOUND
+        _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404 ~> NOT_FOUND
+        _ <- bool2Fox(c == 0) ~> "zarr.invalidFirstChunkCoord" ~> 404 ~> NOT_FOUND
         cubeSize = DataLayer.bucketLength
         request = DataServiceDataRequest(
           dataSource,
@@ -280,9 +280,9 @@ class ZarrStreamingController @Inject()(
                                       token) {
       for {
         (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> 404
-        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
-        _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+          "dataSource.notFound") ~> 404 ~> NOT_FOUND
+        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404 ~> NOT_FOUND
+        _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404 ~> NOT_FOUND
         zarrHeader = ZarrHeader.fromLayer(dataLayer, magParsed)
       } yield Ok(Json.toJson(zarrHeader))
     }
@@ -331,9 +331,9 @@ class ZarrStreamingController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ~> 404
-        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
-        _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404
+        (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ~> 404 ~> NOT_FOUND
+        magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404 ~> NOT_FOUND
+        _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> 404 ~> NOT_FOUND
       } yield
         Ok(
           views.html.datastoreZarrDatasourceDir(
@@ -393,7 +393,7 @@ class ZarrStreamingController @Inject()(
                                       token) {
       for {
         (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> 404
+          "dataSource.notFound") ~> 404 ~> NOT_FOUND
         mags = dataLayer.resolutions
       } yield
         Ok(
@@ -439,7 +439,7 @@ class ZarrStreamingController @Inject()(
                                         urlOrHeaderToken(token, request)) {
         for {
           dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-            "dataSource.notFound") ~> 404
+            "dataSource.notFound") ~> 404 ~> NOT_FOUND
           layerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
         } yield
           Ok(
@@ -460,7 +460,7 @@ class ZarrStreamingController @Inject()(
         for {
           dataSource <- dataSourceRepository
             .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
-            .toFox ?~> Messages("dataSource.notFound") ~> 404
+            .toFox ?~> Messages("dataSource.notFound") ~> 404 ~> NOT_FOUND
 
           dataSourceLayerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
           annotationLayerNames = annotationSource.annotationLayers

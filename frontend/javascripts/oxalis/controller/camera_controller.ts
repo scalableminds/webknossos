@@ -145,7 +145,7 @@ class CameraController extends React.PureComponent<Props> {
         this.props.setTargetAndFixPosition();
         Store.dispatch(
           setTDCameraWithoutTimeTrackingAction({
-            near: 10,
+            near: 1 / 1000,
             far,
           }),
         );

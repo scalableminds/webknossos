@@ -143,30 +143,24 @@ class DataSetController @Inject()(userService: UserService,
     Array(new ApiResponse(code = 200, message = "JSON list containing one object per resulting dataset."),
           new ApiResponse(code = 400, message = badRequestLabel)))
   def list(
-      @ApiParam(value = "Optional filtering: If true, list only active datasets, if false, list only inactive datasets",
-                defaultValue = "None")
+      @ApiParam(value = "Optional filtering: If true, list only active datasets, if false, list only inactive datasets")
       isActive: Option[Boolean],
       @ApiParam(
         value =
-          "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets",
-        defaultValue = "None"
+          "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets"
       )
       isUnreported: Option[Boolean],
       @ApiParam(
         value =
-          "Optional filtering: If true, list only datasets the requesting user is allowed to edit, if false, list only datasets the requesting user is not allowed to edit",
-        defaultValue = "None"
+          "Optional filtering: If true, list only datasets the requesting user is allowed to edit, if false, list only datasets the requesting user is not allowed to edit"
       )
       isEditable: Option[Boolean],
-      @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name",
-                defaultValue = "None",
+      @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name"
                 example = "sample_organization")
       organizationName: Option[String],
-      @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization",
-                defaultValue = "None")
+      @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization")
       onlyMyOrganization: Option[Boolean],
-      @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id",
-                defaultValue = "None")
+      @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id")
       uploaderId: Option[String]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     UsingFilters(

@@ -164,7 +164,7 @@ class DataSetController @Inject()(userService: UserService,
             reportMutable += "Error when exploring as layer set: Empty"
             None
         }
-      } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.toList))
+      } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.mkString("\n")))
     }
 
   @ApiOperation(value = "List all accessible datasets.", nickname = "datasetList")

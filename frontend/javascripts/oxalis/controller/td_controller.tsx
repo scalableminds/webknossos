@@ -98,6 +98,7 @@ type StateProps = {
   flycam: Flycam;
   scale: Vector3;
   activeTool: AnnotationTool;
+  tdViewUseOrthographicCamera: boolean;
 };
 type Props = OwnProps & StateProps;
 
@@ -227,9 +228,14 @@ class TDController extends React.PureComponent<Props> {
     ];
     const flycamPos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     this.controls.forEach((control) => {
-      control.flycamPos.set(...flycamPos);
-      control.mouseMoveFactor = mouseMoveFactor;
-      control.update(true);
+      if (
+        this.props.tdViewUseOrthographicCamera ===
+        (control.object.type === "OrthographicCamera")
+      ) {
+        control.flycamPos.set(...flycamPos);
+        control.mouseMoveFactor = mouseMoveFactor;
+        control.update(true);
+      }
     });
   };
 
@@ -407,6 +413,7 @@ export function mapStateToProps(state: OxalisState): StateProps {
     flycam: state.flycam,
     scale: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,
+    tdViewUseOrthographicCamera: state.userConfiguration.tdViewUseOrthographicCamera,
   };
 }
 const connector = connect(mapStateToProps);

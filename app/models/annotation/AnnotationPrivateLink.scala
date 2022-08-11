@@ -61,8 +61,8 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
       )
     )
 
-//  override def updateAccessQ(requestingUserId: ObjectId): String =
-//    s"""exists(select _user from webknossos.annotations_ ant join webknossos.annotation_privateLinks aPL on ant._id = aPL._annotation where aPL._id = _id and ant._user = ${requestingUserId.id})"""
+  override def readAccessQ(requestingUserId: ObjectId): String =
+    s"""(_annotation in (select _id from webknossos.annotations_ where _user = '${requestingUserId.id}'))"""
 
   def insertOne(aPL: AnnotationPrivateLink): Fox[Unit] = {
     val time = aPL.expirationDateTime.map(new java.sql.Timestamp(_))
@@ -84,19 +84,18 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: Exec
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =
     for {
-      userId <- userIdFromCtx ?~> "FAILED: userIdFromCtx"
-      r <- run(sql"""select #$columns from #$existingCollectionName  where
-          exists(select _user from webknossos.annotations_ ant join #$existingCollectionName aPL on ant._id = aPL._annotation where aPL._id = #$existingCollectionName._id and ant._user = ${userId.id})
-           """.as[AnnotationPrivatelinksRow])
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"""select #$columns from #$existingCollectionName where #$accessQuery""".as[AnnotationPrivatelinksRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def findAllByAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
-      userId <- userIdFromCtx ?~> "FAILED: userIdFromCtx"
-      r <- run(sql"""select #$columns from #$existingCollectionName where
-    exists(select _user from webknossos.annotations_ ant join #$existingCollectionName aPL on ant._id = aPL._annotation where aPL._id = #$existingCollectionName._id and ant._user = ${userId.id} and ant._id = ${annotationId.id})
-     """.as[AnnotationPrivatelinksRow])
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"""select #$columns from #$existingCollectionName where _annotation=${annotationId.id} and #$accessQuery"""
+          .as[AnnotationPrivatelinksRow])
       parsed <- parseAll(r)
     } yield parsed
 

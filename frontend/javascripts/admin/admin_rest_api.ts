@@ -1433,13 +1433,15 @@ export async function addForeignDataSet(
   return result;
 }
 
+type ExplorationResult = {
+  dataSource: DatasourceConfiguration;
+  report: Array<string>;
+};
+
 export async function exploreRemoteDataset(
   remoteUris: string[],
   credentials?: { username: string; pass: string },
-): Promise<{
-  dataSource: DatasourceConfiguration | undefined;
-  report: string[];
-}> {
+): Promise<ExplorationResult> {
   const { dataSource, report } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
     data: credentials
       ? remoteUris.map((uri) => ({

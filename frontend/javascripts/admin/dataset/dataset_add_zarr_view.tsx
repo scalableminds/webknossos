@@ -27,19 +27,19 @@ type Props = OwnProps & StateProps;
 
 function DatasetAddZarrView(props: Props) {
   const { activeUser, onAdded } = props;
-  const [datasourceConfig, setDatasourceConfig] = useState<string>();
+  const [datasourceConfig, setDatasourceConfig] = useState<string>("");
   const [exploreLog, setExploreLog] = useState<string>("");
   const [datasourceUrl, setDatasourceUrl] = useState<string>("");
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
-  const [selectedProtocol, setSelectedProtocol] = useState<string>("https://");
+  const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https">("https");
 
   function validateUrls(userInput: string) {
     if (
       (userInput.indexOf("https://") === 0 && userInput.indexOf("s3://") !== 0) ||
       (userInput.indexOf("https://") !== 0 && userInput.indexOf("s3://") === 0)
     ) {
-      setSelectedProtocol(userInput.indexOf("https://") === 0 ? "https://" : "s3://");
+      setSelectedProtocol(userInput.indexOf("https://") === 0 ? "https" : "s3");
     } else {
       throw new Error("Dataset URL must employ either the https:// or s3:// protocol.");
     }
@@ -113,7 +113,7 @@ function DatasetAddZarrView(props: Props) {
     <div style={{ padding: 5 }}>
       <CardContainer title="Add Zarr Dataset">
         Please enter a URL that points to the Zarr data you would like to import. If necessary,
-        specify the credentials for the dataset. More layers can be added to the loaded datasource
+        specify the credentials for the dataset. More layers can be added to the datasource specification below
         using the Add button. Once you have approved of the resulting datasource you can import it.
         <Form style={{ marginTop: 20 }} layout="vertical">
           <FormItem
@@ -145,7 +145,7 @@ function DatasetAddZarrView(props: Props) {
           </FormItem>
           <Row gutter={8}>
             <Col span={12}>
-              <FormItem label={selectedProtocol === "https://" ? "Username" : "Access Key"}>
+              <FormItem label={selectedProtocol === "https" ? "Username" : "Access Key"}>
                 <Input
                   value={usernameOrAccessKey}
                   onChange={(e) => setUsernameOrAccessKey(e.target.value)}
@@ -153,7 +153,7 @@ function DatasetAddZarrView(props: Props) {
               </FormItem>
             </Col>
             <Col span={12}>
-              <FormItem label={selectedProtocol === "https://" ? "Password" : "Secret Key"}>
+              <FormItem label={selectedProtocol === "https" ? "Password" : "Secret Key"}>
                 <Password
                   value={passwordOrSecretKey}
                   onChange={(e) => setPasswordOrSecretKey(e.target.value)}

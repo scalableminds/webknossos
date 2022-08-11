@@ -3,7 +3,6 @@ package models.binary
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
-
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
@@ -11,6 +10,7 @@ import com.scalableminds.webknossos.datastore.jzarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
@@ -80,14 +80,13 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       layerUri: String,
       user: Option[String],
       password: Option[String],
-      reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[List[(ZarrLayer, Vec3Double)]] = {
-    val remoteSource = RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)
+      reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
+      remoteSource <- tryo(RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)).toFox ?~> s"Received invalid URI: $layerUri"
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
       remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
       layersWithVoxelSizes <- exploreAsArrayOrNgff(remotePath, remoteSource.credentials, reportMutable)
     } yield layersWithVoxelSizes
-  }
 
   private def normalizeUri(uri: String): String =
     if (uri.endsWith(ZarrHeader.FILENAME_DOT_ZARRAY)) uri.dropRight(ZarrHeader.FILENAME_DOT_ZARRAY.length)

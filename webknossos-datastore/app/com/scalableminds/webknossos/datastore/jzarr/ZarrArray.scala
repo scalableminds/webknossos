@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.jzarr
 
 import java.io.IOException
 import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util
 
@@ -15,7 +16,6 @@ import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.io.Source
 
 object ZarrArray extends LazyLogging {
   private val chunkSizeLimitBytes = 64 * 1024 * 1024
@@ -25,30 +25,29 @@ object ZarrArray extends LazyLogging {
     val store = new FileSystemStore(path)
     val rootPath = new ZarrPath("")
     val headerPath = rootPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
-    val headerInputStream = store.getInputStream(headerPath.storeKey)
-    try {
-      if (headerInputStream == null)
-        throw new IOException(
-          "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
-      val headerString = Source.fromInputStream(headerInputStream).mkString
-      val header: ZarrHeader =
-        Json.parse(headerString).validate[ZarrHeader] match {
-          case JsSuccess(parsedHeader, _) =>
-            parsedHeader
-          case errors: JsError =>
-            throw new Exception("Validating json as zarr header failed: " + JsError.toJson(errors).toString())
-        }
-      if (header.bytesPerChunk > chunkSizeLimitBytes) {
-        throw new IllegalArgumentException(
-          f"Chunk size of this Zarr Array exceeds limit of $chunkSizeLimitBytes, got ${header.bytesPerChunk}")
+    val headerBytes = store.readBytes(headerPath.storeKey)
+    if (headerBytes.isEmpty)
+      throw new IOException(
+        "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
+    val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
+    val header: ZarrHeader =
+      Json.parse(headerString).validate[ZarrHeader] match {
+        case JsSuccess(parsedHeader, _) =>
+          parsedHeader
+        case errors: JsError =>
+          throw new Exception("Validating json as zarr header failed: " + JsError.toJson(errors).toString())
       }
-      new ZarrArray(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)))
-    } finally if (headerInputStream != null) headerInputStream.close()
+    if (header.bytesPerChunk > chunkSizeLimitBytes) {
+      throw new IllegalArgumentException(
+        f"Chunk size of this Zarr Array exceeds limit of $chunkSizeLimitBytes, got ${header.bytesPerChunk}")
+    }
+    new ZarrArray(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)))
   }
 
 }
 
-class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader, axisOrder: AxisOrder) extends LazyLogging {
+class ZarrArray(relativePath: ZarrPath, store: FileSystemStore, header: ZarrHeader, axisOrder: AxisOrder)
+    extends LazyLogging {
 
   private val chunkReader =
     ChunkReader.create(store, header)

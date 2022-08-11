@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import scala.util.Using
 
 object ChunkReader {
-  def create(store: Store, header: ZarrHeader): ChunkReader =
+  def create(store: FileSystemStore, header: ZarrHeader): ChunkReader =
     header.dataType match {
       case ZarrDataType.i1 | ZarrDataType.u1 => new ByteChunkReader(store, header)
       case ZarrDataType.i2 | ZarrDataType.u2 => new ShortChunkReader(store, header)
@@ -23,7 +23,7 @@ object ChunkReader {
 
 trait ChunkReader {
   val header: ZarrHeader
-  val store: Store
+  val store: FileSystemStore
   lazy val chunkSize: Int = header.chunks.toList.product
 
   @throws[IOException]
@@ -31,12 +31,11 @@ trait ChunkReader {
 
   protected def readBytes(path: String): Option[Array[Byte]] =
     Using.Manager { use =>
-      val is = use(store.getInputStream(path))
-      if (is == null) None
-      else {
+      store.readBytes(path).map { bytes =>
+        val is = use(new ByteArrayInputStream(bytes))
         val os = use(new ByteArrayOutputStream())
         header.compressorImpl.uncompress(is, os)
-        Some(os.toByteArray)
+        os.toByteArray
       }
     }.get
 
@@ -44,7 +43,7 @@ trait ChunkReader {
     MultiArrayUtils.createFilledArray(dataType, header.chunkShapeOrdered, header.fillValueNumber)
 }
 
-class ByteChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
+class ByteChunkReader(val store: FileSystemStore, val header: ZarrHeader) extends ChunkReader {
   val ma2DataType: MADataType = MADataType.BYTE
 
   override def read(path: String): Future[MultiArray] =
@@ -53,7 +52,7 @@ class ByteChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRea
     }.getOrElse(createFilled(ma2DataType)))
 }
 
-class DoubleChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
+class DoubleChunkReader(val store: FileSystemStore, val header: ZarrHeader) extends ChunkReader {
 
   val ma2DataType: MADataType = MADataType.DOUBLE
 
@@ -70,7 +69,7 @@ class DoubleChunkReader(val store: Store, val header: ZarrHeader) extends ChunkR
     }.get)
 }
 
-class ShortChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader with LazyLogging {
+class ShortChunkReader(val store: FileSystemStore, val header: ZarrHeader) extends ChunkReader with LazyLogging {
 
   val ma2DataType: MADataType = MADataType.SHORT
 
@@ -87,7 +86,7 @@ class ShortChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRe
     }.get)
 }
 
-class IntChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
+class IntChunkReader(val store: FileSystemStore, val header: ZarrHeader) extends ChunkReader {
 
   val ma2DataType: MADataType = MADataType.INT
 
@@ -104,7 +103,7 @@ class IntChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRead
     }.get)
 }
 
-class LongChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
+class LongChunkReader(val store: FileSystemStore, val header: ZarrHeader) extends ChunkReader {
 
   val ma2DataType: MADataType = MADataType.LONG
 
@@ -121,7 +120,7 @@ class LongChunkReader(val store: Store, val header: ZarrHeader) extends ChunkRea
     }.get)
 }
 
-class FloatChunkReader(val store: Store, val header: ZarrHeader) extends ChunkReader {
+class FloatChunkReader(val store: FileSystemStore, val header: ZarrHeader) extends ChunkReader {
 
   val ma2DataType: MADataType = MADataType.FLOAT
 

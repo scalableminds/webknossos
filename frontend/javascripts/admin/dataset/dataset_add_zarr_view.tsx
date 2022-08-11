@@ -38,9 +38,9 @@ function DatasetAddZarrView(props: Props) {
       (userInput.indexOf("https://") === 0 && userInput.indexOf("s3://") !== 0) ||
       (userInput.indexOf("https://") !== 0 && userInput.indexOf("s3://") === 0)
     ) {
-      throw new Error("Dataset URL must employ either the https:// or s3:// protocol.");
-    } else {
       setSelectedProtocol(userInput.indexOf("https://") === 0 ? "https://" : "s3://");
+    } else {
+      throw new Error("Dataset URL must employ either the https:// or s3:// protocol.");
     }
   }
 

@@ -1,4 +1,4 @@
-import { Form, Input, Button, Col, Row, Divider } from "antd";
+import { Form, Input, Button, Col, Row, Collapse } from "antd";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import type { APIUser } from "types/api_flow_types";
@@ -14,6 +14,7 @@ import Toast from "libs/toast";
 import DataLayer from "oxalis/model/data_layer";
 import _ from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
+const { Panel } = Collapse;
 const FormItem = Form.Item;
 
 type OwnProps = {
@@ -27,7 +28,7 @@ type Props = OwnProps & StateProps;
 function DatasetAddZarrView(props: Props) {
   const { activeUser, onAdded } = props;
   const [datasourceConfig, setDatasourceConfig] = useState<string>();
-  // const [exploreLog, setExploreLog] = useState<string>();
+  const [exploreLog, setExploreLog] = useState<string>("");
   const [datasourceUrl, setDatasourceUrl] = useState<string>("");
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
@@ -46,16 +47,15 @@ function DatasetAddZarrView(props: Props) {
 
   async function handleExplore() {
     if (datasourceUrl) {
-      let datasourceToMerge;
-      if (!usernameOrAccessKey || !passwordOrSecretKey) {
-        datasourceToMerge = await exploreRemoteDataset([datasourceUrl]);
-      } else {
-        datasourceToMerge = await exploreRemoteDataset([datasourceUrl], {
-          username: usernameOrAccessKey,
-          pass: passwordOrSecretKey,
-        });
-      }
-      if (datasourceToMerge) {
+      const { dataSource, report } =
+        !usernameOrAccessKey || !passwordOrSecretKey
+          ? await exploreRemoteDataset([datasourceUrl])
+          : await exploreRemoteDataset([datasourceUrl], {
+              username: usernameOrAccessKey,
+              pass: passwordOrSecretKey,
+            });
+      setExploreLog(report.toString());
+      if (dataSource) {
         if (datasourceConfig) {
           // TODO: check that both datasources have same voxel size else warning
           let currentDatasource;
@@ -65,13 +65,13 @@ function DatasetAddZarrView(props: Props) {
             Toast.error("The loaded datasource config contains invalid JSON.");
             return;
           }
-          const layers = currentDatasource.dataLayers.concat(datasourceToMerge.dataLayers);
+          const layers = currentDatasource.dataLayers.concat(dataSource.dataLayers);
           const uniqueLayers = _.uniqBy(layers, (layer: DataLayer) => layer.name);
           currentDatasource.dataLayers = uniqueLayers;
-          currentDatasource.id.name = `merge_${currentDatasource.id.name}_${datasourceToMerge.id.name}`;
+          currentDatasource.id.name = `merge_${currentDatasource.id.name}_${dataSource.id.name}`;
           setDatasourceConfig(jsonStringify(currentDatasource));
         } else {
-          setDatasourceConfig(jsonStringify(datasourceToMerge));
+          setDatasourceConfig(jsonStringify(dataSource));
         }
       } else {
         Toast.error("Exploring this remote dataset did not return a datasource.");
@@ -165,7 +165,11 @@ function DatasetAddZarrView(props: Props) {
               Add
             </AsyncButton>
           </FormItem>
-          <Divider />
+          <Collapse bordered={false} collapsible={exploreLog ? "header" : "disabled"}>
+            <Panel header="Exploration Log" key="1">
+              <Hint style={{ margin: "0px 12px 0px 12px" }}>{exploreLog}</Hint>
+            </Panel>
+          </Collapse>
           <FormItem label="Datasource">
             <TextArea
               rows={4}

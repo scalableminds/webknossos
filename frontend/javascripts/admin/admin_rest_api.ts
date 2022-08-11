@@ -1436,7 +1436,10 @@ export async function addForeignDataSet(
 export async function exploreRemoteDataset(
   remoteUris: string[],
   credentials?: { username: string; pass: string },
-): Promise<DatasourceConfiguration> {
+): Promise<{
+  dataSource: DatasourceConfiguration | undefined;
+  report: string[];
+}> {
   const { dataSource, report } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
     data: credentials
       ? remoteUris.map((uri) => ({
@@ -1446,12 +1449,10 @@ export async function exploreRemoteDataset(
         }))
       : remoteUris.map((uri) => ({ remoteUri: uri })),
   });
-  console.log(report);
   if (report[1].indexOf("403 Forbidden") !== -1 || report[1].indexOf("401 Unauthorized") !== -1) {
     Toast.error("The data could not be accessed. Please verify the credentials!");
-    return dataSource;
   }
-  return dataSource;
+  return { dataSource, report };
 }
 
 export async function storeRemoteDataset(

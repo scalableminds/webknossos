@@ -57,19 +57,25 @@ function DatasetAddZarrView(props: Props) {
       setExploreLog(report.toString());
       if (dataSource) {
         if (datasourceConfig) {
-          // TODO: check that both datasources have same voxel size else warning
-          let currentDatasource;
+          let loadedDatasource;
           try {
-            currentDatasource = JSON.parse(datasourceConfig);
+            loadedDatasource = JSON.parse(datasourceConfig);
           } catch (e) {
             Toast.error("The loaded datasource config contains invalid JSON.");
             return;
           }
-          const layers = currentDatasource.dataLayers.concat(dataSource.dataLayers);
+          if (_.isEqual(loadedDatasource.scale, dataSource.scale)) {
+            Toast.warning(
+              `${messages["dataset.add_zarr_different_scale_warning"]}\n${dataSource.scale.join(
+                "\n",
+              )}`,
+            );
+          }
+          const layers = loadedDatasource.dataLayers.concat(dataSource.dataLayers);
           const uniqueLayers = _.uniqBy(layers, (layer: DataLayer) => layer.name);
-          currentDatasource.dataLayers = uniqueLayers;
-          currentDatasource.id.name = `merge_${currentDatasource.id.name}_${dataSource.id.name}`;
-          setDatasourceConfig(jsonStringify(currentDatasource));
+          loadedDatasource.dataLayers = uniqueLayers;
+          loadedDatasource.id.name = `merge_${loadedDatasource.id.name}_${dataSource.id.name}`;
+          setDatasourceConfig(jsonStringify(loadedDatasource));
         } else {
           setDatasourceConfig(jsonStringify(dataSource));
         }

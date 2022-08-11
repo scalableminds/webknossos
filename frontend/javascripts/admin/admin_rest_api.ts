@@ -1435,7 +1435,7 @@ export async function addForeignDataSet(
 
 type ExplorationResult = {
   dataSource: DatasourceConfiguration;
-  report: Array<string>;
+  report: string;
 };
 
 export async function exploreRemoteDataset(
@@ -1451,7 +1451,7 @@ export async function exploreRemoteDataset(
         }))
       : remoteUris.map((uri) => ({ remoteUri: uri })),
   });
-  if (report[1].indexOf("403 Forbidden") !== -1 || report[1].indexOf("401 Unauthorized") !== -1) {
+  if (report.indexOf("403 Forbidden") !== -1 || report.indexOf("401 Unauthorized") !== -1) {
     Toast.error("The data could not be accessed. Please verify the credentials!");
   }
   return { dataSource, report };

@@ -1,4 +1,4 @@
-import { Form, Input, Button, Col, Row, Collapse } from "antd";
+import { Form, Input, Button, Col, Row, Collapse, List } from "antd";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import type { APIUser } from "types/api_flow_types";
@@ -46,49 +46,45 @@ function DatasetAddZarrView(props: Props) {
   }
 
   async function handleExplore() {
-    if (datasourceUrl) {
-      const { dataSource, report } =
-        !usernameOrAccessKey || !passwordOrSecretKey
-          ? await exploreRemoteDataset([datasourceUrl])
-          : await exploreRemoteDataset([datasourceUrl], {
-              username: usernameOrAccessKey,
-              pass: passwordOrSecretKey,
-            });
-      setExploreLog(report.toString());
-      if (dataSource) {
-        if (datasourceConfig) {
-          let loadedDatasource;
-          try {
-            loadedDatasource = JSON.parse(datasourceConfig);
-          } catch (e) {
-            Toast.error("The loaded datasource config contains invalid JSON.");
-            return;
-          }
-          if (_.isEqual(loadedDatasource.scale, dataSource.scale)) {
-            Toast.warning(
-              `${messages["dataset.add_zarr_different_scale_warning"]}\n${dataSource.scale.join(
-                "\n",
-              )}`,
-            );
-          }
-          const layers = loadedDatasource.dataLayers.concat(dataSource.dataLayers);
-          const uniqueLayers = _.uniqBy(layers, (layer: DataLayer) => layer.name);
-          loadedDatasource.dataLayers = uniqueLayers;
-          loadedDatasource.id.name = `merge_${loadedDatasource.id.name}_${dataSource.id.name}`;
-          setDatasourceConfig(jsonStringify(loadedDatasource));
-        } else {
-          setDatasourceConfig(jsonStringify(dataSource));
-        }
-      } else {
-        Toast.error("Exploring this remote dataset did not return a datasource.");
-      }
-    } else {
+    if (!datasourceUrl) {
       Toast.error("Please provide a valid URL for exploration.");
+      return;
+    }
+    const { dataSource, report } =
+      !usernameOrAccessKey || !passwordOrSecretKey
+        ? await exploreRemoteDataset([datasourceUrl])
+        : await exploreRemoteDataset([datasourceUrl], {
+            username: usernameOrAccessKey,
+            pass: passwordOrSecretKey,
+          });
+    setExploreLog(report);
+    if (!dataSource) {
+      Toast.error("Exploring this remote dataset did not return a datasource.");
+      return;
+    }
+    if (!datasourceConfig) {
+      setDatasourceConfig(jsonStringify(dataSource));
+      return;
+    }
+    let loadedDatasource;
+    try {
+      loadedDatasource = JSON.parse(datasourceConfig);
+    } catch (e) {
+      Toast.error(
+        "The current datasource config contains invalid JSON. Cannot add the new Zarr data.",
+      );
+      return;
+    }
     if (!_.isEqual(loadedDatasource.scale, dataSource.scale)) {
       Toast.warning(
         `${messages["dataset.add_zarr_different_scale_warning"]}\n${dataSource.scale.join("\n")}`,
       );
     }
+    const layers = loadedDatasource.dataLayers.concat(dataSource.dataLayers);
+    const uniqueLayers = _.uniqBy(layers, (layer: DataLayer) => layer.name);
+    loadedDatasource.dataLayers = uniqueLayers;
+    loadedDatasource.id.name = `${loadedDatasource.id.name}_and_${dataSource.id.name}`;
+    setDatasourceConfig(jsonStringify(loadedDatasource));
   }
 
   async function handleStoreDataset() {
@@ -117,8 +113,9 @@ function DatasetAddZarrView(props: Props) {
     <div style={{ padding: 5 }}>
       <CardContainer title="Add Zarr Dataset">
         Please enter a URL that points to the Zarr data you would like to import. If necessary,
-        specify the credentials for the dataset. More layers can be added to the datasource specification below
-        using the Add button. Once you have approved of the resulting datasource you can import it.
+        specify the credentials for the dataset. More layers can be added to the datasource
+        specification below using the Add button. Once you have approved of the resulting datasource
+        you can import it.
         <Form style={{ marginTop: 20 }} layout="vertical">
           <FormItem
             name="url"
@@ -177,7 +174,15 @@ function DatasetAddZarrView(props: Props) {
           </FormItem>
           <Collapse bordered={false} collapsible={exploreLog ? "header" : "disabled"}>
             <Panel header="Exploration Log" key="1">
-              <Hint style={{ margin: "0px 12px 0px 12px" }}>{exploreLog}</Hint>
+              <List
+                size="small"
+                dataSource={exploreLog.split("\n")}
+                renderItem={(item) => (
+                  <List.Item>
+                    <Hint style={{ width: "90%" }}>{item}</Hint>
+                  </List.Item>
+                )}
+              />
             </Panel>
           </Collapse>
           <FormItem label="Datasource">

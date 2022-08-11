@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import React, { useState } from "react";
 import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { exploreRemoteDataset, storeRemoteDataset } from "admin/admin_rest_api";
+import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
 import { CardContainer } from "admin/dataset/dataset_components";
@@ -92,19 +92,23 @@ function DatasetAddZarrView(props: Props) {
       let configJSON;
       try {
         configJSON = JSON.parse(datasourceConfig);
+        const nameValidationResult = await isDatasetNameValid(configJSON.id);
+        if (nameValidationResult) {
+          throw new Error(nameValidationResult);
+        }
+        const response = await storeRemoteDataset(
+          configJSON.id.name,
+          activeUser.organization,
+          datasourceConfig,
+        );
+        if (response.status !== 200) {
+          throw new Error(`${response.status} ${response.statusText} ${response.json}`);
+        }
       } catch (e) {
-        Toast.error("The loaded datasource config contains invalid JSON.");
+        Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
-      const result = await storeRemoteDataset(
-        configJSON.id.name,
-        activeUser.organization,
-        datasourceConfig,
-      );
-      console.log(result);
-      if (result) {
-        onAdded(activeUser.organization, configJSON.id.name);
-      }
+      onAdded(activeUser.organization, configJSON.id.name);
     }
   }
 

@@ -548,7 +548,7 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
 // ### Private Links
 
 export function createPrivateLink(annotationId: string): Promise<TaskCreationResponseContainer> {
-  return Request.sendJSONReceiveJSON("/api/annotations/zarr_private", {
+  return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       _annotation: annotationId,
       expirationDateTime: null,
@@ -557,13 +557,13 @@ export function createPrivateLink(annotationId: string): Promise<TaskCreationRes
 }
 
 export function getPrivateLinks(): Promise<Array<unknown>> {
-  return Request.receiveJSON("/api/annotations/zarr_private");
+  return Request.receiveJSON("/api/zarrPrivateLinks");
 }
 
 export function deletePrivateLink(linkId: string): Promise<{
   messages: Array<Message>;
 }> {
-  return Request.receiveJSON(`/annotations/zarr_private/${linkId}`, {
+  return Request.receiveJSON(`/api/zarrPrivateLinks/${linkId}`, {
     method: "DELETE",
   });
 }

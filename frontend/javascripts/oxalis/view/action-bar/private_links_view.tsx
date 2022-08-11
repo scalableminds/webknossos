@@ -27,7 +27,9 @@ export function PrivateLinksViewInner() {
 
   // Queries
   debugger;
-  const { isLoading, error, data } = useQuery(["links"], getPrivateLinks);
+  const { isLoading, error, data } = useQuery(["links"], getPrivateLinks, {
+    refetchOnWindowFocus: false,
+  });
 
   // Mutations
   const mutation = useMutation(createPrivateLink, {
@@ -46,7 +48,7 @@ export function PrivateLinksViewInner() {
 
       // Optimistically update to the new value
       queryClient.setQueryData(["links"], (oldItems) =>
-        oldItems.filter((link) => link._id.id != linkIdToDelete),
+        oldItems.filter((link) => link._id != linkIdToDelete),
       );
 
       // Return a context object with the snapshotted value
@@ -71,12 +73,12 @@ export function PrivateLinksViewInner() {
     <div>
       <ul>
         {data.map((link) => (
-          <li key={link._id.id}>
+          <li key={link._id}>
             {link.accessToken}
 
             <button
               onClick={() => {
-                deleteMutation.mutate(link._id.id);
+                deleteMutation.mutate(link._id);
               }}
             >
               Delete

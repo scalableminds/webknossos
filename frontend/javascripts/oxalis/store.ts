@@ -41,6 +41,7 @@ import type {
   AnnotationTool,
   MappingStatus,
   OrthoViewWithoutTD,
+  InterpolationMode,
 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -320,6 +321,7 @@ export type UserConfiguration = {
   // how volume annotations overwrite existing voxels.
   readonly overwriteMode: OverwriteMode;
   readonly fillMode: FillMode;
+  readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
 };
 export type RecommendedConfiguration = Partial<

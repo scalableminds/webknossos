@@ -33,8 +33,8 @@ class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext) {
   def publicWrites(annotationPrivateLink: AnnotationPrivateLink): Fox[JsValue] =
     Fox.successful(
       Json.obj(
-        "_id" -> annotationPrivateLink._id.toString,
-        "_annotation" -> annotationPrivateLink._annotation.toString,
+        "id" -> annotationPrivateLink._id.toString,
+        "annotation" -> annotationPrivateLink._annotation.toString,
         "accessToken" -> annotationPrivateLink.accessToken,
         "expirationDateTime" -> annotationPrivateLink.expirationDateTime,
         "isDeleted" -> annotationPrivateLink.isDeleted,

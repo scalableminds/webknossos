@@ -61,7 +61,7 @@ class ZarrStreamingController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
                                                                                   dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> 404
+          "dataSource.notFound") ~> NOT_FOUND
         existingMags = dataLayer.resolutions
 
         omeNgffHeader = OmeNgffHeader.fromDataLayerName(dataLayerName,
@@ -107,7 +107,7 @@ class ZarrStreamingController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
       for {
-        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ~> 404
+        dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ~> NOT_FOUND
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.map(convertLayerToZarrLayer)
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
@@ -255,7 +255,8 @@ class ZarrStreamingController @Inject()(
           ),
           DataServiceRequestSettings(halfByte = false)
         )
-        (data, _) <- binaryDataService.handleDataRequests(List(request))
+        (data, notFoundIndices) <- binaryDataService.handleDataRequests(List(request))
+        _ <- bool2Fox(notFoundIndices.isEmpty) ~> "zarr.chunkNotFound" ~> NOT_FOUND
       } yield Ok(data)
     }
 

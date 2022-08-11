@@ -177,7 +177,6 @@ function _ShareModalView(props: Props) {
       return;
     }
     const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId);
-    console.log("fetchedSharedTeams", fetchedSharedTeams);
     setSharedTeams(fetchedSharedTeams);
   };
 
@@ -322,6 +321,7 @@ function _ShareModalView(props: Props) {
       visible={isVisible}
       width={800}
       onOk={onOk}
+      onCancel={onOk}
       cancelButtonProps={{ style: { display: "none" } }}
     >
       <Row>

@@ -157,9 +157,9 @@ test("VolumeTracing should cycle trace/view/brush tool", (t) => {
 });
 test("VolumeTracing should update its lastLabelActions", (t) => {
   const direction = [4, 6, 9];
-  const updateDirectionAction = VolumeTracingActions.updateDirectionAction(direction);
+  const registerLabelPointAction = VolumeTracingActions.registerLabelPointAction(direction);
   // Update direction
-  const newState = VolumeTracingReducer(initialState, updateDirectionAction);
+  const newState = VolumeTracingReducer(initialState, registerLabelPointAction);
   t.not(newState, initialState);
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
     t.deepEqual(tracing.lastLabelActions[0].centroid, direction);

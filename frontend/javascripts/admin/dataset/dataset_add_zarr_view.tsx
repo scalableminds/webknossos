@@ -14,6 +14,7 @@ import Toast from "libs/toast";
 import DataLayer from "oxalis/model/data_layer";
 import _ from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
+import { formatScale } from "libs/format_utils";
 const { Panel } = Collapse;
 const FormItem = Form.Item;
 
@@ -77,7 +78,8 @@ function DatasetAddZarrView(props: Props) {
     }
     if (!_.isEqual(loadedDatasource.scale, dataSource.scale)) {
       Toast.warning(
-        `${messages["dataset.add_zarr_different_scale_warning"]}\n${dataSource.scale.join("\n")}`,
+        `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(dataSource.scale)}`,
+        { timeout: 10000 }
       );
     }
     const layers = loadedDatasource.dataLayers.concat(dataSource.dataLayers);
@@ -177,7 +179,7 @@ function DatasetAddZarrView(props: Props) {
             </AsyncButton>
           </FormItem>
           <Collapse bordered={false} collapsible={exploreLog ? "header" : "disabled"}>
-            <Panel header="Exploration Log" key="1">
+            <Panel header="Log" key="1">
               <Hint style={{ width: "90%" }}>
                 <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
               </Hint>

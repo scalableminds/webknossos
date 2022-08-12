@@ -58,5 +58,5 @@ export type DatasourceConfiguration = {
     team: string;
   };
   dataLayers: Array<DataLayer>;
-  scale: Array<number>;
+  scale: Vector3;
 };

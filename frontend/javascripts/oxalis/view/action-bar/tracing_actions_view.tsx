@@ -68,6 +68,7 @@ import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
+import { PrivateLinksModal } from "./private_links_view";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -92,6 +93,7 @@ type Props = OwnProps & StateProps;
 type State = {
   isMergeModalOpen: boolean;
   isUserScriptsModalOpen: boolean;
+  isZarrPrivateLinksModalOpen: boolean;
   isReopenAllowed: boolean;
 };
 export type LayoutProps = {
@@ -245,6 +247,7 @@ export function LayoutMenu(props: LayoutMenuProps) {
 class TracingActionsView extends React.PureComponent<Props, State> {
   state: State = {
     isMergeModalOpen: false,
+    isZarrPrivateLinksModalOpen: false,
     isUserScriptsModalOpen: false,
     isReopenAllowed: false,
   };
@@ -585,12 +588,30 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         Share
       </Menu.Item>,
     );
+    elements.push(
+      <Menu.Item
+        key="zarr-links-button"
+        onClick={() => this.setState({ isZarrPrivateLinksModalOpen: true })}
+      >
+        <LinkOutlined />
+        Manage Zarr Endpoints
+      </Menu.Item>,
+    );
+
     modals.push(
       <ShareModalView
         key="share-modal"
         isVisible={this.props.isShareModalOpen}
         onOk={this.handleShareClose}
         annotationType={annotationType}
+        annotationId={annotationId}
+      />,
+    );
+    modals.push(
+      <PrivateLinksModal
+        key="private-links-modal"
+        isVisible={this.state.isZarrPrivateLinksModalOpen}
+        onOk={() => this.setState({ isZarrPrivateLinksModalOpen: false })}
         annotationId={annotationId}
       />,
     );

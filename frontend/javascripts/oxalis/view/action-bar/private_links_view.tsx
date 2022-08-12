@@ -2,7 +2,7 @@ import React from "react";
 import {
   createPrivateLink,
   deletePrivateLink,
-  getPrivateLinks,
+  getPrivateLinksByAnnotation,
   updatePrivateLink,
 } from "admin/admin_rest_api";
 import {
@@ -19,11 +19,10 @@ import {
   DatePickerProps,
   Dropdown,
   Input,
-  List,
   Menu,
+  Modal,
   Popover,
   Space,
-  Spin,
   Table,
   Tooltip,
 } from "antd";
@@ -32,7 +31,6 @@ import {
   DeleteOutlined,
   DownOutlined,
   EditOutlined,
-  LoadingOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
 import { ZarrPrivateLink } from "types/api_flow_types";
@@ -40,23 +38,23 @@ import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { ColumnsType } from "antd/lib/table";
+import { makeComponentLazy } from "libs/react_helpers";
 
-const LOADING_ICON = <LoadingOutlined style={{ fontSize: 24 }} spin />;
-
-function useLinksQuery() {
-  return useQuery(["links"], getPrivateLinks, {
+function useLinksQuery(annotationId: string) {
+  return useQuery(["links", annotationId], () => getPrivateLinksByAnnotation(annotationId), {
     initialData: [],
     refetchOnWindowFocus: false,
   });
 }
 
-function useCreateLinkMutation() {
+function useCreateLinkMutation(annotationId: string) {
   const queryClient = useQueryClient();
+  const mutationKey = ["links", annotationId];
 
   return useMutation(createPrivateLink, {
-    mutationKey: ["links"],
+    mutationKey,
     onSuccess: (newLink) => {
-      queryClient.setQueryData(["links"], (oldItems: ZarrPrivateLink[] | undefined) =>
+      queryClient.setQueryData(mutationKey, (oldItems: ZarrPrivateLink[] | undefined) =>
         (oldItems || []).concat([newLink]),
       );
     },
@@ -66,20 +64,21 @@ function useCreateLinkMutation() {
   });
 }
 
-function useUpdatePrivateLink() {
+function useUpdatePrivateLink(annotationId: string) {
   const queryClient = useQueryClient();
+  const mutationKey = ["links", annotationId];
 
   return useMutation(updatePrivateLink, {
-    mutationKey: ["links"],
+    mutationKey,
     onMutate: async (updatedLinkItem) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-      await queryClient.cancelQueries(["links"]);
+      await queryClient.cancelQueries(mutationKey);
 
       // Snapshot the previous value
-      const previousLinks = queryClient.getQueryData(["links"]);
+      const previousLinks = queryClient.getQueryData(mutationKey);
 
       // Optimistically update to the new value
-      queryClient.setQueryData(["links"], (oldItems: ZarrPrivateLink[] | undefined) =>
+      queryClient.setQueryData(mutationKey, (oldItems: ZarrPrivateLink[] | undefined) =>
         (oldItems || []).map((link) => (link.id != updatedLinkItem.id ? link : updatedLinkItem)),
       );
 
@@ -90,26 +89,28 @@ function useUpdatePrivateLink() {
     onError: (err, _updatedLinkItem, context) => {
       Toast.error(`Could not update link. ${err}`);
       if (context) {
-        queryClient.setQueryData(["links"], context.previousLinks);
+        queryClient.setQueryData(mutationKey, context.previousLinks);
       }
     },
   });
 }
 
-function useDeleteLinkMutation() {
+function useDeleteLinkMutation(annotationId: string) {
   const queryClient = useQueryClient();
 
+  const mutationKey = ["links", annotationId];
+
   return useMutation(deletePrivateLink, {
-    mutationKey: ["links"],
+    mutationKey,
     onMutate: async (linkIdToDelete) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-      await queryClient.cancelQueries(["links"]);
+      await queryClient.cancelQueries(mutationKey);
 
       // Snapshot the previous value
-      const previousLinks = queryClient.getQueryData(["links"]);
+      const previousLinks = queryClient.getQueryData(mutationKey);
 
       // Optimistically update to the new value
-      queryClient.setQueryData(["links"], (oldItems: ZarrPrivateLink[] | undefined) =>
+      queryClient.setQueryData(mutationKey, (oldItems: ZarrPrivateLink[] | undefined) =>
         (oldItems || []).filter((link) => link.id != linkIdToDelete),
       );
 
@@ -120,7 +121,7 @@ function useDeleteLinkMutation() {
     onError: (err, _linkIdToDelete, context) => {
       Toast.error(`Could not delete link. ${err}`);
       if (context) {
-        queryClient.setQueryData(["links"], context.previousLinks);
+        queryClient.setQueryData(mutationKey, context.previousLinks);
       }
     },
   });
@@ -148,7 +149,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
 }
 
 function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
-  const updateMutation = useUpdatePrivateLink();
+  const updateMutation = useUpdatePrivateLink(linkItem.annotation);
 
   const onChange: DatePickerProps["onChange"] = (date, dateString) => {
     updateMutation.mutate({ ...linkItem, expirationDateTime: Number(date) });
@@ -239,13 +240,10 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   );
 }
 
-export function PrivateLinksView() {
-  const { error, data: links } = useLinksQuery();
-  const createLinkMutation = useCreateLinkMutation();
-  const deleteMutation = useDeleteLinkMutation();
-  const isFetchingCount = useIsFetching(["links"]);
-  const isMutatingCount = useIsMutating(["links"]);
-  const isBusy = isFetchingCount + isMutatingCount > 0;
+function PrivateLinksView({ annotationId }: { annotationId: string }) {
+  const { error, data: links } = useLinksQuery(annotationId);
+  const createLinkMutation = useCreateLinkMutation(annotationId);
+  const deleteMutation = useDeleteLinkMutation(annotationId);
 
   if (error) {
     return <span>Error while loading the private links: {error}</span>;
@@ -282,9 +280,8 @@ export function PrivateLinksView() {
   return (
     <div>
       <div style={{ marginBottom: 8 }}>
-        You can create a Zarr link to this annotation/dataset below. The link can be used by other
-        tools to access the data in a streaming manner.
-        {isBusy && <Spin indicator={LOADING_ICON} />}
+        You can create one or multiple Zarr link to this annotation below. The link can be used by
+        other tools to access the data in a streaming manner.
       </div>
       {links.length > 0 && (
         <Table rowKey="id" columns={columns} dataSource={links} size="small" pagination={false} />
@@ -295,7 +292,7 @@ export function PrivateLinksView() {
           type={links.length === 0 ? "primary" : "link"}
           size={links.length === 0 ? "large" : undefined}
           icon={<PlusOutlined />}
-          onClick={() => createLinkMutation.mutateAsync("62f3b0d22102004bb5cb5b2e")}
+          onClick={() => createLinkMutation.mutateAsync(annotationId)}
         >
           Create Zarr Link
         </AsyncButton>
@@ -303,3 +300,37 @@ export function PrivateLinksView() {
     </div>
   );
 }
+
+export function _PrivateLinksModal({
+  isVisible,
+  onOk,
+  annotationId,
+}: {
+  isVisible: boolean;
+  onOk: () => void;
+  annotationId: string;
+}) {
+  const mutationKey = ["links", annotationId];
+  const isFetchingCount = useIsFetching(mutationKey);
+  const isMutatingCount = useIsMutating(mutationKey);
+  const isBusy = isFetchingCount + isMutatingCount > 0;
+
+  return (
+    <Modal
+      title="Manage Zarr Endpoints"
+      visible={isVisible}
+      width={800}
+      onCancel={onOk}
+      onOk={onOk}
+      footer={[
+        <Button type="primary" loading={isBusy} onClick={onOk}>
+          OK
+        </Button>,
+      ]}
+    >
+      <PrivateLinksView annotationId={annotationId} />
+    </Modal>
+  );
+}
+
+export const PrivateLinksModal = makeComponentLazy(_PrivateLinksModal);

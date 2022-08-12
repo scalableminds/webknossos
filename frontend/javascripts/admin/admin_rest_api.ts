@@ -557,8 +557,8 @@ export function createPrivateLink(annotationId: string): Promise<ZarrPrivateLink
   });
 }
 
-export function getPrivateLinks(): Promise<Array<ZarrPrivateLink>> {
-  return Request.receiveJSON("/api/zarrPrivateLinks");
+export function getPrivateLinksByAnnotation(annotationId: string): Promise<Array<ZarrPrivateLink>> {
+  return Request.receiveJSON(`/api/zarrPrivateLinks/byAnnotation/${annotationId}`);
 }
 
 export function updatePrivateLink(link: ZarrPrivateLink): Promise<ZarrPrivateLink> {

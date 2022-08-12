@@ -1,4 +1,4 @@
-import { Form, Input, Button, Col, Row, Collapse, List } from "antd";
+import { Form, Input, Button, Col, Row, Collapse } from "antd";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import type { APIUser } from "types/api_flow_types";
@@ -178,15 +178,9 @@ function DatasetAddZarrView(props: Props) {
           </FormItem>
           <Collapse bordered={false} collapsible={exploreLog ? "header" : "disabled"}>
             <Panel header="Exploration Log" key="1">
-              <List
-                size="small"
-                dataSource={exploreLog.split("\n")}
-                renderItem={(item) => (
-                  <List.Item>
-                    <Hint style={{ width: "90%" }}>{item}</Hint>
-                  </List.Item>
-                )}
-              />
+              <Hint style={{ width: "90%" }}>
+                <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
+              </Hint>
             </Panel>
           </Collapse>
           <FormItem label="Datasource">

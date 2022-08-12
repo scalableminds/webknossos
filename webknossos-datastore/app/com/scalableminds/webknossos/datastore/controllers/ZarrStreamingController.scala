@@ -50,7 +50,7 @@ class ZarrStreamingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               s"$organizationName/$dataSetName",
-              Seq("datasource-properties.json", ".zgroup") + layerNames
+              List("datasource-properties.json", ".zgroup") + layerNames
             ))
       }
     }
@@ -71,7 +71,7 @@ class ZarrStreamingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
-              Seq(".zattrs", ".zgroup") + mags.map(_.toMagLiteral())
+              List(".zattrs", ".zgroup") + mags.map(_.toMagLiteral())
             )).withHeaders()
       }
     }
@@ -93,7 +93,7 @@ class ZarrStreamingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               "%s/%s/%s/%s".format(organizationName, dataSetName, dataLayerName, mag),
-              Seq(".zarray")
+              List(".zarray")
             )).withHeaders()
       }
     }

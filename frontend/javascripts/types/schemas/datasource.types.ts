@@ -25,7 +25,7 @@ type DataLayerKnossosPartial = {
     boundingBox: BoundingBox;
   }>;
 };
-type DataLayer = {
+export type DataLayer = {
   name: string;
   category: "color" | "segmentation";
   elementClass:

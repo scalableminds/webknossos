@@ -11,10 +11,10 @@ import Password from "antd/lib/input/Password";
 import TextArea from "antd/lib/input/TextArea";
 import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
-import DataLayer from "oxalis/model/data_layer";
 import _ from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import { formatScale } from "libs/format_utils";
+import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 const { Panel } = Collapse;
 const FormItem = Form.Item;
 
@@ -25,6 +25,42 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
 };
 type Props = OwnProps & StateProps;
+
+function mergeNewLayers(
+  loadedDatasource: DatasourceConfiguration,
+  datasourceToMerge: DatasourceConfiguration,
+): DatasourceConfiguration {
+  const allLayers = datasourceToMerge.dataLayers.concat(loadedDatasource.dataLayers);
+  const groupedLayers = _.groupBy(allLayers, (layer: DataLayer) => layer.name) as unknown as Record<
+    string,
+    DataLayer[]
+  >;
+  const uniqueLayers: DataLayer[] = [];
+  for (const entry of _.entries(groupedLayers)) {
+    const [name, layerGroup] = entry;
+    if (layerGroup.length === 1) {
+      uniqueLayers.push(layerGroup[0]);
+    } else {
+      let idx = 1;
+      for (const layer of layerGroup) {
+        if (idx === 1) {
+          uniqueLayers.push(layer);
+        } else {
+          uniqueLayers.push({ ...layer, name: `${name}_${idx}` });
+        }
+        idx++;
+      }
+    }
+  }
+  return {
+    ...loadedDatasource,
+    dataLayers: uniqueLayers,
+    id: {
+      ...loadedDatasource.id,
+      name: `${loadedDatasource.id.name}_and_${datasourceToMerge.id.name}`,
+    },
+  };
+}
 
 function DatasetAddZarrView(props: Props) {
   const { activeUser, onAdded } = props;
@@ -79,14 +115,10 @@ function DatasetAddZarrView(props: Props) {
     if (!_.isEqual(loadedDatasource.scale, dataSource.scale)) {
       Toast.warning(
         `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(dataSource.scale)}`,
-        { timeout: 10000 }
+        { timeout: 10000 },
       );
     }
-    const layers = loadedDatasource.dataLayers.concat(dataSource.dataLayers);
-    const uniqueLayers = _.uniqBy(layers, (layer: DataLayer) => layer.name);
-    loadedDatasource.dataLayers = uniqueLayers;
-    loadedDatasource.id.name = `${loadedDatasource.id.name}_and_${dataSource.id.name}`;
-    setDatasourceConfig(jsonStringify(loadedDatasource));
+    setDatasourceConfig(jsonStringify(mergeNewLayers(loadedDatasource, dataSource)));
   }
 
   async function handleStoreDataset() {
@@ -171,7 +203,7 @@ function DatasetAddZarrView(props: Props) {
           <FormItem style={{ marginBottom: 0 }}>
             <AsyncButton
               size="large"
-              type="default"
+              type={datasourceConfig ? "default" : "primary"}
               style={{ width: "100%" }}
               onClick={handleExplore}
             >

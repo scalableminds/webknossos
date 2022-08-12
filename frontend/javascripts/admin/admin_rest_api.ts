@@ -1434,7 +1434,7 @@ export async function addForeignDataSet(
 }
 
 type ExplorationResult = {
-  dataSource: DatasourceConfiguration;
+  dataSource: DatasourceConfiguration | undefined;
   report: string;
 };
 

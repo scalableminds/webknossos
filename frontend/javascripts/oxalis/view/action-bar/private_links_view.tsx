@@ -31,6 +31,7 @@ import {
   DeleteOutlined,
   DownOutlined,
   EditOutlined,
+  InfoCircleOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
 import { ZarrPrivateLink } from "types/api_flow_types";
@@ -79,7 +80,7 @@ function useUpdatePrivateLink(annotationId: string) {
 
       // Optimistically update to the new value
       queryClient.setQueryData(mutationKey, (oldItems: ZarrPrivateLink[] | undefined) =>
-        (oldItems || []).map((link) => (link.id != updatedLinkItem.id ? link : updatedLinkItem)),
+        (oldItems || []).map((link) => (link.id !== updatedLinkItem.id ? link : updatedLinkItem)),
       );
 
       // Return a context object with the snapshotted value
@@ -111,7 +112,7 @@ function useDeleteLinkMutation(annotationId: string) {
 
       // Optimistically update to the new value
       queryClient.setQueryData(mutationKey, (oldItems: ZarrPrivateLink[] | undefined) =>
-        (oldItems || []).filter((link) => link.id != linkIdToDelete),
+        (oldItems || []).filter((link) => link.id !== linkIdToDelete),
       );
 
       // Return a context object with the snapshotted value
@@ -128,7 +129,7 @@ function useDeleteLinkMutation(annotationId: string) {
 }
 
 function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
-  const url = "https://.../" + linkItem.accessToken;
+  const url = `https://.../${linkItem.accessToken}`;
   const copyTokenToClipboard = async () => {
     await navigator.clipboard.writeText(url);
     Toast.success("URL copied to clipboard");
@@ -151,7 +152,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
 function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const updateMutation = useUpdatePrivateLink(linkItem.annotation);
 
-  const onChange: DatePickerProps["onChange"] = (date, dateString) => {
+  const onChange: DatePickerProps["onChange"] = (date) => {
     updateMutation.mutate({ ...linkItem, expirationDateTime: Number(date) });
   };
 
@@ -202,14 +203,25 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
     />
   );
 
-  return linkItem.expirationDateTime == null ? (
-    <Dropdown overlay={expirationMenu}>
-      <Space style={{ color: "var(--ant-text-secondary)" }}>
-        Add Expiration Date
-        <DownOutlined />
-      </Space>
-    </Dropdown>
-  ) : (
+  if (linkItem.expirationDateTime == null) {
+    return (
+      <Dropdown overlay={expirationMenu}>
+        <Space style={{ color: "var(--ant-text-secondary)" }}>
+          Add Expiration Date
+          <DownOutlined />
+        </Space>
+      </Dropdown>
+    );
+  }
+
+  const maybeWarning =
+    Number(new Date()) > linkItem.expirationDateTime ? (
+      <Tooltip title="This link has expired">
+        <InfoCircleOutlined style={{ color: "var(--ant-error)" }} />
+      </Tooltip>
+    ) : null;
+
+  return (
     <span>
       <FormattedDate timestamp={linkItem.expirationDateTime} />
       <Popover
@@ -235,6 +247,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
         trigger="click"
       >
         <EditOutlined style={{ marginLeft: 4 }} />
+        {maybeWarning}
       </Popover>
     </span>
   );

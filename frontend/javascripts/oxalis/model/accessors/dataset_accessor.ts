@@ -658,11 +658,11 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
     case "int16":
     case "int32":
     case "float":
-    case "int64":
     case "uint64":
       return true;
 
     case "double":
+    case "int64":
     default:
       return false;
   }

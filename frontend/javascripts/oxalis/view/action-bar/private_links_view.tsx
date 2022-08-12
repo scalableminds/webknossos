@@ -277,16 +277,14 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
     {
       title: "",
       key: "action",
-      render: (_, linkItem) => {
-        return (
-          <Tooltip title="Delete Link" placement="left">
-            <AsyncIconButton
-              onClick={() => deleteMutation.mutateAsync(linkItem.id)}
-              icon={<DeleteOutlined />}
-            />
-          </Tooltip>
-        );
-      },
+      render: (_, linkItem) => (
+        <Tooltip title="Delete Link" placement="left">
+          <AsyncIconButton
+            onClick={() => deleteMutation.mutateAsync(linkItem.id)}
+            icon={<DeleteOutlined />}
+          />
+        </Tooltip>
+      ),
     },
   ];
 
@@ -336,7 +334,7 @@ export function _PrivateLinksModal({
       onCancel={onOk}
       onOk={onOk}
       footer={[
-        <Button type="primary" loading={isBusy} onClick={onOk}>
+        <Button key="ok" type="primary" loading={isBusy} onClick={onOk}>
           OK
         </Button>,
       ]}

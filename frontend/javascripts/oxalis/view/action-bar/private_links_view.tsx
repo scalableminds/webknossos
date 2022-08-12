@@ -24,6 +24,7 @@ import {
   Popover,
   Space,
   Spin,
+  Table,
   Tooltip,
 } from "antd";
 import {
@@ -31,7 +32,6 @@ import {
   DeleteOutlined,
   DownOutlined,
   EditOutlined,
-  LinkOutlined,
   LoadingOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
@@ -39,7 +39,9 @@ import { ZarrPrivateLink } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import moment from "moment";
 import FormattedDate from "components/formatted_date";
-import { createLocation } from "history";
+import { ColumnsType } from "antd/lib/table";
+
+const LOADING_ICON = <LoadingOutlined style={{ fontSize: 24 }} spin />;
 
 function useLinksQuery() {
   return useQuery(["links"], getPrivateLinks, {
@@ -124,37 +126,35 @@ function useDeleteLinkMutation() {
   });
 }
 
-function LinkListItem({ linkItem }: { linkItem: ZarrPrivateLink }) {
-  const deleteMutation = useDeleteLinkMutation();
-  const updateMutation = useUpdatePrivateLink();
-  const linkUrl = "https://.../" + linkItem.accessToken;
+function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
+  const url = "https://.../" + linkItem.accessToken;
   const copyTokenToClipboard = async () => {
-    await navigator.clipboard.writeText(linkUrl);
+    await navigator.clipboard.writeText(url);
     Toast.success("URL copied to clipboard");
   };
-  const linkUrlInput = (
-    <Input.Group compact>
+  return (
+    <Input.Group compact className="no-borders">
       <Input
-        value={linkUrl}
+        value={url}
         size="small"
         style={{
           width: "90%",
         }}
         readOnly
       />
-      <Button
-        size="small"
-        onClick={copyTokenToClipboard}
-        icon={<CopyOutlined className="without-icon-margin" />}
-      />
+      <Button size="small" onClick={copyTokenToClipboard} icon={<CopyOutlined />} />
     </Input.Group>
   );
+}
+
+function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
+  const updateMutation = useUpdatePrivateLink();
 
   const onChange: DatePickerProps["onChange"] = (date, dateString) => {
     updateMutation.mutate({ ...linkItem, expirationDateTime: Number(date) });
   };
 
-  const handleExpiryMenuClick = ({
+  const handleExpirationMenuClick = ({
     key,
   }: {
     key: "24 hours" | "1 week" | "6 months" | "1 year";
@@ -170,15 +170,16 @@ function LinkListItem({ linkItem }: { linkItem: ZarrPrivateLink }) {
         case "1 year":
           return moment().add(1, "year");
         default:
-          throw new Error("Unexpected expiry date key");
+          throw new Error("Unexpected expiration date key");
       }
     })();
 
     updateMutation.mutate({ ...linkItem, expirationDateTime: Number(expirationDateTime) });
   };
-  const expiryMenu = (
+  const expirationMenu = (
     <Menu
-      onClick={handleExpiryMenuClick}
+      // @ts-ignore
+      onClick={handleExpirationMenuClick}
       items={[
         {
           label: "24 hours",
@@ -200,98 +201,105 @@ function LinkListItem({ linkItem }: { linkItem: ZarrPrivateLink }) {
     />
   );
 
-  return (
-    <List.Item
-      actions={[
-        <span>
-          <Tooltip title="Delete Link" placement="left">
-            <AsyncIconButton
-              onClick={() => deleteMutation.mutateAsync(linkItem.id)}
-              icon={<DeleteOutlined className="without-icon-margin" />}
-            />
-          </Tooltip>
-        </span>,
-      ]}
-    >
-      <List.Item.Meta
-        avatar={<LinkOutlined style={{ marginTop: 10 }} />}
-        title={linkUrlInput}
-        description={
-          linkItem.expirationDateTime == null ? (
-            <Dropdown overlay={expiryMenu}>
-              <Space>
-                Add Expiry Date
-                <DownOutlined />
-              </Space>
-            </Dropdown>
-          ) : (
-            <span>
-              Expires on <FormattedDate timestamp={linkItem.expirationDateTime} />
-              <Popover
-                content={
-                  <>
-                    <DatePicker
-                      onChange={onChange}
-                      defaultValue={moment(linkItem.expirationDateTime)}
-                    />
-                    <Button
-                      type="link"
-                      onClick={() =>
-                        updateMutation.mutate({ ...linkItem, expirationDateTime: null })
-                      }
-                    >
-                      Remove expiration date
-                    </Button>
-                  </>
-                }
-                title="Set an expiration date"
-                trigger="click"
-              >
-                <EditOutlined style={{ marginLeft: 4 }} />
-              </Popover>
-            </span>
-          )
+  return linkItem.expirationDateTime == null ? (
+    <Dropdown overlay={expirationMenu}>
+      <Space style={{ color: "var(--ant-text-secondary)" }}>
+        Add Expiration Date
+        <DownOutlined />
+      </Space>
+    </Dropdown>
+  ) : (
+    <span>
+      <FormattedDate timestamp={linkItem.expirationDateTime} />
+      <Popover
+        content={
+          <>
+            <div>
+              <DatePicker
+                onChange={onChange}
+                // @ts-ignore
+                defaultValue={moment(linkItem.expirationDateTime)}
+                allowClear={false}
+              />
+            </div>
+            <Button
+              type="link"
+              onClick={() => updateMutation.mutate({ ...linkItem, expirationDateTime: null })}
+            >
+              Remove expiration date
+            </Button>
+          </>
         }
-      />
-    </List.Item>
+        title="Set an expiration date"
+        trigger="click"
+      >
+        <EditOutlined style={{ marginLeft: 4 }} />
+      </Popover>
+    </span>
   );
 }
 
 export function PrivateLinksView() {
-  const { isLoading, error, data: links } = useLinksQuery();
+  const { error, data: links } = useLinksQuery();
   const createLinkMutation = useCreateLinkMutation();
+  const deleteMutation = useDeleteLinkMutation();
   const isFetchingCount = useIsFetching(["links"]);
   const isMutatingCount = useIsMutating(["links"]);
   const isBusy = isFetchingCount + isMutatingCount > 0;
 
   if (error) {
-    return <span>Error: {error.message}</span>;
+    return <span>Error while loading the private links: {error}</span>;
   }
 
-  const loadingIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
+  const columns: ColumnsType<ZarrPrivateLink> = [
+    {
+      title: "URL",
+      key: "name",
+      render: (_, linkItem) => <UrlInput linkItem={linkItem} />,
+    },
+    {
+      title: "Expiration Date",
+      key: "name",
+      dataIndex: "expirationDateTime",
+      render: (_, linkItem) => <ExpirationDate linkItem={linkItem} />,
+    },
+    {
+      title: "",
+      key: "action",
+      render: (_, linkItem) => {
+        return (
+          <Tooltip title="Delete Link" placement="left">
+            <AsyncIconButton
+              onClick={() => deleteMutation.mutateAsync(linkItem.id)}
+              icon={<DeleteOutlined />}
+            />
+          </Tooltip>
+        );
+      },
+    },
+  ];
+
   return (
     <div>
-      <p>
+      <div style={{ marginBottom: 8 }}>
         You can create a Zarr link to this annotation/dataset below. The link can be used by other
         tools to access the data in a streaming manner.
-        {isBusy && <Spin indicator={loadingIcon} />}
-      </p>
+        {isBusy && <Spin indicator={LOADING_ICON} />}
+      </div>
       {links.length > 0 && (
-        <List
-          loading={isLoading}
-          itemLayout="horizontal"
-          dataSource={links || []}
-          renderItem={(linkItem: ZarrPrivateLink) => <LinkListItem linkItem={linkItem} />}
-        />
+        <Table rowKey="id" columns={columns} dataSource={links} size="small" pagination={false} />
       )}
 
-      <AsyncButton
-        type={links.length === 0 ? "primary" : "link"}
-        icon={<PlusOutlined />}
-        onClick={() => createLinkMutation.mutateAsync("62f3b0d22102004bb5cb5b2e")}
-      >
-        Create Zarr Link
-      </AsyncButton>
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+        <AsyncButton
+          type={links.length === 0 ? "primary" : "link"}
+          size={links.length === 0 ? "large" : undefined}
+          icon={<PlusOutlined />}
+          onClick={() => createLinkMutation.mutateAsync("62f3b0d22102004bb5cb5b2e")}
+        >
+          Create Zarr Link
+        </AsyncButton>
+      </div>
     </div>
   );
 }

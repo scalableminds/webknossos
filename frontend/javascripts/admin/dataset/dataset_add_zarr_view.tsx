@@ -26,6 +26,16 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 
+function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
+  for (const layer of datasource.dataLayers) {
+    if (layer.category === "color" || layer.largestSegmentId == null) {
+      continue;
+    }
+    layer.largestSegmentId = 1;
+    Toast.warning(`Please adapt the largestSegmentID for layer ${layer.name}.`);
+  }
+}
+
 function mergeNewLayers(
   loadedDatasource: DatasourceConfiguration,
   datasourceToMerge: DatasourceConfiguration,
@@ -99,6 +109,7 @@ function DatasetAddZarrView(props: Props) {
       Toast.error("Exploring this remote dataset did not return a datasource.");
       return;
     }
+    ensureLargestSegmentIdsInPlace(dataSource);
     if (!datasourceConfig) {
       setDatasourceConfig(jsonStringify(dataSource));
       return;

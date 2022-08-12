@@ -254,7 +254,7 @@ class VolumeTracingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              existingMags.map(_.toMagLiteral(allowScalar = true))
+              Seq(".zattrs", ".zgroup") + existingMags.map(_.toMagLiteral(allowScalar = true))
             )).withHeaders()
       }
     }
@@ -273,7 +273,7 @@ class VolumeTracingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              List.empty
+              Seq(".zarray")
             )).withHeaders()
       }
     }

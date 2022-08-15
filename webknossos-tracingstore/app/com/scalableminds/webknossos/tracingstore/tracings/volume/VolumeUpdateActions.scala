@@ -209,6 +209,7 @@ object UpdateTdCamera {
 case class CreateSegmentVolumeAction(id: Long,
                                      anchorPosition: Option[Vec3Int],
                                      name: Option[String],
+                                     color: Option[com.scalableminds.util.image.Color],
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None)
@@ -224,7 +225,7 @@ case class CreateSegmentVolumeAction(id: Long,
     CompactVolumeUpdateAction("createSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val newSegment = Segment(id, anchorPosition.map(vec3IntToProto), name, creationTime)
+    val newSegment = Segment(id, anchorPosition.map(vec3IntToProto), name, creationTime, colorOptToProto(color))
     tracing.addSegments(newSegment)
   }
 }
@@ -236,6 +237,7 @@ object CreateSegmentVolumeAction {
 case class UpdateSegmentVolumeAction(id: Long,
                                      anchorPosition: Option[Vec3Int],
                                      name: Option[String],
+                                     color: Option[com.scalableminds.util.image.Color],
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None)
@@ -256,7 +258,8 @@ case class UpdateSegmentVolumeAction(id: Long,
       segment.copy(
         anchorPosition = anchorPosition.map(vec3IntToProto),
         name = name,
-        creationTime = creationTime
+        creationTime = creationTime,
+        color = colorOptToProto(color).orElse(segment.color)
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }

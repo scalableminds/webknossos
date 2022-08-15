@@ -19,6 +19,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for ad-hoc meshing for volume annotation layers with fallback segmentations. [#6369](https://github.com/scalableminds/webknossos/pull/6369)
 - Added new backend API route for requesting all publications. Those publications can now have also attached annotations. [#6315](https://github.com/scalableminds/webknossos/pull/6315)
 - Added support for 64-bit segmentations (uint64). Note that the actual support only covers IDs up to 2^53 - 1 (matches the JavaScript number type). Also note that JSON mappings are only compatible with segment ids which only use the lower 32 bits. [#6317](https://github.com/scalableminds/webknossos/pull/6317)
+- Added a "duplicate" button for annotations. [#6386](https://github.com/scalableminds/webknossos/pull/6386)
+- Added new filter options for the dataset list api at `api/datasets`: `organizationName: String`, `onlyMyOrganization: Boolean`, `uploaderId: String` [#6377](https://github.com/scalableminds/webknossos/pull/6377)
 
 ### Changed
 - webKnossos uses WebGL 2 instead of WebGL 1 now. In case your browser/hardware does not support this, webKnossos will alert you and you need to upgrade your system. [#6350](https://github.com/scalableminds/webknossos/pull/6350)
@@ -34,6 +36,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed an error if multiple proofreading actions were performed in rapid succession. If webKnossos is busy, inputs to the viewports are disabled from now on. [#6325](https://github.com/scalableminds/webknossos/pull/6325)
 - Fixed that ad-hoc meshing would terminate early for large segments. [#6352](https://github.com/scalableminds/webknossos/pull/6352)
 - Fixed a bug where the largestSegmentId of zarr segmentation layers was not propagated from the datasource-properties.json, which broke annotating based on these layers. [#6363](https://github.com/scalableminds/webknossos/pull/6363)
+- Fixed a bug where uploads of wkw datasets with numerical-only layer names would fail. [#6382](https://github.com/scalableminds/webknossos/pull/6382)
+- Public datasets of other organizations are no longer listed during task creation. [#6377](https://github.com/scalableminds/webknossos/pull/6377)
+- Tightened organization isolation security for dataset uploads. [#6378](https://github.com/scalableminds/webknossos/pull/6378)
 
 ### Removed
 - Annotation Type was removed from the info tab. [#6330](https://github.com/scalableminds/webknossos/pull/6330)

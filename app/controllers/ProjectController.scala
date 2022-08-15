@@ -2,7 +2,6 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.DefaultConverters.BoolToOption
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations._
 import javax.inject.Inject
@@ -198,7 +197,7 @@ Expects:
         project <- projectDAO.findOne(projectIdValidated) ?~> "project.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
         tasks <- taskDAO.findAllByProject(project._id, limit.getOrElse(Int.MaxValue), pageNumber.getOrElse(0))
-        taskCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+        taskCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           taskDAO.countAllByProject(project._id)(GlobalAccessContext))
         js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
       } yield {

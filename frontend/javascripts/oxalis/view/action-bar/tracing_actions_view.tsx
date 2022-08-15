@@ -4,6 +4,7 @@ import {
   CheckCircleOutlined,
   CheckOutlined,
   CodeSandboxOutlined,
+  CopyOutlined,
   DeleteOutlined,
   DisconnectOutlined,
   DownloadOutlined,
@@ -30,7 +31,7 @@ import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import {
-  copyAnnotationToUserAccount,
+  duplicateAnnotation,
   finishAnnotation,
   reOpenAnnotation,
   createExplorational,
@@ -302,11 +303,21 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleCopyToAccount = async () => {
-    const newAnnotation = await copyAnnotationToUserAccount(
+    // duplicates the annotation in the current user account
+    const newAnnotation = await duplicateAnnotation(
       this.props.annotationId,
       this.props.annotationType,
     );
-    location.href = `/annotations/Explorational/${newAnnotation.id}`;
+    location.href = `/annotations/${newAnnotation.id}`;
+  };
+
+  handleDuplicate = async () => {
+    await Model.ensureSavedState();
+    const newAnnotation = await duplicateAnnotation(
+      this.props.annotationId,
+      this.props.annotationType,
+    );
+    location.href = `/annotations/${newAnnotation.id}`;
   };
 
   handleCopySandboxToAccount = async () => {
@@ -583,6 +594,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         annotationId={annotationId}
       />,
     );
+    if (activeUser != null) {
+      elements.push(
+        <Menu.Item key="duplicate-button" onClick={this.handleDuplicate}>
+          <CopyOutlined />
+          Duplicate
+        </Menu.Item>,
+      );
+    }
     elements.push(screenshotMenuItem);
     elements.push(
       <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>

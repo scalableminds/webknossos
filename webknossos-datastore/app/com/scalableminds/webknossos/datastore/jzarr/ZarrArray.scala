@@ -132,7 +132,7 @@ class ZarrArray(relativePath: ZarrPath, store: FileSystemStore, header: ZarrHead
         header.order == ArrayOrder.F &&
         isZeroOffset(offsetInChunk) &&
         isBufferShapeEqualChunkShape(bufferShape) &&
-        axisOrder == AxisOrder.asXyzFromRank(header.rank)
+        axisOrder == AxisOrder.asCxyzFromRank(header.rank)
       case _ => false
     }
 

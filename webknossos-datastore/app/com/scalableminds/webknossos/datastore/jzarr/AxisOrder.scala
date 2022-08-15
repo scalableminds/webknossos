@@ -27,8 +27,14 @@ object AxisOrder {
   // assumes that the last three elements of the shapre are z,y,x (standard in OME NGFF)
   def asZyxFromRank(rank: Int): AxisOrder = AxisOrder(rank - 1, rank - 2, rank - 3)
 
-  // assumes that the last three elements of the shapre are x,y,z (which is what webKnossos sends to the frontend)
-  def asXyzFromRank(rank: Int): AxisOrder = AxisOrder(rank - 3, rank - 2, rank - 1)
+  def cxyz: AxisOrder = asCxyzFromRank(rank = 4)
+
+  // assumes that the last three elements of the shapre are (c),x,y,z (which is what webKnossos sends to the frontend)
+  def asCxyzFromRank(rank: Int): AxisOrder =
+    if (rank == 3)
+      AxisOrder(rank - 3, rank - 2, rank - 1)
+    else
+      AxisOrder(rank - 3, rank - 2, rank - 1, Some(rank - 4))
 
   implicit val jsonFormat: OFormat[AxisOrder] = Json.format[AxisOrder]
 }

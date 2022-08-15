@@ -28,6 +28,8 @@ object Category extends ExtendedEnumeration {
 object ElementClass extends ExtendedEnumeration {
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
 
+  def segmentationElementClasses: Set[Value] = Set(uint8, uint16, uint32, uint64)
+
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
     case ElementClass.uint16 => 2

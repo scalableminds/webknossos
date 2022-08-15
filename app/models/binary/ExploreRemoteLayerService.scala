@@ -144,8 +144,10 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)
       boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
       zarrMag = ZarrMag(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
-    } yield
-      List((ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag)), Vec3Double(1.0, 1.0, 1.0)))
+      layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
+        ZarrSegmentationLayer(name, boundingBox, elementClass, List(zarrMag), largestSegmentId = 0L)
+      } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag))
+    } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
 
   private def parseJsonFromPath[T: Reads](path: Path)(implicit ec: ExecutionContext): Fox[T] =
     for {
@@ -176,17 +178,13 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       boundingBox = boundingBoxFromMags(magsWithAttributes)
-      name <- guessNameFromPath(remotePath)
+      nameFromPath <- guessNameFromPath(remotePath)
+      name = multiscale.name.getOrElse(nameFromPath)
       voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
-    } yield
-      (ZarrDataLayer(
-         multiscale.name.getOrElse(name),
-         Category.color,
-         boundingBox,
-         elementClass,
-         magsWithAttributes.map(_.mag)
-       ),
-       voxelSizeNanometers)
+      layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
+        ZarrSegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = 0L)
+      } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
+    } yield (layer, voxelSizeNanometers)
 
   private def zarrMagFromNgffDataset(
       ngffDataset: OmeNgffDataset,
@@ -278,5 +276,9 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     val zFactors = filtered.map(_.scale(axisOrder.z))
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
+
+  private def looksLikeSegmentationLayer(layerName: String, elementClass: ElementClass.Value) =
+    Set("segmentation", "labels").contains(layerName.toLowerCase) && ElementClass.segmentationElementClasses.contains(
+      elementClass)
 
 }

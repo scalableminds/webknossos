@@ -39,6 +39,11 @@ package object datasource {
 
     lazy val boundingBox: BoundingBox =
       BoundingBox.combine(dataLayers.map(_.boundingBox))
+
+    def segmentationLayers: List[SegmentationLayer] = dataLayers.flatMap {
+      case layer: SegmentationLayer => Some(layer)
+      case _                        => None
+    }
   }
 
   object GenericDataSource {

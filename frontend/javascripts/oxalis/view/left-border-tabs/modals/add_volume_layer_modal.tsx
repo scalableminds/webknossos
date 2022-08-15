@@ -102,6 +102,9 @@ export default function AddVolumeLayerModal({
     [dataset, tracing],
   );
   const initialNewLayerName = useMemo(() => {
+    if (preselectedLayerName) {
+      return preselectedLayerName;
+    }
     if (allReadableLayerNames.indexOf("Volume") === -1) {
       return "Volume";
     } else {

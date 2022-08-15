@@ -161,6 +161,7 @@ dataLayer.invalidMag=Supplied “{0}” is not a valid mag format. Please use �
 
 zarr.invalidChunkCoordinates=The requested chunk coordinates are in an invalid format. Expected c.x.y.z
 zarr.invalidFirstChunkCoord="First Channel must be 0"
+zarr.chunkNotFound=Could not find the requested chunk
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"
@@ -362,6 +363,8 @@ job.inferNeurons.notAllowed.organization = Currently neuron inferral is only all
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
+
+publication.notFound = Publication could not be found.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 

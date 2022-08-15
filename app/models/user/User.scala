@@ -93,6 +93,21 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"_organization in (select _organization from webknossos.users_ where _id = '$requestingUserId' and isAdmin)"
 
+  def listAccessQ(requestingUserId: ObjectId) =
+    s"""(${readAccessQ(requestingUserId)})
+        and
+        (
+          isUnlisted = false
+          or
+          ('$requestingUserId' in
+            (
+              select u._id
+              from webknossos.users_ u join webknossos.multiUsers_ m on u._multiUser = m._id
+              where m.isSuperUser
+            )
+          )
+        )"""
+
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
@@ -102,9 +117,8 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
-      accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #$columns from #$existingCollectionName where isUnlisted = false and #$accessQuery".as[UsersRow])
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[UsersRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -112,11 +126,10 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     if (teams.isEmpty) Fox.successful(List())
     else
       for {
-        accessQuery <- readAccessQuery
+        accessQuery <- accessQueryFromAccessQ(listAccessQ)
         r <- run(sql"""select #${columnsWithPrefix("u.")}
                          from (select #$columns from #$existingCollectionName where #$accessQuery) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
-                               and not u.isUnlisted
                                and not u.isDeactivated
                          order by _id""".as[UsersRow])
         parsed <- parseAll(r)
@@ -130,7 +143,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def findAdminsAndDatasetManagersByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
-      accessQuery <- readAccessQuery
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(sql"""select #$columns
                      from #$existingCollectionName
                      where #$accessQuery
@@ -166,7 +179,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def findContributorsForAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
-      accessQuery <- readAccessQuery
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
       result <- run(
         sql"""select #$columns from #$existingCollectionName
                               where _id in (select _user from webknossos.annotation_contributors where _annotation = $annotationId) and #$accessQuery"""

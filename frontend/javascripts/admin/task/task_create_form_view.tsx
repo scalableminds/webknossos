@@ -33,7 +33,7 @@ import type { Vector6 } from "oxalis/constants";
 import {
   createTaskFromNML,
   createTasks,
-  getActiveDatasets,
+  getActiveDatasetsOfMyOrganization,
   getAnnotationInformation,
   getProjects,
   getScripts,
@@ -275,7 +275,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       isFetchingData: true,
     });
     const [datasets, projects, scripts, taskTypes] = await Promise.all([
-      getActiveDatasets(),
+      getActiveDatasetsOfMyOrganization(),
       getProjects(),
       getScripts(),
       getTaskTypes(),

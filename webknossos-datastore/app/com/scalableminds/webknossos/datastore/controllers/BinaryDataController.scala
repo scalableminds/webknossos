@@ -69,7 +69,7 @@ class BinaryDataController @Inject()(
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
-                                                                                    dataLayerName) ~> 404
+                                                                                    dataLayerName) ~> NOT_FOUND
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
           duration = System.currentTimeMillis() - t
           _ = if (duration > 10000)
@@ -114,7 +114,7 @@ class BinaryDataController @Inject()(
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
-                                                                                  dataLayerName) ~> 404
+                                                                                  dataLayerName) ~> NOT_FOUND
         _ <- bool2Fox(!(resolution.isDefined && mag.isDefined)) ?~> "Can only interpret mag or zoomStep. Use only mag instead."
         magFromZoomStep = resolution.map(dataLayer.magFromExponent(_, snapToClosest = true))
         magParsedOpt <- Fox.runOptional(mag)(Vec3Int.fromMagLiteral(_).toFox)
@@ -149,7 +149,7 @@ class BinaryDataController @Inject()(
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
-                                                                                  dataLayerName) ~> 404
+                                                                                  dataLayerName) ~> NOT_FOUND
         request = DataRequest(
           VoxelPosition(x * cubeSize * resolution,
                         y * cubeSize * resolution,
@@ -181,7 +181,7 @@ class BinaryDataController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
                                                                                   dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> 404
+          "dataSource.notFound") ~> NOT_FOUND
         position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
         request = DataRequest(position, width, height, 1)
         (data, _) <- requestData(dataSource, dataLayer, request)
@@ -217,7 +217,7 @@ class BinaryDataController @Inject()(
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
-                                                                                  dataLayerName) ~> 404
+                                                                                  dataLayerName) ~> NOT_FOUND
         segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
         mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
         result <- mappingService.handleMappingRequest(mappingRequest)
@@ -239,7 +239,7 @@ class BinaryDataController @Inject()(
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
-                                                                                    dataLayerName) ~> 404
+                                                                                    dataLayerName) ~> NOT_FOUND
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
           isosurfaceRequest = IsosurfaceRequest(
             Some(dataSource),
@@ -281,7 +281,7 @@ class BinaryDataController @Inject()(
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
-                                                                                    dataLayerName) ~> 404
+                                                                                    dataLayerName) ~> NOT_FOUND
           meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
         } yield
           Ok(
@@ -301,7 +301,7 @@ class BinaryDataController @Inject()(
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
-                                                                                    dataLayerName) ~> 404
+                                                                                    dataLayerName) ~> NOT_FOUND
           positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
         } yield
           Ok(
@@ -322,7 +322,7 @@ class BinaryDataController @Inject()(
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                     dataSetName,
                                                                                     dataLayerName) ?~> Messages(
-            "dataSource.notFound") ~> 404 ?~> Messages("histogram.layerMissing", dataLayerName)
+            "dataSource.notFound") ~> NOT_FOUND ?~> Messages("histogram.layerMissing", dataLayerName)
           listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages("histogram.failed",
                                                                                                   dataLayerName)
         } yield Ok(Json.toJson(listOfHistograms))

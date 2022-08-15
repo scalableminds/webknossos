@@ -31,6 +31,7 @@ import type {
   APIProjectProgressReport,
   APIProjectUpdater,
   APIProjectWithAssignments,
+  APIPublication,
   APIResolutionRestrictions,
   APIScript,
   APIScriptCreator,
@@ -721,7 +722,7 @@ export function finishAllAnnotations(selectedAnnotationIds: Array<string>): Prom
   );
 }
 
-export function copyAnnotationToUserAccount(
+export function duplicateAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {
@@ -790,10 +791,10 @@ export function createExplorational(
     layers = [
       {
         typ: "Volume",
-        name: "Volume",
+        name: fallbackLayerName || "Volume",
         fallbackLayerName,
         resolutionRestrictions,
-      }, // { typ: "Volume", name: "Volume 2" },
+      },
     ];
   } else {
     layers = [
@@ -803,10 +804,10 @@ export function createExplorational(
       },
       {
         typ: "Volume",
-        name: "Volume",
+        name: fallbackLayerName || "Volume",
         fallbackLayerName,
         resolutionRestrictions,
-      }, // { typ: "Volume", name: "Volume 2" },
+      },
     ];
   }
 
@@ -993,6 +994,7 @@ export async function getDatasets(
   assertResponseLimit(datasets);
   return datasets;
 }
+
 export async function getJobs(): Promise<APIJob[]> {
   const jobs = await Request.receiveJSON("/api/jobs");
   assertResponseLimit(jobs);
@@ -1249,8 +1251,8 @@ export async function updateDatasetDatasource(
   );
 }
 
-export async function getActiveDatasets(): Promise<Array<APIDataset>> {
-  const datasets = await Request.receiveJSON("/api/datasets?isActive=true");
+export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
+  const datasets = await Request.receiveJSON("/api/datasets?isActive=true&onlyMyOrganization=true");
   assertResponseLimit(datasets);
   return datasets;
 }
@@ -1670,6 +1672,18 @@ export async function getMeanAndStdDevFromDataset(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/colorStatistics?token=${token}`,
     ),
   );
+}
+
+// #### Publications
+export async function getPublications(): Promise<Array<APIPublication>> {
+  const publications = await Request.receiveJSON("/api/publications");
+  assertResponseLimit(publications);
+  return publications;
+}
+
+export async function getPublication(id: string): Promise<APIPublication> {
+  const publication = await Request.receiveJSON(`/api/publications/${id}`);
+  return publication;
 }
 
 // #### Datastores

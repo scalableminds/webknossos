@@ -96,7 +96,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   def isKnownUpload(uploadId: String): Fox[Boolean] =
     runningUploadMetadataStore.contains(redisKeyForFileCount(uploadId))
 
-  private def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
+  def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
   def uploadDirectory(organizationName: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationName).resolve(uploadingDir).resolve(uploadId)

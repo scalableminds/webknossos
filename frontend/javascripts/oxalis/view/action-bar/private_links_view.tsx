@@ -43,6 +43,7 @@ import { makeComponentLazy } from "libs/react_helpers";
 import { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
+import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 
 function useLinksQuery(annotationId: string) {
   return useQuery(["links", annotationId], () => getPrivateLinksByAnnotation(annotationId), {
@@ -133,12 +134,13 @@ function useDeleteLinkMutation(annotationId: string) {
 
 function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataStoreURL = dataset.dataStore.url;
   const dataLayers = getDataLayers(dataset);
-  const url = `${dataStoreURL}/annotations/zarr/${linkItem.accessToken}`;
+  const baseUrl = `${dataStoreURL}/annotations/zarr/${linkItem.accessToken}`;
 
-  const copyTokenToClipboard = async (layerName: string) => {
-    await navigator.clipboard.writeText(`${url}/${layerName}`);
+  const copyTokenToClipboard = async ({ key: layerName }: { key: string }) => {
+    await navigator.clipboard.writeText(`${baseUrl}/${layerName}`);
     Toast.success("URL copied to clipboard");
   };
 
@@ -146,17 +148,26 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
     <Menu
       // @ts-ignore
       onClick={copyTokenToClipboard}
-      items={dataLayers.map((layer) => ({
-        label: layer.name,
-        key: layer.name,
-      }))}
+      items={[
+        {
+          type: "group",
+          label: "Select layer to copy URL",
+          children: dataLayers.map((layer) => ({
+            label:
+              "tracingId" in layer && layer.tracingId != null
+                ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+                : layer.name,
+            key: layer.name,
+          })),
+        },
+      ]}
     />
   );
 
   return (
     <Input.Group compact className="no-borders">
       <Input
-        value={url}
+        value={baseUrl}
         size="small"
         style={{
           width: "90%",
@@ -286,7 +297,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
 
   const columns: ColumnsType<ZarrPrivateLink> = [
     {
-      title: "URL",
+      title: "Base URL",
       key: "name",
       render: (_, linkItem) => <UrlInput linkItem={linkItem} />,
     },

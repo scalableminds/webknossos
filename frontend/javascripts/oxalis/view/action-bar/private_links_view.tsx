@@ -333,7 +333,7 @@ export function _PrivateLinksModal({
 
   return (
     <Modal
-      title="Manage Zarr Endpoints"
+      title="Manage Zarr Links"
       visible={isVisible}
       width={800}
       onCancel={onOk}

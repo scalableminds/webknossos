@@ -594,7 +594,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         onClick={() => this.setState({ isZarrPrivateLinksModalOpen: true })}
       >
         <LinkOutlined />
-        Manage Zarr Endpoints
+        Manage Zarr Links
       </Menu.Item>,
     );
 

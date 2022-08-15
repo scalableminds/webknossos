@@ -291,8 +291,8 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
   return (
     <div>
       <div style={{ marginBottom: 8 }}>
-        You can create one or multiple Zarr link to this annotation below. The link can be used by
-        other tools to access the data in a streaming manner.
+      Create <a href="https://zarr.dev">Zarr</a> streaming links to allow other tools to load the data of this annotation.
+      Note that anyone with these links can access the data, regardless of other sharing settings.
       </div>
       {links.length > 0 && (
         <Table rowKey="id" columns={columns} dataSource={links} size="small" pagination={false} />

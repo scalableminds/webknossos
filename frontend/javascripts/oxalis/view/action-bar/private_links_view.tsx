@@ -40,6 +40,8 @@ import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { ColumnsType } from "antd/lib/table";
 import { makeComponentLazy } from "libs/react_helpers";
+import { OxalisState } from "oxalis/store";
+import { useSelector } from "react-redux";
 
 function useLinksQuery(annotationId: string) {
   return useQuery(["links", annotationId], () => getPrivateLinksByAnnotation(annotationId), {
@@ -129,7 +131,9 @@ function useDeleteLinkMutation(annotationId: string) {
 }
 
 function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
-  const url = `https://.../${linkItem.accessToken}`;
+  const dataStoreURL = useSelector((state: OxalisState) => state.dataset.dataStore.url);
+  const url = `${dataStoreURL}/annotations/zarr/${linkItem.accessToken}`;
+
   const copyTokenToClipboard = async () => {
     await navigator.clipboard.writeText(url);
     Toast.success("URL copied to clipboard");

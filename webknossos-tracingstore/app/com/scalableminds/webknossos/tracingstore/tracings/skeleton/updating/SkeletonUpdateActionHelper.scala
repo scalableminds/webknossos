@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.geometry.ColorProto
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 
-trait SkeletonUpdateActionHelper {
+trait SkeletonUpdateActionHelper extends ProtoGeometryImplicits {
 
   protected def mapTrees(tracing: SkeletonTracing, treeId: Int, transformTree: Tree => Tree): Seq[Tree] =
     tracing.trees.map((tree: Tree) => if (tree.treeId == treeId) transformTree(tree) else tree)

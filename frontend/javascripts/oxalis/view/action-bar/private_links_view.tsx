@@ -42,6 +42,7 @@ import { ColumnsType } from "antd/lib/table";
 import { makeComponentLazy } from "libs/react_helpers";
 import { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
+import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 
 function useLinksQuery(annotationId: string) {
   return useQuery(["links", annotationId], () => getPrivateLinksByAnnotation(annotationId), {
@@ -131,13 +132,27 @@ function useDeleteLinkMutation(annotationId: string) {
 }
 
 function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
-  const dataStoreURL = useSelector((state: OxalisState) => state.dataset.dataStore.url);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataStoreURL = dataset.dataStore.url;
+  const dataLayers = getDataLayers(dataset);
   const url = `${dataStoreURL}/annotations/zarr/${linkItem.accessToken}`;
 
-  const copyTokenToClipboard = async () => {
-    await navigator.clipboard.writeText(url);
+  const copyTokenToClipboard = async (layerName: string) => {
+    await navigator.clipboard.writeText(`${url}/${layerName}`);
     Toast.success("URL copied to clipboard");
   };
+
+  const copyLayerUrlMenu = (
+    <Menu
+      // @ts-ignore
+      onClick={copyTokenToClipboard}
+      items={dataLayers.map((layer) => ({
+        label: layer.name,
+        key: layer.name,
+      }))}
+    />
+  );
+
   return (
     <Input.Group compact className="no-borders">
       <Input
@@ -148,7 +163,10 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
         }}
         readOnly
       />
-      <Button size="small" onClick={copyTokenToClipboard} icon={<CopyOutlined />} />
+
+      <Dropdown overlay={copyLayerUrlMenu}>
+        <Button size="small" icon={<CopyOutlined />} />
+      </Dropdown>
     </Input.Group>
   );
 }

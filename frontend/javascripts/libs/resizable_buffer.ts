@@ -1,9 +1,7 @@
-import type { TypedArray } from "oxalis/constants";
-
 const GROW_MULTIPLIER = 1.3;
 type Class<T> = new (...args: any[]) => T;
 
-class ResizableBuffer<T extends TypedArray> {
+class ResizableBuffer<T extends Float32Array> {
   elementLength: number;
   capacity: number;
   length: number;
@@ -55,18 +53,18 @@ class ResizableBuffer<T extends TypedArray> {
     return this.buffer[i];
   }
 
-  set(element: Array<number> | TypedArray, i: number): void {
+  set(element: Array<number> | T, i: number): void {
     this.buffer.set(element, i * this.elementLength);
   }
 
-  push(element: Array<number> | TypedArray): void {
+  push(element: Array<number> | T): void {
     this.ensureCapacity();
     const { buffer, elementLength, length } = this;
     buffer.set(element, length);
     this.length += elementLength;
   }
 
-  pushMany(elements: Array<Array<number>> | Array<TypedArray>): void {
+  pushMany(elements: Array<Array<number>> | Array<T>): void {
     this.ensureCapacity(this.length + elements.length * this.elementLength);
     // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;

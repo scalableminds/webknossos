@@ -41,37 +41,26 @@ export const getRgbaAtIndex: ShaderModule = {
 };
 export const getRgbaAtXYIndex: ShaderModule = {
   code: `
-    vec4 getRgbaAtXYIndex(sampler2D dtexture, float textureWidth, float x, float y) {
-      return texture2D(
-          dtexture,
-          vec2(
-            (floor(x) + 0.5) / textureWidth,
-            (floor(y) + 0.5) / textureWidth
-          )
-        ).rgba;
-    }
-
     // Define this function for each segmentation and color layer, since iOS cannot handle
     // sampler2D textures[dataTextureCountPerLayer]
     // as a function parameter properly
 
     <% _.each(layerNamesWithSegmentation, (name) => { %>
-      vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float textureWidth, float x, float y) {
-        vec2 accessPoint = (floor(vec2(x, y)) + 0.5) / textureWidth;
-
+      vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
         // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
 
         <% if (dataTextureCountPerLayer === 1) { %>
             // Don't use if-else when there is only one data texture anyway
-            return texture2D(<%= name + "_textures" %>[0], accessPoint).rgba;
+
+            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
         <% } else { %>
           if (textureIdx == 0.0) {
-            return texture2D(<%= name + "_textures" %>[0], accessPoint).rgba;
+            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
           } <% _.range(1, dataTextureCountPerLayer).forEach(textureIndex => { %>
           else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            return texture2D(<%= name + "_textures" %>[<%= textureIndex %>], accessPoint).rgba;
+            return texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba;
           }
           <% }) %>
           return vec4(0.5, 0.0, 0.0, 0.0);
@@ -79,12 +68,12 @@ export const getRgbaAtXYIndex: ShaderModule = {
       }
     <% }); %>
 
-    vec4 getRgbaAtXYIndex(float layerIndex, float textureIdx, float textureWidth, float x, float y) {
+    vec4 getRgbaAtXYIndex(float layerIndex, float textureIdx, float x, float y) {
       if (layerIndex == 0.0) {
-        return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, textureWidth, x, y);
+        return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, x, y);
       } <% _.each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
         else if (layerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
-          return getRgbaAtXYIndex_<%= name %>(textureIdx, textureWidth, x, y);
+          return getRgbaAtXYIndex_<%= name %>(textureIdx, x, y);
         }
       <% }); %>
       return vec4(0.0);
@@ -101,7 +90,7 @@ export const getColorForCoords: ShaderModule = {
     getResolutionFactors,
   ],
   code: `
-    vec4 getColorForCoords(
+    vec4[2] getColorForCoords64(
       sampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
@@ -111,6 +100,9 @@ export const getColorForCoords: ShaderModule = {
       // This method looks up the color data at the given position.
       // The data will be clamped to be non-negative, since negative data
       // is reserved for missing buckets.
+
+      // Will hold [highValue, lowValue];
+      vec4 returnValue[2];
 
       vec3 coords = floor(getRelativeCoords(worldPositionUVW, zoomStep));
       vec3 relativeBucketPosition = div(coords, bucketWidth);
@@ -126,7 +118,8 @@ export const getColorForCoords: ShaderModule = {
         // so that we won't have to address data outside of the addresSpaceDimensions.
         // Nevertheless, we explicitly guard against this situation here to avoid
         // rendering wrong data.
-        return vec4(1.0, 1.0, 0.0, 1.0);
+        returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
+        return returnValue;
       }
 
       float bucketIdx = linearizeVec3ToIndex(relativeBucketPosition, addressSpaceDimensions);
@@ -149,13 +142,15 @@ export const getColorForCoords: ShaderModule = {
         // The downside is that data which does not exist, will be rendered gray instead of black.
         // Issue to track progress: #3446
         float alpha = isFlightMode() ? -1.0 : 0.0;
-        return vec4(0.0, 0.0, 0.0, alpha);
+        returnValue[1] = vec4(0.0, 0.0, 0.0, alpha);
+        return returnValue;
       }
 
       if (bucketAddress < 0. ||
           isNan(bucketAddress)) {
         // Not-yet-existing data is encoded with a = -1.0
-        return vec4(0.0, 0.0, 0.0, -1.0);
+        returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
+        return returnValue;
       }
 
       if (renderedZoomStep != zoomStep) {
@@ -203,16 +198,36 @@ export const getColorForCoords: ShaderModule = {
         div(pixelIdxInBucket, d_texture_width) +
         div(packedBucketSize * bucketAddress, d_texture_width);
 
+      // The lower 32-bit of the value.
       vec4 bucketColor = getRgbaAtXYIndex(
         layerIndex,
         textureIndex,
-        d_texture_width,
         x,
         y
       );
 
+      if (packingDegree == 0.5) {
+        vec4 bucketColorHigh = getRgbaAtXYIndex(
+          layerIndex,
+          textureIndex,
+          // x + 1.0 will never exceed the texture width because
+          // - the texture width is even
+          // - and x is guaranteed to be even, too (due dividing by
+          //   packingDegree=0.5)
+          x + 1.0,
+          // Since x + 1.0 won't "overflow", y doesn't need to be
+          // adapted, either.
+          y
+        );
+
+        returnValue[0] =  bucketColorHigh;
+        returnValue[1] = bucketColor;
+        return returnValue;
+      }
+
       if (packingDegree == 1.0) {
-        return max(bucketColor, 0.0);
+        returnValue[1] = max(bucketColor, 0.0);
+        return returnValue;
       }
 
       float rgbaIndex = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, packingDegree);
@@ -222,34 +237,55 @@ export const getColorForCoords: ShaderModule = {
         // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentationId for an example.
         // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
         if (rgbaIndex == 0.0) {
-          return vec4(
+          returnValue[1] = vec4(
             max(bucketColor.r, 0.0),
             max(bucketColor.g, 0.0),
             max(bucketColor.r, 0.0),
             max(bucketColor.g, 0.0)
           );
+          return returnValue;
         } else if (rgbaIndex == 1.0) {
-          return vec4(
+          returnValue[1] = vec4(
             max(bucketColor.b, 0.0),
             max(bucketColor.a, 0.0),
             max(bucketColor.b, 0.0),
             max(bucketColor.a, 0.0)
           );
+          return returnValue;
         }
       }
 
       // The following code deals with packingDegree == 4.0
       if (rgbaIndex == 0.0) {
-        return vec4(max(bucketColor.r, 0.0));
+        returnValue[1] = vec4(max(bucketColor.r, 0.0));
+        return returnValue;
       } else if (rgbaIndex == 1.0) {
-        return vec4(max(bucketColor.g, 0.0));
+        returnValue[1] = vec4(max(bucketColor.g, 0.0));
+        return returnValue;
       } else if (rgbaIndex == 2.0) {
-        return vec4(max(bucketColor.b, 0.0));
+        returnValue[1] = vec4(max(bucketColor.b, 0.0));
+        return returnValue;
       } else if (rgbaIndex == 3.0) {
-        return vec4(max(bucketColor.a, 0.0));
+        returnValue[1] = vec4(max(bucketColor.a, 0.0));
+        return returnValue;
       }
 
-      return vec4(0.0);
+      returnValue[1] = vec4(0.0);
+      return returnValue;
+    }
+
+    vec4 getColorForCoords(
+      sampler2D lookUpTexture,
+      float layerIndex,
+      float d_texture_width,
+      float packingDegree,
+      vec3 worldPositionUVW
+    ) {
+      // The potential overhead of delegating to the 64-bit variant (instead of using a specialized
+      // 32-bit variant) was measured by rendering 600 times consecutively (without throttling).
+      // No clear negative impact could be measured which is why this delegation should be ok.
+      vec4[2] retVal = getColorForCoords64(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+      return retVal[1];
     }
   `,
 };

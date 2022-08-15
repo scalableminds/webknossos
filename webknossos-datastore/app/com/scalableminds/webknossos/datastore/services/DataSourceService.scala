@@ -135,11 +135,11 @@ class DataSourceService @Inject()(
       Check(
         dataSource.dataLayers.forall {
           case layer: SegmentationLayer =>
-            layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxSegmentIdValue(layer.elementClass)
+            ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
           case _ =>
             true
         },
-        "Largest segment ID invalid"
+        "Largest segment id exceeds range (must be nonnegative, within element class range, and < 2^53)"
       ),
       Check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,

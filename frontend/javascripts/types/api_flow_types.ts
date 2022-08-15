@@ -130,6 +130,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   jobsEnabled: boolean;
   sortingKey: number;
   owningOrganization: string;
+  publication: null | undefined;
   tags: Array<string>;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;

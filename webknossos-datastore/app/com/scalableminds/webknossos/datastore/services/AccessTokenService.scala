@@ -36,8 +36,8 @@ object UserAccessRequest {
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.delete)
   def administrateDataSources: UserAccessRequest =
     UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
-  def listDataSources: UserAccessRequest =
-    UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.list)
+  def administrateDataSources(organizationName: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId("", organizationName), AccessResourceType.datasource, AccessMode.administrate)
   def readDataSources(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.read)
   def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =

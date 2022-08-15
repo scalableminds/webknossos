@@ -36,6 +36,8 @@ class DataSourceController @Inject()(
     extends Controller
     with FoxImplicits {
 
+  override def allowRemoteOrigin: Boolean = true
+
   @ApiOperation(hidden = true, value = "")
   def read(token: Option[String],
            organizationName: String,

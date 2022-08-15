@@ -63,9 +63,7 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 
   def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int = {
-    // frontend treats 8-byte segmentations as 4-byte segmentations,
-    // truncating high IDs. Volume buckets will have at most 4-byte voxels
-    val bytesPerVoxel = scala.math.min(ElementClass.bytesPerElement(dataLayer.elementClass), 4)
+    val bytesPerVoxel = ElementClass.bytesPerElement(dataLayer.elementClass)
     bytesPerVoxel * scala.math.pow(DataLayer.bucketLength, 3).intValue
   }
 }

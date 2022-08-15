@@ -162,10 +162,6 @@ class PlaneMaterialFactory {
         type: "f",
         value: 40,
       },
-      activeCellId: {
-        type: "v4",
-        value: new THREE.Vector4(0, 0, 0, 0),
-      },
       isMouseInActiveViewport: {
         type: "b",
         value: false,
@@ -202,7 +198,23 @@ class PlaneMaterialFactory {
         type: "v3",
         value: new THREE.Vector3(...addressSpaceDimensions),
       },
-      hoveredSegmentId: {
+      // The hovered segment id is always stored as a 64-bit (8 byte)
+      // value which is why it is spread over two uniforms,
+      // named as `-High` and `-Low`.
+      hoveredSegmentIdHigh: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      hoveredSegmentIdLow: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      // The same is done for the active cell id.
+      activeCellIdHigh: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      activeCellIdLow: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
@@ -522,8 +534,10 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
           (hoveredSegmentId) => {
-            const [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentId);
-            this.uniforms.hoveredSegmentId.value.set(r, g, b, a);
+            const [high, low] = Utils.convertNumberTo64Bit(hoveredSegmentId);
+
+            this.uniforms.hoveredSegmentIdLow.value.set(...low);
+            this.uniforms.hoveredSegmentIdHigh.value.set(...high);
           },
         ),
       );
@@ -582,9 +596,11 @@ class PlaneMaterialFactory {
     }
 
     const mappedActiveCellId = segmentationLayer.cube.mapId(activeCellId);
-    // Convert the id into 4 bytes (little endian)
-    const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);
-    this.uniforms.activeCellId.value.set(r, g, b, a);
+
+    const [high, low] = Utils.convertNumberTo64Bit(mappedActiveCellId);
+
+    this.uniforms.activeCellIdLow.value.set(...low);
+    this.uniforms.activeCellIdHigh.value.set(...high);
   }
 
   updateUniformsForLayer(

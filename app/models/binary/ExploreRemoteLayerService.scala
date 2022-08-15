@@ -225,9 +225,11 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     val x = axes.indexWhere(axisMatches(_, "x"))
     val y = axes.indexWhere(axisMatches(_, "y"))
     val z = axes.indexWhere(axisMatches(_, "z"))
+    val c = axes.indexWhere(_.`type` == "channel")
+    val cOpt = if (c == -1) None else Some(c)
     for {
       _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
-    } yield AxisOrder(x, y, z)
+    } yield AxisOrder(x, y, z, cOpt)
   }
 
   private def extractAxisUnitFactors(axes: List[OmeNgffAxis], axisOrder: AxisOrder)(

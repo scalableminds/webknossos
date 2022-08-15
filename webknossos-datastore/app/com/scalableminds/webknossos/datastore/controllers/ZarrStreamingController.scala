@@ -238,43 +238,39 @@ class ZarrStreamingController @Inject()(
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.collect({
           case d: WKWDataLayer =>
-            val rank = if (d.elementClass == ElementClass.uint24) 4 else 3
             ZarrDataLayer(
               d.name,
               d.category,
               d.boundingBox,
               d.elementClass,
-              d.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.asXyzFromRank(rank)))),
+              d.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
               numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
             )
           case s: WKWSegmentationLayer =>
-            val rank = if (s.elementClass == ElementClass.uint24) 4 else 3
             ZarrSegmentationLayer(
               s.name,
               s.boundingBox,
               s.elementClass,
-              s.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.asXyzFromRank(rank)))),
+              s.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
               mappings = s.mappings,
               largestSegmentId = s.largestSegmentId,
               numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
             )
           case z: ZarrDataLayer =>
-            val rank = if (z.elementClass == ElementClass.uint24) 4 else 3
             ZarrDataLayer(
               z.name,
               z.category,
               z.boundingBox,
               z.elementClass,
-              z.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.asXyzFromRank(rank)))),
+              z.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
               numChannels = Some(if (z.elementClass == ElementClass.uint24) 3 else 1)
             )
           case zs: ZarrSegmentationLayer =>
-            val rank = if (zs.elementClass == ElementClass.uint24) 4 else 3
             ZarrSegmentationLayer(
               zs.name,
               zs.boundingBox,
               zs.elementClass,
-              zs.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.asXyzFromRank(rank)))),
+              zs.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
               mappings = zs.mappings,
               largestSegmentId = zs.largestSegmentId,
               numChannels = Some(if (zs.elementClass == ElementClass.uint24) 3 else 1)

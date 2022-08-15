@@ -23,7 +23,10 @@ import {
   getLastLabelAction,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { registerLabelPointAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  finishAnnotationStrokeAction,
+  registerLabelPointAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -417,6 +420,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
       activeViewport,
     );
   }
+
+  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
   // Theoretically, the user might extrude (or interpolate, even though this is less likely) multiple
   // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything inbetween manually.

@@ -231,4 +231,7 @@ webKnossos was inspired by [KNOSSOS](https://knossos.app).
 * [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 
 # License
-AGPLv3
+Dual-license model
+* AGPLv3
+* Commercial license by [scalable minds](https://scalableminds.com)
+

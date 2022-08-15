@@ -377,7 +377,9 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
         "isForeign" -> dataStore.isForeign,
         "jobsEnabled" -> jobsEnabled,
-        "tags" -> dataSet.tags
+        "tags" -> dataSet.tags,
+        // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented
+        "publication" -> None
       )
     }
 }

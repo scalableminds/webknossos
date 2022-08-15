@@ -29,6 +29,7 @@ import type { ViewMode, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants"
 import constants from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import window from "libs/window";
+import { SeedSubscriberFn } from "./cuckoo_table";
 
 const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
 const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
@@ -303,5 +304,10 @@ export default class LayerRenderingManager {
 
     this.cachedAnchorPoint = anchorPoint;
     return true;
+  }
+
+  // todo: unsubscribe?
+  subscribeToSeeds(fn: SeedSubscriberFn): void {
+    return this.textureBucketManager.lookUpTable.subscribeToSeeds(fn);
   }
 }

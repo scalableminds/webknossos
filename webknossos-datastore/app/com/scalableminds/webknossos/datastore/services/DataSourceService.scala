@@ -134,13 +134,17 @@ class DataSourceService @Inject()(
       Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
       Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
       Check(
-        dataSource.dataLayers.forall {
-          case layer: SegmentationLayer =>
-            layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxSegmentIdValue(layer.elementClass)
-          case _ =>
-            true
+        dataSource.segmentationLayers.forall { layer =>
+          ElementClass.segmentationElementClasses.contains(layer.elementClass)
         },
-        "Largest segment ID invalid"
+        s"Invalid element class for segmentation layer"
+      ),
+      Check(
+        dataSource.segmentationLayers.forall { layer =>
+          layer.largestSegmentId > 0 && ElementClass.segmentationElementClasses
+            .contains(layer.elementClass) && layer.largestSegmentId < ElementClass.maxSegmentIdValue(layer.elementClass)
+        },
+        "Largest segment ID invalid for element class"
       ),
       Check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,

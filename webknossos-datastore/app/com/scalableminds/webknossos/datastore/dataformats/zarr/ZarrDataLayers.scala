@@ -78,7 +78,7 @@ case class ZarrSegmentationLayer(
     elementClass: ElementClass.Value,
     mags: List[ZarrMag],
     largestSegmentId: Long,
-    mappings: Option[Set[String]],
+    mappings: Option[Set[String]] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     override val numChannels: Option[Int] = Some(1)

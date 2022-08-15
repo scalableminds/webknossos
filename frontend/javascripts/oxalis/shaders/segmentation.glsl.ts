@@ -14,7 +14,7 @@ import { getRgbaAtIndex } from "./texture_access.glsl";
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex, getElementOfPermutation, aaStep, colormapJet],
   code: `
-    vec3 convertCellIdToRGB(vec4 id) {
+    vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
       /*
       This function maps from a segment id to a color with a pattern.
       For the color, the jet color map is used. For the patterns, we employ the following
@@ -31,6 +31,9 @@ export const convertCellIdToRGB: ShaderModule = {
       The patterns are still painted on top of these, though.
       */
 
+      // Since collisions of ids are bound to happen, using all 64 bits is not
+      // necessary, which is why we simply combine the 32-bit tuple into one 32-bit value.
+      vec4 id = idHigh + idLow;
       float lastEightBits = id.r;
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
@@ -139,7 +142,15 @@ export const jsConvertCellIdToHSLA = (
     const last8Bits = id % 2 ** 8;
     hue = customColors[last8Bits] || 0;
   } else {
-    const significantSegmentIndex = id % 2 ** 16;
+    // The shader always derives the segment color by using a 64-bit id from which
+    // - the lower 16 bits of the lower 32 bits and
+    // - the lower 16 bits of the upper 32 bits
+    // are used to derive the color.
+    // In JS, we do it similarly:
+    const bigId = BigInt(id);
+    const highPart = Number((bigId >> 32n) % 2n ** 16n);
+    const lowPart = id % 2 ** 16;
+    const significantSegmentIndex = highPart + lowPart;
     const colorCount = 19;
     const colorIndex = jsGetElementOfPermutation(significantSegmentIndex, colorCount, 2);
     const colorValueDecimal = (1.0 / colorCount) * colorIndex;
@@ -176,15 +187,14 @@ export const getSegmentationId: ShaderModule = {
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    vec4 getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
-      vec4 volume_color =
-        getMaybeFilteredColorOrFallback(
+    vec4[2] getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
+      vec4[2] volume_color =
+        getSegmentIdOrFallback(
           <%= segmentationName %>_lookup_texture,
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
           <%= formatNumberAsGLSLFloat(packingDegreeLookup[segmentationName]) %>,
           worldPositionUVW,
-          true, // Don't use bilinear filtering for volume data
           vec4(0.0, 0.0, 0.0, 0.0)
         );
 
@@ -193,32 +203,36 @@ export const getSegmentationId: ShaderModule = {
       // a cell id with the hovered cell passed via uniforms, for example).
 
       <% if (packingDegreeLookup[segmentationName] === 4) { %>
-        volume_color = vec4(volume_color.r, 0.0, 0.0, 0.0);
+        volume_color[1] = vec4(volume_color.r, 0.0, 0.0, 0.0);
       <% } else if (packingDegreeLookup[segmentationName] === 2) { %>
-        volume_color = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
+        volume_color[1] = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
       <% } %>
 
       <% if (isMappingSupported) { %>
         if (isMappingEnabled) {
+          // Note that currently only the lower 32 bits of the segmentation
+          // are used for applying the JSON mapping.
 
           float index = binarySearchIndex(
             segmentation_mapping_lookup_texture,
             mappingSize,
-            volume_color
+            volume_color[1]
           );
           if (index != -1.0) {
-            volume_color = getRgbaAtIndex(
+            volume_color[1] = getRgbaAtIndex(
               segmentation_mapping_texture,
               <%= mappingTextureWidth %>,
               index
             );
           } else if (hideUnmappedIds) {
-            volume_color = vec4(0.0);
+            volume_color[1] = vec4(0.0);
           }
         }
       <% } %>
 
-      return volume_color * 255.0;
+      volume_color[0] *= 255.0;
+      volume_color[1] *= 255.0;
+      return volume_color;
     }
 <% }) %>
   `,

@@ -10,6 +10,7 @@ import {
   InterpolationModeEnum,
   OrthoViews,
   ToolsWithInterpolationCapabilities,
+  TypedArrayWithoutBigInt,
   Vector3,
 } from "oxalis/constants";
 import Model from "oxalis/model";
@@ -149,6 +150,17 @@ const isEqual = cwise({
   },
 });
 
+const isEqualFromBigUint64: (
+  output: NdArray<TypedArrayWithoutBigInt>,
+  a: NdArray<BigUint64Array>,
+  b: BigInt,
+) => void = cwise({
+  args: ["array", "array", "scalar"],
+  body: function body(output: number, a: BigInt, b: BigInt) {
+    output = a === b ? 1 : 0;
+  },
+});
+
 const isNonZero = cwise({
   args: ["array"],
   // The following function is parsed by cwise which is why
@@ -216,8 +228,8 @@ function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarr
  */
 function signedDist(arr: ndarray.NdArray) {
   // Copy the input twice to avoid mutating it
-  arr = copy(Float32Array, arr);
-  const negatedArr = copy(Float32Array, arr);
+  arr = copy(Float32Array, arr) as NdArray<Float32Array>;
+  const negatedArr = copy(Float32Array, arr) as NdArray<Float32Array>;
 
   // Normal distance transform for arr
   distanceTransform(arr);
@@ -359,13 +371,40 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     );
   }
 
-  let firstSlice = inputNd.pick(null, null, 0);
-  let lastSlice = inputNd.pick(null, null, interpolationDepth);
+  // These two variables will be initialized with binary masks (representing whether
+  // a voxel contains the active segment id).
+  let firstSlice;
+  let lastSlice;
 
-  // Calculate firstSlice = firstSlice[...] == activeCellId
-  isEqual(firstSlice, activeCellId);
-  // Calculate lastSlice = lastSlice[...] == activeCellId
-  isEqual(lastSlice, activeCellId);
+  const isBigUint64 = inputNd.data instanceof BigUint64Array;
+  if (isBigUint64) {
+    // For BigUint64 arrays, we want to convert as early as possible to Float32, since
+    // the cwise operations don't generalize across all members of TypedArray.
+    // Float values are more than enough, because the interpolation process only
+    // cares about voxel distances. Also, the actual IDs are discarded by creating a binary
+    // mask as the very first step (see below).
+
+    const firstSliceBigInt = inputNd.pick(null, null, 0);
+    const lastSliceBigInt = inputNd.pick(null, null, interpolationDepth);
+
+    // Prepare empty output arrays in Float32
+    firstSlice = ndarray(new Float32Array(firstSliceBigInt.size), firstSliceBigInt.shape);
+    lastSlice = ndarray(new Float32Array(lastSliceBigInt.size), lastSliceBigInt.shape);
+
+    const activeCellIdBig = BigInt(activeCellId);
+    // Calculate firstSlice = firstSliceBigInt[...] == activeCellId
+    isEqualFromBigUint64(firstSlice, firstSliceBigInt as NdArray<BigUint64Array>, activeCellIdBig);
+    // Calculate lastSlice = lastSliceBigInt[...] == activeCellId
+    isEqualFromBigUint64(lastSlice, lastSliceBigInt as NdArray<BigUint64Array>, activeCellIdBig);
+  } else {
+    firstSlice = inputNd.pick(null, null, 0) as NdArray<TypedArrayWithoutBigInt>;
+    lastSlice = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArrayWithoutBigInt>;
+
+    // Calculate firstSlice = firstSlice[...] == activeCellId
+    isEqual(firstSlice, activeCellId);
+    // Calculate lastSlice = lastSlice[...] == activeCellId
+    isEqual(lastSlice, activeCellId);
+  }
 
   if (onlyExtrude) {
     if (directionFactor > 0) {

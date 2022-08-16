@@ -7,6 +7,7 @@ import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
+  getVisibleSegments,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getAddressSpaceDimensions,
@@ -28,7 +29,7 @@ import {
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
-import type { DatasetLayerConfiguration } from "oxalis/store";
+import type { DatasetLayerConfiguration, SegmentMap } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
@@ -38,6 +39,8 @@ import type { ElementClass } from "types/api_flow_types";
 import { createUpdatableTexture } from "./plane_material_factory_helpers";
 import { getRenderer } from "oxalis/controller/renderer";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
+import { diffSegmentLists } from "oxalis/model/sagas/volumetracing_saga";
+import DiffableMap from "libs/diffable_map";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -608,6 +611,35 @@ class PlaneMaterialFactory {
             this.uniforms.showBrush.value = isBrushTool(annotationTool);
           },
           true,
+        ),
+      );
+
+      let prevSegments: SegmentMap = new DiffableMap();
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => getVisibleSegments(storeState),
+          (visibleSegments) => {
+            if (!visibleSegments) {
+              return;
+            }
+
+            for (const updateAction of diffSegmentLists(prevSegments, visibleSegments)) {
+              if (updateAction.name === "deleteSegment") {
+                // todo
+              } else if (
+                updateAction.name === "updateSegment" ||
+                updateAction.name === "createSegment"
+              ) {
+                const { cuckoo } = getCustomColorTexture();
+                const { id, color } = updateAction.value;
+                if (color != null) {
+                  cuckoo.set(id, color.slice(0, 3));
+                }
+              }
+            }
+
+            prevSegments = visibleSegments;
+          },
         ),
       );
     }

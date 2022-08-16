@@ -50,6 +50,8 @@ export class CuckooTable {
   }
 
   set(pendingKey: number, pendingValue: Vector3, rehashAttempt: number = 0) {
+    // todo: check that repeated sets to same key work
+
     if (rehashAttempt == 0) {
       this.setCount++;
     }

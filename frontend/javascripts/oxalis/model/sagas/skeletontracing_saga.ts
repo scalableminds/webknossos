@@ -581,22 +581,18 @@ export function* diffTrees(
     }
   }
 }
-const diffTreeCache = {};
+const diffTreeCache: { prevTrees?: TreeMap; trees?: TreeMap; diff: UpdateAction[] } = { diff: [] };
 export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<UpdateAction> {
   // Try to use the cached version of the diff if available to increase performance
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'prevTrees' does not exist on type '{}'.
   if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'prevTrees' does not exist on type '{}'.
     diffTreeCache.prevTrees = prevTrees;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type '{}'.
     diffTreeCache.trees = trees;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'diff' does not exist on type '{}'.
     diffTreeCache.diff = Array.from(diffTrees(prevTrees, trees));
   }
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'diff' does not exist on type '{}'.
   return diffTreeCache.diff;
 }
+
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,

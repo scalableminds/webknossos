@@ -532,7 +532,7 @@ export function* diffSegmentLists(
 
   for (const segmentId of addedSegmentIds) {
     const segment = newSegments.get(segmentId);
-    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
+    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name, segment.color);
   }
 
   for (const segmentId of bothSegmentIds) {

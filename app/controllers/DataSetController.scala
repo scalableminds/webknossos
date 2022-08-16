@@ -133,7 +133,7 @@ class DataSetController @Inject()(userService: UserService,
       _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
       noDataStoreBox <- dataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
       _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
-      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
+      _ <- dataSetService.assertValidDataSetName(dataSetName) ?~> "dataSet.name.invalid"
       _ <- dataSetDAO
         .findOneByNameAndOrganization(dataSetName, request.identity._organization)
         .reverse ?~> "dataSet.name.alreadyTaken"
@@ -453,7 +453,7 @@ Expects:
       for {
         organization <- organizationDAO.findOneByName(organizationName)
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
-        _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
+        _ <- dataSetService.assertValidDataSetName(dataSetName) ?~> "dataSet.name.invalid"
         _ <- dataSetService.assertNewDataSetName(dataSetName, organization._id) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
     }

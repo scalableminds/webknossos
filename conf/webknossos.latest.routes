@@ -40,7 +40,7 @@ PUT           /dataSetConfigurations/default/:organizationName/:dataSetName     
 POST          /user/tasks/request                                                       controllers.TaskController.request
 GET           /user/tasks/peek                                                          controllers.TaskController.peekNext
 
-GET           /users                                                                    controllers.UserController.list
+GET           /users                                                                    controllers.UserController.list(isEditable: Option[Boolean], isTeamManagerOrAdmin: Option[Boolean], isAdmin: Option[Boolean])
 GET           /user                                                                     controllers.UserController.current
 GET           /user/tasks                                                               controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /user/annotations                                                         controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
@@ -65,7 +65,7 @@ GET           /teams/:id/progressOverview                                       
 # DataSets
 POST          /datasets/:organizationName/:dataSetName/createExplorational              controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/sandbox/:typ                     controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String, sharingToken: Option[String])
-GET           /datasets                                                                 controllers.DataSetController.list
+GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String])
 POST          /datasets                                                                 controllers.DataSetController.create(typ: String)
 POST          /datasets/addForeign                                                      controllers.DataSetController.addForeignDataStoreAndDataSet
 POST          /datasets/exploreRemote                                                   controllers.DataSetController.exploreRemoteDataset

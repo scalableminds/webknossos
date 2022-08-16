@@ -189,7 +189,9 @@ class AnnotationService @Inject()(
           }
           .headOption
           .toFox
-        _ <- bool2Fox(fallbackLayer.elementClass != ElementClass.uint64) ?~> "annotation.volume.uint64"
+        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(
+          fallbackLayer.largestSegmentId,
+          fallbackLayer.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
       } yield fallbackLayer
 
     def createAndSaveAnnotationLayer(
@@ -485,7 +487,7 @@ class AnnotationService @Inject()(
           case _                        => None
         }.headOption
       } else None
-      _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+      _ <- bool2Fox(fallbackLayer.forall(_.largestSegmentId >= 0L)) ?~> "annotation.volume.negativeLargestSegmentId"
 
       volumeTracing <- createVolumeTracing(
         dataSource,

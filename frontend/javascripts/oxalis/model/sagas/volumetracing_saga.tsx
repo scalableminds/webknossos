@@ -544,6 +544,7 @@ export function* diffSegmentLists(
         segment.id,
         segment.somePosition,
         segment.name,
+        segment.color,
         segment.creationTime,
       );
     }

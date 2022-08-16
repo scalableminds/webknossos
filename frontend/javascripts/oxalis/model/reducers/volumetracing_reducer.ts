@@ -131,6 +131,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     // used by ...oldSegment
     creationTime: action.timestamp,
     name: null,
+    color: null,
     ...oldSegment,
     ...segment,
     somePosition,
@@ -166,6 +167,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
           ...segment,
           id: segment.segmentId,
           somePosition: Utils.point3ToVector3(segment.anchorPosition),
+          color: segment.color != null ? Utils.colorObjectToRGBAArray(segment.color) : null,
         },
       ]),
     ),

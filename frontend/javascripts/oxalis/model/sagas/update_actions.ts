@@ -1,5 +1,5 @@
 import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import type {
   VolumeTracing,
   BranchPoint,
@@ -129,6 +129,7 @@ export type UpdateSegmentUpdateAction = {
     anchorPosition: Vector3 | null | undefined;
     name: string | null | undefined;
     creationTime: number | null | undefined;
+    color: Vector4 | null;
   };
 };
 export type DeleteSegmentUpdateAction = {
@@ -454,6 +455,7 @@ export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
+  color: Vector4 | null,
   creationTime: number | null | undefined = Date.now(),
 ): UpdateSegmentUpdateAction {
   return {
@@ -463,6 +465,7 @@ export function updateSegmentVolumeAction(
       anchorPosition,
       name,
       creationTime,
+      color,
     },
   };
 }

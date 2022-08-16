@@ -638,6 +638,7 @@ type ServerSegment = {
   name: string | null | undefined;
   anchorPosition: Point3;
   creationTime: number | null | undefined;
+  color: ColorObject | null;
 };
 export type ServerTracingBase = {
   id: string;

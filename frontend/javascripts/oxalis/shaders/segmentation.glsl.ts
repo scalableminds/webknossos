@@ -82,12 +82,15 @@ export const convertCellIdToRGB: ShaderModule = {
 
       uint integerValue = vec4ToUint(idLow);
       vec3 customColor = attemptCustomColorLookUp(integerValue, seed0);
-      if (customColor.r == -1.)
+      if (customColor.r == -1.) {
         customColor = attemptCustomColorLookUp(integerValue, seed1);
-      if (customColor.r == -1.)
+      }
+      if (customColor.r == -1.) {
         customColor = attemptCustomColorLookUp(integerValue, seed2);
-
-      return customColor;
+      }
+      if (customColor.r != -1.) {
+        return customColor;
+      }
 
       <% if (isMappingSupported) { %>
         // If the first element of the mapping colors texture is still the initialized

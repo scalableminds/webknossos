@@ -203,9 +203,9 @@ export const getSegmentationId: ShaderModule = {
       // a cell id with the hovered cell passed via uniforms, for example).
 
       <% if (packingDegreeLookup[segmentationName] === 4) { %>
-        volume_color[1] = vec4(volume_color.r, 0.0, 0.0, 0.0);
+        volume_color[1] = vec4(volume_color[1].r, 0.0, 0.0, 0.0);
       <% } else if (packingDegreeLookup[segmentationName] === 2) { %>
-        volume_color[1] = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
+        volume_color[1] = vec4(volume_color[1].r, volume_color[1].g, 0.0, 0.0);
       <% } %>
 
       <% if (isMappingSupported) { %>

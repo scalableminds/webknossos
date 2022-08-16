@@ -42,6 +42,7 @@ import type {
   MappingStatus,
   OrthoViewWithoutTD,
   InterpolationMode,
+  Vector4,
 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -213,6 +214,7 @@ export type Segment = {
   name: string | null | undefined;
   somePosition: Vector3;
   creationTime: number | null | undefined;
+  color: Vector4 | null;
 };
 export type SegmentMap = DiffableMap<number, Segment>;
 

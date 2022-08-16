@@ -11,6 +11,7 @@ import Checkbox from "antd/lib/checkbox/Checkbox";
 import React from "react";
 
 import classnames from "classnames";
+import * as Utils from "libs/utils";
 import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
@@ -32,6 +33,7 @@ const convertCellIdToCSS = (id: number, mappingColors: ActiveMappingInfo["mappin
 };
 
 function getColoredDotIconForSegment(
+  segment: Segment,
   segmentId: number,
   mappingColors: ActiveMappingInfo["mappingColors"],
 ) {
@@ -40,7 +42,10 @@ function getColoredDotIconForSegment(
       className="circle"
       style={{
         paddingLeft: "10px",
-        backgroundColor: convertCellIdToCSS(segmentId, mappingColors),
+        backgroundColor:
+          segment.color != null
+            ? `rgb(${segment.color.map((el) => el * 255).join(", ")})`
+            : convertCellIdToCSS(segmentId, mappingColors),
       }}
     />
   );
@@ -60,6 +65,7 @@ const getLoadPrecomputedMeshMenuItem = (
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
   return (
     <MenuItemWithMappingActivationConfirmation
+      key="loadPrecomputedMesh"
       onClick={() =>
         andCloseContextMenu(
           // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
@@ -96,6 +102,7 @@ const getComputeMeshAdHocMenuItem = (
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
   return (
     <Menu.Item
+      key="loadAdHocMesh"
       onClick={() => andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition))}
       disabled={disabled}
     >
@@ -116,6 +123,7 @@ const getMakeSegmentActiveMenuItem = (
     : "Make this the active segment ID.";
   return (
     <Menu.Item
+      key="setActiveCell"
       onClick={() => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition))}
       disabled={disabled}
     >
@@ -314,6 +322,8 @@ function _SegmentListItem({
   loadPrecomputedMesh,
   currentMeshFile,
 }: Props) {
+  const isEditingDisabled = !allowUpdate;
+
   const mappedId = mapId(segment.id);
 
   if (mappingInfo.hideUnmappedIds && mappedId === 0) {
@@ -339,6 +349,58 @@ function _SegmentListItem({
         andCloseContextMenu,
       )}
       {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
+
+      <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled}>
+        <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
+          Select Segment Color
+          <input
+            type="color"
+            value={Utils.rgbToHex(Utils.map3((value) => value * 255, segment.color ?? [0, 0, 0]))}
+            disabled={isEditingDisabled}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: "100%",
+              opacity: 0,
+              cursor: isEditingDisabled ? "unset" : "pointer",
+            }}
+            onChange={(event) => {
+              if (isEditingDisabled || visibleSegmentationLayer == null) {
+                return;
+              }
+
+              let color = Utils.hexToRgb(event.target.value);
+              color = Utils.map3((component) => component / 255, color);
+              updateSegment(
+                segment.id,
+                {
+                  color: [color[0], color[1], color[2], 255],
+                },
+                visibleSegmentationLayer.name,
+              );
+            }}
+          />
+        </div>
+      </Menu.Item>
+      <Menu.Item
+        key="resetSegmentColor"
+        disabled={isEditingDisabled}
+        onClick={() => {
+          if (isEditingDisabled || visibleSegmentationLayer == null) {
+            return;
+          }
+          updateSegment(
+            segment.id,
+            {
+              color: null,
+            },
+            visibleSegmentationLayer.name,
+          );
+        }}
+      >
+        Reset Segment Color
+      </Menu.Item>
     </Menu>
   );
 
@@ -390,7 +452,7 @@ function _SegmentListItem({
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>
-          {getColoredDotIconForSegment(mappedId, mappingInfo.mappingColors)}
+          {getColoredDotIconForSegment(segment, mappedId, mappingInfo.mappingColors)}
           <EditableTextLabel
             value={segment.name || `Segment ${segment.id}`}
             label="Segment Name"

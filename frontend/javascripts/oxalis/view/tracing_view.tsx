@@ -1,6 +1,7 @@
 import * as React from "react";
 import Toast from "libs/toast";
 import messages from "messages";
+import ErrorHandling from "libs/error_handling";
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'canvas' implicitly has an 'any' type.
 const registerWebGlCrashHandler = (canvas) => {
@@ -15,6 +16,7 @@ const registerWebGlCrashHandler = (canvas) => {
         sticky: true,
       });
       console.error("Webgl context lost", e);
+      ErrorHandling.notify(e);
     },
     false,
   );

@@ -237,7 +237,7 @@ class TDController extends React.PureComponent<Props> {
           const { hoveredSegmentId } = storeState.temporaryConfiguration;
           const segmentationLayer = getVisibleSegmentationLayer(storeState);
 
-          if (!segmentationLayer) {
+          if (!segmentationLayer || hoveredSegmentId == null) {
             return;
           }
 

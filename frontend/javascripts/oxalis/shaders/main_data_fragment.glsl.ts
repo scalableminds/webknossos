@@ -53,6 +53,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% }) %>
 
 <% if (hasSegmentation) { %>
+  uniform sampler2D custom_color_texture;
   uniform vec4 activeCellIdHigh;
   uniform vec4 activeCellIdLow;
   uniform bool isMouseInActiveViewport;
@@ -96,6 +97,10 @@ varying mat4 savedModelMatrix;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
+
+uniform highp uint seed0;
+uniform highp uint seed1;
+uniform highp uint seed2;
 
 // For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it

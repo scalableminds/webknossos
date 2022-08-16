@@ -14,6 +14,43 @@ import { getRgbaAtIndex } from "./texture_access.glsl";
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex, getElementOfPermutation, aaStep, colormapJet],
   code: `
+    highp uint hashCombine(highp uint state, highp uint value) {
+      value *= 0xcc9e2d51u;
+      value = (value << 15u) | (value >> 17u);
+      value *= 0x1b873593u;
+      state ^= value;
+      state = (state << 13u) | (state >> 19u);
+      state = (state * 5u) + 0xe6546b64u;
+      return state;
+    }
+
+    uint vec4ToUint(vec4 idLow) {
+      uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
+      return integerValue;
+    }
+
+    vec3 attemptCustomColorLookUp(uint integerValue, uint seed) {
+      highp uint ENTRY_CAPACITY = 16777216u;
+      highp uint ELEMENTS_PER_ENTRY = 4u;
+      highp uint ELEMENTS_PER_TEXEL = 4u;
+      highp uint TWIDTH = 4096u;
+
+      highp uint h0 = hashCombine(seed, integerValue) % ENTRY_CAPACITY;
+      h0 = uint(h0 * ELEMENTS_PER_ENTRY / ELEMENTS_PER_TEXEL);
+      highp uint x = h0 % TWIDTH;
+      highp uint y = h0 / TWIDTH;
+
+      vec4 customEntry = texelFetch(custom_color_texture, ivec2(x, y), 0);
+      vec3 customColor = customEntry.gba;
+
+      if (customEntry.r != float(integerValue)) {
+         return vec3(-1);
+      }
+
+      return customEntry.gba;
+    }
+
+
     vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
       /*
       This function maps from a segment id to a color with a pattern.
@@ -42,6 +79,15 @@ export const convertCellIdToRGB: ShaderModule = {
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
       float colorValue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       // For historical reference: the old color generation was: colorValue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
+
+      uint integerValue = vec4ToUint(idLow);
+      vec3 customColor = attemptCustomColorLookUp(integerValue, seed0);
+      if (customColor.r == -1.)
+        customColor = attemptCustomColorLookUp(integerValue, seed1);
+      if (customColor.r == -1.)
+        customColor = attemptCustomColorLookUp(integerValue, seed2);
+
+      return customColor;
 
       <% if (isMappingSupported) { %>
         // If the first element of the mapping colors texture is still the initialized

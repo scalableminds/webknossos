@@ -35,6 +35,10 @@ import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
+import { createUpdatableTexture } from "./plane_material_factory_helpers";
+import { getRenderer } from "oxalis/controller/renderer";
+import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
+
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
   polygonOffsetFactor?: number;
@@ -76,6 +80,22 @@ function getPackingDegreeLookup(): Record<string, number> {
     getPackingDegree(getByteCount(dataset, layer.name), getElementClass(dataset, layer.name)),
   );
 }
+
+const getCustomColorTexture = _.memoize(() => {
+  const textureWidth = 4096;
+  const customColorTexture = createUpdatableTexture(
+    textureWidth,
+    4,
+    THREE.FloatType,
+    getRenderer(),
+  );
+  const cuckoo = new CuckooTable(textureWidth, customColorTexture);
+  cuckoo.set(1, [128, 0, 128]);
+  cuckoo.set(2, [0, 128, 128]);
+  cuckoo.set(256, [128, 128, 0]);
+
+  return { cuckoo, customColorTexture };
+});
 
 class PlaneMaterialFactory {
   planeID: OrthoView;
@@ -281,15 +301,16 @@ class PlaneMaterialFactory {
         type: "t",
         value: lookUpTexture,
       };
-      dataLayer.layerRenderingManager.subscribeToSeeds((seeds) => {
-        seeds.forEach((seed, idx) => {
-          this.uniforms[`${layerName}_seed${idx}`] = {
-            type: "f",
-            value: seed,
-          };
-        });
-      });
     }
+    const { cuckoo } = getCustomColorTexture();
+    cuckoo.subscribeToSeeds((seeds: number[]) => {
+      seeds.forEach((seed, idx) => {
+        this.uniforms[`seed${idx}`] = {
+          type: "uint",
+          value: seed,
+        };
+      });
+    });
 
     this.attachSegmentationTextures();
   }
@@ -301,6 +322,9 @@ class PlaneMaterialFactory {
         ? segmentationLayer.mappings.getMappingTextures() // It's important to set up the uniforms (even when they are null), since later
         : // additions to `this.uniforms` won't be properly attached otherwise.
           [null, null, null];
+
+    const { customColorTexture } = getCustomColorTexture();
+
     this.uniforms.segmentation_mapping_texture = {
       type: "t",
       value: mappingTexture,
@@ -312,6 +336,10 @@ class PlaneMaterialFactory {
     this.uniforms.segmentation_mapping_color_texture = {
       type: "t",
       value: mappingColorTexture,
+    };
+    this.uniforms.custom_color_texture = {
+      type: "t",
+      value: customColorTexture,
     };
   }
 

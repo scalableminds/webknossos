@@ -1,8 +1,9 @@
-import { Vector2, Vector4 } from "oxalis/constants";
+import UpdatableTexture from "libs/UpdatableTexture";
+import { Vector2, Vector3 } from "oxalis/constants";
 
-const ELEMENTS_PER_ENTRY = 6;
+const ELEMENTS_PER_ENTRY = 4;
 
-type Entry = [Vector4, Vector2];
+type Entry = [number, Vector3];
 
 export type SeedSubscriberFn = (seeds: number[]) => void;
 
@@ -11,11 +12,14 @@ export class CuckooTable {
   table!: Float32Array;
   seeds!: number[];
   seedSubscribers: Array<SeedSubscriberFn> = [];
+  texture: UpdatableTexture;
 
   setCount: number = 0;
 
-  constructor(requestedCapacity: number) {
-    this.entryCapacity = requestedCapacity * 4;
+  constructor(textureWidth: number, texture: UpdatableTexture) {
+    this.entryCapacity = Math.floor((textureWidth ** 2 * 4) / ELEMENTS_PER_ENTRY);
+    console.log("this.entryCapacity", this.entryCapacity);
+    this.texture = texture;
     this.initialize();
   }
 
@@ -29,18 +33,23 @@ export class CuckooTable {
       Math.floor(32768 * Math.random()),
       Math.floor(32768 * Math.random()),
     ];
-    this.seedSubscribers.forEach((fn) => fn(this.seeds));
+    this.notifySeedListeners();
   }
 
   subscribeToSeeds(fn: SeedSubscriberFn): void {
     this.seedSubscribers.push(fn);
+    this.notifySeedListeners();
+  }
+
+  notifySeedListeners() {
+    this.seedSubscribers.forEach((fn) => fn(this.seeds));
   }
 
   clearAll() {
     this.table.fill(-1);
   }
 
-  set(pendingKey: Vector4, pendingValue: Vector2, rehashAttempt: number = 0) {
+  set(pendingKey: number, pendingValue: Vector3, rehashAttempt: number = 0) {
     if (rehashAttempt == 0) {
       this.setCount++;
     }
@@ -95,18 +104,13 @@ export class CuckooTable {
       if (oldTable[offset] === 0) {
         continue;
       }
-      const key: Vector4 = [
-        oldTable[offset + 0],
-        oldTable[offset + 1],
-        oldTable[offset + 2],
-        oldTable[offset + 3],
-      ];
-      const value: Vector2 = [oldTable[offset + 4], oldTable[offset + 5]];
+      const key: number = oldTable[offset + 0];
+      const value: Vector3 = [oldTable[offset + 1], oldTable[offset + 2], oldTable[offset + 3]];
       this.set(key, value, rehashAttempt);
     }
   }
 
-  get(key: Vector4): Vector2 {
+  get(key: number): Vector2 {
     for (const seed of this.seeds) {
       const hashedAddress = this._hashKeyToAddress(seed, key);
 
@@ -118,50 +122,34 @@ export class CuckooTable {
     return [-1, -1];
   }
 
-  // hasEntry(key: Vector4, value: number, hashedAddress1: number, hashedAddress2: number): boolean {
+  // hasEntry(key: number, value: number, hashedAddress1: number, hashedAddress2: number): boolean {
   //   return this.isEntry(key, value, hashedAddress1) || this.isEntry(key, value, hashedAddress2);
   // }
 
   getEntryAtAddress(hashedAddress: number): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
     return [
-      [
-        this.table[offset + 0],
-        this.table[offset + 1],
-        this.table[offset + 2],
-        this.table[offset + 3],
-      ],
-      [this.table[offset + 4], this.table[offset + 5]],
+      this.table[offset + 0],
+      [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]],
     ];
   }
 
-  private canDisplacedEntryBeIgnored(displacedKey: Vector4, newKey: Vector4): boolean {
+  private canDisplacedEntryBeIgnored(displacedKey: number, newKey: number): boolean {
     return (
       // Either, the slot is empty...
       // -1, -1, -1, -1 is not allowed as a key
-      (displacedKey[0] === -1 &&
-        displacedKey[1] === -1 &&
-        displacedKey[2] === -1 &&
-        displacedKey[3] === -1) ||
+      displacedKey === -1 ||
       // or the slot already refers to the key
-      (displacedKey[0] === newKey[0] &&
-        displacedKey[1] === newKey[1] &&
-        displacedKey[2] === newKey[2] &&
-        displacedKey[3] === newKey[3])
+      displacedKey === newKey
     );
   }
 
-  doesAddressContainKey(key: Vector4, hashedAddress: number): boolean {
+  doesAddressContainKey(key: number, hashedAddress: number): boolean {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
-    return (
-      this.table[offset] === key[0] &&
-      this.table[offset + 1] === key[1] &&
-      this.table[offset + 2] === key[2] &&
-      this.table[offset + 3] === key[3]
-    );
+    return this.table[offset] === key;
   }
 
-  getValueAtAddress(key: Vector4, hashedAddress: number): Vector2 | null {
+  getValueAtAddress(key: number, hashedAddress: number): Vector2 | null {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
     if (this.doesAddressContainKey(key, hashedAddress)) {
       return [this.table[offset + 4], this.table[offset + 5]];
@@ -170,31 +158,26 @@ export class CuckooTable {
     }
   }
 
-  private writeEntryAtAddress(key: Vector4, value: Vector2, hashedAddress: number): Entry {
+  private writeEntryAtAddress(key: number, value: Vector3, hashedAddress: number): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
 
     const displacedEntry: Entry = [
-      [
-        this.table[offset + 0],
-        this.table[offset + 1],
-        this.table[offset + 2],
-        this.table[offset + 3],
-      ],
-      [this.table[offset + 4], this.table[offset + 5]],
+      this.table[offset + 0],
+      [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]],
     ];
 
+    console.log("writing key=", key, "value=", value, "to", offset);
+
     // eslint-disable-next-line prefer-destructuring
-    this.table[offset] = key[0];
+    this.table[offset] = key;
     // eslint-disable-next-line prefer-destructuring
-    this.table[offset + 1] = key[1];
+    this.table[offset + 1] = value[0];
     // eslint-disable-next-line prefer-destructuring
-    this.table[offset + 2] = key[2];
+    this.table[offset + 2] = value[1];
     // eslint-disable-next-line prefer-destructuring
-    this.table[offset + 3] = key[3];
-    // eslint-disable-next-line prefer-destructuring
-    this.table[offset + 4] = value[0];
-    // eslint-disable-next-line prefer-destructuring
-    this.table[offset + 5] = value[1];
+    this.table[offset + 3] = value[2];
+
+    this.texture.update(this.table, 0, 0, 4096, 4096);
 
     return displacedEntry;
   }
@@ -224,11 +207,9 @@ export class CuckooTable {
     return state;
   }
 
-  _hashKeyToAddress(seed: number, key: Vector4): number {
-    let state = this._hashCombine(seed, key[0]);
-    state = this._hashCombine(state, key[1]);
-    state = this._hashCombine(state, key[2]);
-    state = this._hashCombine(state, key[3]);
+  _hashKeyToAddress(seed: number, key: number): number {
+    console.log("using seed", seed);
+    const state = this._hashCombine(seed, key);
 
     return state % this.entryCapacity;
   }

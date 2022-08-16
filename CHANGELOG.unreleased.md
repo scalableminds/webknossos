@@ -41,6 +41,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Tightened organization isolation security for dataset uploads. [#6378](https://github.com/scalableminds/webknossos/pull/6378)
 - Fixed a bug with undo/redo and volume interpolation/extrusion. [#6403](https://github.com/scalableminds/webknossos/pull/6403)
 - Fixed a regression which caused that uint16 and uint8 segmentations could not be rendered. [#6406](https://github.com/scalableminds/webknossos/pull/6406)
+- Fixed a bug with the clip histogram button to prevent it from showing a loading spinner forever in some cases. [#6407]
 
 ### Removed
 - Annotation Type was removed from the info tab. [#6330](https://github.com/scalableminds/webknossos/pull/6330)

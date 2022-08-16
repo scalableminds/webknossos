@@ -723,7 +723,7 @@ export function finishAllAnnotations(selectedAnnotationIds: Array<string>): Prom
   );
 }
 
-export function copyAnnotationToUserAccount(
+export function duplicateAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {
@@ -995,6 +995,7 @@ export async function getDatasets(
   assertResponseLimit(datasets);
   return datasets;
 }
+
 export async function getJobs(): Promise<APIJob[]> {
   const jobs = await Request.receiveJSON("/api/jobs");
   assertResponseLimit(jobs);
@@ -1251,8 +1252,8 @@ export async function updateDatasetDatasource(
   );
 }
 
-export async function getActiveDatasets(): Promise<Array<APIDataset>> {
-  const datasets = await Request.receiveJSON("/api/datasets?isActive=true");
+export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIDataset>> {
+  const datasets = await Request.receiveJSON("/api/datasets?isActive=true&onlyMyOrganization=true");
   assertResponseLimit(datasets);
   return datasets;
 }

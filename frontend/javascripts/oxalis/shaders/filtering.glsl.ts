@@ -121,5 +121,23 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
 
       return color;
     }
+
+    vec4[2] getSegmentIdOrFallback(
+      sampler2D lookUpTexture,
+      float layerIndex,
+      float d_texture_width,
+      float packingDegree,
+      vec3 worldPositionUVW,
+      vec4 fallbackColor
+    ) {
+      vec4[2] color = getColorForCoords64(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+
+      if (color[1].a < 0.0) {
+        // Render gray for not-yet-existing data
+        color[1] = fallbackColor;
+      }
+
+      return color;
+    }
   `,
 };

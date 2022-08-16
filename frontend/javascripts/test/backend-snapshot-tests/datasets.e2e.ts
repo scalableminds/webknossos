@@ -10,7 +10,7 @@ import * as api from "admin/admin_rest_api";
 import test from "ava";
 
 async function getFirstDataset(): Promise<APIDataset> {
-  const datasets = await api.getActiveDatasets();
+  const datasets = await api.getActiveDatasetsOfMyOrganization();
 
   const dataset = _.sortBy(datasets, (d) => d.name)[0];
 
@@ -40,7 +40,7 @@ test.serial("getDatasets", async (t) => {
   });
 });
 test("getActiveDatasets", async (t) => {
-  let datasets = await api.getActiveDatasets();
+  let datasets = await api.getActiveDatasetsOfMyOrganization();
   datasets = _.sortBy(datasets, (d) => d.name);
   t.snapshot(datasets, {
     id: "datasets-getActiveDatasets",

@@ -161,6 +161,7 @@ dataLayer.invalidMag=Supplied “{0}” is not a valid mag format. Please use �
 
 zarr.invalidChunkCoordinates=The requested chunk coordinates are in an invalid format. Expected c.x.y.z
 zarr.invalidFirstChunkCoord="First Channel must be 0"
+zarr.chunkNotFound=Could not find the requested chunk
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"
@@ -224,7 +225,7 @@ tracing.wrongMag=Tracing “{0}” does not have mag “{1}”
 
 annotation.create.failed=Failed to create annotation.
 annotation.create.forbidden=You do not have permission to create annotations for this dataset.
-annotation.volume.uint64=Creating volume annotations with uint64 fallback layer is not supported by wK yet.
+annotation.volume.negativeLargestSegmentId=The resulting volume annotation would have an invalid largest segment id (must be nonnegative, within element class range, and < 2^53)
 annotation.volume.resolutionRestrictionsTooTight=Task type resolution restrictions are too tight, resulting annotation has no resolutions.
 annotation.volume.resolutionsDoNotMatch=Could not merge volume annotations, as their resolutions differ. Please ensure each annotation has the same set of resolutions.
 annotation.notFound=Annotation couldn’t be found

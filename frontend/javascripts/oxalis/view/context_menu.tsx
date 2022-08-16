@@ -964,7 +964,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
       infoRows.push(
         <div key="copy-cell" className="node-context-menu-item">
           <div className="cell-context-icon" />
-          Segment ID: {segmentIdAtPosition}{" "}
+          Segment ID: {`${segmentIdAtPosition}`}{" "}
           {copyIconWithTooltip(segmentIdAtPosition, "Copy Segment ID")}
         </div>,
       );

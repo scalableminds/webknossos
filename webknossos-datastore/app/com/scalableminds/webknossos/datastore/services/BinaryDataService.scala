@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache}
 import com.typesafe.scalalogging.LazyLogging
@@ -58,11 +58,7 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
             data,
             agglomerateService.applyAgglomerate(request)
           )
-          convertedData = convertIfNecessary(
-            request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation,
-            mappedData,
-            convertToUInt32)
-          resultData = convertIfNecessary(request.settings.halfByte, convertedData, convertToHalfByte)
+          resultData = convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte)
         } yield (resultData, index)
     }
 
@@ -170,17 +166,6 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
       i += 1
     }
     compressed
-  }
-
-  private def convertToUInt32(a: Array[Byte]) = {
-    val result = new Array[Byte](a.length / 2)
-
-    for (i <- a.indices by 8) {
-      for (j <- 0 until 4) {
-        result(i / 2 + j) = a(i + j)
-      }
-    }
-    result
   }
 
   def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]): (Int, Int) = {

@@ -98,6 +98,12 @@ async function clipHistogram(action: ClipHistogramAction) {
     Toast.warning(
       "The histogram could not be clipped, because the data did not contain any brightness values greater than 0.",
     );
+
+    // this is required to correctly reset the state of the AsyncButton initiating this action
+    if (action.callback != null) {
+      action.callback();
+    }
+
     return;
   }
 

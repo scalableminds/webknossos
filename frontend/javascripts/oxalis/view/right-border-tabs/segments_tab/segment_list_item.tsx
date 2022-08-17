@@ -375,7 +375,7 @@ function _SegmentListItem({
               updateSegment(
                 segment.id,
                 {
-                  color: [color[0], color[1], color[2], 255],
+                  color: [color[0], color[1], color[2]],
                 },
                 visibleSegmentationLayer.name,
               );

@@ -119,7 +119,7 @@ export type CreateSegmentUpdateAction = {
     id: number;
     anchorPosition: Vector3 | null | undefined;
     name: string | null | undefined;
-    color: Vector4 | null;
+    color: Vector3 | null;
     creationTime: number | null | undefined;
   };
 };
@@ -129,7 +129,7 @@ export type UpdateSegmentUpdateAction = {
     id: number;
     anchorPosition: Vector3 | null | undefined;
     name: string | null | undefined;
-    color: Vector4 | null;
+    color: Vector3 | null;
     creationTime: number | null | undefined;
   };
 };
@@ -440,7 +440,7 @@ export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
-  color: Vector4 | null,
+  color: Vector3 | null,
   creationTime: number | null | undefined = Date.now(),
 ): CreateSegmentUpdateAction {
   return {
@@ -458,7 +458,7 @@ export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
-  color: Vector4 | null,
+  color: Vector3 | null,
   creationTime: number | null | undefined = Date.now(),
 ): UpdateSegmentUpdateAction {
   return {

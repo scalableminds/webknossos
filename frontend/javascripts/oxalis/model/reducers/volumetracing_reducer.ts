@@ -167,7 +167,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
           ...segment,
           id: segment.segmentId,
           somePosition: Utils.point3ToVector3(segment.anchorPosition),
-          color: segment.color != null ? Utils.colorObjectToRGBAArray(segment.color) : null,
+          color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
         },
       ]),
     ),

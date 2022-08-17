@@ -633,7 +633,7 @@ class PlaneMaterialFactory {
                 const { cuckoo } = getCustomColorTexture();
                 const { id, color } = updateAction.value;
                 if (color != null) {
-                  cuckoo.set(id, color.slice(0, 3));
+                  cuckoo.set(id, color);
                 }
               }
             }

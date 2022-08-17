@@ -214,7 +214,7 @@ export type Segment = {
   name: string | null | undefined;
   somePosition: Vector3;
   creationTime: number | null | undefined;
-  color: Vector4 | null;
+  color: Vector3 | null;
 };
 export type SegmentMap = DiffableMap<number, Segment>;
 

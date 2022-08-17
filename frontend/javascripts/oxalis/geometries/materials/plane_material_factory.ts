@@ -93,9 +93,9 @@ const getCustomColorTexture = _.memoize(() => {
     getRenderer(),
   );
   const cuckoo = new CuckooTable(textureWidth, customColorTexture);
-  cuckoo.set(1, [128, 0, 128]);
-  cuckoo.set(2, [0, 128, 128]);
-  cuckoo.set(256, [128, 128, 0]);
+  // cuckoo.set(1, [128, 0, 128]);
+  // cuckoo.set(2, [0, 128, 128]);
+  // cuckoo.set(256, [128, 128, 0]);
 
   return { cuckoo, customColorTexture };
 });

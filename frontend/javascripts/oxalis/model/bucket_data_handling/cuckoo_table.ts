@@ -13,10 +13,12 @@ export class CuckooTable {
   seeds!: number[];
   seedSubscribers: Array<SeedSubscriberFn> = [];
   texture: UpdatableTexture;
+  textureWidth: number;
 
   setCount: number = 0;
 
   constructor(textureWidth: number, texture: UpdatableTexture) {
+    this.textureWidth = textureWidth;
     this.entryCapacity = Math.floor((textureWidth ** 2 * 4) / ELEMENTS_PER_ENTRY);
     console.log("this.entryCapacity", this.entryCapacity);
     this.texture = texture;
@@ -76,7 +78,12 @@ export class CuckooTable {
       currentAddress = this._hashKeyToAddress(seed, pendingKey);
 
       // Swap pendingKey, pendingValue with what's contained in H1
-      displacedEntry = this.writeEntryAtAddress(pendingKey, pendingValue, currentAddress);
+      displacedEntry = this.writeEntryAtAddress(
+        pendingKey,
+        pendingValue,
+        currentAddress,
+        rehashAttempt > 0,
+      );
 
       if (this.canDisplacedEntryBeIgnored(displacedEntry[0], pendingKey)) {
         return;
@@ -90,6 +97,10 @@ export class CuckooTable {
     }
     this.rehash(rehashAttempt + 1);
     this.set(pendingKey, pendingValue, rehashAttempt + 1);
+
+    // Since a rehash was performed, the incremental texture updates were
+    // skipped. Update the entire texture:
+    this.texture.update(this.table, 0, 0, 4096, 4096);
   }
 
   private rehash(rehashAttempt: number): void {
@@ -160,15 +171,21 @@ export class CuckooTable {
     }
   }
 
-  private writeEntryAtAddress(key: number, value: Vector3, hashedAddress: number): Entry {
+  private writeEntryAtAddress(
+    key: number,
+    value: Vector3,
+    hashedAddress: number,
+    isRehashing: boolean,
+  ): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    const texelOffset = offset / 4;
 
     const displacedEntry: Entry = [
       this.table[offset + 0],
       [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]],
     ];
 
-    console.log("writing key=", key, "value=", value, "to", offset);
+    // console.log("writing key=", key, "value=", value, "to", offset);
 
     // eslint-disable-next-line prefer-destructuring
     this.table[offset] = key;
@@ -179,7 +196,17 @@ export class CuckooTable {
     // eslint-disable-next-line prefer-destructuring
     this.table[offset + 3] = value[2];
 
-    this.texture.update(this.table, 0, 0, 4096, 4096);
+    if (!isRehashing) {
+      // If we are rehashing, it makes more sense to flush the entire texture content
+      // after the rehashing is done.
+      this.texture.update(
+        this.table.slice(offset, offset + 4),
+        texelOffset % this.textureWidth,
+        Math.floor(texelOffset / this.textureWidth),
+        1,
+        1,
+      );
+    }
 
     return displacedEntry;
   }
@@ -210,7 +237,6 @@ export class CuckooTable {
   }
 
   _hashKeyToAddress(seed: number, key: number): number {
-    console.log("using seed", seed);
     const state = this._hashCombine(seed, key);
 
     return state % this.entryCapacity;

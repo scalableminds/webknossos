@@ -163,7 +163,7 @@ function DatasetAddZarrView(props: Props) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
-      <CardContainer title="Add Zarr Dataset">
+      <CardContainer title="Add Remote Zarr Dataset">
         Please enter a URL that points to the Zarr data you would like to import. If necessary,
         specify the credentials for the dataset. More layers can be added to the datasource
         specification below using the Add button. Once you have approved of the resulting datasource
@@ -250,7 +250,7 @@ function DatasetAddZarrView(props: Props) {
                   style={{ width: "100%" }}
                   onClick={handleExplore}
                 >
-                  Add
+                  Add Layer
                 </AsyncButton>
               </Col>
             </Row>

@@ -133,7 +133,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
               tab={
                 <span>
                   <DatabaseOutlined />
-                  Add Zarr Dataset
+                  Add Remote Zarr Dataset
                 </span>
               }
               key="2"

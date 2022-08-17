@@ -237,14 +237,19 @@ function DatasetAddZarrView(props: Props) {
             </Row>
           ) : null}
           <FormItem style={{ marginBottom: 0 }}>
-            <AsyncButton
-              size="large"
-              type={datasourceConfig ? "default" : "primary"}
-              style={{ width: "100%" }}
-              onClick={handleExplore}
-            >
-              Add
-            </AsyncButton>
+            <Row gutter={8}>
+              <Col span={18} />
+              <Col span={6}>
+                <AsyncButton
+                  size="large"
+                  type={datasourceConfig ? "default" : "primary"}
+                  style={{ width: "100%" }}
+                  onClick={handleExplore}
+                >
+                  Add
+                </AsyncButton>
+              </Col>
+            </Row>
           </FormItem>
           <Collapse bordered={false} collapsible={exploreLog ? "header" : "disabled"}>
             <Panel header="Log" key="1">
@@ -266,7 +271,9 @@ function DatasetAddZarrView(props: Props) {
             />
           </FormItem>
           <Row gutter={8}>
-            <Col span={12}>
+            <Col span={6} />
+            <Col span={6} />
+            <Col span={6}>
               <FormItem>
                 <Button
                   size="large"
@@ -278,7 +285,7 @@ function DatasetAddZarrView(props: Props) {
                 </Button>
               </FormItem>
             </Col>
-            <Col span={12}>
+            <Col span={6}>
               <Button
                 size="large"
                 type="primary"

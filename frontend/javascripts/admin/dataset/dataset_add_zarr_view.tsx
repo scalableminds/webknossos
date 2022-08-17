@@ -140,7 +140,7 @@ function DatasetAddZarrView(props: Props) {
       let configJSON;
       try {
         configJSON = JSON.parse(datasourceConfig);
-        const nameValidationResult = await isDatasetNameValid(configJSON.id);
+        const nameValidationResult = await isDatasetNameValid({ name: configJSON.id.name, owningOrganization: activeUser.organization });
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
@@ -150,7 +150,8 @@ function DatasetAddZarrView(props: Props) {
           datasourceConfig,
         );
         if (response.status !== 200) {
-          throw new Error(`${response.status} ${response.statusText} ${response.json}`);
+          const errorJSONString = JSON.stringify(await response.json());
+          throw new Error(`${response.status} ${response.statusText} ${errorJSONString}`);
         }
       } catch (e) {
         Toast.error(`The datasource config could not be stored. ${e}`);

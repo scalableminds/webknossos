@@ -89,6 +89,7 @@ function DatasetAddZarrView(props: Props) {
       (userInput.indexOf("https://") !== 0 && userInput.indexOf("s3://") === 0)
     ) {
       setSelectedProtocol(userInput.indexOf("https://") === 0 ? "https" : "s3");
+      setShowCredentialsFields(userInput.indexOf("s3://") === 0);
     } else {
       throw new Error("Dataset URL must employ either the https:// or s3:// protocol.");
     }
@@ -198,9 +199,12 @@ function DatasetAddZarrView(props: Props) {
           <FormItem label="Authentication">
             <RadioGroup
               defaultValue="hide"
+              value={showCredentialsFields ? "show" : "hide"}
               onChange={(e) => setShowCredentialsFields(e.target.value === "show")}
             >
-              <Radio value="hide">{selectedProtocol === "https" ? "None" : "Anonymous"}</Radio>
+              <Radio value="hide" disabled={selectedProtocol === "s3"}>
+                {selectedProtocol === "https" ? "None" : "Anonymous"}
+              </Radio>
               <Radio value="show">
                 {selectedProtocol === "https" ? "Basic authentication" : "With credentials"}
               </Radio>

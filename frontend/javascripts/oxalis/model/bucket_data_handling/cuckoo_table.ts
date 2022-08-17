@@ -205,7 +205,7 @@ export class CuckooTable {
     isRehashing: boolean,
   ): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
-    const texelOffset = offset / 4;
+    const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
 
     const displacedEntry: Entry = [
       this.table[offset + 0],
@@ -220,10 +220,10 @@ export class CuckooTable {
     this.table[offset + 3] = value[2];
 
     if (!isRehashing) {
-      // If we are rehashing, it makes more sense to flush the entire texture content
-      // after the rehashing is done.
+      // Only partially update if we are not rehashing. Otherwise, it makes more
+      // sense to flush the entire texture content after the rehashing is done.
       this._texture.update(
-        this.table.slice(offset, offset + 4),
+        this.table.slice(offset, offset + ELEMENTS_PER_ENTRY),
         texelOffset % this.textureWidth,
         Math.floor(texelOffset / this.textureWidth),
         1,

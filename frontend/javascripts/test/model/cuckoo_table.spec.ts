@@ -63,7 +63,7 @@ const { CuckooTable } = mock.reRequire("oxalis/model/bucket_data_handling/cuckoo
 
 function generateRandomEntry(): [number, Vector3] {
   return [
-    Math.floor(Math.random() * 1000),
+    Math.floor(Math.random() * 10000),
     [
       Math.floor(Math.random() * 1000),
       Math.floor(Math.random() * 1000),

@@ -1,4 +1,4 @@
-import { Form, Input, Button, Col, Row, Collapse } from "antd";
+import { Form, Input, Button, Col, Radio, Row, Collapse } from "antd";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import type { APIUser } from "types/api_flow_types";
@@ -17,6 +17,7 @@ import { formatScale } from "libs/format_utils";
 import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 const { Panel } = Collapse;
 const FormItem = Form.Item;
+const RadioGroup = Radio.Group;
 
 type OwnProps = {
   onAdded: (arg0: string, arg1: string) => Promise<void>;
@@ -77,6 +78,7 @@ function DatasetAddZarrView(props: Props) {
   const [datasourceConfig, setDatasourceConfig] = useState<string>("");
   const [exploreLog, setExploreLog] = useState<string>("");
   const [datasourceUrl, setDatasourceUrl] = useState<string>("");
+  const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
   const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https">("https");
@@ -193,24 +195,47 @@ function DatasetAddZarrView(props: Props) {
               onChange={(e) => setDatasourceUrl(e.target.value)}
             />
           </FormItem>
-          <Row gutter={8}>
-            <Col span={12}>
-              <FormItem label={selectedProtocol === "https" ? "Username" : "Access Key ID"}>
-                <Input
-                  value={usernameOrAccessKey}
-                  onChange={(e) => setUsernameOrAccessKey(e.target.value)}
-                />
-              </FormItem>
-            </Col>
-            <Col span={12}>
-              <FormItem label={selectedProtocol === "https" ? "Password" : "Secret Access Key"}>
-                <Password
-                  value={passwordOrSecretKey}
-                  onChange={(e) => setPasswordOrSecretKey(e.target.value)}
-                />
-              </FormItem>
-            </Col>
-          </Row>
+          <FormItem label="Authentication">
+            <RadioGroup
+              defaultValue="hide"
+              onChange={(e) => setShowCredentialsFields(e.target.value === "show")}
+            >
+              <Radio value="hide">{selectedProtocol === "https" ? "None" : "Anonymous"}</Radio>
+              <Radio value="show">
+                {selectedProtocol === "https" ? "Basic authentication" : "With credentials"}
+              </Radio>
+            </RadioGroup>
+          </FormItem>
+          {showCredentialsFields ? (
+            <Row gutter={8}>
+              <Col span={12}>
+                <FormItem
+                  label={selectedProtocol === "https" ? "Username" : "Access Key ID"}
+                  hasFeedback
+                  rules={[{ required: true }]}
+                  validateFirst
+                >
+                  <Input
+                    value={usernameOrAccessKey}
+                    onChange={(e) => setUsernameOrAccessKey(e.target.value)}
+                  />
+                </FormItem>
+              </Col>
+              <Col span={12}>
+                <FormItem
+                  label={selectedProtocol === "https" ? "Password" : "Secret Access Key"}
+                  hasFeedback
+                  rules={[{ required: true }]}
+                  validateFirst
+                >
+                  <Password
+                    value={passwordOrSecretKey}
+                    onChange={(e) => setPasswordOrSecretKey(e.target.value)}
+                  />
+                </FormItem>
+              </Col>
+            </Row>
+          ) : null}
           <FormItem style={{ marginBottom: 0 }}>
             <AsyncButton
               size="large"

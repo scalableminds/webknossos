@@ -283,7 +283,9 @@ function VolumeInterpolationButton() {
       style={{ padding: "0 5px 0 6px" }}
       buttonsRender={([leftButton, rightButton]) => [
         <Tooltip title={tooltipTitle} key="leftButton">
-          {React.cloneElement(leftButton as React.ReactElement<any, string>, { isDisabled })}
+          {React.cloneElement(leftButton as React.ReactElement<any, string>, {
+            disabled: isDisabled,
+          })}
         </Tooltip>,
         rightButton,
       ]}

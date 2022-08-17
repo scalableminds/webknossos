@@ -3,8 +3,8 @@ package utils
 import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
-import javax.inject.Inject
 
+import javax.inject.Inject
 import scala.concurrent.duration._
 
 class WkConf @Inject()(configuration: Configuration) extends ConfigReader with LazyLogging {
@@ -20,36 +20,46 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val enabled: Seq[String] = getList[String]("play.modules.enabled")
       val disabled: Seq[String] = getList[String]("play.modules.disabled")
     }
+
     val children = List(Modules)
   }
 
   object WebKnossos {
     val tabTitle: String = get[String]("webKnossos.tabTitle")
+
     object User {
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
       val inviteExpiry: Duration = get[Duration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
     }
+
     val newOrganizationMailingList: String = get[String]("webKnossos.newOrganizationMailingList")
+
     object Tasks {
       val maxOpenPerUser: Int = get[Int]("webKnossos.tasks.maxOpenPerUser")
     }
+
     object Cache {
       object User {
         val timeout: FiniteDuration = get[FiniteDuration]("webKnossos.cache.user.timeout")
       }
+
       val children = List(User)
     }
+
     object SampleOrganization {
       val enabled: Boolean = get[Boolean]("webKnossos.sampleOrganization.enabled")
+
       object User {
         val email: String = get[String]("webKnossos.sampleOrganization.user.email")
         val password: String = get[String]("webKnossos.sampleOrganization.user.password")
         val token: String = get[String]("webKnossos.sampleOrganization.user.token")
         val isSuperUser: Boolean = get[Boolean]("webKnossos.sampleOrganization.user.isSuperUser")
       }
+
       val children = List(User)
     }
+
     val operatorData: String = get[String]("webKnossos.operatorData")
     val children = List(User, Tasks, Cache, SampleOrganization)
   }
@@ -83,6 +93,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object Mail {
     val logToStdout: Boolean = get[Boolean]("mail.logToStdout")
+
     object Smtp {
       val host: String = get[String]("mail.smtp.host")
       val port: Int = get[Int]("mail.smtp.port")
@@ -91,13 +102,16 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val user: String = get[String]("mail.smtp.user")
       val pass: String = get[String]("mail.smtp.pass")
     }
+
     val defaultSender: String = get[String]("mail.defaultSender")
+
     object Mailchimp {
       val host: String = get[String]("mail.mailchimp.host")
       val listId: String = get[String]("mail.mailchimp.listId")
       val user: String = get[String]("mail.mailchimp.user")
       val password: String = get[String]("mail.mailchimp.password")
     }
+
     val children = List(Smtp, Mailchimp)
   }
 
@@ -108,6 +122,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val authenticatorExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.authenticatorExpiry")
       val authenticatorIdleTimeout: Duration = get[Duration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
     }
+
     object CookieAuthenticator {
       val cookieName: String = get[String]("silhouette.cookieAuthenticator.cookieName")
       val cookiePath: String = get[String]("silhouette.cookieAuthenticator.cookiePath")
@@ -117,6 +132,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val authenticatorExpiry: Duration = get[Duration]("silhouette.cookieAuthenticator.authenticatorExpiry")
       val cookieMaxAge: Duration = get[Duration]("silhouette.cookieAuthenticator.cookieMaxAge")
     }
+
     val children = List(TokenAuthenticator, CookieAuthenticator)
   }
 
@@ -156,6 +172,17 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
   }
 
+  object Voxelytics {
+    val enabled: Boolean = get[Boolean]("voxelytics.enabled")
+
+    object Elasticsearch {
+      val host: String = get[String]("voxelytics.elasticsearch.host")
+      val index: String = get[String]("voxelytics.elasticsearch.index")
+    }
+
+    val children = List(Elasticsearch)
+  }
+
   val children =
     List(
       Http,
@@ -170,7 +197,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Braintracing,
       Airbrake,
       GoogleAnalytics,
-      BackendAnalytics
+      BackendAnalytics,
+      Voxelytics
     )
 
   val removedConfigKeys = List(

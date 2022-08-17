@@ -1,7 +1,5 @@
 package com.scalableminds.webknossos.datastore.rpc
 
-import java.io.File
-
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.util.mvc.MimeTypes
@@ -13,6 +11,7 @@ import play.api.libs.json._
 import play.api.libs.ws._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
+import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
@@ -120,9 +119,19 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
     performRequest
   }
 
+  def delete(): Fox[WSResponse] = {
+    request = request.withMethod("DELETE")
+    performRequest
+  }
+
   def postJsonWithJsonResponse[T: Writes, U: Reads](body: T = Json.obj()): Fox[U] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType).withBody(Json.toJson(body)).withMethod("POST")
+    parseJsonResponse(performRequest)
+  }
+
+  def postBytesWithJsonResponse[U: Reads](body: Array[Byte]): Fox[U] = {
+    request = request.withBody(body).withMethod("POST")
     parseJsonResponse(performRequest)
   }
 

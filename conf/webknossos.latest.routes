@@ -227,3 +227,14 @@ POST          /jobs/:id/status                                                  
 # Publications
 GET           /publications                                                             controllers.PublicationController.listPublications()
 GET           /publications/:id                                                         controllers.PublicationController.read(id: String)
+
+
+# Voxelytics
+POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.createWorkflow
+GET           /voxelytics/workflows                                                     controllers.VoxelyticsController.listWorkflows(workflowHash: Option[String])
+GET           /voxelytics/workflows/:workflowHash                                       controllers.VoxelyticsController.getWorkflow(workflowHash: String, runId: Option[String])
+POST          /voxelytics/workflows/:workflowHash/events                                controllers.VoxelyticsController.createWorkflowEvents(workflowHash: String, runName: String)
+GET           /voxelytics/workflows/:workflowHash/chunkStatistics                       controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: String, taskName: String)
+GET           /voxelytics/workflows/:workflowHash/artifactChecksums                     controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: String, taskName: Option[String], artifactName: Option[String])
+POST          /voxelytics/logs                                                          controllers.VoxelyticsController.appendLogs
+GET           /voxelytics/logs                                                          controllers.VoxelyticsController.getLogs(runId: String, taskName: Option[String], minLevel: Option[String])

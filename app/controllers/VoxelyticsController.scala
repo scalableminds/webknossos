@@ -18,7 +18,6 @@ import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.Breaks.{break, breakable}
 
 object VoxelyticsLogLevel extends ExtendedEnumeration {
   type VoxelyticsLogLevel = Value
@@ -26,56 +25,58 @@ object VoxelyticsLogLevel extends ExtendedEnumeration {
 }
 
 class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: ExecutionContext) extends LazyLogging {
+
+  private lazy val conf = wkConf.Voxelytics.Elasticsearch
+
   def queryLogs(runName: String,
                 organizationName: String,
                 taskName: Option[String],
-                minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO): Fox[List[JsValue]] = {
+                minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO): Fox[JsValue] = {
 
     val levels = VoxelyticsLogLevel.values - minLevel
 
     var queryStringParts = List(
       s"vx.run_name:${'"'}${runName}${'"'}",
       s"vx.run_name:${'"'}${organizationName}${'"'}",
-      s"level:(${levels.map(_.toString).mkString(", ")}"
+      s"level:(${levels.map(_.toString).mkString(" OR ")})"
     )
     if (taskName.isDefined) {
-      queryStringParts += s"vx.task_name:${'"'}${taskName}${'"'}"
+      queryStringParts +: s"vx.task_name:${'"'}${taskName}${'"'}"
     }
 
     val scrollBody = Json.obj(
       "size" -> JsNumber(10000),
       "query" -> Json.obj("query_string" -> Json.obj("query" -> queryStringParts.mkString(" AND "))),
-      "sort" -> Json.arr(
-        Json.obj("@timestamp" -> Json.obj("order" -> "asc", "format" -> "strict_date_optional_time_nanos")))
+      "sort" -> Json.arr(Json.obj("@timestamp" -> Json.obj("order" -> "asc")))
     )
 
     var buffer = List.empty[JsValue]
-    var scrollId = 0
+
+    def fetchBatch(scrollId: String): Fox[String] =
+      for {
+        batch <- rpc(s"${conf.host}/_search/scroll")
+          .postJsonWithJsonResponse[JsValue, JsValue](Json.obj("scroll" -> "1m", "scroll_id" -> scrollId))
+        batchScrollId = (batch \ "_scroll_id").as[String]
+        batchHits = (batch \ "hits" \ "hits").as[List[JsValue]]
+        _ = { buffer ++= batchHits }
+        returnedScrollId <- if (batchHits.isEmpty) {
+          Fox.successful(scrollId)
+        } else {
+          fetchBatch(batchScrollId)
+        }
+      } yield (returnedScrollId)
+
     for {
       scroll <- rpc(s"${conf.host}/${conf.index}/_search?scroll=1m")
         .postJsonWithJsonResponse[JsValue, JsValue](scrollBody) ~> "Could not fetch logs"
-      _ <- scrollId = (scroll \ "_scroll_id").as[Int]
+      scrollId = (scroll \ "_scroll_id").as[String]
       scrollHits = (scroll \ "hits" \ "hits").as[List[JsValue]]
-      _ <- buffer ++= scrollHits
-      _ <- breakable {
-        try {
-          for {
-            batch <- rpc(s"${conf.host}/_search/scroll")
-              .postJsonWithJsonResponse[JsValue, JsValue](Json.obj("scroll" -> "1m", "scroll_id" -> scrollId))
-            batchScrollId = (batch \ "_scroll_id").as[Int]
-            batchHits = (batch \ "hits" \ "hits").as[List[JsValue]]
-            _ <- if (batchHits.isEmpty) break()
-            _ <- scrollId = batchScrollId
-          } yield batch
-        } finally {
-          rpc(s"${conf.host}/_search/scroll/${scrollId}").delete()
-        }
-      }
-    } yield buffer
+      _ = { buffer ++= scrollHits }
+      lastScrollId <- fetchBatch(scrollId)
+      _ <- rpc(s"${conf.host}/_search/scroll/${lastScrollId}").delete()
+    } yield JsArray(buffer)
 
   }
-
-  private lazy val conf = wkConf.Voxelytics.Elasticsearch
 
   def bulkInsert(logEntries: List[JsValue]): Fox[Unit] = {
     if (conf.host.isEmpty || logEntries.isEmpty) return Fox.successful(())
@@ -88,16 +89,10 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
     for {
       res <- rpc(uri)
         .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
-        .postBytesWithJsonResponse[ElasticsearchBulkInsertResponse](bytes)
-      _ <- Fox.bool2Fox(res.errors.forall(_.isEmpty))
+        .postBytesWithJsonResponse[JsValue](bytes)
+      _ <- Fox.bool2Fox((res \ "errors").asOpt[List[JsValue]].forall(_.isEmpty))
     } yield ()
   }
-}
-
-case class ElasticsearchBulkInsertResponse(errors: Option[List[JsValue]])
-
-object ElasticsearchBulkInsertResponse {
-  implicit val jsonFormat: OFormat[ElasticsearchBulkInsertResponse] = Json.format[ElasticsearchBulkInsertResponse]
 }
 
 case class VoxelyticsWorkflowDescription(workflowHash: String)
@@ -169,9 +164,15 @@ class VoxelyticsController @Inject()(
   @ApiOperation(hidden = true, value = "")
   def getLogs(runId: String, taskName: Option[String], minLevel: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
+      val runName = runId
+      val organizationName = request.identity._organization.id
       for {
-        logEntries <- elasticsearchClient.queryLogs()
-      } notImplemented
+        logEntries <- elasticsearchClient.queryLogs(
+          runName,
+          organizationName,
+          taskName,
+          minLevel.flatMap(VoxelyticsLogLevel.fromString).getOrElse(VoxelyticsLogLevel.INFO)) ~> BAD_REQUEST
+      } yield JsonOk(logEntries)
     }
 
   private def notImplemented: Future[Result] = Future.successful(Result(ResponseHeader(NOT_IMPLEMENTED), NoEntity))

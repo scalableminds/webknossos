@@ -17,6 +17,7 @@ import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreService}
 import models.job.JobDAO
+import models.organization.OrganizationDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
@@ -42,6 +43,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     annotationDAO: AnnotationDAO,
                                     annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
                                     userService: UserService,
+                                    organizationDAO: OrganizationDAO,
                                     annotationStore: AnnotationStore,
                                     annotationInformationProvider: AnnotationInformationProvider,
                                     dataStoreService: DataStoreService,
@@ -130,15 +132,17 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
         isAllowed <- dataSetService.isEditableBy(dataset, Some(user))
-      } yield {
-        UserAccessAnswer(isAllowed)
-      }
+      } yield UserAccessAnswer(isAllowed)
 
     def tryAdministrate: Fox[UserAccessAnswer] =
       userBox match {
         case Full(user) =>
           for {
-            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+            // if dataSourceId is empty, the request asks if the user may administrate in *any* (i.e. their own) organization
+            relevantOrganization <- if (dataSourceId.team.isEmpty)
+              Fox.successful(user._organization)
+            else organizationDAO.findOneByName(dataSourceId.team).map(_._id)
+            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, relevantOrganization)
           } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
         case _ => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
       }

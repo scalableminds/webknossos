@@ -11,6 +11,7 @@ import type {
   BoundingBoxType,
   Point3,
   ColorObject,
+  TypedArray,
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
 
@@ -746,9 +747,34 @@ export function convertDecToBase256(num: number): Vector4 {
 
   [tmp, a] = divMod(tmp); // eslint-disable-line prefer-const
 
-  // Big endian
-  return [a, b, g, r];
+  // Little endian
+  return [r, g, b, a];
 }
+
+export function castForArrayType(uncastNumber: number, data: TypedArray): number | bigint {
+  return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
+}
+
+export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
+  if (num == null) {
+    return [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+  }
+  // Cast to BigInt as bit-wise operations only work with 32 bits,
+  // even though Number uses 53 bits.
+  const bigNum = BigInt(num);
+
+  const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
+  const bigNumHigh = Number(bigNum >> 32n);
+
+  const low = convertDecToBase256(bigNumLow);
+  const high = convertDecToBase256(bigNumHigh);
+
+  return [high, low];
+}
+
 export async function promiseAllWithErrors<T>(promises: Array<Promise<T>>): Promise<{
   successes: Array<T>;
   errors: Array<Error>;

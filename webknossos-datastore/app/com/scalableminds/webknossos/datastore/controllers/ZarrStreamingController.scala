@@ -339,7 +339,7 @@ class ZarrStreamingController @Inject()(
           views.html.datastoreZarrDatasourceDir(
             "Datastore",
             "%s/%s/%s/%s".format(organizationName, dataSetName, dataLayerName, mag),
-            List.empty
+            List(".zarray")
           )).withHeaders()
     }
 
@@ -400,7 +400,7 @@ class ZarrStreamingController @Inject()(
           views.html.datastoreZarrDatasourceDir(
             "Datastore",
             "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
-            mags.map(_.toMagLiteral())
+            List(".zattrs", ".zgroup") ++ mags.map(_.toMagLiteral())
           )).withHeaders()
     }
 
@@ -446,7 +446,7 @@ class ZarrStreamingController @Inject()(
             views.html.datastoreZarrDatasourceDir(
               "Datastore",
               s"$organizationName/$dataSetName",
-              layerNames
+              List("datasource-properties.json", ".zgroup") ++ layerNames
             ))
       }
     }
@@ -470,9 +470,9 @@ class ZarrStreamingController @Inject()(
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
-              "Datastore",
+              "Combined datastore and tracingstore directory",
               s"$accessToken",
-              layerNames
+              List("datasource-properties.json", ".zgroup") ++ layerNames
             ))
       }
     }

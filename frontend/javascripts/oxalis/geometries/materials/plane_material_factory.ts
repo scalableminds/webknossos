@@ -36,8 +36,6 @@ import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
-import { createUpdatableTexture } from "./plane_material_factory_helpers";
-import { getRenderer } from "oxalis/controller/renderer";
 import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
 import { diffSegmentLists } from "oxalis/model/sagas/volumetracing_saga";
 import DiffableMap from "libs/diffable_map";
@@ -83,20 +81,14 @@ function getPackingDegreeLookup(): Record<string, number> {
   );
 }
 
-const getCustomColorTexture = _.memoize(() => {
+const getCustomColorCuckooTable = _.memoize(() => {
   const textureWidth = 4096;
-  const customColorTexture = createUpdatableTexture(
-    textureWidth,
-    4,
-    THREE.FloatType,
-    getRenderer(),
-  );
-  const cuckoo = new CuckooTable(textureWidth, customColorTexture);
+  const cuckoo = new CuckooTable(textureWidth);
   // cuckoo.set(1, [128, 0, 128]);
   // cuckoo.set(2, [0, 128, 128]);
   // cuckoo.set(256, [128, 128, 0]);
 
-  return { cuckoo, customColorTexture };
+  return cuckoo;
 });
 
 class PlaneMaterialFactory {
@@ -269,7 +261,7 @@ class PlaneMaterialFactory {
         value: lookUpTexture,
       };
     }
-    const { cuckoo } = getCustomColorTexture();
+    const cuckoo = getCustomColorCuckooTable();
     cuckoo.subscribeToSeeds((seeds: number[]) => {
       seeds.forEach((seed, idx) => {
         this.uniforms[`seed${idx}`] = {
@@ -289,7 +281,8 @@ class PlaneMaterialFactory {
         : // additions to `this.uniforms` won't be properly attached otherwise.
           [null, null, null];
 
-    const { customColorTexture } = getCustomColorTexture();
+    const cuckoo = getCustomColorCuckooTable();
+    const customColorTexture = cuckoo.getTexture();
 
     this.uniforms.segmentation_mapping_texture = {
       value: mappingTexture,
@@ -589,7 +582,7 @@ class PlaneMaterialFactory {
                 updateAction.name === "updateSegment" ||
                 updateAction.name === "createSegment"
               ) {
-                const { cuckoo } = getCustomColorTexture();
+                const cuckoo = getCustomColorCuckooTable();
                 const { id, color } = updateAction.value;
                 if (color != null) {
                   cuckoo.set(id, color);

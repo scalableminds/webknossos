@@ -1,7 +1,12 @@
+import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
-import { Vector2, Vector3 } from "oxalis/constants";
+import { Vector3 } from "oxalis/constants";
+import { getRenderer } from "oxalis/controller/renderer";
+import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 
 const ELEMENTS_PER_ENTRY = 4;
+const TEXTURE_CHANNEL_COUNT = 4;
+const DEFAULT_LOAD_FACTOR = 0.25;
 
 type Entry = [number, Vector3];
 
@@ -12,17 +17,33 @@ export class CuckooTable {
   table!: Float32Array;
   seeds!: number[];
   seedSubscribers: Array<SeedSubscriberFn> = [];
-  texture: UpdatableTexture;
+  _texture: UpdatableTexture;
   textureWidth: number;
 
   setCount: number = 0;
 
-  constructor(textureWidth: number, texture: UpdatableTexture) {
+  constructor(textureWidth: number) {
     this.textureWidth = textureWidth;
-    this.entryCapacity = Math.floor((textureWidth ** 2 * 4) / ELEMENTS_PER_ENTRY);
+    this._texture = createUpdatableTexture(
+      textureWidth,
+      TEXTURE_CHANNEL_COUNT,
+      THREE.FloatType,
+      getRenderer(),
+    );
+    this.entryCapacity = Math.floor(
+      (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY,
+    );
     console.log("this.entryCapacity", this.entryCapacity);
-    this.texture = texture;
+
     this.initialize();
+  }
+
+  static fromCapacity(requestedCapacity: number): CuckooTable {
+    const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
+    const textureWidth = Math.ceil(
+      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY),
+    );
+    return new CuckooTable(textureWidth);
   }
 
   private initialize() {
@@ -36,6 +57,10 @@ export class CuckooTable {
       Math.floor(32768 * Math.random()),
     ];
     this.notifySeedListeners();
+  }
+
+  getTexture(): UpdatableTexture {
+    return this._texture;
   }
 
   subscribeToSeeds(fn: SeedSubscriberFn): void {
@@ -54,7 +79,9 @@ export class CuckooTable {
   set(pendingKey: number, pendingValue: Vector3, rehashAttempt: number = 0) {
     // todo: check that repeated sets to same key work
 
-    if (rehashAttempt == 0) {
+    console.log("set");
+
+    if (rehashAttempt === 0) {
       this.setCount++;
     }
     let displacedEntry;
@@ -100,7 +127,7 @@ export class CuckooTable {
 
     // Since a rehash was performed, the incremental texture updates were
     // skipped. Update the entire texture:
-    this.texture.update(this.table, 0, 0, 4096, 4096);
+    this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
   }
 
   private rehash(rehashAttempt: number): void {
@@ -123,7 +150,7 @@ export class CuckooTable {
     }
   }
 
-  get(key: number): Vector2 {
+  get(key: number): Vector3 {
     for (const seed of this.seeds) {
       const hashedAddress = this._hashKeyToAddress(seed, key);
 
@@ -132,7 +159,7 @@ export class CuckooTable {
         return value;
       }
     }
-    return [-1, -1];
+    return [-1, -1, -1];
   }
 
   // hasEntry(key: number, value: number, hashedAddress1: number, hashedAddress2: number): boolean {
@@ -162,10 +189,10 @@ export class CuckooTable {
     return this.table[offset] === key;
   }
 
-  getValueAtAddress(key: number, hashedAddress: number): Vector2 | null {
+  getValueAtAddress(key: number, hashedAddress: number): Vector3 | null {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
     if (this.doesAddressContainKey(key, hashedAddress)) {
-      return [this.table[offset + 4], this.table[offset + 5]];
+      return [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]];
     } else {
       return null;
     }
@@ -187,19 +214,15 @@ export class CuckooTable {
 
     // console.log("writing key=", key, "value=", value, "to", offset);
 
-    // eslint-disable-next-line prefer-destructuring
     this.table[offset] = key;
-    // eslint-disable-next-line prefer-destructuring
     this.table[offset + 1] = value[0];
-    // eslint-disable-next-line prefer-destructuring
     this.table[offset + 2] = value[1];
-    // eslint-disable-next-line prefer-destructuring
     this.table[offset + 3] = value[2];
 
     if (!isRehashing) {
       // If we are rehashing, it makes more sense to flush the entire texture content
       // after the rehashing is done.
-      this.texture.update(
+      this._texture.update(
         this.table.slice(offset, offset + 4),
         texelOffset % this.textureWidth,
         Math.floor(texelOffset / this.textureWidth),

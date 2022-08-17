@@ -42,7 +42,6 @@ import type {
   MappingStatus,
   OrthoViewWithoutTD,
   InterpolationMode,
-  Vector4,
 } from "oxalis/constants";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";

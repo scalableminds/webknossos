@@ -1,5 +1,5 @@
 import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import type {
   VolumeTracing,
   BranchPoint,

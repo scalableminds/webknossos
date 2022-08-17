@@ -140,7 +140,10 @@ function DatasetAddZarrView(props: Props) {
       let configJSON;
       try {
         configJSON = JSON.parse(datasourceConfig);
-        const nameValidationResult = await isDatasetNameValid({ name: configJSON.id.name, owningOrganization: activeUser.organization });
+        const nameValidationResult = await isDatasetNameValid({
+          name: configJSON.id.name,
+          owningOrganization: activeUser.organization,
+        });
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }

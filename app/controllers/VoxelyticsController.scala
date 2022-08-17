@@ -37,7 +37,7 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
 
     var queryStringParts = List(
       s"vx.run_name:${'"'}${runName}${'"'}",
-      s"vx.run_name:${'"'}${organizationName}${'"'}",
+      s"vx.wk_org:${'"'}${organizationName}${'"'}",
       s"level:(${levels.map(_.toString).mkString(" OR ")})"
     )
     if (taskName.isDefined) {
@@ -50,6 +50,8 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
       "sort" -> Json.arr(Json.obj("@timestamp" -> Json.obj("order" -> "asc")))
     )
 
+    println(scrollBody.toString())
+
     var buffer = List.empty[JsValue]
 
     def fetchBatch(scrollId: String): Fox[String] =
@@ -58,7 +60,9 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
           .postJsonWithJsonResponse[JsValue, JsValue](Json.obj("scroll" -> "1m", "scroll_id" -> scrollId))
         batchScrollId = (batch \ "_scroll_id").as[String]
         batchHits = (batch \ "hits" \ "hits").as[List[JsValue]]
-        _ = { buffer ++= batchHits }
+        _ = {
+          buffer ++= batchHits
+        }
         returnedScrollId <- if (batchHits.isEmpty) {
           Fox.successful(scrollId)
         } else {
@@ -71,7 +75,9 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
         .postJsonWithJsonResponse[JsValue, JsValue](scrollBody) ~> "Could not fetch logs"
       scrollId = (scroll \ "_scroll_id").as[String]
       scrollHits = (scroll \ "hits" \ "hits").as[List[JsValue]]
-      _ = { buffer ++= scrollHits }
+      _ = {
+        buffer ++= scrollHits
+      }
       lastScrollId <- fetchBatch(scrollId)
       _ <- rpc(s"${conf.host}/_search/scroll/${lastScrollId}").delete()
     } yield JsArray(buffer)
@@ -165,8 +171,9 @@ class VoxelyticsController @Inject()(
   def getLogs(runId: String, taskName: Option[String], minLevel: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       val runName = runId
-      val organizationName = request.identity._organization.id
       for {
+        organization <- organizationDAO.findOne(request.identity._organization)
+        organizationName = organization.name
         logEntries <- elasticsearchClient.queryLogs(
           runName,
           organizationName,

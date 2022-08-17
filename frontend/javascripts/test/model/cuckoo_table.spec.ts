@@ -63,7 +63,7 @@ const { CuckooTable } = mock.reRequire("oxalis/model/bucket_data_handling/cuckoo
 
 function generateRandomEntry(): [number, Vector3] {
   return [
-    Math.floor(Math.random() * 10000),
+    Math.floor(Math.random() * 2 ** 32),
     [
       Math.floor(Math.random() * 1000),
       Math.floor(Math.random() * 1000),
@@ -90,13 +90,16 @@ function generateRandomEntrySet() {
 }
 
 function isValueEqual(t: ExecutionContext<any>, val1: Vector3, val2: Vector3) {
+  if (!(val1[0] === val2[0] && val1[1] === val2[1] && val1[2] === val2[2])) {
+    throw new Error(`${val1} != ${val2}`);
+  }
+
   t.true(val1[0] === val2[0]);
   t.true(val1[1] === val2[1]);
   t.true(val1[2] === val2[2]);
 }
 
 test.serial("CuckooTable", (t) => {
-  return;
   const entries = generateRandomEntrySet();
   const ct = CuckooTable.fromCapacity(entries.length);
   console.time("simple");
@@ -142,9 +145,8 @@ test.serial("CuckooTable", (t) => {
 });
 
 test.serial("CuckooTable speed", (t) => {
-  return;
   console.log("cuckoo test");
-  const RUNS = 1;
+  const RUNS = 100;
   const hashSets = _.range(RUNS).map(() => generateRandomEntrySet());
 
   const cts = _.range(RUNS).map(() => CuckooTable.fromCapacity(hashSets[0].length));

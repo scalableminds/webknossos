@@ -14,7 +14,7 @@ export type SeedSubscriberFn = (seeds: number[]) => void;
 
 export class CuckooTable {
   entryCapacity: number;
-  table!: Float32Array;
+  table!: Uint32Array;
   seeds!: number[];
   seedSubscribers: Array<SeedSubscriberFn> = [];
   _texture: UpdatableTexture;
@@ -33,7 +33,6 @@ export class CuckooTable {
     this.entryCapacity = Math.floor(
       (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY,
     );
-    console.log("this.entryCapacity", this.entryCapacity);
 
     this.initialize();
   }
@@ -47,14 +46,14 @@ export class CuckooTable {
   }
 
   private initialize() {
-    this.table = new Float32Array(ELEMENTS_PER_ENTRY * this.entryCapacity).fill(-1);
+    this.table = new Uint32Array(ELEMENTS_PER_ENTRY * this.entryCapacity).fill(-1);
 
-    // The chance of colliding seeds is lower than 9.32e-10 which is why
-    // we ignore this case (a rehash will happen automatically).
+    // The chance of colliding seeds is super low which is why
+    // we ignore this case (a rehash would happen automatically, anyway).
     this.seeds = [
-      Math.floor(32768 * Math.random()),
-      Math.floor(32768 * Math.random()),
-      Math.floor(32768 * Math.random()),
+      Math.floor(2 ** 32 * Math.random()),
+      Math.floor(2 ** 32 * Math.random()),
+      Math.floor(2 ** 32 * Math.random()),
     ];
     this.notifySeedListeners();
   }
@@ -79,8 +78,6 @@ export class CuckooTable {
   set(pendingKey: number, pendingValue: Vector3, rehashAttempt: number = 0) {
     // todo: check that repeated sets to same key work
 
-    console.log("set");
-
     if (rehashAttempt === 0) {
       this.setCount++;
     }
@@ -90,8 +87,8 @@ export class CuckooTable {
 
     const ITERATION_THRESHOLD = 40;
     const REHASH_THRESHOLD = 100;
-    if (rehashAttempt > 5) {
-      console.log("rehashing 5 times in a row.");
+    if (rehashAttempt > 5 && rehashAttempt % 10 === 0) {
+      // console.log("rehash attempt: 5", rehashAttempt);
     }
     if (rehashAttempt >= REHASH_THRESHOLD) {
       throw new Error(
@@ -131,23 +128,26 @@ export class CuckooTable {
   }
 
   private rehash(rehashAttempt: number): void {
-    // console.log("############################### rehashing");
     const oldTable = this.table;
 
     this.initialize();
 
+    let n = 0;
     for (
       let offset = 0;
       offset < this.entryCapacity * ELEMENTS_PER_ENTRY;
       offset += ELEMENTS_PER_ENTRY
     ) {
-      if (oldTable[offset] === 0) {
+      if (oldTable[offset] === -1) {
         continue;
       }
       const key: number = oldTable[offset + 0];
       const value: Vector3 = [oldTable[offset + 1], oldTable[offset + 2], oldTable[offset + 3]];
       this.set(key, value, rehashAttempt);
+      n++;
     }
+
+    console.log("rehashing done. set", n, "items");
   }
 
   get(key: number): Vector3 {
@@ -177,7 +177,7 @@ export class CuckooTable {
   private canDisplacedEntryBeIgnored(displacedKey: number, newKey: number): boolean {
     return (
       // Either, the slot is empty...
-      // -1, -1, -1, -1 is not allowed as a key
+      // -1 is not allowed as a key
       displacedKey === -1 ||
       // or the slot already refers to the key
       displacedKey === newKey

@@ -51,7 +51,6 @@ const RECOMPILATION_THROTTLE_TIME = 500;
 export type Uniforms = Record<
   string,
   {
-    type: "b" | "f" | "i" | "t" | "v2" | "v3" | "v4" | "tv";
     value: any;
   }
 >;
@@ -138,107 +137,82 @@ class PlaneMaterialFactory {
     );
     this.uniforms = {
       sphericalCapRadius: {
-        type: "f",
         value: 140,
       },
       globalPosition: {
-        type: "v3",
         value: new THREE.Vector3(0, 0, 0),
       },
       anchorPoint: {
-        type: "v4",
         value: new THREE.Vector3(0, 0, 0),
       },
       zoomStep: {
-        type: "f",
         value: 1,
       },
       zoomValue: {
-        type: "f",
         value: 1,
       },
       useBilinearFiltering: {
-        type: "b",
         value: true,
       },
       isMappingEnabled: {
-        type: "b",
         value: false,
       },
       mappingSize: {
-        type: "f",
         value: 0,
       },
       hideUnmappedIds: {
-        type: "b",
         value: false,
       },
       globalMousePosition: {
-        type: "v3",
         value: new THREE.Vector3(0, 0, 0),
       },
       brushSizeInPixel: {
-        type: "f",
         value: 0,
       },
       segmentationPatternOpacity: {
-        type: "f",
         value: 40,
       },
       isMouseInActiveViewport: {
-        type: "b",
         value: false,
       },
       isMouseInCanvas: {
-        type: "b",
         value: false,
       },
       showBrush: {
-        type: "b",
         value: false,
       },
       viewMode: {
-        type: "f",
         value: 0,
       },
       planeID: {
-        type: "f",
         value: OrthoViewValues.indexOf(this.planeID),
       },
       bboxMin: {
-        type: "v3",
         value: new THREE.Vector3(0, 0, 0),
       },
       bboxMax: {
-        type: "v3",
         value: new THREE.Vector3(0, 0, 0),
       },
       renderBucketIndices: {
-        type: "b",
         value: false,
       },
       addressSpaceDimensions: {
-        type: "v3",
         value: new THREE.Vector3(...addressSpaceDimensions),
       },
       // The hovered segment id is always stored as a 64-bit (8 byte)
       // value which is why it is spread over two uniforms,
       // named as `-High` and `-Low`.
       hoveredSegmentIdHigh: {
-        type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
       hoveredSegmentIdLow: {
-        type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
       // The same is done for the active cell id.
       activeCellIdHigh: {
-        type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
       activeCellIdLow: {
-        type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
     };
@@ -246,37 +220,30 @@ class PlaneMaterialFactory {
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
       this.uniforms[`${layerName}_maxZoomStep`] = {
-        type: "f",
         value: dataLayer.cube.resolutionInfo.getHighestResolutionIndex(),
       };
       this.uniforms[`${layerName}_alpha`] = {
-        type: "f",
         value: 1,
       };
       // If the `_unrenderable` uniform is true, the layer
       // cannot (and should not) be rendered in the
       // current mag.
       this.uniforms[`${layerName}_unrenderable`] = {
-        type: "f",
         value: 0,
       };
     }
 
     for (const name of getSanitizedColorLayerNames()) {
       this.uniforms[`${name}_color`] = {
-        type: "v3",
         value: DEFAULT_COLOR,
       };
       this.uniforms[`${name}_min`] = {
-        type: "f",
         value: 0.0,
       };
       this.uniforms[`${name}_max`] = {
-        type: "f",
         value: 1.0,
       };
       this.uniforms[`${name}_is_inverted`] = {
-        type: "f",
         value: 0,
       };
     }
@@ -293,15 +260,12 @@ class PlaneMaterialFactory {
       const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
       const layerName = sanitizeName(name);
       this.uniforms[`${layerName}_textures`] = {
-        type: "tv",
         value: dataTextures,
       };
       this.uniforms[`${layerName}_data_texture_width`] = {
-        type: "f",
         value: dataLayer.layerRenderingManager.textureWidth,
       };
       this.uniforms[`${layerName}_lookup_texture`] = {
-        type: "t",
         value: lookUpTexture,
       };
     }
@@ -309,7 +273,6 @@ class PlaneMaterialFactory {
     cuckoo.subscribeToSeeds((seeds: number[]) => {
       seeds.forEach((seed, idx) => {
         this.uniforms[`seed${idx}`] = {
-          type: "uint",
           value: seed,
         };
       });
@@ -329,19 +292,15 @@ class PlaneMaterialFactory {
     const { customColorTexture } = getCustomColorTexture();
 
     this.uniforms.segmentation_mapping_texture = {
-      type: "t",
       value: mappingTexture,
     };
     this.uniforms.segmentation_mapping_lookup_texture = {
-      type: "t",
       value: mappingLookupTexture,
     };
     this.uniforms.segmentation_mapping_color_texture = {
-      type: "t",
       value: mappingColorTexture,
     };
     this.uniforms.custom_color_texture = {
-      type: "t",
       value: customColorTexture,
     };
   }

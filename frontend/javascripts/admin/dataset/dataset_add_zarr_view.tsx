@@ -195,7 +195,7 @@ function DatasetAddZarrView(props: Props) {
           </FormItem>
           <Row gutter={8}>
             <Col span={12}>
-              <FormItem label={selectedProtocol === "https" ? "Username" : "Access Key"}>
+              <FormItem label={selectedProtocol === "https" ? "Username" : "Access Key ID"}>
                 <Input
                   value={usernameOrAccessKey}
                   onChange={(e) => setUsernameOrAccessKey(e.target.value)}

@@ -1,116 +1,61 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.typesafe.scalalogging.LazyLogging
-import controllers.VoxelyticsLogLevel.VoxelyticsLogLevel
 import io.swagger.annotations._
 import models.organization.OrganizationDAO
 import models.user.{UserDAO, UserService}
+import models.voxelytics._
 import oxalis.security.WkEnv
-import play.api.http.HeaderNames
 import play.api.http.HttpEntity.NoEntity
 import play.api.libs.json._
 import play.api.mvc.{ResponseHeader, _}
-import utils.WkConf
+import utils.{ObjectId, WkConf}
 
+import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-object VoxelyticsLogLevel extends ExtendedEnumeration {
-  type VoxelyticsLogLevel = Value
-  val NOTSET, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL = Value
+case class ChunkStatisticsEntry(executionId: String,
+                                countTotal: Long,
+                                countFinished: Long,
+                                beginTime: Instant,
+                                endTime: Instant,
+                                max_memory: Double,
+                                median_memory: Double,
+                                stddev_memory: Double,
+                                max_cpuUser: Double,
+                                median_cpuUser: Double,
+                                stddev_cpuUser: Double,
+                                max_cpuSystem: Double,
+                                median_cpuSystem: Double,
+                                stddev_cpuSystem: Double,
+                                max_duration: Double,
+                                median_duration: Double,
+                                stddev_duration: Double,
+                                sum_duration: Double)
+object ChunkStatisticsEntry {
+  implicit val jsonFormat: OFormat[ChunkStatisticsEntry] = Json.format[ChunkStatisticsEntry]
 }
 
-class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: ExecutionContext) extends LazyLogging {
+case class ArtifactChecksumEntry(taskName: String,
+                                 artifactName: String,
+                                 path: String,
+                                 resolvedPath: String,
+                                 timestamp: Instant,
+                                 checksumMethod: String,
+                                 checksum: String,
+                                 fileSize: Long,
+                                 lastModified: Instant)
 
-  private lazy val conf = wkConf.Voxelytics.Elasticsearch
-
-  def queryLogs(runName: String,
-                organizationName: String,
-                taskName: Option[String],
-                minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO): Fox[JsValue] = {
-
-    val levels = VoxelyticsLogLevel.values - minLevel
-
-    var queryStringParts = List(
-      s"vx.run_name:${'"'}${runName}${'"'}",
-      s"vx.wk_org:${'"'}${organizationName}${'"'}",
-      s"level:(${levels.map(_.toString).mkString(" OR ")})"
-    )
-    if (taskName.isDefined) {
-      queryStringParts +: s"vx.task_name:${'"'}${taskName}${'"'}"
-    }
-
-    val scrollBody = Json.obj(
-      "size" -> JsNumber(10000),
-      "query" -> Json.obj("query_string" -> Json.obj("query" -> queryStringParts.mkString(" AND "))),
-      "sort" -> Json.arr(Json.obj("@timestamp" -> Json.obj("order" -> "asc")))
-    )
-
-    println(scrollBody.toString())
-
-    var buffer = List.empty[JsValue]
-
-    def fetchBatch(scrollId: String): Fox[String] =
-      for {
-        batch <- rpc(s"${conf.host}/_search/scroll")
-          .postJsonWithJsonResponse[JsValue, JsValue](Json.obj("scroll" -> "1m", "scroll_id" -> scrollId))
-        batchScrollId = (batch \ "_scroll_id").as[String]
-        batchHits = (batch \ "hits" \ "hits").as[List[JsValue]]
-        _ = {
-          buffer ++= batchHits
-        }
-        returnedScrollId <- if (batchHits.isEmpty) {
-          Fox.successful(scrollId)
-        } else {
-          fetchBatch(batchScrollId)
-        }
-      } yield (returnedScrollId)
-
-    for {
-      scroll <- rpc(s"${conf.host}/${conf.index}/_search?scroll=1m")
-        .postJsonWithJsonResponse[JsValue, JsValue](scrollBody) ~> "Could not fetch logs"
-      scrollId = (scroll \ "_scroll_id").as[String]
-      scrollHits = (scroll \ "hits" \ "hits").as[List[JsValue]]
-      _ = {
-        buffer ++= scrollHits
-      }
-      lastScrollId <- fetchBatch(scrollId)
-      _ <- rpc(s"${conf.host}/_search/scroll/${lastScrollId}").delete()
-    } yield JsArray(buffer)
-
-  }
-
-  def bulkInsert(logEntries: List[JsValue]): Fox[Unit] = {
-    if (conf.host.isEmpty || logEntries.isEmpty) return Fox.successful(())
-    val uri = s"${conf.host}/_bulk"
-    val bytes = logEntries
-      .flatMap(entry =>
-        List(Json.toBytes(Json.obj("create" -> Json.obj("_index" -> conf.index, "_id" -> ""))), Json.toBytes(entry)))
-      .fold(Array.emptyByteArray)((rest, entry) => rest ++ entry ++ "\n".getBytes)
-
-    for {
-      res <- rpc(uri)
-        .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
-        .postBytesWithJsonResponse[JsValue](bytes)
-      _ <- Fox.bool2Fox((res \ "errors").asOpt[List[JsValue]].forall(_.isEmpty))
-    } yield ()
-  }
+object ArtifactChecksumEntry {
+  implicit val jsonFormat: OFormat[ArtifactChecksumEntry] = Json.format[ArtifactChecksumEntry]
 }
-
-case class VoxelyticsWorkflowDescription(workflowHash: String)
-
-object VoxelyticsWorkflowDescription {
-  implicit val jsonFormat: OFormat[VoxelyticsWorkflowDescription] = Json.format[VoxelyticsWorkflowDescription]
-}
-
 @Api
 class VoxelyticsController @Inject()(
     userDAO: UserDAO,
     organizationDAO: OrganizationDAO,
+    voxelyticsDAO: VoxelyticsDAO,
     userService: UserService,
     elasticsearchClient: ElasticsearchClient,
     wkConf: WkConf,
@@ -123,7 +68,61 @@ class VoxelyticsController @Inject()(
   @ApiOperation(hidden = true, value = "")
   def createWorkflow: Action[VoxelyticsWorkflowDescription] =
     sil.SecuredAction.async(validateJson[VoxelyticsWorkflowDescription]) { implicit request =>
-      notImplemented
+      def upsertTask(_run: ObjectId, taskName: String, task: VoxelyticsWorkflowDescriptionTaskConfig): Fox[Unit] =
+        for {
+          // TODO: Authorization
+          taskId <- voxelyticsDAO.upsertTask(
+            _run,
+            taskName,
+            task.task,
+            Json.obj("config" -> task.config,
+                     "description" -> task.description,
+                     "distribution" -> task.distribution,
+                     "inputs" -> task.inputs,
+                     "output_paths" -> task.output_paths)
+          )
+          _ <- Fox.sequence(
+            request.body.artifacts
+              .getOrElse(taskName, List.empty)
+              .map(artifactKV => {
+                val artifactName = artifactKV._1
+                val artifact = artifactKV._2
+                voxelyticsDAO.upsertArtifact(taskId,
+                                             artifactName,
+                                             artifact.path,
+                                             artifact.file_size,
+                                             artifact.inode_count,
+                                             artifact.version,
+                                             artifact.metadata)
+              })
+              .toList)
+        } yield ()
+
+      for {
+        workflowId <- voxelyticsDAO.upsertWorkflow(request.body.workflow.hash,
+                                                   request.body.workflow.name,
+                                                   request.identity._organization)
+        runId <- voxelyticsDAO.upsertRun(
+          request.identity._organization,
+          request.identity._id,
+          request.body.run.name,
+          request.body.run.user,
+          request.body.run.hostname,
+          request.body.run.voxelyticsVersion,
+          request.body.workflow.hash,
+          request.body.workflow.yamlContent,
+          request.body.config.withoutTasks()
+        )
+        _ <- Fox.sequence(
+          request.body.config.tasks
+            .map(taskKV => {
+              val taskName = taskKV._1
+              val task = taskKV._2
+              upsertTask(runId, taskName, task)
+            })
+            .toList)
+
+      } yield JsonOk(Json.obj("workflowId" -> workflowId, "runId" -> runId))
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -139,39 +138,110 @@ class VoxelyticsController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def createWorkflowEvents(workflowHash: String, runName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      notImplemented
+  def createWorkflowEvents(workflowHash: String, runName: String): Action[List[WorkflowEvent]] =
+    sil.SecuredAction.async(validateJson[List[WorkflowEvent]]) { implicit request =>
+      def createWorkflowEvent(runId: ObjectId, event: WorkflowEvent): Fox[Unit] =
+        event match {
+          case ev: RunStateChangeEvent =>
+            for {
+              _ <- voxelyticsDAO.upsertRunStateChangeEvent(runId, ev)
+            } yield ()
+
+          case ev: TaskStateChangeEvent =>
+            for {
+              taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
+              _ <- voxelyticsDAO.upsertTaskStateChangeEvent(taskId, ev)
+              _ <- Fox.sequence(
+                ev.artifacts
+                  .map(artifactKV => {
+                    val artifactName = artifactKV._1
+                    val artifact = artifactKV._2
+                    voxelyticsDAO.upsertArtifact(taskId,
+                                                 artifactName,
+                                                 artifact.path,
+                                                 artifact.file_size,
+                                                 artifact.inode_count,
+                                                 artifact.version,
+                                                 artifact.metadata)
+                  })
+                  .toList)
+            } yield ()
+
+          case ev: ChunkStateChangeEvent =>
+            for {
+              taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
+              chunkId <- voxelyticsDAO.getChunkIdByName(taskId, ev.executionId, ev.chunkName)
+              _ <- voxelyticsDAO.upsertChunkStateChangeEvent(chunkId, ev)
+            } yield ()
+
+          case ev: RunHeartbeatEvent =>
+            for {
+              _ <- voxelyticsDAO.upsertRunHeartbeatEvent(runId, ev)
+            } yield ()
+
+          case ev: ChunkProfilingEvent =>
+            for {
+              taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
+              chunkId <- voxelyticsDAO.getChunkIdByName(taskId, ev.executionId, ev.chunkName)
+              _ <- voxelyticsDAO.upsertChunkProfilingEvent(chunkId, ev)
+            } yield ()
+
+          case ev: ArtifactFileChecksumEvent =>
+            for {
+              taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
+              artifactId <- voxelyticsDAO.getArtifactIdByName(taskId, ev.artifactName)
+              _ <- voxelyticsDAO.upsertArtifactChecksumEvent(artifactId, ev)
+            } yield ()
+        }
+
+      for {
+        // TODO: Authorization based on runId
+        runId <- voxelyticsDAO.getRunIdByName(runName, request.identity._organization)
+        _ <- Fox.sequence(request.body.map(event => createWorkflowEvent(runId, event)))
+      } yield Ok
     }
 
   @ApiOperation(hidden = true, value = "")
   def getChunkStatistics(workflowHash: String, runId: String, taskName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      notImplemented
+      for {
+        // TODO: Authorization based on runId
+        taskId <- voxelyticsDAO.getTaskIdByName(taskName, ObjectId(runId))
+        results <- voxelyticsDAO.getChunkStatistics(taskId)
+      } yield JsonOk(Json.toJson(results))
     }
 
   @ApiOperation(hidden = true, value = "")
   def getArtifactChecksums(workflowHash: String,
                            runId: String,
-                           taskName: Option[String],
+                           taskName: String,
                            artifactName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      notImplemented
+      for {
+        // TODO: Authorization based on runId
+        taskId <- voxelyticsDAO.getTaskIdByName(taskName, ObjectId(runId))
+        results <- voxelyticsDAO.getArtifactChecksums(taskId, artifactName)
+      } yield JsonOk(Json.toJson(results))
     }
 
   @ApiOperation(hidden = true, value = "")
-  def appendLogs: Action[List[JsValue]] =
-    sil.SecuredAction.async(validateJson[List[JsValue]]) { implicit request =>
+  def appendLogs: Action[List[JsObject]] =
+    sil.SecuredAction.async(validateJson[List[JsObject]]) { implicit request =>
       for {
-        _ <- elasticsearchClient.bulkInsert(request.body) ~> BAD_REQUEST
+        organization <- organizationDAO.findOne(request.identity._organization)
+        logEntries = request.body.map(
+          entry =>
+            entry ++ Json.obj("vx" -> ((entry \ "vx").as[JsObject] ++ Json.obj("wk_org" -> organization.name,
+                                                                               "wk_user" -> request.identity._id.id))))
+        _ <- elasticsearchClient.bulkInsert(logEntries)
       } yield Ok
     }
 
   @ApiOperation(hidden = true, value = "")
   def getLogs(runId: String, taskName: Option[String], minLevel: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      val runName = runId
       for {
+        runName <- voxelyticsDAO.getRunNameById(ObjectId(runId), request.identity._organization)
         organization <- organizationDAO.findOne(request.identity._organization)
         organizationName = organization.name
         logEntries <- elasticsearchClient.queryLogs(

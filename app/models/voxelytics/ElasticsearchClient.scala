@@ -1,0 +1,94 @@
+package models.voxelytics
+
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.typesafe.scalalogging.LazyLogging
+import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
+import play.api.http.HeaderNames
+import play.api.libs.json.{JsArray, JsNumber, JsValue, Json}
+import utils.WkConf
+
+import java.util.UUID
+import javax.inject.Inject
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
+
+class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: ExecutionContext) extends LazyLogging {
+
+  private lazy val conf = wkConf.Voxelytics.Elasticsearch
+
+  def queryLogs(runName: String,
+                organizationName: String,
+                taskName: Option[String],
+                minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO): Fox[JsValue] = {
+
+    val levels = VoxelyticsLogLevel.values - minLevel
+
+    val queryStringParts = List(
+      s"vx.run_name:${'"'}$runName${'"'}",
+      s"vx.wk_org:${'"'}$organizationName${'"'}",
+      s"level:(${levels.map(_.toString).mkString(" OR ")})"
+    )
+    if (taskName.isDefined) {
+      queryStringParts +: s"vx.task_name:${'"'}$taskName${'"'}"
+    }
+
+    val scrollBody = Json.obj(
+      "size" -> JsNumber(10000),
+      "query" -> Json.obj("query_string" -> Json.obj("query" -> queryStringParts.mkString(" AND "))),
+      "sort" -> Json.arr(Json.obj("@timestamp" -> Json.obj("order" -> "asc")))
+    )
+
+    logger.info(scrollBody.toString())
+
+    val buffer = ListBuffer[JsValue]()
+
+    for {
+      scroll <- rpc(s"${conf.host}/${conf.index}/_search?scroll=1m")
+        .postJsonWithJsonResponse[JsValue, JsValue](scrollBody) ~> "Could not fetch logs"
+      scrollId = (scroll \ "_scroll_id").as[String]
+      scrollHits = (scroll \ "hits" \ "hits").as[List[JsValue]]
+      _ = {
+        buffer ++= scrollHits
+      }
+      lastScrollId <- fetchBatch(buffer, scrollId)
+      _ <- rpc(s"${conf.host}/_search/scroll/$lastScrollId").delete()
+    } yield JsArray(buffer)
+
+  }
+
+  private def fetchBatch(buffer: ListBuffer[JsValue], scrollId: String): Fox[String] =
+    for {
+      batch <- rpc(s"${conf.host}/_search/scroll")
+        .postJsonWithJsonResponse[JsValue, JsValue](Json.obj("scroll" -> "1m", "scroll_id" -> scrollId))
+      batchScrollId = (batch \ "_scroll_id").as[String]
+      batchHits = (batch \ "hits" \ "hits").as[List[JsValue]]
+      _ = {
+        buffer ++= batchHits
+      }
+      returnedScrollId <- if (batchHits.isEmpty) {
+        Fox.successful(scrollId)
+      } else {
+        fetchBatch(buffer, batchScrollId)
+      }
+    } yield returnedScrollId
+
+  def bulkInsert(logEntries: List[JsValue]): Fox[Unit] =
+    if (conf.host.nonEmpty && logEntries.nonEmpty) {
+      val uri = s"${conf.host}/_bulk"
+      val bytes = logEntries
+        .flatMap(entry =>
+          List(Json.toBytes(Json.obj("create" -> Json.obj("_index" -> conf.index, "_id" -> UUID.randomUUID.toString))),
+               Json.toBytes(entry)))
+        .fold(Array.emptyByteArray)((rest, entry) => rest ++ entry ++ "\n".getBytes)
+
+      for {
+        res <- rpc(uri)
+          .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+          .postBytesWithJsonResponse[JsValue](bytes)
+        _ <- Fox.bool2Fox((res \ "errors").asOpt[List[JsValue]].forall(_.isEmpty))
+      } yield ()
+    } else {
+      Fox.successful(())
+    }
+}

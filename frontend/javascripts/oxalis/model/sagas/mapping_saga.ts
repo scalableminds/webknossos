@@ -22,6 +22,7 @@ import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings"
 import api from "oxalis/api/internal_api";
 import { MappingStatusEnum } from "oxalis/constants";
 import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
+import Toast from "libs/toast";
 type APIMappings = Record<string, APIMapping>;
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {
@@ -157,7 +158,19 @@ function* maybeFetchMapping(
   }
 
   const fetchedMappings: APIMappings = {};
-  yield* call(fetchMappings, layerName, mappingName, fetchedMappings);
+  try {
+    yield* call(fetchMappings, layerName, mappingName, fetchedMappings);
+  } catch (exception) {
+    yield* call(
+      [Toast, Toast.error],
+      "The requested mapping could not be loaded.",
+      { sticky: true },
+      `${exception}`,
+    );
+    console.error(exception);
+    yield* put(setMappingAction(layerName, null, mappingType));
+    return;
+  }
   const { hideUnmappedIds, colors: mappingColors } = fetchedMappings[mappingName];
   // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
   // class will get the first color, and so on
@@ -175,6 +188,15 @@ function* maybeFetchMapping(
     mappingColors,
     hideUnmappedIds,
   };
+
+  if (layerInfo.elementClass === "uint64") {
+    yield* call(
+      [Toast, Toast.warning],
+      "The activated mapping will only be valid for the lower 32-bits of the active 64-bit segmentation.",
+      { sticky: true },
+    );
+  }
+
   yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
 }
 
@@ -232,7 +254,10 @@ function* buildMappingObject(
 
   for (const currentMappingName of getMappingChain(mappingName, fetchedMappings)) {
     const mapping = fetchedMappings[currentMappingName];
-    ErrorHandling.assertExists(mapping.classes, "Mappings must have been fetched at this point");
+    ErrorHandling.assertExists(
+      mapping.classes,
+      "Mappings must have been fetched at this point. Ensure that the mapping JSON contains a classes property.",
+    );
 
     if (mapping.classes) {
       for (const mappingClass of mapping.classes) {

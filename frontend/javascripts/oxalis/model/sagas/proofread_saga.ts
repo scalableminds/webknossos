@@ -175,8 +175,8 @@ function* loadFineAdHocMeshesInProximity(
 
   const { elementClass } = yield* select((state) => getLayerByName(state.dataset, layerName));
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
-  const segmentIdsInProximity = segmentIdsArrayBuffers.map(
-    (buffer) => new TypedArrayClass(buffer)[0],
+  const segmentIdsInProximity = segmentIdsArrayBuffers.map((buffer) =>
+    Number(new TypedArrayClass(buffer)[0]),
   );
 
   if (oldSegmentIdsInProximity != null) {

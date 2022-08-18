@@ -11,7 +11,7 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { mod } from "libs/utils";
+import { castForArrayType, mod } from "libs/utils";
 import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -22,12 +22,16 @@ import window from "libs/window";
 export const enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
   REQUESTED = "REQUESTED",
-  MISSING = "MISSING",
-  // Missing means that the bucket couldn't be found on the data store
+  MISSING = "MISSING", // Missing means that the bucket couldn't be found on the data store
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
-export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
+export type BucketDataArray =
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | Float32Array
+  | BigUint64Array;
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
   visualizeBucketsOnGPU: false,
@@ -80,7 +84,13 @@ export class NullBucket {
 export const getConstructorForElementClass = (
   type: ElementClass,
 ): [
-  Uint8ArrayConstructor | Uint16ArrayConstructor | Uint32ArrayConstructor | Float32ArrayConstructor,
+  (
+    | Uint8ArrayConstructor
+    | Uint16ArrayConstructor
+    | Uint32ArrayConstructor
+    | Float32ArrayConstructor
+    | BigUint64ArrayConstructor
+  ),
   number,
 ] => {
   switch (type) {
@@ -102,6 +112,10 @@ export const getConstructorForElementClass = (
 
     case "float":
       return [Float32Array, 1];
+
+    case "int64":
+    case "uint64":
+      return [BigUint64Array, 1];
 
     default:
       throw new Error(`This type is not supported by the DataBucket class: ${type}`);
@@ -451,7 +465,7 @@ export class DataBucket {
 
   applyVoxelMap(
     voxelMap: Uint8Array,
-    cellId: number,
+    segmentId: number,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
     sliceCount: number,
     thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
@@ -470,7 +484,7 @@ export class DataBucket {
         this._applyVoxelMapInPlace(
           _data,
           voxelMap,
-          cellId,
+          segmentId,
           get3DAddress,
           sliceCount,
           thirdDimensionIndex,
@@ -483,7 +497,7 @@ export class DataBucket {
     this._applyVoxelMapInPlace(
       data,
       voxelMap,
-      cellId,
+      segmentId,
       get3DAddress,
       sliceCount,
       thirdDimensionIndex,
@@ -495,7 +509,7 @@ export class DataBucket {
   _applyVoxelMapInPlace(
     data: BucketDataArray,
     voxelMap: Uint8Array,
-    cellId: number,
+    uncastSegmentId: number,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
     sliceCount: number,
     thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
@@ -504,6 +518,8 @@ export class DataBucket {
     overwritableValue: number = 0,
   ) {
     const out = new Float32Array(3);
+
+    const segmentId = castForArrayType(uncastSegmentId, data);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
@@ -514,10 +530,10 @@ export class DataBucket {
             (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
           // The voxelToLabel is already within the bucket and in the correct resolution.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
-          const currentSegmentId = data[voxelAddress];
+          const currentSegmentId = Number(data[voxelAddress]);
 
           if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
-            data[voxelAddress] = cellId;
+            data[voxelAddress] = segmentId;
           }
         }
       }

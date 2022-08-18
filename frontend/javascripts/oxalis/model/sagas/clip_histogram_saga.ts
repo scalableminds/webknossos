@@ -37,8 +37,13 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
   const dataForAllViewPorts = new TypedArrayClass(
     cuboidXY.length + cuboidXZ.length + cuboidYZ.length,
   );
+
+  // If getViewportData returned a BigUint array, dataForAllViewPorts will be an BigUint array, too.
+  // @ts-ignore
   dataForAllViewPorts.set(cuboidXY);
+  // @ts-ignore
   dataForAllViewPorts.set(cuboidXZ, cuboidXY.length);
+  // @ts-ignore
   dataForAllViewPorts.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
   const localHist = new Map();
   for (let i = 0; i < dataForAllViewPorts.length; i++) {
@@ -93,6 +98,12 @@ async function clipHistogram(action: ClipHistogramAction) {
     Toast.warning(
       "The histogram could not be clipped, because the data did not contain any brightness values greater than 0.",
     );
+
+    // this is required to correctly reset the state of the AsyncButton initiating this action
+    if (action.callback != null) {
+      action.callback();
+    }
+
     return;
   }
 

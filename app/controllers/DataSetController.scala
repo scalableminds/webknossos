@@ -2,10 +2,12 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, GenericDataSource}
 import io.swagger.annotations._
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
@@ -74,7 +76,7 @@ class DataSetController @Inject()(userService: UserService,
                 w: Option[Int],
                 h: Option[Int]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
+      def imageFromCacheIfPossible(dataSet: DataSet, dataSource: GenericDataSource[DataLayerLike]): Fox[Array[Byte]] = {
         val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
         val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
         dataSetService.thumbnailCache.find(
@@ -82,9 +84,11 @@ class DataSetController @Inject()(userService: UserService,
           case Some(a) =>
             Fox.successful(a)
           case _ =>
-            val defaultCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
+            val configuredCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
               c.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Vec3Int])))
-            val defaultZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
+            val centerOpt = configuredCenterOpt.orElse(
+              BoundingBox.intersection(dataSource.dataLayers.map(_.boundingBox)).map(_.center))
+            val configuredZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
               c.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
             dataSetService
               .clientFor(dataSet)(GlobalAccessContext)
@@ -93,8 +97,8 @@ class DataSetController @Inject()(userService: UserService,
                                             dataLayerName,
                                             width,
                                             height,
-                                            defaultZoomOpt,
-                                            defaultCenterOpt))
+                                            configuredZoomOpt,
+                                            centerOpt))
               .map { result =>
                 // We don't want all images to expire at the same time. Therefore, we add some random variation
                 dataSetService.thumbnailCache.insert(
@@ -110,10 +114,12 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages(
+        dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound" ~> NOT_FOUND
+        usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+        _ <- bool2Fox(usableDataSource.dataLayers.exists(_.name == dataLayerName)) ?~> Messages(
           "dataLayer.notFound",
           dataLayerName) ~> NOT_FOUND
-        image <- imageFromCacheIfPossible(dataSet)
+        image <- imageFromCacheIfPossible(dataSet, usableDataSource)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }
@@ -124,30 +130,22 @@ class DataSetController @Inject()(userService: UserService,
     Array(new ApiResponse(code = 200, message = "JSON list containing one object per resulting dataset."),
           new ApiResponse(code = 400, message = badRequestLabel)))
   def list(
-      @ApiParam(value = "Optional filtering: If true, list only active datasets, if false, list only inactive datasets",
-                defaultValue = "None")
+      @ApiParam(value = "Optional filtering: If true, list only active datasets, if false, list only inactive datasets")
       isActive: Option[Boolean],
       @ApiParam(
         value =
-          "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets",
-        defaultValue = "None"
-      )
+          "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets")
       isUnreported: Option[Boolean],
       @ApiParam(
         value =
-          "Optional filtering: If true, list only datasets the requesting user is allowed to edit, if false, list only datasets the requesting user is not allowed to edit",
-        defaultValue = "None"
-      )
+          "Optional filtering: If true, list only datasets the requesting user is allowed to edit, if false, list only datasets the requesting user is not allowed to edit")
       isEditable: Option[Boolean],
       @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name",
-                defaultValue = "None",
                 example = "sample_organization")
       organizationName: Option[String],
-      @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization",
-                defaultValue = "None")
+      @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization")
       onlyMyOrganization: Option[Boolean],
-      @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id",
-                defaultValue = "None")
+      @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id")
       uploaderId: Option[String]
   ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     UsingFilters(

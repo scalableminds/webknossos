@@ -46,7 +46,9 @@ function BorderToggleButton(props: Props) {
         onClick={(event) => {
           if (event != null) {
             // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
-            event.target.blur();
+            event.target.blur(); // this will only blur the the wrapped icon <div> element
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'EventTarge... Remove this comment to see the full error message
+            event.target.parentElement.blur(); // this will only blur the <button> element
           }
 
           onClick();

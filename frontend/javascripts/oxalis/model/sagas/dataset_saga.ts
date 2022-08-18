@@ -6,6 +6,7 @@ import { getEnabledLayers } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import messages from "messages";
 import { getCurrentResolution } from "../accessors/flycam_accessor";
+import { OrthoViews } from "oxalis/constants";
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
     const maximumLayerCountToRender = yield* select(
@@ -50,9 +51,13 @@ export function* watchZ1Downsampling(): Saga<void> {
     const minVoxelPerPixel = 0.1;
     if (!userClosedWarning) {
       // checking only the downsampled dimensions x and y
+      const is3DViewportFullscreen = yield* select(
+        (state) => state.viewModeData.plane.activeViewport == OrthoViews.TDView,
+      );
       const showWarning =
-        currentZoomStep / currentRes[0] < minVoxelPerPixel ||
-        currentZoomStep / currentRes[1] < minVoxelPerPixel;
+        (currentZoomStep / currentRes[0] < minVoxelPerPixel ||
+          currentZoomStep / currentRes[1] < minVoxelPerPixel) &&
+        !is3DViewportFullscreen;
       if (showWarning) {
         Toast.warning(messages["dataset.z1_downsampling_hint"], {
           sticky: true,

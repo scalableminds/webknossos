@@ -7,6 +7,7 @@ import { createUpdatableTexture } from "oxalis/geometries/materials/plane_materi
 const ELEMENTS_PER_ENTRY = 4;
 const TEXTURE_CHANNEL_COUNT = 4;
 const DEFAULT_LOAD_FACTOR = 0.25;
+const EMPTY_KEY = 2 ** 32 - 1;
 
 type Entry = [number, Vector3];
 
@@ -27,9 +28,11 @@ export class CuckooTable {
     this._texture = createUpdatableTexture(
       textureWidth,
       TEXTURE_CHANNEL_COUNT,
-      THREE.FloatType,
+      THREE.UnsignedIntType,
       getRenderer(),
+      THREE.RGBAIntegerFormat,
     );
+    this._texture.internalFormat = "RGBA32UI";
     this.entryCapacity = Math.floor(
       (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY,
     );
@@ -46,10 +49,12 @@ export class CuckooTable {
   }
 
   private initialize() {
-    this.table = new Uint32Array(ELEMENTS_PER_ENTRY * this.entryCapacity).fill(-1);
+    this.table = new Uint32Array(ELEMENTS_PER_ENTRY * this.entryCapacity).fill(EMPTY_KEY);
 
     // The chance of colliding seeds is super low which is why
     // we ignore this case (a rehash would happen automatically, anyway).
+    // Note that it makes sense to use all 32 bits for the seeds. Otherwise,
+    // hash collisions are more likely to happen.
     this.seeds = [
       Math.floor(2 ** 32 * Math.random()),
       Math.floor(2 ** 32 * Math.random()),
@@ -72,10 +77,13 @@ export class CuckooTable {
   }
 
   clearAll() {
-    this.table.fill(-1);
+    this.table.fill(EMPTY_KEY);
+    this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
   }
 
   set(pendingKey: number, pendingValue: Vector3, rehashAttempt: number = 0) {
+    this.clearAll();
+    return;
     // todo: check that repeated sets to same key work
 
     if (rehashAttempt === 0) {
@@ -124,7 +132,13 @@ export class CuckooTable {
 
     // Since a rehash was performed, the incremental texture updates were
     // skipped. Update the entire texture:
-    this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
+    this._texture.update(
+      new Uint8Array(this.table.buffer),
+      0,
+      0,
+      this.textureWidth,
+      this.textureWidth,
+    );
   }
 
   private rehash(rehashAttempt: number): void {
@@ -138,7 +152,7 @@ export class CuckooTable {
       offset < this.entryCapacity * ELEMENTS_PER_ENTRY;
       offset += ELEMENTS_PER_ENTRY
     ) {
-      if (oldTable[offset] === -1) {
+      if (oldTable[offset] === EMPTY_KEY) {
         continue;
       }
       const key: number = oldTable[offset + 0];
@@ -178,7 +192,7 @@ export class CuckooTable {
     return (
       // Either, the slot is empty...
       // -1 is not allowed as a key
-      displacedKey === -1 ||
+      displacedKey === EMPTY_KEY ||
       // or the slot already refers to the key
       displacedKey === newKey
     );
@@ -191,9 +205,12 @@ export class CuckooTable {
 
   getValueAtAddress(key: number, hashedAddress: number): Vector3 | null {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
+    // console.log("read value at offset=", offset);
     if (this.doesAddressContainKey(key, hashedAddress)) {
+      // console.log("found", this.table.slice(offset + 1, offset + 4));
       return [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]];
     } else {
+      // console.log("not found. entry=", this.table.slice(offset, offset + 4));
       return null;
     }
   }
@@ -212,7 +229,17 @@ export class CuckooTable {
       [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]],
     ];
 
-    // console.log("writing key=", key, "value=", value, "to", offset);
+    // console.log(
+    //   "writing key=",
+    //   key,
+    //   "value=",
+    //   value,
+    //   "to offset=",
+    //   offset,
+    //   "(displaced: ",
+    //   displacedEntry,
+    //   ")",
+    // );
 
     this.table[offset] = key;
     this.table[offset + 1] = value[0];
@@ -222,13 +249,14 @@ export class CuckooTable {
     if (!isRehashing) {
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
-      this._texture.update(
-        this.table.slice(offset, offset + ELEMENTS_PER_ENTRY),
-        texelOffset % this.textureWidth,
-        Math.floor(texelOffset / this.textureWidth),
-        1,
-        1,
-      );
+      // this._texture.update(
+      //   // todo: perf?
+      //   new Uint8Array(this.table.slice(offset, offset + ELEMENTS_PER_ENTRY)),
+      //   texelOffset % this.textureWidth,
+      //   Math.floor(texelOffset / this.textureWidth),
+      //   1,
+      //   1,
+      // );
     }
 
     return displacedEntry;

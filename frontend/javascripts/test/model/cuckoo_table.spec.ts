@@ -108,20 +108,24 @@ test.serial("CuckooTable", (t) => {
   for (const entry of entries) {
     // console.log(`! write n=${n}   entry=${entry}`);
 
+    // console.log(`\nset ${n}-th item`);
     ct.set(entry[0], entry[1]);
     const readValue = ct.get(entry[0]);
+
+    // console.log("  isValueEqual");
     isValueEqual(t, entry[1], readValue);
-    // if (entry[1][0] != readValue[0]) {
-    //   console.log("key:", entry[0]);
-    //   console.log("value:", entry[1]);
-    //   console.log("retrieved value: ", ct.get(entry[0]));
-    //   throw new Error("failed");
-    // }
+    if (entry[1][0] != readValue[0]) {
+      // console.log("key:", entry[0]);
+      // console.log("value:", entry[1]);
+      // console.log("retrieved value: ", ct.get(entry[0]));
+      throw new Error("failed");
+    }
     let nn = 0;
     for (const innerEntry of entries) {
       if (nn > n) {
         break;
       }
+      // console.log("  isValueEqual");
       isValueEqual(t, innerEntry[1], ct.get(innerEntry[0]));
       // if (innerEntry[1] != ct.get(innerEntry[0])) {
       //   console.log(`? nn=${nn}  expected=${innerEntry}    retrieved=${ct.get(innerEntry[0])}`);

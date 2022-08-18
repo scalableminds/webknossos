@@ -53,7 +53,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% }) %>
 
 <% if (hasSegmentation) { %>
-  uniform sampler2D custom_color_texture;
+  uniform highp usampler2D custom_color_texture;
   uniform vec4 activeCellIdHigh;
   uniform vec4 activeCellIdLow;
   uniform bool isMouseInActiveViewport;

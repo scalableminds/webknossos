@@ -40,14 +40,18 @@ export const convertCellIdToRGB: ShaderModule = {
       highp uint x = h0 % TWIDTH;
       highp uint y = h0 / TWIDTH;
 
-      vec4 customEntry = texelFetch(custom_color_texture, ivec2(x, y), 0);
-      vec3 customColor = customEntry.gba;
+      uvec4 customEntry = texelFetch(custom_color_texture, ivec2(x, y), 0);
+      uvec3 customColor = customEntry.gba;
 
-      if (customEntry.r != float(integerValue)) {
+      if (customEntry.r == 255u) {
+         return vec3(0., 10., 0.);
+      }
+
+      if (customEntry.r != uint(integerValue)) {
          return vec3(-1);
       }
 
-      return customEntry.gba;
+      return vec3(customEntry.gba);
     }
 
 

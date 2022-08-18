@@ -12,9 +12,23 @@ export default {
   },
 };
 
+// let isAceInitialized = false;
+// function loadAce() {
+//   if (isAceInitialized) {
+//     return;
+//   }
+//   isAceInitialized = true;
+//   const aceScript = document.createElement("script");
+//   aceScript.setAttribute("src", "https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/ace.js");
+//   document.head.appendChild(aceScript);
+// }
+
 window._setupShaderEditor = (identifier, _shaderType) => {
+  // loadAce();
+
   const outer = document.createElement("div");
   const input = document.createElement("textarea");
+  input.id = "editor";
   const shaderType = _shaderType || "fragmentShader";
   input.value = window.materials[identifier][shaderType];
   const button = document.createElement("button");
@@ -57,4 +71,10 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   );
   outer.appendChild(input);
   document.body.appendChild(outer);
+
+  // setTimeout(() => {
+  //   var editor = ace.edit("editor");
+  //   editor.setTheme("ace/theme/monokai");
+  //   editor.session.setMode("ace/mode/javascript");
+  // }, 1000);
 };

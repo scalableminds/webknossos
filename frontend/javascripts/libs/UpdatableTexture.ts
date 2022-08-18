@@ -9,22 +9,38 @@ const lazyGetCanvas = _.memoize(() => {
   return canvas;
 });
 
-const getImageData = _.memoize((width: number, height: number): ImageData => {
-  const canvas = lazyGetCanvas();
-  const ctx = canvas.getContext("2d");
-  if (ctx == null) {
-    throw new Error("Could not get context for texture.");
-  }
-  const imageData = ctx.createImageData(width, height);
+const getImageData = _.memoize(
+  (width: number, height: number, isInt: boolean): ImageData => {
+    const canvas = lazyGetCanvas();
+    const ctx = canvas.getContext("2d");
+    if (ctx == null) {
+      throw new Error("Could not get context for texture.");
+    }
 
-  // Explicitly "release" canvas. Necessary for iOS.
-  // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
-  canvas.width = 1;
-  canvas.height = 1;
-  ctx.clearRect(0, 0, 1, 1);
+    // if (isInt) {
+    //   // todo: needed?
+    //   width *= 4;
+    //   height *= 4;
+    // }
+    //
 
-  return imageData;
-});
+    if (isInt) {
+      console.log("using uint32");
+      return new Uint32Array(width * height);
+    }
+
+    const imageData = ctx.createImageData(width, height);
+
+    // Explicitly "release" canvas. Necessary for iOS.
+    // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
+    canvas.width = 1;
+    canvas.height = 1;
+    ctx.clearRect(0, 0, 1, 1);
+
+    return imageData;
+  },
+  (width: number, height: number, isInt: boolean) => `${width}_${height}_${isInt}`,
+);
 
 class UpdatableTexture extends THREE.Texture {
   isUpdatableTexture: boolean;
@@ -47,7 +63,7 @@ class UpdatableTexture extends THREE.Texture {
     anisotropy?: number,
     encoding?: THREE.TextureEncoding,
   ) {
-    const imageData = getImageData(width, height);
+    let imageData = getImageData(width, height, type === THREE.UnsignedIntType);
 
     super(
       // @ts-ignore
@@ -110,7 +126,13 @@ class UpdatableTexture extends THREE.Texture {
     return this.renderer.properties.get(this).__webglTexture != null;
   }
 
-  update(src: Float32Array | Uint8Array, x: number, y: number, width: number, height: number) {
+  update(
+    src: Float32Array | Uint8Array | Uint32Array,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) {
     if (!this.isInitialized()) {
       this.renderer.initTexture(this);
     }

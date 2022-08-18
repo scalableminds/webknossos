@@ -4,11 +4,9 @@ import com.google.common.io.BaseEncoding
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.schema.Tables._
 
 import javax.inject.Inject
-import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._

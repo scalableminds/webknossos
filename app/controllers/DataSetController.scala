@@ -93,7 +93,12 @@ class DataSetController @Inject()(userService: UserService,
             dataSetService
               .clientFor(dataSet)(GlobalAccessContext)
               .flatMap(
-                _.requestDataLayerThumbnail(organizationName, dataLayerName, width, height, configuredZoomOpt, centerOpt))
+                _.requestDataLayerThumbnail(organizationName,
+                                            dataLayerName,
+                                            width,
+                                            height,
+                                            configuredZoomOpt,
+                                            centerOpt))
               .map { result =>
                 // We don't want all images to expire at the same time. Therefore, we add some random variation
                 dataSetService.thumbnailCache.insert(

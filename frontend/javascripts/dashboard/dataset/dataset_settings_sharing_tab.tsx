@@ -7,7 +7,6 @@ import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import features from "features";
 import window from "libs/window";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
@@ -80,11 +79,6 @@ function DatasetSettingsSharingTab({
     setSharingToken(newSharingToken);
   }
 
-  async function handleCopyAllowUsageCode(): Promise<void> {
-    await navigator.clipboard.writeText(getAllowUsageCode());
-    Toast.success("Code copied to clipboard");
-  }
-
   function getSharingLink() {
     if (!form) return undefined;
 
@@ -93,14 +87,6 @@ function DatasetSettingsSharingTab({
     return `${window.location.origin}/datasets/${datasetId.owningOrganization}/${
       datasetId.name
     }/view${doesNeedToken ? tokenSuffix : ""}`;
-  }
-
-  function getAllowUsageCode() {
-    if (dataset != null) {
-      const dataStoreName = dataset.dataStore.name;
-      const dataStoreURL = dataset.dataStore.url;
-      return `${dataStoreName}, ${dataStoreURL}, ${datasetId.name}`;
-    } else return "";
   }
 
   function getUserAccessList() {
@@ -186,33 +172,6 @@ function DatasetSettingsSharingTab({
           )}
         </Input.Group>
       </FormItemWithInfo>
-      {form.getFieldValue("dataset.isPublic") && features().addForeignDataset && (
-        <FormItemWithInfo
-          label="Code for adding this dataset to other webKnossos instances"
-          info="Give this code to users with other webKnossos instances in order to add this dataset."
-        >
-          <Input.Group compact>
-            <Input
-              value={getAllowUsageCode()}
-              onClick={handleSelectCode}
-              style={{
-                width: "80%",
-              }}
-              readOnly
-            />
-            <Button
-              onClick={handleCopyAllowUsageCode}
-              style={{
-                width: "10%",
-              }}
-              icon={<CopyOutlined />}
-            >
-              Copy
-            </Button>
-          </Input.Group>
-        </FormItemWithInfo>
-      )}
-
       {getUserAccessList()}
     </div>
   ) : null;

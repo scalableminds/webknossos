@@ -11,7 +11,27 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
       math.max(topLeft.y, other.topLeft.y) < math.min(bottomRight.y, other.bottomRight.y) &&
       math.max(topLeft.z, other.topLeft.z) < math.min(bottomRight.z, other.bottomRight.z)
 
-  def combineWith(other: BoundingBox): BoundingBox = {
+  def intersection(other: BoundingBox): Option[BoundingBox] = {
+    val newTopLeft = Vec3Int(
+      math.max(topLeft.x, other.topLeft.x),
+      math.max(topLeft.y, other.topLeft.y),
+      math.max(topLeft.z, other.topLeft.z)
+    )
+    val newBottomRight = Vec3Int(
+      math.min(bottomRight.x, other.bottomRight.x),
+      math.min(bottomRight.y, other.bottomRight.y),
+      math.min(bottomRight.z, other.bottomRight.z)
+    )
+    if (newTopLeft.x < newBottomRight.x && newTopLeft.y < newBottomRight.y && newTopLeft.z < newBottomRight.z) {
+      Some(
+        BoundingBox(newTopLeft,
+                    newBottomRight.x - newTopLeft.x,
+                    newBottomRight.y - newTopLeft.y,
+                    newBottomRight.z - newTopLeft.z))
+    } else None
+  }
+
+  def union(other: BoundingBox): BoundingBox = {
     val x = math.min(other.topLeft.x, topLeft.x)
     val y = math.min(other.topLeft.y, topLeft.y)
     val z = math.min(other.topLeft.z, topLeft.z)
@@ -32,7 +52,7 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def scale(s: Float): BoundingBox =
     BoundingBox(topLeft.scale(s), (width * s).toInt, (height * s).toInt, (depth * s).toInt)
 
-  def toSql =
+  def toSql: List[Int] =
     List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)
 
   def volume: Long =
@@ -77,12 +97,22 @@ object BoundingBox {
     else
       None
 
-  def combine(bbs: List[BoundingBox]): BoundingBox =
+  def union(bbs: List[BoundingBox]): BoundingBox =
     bbs match {
       case head :: tail =>
-        tail.foldLeft(head)(_ combineWith _)
+        tail.foldLeft(head)(_ union _)
       case _ =>
         BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
+    }
+
+  def intersection(bbs: List[BoundingBox]): Option[BoundingBox] =
+    bbs match {
+      case head :: tail =>
+        tail.foldLeft[Option[BoundingBox]](Some(head)) { (aOpt, b) =>
+          aOpt.flatMap(_ intersection b)
+        }
+      case _ =>
+        None
     }
 
   implicit val jsonFormat: OFormat[BoundingBox] = Json.format[BoundingBox]

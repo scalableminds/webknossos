@@ -38,7 +38,7 @@ package object datasource {
     val center: Vec3Int = boundingBox.center
 
     lazy val boundingBox: BoundingBox =
-      BoundingBox.combine(dataLayers.map(_.boundingBox))
+      BoundingBox.union(dataLayers.map(_.boundingBox))
   }
 
   object GenericDataSource {

@@ -2,10 +2,12 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, GenericDataSource}
 import io.swagger.annotations._
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
@@ -74,7 +76,7 @@ class DataSetController @Inject()(userService: UserService,
                 w: Option[Int],
                 h: Option[Int]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
+      def imageFromCacheIfPossible(dataSet: DataSet, dataSource: GenericDataSource[DataLayerLike]): Fox[Array[Byte]] = {
         val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
         val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
         dataSetService.thumbnailCache.find(
@@ -82,9 +84,11 @@ class DataSetController @Inject()(userService: UserService,
           case Some(a) =>
             Fox.successful(a)
           case _ =>
-            val defaultCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
+            val configuredCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
               c.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Vec3Int])))
-            val defaultZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
+            val centerOpt = configuredCenterOpt.orElse(
+              BoundingBox.intersection(dataSource.dataLayers.map(_.boundingBox)).map(_.center))
+            val configuredZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
               c.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
             dataSetService
               .clientFor(dataSet)(GlobalAccessContext)
@@ -93,8 +97,8 @@ class DataSetController @Inject()(userService: UserService,
                                             dataLayerName,
                                             width,
                                             height,
-                                            defaultZoomOpt,
-                                            defaultCenterOpt))
+                                            configuredZoomOpt,
+                                            centerOpt))
               .map { result =>
                 // We don't want all images to expire at the same time. Therefore, we add some random variation
                 dataSetService.thumbnailCache.insert(
@@ -110,10 +114,12 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages(
+        dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound" ~> NOT_FOUND
+        usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+        _ <- bool2Fox(usableDataSource.dataLayers.exists(_.name == dataLayerName)) ?~> Messages(
           "dataLayer.notFound",
           dataLayerName) ~> NOT_FOUND
-        image <- imageFromCacheIfPossible(dataSet)
+        image <- imageFromCacheIfPossible(dataSet, usableDataSource)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }

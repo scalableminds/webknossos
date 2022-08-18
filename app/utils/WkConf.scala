@@ -174,6 +174,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object Voxelytics {
     val enabled: Boolean = get[Boolean]("voxelytics.enabled")
+    val staleTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.staleTimeout")
 
     object Elasticsearch {
       val host: String = get[String]("voxelytics.elasticsearch.host")

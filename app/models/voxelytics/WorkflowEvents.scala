@@ -5,7 +5,6 @@ import play.api.libs.json._
 
 import java.time.Instant
 
-
 trait WorkflowEvent {}
 
 case class RunStateChangeEvent(state: RunState, timestamp: Instant) extends WorkflowEvent
@@ -13,15 +12,15 @@ case class RunStateChangeEvent(state: RunState, timestamp: Instant) extends Work
 case class TaskStateChangeEvent(taskName: String,
                                 state: RunState,
                                 timestamp: Instant,
-                                artifacts: Map[String, VoxelyticsWorkflowDescriptionArtifact])
-  extends WorkflowEvent
+                                artifacts: Map[String, WorkflowDescriptionArtifact])
+    extends WorkflowEvent
 
 case class ChunkStateChangeEvent(taskName: String,
                                  executionId: String,
                                  chunkName: String,
                                  timestamp: Instant,
                                  state: RunState)
-  extends WorkflowEvent
+    extends WorkflowEvent
 
 case class RunHeartbeatEvent(timestamp: Instant) extends WorkflowEvent
 
@@ -34,7 +33,7 @@ case class ChunkProfilingEvent(taskName: String,
                                cpuUser: Double,
                                cpuSystem: Double,
                                timestamp: Instant)
-  extends WorkflowEvent
+    extends WorkflowEvent
 
 case class ArtifactFileChecksumEvent(taskName: String,
                                      artifactName: String,
@@ -43,9 +42,9 @@ case class ArtifactFileChecksumEvent(taskName: String,
                                      checksumMethod: String,
                                      checksum: String,
                                      fileSize: Long,
-                                     lastModified: Long,
+                                     lastModified: Instant,
                                      timestamp: Instant)
-  extends WorkflowEvent
+    extends WorkflowEvent
 
 object RunStateChangeEvent {
   implicit val jsonFormat: OFormat[RunStateChangeEvent] = Json.format[RunStateChangeEvent]
@@ -75,11 +74,11 @@ object WorkflowEvent {
   implicit object workflowEventFormat extends Format[WorkflowEvent] {
     override def reads(json: JsValue): JsResult[WorkflowEvent] =
       (json \ "type").as[String] match {
-        case "RUN_STATE_CHANGE" => json.validate[RunStateChangeEvent]
-        case "TASK_STATE_CHANGE" => json.validate[TaskStateChangeEvent]
-        case "CHUNK_STATE_CHANGE" => json.validate[ChunkStateChangeEvent]
-        case "RUN_HEARTBEAT" => json.validate[RunHeartbeatEvent]
-        case "CHUNK_PROFILING" => json.validate[ChunkProfilingEvent]
+        case "RUN_STATE_CHANGE"       => json.validate[RunStateChangeEvent]
+        case "TASK_STATE_CHANGE"      => json.validate[TaskStateChangeEvent]
+        case "CHUNK_STATE_CHANGE"     => json.validate[ChunkStateChangeEvent]
+        case "RUN_HEARTBEAT"          => json.validate[RunHeartbeatEvent]
+        case "CHUNK_PROFILING"        => json.validate[ChunkProfilingEvent]
         case "ARTIFACT_FILE_CHECKSUM" => json.validate[ArtifactFileChecksumEvent]
       }
 

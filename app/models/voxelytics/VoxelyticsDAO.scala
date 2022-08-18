@@ -1,16 +1,253 @@
 package models.voxelytics
 
 import com.scalableminds.util.tools.Fox
-import controllers.{ArtifactChecksumEntry, ChunkStatisticsEntry}
-import play.api.libs.json.JsValue
+import controllers._
+import play.api.libs.json._
+import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLClient, SimpleSQLDAO}
 
-import java.sql.Timestamp
 import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 
 class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+  private def writeSafeTuple(seq: List[String]) =
+    sql"(" + seq.map(s => sql"${s}").mkString(", ") + sql")"
+  def selectArtifacts(taskIds: List[ObjectId]): Fox[List[ArtifactEntry]] =
+    for {
+      r <- run(sql"""
+          SELECT
+            a._id,
+            a._task,
+            a.name,
+            a.path,
+            a.fileSize,
+            a.inodeCount,
+            a.version,
+            a.metadata,
+            t.name AS taskName
+          FROM webknossos.voxelytics_artifacts a
+          JOIN webknossos.voxelytics_tasks t ON t._id = a._task
+          WHERE t."_id" IN #${writeSafeTuple(taskIds.map(_.id))}
+          ;""".as[(String, String, String, String, Long, Long, String, String, String)])
+    } yield
+      r.toList.map(
+        row =>
+          ArtifactEntry(ObjectId(row._1),
+                        ObjectId(row._2),
+                        row._3,
+                        row._4,
+                        row._5,
+                        row._6,
+                        row._7,
+                        Json.parse(row._8).as[JsObject],
+                        row._9))
+
+  def selectTasks(combinedTaskRuns: List[TaskRunEntry]): Fox[List[TaskEntry]] =
+    for {
+      r <- run(sql"""
+          SELECT
+            t._id,
+            t._run,
+            t.name,
+            t.task,
+            t.config
+          FROM webknossos.voxelytics_tasks t
+          WHERE
+              ("_run", "name") IN (#${combinedTaskRuns.map(t => sql"(${t.runId.id}, ${t.taskName})").mkString(", ")})
+          ;""".as[(String, String, String, String, String)])
+    } yield
+      r.toList.map(row =>
+        TaskEntry(ObjectId(row._1), ObjectId(row._2), row._3, row._4, Json.parse(row._5).as[JsObject]))
+
+  def findWorkflowsByHash(organizationId: ObjectId, workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
+    for {
+      r <- run(sql"""
+          SELECT name, hash
+          FROM voxelytics_workflows
+          WHERE hash IN ${writeSafeTuple(workflowHashes.toList)} AND _organization = ${organizationId.id}
+          ;""".as[(String, String)])
+    } yield r.toList.map(row => WorkflowEntry(row._1, row._2))
+
+  def findWorkflowByHash(organizationId: ObjectId, workflowHash: String): Fox[WorkflowEntry] =
+    for {
+      r <- run(sql"""
+          SELECT name, hash
+          FROM voxelytics_workflows
+          WHERE hash = $workflowHash AND _organization = ${organizationId.id}
+          ;""".as[(String, String)])
+    } yield WorkflowEntry(r.head._1, r.head._2)
+
+  def selectTaskRuns(organizationId: ObjectId,
+                     runIds: List[ObjectId],
+                     staleTimeout: Duration): Fox[List[TaskRunEntry]] =
+    for {
+      r <- run(sql"""
+        WITH latest_chunk_states AS (
+          SELECT DISTINCT ON ("_chunk") "_chunk", "timestamp", "state"
+          FROM "webknossos"."voxelytics_chunk_state_change_events"
+          ORDER BY "_chunk", "timestamp" DESC
+        )
+        SELECT
+          r."name" AS "runName",
+          r."_id" AS "runId",
+          t."_id" AS "taskId",
+          t."name" AS "taskName",
+          CASE
+            WHEN task_state."state" = 'RUNNING' AND run_heartbeat."timestamp" IS NOT NULL AND run_heartbeat."timestamp" < NOW() - INTERVAL '${staleTimeout.toSeconds} SECONDS'
+            THEN 'STALE' ELSE task_state."state" END AS "state",
+          task_begin."timestamp" AS "beginTime",
+          CASE
+            WHEN task_state."state" = 'RUNNING' AND run_heartbeat."timestamp" IS NOT NULL AND run_heartbeat."timestamp" < NOW() - INTERVAL '${staleTimeout.toSeconds} SECONDS'
+            THEN run_heartbeat."timestamp" ELSE task_end."timestamp" END AS "endTime",
+          exec."executionId" AS "currentExecutionId",
+          COALESCE(chunks."total", 0) AS "chunksTotal",
+          COALESCE(chunks."finished", 0) AS "chunksFinished"
+        FROM "webknossos"."voxelytics_runs" r
+        JOIN "webknossos"."voxelytics_tasks" t ON t."_run" = r."_id"
+        JOIN (
+          SELECT DISTINCT ON ("_task") "_task", "state"
+          FROM "webknossos"."voxelytics_task_state_change_events"
+          ORDER BY "_task", "timestamp" DESC
+        ) task_state
+          ON t."_id" = task_state."_task"
+        LEFT JOIN (
+          SELECT DISTINCT ON ("_task") "_task", "timestamp"
+          FROM "webknossos"."voxelytics_task_state_change_events"
+          WHERE "state" = 'RUNNING'
+          ORDER BY "_task", timestamp
+        ) task_begin
+          ON t."_id" = task_begin."_task"
+        LEFT JOIN (
+          SELECT DISTINCT ON ("_task") "_task", "timestamp"
+          FROM "webknossos"."voxelytics_task_state_change_events"
+          WHERE "state" IN ('COMPLETE', 'FAILED', 'CANCELLED')
+          ORDER BY "_task", "timestamp" DESC
+        ) task_end
+          ON t."_id" = task_end."_task"
+        LEFT JOIN (
+          SELECT "_run", "timestamp"
+          FROM "webknossos"."voxelytics_run_heartbeat_events"
+        ) run_heartbeat
+          ON r."_id" = run_heartbeat."_run"
+        LEFT JOIN (
+          SELECT DISTINCT ON (c."_task") c."_task", c."executionId"
+          FROM latest_chunk_states
+          JOIN "webknossos"."voxelytics_chunks" c ON c."_id" = latest_chunk_states."_chunk"
+          WHERE latest_chunk_states."state" = 'RUNNING'
+          ORDER BY c."_task", latest_chunk_states."timestamp" DESC
+        ) exec ON exec."_task" = t."_id"
+        LEFT JOIN (
+          SELECT
+            count_all."_task" AS "_task",
+            count_all."count" AS "total",
+            COALESCE(count_finished."count", 0) AS "finished"
+          FROM (
+            SELECT "_task", COUNT("_id") AS "count"
+            FROM "webknossos"."voxelytics_chunks"
+            GROUP BY "_task"
+          ) count_all
+          LEFT JOIN (
+            SELECT c."_task", COUNT("_id") AS "count"
+              FROM latest_chunk_states
+              JOIN "webknossos"."voxelytics_chunks" c ON c."_id" = latest_chunk_states."_chunk"
+              WHERE latest_chunk_states."state" IN ('COMPLETE', 'FAILED', 'CANCELLED')
+            GROUP BY c."_task"
+          ) count_finished ON count_finished."_task" = count_all."_task"
+        ) chunks ON chunks."_task" = t."_id"
+        WHERE
+          r."_organization" = ${organizationId.id} AND
+          r."_id" IN ${writeSafeTuple(runIds.map(_.id))}
+        ;""".as[(String, String, String, String, String, Option[Instant], Option[Instant], Option[String], Long, Long)])
+    } yield
+      r.toList.map(
+        row =>
+          TaskRunEntry(
+            row._1,
+            ObjectId(row._2),
+            ObjectId(row._3),
+            row._4,
+            RunState.fromString(row._5).get,
+            row._6,
+            row._7,
+            row._8,
+            row._9,
+            row._10
+        ))
+
+  def selectRuns(organizationId: ObjectId,
+                 runIds: Option[List[ObjectId]],
+                 workflowHash: Option[String],
+                 staleTimeout: Duration): Fox[List[RunEntry]] = {
+    val runIdsQ = runIds.map(runIds => sql" AND r._id IN #${writeSafeTuple(runIds.map(_.id))}").getOrElse(sql"")
+    val workflowHashQ =
+      workflowHash.map(workflowHash => sql" AND r.workflow_hash = ${workflowHash}").getOrElse(sql"")
+    for {
+      r <- run(sql"""
+        SELECT
+          r._id,
+          r.name,
+          r.username,
+          r.hostname,
+          r.voxelyticsVersion,
+          r.workflow_hash,
+          r.workflow_yamlContent,
+          r.workflow_config
+          CASE
+            WHEN run_state.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - INTERVAL '${staleTimeout.toSeconds} SECONDS'
+            THEN 'STALE' ELSE run_state.state END AS state,
+          run_begin.timestamp AS beginTime,
+          CASE
+            WHEN run_state.state = 'RUNNING' AND run_heartbeat.timestamp IS NOT NULL AND run_heartbeat.timestamp < NOW() - INTERVAL '${staleTimeout.toSeconds} SECONDS'
+            THEN run_heartbeat.timestamp ELSE run_end.timestamp END AS endTime
+        FROM webknossos.voxelytics_runs r
+        JOIN (
+          SELECT DISTINCT ON (_run) _run, state
+          FROM webknossos.voxelytics_run_state_change_events
+          ORDER BY _run, timestamp DESC
+        ) run_state
+          ON r._id = run_state._run
+        JOIN (
+          SELECT DISTINCT ON (_run) _run, timestamp
+          FROM webknossos.voxelytics_run_state_change_events
+          WHERE state = 'RUNNING'
+          ORDER BY _run, timestamp
+        ) run_begin
+          ON r._id = run_begin._run
+        LEFT JOIN (
+          SELECT DISTINCT ON (_run) _run, timestamp
+          FROM webknossos.voxelytics_run_state_change_events
+          WHERE state IN ('COMPLETE', 'FAILED', 'CANCELLED')
+          ORDER BY _run, timestamp DESC
+        ) run_end
+          ON r._id = run_end._run
+        LEFT JOIN (
+          SELECT _run, timestamp
+          FROM webknossos.voxelytics_run_heartbeat_events
+        ) run_heartbeat
+          ON r._id = run_heartbeat._run
+        WHERE r._organization = ${organizationId.id}
+          #$runIdsQ
+          #$workflowHashQ
+        ;""".as[(String, String, String, String, String, String, String, String, String, Instant, Option[Instant])])
+    } yield
+      r.toList.map(
+        row =>
+          RunEntry(
+            ObjectId(row._1),
+            row._2,
+            row._3,
+            row._4,
+            row._5,
+            row._6,
+            row._7,
+            Json.parse(row._8).as[JsObject],
+            RunState.fromString(row._9).get,
+            row._10,
+            row._11
+        ))
+  }
 
   def upsertArtifactChecksumEvent(artifactId: ObjectId, ev: ArtifactFileChecksumEvent): Fox[Unit] =
     for {
@@ -102,7 +339,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       _ <- run(
         sqlu"""INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflow_hash, workflow_yamlContent, workflow_config)
-                VALUES (${ObjectId.generate}, ${organizationId.id}, ${userId.id}, $name, $username, $hostname, $voxelyticsVersion, $workflow_hash, $workflow_yamlContent, $workflow_config)
+                VALUES (${ObjectId.generate}, ${organizationId.id}, ${userId.id}, $name, $username, $hostname, $voxelyticsVersion, $workflow_hash, $workflow_yamlContent, ${Json
+          .stringify(workflow_config)})
                 ON CONFLICT (_organization, name)
                   DO UPDATE SET
                     _user = EXCLUDED._user,
@@ -121,7 +359,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def upsertTask(runId: ObjectId, name: String, task: String, config: JsValue): Fox[ObjectId] =
     for {
       _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_tasks (_id, _run, name, task, config)
-                VALUES (${ObjectId.generate}, ${runId.id}, $name, $task, $config)
+                VALUES (${ObjectId.generate}, ${runId.id}, $name, $task, ${Json.stringify(config)})
                 ON CONFLICT (_run, name)
                   DO UPDATE SET
                     task = EXCLUDED.task,
@@ -142,7 +380,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       _ <- run(
         sqlu"""INSERT INTO webknossos.voxelytics_artifacts (_id, _task, name, path, fileSize, inodeCount, version, metadata)
-                VALUES (${ObjectId.generate}, ${taskId.id}, $name, $path, $fileSize, $inodeCount, $version, $metadata)
+                VALUES (${ObjectId.generate}, ${taskId.id}, $name, $path, $fileSize, $inodeCount, $version, ${Json
+          .stringify(metadata)})
                 ON CONFLICT (_task, name)
                   DO UPDATE SET
                     path = EXCLUDED.path,
@@ -300,8 +539,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           (String,
            Int,
            Int,
-           Timestamp,
-           Timestamp,
+           Instant,
+           Instant,
            Double,
            Double,
            Double,
@@ -322,8 +561,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
             row._1,
             row._2,
             row._3,
-            new Instant(row._4),
-            new Instant(row._5),
+            row._4,
+            row._5,
             row._6,
             row._7,
             row._8,
@@ -362,17 +601,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           JOIN webknossos.voxelytics_artifacts a ON a._id = af._artifact
         WHERE
           a._task = ${taskId.id} #${artifactName.map(a => sql"AND a.name = $a").getOrElse("")}
-        ORDER BY af.path;""".as[(String, String, String, String, Timestamp, String, String, Long, Timestamp)])
+        ORDER BY af.path;""".as[(String, String, String, String, Instant, String, String, Long, Instant)])
     } yield
-      r.toList.map(
-        row =>
-          ArtifactChecksumEntry(row._1,
-                                row._2,
-                                row._3,
-                                row._4,
-                                new Instant(row._5),
-                                row._6,
-                                row._7,
-                                row._8,
-                                new Instant(row._9)))
+      r.toList.map(row => ArtifactChecksumEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7, row._8, row._9))
 }

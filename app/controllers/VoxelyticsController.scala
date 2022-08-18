@@ -5,16 +5,77 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations._
 import models.organization.OrganizationDAO
 import models.user.{UserDAO, UserService}
+import models.voxelytics.RunState.RunState
 import models.voxelytics._
 import oxalis.security.WkEnv
-import play.api.http.HttpEntity.NoEntity
 import play.api.libs.json._
-import play.api.mvc.{ResponseHeader, _}
+import play.api.mvc._
 import utils.{ObjectId, WkConf}
 
 import java.time.Instant
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.util.Try
+
+case class RunEntry(runId: ObjectId,
+                    name: String,
+                    username: String,
+                    hostname: String,
+                    voxelyticsVersion: String,
+                    workflow_hash: String,
+                    workflow_yamlContent: String,
+                    workflow_config: JsObject,
+                    state: RunState,
+                    beginTime: Instant,
+                    endTime: Option[Instant])
+
+object RunEntry {
+  implicit val jsonFormat: OFormat[RunEntry] = Json.format[RunEntry]
+}
+
+case class TaskRunEntry(runName: String,
+                        runId: ObjectId,
+                        taskId: ObjectId,
+                        taskName: String,
+                        state: RunState,
+                        beginTime: Option[Instant],
+                        endTime: Option[Instant],
+                        currentExecutionId: Option[String],
+                        chunksTotal: Long,
+                        chunksFinished: Long)
+
+object TaskRunEntry {
+  implicit val jsonFormat: OFormat[TaskRunEntry] = Json.format[TaskRunEntry]
+}
+
+case class WorkflowEntry(
+    name: String,
+    hash: String
+)
+
+object WorkflowEntry {
+  implicit val jsonFormat: OFormat[WorkflowEntry] = Json.format[WorkflowEntry]
+}
+
+case class ArtifactEntry(artifactId: ObjectId,
+                         taskId: ObjectId,
+                         name: String,
+                         path: String,
+                         fileSize: Long,
+                         inodeCount: Long,
+                         version: String,
+                         metadata: JsObject,
+                         taskName: String)
+
+object ArtifactEntry {
+  implicit val jsonFormat: OFormat[ArtifactEntry] = Json.format[ArtifactEntry]
+}
+
+case class TaskEntry(taskId: ObjectId, runId: ObjectId, name: String, task: String, config: JsObject)
+
+object TaskEntry {
+  implicit val jsonFormat: OFormat[TaskEntry] = Json.format[TaskEntry]
+}
 
 case class ChunkStatisticsEntry(executionId: String,
                                 countTotal: Long,
@@ -34,6 +95,7 @@ case class ChunkStatisticsEntry(executionId: String,
                                 median_duration: Double,
                                 stddev_duration: Double,
                                 sum_duration: Double)
+
 object ChunkStatisticsEntry {
   implicit val jsonFormat: OFormat[ChunkStatisticsEntry] = Json.format[ChunkStatisticsEntry]
 }
@@ -51,6 +113,7 @@ case class ArtifactChecksumEntry(taskName: String,
 object ArtifactChecksumEntry {
   implicit val jsonFormat: OFormat[ArtifactChecksumEntry] = Json.format[ArtifactChecksumEntry]
 }
+
 @Api
 class VoxelyticsController @Inject()(
     userDAO: UserDAO,
@@ -66,9 +129,9 @@ class VoxelyticsController @Inject()(
   private lazy val conf = wkConf.Voxelytics
 
   @ApiOperation(hidden = true, value = "")
-  def createWorkflow: Action[VoxelyticsWorkflowDescription] =
-    sil.SecuredAction.async(validateJson[VoxelyticsWorkflowDescription]) { implicit request =>
-      def upsertTask(_run: ObjectId, taskName: String, task: VoxelyticsWorkflowDescriptionTaskConfig): Fox[Unit] =
+  def createWorkflow: Action[WorkflowDescription] =
+    sil.SecuredAction.async(validateJson[WorkflowDescription]) { implicit request =>
+      def upsertTask(_run: ObjectId, taskName: String, task: WorkflowDescriptionTaskConfig): Fox[Unit] =
         for {
           // TODO: Authorization
           taskId <- voxelyticsDAO.upsertTask(
@@ -125,16 +188,128 @@ class VoxelyticsController @Inject()(
       } yield JsonOk(Json.obj("workflowId" -> workflowId, "runId" -> runId))
     }
 
+  private def aggregateBeginEndTime(runs: List[RunEntry]): (RunState, Instant, Option[Instant]) = {
+    val state = runs.maxBy(_.beginTime).state
+    val beginTime = runs.map(_.beginTime).min
+    val endTime = Try(runs.flatMap(_.endTime).max).toOption
+
+    (state, beginTime, endTime)
+  }
+
   @ApiOperation(hidden = true, value = "")
   def listWorkflows(workflowHash: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      notImplemented
+      for {
+        runs <- voxelyticsDAO.selectRuns(request.identity._organization, None, workflowHash, conf.staleTimeout)
+        taskRuns <- voxelyticsDAO.selectTaskRuns(request.identity._organization, runs.map(_.runId), conf.staleTimeout)
+        workflows <- voxelyticsDAO.findWorkflowsByHash(request.identity._organization, runs.map(_.workflow_hash).toSet)
+        result = JsArray(workflows.flatMap(workflow => {
+          val workflowRuns = runs.filter(run => run.workflow_hash == workflow.hash)
+          if (workflowRuns.nonEmpty) {
+            val state, beginTime, endTime = aggregateBeginEndTime(workflowRuns)
+            Some(
+              Json.obj(
+                "name" -> workflow.name,
+                "hash" -> workflow.hash,
+                "beginTime" -> beginTime,
+                "endTime" -> endTime,
+                "state" -> state.toString(),
+                "runs" -> workflowRuns.map(run => {
+                  val tasks = taskRuns.filter(taskRun => taskRun.runId == run.runId)
+                  Json.obj(
+                    "id" -> run.runId,
+                    "name" -> run.name,
+                    "username" -> run.username,
+                    "hostname" -> run.hostname,
+                    "voxelyticsVersion" -> run.voxelyticsVersion,
+                    "beginTime" -> run.beginTime,
+                    "endTime" -> run.endTime,
+                    "state" -> run.state,
+                    "tasks" -> tasks
+                  )
+                })
+              ))
+          } else {
+            None
+          }
+        }))
+      } yield JsonOk(result)
     }
 
   @ApiOperation(hidden = true, value = "")
   def getWorkflow(workflowHash: String, runId: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      notImplemented
+      for {
+        workflow <- voxelyticsDAO.findWorkflowByHash(request.identity._organization, workflowHash) ~> NOT_FOUND
+
+        // Fetching all runs for this workflow or specified run
+        // If all runs are fetched, a combined version of the workflow report
+        // will be returned that contains the information of the most recent task runs
+        runs <- runId
+          .map(
+            runId =>
+              voxelyticsDAO.selectRuns(request.identity._organization,
+                                       Some(List(ObjectId(runId))),
+                                       Some(workflowHash),
+                                       conf.staleTimeout))
+          .getOrElse(
+            voxelyticsDAO.selectRuns(request.identity._organization, None, Some(workflowHash), conf.staleTimeout))
+        _ <- bool2Fox(runs.nonEmpty) ~> NOT_FOUND
+        sortedRuns = runs.sortBy(_.beginTime).reverse
+        // All workflows have at least one run, because they are created at the same time
+        mostRecentRun = sortedRuns.head
+
+        // Fetch task runs for all runs
+        taskRuns <- voxelyticsDAO.selectTaskRuns(request.identity._organization,
+                                                 sortedRuns.map(_.runId),
+                                                 conf.staleTimeout)
+
+        // Select one representative "task run" for each task
+        // This will be the most recent run that is running or finished or the most recent run
+        combinedTaskRuns = taskRuns
+          .filter(task => task.runId == mostRecentRun.runId)
+          .map(task => {
+            val thisTaskRuns = taskRuns.filter(t => t.taskName == task.taskName).sortBy(_.beginTime)
+            val nonWaitingTaskRuns = thisTaskRuns.filter(t => {
+              t.state == RunState.RUNNING || t.state == RunState.COMPLETE || t.state == RunState.FAILED || t.state == RunState.CANCELLED
+            })
+            if (nonWaitingTaskRuns.nonEmpty) {
+              nonWaitingTaskRuns.head
+            } else {
+              thisTaskRuns.head
+            }
+          })
+
+        // Fetch artifact data for selected/combined task runs
+        artifacts <- voxelyticsDAO.selectArtifacts(combinedTaskRuns.map(_.taskId))
+        artifactsByTask = artifacts.groupBy(_.taskName)
+        tasks <- voxelyticsDAO.selectTasks(combinedTaskRuns)
+
+        // Assemble workflow report JSON
+        (state, beginTime, endTime) = aggregateBeginEndTime(runs)
+        config = mostRecentRun.workflow_config ++ Json.obj(
+          "tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
+        result = Json.obj(
+          "config" -> config,
+          "artifacts" -> artifactsByTask,
+          "run" -> Json.obj(
+            "id" -> mostRecentRun.runId.id,
+            "name" -> mostRecentRun.name,
+            "username" -> mostRecentRun.username,
+            "hostname" -> mostRecentRun.hostname,
+            "voxelyticsVersion" -> mostRecentRun.voxelyticsVersion,
+            "beginTime" -> beginTime,
+            "endTime" -> endTime,
+            "state" -> state,
+            "tasks" -> combinedTaskRuns
+          ),
+          "workflow" -> Json.obj(
+            "name" -> workflow.name,
+            "hash" -> workflowHash,
+            "yamlContent" -> mostRecentRun.workflow_yamlContent
+          )
+        )
+      } yield JsonOk(result)
     }
 
   @ApiOperation(hidden = true, value = "")
@@ -251,6 +426,4 @@ class VoxelyticsController @Inject()(
           minLevel.flatMap(VoxelyticsLogLevel.fromString).getOrElse(VoxelyticsLogLevel.INFO)) ~> BAD_REQUEST
       } yield JsonOk(logEntries)
     }
-
-  private def notImplemented: Future[Result] = Future.successful(Result(ResponseHeader(NOT_IMPLEMENTED), NoEntity))
 }

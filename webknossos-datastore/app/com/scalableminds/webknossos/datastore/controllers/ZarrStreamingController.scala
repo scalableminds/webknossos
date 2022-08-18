@@ -74,7 +74,7 @@ class ZarrStreamingController @Inject()(
   def zAttrsWithAnnotationPrivateLink(accessToken: String, dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
+        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken) ~> NOT_FOUND
         annotationLayer = annotationSource.getAnnotationLayer(dataLayerName)
 
         omeNgffHeader <- annotationLayer match {
@@ -159,7 +159,7 @@ class ZarrStreamingController @Inject()(
 
   def dataSourceWithAnnotationPrivateLink(accessToken: String): Action[AnyContent] = Action.async { implicit request =>
     for {
-      annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
+      annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken) ~> NOT_FOUND
       volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
 
       _ <- accessTokenService.validateAccess(
@@ -167,14 +167,16 @@ class ZarrStreamingController @Inject()(
           DataSourceId(annotationSource.dataSetName, annotationSource.organizationName)),
         Some(accessToken)) {
         Future.successful(Ok("Ok"))
-      } ?~> "Access Denied" ~> 404
+      } ?~> "Access Denied" ~> NOT_FOUND
 
       dataSource <- dataSourceRepository
         .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
         .toFox ~> NOT_FOUND
       dataSourceLayers = dataSource.dataLayers.map(convertLayerToZarrLayer)
-      annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(l =>
-        remoteTracingstoreClient.getVolumeLayerAsZarrLayer(l.tracingId, annotationSource.tracingStoreUrl, accessToken))
+      annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(
+        l =>
+          remoteTracingstoreClient
+            .getVolumeLayerAsZarrLayer(l.tracingId, Some(l.name), annotationSource.tracingStoreUrl, accessToken))
       allLayer = dataSourceLayers ++ annotationLayers
       zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
     } yield Ok(Json.toJson(zarrSource))
@@ -202,7 +204,7 @@ class ZarrStreamingController @Inject()(
                              cxyz: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
+        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken) ~> NOT_FOUND
         layer = annotationSource.getAnnotationLayer(dataLayerName)
 
         result <- layer match {
@@ -290,7 +292,7 @@ class ZarrStreamingController @Inject()(
   def zArrayPrivateLink(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] = Action.async {
     implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
+        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken) ~> NOT_FOUND
         layer = annotationSource.getAnnotationLayer(dataLayerName)
 
         result <- layer match {
@@ -348,7 +350,7 @@ class ZarrStreamingController @Inject()(
                                             mag: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
+        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken) ~> NOT_FOUND
         layer = annotationSource.getAnnotationLayer(dataLayerName)
 
         result <- layer match {
@@ -400,14 +402,14 @@ class ZarrStreamingController @Inject()(
           views.html.datastoreZarrDatasourceDir(
             "Datastore",
             "%s/%s/%s".format(organizationName, dataSetName, dataLayerName),
-            List(".zattrs", ".zgroup") ++ mags.map(_.toMagLiteral())
+            List(".zattrs", ".zgroup") ++ mags.map(_.toMagLiteral(allowScalar = true))
           )).withHeaders()
     }
 
   def dataLayerFolderContentsPrivateLink(accessToken: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
+        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken) ~> NOT_FOUND
         layer = annotationSource.getAnnotationLayer(dataLayerName)
 
         result <- layer match {
@@ -466,7 +468,7 @@ class ZarrStreamingController @Inject()(
           annotationLayerNames = annotationSource.annotationLayers
             .filter(_.typ == AnnotationLayerType.Volume)
             .map(_.name)
-          layerNames = dataSourceLayerNames ++ annotationLayerNames
+          layerNames = annotationLayerNames.toSet.union(dataSourceLayerNames.toSet).toList
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
@@ -500,7 +502,7 @@ class ZarrStreamingController @Inject()(
   def zGroupPrivateLink(accessToken: String, dataLayerName: String): Action[AnyContent] = Action.async {
     implicit request =>
       for {
-        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken)
+        annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken) ~> NOT_FOUND
         layer = annotationSource.getAnnotationLayer(dataLayerName)
 
         result <- layer match {

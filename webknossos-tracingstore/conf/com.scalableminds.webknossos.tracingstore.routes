@@ -39,8 +39,9 @@ GET         /volume/zarr/:tracingId                             @com.scalablemin
 GET         /volume/zarr/:tracingId/                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.volumeTracingFolderContent(token: Option[String], tracingId: String)
 GET         /volume/zarr/:tracingId/.zgroup                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.zGroup(token: Option[String], tracingId: String)
 GET         /volume/zarr/:tracingId/.zattrs                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.zAttrs(token: Option[String], tracingId: String)
-GET         /volume/zarr/:tracingId/zarrSource                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.zarrSource(token: Option[String], tracingId: String)
+GET         /volume/zarr/:tracingId/zarrSource                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.zarrSource(token: Option[String], tracingId: String, tracingName: Option[String])
 GET         /volume/zarr/:tracingId/:mag                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.volumeTracingMagFolderContent(token: Option[String], tracingId: String, mag: String)
+GET         /volume/zarr/:tracingId/:mag/                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.volumeTracingMagFolderContent(token: Option[String], tracingId: String, mag: String)
 GET         /volume/zarr/:tracingId/:mag/.zarray                @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.zArray(token: Option[String], tracingId: String, mag: String)
 GET         /volume/zarr/:tracingId/:mag/:cxyz                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.rawZarrCube(token: Option[String], tracingId: String, mag: String, cxyz: String)
 

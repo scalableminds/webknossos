@@ -39,7 +39,7 @@ class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext) {
         "expirationDateTime" -> annotationPrivateLink.expirationDateTime,
       ))
 
-  def generateToken: String = RandomIDGenerator.generateBlocking(24)
+  def generateToken: String = RandomIDGenerator.generateBlocking(12)
 }
 
 class AnnotationPrivateLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

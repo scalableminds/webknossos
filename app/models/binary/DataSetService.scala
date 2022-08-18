@@ -21,7 +21,6 @@ import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import play.api.i18n.MessagesProvider
 import oxalis.security.RandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
@@ -35,7 +34,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
                                workerDAO: WorkerDAO,
-                               publicationDAO: PublicationDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
@@ -315,8 +313,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
 
-  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext,
-                                                             m: MessagesProvider): Fox[Unit] =
+  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"

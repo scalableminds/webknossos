@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { document } from "libs/window";
 import _ from "lodash";
+import { TypedArray } from "oxalis/constants";
 
 const lazyGetCanvas = _.memoize(() => {
   const canvas = document.createElement("canvas");
@@ -10,23 +11,20 @@ const lazyGetCanvas = _.memoize(() => {
 });
 
 const getImageData = _.memoize(
-  (width: number, height: number, isInt: boolean): ImageData => {
+  (
+    width: number,
+    height: number,
+    isInt: boolean,
+  ): { width: number; height: number; data: TypedArray } => {
     const canvas = lazyGetCanvas();
     const ctx = canvas.getContext("2d");
     if (ctx == null) {
       throw new Error("Could not get context for texture.");
     }
 
-    // if (isInt) {
-    //   // todo: needed?
-    //   width *= 4;
-    //   height *= 4;
-    // }
-    //
-
     if (isInt) {
       console.log("using uint32");
-      return new Uint32Array(width * height);
+      return { width, height, data: new Uint32Array(4 * width * height).fill(255) };
     }
 
     const imageData = ctx.createImageData(width, height);
@@ -67,6 +65,7 @@ class UpdatableTexture extends THREE.Texture {
 
     super(
       // @ts-ignore
+      // type === THREE.UnsignedIntType ? null : imageData,
       imageData,
       mapping,
       wrapS,
@@ -79,6 +78,10 @@ class UpdatableTexture extends THREE.Texture {
       encoding,
     );
 
+    // if (type === THREE.UnsignedIntType) {
+    //   this.image = imageData;
+    // }
+
     this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
     this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;
     this.generateMipmaps = false;
@@ -86,6 +89,7 @@ class UpdatableTexture extends THREE.Texture {
     this.unpackAlignment = 1;
     this.needsUpdate = true;
     this.isUpdatableTexture = true;
+    // this.isDataTexture = true;
   }
 
   setRenderer(renderer: THREE.WebGLRenderer) {

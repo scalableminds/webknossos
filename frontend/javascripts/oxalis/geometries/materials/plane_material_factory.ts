@@ -82,7 +82,7 @@ function getPackingDegreeLookup(): Record<string, number> {
 }
 
 const getCustomColorCuckooTable = _.memoize(() => {
-  const textureWidth = 4096;
+  const textureWidth = 512;
   const cuckoo = new CuckooTable(textureWidth);
   // cuckoo.set(1, [128, 0, 128]);
   // cuckoo.set(2, [0, 128, 128]);

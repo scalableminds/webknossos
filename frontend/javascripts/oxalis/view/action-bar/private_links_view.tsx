@@ -137,7 +137,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataStoreURL = dataset.dataStore.url;
   const dataLayers = getDataLayers(dataset);
-  const baseUrl = `${dataStoreURL}/annotations/zarr/${linkItem.accessToken}`;
+  const baseUrl = `${dataStoreURL}/data/annotations/zarr/${linkItem.accessToken}`;
 
   const copyTokenToClipboard = async ({ key: layerName }: { key: string }) => {
     await navigator.clipboard.writeText(`${baseUrl}/${layerName}`);

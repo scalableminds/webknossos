@@ -196,13 +196,6 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- ObjectId.fromString(r)
     } yield parsed
 
-  def getIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
-    for {
-      accessQuery <- readAccessQuery
-      rList <- run(sql"select _id from #$existingCollectionName where name = $name and #$accessQuery".as[String])
-      r <- rList.headOption.toFox
-    } yield ObjectId(r)
-
   def getNameById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
@@ -246,7 +239,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       _ <- assertUpdateAccess(id)
       query = writeArrayTuple(tags)
       _ = logger.info(s"updating tags, setting to ${tags.mkString(",")} with sql set tags = '$query'")
-      _ <- run(sqlu"update webknossos.datasets set tags = '#${query}' where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.datasets set tags = '#$query' where _id = ${id.id}")
     } yield ()
 
   def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DataSetViewConfiguration)(
@@ -405,9 +398,9 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
         JsonHelper.parseJsonToFox[LayerViewConfiguration](_))
     } yield {
-      (row.largestsegmentid, row.mappings) match {
-        case (Some(segmentId), Some(mappings)) =>
-          val mappingsAsSet = parseArrayTuple(mappings).toSet
+      category match {
+        case Category.segmentation =>
+          val mappingsAsSet = row.mappings.map(parseArrayTuple(_).toSet)
           Fox.successful(
             AbstractSegmentationLayer(
               row.name,
@@ -415,12 +408,12 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
               boundingBox,
               resolutions.sortBy(_.maxDim),
               elementClass,
-              segmentId,
-              if (mappingsAsSet.isEmpty) None else Some(mappingsAsSet),
+              row.largestsegmentid,
+              mappingsAsSet.flatMap(m => if (m.isEmpty) None else Some(m)),
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt
             ))
-        case (None, None) =>
+        case Category.color =>
           Fox.successful(
             AbstractDataLayer(
               row.name,
@@ -431,7 +424,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
               defaultViewConfigurationOpt,
               adminViewConfigurationOpt
             ))
-        case _ => Fox.failure("Could not match Dataset Layer")
+        case _ => Fox.failure(s"Could not match dataset layer with category $category")
       }
     }
     result.flatten
@@ -442,14 +435,6 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
       rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId, skipResolutions)))
     } yield rowsParsed
-
-  def findOneByNameForDataSet(dataLayerName: String, dataSetId: ObjectId): Fox[DataLayer] =
-    for {
-      rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).filter(_.name === dataLayerName).result)
-        .map(_.toList)
-      firstRow <- rows.headOption.toFox ?~> ("Could not find data layer " + dataLayerName)
-      parsed <- parseRow(firstRow, dataSetId)
-    } yield parsed
 
   private def insertLayerQuery(_dataSet: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =
     layer match {

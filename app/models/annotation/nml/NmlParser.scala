@@ -1,7 +1,6 @@
 package models.annotation.nml
 
 import java.io.InputStream
-
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
@@ -11,6 +10,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiCompone
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.Box._
@@ -82,7 +82,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 editRotation,
                 ElementClass.uint32,
                 v.fallbackLayerName,
-                0,
+                v.largestSegmentId.getOrElse(VolumeTracingDefaults.largestSegmentId),
                 0,
                 zoomLevel,
                 None,
@@ -154,7 +154,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           getSingleAttribute(node, "location"),
           getSingleAttributeOpt(node, "fallbackLayer"),
           getSingleAttributeOpt(node, "name"),
-          parseVolumeSegmentMetadata(node \ "segments" \ "segment")
+          parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
+          getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt)
         )
       }
     )

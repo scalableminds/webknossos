@@ -11,6 +11,8 @@ object VolumeTracingDefaults {
 
   val largestSegmentId = 0L
 
+  val unsetLargestSegmentId = -1L
+
   val zoomLevel = 1.0
 
 }

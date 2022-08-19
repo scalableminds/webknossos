@@ -149,7 +149,9 @@ class AnnotationService @Inject()(
         elementClassToProto(
           fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
         fallbackLayer.map(_.name),
-        fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId),
+        fallbackLayer
+          .map(_.largestSegmentId.getOrElse(VolumeTracingDefaults.unsetLargestSegmentId))
+          .getOrElse(VolumeTracingDefaults.largestSegmentId),
         0,
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(organizationName),
@@ -487,7 +489,7 @@ class AnnotationService @Inject()(
           case _                        => None
         }.headOption
       } else None
-      _ <- bool2Fox(fallbackLayer.forall(_.largestSegmentId >= 0L)) ?~> "annotation.volume.negativeLargestSegmentId"
+      _ <- bool2Fox(fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))) ?~> "annotation.volume.invalidLargestSegmentId"
 
       volumeTracing <- createVolumeTracing(
         dataSource,

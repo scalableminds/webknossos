@@ -267,6 +267,9 @@ Expects:
         case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
         case _                                                                                   => None
       }.headOption
+      largestSegmentIdFromFallback = fallbackLayer
+        .map(_.largestSegmentId.getOrElse(VolumeTracingDefaults.unsetLargestSegmentId))
+        .getOrElse(VolumeTracingDefaults.largestSegmentId)
     } yield {
       volumeTracing.copy(
         boundingBox =
@@ -276,7 +279,9 @@ Expects:
           .map(layer => elementClassToProto(layer.elementClass))
           .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass)),
         fallbackLayer = fallbackLayer.map(_.name),
-        largestSegmentId = fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId)
+        largestSegmentId =
+          if (volumeTracing.largestSegmentId == VolumeTracingDefaults.largestSegmentId) largestSegmentIdFromFallback
+          else volumeTracing.largestSegmentId
       )
     }
 

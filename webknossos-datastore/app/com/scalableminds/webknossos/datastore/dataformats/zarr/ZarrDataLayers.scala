@@ -72,7 +72,7 @@ case class ZarrSegmentationLayer(
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
     mags: List[ZarrMag],
-    largestSegmentId: Long,
+    largestSegmentId: Option[Long] = None,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,

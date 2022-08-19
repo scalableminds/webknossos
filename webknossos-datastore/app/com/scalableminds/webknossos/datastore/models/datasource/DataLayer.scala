@@ -61,7 +61,11 @@ object ElementClass extends ExtendedEnumeration {
   }
 
   def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =
-    largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass)
+    largestSegmentIdIsInRange(Some(largestSegmentId), elementClass)
+
+  def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
+    largestSegmentIdOpt.forall(largestSegmentId =>
+      largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass))
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")
@@ -126,7 +130,7 @@ object DataLayerLike {
 
 trait SegmentationLayerLike extends DataLayerLike {
 
-  def largestSegmentId: Long
+  def largestSegmentId: Option[Long]
 
   def mappings: Option[Set[String]]
 
@@ -234,7 +238,7 @@ case class AbstractSegmentationLayer(
     boundingBox: BoundingBox,
     resolutions: List[Vec3Int],
     elementClass: ElementClass.Value,
-    largestSegmentId: Long,
+    largestSegmentId: Option[Long] = None,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
@@ -268,4 +272,5 @@ trait ResolutionFormatHelper {
     override def writes(resolution: Vec3Int): JsValue =
       Vec3Int.Vec3IntWrites.writes(resolution)
   }
+
 }

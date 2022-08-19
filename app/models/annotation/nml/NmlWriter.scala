@@ -6,7 +6,9 @@ import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.Segment
 import com.scalableminds.webknossos.datastore.geometry._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
+
 import javax.inject.Inject
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import models.annotation.{Annotation, AnnotationLayerType, FetchedAnnotationLayer}
@@ -211,6 +213,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         volumeLayer.tracing match {
           case Right(volumeTracing) =>
             volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
+            if (volumeTracing.largestSegmentId != VolumeTracingDefaults.unsetLargestSegmentId) {
+              writer.writeAttribute("largestSegmentId", volumeTracing.largestSegmentId.toString)
+            }
             writeVolumeSegmentMetadata(volumeTracing.segments)
           case _ => ()
         }

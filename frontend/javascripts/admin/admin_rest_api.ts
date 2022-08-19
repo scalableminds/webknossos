@@ -566,7 +566,7 @@ export function getPrivateLinksByAnnotation(annotationId: string): Promise<Array
 
 export function updatePrivateLink(link: ZarrPrivateLink): Promise<ZarrPrivateLink> {
   return Request.sendJSONReceiveJSON(`/api/zarrPrivateLinks/${link.id}`, {
-    data: { ...link, annotation: link.annotation },
+    data: link,
     method: "PUT",
   });
 }

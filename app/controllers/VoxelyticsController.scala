@@ -128,14 +128,16 @@ class VoxelyticsController @Inject()(
 
   private lazy val conf = wkConf.Voxelytics
 
+  override def allowRemoteOrigin: Boolean = true
+
   @ApiOperation(hidden = true, value = "")
   def createWorkflow: Action[WorkflowDescription] =
     sil.SecuredAction.async(validateJson[WorkflowDescription]) { implicit request =>
-      def upsertTask(_run: ObjectId, taskName: String, task: WorkflowDescriptionTaskConfig): Fox[Unit] =
+      def upsertTask(runId: ObjectId, taskName: String, task: WorkflowDescriptionTaskConfig): Fox[Unit] =
         for {
           // TODO: Authorization
           taskId <- voxelyticsDAO.upsertTask(
-            _run,
+            runId,
             taskName,
             task.task,
             Json.obj("config" -> task.config,
@@ -162,9 +164,9 @@ class VoxelyticsController @Inject()(
         } yield ()
 
       for {
-        workflowId <- voxelyticsDAO.upsertWorkflow(request.body.workflow.hash,
-                                                   request.body.workflow.name,
-                                                   request.identity._organization)
+        _ <- voxelyticsDAO.upsertWorkflow(request.body.workflow.hash,
+                                          request.body.workflow.name,
+                                          request.identity._organization)
         runId <- voxelyticsDAO.upsertRun(
           request.identity._organization,
           request.identity._id,
@@ -185,7 +187,7 @@ class VoxelyticsController @Inject()(
             })
             .toList)
 
-      } yield JsonOk(Json.obj("workflowId" -> workflowId, "runId" -> runId))
+      } yield Ok
     }
 
   private def aggregateBeginEndTime(runs: List[RunEntry]): (RunState, Instant, Option[Instant]) = {
@@ -217,7 +219,7 @@ class VoxelyticsController @Inject()(
                 "runs" -> workflowRuns.map(run => {
                   val tasks = taskRuns.filter(taskRun => taskRun.runId == run.runId)
                   Json.obj(
-                    "id" -> run.runId,
+                    "id" -> run.runId.id,
                     "name" -> run.name,
                     "username" -> run.username,
                     "hostname" -> run.hostname,
@@ -225,7 +227,19 @@ class VoxelyticsController @Inject()(
                     "beginTime" -> run.beginTime,
                     "endTime" -> run.endTime,
                     "state" -> run.state,
-                    "tasks" -> tasks
+                    "tasks" -> tasks.map(task =>
+                      Json.obj(
+                        "runName" -> task.runName,
+                        "runId" -> task.runId.id,
+                        "taskId" -> task.taskId.id,
+                        "taskName" -> task.taskName,
+                        "state" -> task.state,
+                        "beginTime" -> task.beginTime,
+                        "endTime" -> task.endTime,
+                        "currentExecutionId" -> task.currentExecutionId,
+                        "chunksTotal" -> task.chunksTotal,
+                        "chunksFinished" -> task.chunksFinished
+                    ))
                   )
                 })
               ))
@@ -291,7 +305,26 @@ class VoxelyticsController @Inject()(
           "tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
         result = Json.obj(
           "config" -> config,
-          "artifacts" -> artifactsByTask,
+          "artifacts" -> JsObject(artifactsByTask.map(artifactKV => {
+            val artifactName = artifactKV._1
+            val artifacts = artifactKV._2
+            (artifactName,
+             JsObject(
+               artifacts.map(
+                 artifact =>
+                   (artifact.name,
+                    artifact.metadata ++
+                      Json.obj(
+                        "artifactId" -> artifact.artifactId.id,
+                        "taskId" -> artifact.taskId.id,
+                        "name" -> artifact.name,
+                        "path" -> artifact.path,
+                        "fileSize" -> artifact.fileSize,
+                        "inodeCount" -> artifact.inodeCount,
+                        "version" -> artifact.version,
+                        "taskName" -> artifact.taskName
+                      )))))
+          })),
           "run" -> Json.obj(
             "id" -> mostRecentRun.runId.id,
             "name" -> mostRecentRun.name,
@@ -301,7 +334,19 @@ class VoxelyticsController @Inject()(
             "beginTime" -> beginTime,
             "endTime" -> endTime,
             "state" -> state,
-            "tasks" -> combinedTaskRuns
+            "tasks" -> combinedTaskRuns.map(task =>
+              Json.obj(
+                "runName" -> task.runName,
+                "runId" -> task.runId.id,
+                "taskId" -> task.taskId.id,
+                "taskName" -> task.taskName,
+                "state" -> task.state,
+                "beginTime" -> task.beginTime,
+                "endTime" -> task.endTime,
+                "currentExecutionId" -> task.currentExecutionId,
+                "chunksTotal" -> task.chunksTotal,
+                "chunksFinished" -> task.chunksFinished
+            ))
           ),
           "workflow" -> Json.obj(
             "name" -> workflow.name,
@@ -345,7 +390,7 @@ class VoxelyticsController @Inject()(
           case ev: ChunkStateChangeEvent =>
             for {
               taskId <- voxelyticsDAO.getTaskIdByName(ev.taskName, runId)
-              chunkId <- voxelyticsDAO.getChunkIdByName(taskId, ev.executionId, ev.chunkName)
+              chunkId <- voxelyticsDAO.upsertChunk(taskId, ev.executionId, ev.chunkName)
               _ <- voxelyticsDAO.upsertChunkStateChangeEvent(chunkId, ev)
             } yield ()
 

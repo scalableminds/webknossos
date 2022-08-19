@@ -3,7 +3,6 @@ package utils
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
@@ -16,6 +15,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 
+import javax.inject.Inject
 import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
@@ -116,6 +116,31 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
           item.drop(1).dropRight(1)
         } else item
       }
+    }
+  }
+
+  def escapeLiteral(aString: String): String = {
+    // Ported from PostgreSQL 9.2.4 source code in src/interfaces/libpq/fe-exec.c
+    var hasBackslash = false
+    val escaped = new StringBuffer("'")
+
+    for (i <- 0 until aString.length) {
+      val c = aString.charAt(i)
+      if (c == '\'') {
+        escaped.append(c).append(c)
+      } else if (c == '\\') {
+        escaped.append(c).append(c)
+        hasBackslash = true
+      } else {
+        escaped.append(c)
+      }
+    }
+    escaped.append('\'')
+
+    if (hasBackslash == true) {
+      "E" + escaped.toString()
+    } else {
+      escaped.toString()
     }
   }
 

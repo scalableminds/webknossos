@@ -9,12 +9,13 @@ case class WorkflowDescriptionTaskConfig(config: JsValue,
                                          output_paths: JsValue,
                                          task: String)
 
-case class WorkflowDescriptionConfig(globalParameters: Map[String, JsValue],
+case class WorkflowDescriptionConfig(global_parameters: Map[String, JsValue],
                                      paths: List[String],
-                                     schema_version: Option[String],
+                                     schema_version: Option[Long],
+                                     git_hash: Option[String],
                                      tasks: Map[String, WorkflowDescriptionTaskConfig]) {
   def withoutTasks(): JsValue =
-    Json.obj("globalParameters" -> globalParameters, "paths" -> paths, "schema_version" -> schema_version)
+    Json.obj("global_parameters" -> global_parameters, "paths" -> paths, "schema_version" -> schema_version)
 }
 
 case class WorkflowDescriptionArtifact(path: String,

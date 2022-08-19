@@ -615,6 +615,9 @@ function mergeDataWithBackendDataInPlace(
   }
 
   // Transfer backend to originalData
+  // The `set` operation is not problematic, since the BucketDataArray types
+  // won't be mixed (either, they are BigInt or they aren't)
+  // @ts-ignore
   originalData.set(backendData);
 
   for (const op of pendingOperations) {

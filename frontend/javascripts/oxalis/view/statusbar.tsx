@@ -4,7 +4,10 @@ import React, { useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getVisibleSegmentationLayer,
+  hasVisibleUint64Segmentation,
+} from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import { useKeyPress } from "libs/react_hooks";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
@@ -242,21 +245,21 @@ function ShortcutsInfo() {
 }
 
 function getCellInfo(globalMousePosition: Vector3 | null | undefined) {
-  const getSegmentIdString = () => {
+  const getSegmentIdString = (): string => {
     const hoveredCellInfo = Model.getHoveredCellId(globalMousePosition);
 
     if (!hoveredCellInfo) {
       return "-";
     }
 
-    return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : hoveredCellInfo.id;
+    return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : `${hoveredCellInfo.id}`;
   };
 
   return <span className="info-element">Segment {getSegmentIdString()}</span>;
 }
 
-function maybeLabelWithSegmentationWarning(hasUint64Segmentation: boolean, label: string) {
-  return hasUint64Segmentation ? (
+function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean, label: string) {
+  return isUint64SegmentationVisible ? (
     <React.Fragment>
       {label}{" "}
       <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
@@ -306,10 +309,7 @@ function Infos() {
   const hasVisibleSegmentation = useSelector(
     (state: OxalisState) => getVisibleSegmentationLayer(state) != null,
   );
-  const hasUint64Segmentation = useSelector((state: OxalisState) => {
-    const segmentationLayer = getVisibleSegmentationLayer(state);
-    return segmentationLayer ? segmentationLayer.originalElementClass === "uint64" : false;
-  });
+  const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
   const globalMousePosition = useSelector((state: OxalisState) => {
     const { activeViewport } = state.viewModeData.plane;
 
@@ -345,9 +345,9 @@ function Infos() {
         <span className="info-element">
           <NumberInputPopoverSetting
             value={activeCellId}
-            label={maybeLabelWithSegmentationWarning(hasUint64Segmentation, "Active Segment")}
+            label={maybeLabelWithSegmentationWarning(isUint64SegmentationVisible, "Active Segment")}
             detailedLabel={maybeLabelWithSegmentationWarning(
-              hasUint64Segmentation,
+              isUint64SegmentationVisible,
               "Change Active Segment ID",
             )}
             onChange={onChangeActiveCellId}

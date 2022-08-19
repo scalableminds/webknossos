@@ -79,6 +79,15 @@ case class Job(
         case _ => None
       }
     }
+
+  def resultLinkSlackFormatted(organizationName: String,
+                               dataStorePublicUrl: String,
+                               webKnossosPublicUrl: String): Option[String] =
+    for {
+      resultLink <- resultLink(organizationName, dataStorePublicUrl)
+      resultLinkFormatted = if (resultLink.startsWith("/")) s" <$webKnossosPublicUrl$resultLink|Result>"
+      else s" <$resultLink|Result>"
+    } yield resultLinkFormatted
 }
 
 class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -295,12 +304,12 @@ class JobService @Inject()(wkConf: WkConf,
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       dataStore <- dataStoreDAO.findOneByName(jobBeforeChange._dataStore)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLink(organization.name, dataStore.publicUrl)
-      resultLinkMrkdwn = resultLink.map(l => s" <${wkConf.Http.uri}$l|Result>").getOrElse("")
+      resultLink = jobAfterChange.resultLinkSlackFormatted(organization.name, dataStore.publicUrl, wkConf.Http.uri)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
-      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.$resultLinkMrkdwn"
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.${resultLink
+        .getOrElse("")}"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",

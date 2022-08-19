@@ -2,11 +2,12 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Filter
-import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, GenericDataSource}
 import io.swagger.annotations._
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
@@ -75,7 +76,7 @@ class DataSetController @Inject()(userService: UserService,
                 w: Option[Int],
                 h: Option[Int]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
+      def imageFromCacheIfPossible(dataSet: DataSet, dataSource: GenericDataSource[DataLayerLike]): Fox[Array[Byte]] = {
         val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
         val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
         dataSetService.thumbnailCache.find(
@@ -83,9 +84,11 @@ class DataSetController @Inject()(userService: UserService,
           case Some(a) =>
             Fox.successful(a)
           case _ =>
-            val defaultCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
+            val configuredCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
               c.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Vec3Int])))
-            val defaultZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
+            val centerOpt = configuredCenterOpt.orElse(
+              BoundingBox.intersection(dataSource.dataLayers.map(_.boundingBox)).map(_.center))
+            val configuredZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
               c.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
             dataSetService
               .clientFor(dataSet)(GlobalAccessContext)
@@ -94,8 +97,8 @@ class DataSetController @Inject()(userService: UserService,
                                             dataLayerName,
                                             width,
                                             height,
-                                            defaultZoomOpt,
-                                            defaultCenterOpt))
+                                            configuredZoomOpt,
+                                            centerOpt))
               .map { result =>
                 // We don't want all images to expire at the same time. Therefore, we add some random variation
                 dataSetService.thumbnailCache.insert(
@@ -111,10 +114,12 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages(
+        dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound" ~> NOT_FOUND
+        usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+        _ <- bool2Fox(usableDataSource.dataLayers.exists(_.name == dataLayerName)) ?~> Messages(
           "dataLayer.notFound",
           dataLayerName) ~> NOT_FOUND
-        image <- imageFromCacheIfPossible(dataSet)
+        image <- imageFromCacheIfPossible(dataSet, usableDataSource)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }
@@ -143,16 +148,48 @@ class DataSetController @Inject()(userService: UserService,
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON list containing one object per resulting dataset."),
           new ApiResponse(code = 400, message = badRequestLabel)))
-  def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def list(
+      @ApiParam(value = "Optional filtering: If true, list only active datasets, if false, list only inactive datasets")
+      isActive: Option[Boolean],
+      @ApiParam(
+        value =
+          "Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets")
+      isUnreported: Option[Boolean],
+      @ApiParam(
+        value =
+          "Optional filtering: If true, list only datasets the requesting user is allowed to edit, if false, list only datasets the requesting user is not allowed to edit")
+      isEditable: Option[Boolean],
+      @ApiParam(value = "Optional filtering: List only datasets of the organization specified by its url-safe name",
+                example = "sample_organization")
+      organizationName: Option[String],
+      @ApiParam(value = "Optional filtering: List only datasets of the requesting user’s organization")
+      onlyMyOrganization: Option[Boolean],
+      @ApiParam(value = "Optional filtering: List only datasets uploaded by the user with this id")
+      uploaderId: Option[String]
+  ): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
-      Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
-      Filter("isUnreported", (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
+      Filter(isActive, (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
+      Filter(isUnreported, (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
+      Filter(isEditable,
+             (value: Boolean, el: DataSet) =>
+               for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield
+                 isEditable && value || !isEditable && !value),
       Filter(
-        "isEditable",
+        organizationName,
+        (value: String, el: DataSet) =>
+          for { organization <- organizationDAO.findOneByName(value)(GlobalAccessContext) ?~> "organization.notFound" } yield
+            el._organization == organization._id
+      ),
+      Filter(
+        onlyMyOrganization,
         (value: Boolean, el: DataSet) =>
-          for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield {
-            isEditable && value || !isEditable && !value
-        }
+          for { organizationId <- request.identity.map(_._organization) ?~> "organization.notFound" } yield
+            !value || el._organization == organizationId
+      ),
+      Filter(
+        uploaderId,
+        (value: String, el: DataSet) =>
+          for { uploaderIdValidated <- ObjectId.fromString(value) } yield el._uploader.contains(uploaderIdValidated)
       )
     ) { filter =>
       for {
@@ -335,7 +372,7 @@ Expects:
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyAs[List[String]] { teams =>
         for {
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
+          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
           teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
@@ -362,7 +399,9 @@ Expects:
                       @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        token <- dataSetService.getSharingToken(dataSetName, request.identity._organization)
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        token <- dataSetService.getSharingToken(dataSetName, organization._id)
       } yield Ok(Json.obj("sharingToken" -> token.trim))
     }
 
@@ -370,7 +409,9 @@ Expects:
   def deleteSharingToken(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        _ <- dataSetDAO.updateSharingTokenByName(dataSetName, request.identity._organization, None)
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        _ <- dataSetDAO.updateSharingTokenByName(dataSetName, organization._id, None)
       } yield Ok
   }
 
@@ -388,8 +429,10 @@ Expects:
                      @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
         _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
-        _ <- dataSetService.assertNewDataSetName(dataSetName, request.identity._organization) ?~> "dataSet.name.alreadyTaken"
+        _ <- dataSetService.assertNewDataSetName(dataSetName, organization._id) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
     }
 

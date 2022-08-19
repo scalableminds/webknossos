@@ -1481,6 +1481,9 @@ class DataApi {
             ? bucket.getData()
             : new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
+          // The `set` operation is not problematic, since the BucketDataArray types
+          // won't be mixed (either, they are BigInt or they aren't)
+          // @ts-ignore
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;
         }

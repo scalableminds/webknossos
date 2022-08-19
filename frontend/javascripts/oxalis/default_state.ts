@@ -133,6 +133,7 @@ const defaultState: OxalisState = {
     isForeign: false,
     jobsEnabled: false,
     sortingKey: 123,
+    publication: null,
   },
   tracing: {
     ...initialAnnotationInfo,

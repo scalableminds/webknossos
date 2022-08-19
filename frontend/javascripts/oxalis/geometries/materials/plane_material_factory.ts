@@ -585,7 +585,10 @@ class PlaneMaterialFactory {
                 const cuckoo = getCustomColorCuckooTable();
                 const { id, color } = updateAction.value;
                 if (color != null) {
-                  cuckoo.set(id, color);
+                  cuckoo.set(
+                    id,
+                    color.map((el) => el * 255),
+                  );
                 }
               }
             }

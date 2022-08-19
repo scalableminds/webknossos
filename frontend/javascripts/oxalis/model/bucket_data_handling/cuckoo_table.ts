@@ -121,8 +121,6 @@ export class CuckooTable {
   }
 
   set(pendingKey: number, pendingValue: Vector3, rehashAttempt: number = 0) {
-    this.clearAll();
-    return;
     // todo: check that repeated sets to same key work
 
     if (rehashAttempt === 0) {
@@ -171,13 +169,7 @@ export class CuckooTable {
 
     // Since a rehash was performed, the incremental texture updates were
     // skipped. Update the entire texture:
-    this._texture.update(
-      new Uint8Array(this.table.buffer),
-      0,
-      0,
-      this.textureWidth,
-      this.textureWidth,
-    );
+    this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
   }
 
   private rehash(rehashAttempt: number): void {
@@ -288,14 +280,14 @@ export class CuckooTable {
     if (!isRehashing) {
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
-      // this._texture.update(
-      //   // todo: perf?
-      //   new Uint8Array(this.table.slice(offset, offset + ELEMENTS_PER_ENTRY)),
-      //   texelOffset % this.textureWidth,
-      //   Math.floor(texelOffset / this.textureWidth),
-      //   1,
-      //   1,
-      // );
+      this._texture.update(
+        // todo: perf?
+        this.table.slice(offset, offset + ELEMENTS_PER_ENTRY),
+        texelOffset % this.textureWidth,
+        Math.floor(texelOffset / this.textureWidth),
+        1,
+        1,
+      );
     }
 
     return displacedEntry;

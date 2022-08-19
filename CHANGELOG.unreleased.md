@@ -21,7 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for 64-bit segmentations (uint64). Note that the actual support only covers IDs up to 2^53 - 1 (matches the JavaScript number type). Also note that JSON mappings are only compatible with segment ids which only use the lower 32 bits. [#6317](https://github.com/scalableminds/webknossos/pull/6317)
 - Added a "duplicate" button for annotations. [#6386](https://github.com/scalableminds/webknossos/pull/6386)
 - Added new filter options for the dataset list api at `api/datasets`: `organizationName: String`, `onlyMyOrganization: Boolean`, `uploaderId: String` [#6377](https://github.com/scalableminds/webknossos/pull/6377)
-- Added new backend API routes for using private zarr links to annotations as well as creating them. [#6367](https://github.com/scalableminds/webknossos/pull/6367)
+- Added a UI to manage Zarr links for an annotation so that the annotation can be streamed to 3rd party tools. This change also includes new backend API routes for using the (private) zarr links to annotations as well as creating them. [#6367](https://github.com/scalableminds/webknossos/pull/6367)
 
 ### Changed
 - webKnossos uses WebGL 2 instead of WebGL 1 now. In case your browser/hardware does not support this, webKnossos will alert you and you need to upgrade your system. [#6350](https://github.com/scalableminds/webknossos/pull/6350)

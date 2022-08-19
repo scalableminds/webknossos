@@ -23,6 +23,7 @@ import {
   Modal,
   Popover,
   Space,
+  Spin,
   Table,
   Tooltip,
 } from "antd";
@@ -47,7 +48,6 @@ import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumet
 
 function useLinksQuery(annotationId: string) {
   return useQuery(["links", annotationId], () => getPrivateLinksByAnnotation(annotationId), {
-    initialData: [],
     refetchOnWindowFocus: false,
   });
 }
@@ -287,7 +287,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
 }
 
 function PrivateLinksView({ annotationId }: { annotationId: string }) {
-  const { error, data: links } = useLinksQuery(annotationId);
+  const { error, data: links, isLoading } = useLinksQuery(annotationId);
   const createLinkMutation = useCreateLinkMutation(annotationId);
   const deleteMutation = useDeleteLinkMutation(annotationId);
 
@@ -328,20 +328,40 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
         data of this annotation. Note that anyone with these links can access the data, regardless
         of other sharing settings.
       </div>
-      {links.length > 0 && (
-        <Table rowKey="id" columns={columns} dataSource={links} size="small" pagination={false} />
-      )}
 
-      <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
-        <AsyncButton
-          type={links.length === 0 ? "primary" : "link"}
-          size={links.length === 0 ? "large" : undefined}
-          icon={<PlusOutlined />}
-          onClick={() => createLinkMutation.mutateAsync(annotationId)}
+      {isLoading || links == null ? (
+        <div
+          style={{
+            margin: "40px 0",
+            textAlign: "center",
+          }}
         >
-          Create Zarr Link
-        </AsyncButton>
-      </div>
+          <Spin />
+        </div>
+      ) : (
+        <>
+          {links.length > 0 && (
+            <Table
+              rowKey="id"
+              columns={columns}
+              dataSource={links}
+              size="small"
+              pagination={false}
+            />
+          )}
+
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+            <AsyncButton
+              type={links.length === 0 ? "primary" : "link"}
+              size={links.length === 0 ? "large" : undefined}
+              icon={<PlusOutlined />}
+              onClick={() => createLinkMutation.mutateAsync(annotationId)}
+            >
+              Create Zarr Link
+            </AsyncButton>
+          </div>
+        </>
+      )}
     </div>
   );
 }

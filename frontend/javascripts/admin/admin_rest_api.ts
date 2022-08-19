@@ -548,11 +548,14 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
 
 // ### Private Links
 
-export function createPrivateLink(annotationId: string): Promise<ZarrPrivateLink> {
+export function createPrivateLink(
+  annotationId: string,
+  initialExpirationPeriodInDays: number = 30,
+): Promise<ZarrPrivateLink> {
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: null,
+      expirationDateTime: new Date().getTime() + initialExpirationPeriodInDays * 24 * 3600 * 1000,
     },
   });
 }

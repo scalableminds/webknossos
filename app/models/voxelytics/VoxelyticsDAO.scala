@@ -15,6 +15,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   private def writeSafeTuple(seq: List[String]) =
     "(" + seq.map(escapeLiteral).mkString(", ") + ")"
+
   def selectArtifacts(taskIds: List[ObjectId]): Fox[List[ArtifactEntry]] =
     for {
       r <- run(sql"""
@@ -164,21 +165,25 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           r._id IN #${writeSafeTuple(runIds.map(_.id))}
         ;"""
         .as[(String, String, String, String, String, Option[Timestamp], Option[Timestamp], Option[String], Long, Long)])
-    } yield
-      r.toList.map(
-        row =>
-          TaskRunEntry(
-            row._1,
-            ObjectId(row._2),
-            ObjectId(row._3),
-            row._4,
-            RunState.fromString(row._5).get,
-            row._6.map(_.toInstant),
-            row._7.map(_.toInstant),
-            row._8,
-            row._9,
-            row._10
-        ))
+      results <- Fox.combined(
+        r.toList.map(
+          row =>
+            for {
+              state <- RunState.fromString(row._5).toFox
+            } yield
+              TaskRunEntry(
+                row._1,
+                ObjectId(row._2),
+                ObjectId(row._3),
+                row._4,
+                state,
+                row._6.map(_.toInstant),
+                row._7.map(_.toInstant),
+                row._8,
+                row._9,
+                row._10
+            )))
+    } yield results
 
   def selectRuns(organizationId: ObjectId,
                  runIds: Option[List[ObjectId]],
@@ -235,22 +240,27 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
           #$runIdsQ
           #$workflowHashQ
         ;""".as[(String, String, String, String, String, String, String, String, String, Timestamp, Option[Timestamp])])
-    } yield
-      r.toList.map(
-        row =>
-          RunEntry(
-            ObjectId(row._1),
-            row._2,
-            row._3,
-            row._4,
-            row._5,
-            row._6,
-            row._7,
-            Json.parse(row._8).as[JsObject],
-            RunState.fromString(row._9).get,
-            row._10.toInstant,
-            row._11.map(_.toInstant)
-        ))
+      results <- Fox.combined(
+        r.toList.map(
+          row =>
+            for {
+              state <- RunState.fromString(row._9).toFox
+            } yield
+              RunEntry(
+                ObjectId(row._1),
+                row._2,
+                row._3,
+                row._4,
+                row._5,
+                row._6,
+                row._7,
+                Json.parse(row._8).as[JsObject],
+                state,
+                row._10.toInstant,
+                row._11.map(_.toInstant)
+            )))
+    } yield results
+
   }
 
   def upsertArtifactChecksumEvent(artifactId: ObjectId, ev: ArtifactFileChecksumEvent): Fox[Unit] =

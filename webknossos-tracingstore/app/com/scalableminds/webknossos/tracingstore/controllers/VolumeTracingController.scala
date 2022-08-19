@@ -265,7 +265,7 @@ class VolumeTracingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
           existingMags = tracing.resolutions.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
-        } yield Ok(Json.toJson(existingMags))
+        } yield Ok(Json.toJson(List(".zattrs", ".zgroup") ++ existingMags))
       }
     }
 
@@ -297,7 +297,7 @@ class VolumeTracingController @Inject()(
           existingMags = tracing.resolutions.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> 404
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> 404
-        } yield Ok(Json.toJson(List.empty))
+        } yield Ok(Json.toJson(List(".zarray")))
       }
     }
 
@@ -366,23 +366,24 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def zarrSource(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-      for {
-        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
+  def zarrSource(token: Option[String], tracingId: String, tracingName: Option[String]): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> 404
 
-        zarrLayer = ZarrSegmentationLayer(
-          name = tracingId,
-          largestSegmentId = tracing.largestSegmentId,
-          boundingBox = tracing.boundingBox,
-          elementClass = tracing.elementClass,
-          mags = tracing.resolutions.toList.map(x => ZarrMag(x, None, None)),
-          mappings = None,
-          numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
-        )
-      } yield Ok(Json.toJson(zarrLayer))
+          zarrLayer = ZarrSegmentationLayer(
+            name = tracingName.getOrElse(tracingId),
+            largestSegmentId = tracing.largestSegmentId,
+            boundingBox = tracing.boundingBox,
+            elementClass = tracing.elementClass,
+            mags = tracing.resolutions.toList.map(x => ZarrMag(x, None, None)),
+            mappings = None,
+            numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
+          )
+        } yield Ok(Json.toJson(zarrLayer))
+      }
     }
-  }
 
   def rawZarrCube(token: Option[String], tracingId: String, mag: String, cxyz: String): Action[AnyContent] =
     Action.async { implicit request =>

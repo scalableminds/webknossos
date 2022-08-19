@@ -22,10 +22,12 @@ class DSRemoteTracingstoreClient @Inject()(
       .getWithJsonResponse[ZarrHeader]
 
   def getVolumeLayerAsZarrLayer(tracingId: String,
+                                tracingName: Option[String],
                                 tracingStoreUri: String,
                                 accessToken: String): Fox[ZarrSegmentationLayer] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/zarrSource")
       .addQueryString("token" -> accessToken)
+      .addQueryStringOptional("tracingName", tracingName)
       .getWithJsonResponse[ZarrSegmentationLayer]
 
   def getOmeNgffHeader(tracingId: String, tracingStoreUri: String, accessToken: String): Fox[OmeNgffHeader] =

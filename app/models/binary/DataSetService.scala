@@ -15,14 +15,15 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.job.WorkerDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import play.api.i18n.MessagesProvider
 import oxalis.security.RandomIDGenerator
+import play.api.i18n.MessagesProvider
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
@@ -35,7 +36,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
                                workerDAO: WorkerDAO,
-                               publicationDAO: PublicationDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,

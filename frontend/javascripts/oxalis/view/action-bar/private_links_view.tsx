@@ -325,7 +325,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
     <div>
       <div style={{ marginBottom: 8 }}>
         Create{" "}
-        <a href="https://zarr.dev" target="_blank">
+        <a href="https://zarr.dev" target="_blank" rel="noreferrer">
           Zarr
         </a>{" "}
         streaming links to allow other tools to load the data of this annotation. Note that anyone

@@ -481,7 +481,7 @@ CREATE TABLE webknossos.voxelytics_workflows (
 CREATE TABLE webknossos.voxelytics_run_state_change_events (
     _run CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.webknossos.VOXELYTICS_RUN_STATE NOT NULL,
+    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_run, timestamp)
 );
 
@@ -494,14 +494,14 @@ CREATE TABLE webknossos.voxelytics_run_heartbeat_events (
 CREATE TABLE webknossos.voxelytics_task_state_change_events (
     _task CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.webknossos.VOXELYTICS_RUN_STATE NOT NULL,
+    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_task, timestamp)
 );
 
 CREATE TABLE webknossos.voxelytics_chunk_state_change_events (
     _chunk CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.webknossos.VOXELYTICS_RUN_STATE NOT NULL,
+    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
     PRIMARY KEY (_chunk, timestamp)
 );
 

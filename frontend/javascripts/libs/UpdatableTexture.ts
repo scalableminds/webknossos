@@ -23,7 +23,6 @@ const getImageData = _.memoize(
     }
 
     if (isInt) {
-      console.log("using uint32");
       return { width, height, data: new Uint32Array(4 * width * height).fill(255) };
     }
 
@@ -41,7 +40,9 @@ const getImageData = _.memoize(
 );
 
 class UpdatableTexture extends THREE.Texture {
-  isUpdatableTexture: boolean;
+  isUpdatableTexture: boolean = true;
+  // Needs to be set to true for integer textures:
+  isDataTexture: boolean = false;
   renderer!: THREE.WebGLRenderer;
   gl: any;
   utils!: THREE.WebGLUtils;
@@ -88,8 +89,6 @@ class UpdatableTexture extends THREE.Texture {
     this.flipY = false;
     this.unpackAlignment = 1;
     this.needsUpdate = true;
-    this.isUpdatableTexture = true;
-    // this.isDataTexture = true;
   }
 
   setRenderer(renderer: THREE.WebGLRenderer) {

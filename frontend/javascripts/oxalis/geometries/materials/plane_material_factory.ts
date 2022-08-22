@@ -587,7 +587,7 @@ class PlaneMaterialFactory {
                 if (color != null) {
                   cuckoo.set(
                     id,
-                    color.map((el) => el * 255),
+                    Utils.map3((el) => el * 255, color),
                   );
                 }
               }

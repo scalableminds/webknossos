@@ -6,6 +6,8 @@ import { Vector3 } from "oxalis/constants";
 import "test/mocks/globals.mock";
 import "test/mocks/updatable_texture.mock";
 
+type Entry = [number, Vector3];
+
 const { CuckooTable } = mock.reRequire("oxalis/model/bucket_data_handling/cuckoo_table");
 
 function generateRandomEntry(): [number, Vector3] {
@@ -46,11 +48,9 @@ function isValueEqual(t: ExecutionContext<any>, val1: Vector3, val2: Vector3) {
   t.true(val1[2] === val2[2]);
 }
 
-test.serial("CuckooTable", (t) => {
+test.serial("CuckooTable: Basic", (t) => {
   const entries = generateRandomEntrySet();
   const ct = CuckooTable.fromCapacity(entries.length);
-  console.time("simple");
-
   let n = 0;
   for (const entry of entries) {
     // console.log(`! write n=${n}   entry=${entry}`);
@@ -82,20 +82,9 @@ test.serial("CuckooTable", (t) => {
     }
     n++;
   }
-
-  // ct.set([1, 10, 3, 4], 1337);
-  // console.log(ct.get([1, 10, 3, 4]));
-  // ct.set([1, 10, 3, 4], 1336);
-  // console.log(ct.get([1, 10, 3, 4]));
-  // ct.set([1, 10, 2, 4], 1);
-  // ct.get([1, 10, 2, 4]);
-  // ct.set([1, 10, 3, 4], 1);
-
-  // ct.set([1, 34, 3, 4], 1);
-  console.timeEnd("simple");
 });
 
-test.serial("CuckooTable speed", (t) => {
+test.serial("CuckooTable: Speed should be alright", (t) => {
   console.log("cuckoo test");
   const RUNS = 100;
   const hashSets = _.range(RUNS).map(() => generateRandomEntrySet());
@@ -107,7 +96,6 @@ test.serial("CuckooTable speed", (t) => {
   const durations = [];
   for (let idx = 0; idx < RUNS; idx++) {
     const ct = cts[idx];
-    // console.log("******************************************************", idx);
     const entries = hashSets[idx];
     for (const entry of entries) {
       const then = performance.now();
@@ -117,18 +105,33 @@ test.serial("CuckooTable speed", (t) => {
     }
   }
   console.timeEnd("many runs");
-  console.log("durations", _.reverse(durations.sort((a, b) => a - b)));
+
   console.log("_.max(durations)", _.max(durations));
   console.log("_.mean(durations)", _.mean(durations));
 
-  // ct.set([1, 10, 3, 4], 1337);
-  // console.log(ct.get([1, 10, 3, 4]));
-  // ct.set([1, 10, 3, 4], 1336);
-  // console.log(ct.get([1, 10, 3, 4]));
-  // ct.set([1, 10, 2, 4], 1);
-  // ct.get([1, 10, 2, 4]);
-  // ct.set([1, 10, 3, 4], 1);
+  t.true(_.mean(durations) < 0.1);
+});
 
-  // ct.set([1, 34, 3, 4], 1);
-  t.true(true);
+test.serial("CuckooTable: Repeated sets should work", (t) => {
+  const ct = CuckooTable.fromCapacity(1);
+
+  for (let _idx = 0; _idx < ct.entryCapacity; _idx++) {
+    const entry: Entry = [1, [2, 3, 4]];
+    ct.set(entry[0], entry[1]);
+    const readValue = ct.get(entry[0]);
+    isValueEqual(t, entry[1], readValue);
+  }
+});
+
+test.serial("CuckooTable: Should throw error when exceeding capacity", (t) => {
+  const ct = CuckooTable.fromCapacity(1);
+
+  t.throws(() => {
+    for (let _idx = 0; _idx < ct.entryCapacity + 1; _idx++) {
+      const entry: Entry = [_idx + 1, [2, 3, 4]];
+      ct.set(entry[0], entry[1]);
+      const readValue = ct.get(entry[0]);
+      isValueEqual(t, entry[1], readValue);
+    }
+  });
 });

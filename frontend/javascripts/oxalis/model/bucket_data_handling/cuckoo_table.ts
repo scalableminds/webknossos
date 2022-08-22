@@ -21,8 +21,6 @@ export class CuckooTable {
   _texture: UpdatableTexture;
   textureWidth: number;
 
-  setCount: number = 0;
-
   constructor(textureWidth: number) {
     this.textureWidth = textureWidth;
     this._texture = createUpdatableTexture(
@@ -121,10 +119,8 @@ export class CuckooTable {
   }
 
   set(pendingKey: number, pendingValue: Vector3, rehashAttempt: number = 0) {
-    // todo: check that repeated sets to same key work
-
-    if (rehashAttempt === 0) {
-      this.setCount++;
+    if (pendingKey === EMPTY_KEY) {
+      throw new Error(`The key ${EMPTY_KEY} is not allowed for the CuckooTable.`);
     }
     let displacedEntry;
     let currentAddress;
@@ -132,12 +128,10 @@ export class CuckooTable {
 
     const ITERATION_THRESHOLD = 40;
     const REHASH_THRESHOLD = 100;
-    if (rehashAttempt > 5 && rehashAttempt % 10 === 0) {
-      // console.log("rehash attempt: 5", rehashAttempt);
-    }
+
     if (rehashAttempt >= REHASH_THRESHOLD) {
       throw new Error(
-        `Cannot rehash, since this is already the ${rehashAttempt}th attempt. set was called ${this.setCount}th times by the user.`,
+        `Cannot rehash, since this is already the ${rehashAttempt}th attempt. Is the capacity exceeded?`,
       );
     }
 

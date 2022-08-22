@@ -10,8 +10,11 @@ import { Vector3 } from "oxalis/constants";
  */
 const formatToChannelCount = new Map([
   [THREE.RedFormat, 1],
+  [THREE.RedIntegerFormat, 1],
   [THREE.RGFormat, 2],
+  [THREE.RGIntegerFormat, 2],
   [THREE.RGBAFormat, 4],
+  [THREE.RGBAIntegerFormat, 4],
 ]);
 
 // @ts-ignore

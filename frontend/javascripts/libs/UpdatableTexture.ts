@@ -1,48 +1,10 @@
 import * as THREE from "three";
-import { document } from "libs/window";
 import _ from "lodash";
-import { TypedArray } from "oxalis/constants";
-
-const lazyGetCanvas = _.memoize(() => {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1;
-  canvas.height = 1;
-  return canvas;
-});
-
-const getImageData = _.memoize(
-  (
-    width: number,
-    height: number,
-    isInt: boolean,
-  ): { width: number; height: number; data: TypedArray } => {
-    const canvas = lazyGetCanvas();
-    const ctx = canvas.getContext("2d");
-    if (ctx == null) {
-      throw new Error("Could not get context for texture.");
-    }
-
-    if (isInt) {
-      return { width, height, data: new Uint32Array(4 * width * height).fill(255) };
-    }
-
-    const imageData = ctx.createImageData(width, height);
-
-    // Explicitly "release" canvas. Necessary for iOS.
-    // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
-    canvas.width = 1;
-    canvas.height = 1;
-    ctx.clearRect(0, 0, 1, 1);
-
-    return imageData;
-  },
-  (width: number, height: number, isInt: boolean) => `${width}_${height}_${isInt}`,
-);
 
 class UpdatableTexture extends THREE.Texture {
   isUpdatableTexture: boolean = true;
   // Needs to be set to true for integer textures:
-  isDataTexture: boolean = false;
+  isDataTexture: boolean = true;
   renderer!: THREE.WebGLRenderer;
   gl: any;
   utils!: THREE.WebGLUtils;
@@ -62,7 +24,7 @@ class UpdatableTexture extends THREE.Texture {
     anisotropy?: number,
     encoding?: THREE.TextureEncoding,
   ) {
-    const imageData = getImageData(width, height, type === THREE.UnsignedIntType);
+    const imageData = { width, height, data: null };
 
     super(
       // @ts-ignore

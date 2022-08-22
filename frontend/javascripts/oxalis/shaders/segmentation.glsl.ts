@@ -72,8 +72,10 @@ export const convertCellIdToRGB: ShaderModule = {
       float colorCount = 19.;
       float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, 2.);
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
-      float colorValue = rgb2hsv(colormapJet(colorValueDecimal)).x;
-      // For historical reference: the old color generation was: colorValue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
+      float colorHue = rgb2hsv(colormapJet(colorValueDecimal)).x;
+      float colorSaturation = 1.;
+      float colorValue = 1.;
+      // For historical reference: the old color generation was: colorHue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
 
       uint integerValue = vec4ToUint(idLow);
       vec3 customColor = attemptCustomColorLookUp(integerValue, seed0);
@@ -84,19 +86,22 @@ export const convertCellIdToRGB: ShaderModule = {
         customColor = attemptCustomColorLookUp(integerValue, seed2);
       }
       if (customColor.r != -1.) {
-        return customColor;
+        vec3 customHSV = rgb2hsv(customColor);
+        colorHue = customHSV.x;
+        colorSaturation = customHSV.y;
+        colorValue = customHSV.z;
       }
 
       <% if (isMappingSupported) { %>
         // If the first element of the mapping colors texture is still the initialized
-        // colorValue of -1, no mapping colors have been specified
+        // colorHue of -1, no mapping colors have been specified
         bool hasCustomMappingColors = getRgbaAtIndex(
           segmentation_mapping_color_texture,
           <%= mappingColorTextureWidth %>,
           0.0
         ).r != -1.0;
         if (isMappingEnabled && hasCustomMappingColors) {
-          colorValue = getRgbaAtIndex(
+          colorHue = getRgbaAtIndex(
             segmentation_mapping_color_texture,
             <%= mappingColorTextureWidth %>,
             lastEightBits
@@ -158,9 +163,9 @@ export const convertCellIdToRGB: ShaderModule = {
       float aaStripeValue = 1.0 - max(aaStripeValueA, useGrid * aaStripeValueB);
 
       vec4 HSV = vec4(
-        colorValue,
-        1.0 - 0.5 * ((1. - aaStripeValue) * segmentationPatternOpacity / 100.0),
-        1.0 - 0.5 * (aaStripeValue * segmentationPatternOpacity / 100.0),
+        colorHue,
+        colorSaturation - 0.5 * ((1. - aaStripeValue) * segmentationPatternOpacity / 100.0),
+        colorValue - 0.5 * (aaStripeValue * segmentationPatternOpacity / 100.0),
         1.0
       );
 

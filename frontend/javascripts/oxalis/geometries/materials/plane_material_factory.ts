@@ -576,19 +576,21 @@ class PlaneMaterialFactory {
             }
 
             for (const updateAction of diffSegmentLists(prevSegments, visibleSegments)) {
-              if (updateAction.name === "deleteSegment") {
-                // todo
-              } else if (
+              if (
                 updateAction.name === "updateSegment" ||
-                updateAction.name === "createSegment"
+                updateAction.name === "createSegment" ||
+                updateAction.name === "deleteSegment"
               ) {
                 const cuckoo = getCustomColorCuckooTable();
-                const { id, color } = updateAction.value;
+                const { id } = updateAction.value;
+                const color = "color" in updateAction.value ? updateAction.value.color : null;
                 if (color != null) {
                   cuckoo.set(
                     id,
                     Utils.map3((el) => el * 255, color),
                   );
+                } else {
+                  cuckoo.unset(id);
                 }
               }
             }

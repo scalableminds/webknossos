@@ -172,6 +172,23 @@ export class CuckooTable {
     this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
   }
 
+  unset(key: number) {
+    for (const seed of this.seeds) {
+      const hashedAddress = this._hashKeyToAddress(seed, key);
+
+      const value = this.getValueAtAddress(key, hashedAddress);
+      if (value != null) {
+        this.writeEntryAtAddress(
+          EMPTY_KEY,
+          [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY],
+          hashedAddress,
+          false,
+        );
+        return;
+      }
+    }
+  }
+
   private rehash(rehashAttempt: number): void {
     const oldTable = this.table;
 
@@ -186,7 +203,7 @@ export class CuckooTable {
       if (oldTable[offset] === EMPTY_KEY) {
         continue;
       }
-      const key: number = oldTable[offset + 0];
+      const key: number = oldTable[offset];
       const value: Vector3 = [oldTable[offset + 1], oldTable[offset + 2], oldTable[offset + 3]];
       this.set(key, value, rehashAttempt);
       n++;
@@ -214,7 +231,7 @@ export class CuckooTable {
   getEntryAtAddress(hashedAddress: number): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
     return [
-      this.table[offset + 0],
+      this.table[offset],
       [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]],
     ];
   }
@@ -256,7 +273,7 @@ export class CuckooTable {
     const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
 
     const displacedEntry: Entry = [
-      this.table[offset + 0],
+      this.table[offset],
       [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]],
     ];
 

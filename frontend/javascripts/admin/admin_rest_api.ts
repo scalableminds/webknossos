@@ -84,6 +84,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { SaveQueueType } from "oxalis/model/actions/save_actions";
+import { DatasourceConfiguration } from "types/schemas/datasource.types";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -1432,6 +1433,45 @@ export async function addForeignDataSet(
   });
   return result;
 }
+
+type ExplorationResult = {
+  dataSource: DatasourceConfiguration | undefined;
+  report: string;
+};
+
+export async function exploreRemoteDataset(
+  remoteUris: string[],
+  credentials?: { username: string; pass: string },
+): Promise<ExplorationResult> {
+  const { dataSource, report } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
+    data: credentials
+      ? remoteUris.map((uri) => ({
+          remoteUri: uri,
+          user: credentials.username,
+          password: credentials.pass,
+        }))
+      : remoteUris.map((uri) => ({ remoteUri: uri })),
+  });
+  if (report.indexOf("403 Forbidden") !== -1 || report.indexOf("401 Unauthorized") !== -1) {
+    Toast.error("The data could not be accessed. Please verify the credentials!");
+  }
+  return { dataSource, report };
+}
+
+export async function storeRemoteDataset(
+  datasetName: string,
+  organizationName: string,
+  datasource: string,
+): Promise<Response> {
+  return doWithToken((token) =>
+    fetch(`/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: datasource,
+    }),
+  );
+}
+
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
 export async function isDatasetNameValid(
   datasetId: APIDatasetId,

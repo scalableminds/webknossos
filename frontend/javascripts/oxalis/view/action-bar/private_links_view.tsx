@@ -132,12 +132,15 @@ function useDeleteLinkMutation(annotationId: string) {
   });
 }
 
-function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
+export function useZarrLinkMenu(maybeAccessToken: string | null) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataStoreURL = dataset.dataStore.url;
   const dataLayers = getDataLayers(dataset);
-  const baseUrl = `${dataStoreURL}/data/annotations/zarr/${linkItem.accessToken}`;
+
+  const baseUrl = maybeAccessToken
+    ? `${dataStoreURL}/data/annotations/zarr/${maybeAccessToken}`
+    : `${dataStoreURL}/data/zarr/${dataset.owningOrganization}/${dataset.name}`;
 
   const copyTokenToClipboard = async ({ key: layerName }: { key: string }) => {
     await navigator.clipboard.writeText(`${baseUrl}/${layerName}`);
@@ -163,6 +166,12 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
       ]}
     />
   );
+
+  return { baseUrl, copyLayerUrlMenu };
+}
+
+function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
+  const { baseUrl, copyLayerUrlMenu } = useZarrLinkMenu(linkItem.accessToken);
 
   return (
     <Input.Group compact className="no-borders">

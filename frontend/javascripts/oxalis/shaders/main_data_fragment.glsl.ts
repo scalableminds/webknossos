@@ -98,9 +98,15 @@ const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
 
+
+// Custom color cuckoo table
 uniform highp uint seed0;
 uniform highp uint seed1;
 uniform highp uint seed2;
+uniform highp uint CUCKOO_ENTRY_CAPACITY;
+uniform highp uint CUCKOO_ELEMENTS_PER_ENTRY;
+uniform highp uint CUCKOO_ELEMENTS_PER_TEXEL;
+uniform highp uint CUCKOO_TWIDTH;
 
 // For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it

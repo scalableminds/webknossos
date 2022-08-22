@@ -30,15 +30,10 @@ export const convertCellIdToRGB: ShaderModule = {
     }
 
     vec3 attemptCustomColorLookUp(uint integerValue, uint seed) {
-      highp uint ENTRY_CAPACITY = 262144u;
-      highp uint ELEMENTS_PER_ENTRY = 4u;
-      highp uint ELEMENTS_PER_TEXEL = 4u;
-      highp uint TWIDTH = 512u;
-
-      highp uint h0 = hashCombine(seed, integerValue) % ENTRY_CAPACITY;
-      h0 = uint(h0 * ELEMENTS_PER_ENTRY / ELEMENTS_PER_TEXEL);
-      highp uint x = h0 % TWIDTH;
-      highp uint y = h0 / TWIDTH;
+      highp uint h0 = hashCombine(seed, integerValue) % CUCKOO_ENTRY_CAPACITY;
+      h0 = uint(h0 * CUCKOO_ELEMENTS_PER_ENTRY / CUCKOO_ELEMENTS_PER_TEXEL);
+      highp uint x = h0 % CUCKOO_TWIDTH;
+      highp uint y = h0 / CUCKOO_TWIDTH;
 
       uvec4 customEntry = texelFetch(custom_color_texture, ivec2(x, y), 0);
       uvec3 customColor = customEntry.gba;

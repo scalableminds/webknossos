@@ -193,6 +193,7 @@ class SceneController {
   }
 
   constructSceneMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
+    // todo:
     const [hue] = jsConvertCellIdToHSLA(cellId);
     const color = new THREE.Color().setHSL(hue, 0.75, 0.05);
     const meshMaterial = new THREE.MeshLambertMaterial({

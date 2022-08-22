@@ -113,6 +113,15 @@ export class CuckooTable {
     this.seedSubscribers.forEach((fn) => fn(this.seeds));
   }
 
+  getUniformValues() {
+    return {
+      CUCKOO_ENTRY_CAPACITY: this.entryCapacity,
+      CUCKOO_ELEMENTS_PER_ENTRY: ELEMENTS_PER_ENTRY,
+      CUCKOO_ELEMENTS_PER_TEXEL: TEXTURE_CHANNEL_COUNT,
+      CUCKOO_TWIDTH: this.textureWidth,
+    };
+  }
+
   clearAll() {
     this.table.fill(EMPTY_KEY);
     this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);

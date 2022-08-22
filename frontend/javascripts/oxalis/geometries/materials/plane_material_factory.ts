@@ -84,9 +84,6 @@ function getPackingDegreeLookup(): Record<string, number> {
 const getCustomColorCuckooTable = _.memoize(() => {
   const textureWidth = 512;
   const cuckoo = new CuckooTable(textureWidth);
-  // cuckoo.set(1, [128, 0, 128]);
-  // cuckoo.set(2, [0, 128, 128]);
-  // cuckoo.set(256, [128, 128, 0]);
 
   return cuckoo;
 });
@@ -269,6 +266,17 @@ class PlaneMaterialFactory {
         };
       });
     });
+    const {
+      CUCKOO_ENTRY_CAPACITY,
+      CUCKOO_ELEMENTS_PER_ENTRY,
+      CUCKOO_ELEMENTS_PER_TEXEL,
+      CUCKOO_TWIDTH,
+    } = cuckoo.getUniformValues();
+
+    this.uniforms["CUCKOO_ENTRY_CAPACITY"] = { value: CUCKOO_ENTRY_CAPACITY };
+    this.uniforms["CUCKOO_ELEMENTS_PER_ENTRY"] = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+    this.uniforms["CUCKOO_ELEMENTS_PER_TEXEL"] = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+    this.uniforms["CUCKOO_TWIDTH"] = { value: CUCKOO_TWIDTH };
 
     this.attachSegmentationTextures();
   }

@@ -67,7 +67,6 @@ POST          /datasets/:organizationName/:dataSetName/createExplorational      
 GET           /datasets/:organizationName/:dataSetName/sandbox/:typ                     controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String, sharingToken: Option[String])
 GET           /datasets                                                                 controllers.DataSetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], isEditable: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String])
 POST          /datasets                                                                 controllers.DataSetController.create(typ: String)
-POST          /datasets/addForeign                                                      controllers.DataSetController.addForeignDataStoreAndDataSet
 GET           /datasets/disambiguate/:dataSetName/toNew                                 controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/health                           controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
 PATCH         /datasets/:organizationName/:dataSetName                                  controllers.DataSetController.update(organizationName: String, dataSetName: String)

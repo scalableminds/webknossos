@@ -1453,20 +1453,6 @@ export function addWkConnectDataset(
   );
 }
 
-export async function addForeignDataSet(
-  dataStoreName: string,
-  url: string,
-  dataSetName: string,
-): Promise<string> {
-  const { result } = await Request.sendJSONReceiveJSON("/api/datasets/addForeign", {
-    data: {
-      dataStoreName,
-      url,
-      dataSetName,
-    },
-  });
-  return result;
-}
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
 export async function isDatasetNameValid(
   datasetId: APIDatasetId,

@@ -73,7 +73,6 @@ export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {
   readonly name: string;
   readonly url: string;
-  readonly isForeign: boolean;
   readonly isScratch: boolean;
   readonly isConnector: boolean;
   readonly allowsUpload: boolean;
@@ -126,7 +125,6 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   displayName: string | null | undefined;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
-  isForeign: boolean;
   jobsEnabled: boolean;
   sortingKey: number;
   owningOrganization: string;
@@ -548,7 +546,6 @@ export type APIBuildInfo = {
 export type APIFeatureToggles = {
   readonly discussionBoard: string | false;
   readonly discussionBoardRequiresAdmin: boolean;
-  readonly addForeignDataset: boolean;
   readonly hideNavbarLogin: boolean;
   readonly isDemoInstance: boolean;
   readonly taskReopenAllowedInSeconds: number;

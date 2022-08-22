@@ -19,7 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(86);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(87);
 COMMIT TRANSACTION;
 
 
@@ -166,7 +166,6 @@ CREATE TABLE webknossos.dataStores(
   key VARCHAR(1024) NOT NULL,
   isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  isForeign BOOLEAN NOT NULL DEFAULT false,
   isConnector BOOLEAN NOT NULL DEFAULT false,
   allowsUpload BOOLEAN NOT NULL DEFAULT true,
   onlyAllowedOrganization CHAR(24)

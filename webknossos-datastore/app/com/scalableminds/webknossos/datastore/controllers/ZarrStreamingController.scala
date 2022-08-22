@@ -172,7 +172,9 @@ class ZarrStreamingController @Inject()(
       dataSource <- dataSourceRepository
         .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
         .toFox ~> NOT_FOUND
-      dataSourceLayers = dataSource.dataLayers.map(convertLayerToZarrLayer)
+      dataSourceLayers = dataSource.dataLayers
+        .filter(dL => !volumeAnnotationLayers.exists(_.name == dL.name))
+        .map(convertLayerToZarrLayer)
       annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(
         l =>
           remoteTracingstoreClient
@@ -207,6 +209,7 @@ class ZarrStreamingController @Inject()(
         annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken) ~> NOT_FOUND
         layer = annotationSource.getAnnotationLayer(dataLayerName)
 
+        // ensures access to volume layers if fallback layer with equal name exists
         result <- layer match {
           case Some(annotationLayer) =>
             remoteTracingstoreClient
@@ -464,11 +467,13 @@ class ZarrStreamingController @Inject()(
             .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
             .toFox ?~> Messages("dataSource.notFound") ~> NOT_FOUND
 
-          dataSourceLayerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
           annotationLayerNames = annotationSource.annotationLayers
             .filter(_.typ == AnnotationLayerType.Volume)
             .map(_.name)
-          layerNames = annotationLayerNames.toSet.union(dataSourceLayerNames.toSet).toList
+          dataSourceLayerNames = dataSource.dataLayers
+            .map((dataLayer: DataLayer) => dataLayer.name)
+            .filter(!annotationLayerNames.contains(_))
+          layerNames = annotationLayerNames ++ dataSourceLayerNames
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(

@@ -48,5 +48,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Removed
 - Annotation Type was removed from the info tab. [#6330](https://github.com/scalableminds/webknossos/pull/6330)
+- Removed the possibility to load data from foreign webKnossos datastores. Use Zarr streaming instead. [#6392](https://github.com/scalableminds/webknossos/pull/6392)
 
 ### Breaking Changes

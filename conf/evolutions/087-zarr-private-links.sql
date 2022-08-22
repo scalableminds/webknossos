@@ -20,6 +20,6 @@ FROM webknossos.annotation_privateLinks
 WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation
-SET schemaVersion = 86;
+SET schemaVersion = 87;
 
 COMMIT TRANSACTION;

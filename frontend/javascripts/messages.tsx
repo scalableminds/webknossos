@@ -148,7 +148,7 @@ instead. Only enable this option if you understand its effect. All layers will n
       <a href="https://zarr.dev" target="_blank" rel="noreferrer">
         Zarr
       </a>{" "}
-      link may be used by other tools to load the dataset's data in a streaming manner.
+      link may be used by other tools to load the dataset&apos;s data in a streaming manner.
     </span>
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",

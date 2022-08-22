@@ -18,6 +18,9 @@ function channelCountToFormat(channelCount: number, type: THREE.TextureDataType)
       if (type === THREE.IntType) return THREE.RGBAIntegerFormat;
       return THREE.RGBAFormat;
     }
+    default: {
+      throw new Error(`Unsupported channel count: ${channelCount}`);
+    }
   }
 }
 // This function has to be in its own file as non-resolvable cycles are created otherwise

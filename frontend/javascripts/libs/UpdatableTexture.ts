@@ -62,11 +62,10 @@ class UpdatableTexture extends THREE.Texture {
     anisotropy?: number,
     encoding?: THREE.TextureEncoding,
   ) {
-    let imageData = getImageData(width, height, type === THREE.UnsignedIntType);
+    const imageData = getImageData(width, height, type === THREE.UnsignedIntType);
 
     super(
       // @ts-ignore
-      // type === THREE.UnsignedIntType ? null : imageData,
       imageData,
       mapping,
       wrapS,
@@ -78,10 +77,6 @@ class UpdatableTexture extends THREE.Texture {
       anisotropy,
       encoding,
     );
-
-    // if (type === THREE.UnsignedIntType) {
-    //   this.image = imageData;
-    // }
 
     this.magFilter = magFilter !== undefined ? magFilter : THREE.LinearFilter;
     this.minFilter = minFilter !== undefined ? minFilter : THREE.LinearMipMapLinearFilter;

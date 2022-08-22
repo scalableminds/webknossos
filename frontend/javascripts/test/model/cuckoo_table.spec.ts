@@ -40,7 +40,7 @@ function generateRandomEntrySet() {
 
 function isValueEqual(t: ExecutionContext<any>, val1: Vector3, val2: Vector3) {
   if (!(val1[0] === val2[0] && val1[1] === val2[1] && val1[2] === val2[2])) {
-    throw new Error(`${val1} != ${val2}`);
+    throw new Error(`${val1} !== ${val2}`);
   }
 
   t.true(val1[0] === val2[0]);
@@ -61,7 +61,7 @@ test.serial("CuckooTable: Basic", (t) => {
 
     // console.log("  isValueEqual");
     isValueEqual(t, entry[1], readValue);
-    if (entry[1][0] != readValue[0]) {
+    if (entry[1][0] !== readValue[0]) {
       // console.log("key:", entry[0]);
       // console.log("value:", entry[1]);
       // console.log("retrieved value: ", ct.get(entry[0]));
@@ -74,7 +74,7 @@ test.serial("CuckooTable: Basic", (t) => {
       }
       // console.log("  isValueEqual");
       isValueEqual(t, innerEntry[1], ct.get(innerEntry[0]));
-      // if (innerEntry[1] != ct.get(innerEntry[0])) {
+      // if (innerEntry[1] !== ct.get(innerEntry[0])) {
       //   console.log(`? nn=${nn}  expected=${innerEntry}    retrieved=${ct.get(innerEntry[0])}`);
       //   throw new Error("failed");
       // }

@@ -337,8 +337,9 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
         <a href="https://zarr.dev" target="_blank" rel="noreferrer">
           Zarr
         </a>{" "}
-        streaming links to allow other tools to load the data of this annotation. Note that anyone
-        with these links can access the data, regardless of other sharing settings.
+        streaming links to allow other tools to load the image data of this annotation (this does
+        not include skeleton data). Note that anyone with these links can access the data,
+        regardless of other sharing settings.
       </div>
 
       {isLoading || links == null ? (

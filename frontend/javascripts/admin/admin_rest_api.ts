@@ -1,6 +1,7 @@
 import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
 import _ from "lodash";
+import moment from "moment";
 import type {
   APIActiveUser,
   APIAnnotation,
@@ -555,7 +556,7 @@ export function createPrivateLink(
   return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
     data: {
       annotation: annotationId,
-      expirationDateTime: new Date().getTime() + initialExpirationPeriodInDays * 24 * 3600 * 1000,
+      expirationDateTime: moment().add(initialExpirationPeriodInDays, "days").valueOf(),
     },
   });
 }

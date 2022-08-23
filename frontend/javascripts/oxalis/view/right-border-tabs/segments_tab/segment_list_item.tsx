@@ -6,16 +6,15 @@ import {
   EllipsisOutlined,
 } from "@ant-design/icons";
 import { List, Tooltip, Dropdown, Menu } from "antd";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Checkbox from "antd/lib/checkbox/Checkbox";
 import React from "react";
 
 import classnames from "classnames";
 import * as Utils from "libs/utils";
 import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import {
   triggerIsosurfaceDownloadAction,
   updateIsosurfaceVisibilityAction,
@@ -24,28 +23,26 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import type { ActiveMappingInfo, IsosurfaceInformation, Segment } from "oxalis/store";
+import type { ActiveMappingInfo, IsosurfaceInformation, OxalisState, Segment } from "oxalis/store";
 import Store from "oxalis/store";
+import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
 
-const convertCellIdToCSS = (id: number, mappingColors: ActiveMappingInfo["mappingColors"]) => {
-  const [h, s, l, a] = jsConvertCellIdToHSLA(id, mappingColors);
+const hslaToCSS = (hsla: Vector4) => {
+  const [h, s, l, a] = hsla;
   return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 };
 
-function getColoredDotIconForSegment(
-  segment: Segment,
-  segmentId: number,
-  mappingColors: ActiveMappingInfo["mappingColors"],
-) {
+function getColoredDotIconForSegment(segmentId: number) {
+  const hslaCss = useSelector((state: OxalisState) =>
+    hslaToCSS(getSegmentColorAsHSL(state, segmentId)),
+  );
+
   return (
     <span
       className="circle"
       style={{
         paddingLeft: "10px",
-        backgroundColor:
-          segment.color != null
-            ? `rgb(${segment.color.map((el) => el * 255).join(", ")})`
-            : convertCellIdToCSS(segmentId, mappingColors),
+        backgroundColor: hslaCss,
       }}
     />
   );
@@ -350,9 +347,9 @@ function _SegmentListItem({
       )}
       {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
 
-      <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled}>
+      <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled || segment.id !== mappedId}>
         <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
-          Select Segment Color
+          Change Segment Color
           <input
             type="color"
             value={Utils.rgbToHex(Utils.map3((value) => value * 255, segment.color ?? [0, 0, 0]))}
@@ -452,7 +449,7 @@ function _SegmentListItem({
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>
-          {getColoredDotIconForSegment(segment, mappedId, mappingInfo.mappingColors)}
+          {getColoredDotIconForSegment(mappedId)}
           <EditableTextLabel
             value={segment.name || `Segment ${segment.id}`}
             label="Segment Name"

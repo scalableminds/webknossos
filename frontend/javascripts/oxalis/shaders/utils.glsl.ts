@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { Vector3 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
 export const hsvToRgb: ShaderModule = {
   requirements: [],
@@ -37,6 +38,51 @@ export function jsRgb2hsv(rgb: [number, number, number]): [number, number, numbe
   // @ts-expect-error ts-migrate(2365) FIXME: Operator '+' cannot be applied to types 'number | ... Remove this comment to see the full error message
   return [60 * (h < 0 ? h + 6 : h), v && n / v, v];
 }
+
+/**
+ * Adapted from https://stackoverflow.com/a/9493060.
+ *
+ * Converts an RGB color value to HSL. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes r, g, and b are contained in the set [0, 1] and
+ * returns h, s, and l in the set [0, 1].
+ *
+ * @param   {number}  r       The red color value
+ * @param   {number}  g       The green color value
+ * @param   {number}  b       The blue color value
+ * @return  {Array}           The HSL representation
+ */
+export function jsRgb2hsl(rgb: [number, number, number]): Vector3 {
+  const [r, g, b] = rgb;
+  let max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
+  let h,
+    s,
+    l = (max + min) / 2;
+
+  if (max == min) {
+    h = s = 0; // achromatic
+  } else {
+    let d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+      default:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+
+  return [h, s, l];
+}
+
 export const colormapJet: ShaderModule = {
   requirements: [],
   code: `

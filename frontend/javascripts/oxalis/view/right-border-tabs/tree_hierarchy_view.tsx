@@ -459,7 +459,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                   cursor: "pointer",
                 }}
               />{" "}
-              Select Tree Color
+              Change Tree Color
               <input
                 type="color"
                 value={Utils.rgbToHex(Utils.map3((value) => value * 255, tree.color))}

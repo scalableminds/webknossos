@@ -55,10 +55,10 @@ export function* watchZ1Downsampling(): Saga<void> {
     if (!userClosedWarning) {
       // checking only the downsampled dimensions x and y
       const extents = yield* select((state) => getViewportExtents(state));
-      const areas = [extents["PLANE_XY"], extents["PLANE_YZ"], extents["PLANE_XZ"]].map(
+      const areas = [extents.PLANE_XY, extents.PLANE_YZ, extents.PLANE_XZ].map(
         ([width, height]) => width * height,
       );
-      const areDataviewportsInvisible = sum(areas) == 0;
+      const areDataviewportsInvisible = sum(areas) === 0;
 
       const showWarning =
         (currentZoomStep / currentRes[0] < minVoxelPerPixel ||

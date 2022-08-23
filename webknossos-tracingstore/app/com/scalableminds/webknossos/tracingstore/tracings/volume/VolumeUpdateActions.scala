@@ -259,7 +259,7 @@ case class UpdateSegmentVolumeAction(id: Long,
         anchorPosition = anchorPosition.map(vec3IntToProto),
         name = name,
         creationTime = creationTime,
-        color = colorOptToProto(color).orElse(segment.color)
+        color = colorOptToProto(color)
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }

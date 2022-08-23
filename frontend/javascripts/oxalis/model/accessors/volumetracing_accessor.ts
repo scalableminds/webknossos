@@ -497,21 +497,18 @@ export function getSegmentColorAsHSL(state: OxalisState, mappedId: number): Vect
   if (!visibleSegmentationLayer) {
     return [1, 1, 1, 1];
   }
-  const activeVolumeTracing = getActiveSegmentationTracing(state);
-  if (!activeVolumeTracing) {
-    return [1, 1, 1, 1];
-  }
-
   const mappingInfo = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     visibleSegmentationLayer.name,
   );
+  const activeVolumeTracing = getActiveSegmentationTracing(state);
+  if (activeVolumeTracing) {
+    const segment = activeVolumeTracing.segments.getNullable(mappedId);
 
-  const segment = activeVolumeTracing.segments.getNullable(mappedId);
-
-  if (segment?.color) {
-    const [hue, saturation, value] = jsRgb2hsl(segment.color);
-    return [hue, saturation, value, 1];
+    if (segment?.color) {
+      const [hue, saturation, value] = jsRgb2hsl(segment.color);
+      return [hue, saturation, value, 1];
+    }
   }
 
   return jsConvertCellIdToHSLA(mappedId, mappingInfo.mappingColors);

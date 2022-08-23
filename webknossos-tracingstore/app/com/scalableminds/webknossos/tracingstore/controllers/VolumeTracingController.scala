@@ -11,7 +11,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -329,7 +329,7 @@ class VolumeTracingController @Inject()(
 
   def zGroup(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-      Future(Ok(Json.obj("zarr_format" -> 2)))
+      Future(Ok(Json.toJson(OmeNgffGroupHeader(zarr_format = 2))))
     }
   }
 

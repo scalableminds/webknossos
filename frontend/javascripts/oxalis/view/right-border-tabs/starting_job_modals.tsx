@@ -336,7 +336,7 @@ function StartingJobModal(props: StartingJobModalProps) {
 
       Toast.info(
         <>
-          The {jobName} job has been started. You can look in the{" "}
+          The {jobName} job has been started. See the{" "}
           <a target="_blank" href="/jobs" rel="noopener noreferrer">
             Processing Jobs
           </a>{" "}

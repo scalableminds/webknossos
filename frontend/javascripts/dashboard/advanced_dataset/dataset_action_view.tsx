@@ -1,8 +1,6 @@
-import { Tooltip } from "antd";
 import {
   EllipsisOutlined,
   EyeOutlined,
-  InfoCircleOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
   PlusOutlined,
@@ -11,7 +9,6 @@ import {
 } from "@ant-design/icons";
 import { Link, LinkProps, RouteComponentProps, withRouter } from "react-router-dom";
 import * as React from "react";
-import { Unicode } from "oxalis/constants";
 import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
 import {
@@ -138,6 +135,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     isReloading: false,
     isCreateExplorativeModalVisible: false,
   };
+
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
     this.setState({
       isReloading: true,
@@ -159,7 +157,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     const { isReloading } = this.state;
     const { isCreateExplorativeModalVisible } = this.state;
     const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
-    const reloadLink = !dataset.isForeign ? (
+    const reloadLink = (
       <a
         onClick={() => this.clearCache(dataset)}
         title="Reload Dataset"
@@ -169,7 +167,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
         {isReloading ? <LoadingOutlined /> : <ReloadOutlined />}
         Reload
       </a>
-    ) : null;
+    );
     const importLink = (
       <div className="dataset-actions">
         <Link
@@ -188,34 +186,21 @@ class DatasetActionView extends React.PureComponent<Props, State> {
         {dataset.isEditable && !dataset.isActive ? importLink : null}
         {dataset.isActive ? (
           <div className="dataset-actions nowrap">
-            {!dataset.isForeign ? (
-              <NewAnnotationLink
-                dataset={dataset}
-                isReloading={isReloading}
-                isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
-                onShowCreateExplorativeModal={() =>
-                  this.setState({
-                    isCreateExplorativeModalVisible: true,
-                  })
-                }
-                onCloseCreateExplorativeModal={() =>
-                  this.setState({
-                    isCreateExplorativeModalVisible: false,
-                  })
-                }
-              />
-            ) : (
-              <p style={disabledWhenReloadingStyle}>
-                New Annotation {Unicode.NonBreakingSpace}
-                <Tooltip title="Cannot create annotations for read-only datasets">
-                  <InfoCircleOutlined
-                    style={{
-                      color: "gray",
-                    }}
-                  />
-                </Tooltip>
-              </p>
-            )}
+            <NewAnnotationLink
+              dataset={dataset}
+              isReloading={isReloading}
+              isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
+              onShowCreateExplorativeModal={() =>
+                this.setState({
+                  isCreateExplorativeModalVisible: true,
+                })
+              }
+              onCloseCreateExplorativeModal={() =>
+                this.setState({
+                  isCreateExplorativeModalVisible: false,
+                })
+              }
+            />
             <LinkWithDisabled
               to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
               title="View Dataset"

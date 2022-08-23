@@ -6,13 +6,13 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrMag, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.jzarr.{
-  AxisOrder,
-  OmeNgffGroupHeader,
-  OmeNgffHeader,
-  ZarrHeader
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{
+  ZarrDataLayer,
+  ZarrLayer,
+  ZarrMag,
+  ZarrSegmentationLayer
 }
+import com.scalableminds.webknossos.datastore.jzarr.{AxisOrder, OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource._

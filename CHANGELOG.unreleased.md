@@ -46,6 +46,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a regression which caused that uint16 and uint8 segmentations could not be rendered. [#6406](https://github.com/scalableminds/webknossos/pull/6406)
 - Fixed a bug which prevented keyboard shortcuts from taking affect after expanding/collapsing the sidebar panels using the button icons.[#6410](https://github.com/scalableminds/webknossos/pull/6410) 
 - Fixed a bug with the clip histogram button to prevent it from showing a loading spinner forever in some cases. [#6407](https://github.com/scalableminds/webknossos/pull/6407)
+- Fixed an issue whereby a warning toast would be triggered every time the 3D viewport is put into fullscreen mode. [#6412](https://github.com/scalableminds/webknossos/pull/6412)
+
 
 
 ### Removed

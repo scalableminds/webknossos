@@ -15,16 +15,17 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
+
+import javax.inject.Inject
 import models.job.WorkerDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import oxalis.security.CompactRandomIDGenerator
+import oxalis.security.RandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
-import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
@@ -34,7 +35,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
                                workerDAO: WorkerDAO,
-                               publicationDAO: PublicationDAO,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
@@ -211,7 +211,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
     def createAndSaveSharingToken(dataSetName: String)(implicit ctx: DBAccessContext): Fox[String] =
       for {
-        tokenValue <- new CompactRandomIDGenerator().generate
+        tokenValue <- new RandomIDGenerator().generate
         _ <- dataSetDAO.updateSharingTokenByName(dataSetName, organizationId, Some(tokenValue))
       } yield tokenValue
 

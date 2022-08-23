@@ -1,6 +1,7 @@
 import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
 import _ from "lodash";
+import moment from "moment";
 import type {
   APIActiveUser,
   APIAnnotation,
@@ -57,6 +58,7 @@ import type {
   WkConnectDatasetConfig,
   ServerEditableMapping,
   APICompoundType,
+  ZarrPrivateLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -544,6 +546,39 @@ export async function transferActiveTasksOfProject(
 
 export async function getUsersWithActiveTasks(projectId: string): Promise<Array<APIActiveUser>> {
   return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
+}
+
+// ### Private Links
+
+export function createPrivateLink(
+  annotationId: string,
+  initialExpirationPeriodInDays: number = 30,
+): Promise<ZarrPrivateLink> {
+  return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
+    data: {
+      annotation: annotationId,
+      expirationDateTime: moment().add(initialExpirationPeriodInDays, "days").valueOf(),
+    },
+  });
+}
+
+export function getPrivateLinksByAnnotation(annotationId: string): Promise<Array<ZarrPrivateLink>> {
+  return Request.receiveJSON(`/api/zarrPrivateLinks/byAnnotation/${annotationId}`);
+}
+
+export function updatePrivateLink(link: ZarrPrivateLink): Promise<ZarrPrivateLink> {
+  return Request.sendJSONReceiveJSON(`/api/zarrPrivateLinks/${link.id}`, {
+    data: link,
+    method: "PUT",
+  });
+}
+
+export function deletePrivateLink(linkId: string): Promise<{
+  messages: Array<Message>;
+}> {
+  return Request.receiveJSON(`/api/zarrPrivateLinks/${linkId}`, {
+    method: "DELETE",
+  });
 }
 
 // ### Annotations

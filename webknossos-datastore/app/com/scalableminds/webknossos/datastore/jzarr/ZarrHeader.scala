@@ -1,13 +1,13 @@
 package com.scalableminds.webknossos.datastore.jzarr
 
-import java.nio.ByteOrder
-
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+
+import java.nio.ByteOrder
 import com.scalableminds.webknossos.datastore.jzarr.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.jzarr.BytesConverter.bytesPerElementFor
 import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
@@ -63,6 +63,34 @@ case class ZarrHeader(
 object ZarrHeader {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
+  /***
+    * This function is used for exposing webknossos layers as zarr layers via the API.
+    * It therefore defaults to the necessary defaults for webknossos data layers.
+    */
+  def fromLayer(dataLayer: DataLayer, mag: Vec3Int): ZarrHeader = {
+    val cubeLength = DataLayer.bucketLength
+    val (channels, dtype) = ElementClass.toChannelAndZarrString(dataLayer.elementClass)
+    // data request method always decompresses before sending
+    val compressor = None
+
+    val shape = Array(
+      channels,
+      // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+      (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / mag.x,
+      (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / mag.y,
+      (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / mag.z
+    )
+
+    val chunks = Array(channels, cubeLength, cubeLength, cubeLength)
+
+    ZarrHeader(zarr_format = 2,
+               shape = shape,
+               chunks = chunks,
+               compressor = compressor,
+               dtype = dtype,
+               order = ArrayOrder.F)
+  }
+
   implicit object NumberFormat extends Format[Number] {
 
     override def reads(json: JsValue): JsResult[Number] =
@@ -103,5 +131,21 @@ object ZarrHeader {
       }
   }
 
-  implicit val jsonFormat: OFormat[ZarrHeader] = Json.using[Json.WithDefaultValues].format[ZarrHeader]
+  implicit object ZarrHeaderFormat extends Format[ZarrHeader] {
+    override def reads(json: JsValue): JsResult[ZarrHeader] =
+      Json.reads[ZarrHeader].reads(json)
+
+    override def writes(zarrHeader: ZarrHeader): JsValue =
+      Json.obj(
+        "dtype" -> zarrHeader.dtype,
+        "fill_value" -> 0,
+        "zarr_format" -> zarrHeader.zarr_format,
+        "order" -> zarrHeader.order,
+        "chunks" -> zarrHeader.chunks,
+        "compressor" -> zarrHeader.compressor,
+        "filters" -> None,
+        "shape" -> zarrHeader.shape,
+        "dimension_seperator" -> zarrHeader.dimension_separator
+      )
+  }
 }

@@ -34,13 +34,14 @@ object RpcTokenHolder {
    * The token is refreshed on every wK restart.
    * Keep it secret!
    */
-  lazy val webKnossosToken: String = CompactRandomIDGenerator.generateBlocking()
+  lazy val webKnossosToken: String = RandomIDGenerator.generateBlocking()
 }
 
 @Api
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataSetService: DataSetService,
                                     annotationDAO: AnnotationDAO,
+                                    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
                                     userService: UserService,
                                     organizationDAO: OrganizationDAO,
                                     annotationStore: AnnotationStore,
@@ -101,7 +102,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
+            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox, token)
           case AccessResourceType.jobExport =>
             handleJobExportAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
           case _ =>
@@ -163,8 +164,12 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  private def handleTracingAccess(tracingId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] = {
+  private def handleTracingAccess(tracingId: String,
+                                  mode: AccessMode,
+                                  userBox: Box[User],
+                                  token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
+    // Optionally, a accessToken can be provided which explicitly looks up the read right the private link table
 
     def findAnnotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
       val annotationFox = annotationDAO.findOneByTracingId(tracingId)
@@ -190,9 +195,16 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     else {
       for {
         annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+        annotationAccessByToken <- token
+          .map(annotationPrivateLinkDAO.findOneByAccessToken)
+          .getOrElse(Fox.empty)
+          .futureBox
+
+        allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
         restrictions <- annotationInformationProvider.restrictionsFor(
           AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
-        allowed <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+        allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+        allowed = allowedByToken || allowedByUser
       } yield {
         if (allowed) UserAccessAnswer(granted = true)
         else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))

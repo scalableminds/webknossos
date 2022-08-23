@@ -15,3 +15,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - [084-annotation-contributors.sql](conf/evolutions/084-annotation-contributors.sql)
 - [085-add-annotations-publicationforeignkey](conf/evolutions/085-add-annotations-publicationforeignkey.sql)
 - [086-drop-foreign-datastores.sql](conf/evolutions/086-drop-foreign-datastores.sql.sql)
+- [087-zarr-private-links](conf/evolutions/087-zarr-private-links.sql)

@@ -141,6 +141,15 @@ GET           /annotations/:typ/:id/sharedTeams                                 
 PATCH         /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.updateSharedTeams(typ: String, id: String)
 PATCH         /annotations/:typ/:id/othersMayEdit                                       controllers.AnnotationController.updateOthersMayEdit(typ: String, id: String, othersMayEdit: Boolean)
 
+# Annotation Private Links
+GET           /zarrPrivateLinks                                                         controllers.AnnotationPrivateLinkController.list
+GET           /zarrPrivateLinks/byAnnotation/:annotationId                              controllers.AnnotationPrivateLinkController.listByAnnotation(annotationId: String)
+GET           /zarrPrivateLinks/byAccessToken/:accessToken                              controllers.AnnotationPrivateLinkController.lookupPrivateLink(accessToken: String)
+POST          /zarrPrivateLinks                                                         controllers.AnnotationPrivateLinkController.create
+PUT           /zarrPrivateLinks/:id                                                     controllers.AnnotationPrivateLinkController.update(id: String)
+DELETE        /zarrPrivateLinks/:id                                                     controllers.AnnotationPrivateLinkController.delete(id: String)
+GET           /zarrPrivateLinks/:id                                                     controllers.AnnotationPrivateLinkController.get(id: String)
+
 # Meshes
 POST          /meshes                                                                   controllers.MeshController.create
 PUT           /meshes/:id                                                               controllers.MeshController.update(id: String)

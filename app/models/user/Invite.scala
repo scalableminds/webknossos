@@ -9,7 +9,7 @@ import javax.inject.Inject
 import models.organization.OrganizationDAO
 import org.joda.time.DateTime
 import oxalis.mail.{DefaultMails, Send}
-import oxalis.security.CompactRandomIDGenerator
+import oxalis.security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
@@ -33,7 +33,7 @@ class InviteService @Inject()(conf: WkConf,
                               inviteDAO: InviteDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val tokenValueGenerator = new CompactRandomIDGenerator
+  private val tokenValueGenerator = new RandomIDGenerator
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 

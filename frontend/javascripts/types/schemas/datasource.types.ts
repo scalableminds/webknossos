@@ -25,7 +25,7 @@ type DataLayerKnossosPartial = {
     boundingBox: BoundingBox;
   }>;
 };
-type DataLayer = {
+export type DataLayer = {
   name: string;
   category: "color" | "segmentation";
   elementClass:
@@ -58,5 +58,5 @@ export type DatasourceConfiguration = {
     team: string;
   };
   dataLayers: Array<DataLayer>;
-  scale: Array<number>;
+  scale: Vector3;
 };

@@ -94,28 +94,22 @@ object MultiArrayUtils {
     while ({ sourceRangeIterator.hasNext }) setter.set(sourceRangeIterator, targetRangeIterator)
   }
 
-  private def createValueSetter(elementType: Class[_]): MultiArrayUtils.ValueSetter = {
-    if (elementType eq classOf[Double])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setDoubleNext(sourceIterator.getDoubleNext)
-    else if (elementType eq classOf[Float])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setFloatNext(sourceIterator.getFloatNext)
-    else if (elementType eq classOf[Long])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setLongNext(sourceIterator.getLongNext)
-    else if (elementType eq classOf[Int])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setIntNext(sourceIterator.getIntNext)
-    else if (elementType eq classOf[Short])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setShortNext(sourceIterator.getShortNext)
-    else if (elementType eq classOf[Byte])
-      return (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-        targetIterator.setByteNext(sourceIterator.getByteNext)
-    (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
-      targetIterator.setObjectNext(sourceIterator.getObjectNext)
-  }
+  private def createValueSetter(elementType: Class[_]): MultiArrayUtils.ValueSetter =
+    if (elementType eq classOf[Double])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setDoubleNext(sourceIterator.getDoubleNext)
+    else if (elementType eq classOf[Float])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setFloatNext(sourceIterator.getFloatNext)
+    else if (elementType eq classOf[Long])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setLongNext(sourceIterator.getLongNext)
+    else if (elementType eq classOf[Int])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setIntNext(sourceIterator.getIntNext)
+    else if (elementType eq classOf[Short])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setShortNext(sourceIterator.getShortNext)
+    else if (elementType eq classOf[Byte])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+      targetIterator.setByteNext(sourceIterator.getByteNext)
+    else
+      (sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
+        targetIterator.setObjectNext(sourceIterator.getObjectNext)
 
   private trait ValueSetter {
     def set(sourceIterator: IndexIterator, targetIterator: IndexIterator)
@@ -124,6 +118,19 @@ object MultiArrayUtils {
   def orderFlippedView(source: MultiArray): MultiArray = {
     val permutation = source.getShape.indices.reverse.toArray
     source.permute(permutation)
+  }
+
+  def axisOrderXYZView(source: MultiArray, axisOrder: AxisOrder, flip: Boolean): MultiArray = {
+    /* create a view in which the last three axes are XYZ, rest unchanged
+     * optionally flip the axes afterwards
+     *
+     * Note that we are at this point unsure if this function should be using the *inverse* permutation.
+     * For all cases we could test, the two are identical. Beware of this when debugging future datasets,
+     * e.g. with axis order ZXY
+     */
+    val permutation = axisOrder.permutation(source.getRank)
+    val flippedIfNeeded = if (flip) permutation.reverse else permutation
+    source.permute(flippedIfNeeded)
   }
 
 }

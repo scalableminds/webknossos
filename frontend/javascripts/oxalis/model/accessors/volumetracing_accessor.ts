@@ -13,7 +13,6 @@ import type {
   HybridTracing,
   LabelAction,
   OxalisState,
-  Segment,
   SegmentMap,
   Tracing,
   VolumeTracing,

@@ -37,7 +37,7 @@ import constants, {
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import window from "libs/window";
-import { setSceneController } from "./scene_controller_provider";
+import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
 
 const CUBE_COLOR = 0x999999;

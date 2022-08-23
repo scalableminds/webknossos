@@ -54,16 +54,18 @@ export function jsRgb2hsv(rgb: [number, number, number]): [number, number, numbe
  */
 export function jsRgb2hsl(rgb: [number, number, number]): Vector3 {
   const [r, g, b] = rgb;
-  let max = Math.max(r, g, b),
-    min = Math.min(r, g, b);
-  let h,
-    s,
-    l = (max + min) / 2;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h;
+  let s;
+  const l = (max + min) / 2;
 
-  if (max == min) {
-    h = s = 0; // achromatic
+  if (max === min) {
+    // achromatic
+    h = 0;
+    s = 0;
   } else {
-    let d = max - min;
+    const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
       case r:

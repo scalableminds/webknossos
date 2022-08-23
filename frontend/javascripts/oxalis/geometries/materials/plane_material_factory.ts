@@ -273,10 +273,10 @@ class PlaneMaterialFactory {
       CUCKOO_TWIDTH,
     } = cuckoo.getUniformValues();
 
-    this.uniforms["CUCKOO_ENTRY_CAPACITY"] = { value: CUCKOO_ENTRY_CAPACITY };
-    this.uniforms["CUCKOO_ELEMENTS_PER_ENTRY"] = { value: CUCKOO_ELEMENTS_PER_ENTRY };
-    this.uniforms["CUCKOO_ELEMENTS_PER_TEXEL"] = { value: CUCKOO_ELEMENTS_PER_TEXEL };
-    this.uniforms["CUCKOO_TWIDTH"] = { value: CUCKOO_TWIDTH };
+    this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
+    this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+    this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+    this.uniforms.CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
 
     this.attachSegmentationTextures();
   }

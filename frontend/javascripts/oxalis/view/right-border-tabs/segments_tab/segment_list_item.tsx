@@ -32,7 +32,7 @@ const hslaToCSS = (hsla: Vector4) => {
   return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 };
 
-function getColoredDotIconForSegment(segmentId: number) {
+function ColoredDotIconForSegment({ segmentId }: { segmentId: number }) {
   const hslaCss = useSelector((state: OxalisState) =>
     hslaToCSS(getSegmentColorAsHSL(state, segmentId)),
   );
@@ -449,7 +449,7 @@ function _SegmentListItem({
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>
-          {getColoredDotIconForSegment(mappedId)}
+          <ColoredDotIconForSegment segmentId={mappedId} />
           <EditableTextLabel
             value={segment.name || `Segment ${segment.id}`}
             label="Segment Name"

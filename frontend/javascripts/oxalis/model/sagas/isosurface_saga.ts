@@ -54,7 +54,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { RedoAction, saveNowAction, UndoAction } from "oxalis/model/actions/save_actions";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";

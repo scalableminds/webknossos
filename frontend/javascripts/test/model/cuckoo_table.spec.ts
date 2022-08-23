@@ -53,31 +53,22 @@ test.serial("CuckooTable: Basic", (t) => {
   const ct = CuckooTable.fromCapacity(entries.length);
   let n = 0;
   for (const entry of entries) {
-    // console.log(`! write n=${n}   entry=${entry}`);
-
-    // console.log(`\nset ${n}-th item`);
     ct.set(entry[0], entry[1]);
     const readValue = ct.get(entry[0]);
 
-    // console.log("  isValueEqual");
     isValueEqual(t, entry[1], readValue);
     if (entry[1][0] !== readValue[0]) {
-      // console.log("key:", entry[0]);
-      // console.log("value:", entry[1]);
-      // console.log("retrieved value: ", ct.get(entry[0]));
       throw new Error("failed");
     }
+
+    // Check that all previously set items are still
+    // intact.
     let nn = 0;
     for (const innerEntry of entries) {
       if (nn > n) {
         break;
       }
-      // console.log("  isValueEqual");
       isValueEqual(t, innerEntry[1], ct.get(innerEntry[0]));
-      // if (innerEntry[1] !== ct.get(innerEntry[0])) {
-      //   console.log(`? nn=${nn}  expected=${innerEntry}    retrieved=${ct.get(innerEntry[0])}`);
-      //   throw new Error("failed");
-      // }
       nn++;
     }
     n++;
@@ -85,7 +76,6 @@ test.serial("CuckooTable: Basic", (t) => {
 });
 
 test.serial("CuckooTable: Speed should be alright", (t) => {
-  console.log("cuckoo test");
   const RUNS = 100;
   const hashSets = _.range(RUNS).map(() => generateRandomEntrySet());
 
@@ -105,9 +95,6 @@ test.serial("CuckooTable: Speed should be alright", (t) => {
     }
   }
   console.timeEnd("many runs");
-
-  console.log("_.max(durations)", _.max(durations));
-  console.log("_.mean(durations)", _.mean(durations));
 
   t.true(_.mean(durations) < 0.1);
 });

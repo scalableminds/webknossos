@@ -100,21 +100,15 @@ function consumeBucketsFromArrayBuffer(
 }
 
 export default class LayerRenderingManager {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastSphericalCapRadius' has no initializ... Remove this comment to see the full error message
-  lastSphericalCapRadius: number;
+  lastSphericalCapRadius: number | undefined;
   // Indicates whether the current position is closer to the previous or next bucket for each dimension
   // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastAreas' has no initializer and is not... Remove this comment to see the full error message
-  lastAreas: OrthoViewMap<Area>;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastZoomedMatrix' has no initializer and is ... Remove this comment to see the full error message
-  lastZoomedMatrix: Matrix4x4;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastViewMode' has no initializer and is ... Remove this comment to see the full error message
-  lastViewMode: ViewMode;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastIsVisible' has no initializer and is... Remove this comment to see the full error message
-  lastIsVisible: boolean;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'textureBucketManager' has no initializer... Remove this comment to see the full error message
-  textureBucketManager: TextureBucketManager;
+  lastAreas: OrthoViewMap<Area> | undefined;
+  lastZoomedMatrix: Matrix4x4 | undefined;
+  lastViewMode: ViewMode | undefined;
+  lastIsVisible: boolean | undefined;
+  textureBucketManager!: TextureBucketManager;
   textureWidth: number;
   cube: DataCube;
   pullQueue: PullQueue;

@@ -299,9 +299,4 @@ export default class LayerRenderingManager {
     this.cachedAnchorPoint = anchorPoint;
     return true;
   }
-
-  // todo: unsubscribe?
-  // subscribeToSeeds(fn: SeedSubscriberFn): void {
-  //   return this.textureBucketManager.lookUpTable.subscribeToSeeds(fn);
-  // }
 }

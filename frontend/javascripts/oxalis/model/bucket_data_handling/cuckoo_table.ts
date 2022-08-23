@@ -72,9 +72,8 @@ export class CuckooTable {
     this.entryCapacity = Math.floor(
       (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY,
     );
-    console.log("this.entryCapacity", this.entryCapacity);
 
-    this.initialize();
+    this.initializeTableArray();
   }
 
   static fromCapacity(requestedCapacity: number): CuckooTable {
@@ -85,7 +84,7 @@ export class CuckooTable {
     return new CuckooTable(textureWidth);
   }
 
-  private initialize() {
+  private initializeTableArray() {
     this.table = new Uint32Array(ELEMENTS_PER_ENTRY * this.entryCapacity).fill(EMPTY_KEY);
 
     // The chance of colliding seeds is super low which is why
@@ -104,9 +103,13 @@ export class CuckooTable {
     return this._texture;
   }
 
-  subscribeToSeeds(fn: SeedSubscriberFn): void {
+  subscribeToSeeds(fn: SeedSubscriberFn): () => void {
     this.seedSubscribers.push(fn);
     this.notifySeedListeners();
+
+    return () => {
+      this.seedSubscribers = this.seedSubscribers.filter((el) => el != fn);
+    };
   }
 
   notifySeedListeners() {
@@ -195,7 +198,7 @@ export class CuckooTable {
   private rehash(rehashAttempt: number): void {
     const oldTable = this.table;
 
-    this.initialize();
+    this.initializeTableArray();
 
     let n = 0;
     for (
@@ -211,8 +214,6 @@ export class CuckooTable {
       this.set(key, value, rehashAttempt);
       n++;
     }
-
-    console.log("rehashing done. set", n, "items");
   }
 
   get(key: number): Vector3 {

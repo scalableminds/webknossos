@@ -8,6 +8,7 @@ import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import type { DataLayerType } from "oxalis/store";
 import Store from "oxalis/store"; // TODO: Non-reactive
+import { CuckooTable } from "./bucket_data_handling/cuckoo_table";
 
 class DataLayer {
   cube: DataCube;
@@ -20,6 +21,7 @@ class DataLayer {
   fallbackLayer: string | null | undefined;
   fallbackLayerInfo: DataLayerType | null | undefined;
   isSegmentation: boolean;
+  cuckooTable: CuckooTable | undefined;
 
   constructor(layerInfo: DataLayerType, textureWidth: number, dataTextureCount: number) {
     this.name = layerInfo.name;
@@ -59,6 +61,20 @@ class DataLayer {
       textureWidth,
       dataTextureCount,
     );
+  }
+
+  getCustomColorCuckooTable() {
+    if (this.cuckooTable != null) {
+      return this.cuckooTable;
+    }
+    if (!this.isSegmentation) {
+      throw new Error(
+        "getCustomColorCuckooTable should not be called for non-segmentation layers.",
+      );
+    }
+    const TEXTURE_WIDTH = 512;
+    this.cuckooTable = new CuckooTable(TEXTURE_WIDTH);
+    return this.cuckooTable;
   }
 
   destroy() {

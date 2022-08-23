@@ -25,6 +25,7 @@ import {
   getUnrenderableLayerInfosForCurrentZoom,
   getSegmentationLayerWithMappingSupport,
   getMappingInfoForSupportedLayer,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -81,13 +82,6 @@ function getPackingDegreeLookup(): Record<string, number> {
   );
 }
 
-const getCustomColorCuckooTable = _.memoize(() => {
-  const textureWidth = 512;
-  const cuckoo = new CuckooTable(textureWidth);
-
-  return cuckoo;
-});
-
 class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
@@ -101,6 +95,7 @@ class PlaneMaterialFactory {
   storePropertyUnsubscribers: Array<() => void> = [];
   leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
   oldShaderCode: string | null | undefined;
+  unsubscribeSeedsFn: (() => void) | null = null;
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
@@ -258,39 +253,18 @@ class PlaneMaterialFactory {
         value: lookUpTexture,
       };
     }
-    const cuckoo = getCustomColorCuckooTable();
-    cuckoo.subscribeToSeeds((seeds: number[]) => {
-      seeds.forEach((seed, idx) => {
-        this.uniforms[`seed${idx}`] = {
-          value: seed,
-        };
-      });
-    });
-    const {
-      CUCKOO_ENTRY_CAPACITY,
-      CUCKOO_ELEMENTS_PER_ENTRY,
-      CUCKOO_ELEMENTS_PER_TEXEL,
-      CUCKOO_TWIDTH,
-    } = cuckoo.getUniformValues();
 
-    this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
-    this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
-    this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
-    this.uniforms.CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
-
-    this.attachSegmentationTextures();
+    this.attachSegmentationMappingTextures();
+    this.attachSegmentationColorTexture();
   }
 
-  attachSegmentationTextures(): void {
+  attachSegmentationMappingTextures(): void {
     const segmentationLayer = Model.getSegmentationLayerWithMappingSupport();
     const [mappingTexture, mappingLookupTexture, mappingColorTexture] =
       Model.isMappingSupported && segmentationLayer != null && segmentationLayer.mappings != null
         ? segmentationLayer.mappings.getMappingTextures() // It's important to set up the uniforms (even when they are null), since later
         : // additions to `this.uniforms` won't be properly attached otherwise.
           [null, null, null];
-
-    const cuckoo = getCustomColorCuckooTable();
-    const customColorTexture = cuckoo.getTexture();
 
     this.uniforms.segmentation_mapping_texture = {
       value: mappingTexture,
@@ -301,9 +275,44 @@ class PlaneMaterialFactory {
     this.uniforms.segmentation_mapping_color_texture = {
       value: mappingColorTexture,
     };
-    this.uniforms.custom_color_texture = {
-      value: customColorTexture,
-    };
+  }
+
+  attachSegmentationColorTexture(): void {
+    const segmentationLayer = Model.getVisibleSegmentationLayer();
+    if (segmentationLayer != null) {
+      const cuckoo = segmentationLayer.getCustomColorCuckooTable();
+      const customColorTexture = cuckoo.getTexture();
+
+      if (this.unsubscribeSeedsFn != null) {
+        this.unsubscribeSeedsFn();
+      }
+      this.unsubscribeSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
+        seeds.forEach((seed, idx) => {
+          this.uniforms[`seed${idx}`] = {
+            value: seed,
+          };
+        });
+      });
+      const {
+        CUCKOO_ENTRY_CAPACITY,
+        CUCKOO_ELEMENTS_PER_ENTRY,
+        CUCKOO_ELEMENTS_PER_TEXEL,
+        CUCKOO_TWIDTH,
+      } = cuckoo.getUniformValues();
+      this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
+      this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+      this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+      this.uniforms.CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
+      this.uniforms.custom_color_texture = {
+        value: customColorTexture,
+      };
+    } else {
+      this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: 0 };
+      this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
+      this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
+      this.uniforms.CUCKOO_TWIDTH = { value: 0 };
+      this.uniforms.custom_color_texture = { value: null };
+    }
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {
@@ -499,7 +508,15 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => getSegmentationLayerWithMappingSupport(storeState),
           (_segmentationLayer) => {
-            this.attachSegmentationTextures();
+            this.attachSegmentationMappingTextures();
+          },
+        ),
+      );
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => getVisibleSegmentationLayer(storeState),
+          (_segmentationLayer) => {
+            this.attachSegmentationColorTexture();
           },
         ),
       );
@@ -583,13 +600,19 @@ class PlaneMaterialFactory {
               return;
             }
 
+            const segmentationLayer = Model.getVisibleSegmentationLayer();
+            if (!segmentationLayer) {
+              return;
+            }
+
+            // todo: needs to diff against correct layer
+            const cuckoo = segmentationLayer.getCustomColorCuckooTable();
             for (const updateAction of diffSegmentLists(prevSegments, visibleSegments)) {
               if (
                 updateAction.name === "updateSegment" ||
                 updateAction.name === "createSegment" ||
                 updateAction.name === "deleteSegment"
               ) {
-                const cuckoo = getCustomColorCuckooTable();
                 const { id } = updateAction.value;
                 const color = "color" in updateAction.value ? updateAction.value.color : null;
                 if (color != null) {

@@ -190,10 +190,6 @@ export class CuckooTable {
     return [-1, -1, -1];
   }
 
-  // hasEntry(key: number, value: number, hashedAddress1: number, hashedAddress2: number): boolean {
-  //   return this.isEntry(key, value, hashedAddress1) || this.isEntry(key, value, hashedAddress2);
-  // }
-
   getEntryAtAddress(hashedAddress: number): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
     return [
@@ -219,12 +215,9 @@ export class CuckooTable {
 
   getValueAtAddress(key: number, hashedAddress: number): Vector3 | null {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
-    // console.log("read value at offset=", offset);
     if (this.doesAddressContainKey(key, hashedAddress)) {
-      // console.log("found", this.table.slice(offset + 1, offset + 4));
       return [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]];
     } else {
-      // console.log("not found. entry=", this.table.slice(offset, offset + 4));
       return null;
     }
   }
@@ -242,18 +235,6 @@ export class CuckooTable {
       this.table[offset],
       [this.table[offset + 1], this.table[offset + 2], this.table[offset + 3]],
     ];
-
-    // console.log(
-    //   "writing key=",
-    //   key,
-    //   "value=",
-    //   value,
-    //   "to offset=",
-    //   offset,
-    //   "(displaced: ",
-    //   displacedEntry,
-    //   ")",
-    // );
 
     this.table[offset] = key;
     this.table[offset + 1] = value[0];
@@ -307,7 +288,3 @@ export class CuckooTable {
     return state % this.entryCapacity;
   }
 }
-
-// if (typeof window !== undefined) {
-//   window.CuckooTable = CuckooTable;
-// }

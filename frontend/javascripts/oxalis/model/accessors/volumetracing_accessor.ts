@@ -512,7 +512,7 @@ export function getSegmentColorAsHSL(state: OxalisState, mappedId: number): Vect
 
   if (segment?.color) {
     const [hue, saturation, value] = jsRgb2hsl(segment.color);
-    return [hue / 360, saturation, value, 1];
+    return [hue, saturation, value, 1];
   }
 
   return jsConvertCellIdToHSLA(mappedId, mappingInfo.mappingColors);

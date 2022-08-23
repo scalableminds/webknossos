@@ -263,6 +263,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Cancel”.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
+  "dataset.add_zarr_different_scale_warning":
+    "The explored data has a different voxel size from the datasource that was already loaded. The explored voxel size was:",
   "dataset.segmentationlayer_not_existing": "This annotation has no segmentation layer.",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",

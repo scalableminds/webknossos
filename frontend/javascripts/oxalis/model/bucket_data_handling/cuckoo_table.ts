@@ -108,7 +108,7 @@ export class CuckooTable {
     this.notifySeedListeners();
 
     return () => {
-      this.seedSubscribers = this.seedSubscribers.filter((el) => el != fn);
+      this.seedSubscribers = this.seedSubscribers.filter((el) => el !== fn);
     };
   }
 
@@ -200,7 +200,6 @@ export class CuckooTable {
 
     this.initializeTableArray();
 
-    let n = 0;
     for (
       let offset = 0;
       offset < this.entryCapacity * ELEMENTS_PER_ENTRY;
@@ -212,7 +211,6 @@ export class CuckooTable {
       const key: number = oldTable[offset];
       const value: Vector3 = [oldTable[offset + 1], oldTable[offset + 2], oldTable[offset + 3]];
       this.set(key, value, rehashAttempt);
-      n++;
     }
   }
 

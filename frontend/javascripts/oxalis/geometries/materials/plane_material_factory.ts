@@ -37,7 +37,6 @@ import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
 import { diffSegmentLists } from "oxalis/model/sagas/volumetracing_saga";
 import DiffableMap from "libs/diffable_map";
 

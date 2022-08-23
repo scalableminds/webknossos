@@ -1,12 +1,15 @@
+import { call, take, takeEvery, takeLatest } from "typed-redux-saga";
+import { sum } from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { call, take, takeEvery, takeLatest } from "typed-redux-saga";
+
 import { sleep } from "libs/utils";
-import { getEnabledLayers } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import messages from "messages";
-import { OrthoViews } from "oxalis/constants";
+import { getEnabledLayers } from "../accessors/dataset_accessor";
 import { getCurrentResolution } from "../accessors/flycam_accessor";
+import { getViewportExtents } from "../accessors/view_mode_accessor";
+
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
     const maximumLayerCountToRender = yield* select(
@@ -51,13 +54,17 @@ export function* watchZ1Downsampling(): Saga<void> {
     const minVoxelPerPixel = 0.1;
     if (!userClosedWarning) {
       // checking only the downsampled dimensions x and y
-      const is3DViewportFullscreen = yield* select(
-        (state) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
+      const extents = yield* select((state) => getViewportExtents(state));
+      const areas = [extents["PLANE_XY"], extents["PLANE_YZ"], extents["PLANE_XZ"]].map(
+        ([width, height]) => width * height,
       );
+      const areDataviewportsInvisible = sum(areas) == 0;
+
       const showWarning =
         (currentZoomStep / currentRes[0] < minVoxelPerPixel ||
           currentZoomStep / currentRes[1] < minVoxelPerPixel) &&
-        !is3DViewportFullscreen;
+        !areDataviewportsInvisible;
+
       if (showWarning) {
         Toast.warning(messages["dataset.z1_downsampling_hint"], {
           sticky: true,

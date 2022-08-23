@@ -9,6 +9,7 @@ import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import DatasetAddNeuroglancerView from "admin/dataset/dataset_add_neuroglancer_view";
 import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
+import DatasetAddZarrView from "admin/dataset/dataset_add_zarr_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
@@ -127,6 +128,21 @@ function DatasetAddView({ history }: RouteComponentProps) {
             >
               <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
             </TabPane>
+            <TabPane
+              tab={
+                <span>
+                  <DatabaseOutlined />
+                  Add Remote Zarr Dataset
+                </span>
+              }
+              key="2"
+            >
+              <DatasetAddZarrView
+                datastores={datastores.own}
+                // @ts-expect-error ts-migrate(2322) FIXME: Type '(datasetOrganization: string, uploadedDatase... Remove this comment to see the full error message
+                onAdded={handleDatasetAdded}
+              />
+            </TabPane>
             {datastores.wkConnect.length > 0 && (
               <TabPane
                 tab={
@@ -135,7 +151,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                     Add Neuroglancer Dataset
                   </span>
                 }
-                key="2"
+                key="3"
               >
                 <DatasetAddNeuroglancerView
                   datastores={datastores.wkConnect}
@@ -152,7 +168,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                     Add BossDB Dataset
                   </span>
                 }
-                key="3"
+                key="4"
               >
                 <DatasetAddBossView
                   datastores={datastores.wkConnect}

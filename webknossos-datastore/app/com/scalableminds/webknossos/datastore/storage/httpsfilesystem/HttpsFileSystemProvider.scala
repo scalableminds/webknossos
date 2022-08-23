@@ -12,7 +12,7 @@ import com.google.common.collect.ImmutableMap
 import com.typesafe.scalalogging.LazyLogging
 
 class HttpsFileSystemProvider extends FileSystemProvider with LazyLogging {
-  private val fileSystems: ConcurrentHashMap[String, HttpsFileSystem] = new ConcurrentHashMap[String, HttpsFileSystem]
+  protected val fileSystems: ConcurrentHashMap[String, HttpsFileSystem] = new ConcurrentHashMap[String, HttpsFileSystem]
 
   override def getScheme: String = "https"
 

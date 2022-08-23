@@ -23,7 +23,6 @@ import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security.RandomIDGenerator
-import play.api.i18n.MessagesProvider
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
@@ -45,12 +44,17 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  val unreportedStatus = "No longer available on datastore."
-  val notYetUploadedStatus = "Not yet fully uploaded."
-  val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
+  private val unreportedStatus = "No longer available on datastore."
+  private val notYetUploadedStatus = "Not yet fully uploaded."
+  private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
 
-  def isProperDataSetName(name: String): Boolean =
-    name.matches("[A-Za-z0-9_\\-]*")
+  def assertValidDataSetName(name: String): Fox[Unit] =
+    for {
+      _ <- bool2Fox(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataSet.name.invalid.characters"
+      _ <- bool2Fox(!name.startsWith(".")) ?~> "dataSet.name.invalid.startsWithDot"
+      _ <- bool2Fox(!name.endsWith(".")) ?~> "dataSet.name.invalid.endsWithDot"
+      _ <- bool2Fox(name.length >= 3) ?~> "dataSet.name.invalid.lessThanThreeCharacters"
+    } yield ()
 
   def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Unit] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
@@ -295,8 +299,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
 
-  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext,
-                                                             m: MessagesProvider): Fox[Unit] =
+  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"

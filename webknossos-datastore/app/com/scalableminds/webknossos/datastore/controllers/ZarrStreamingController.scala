@@ -6,13 +6,14 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{
-  ZarrDataLayer,
-  ZarrLayer,
-  ZarrMag,
-  ZarrSegmentationLayer
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrMag, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.jzarr.{
+  ArrayOrder,
+  AxisOrder,
+  OmeNgffGroupHeader,
+  OmeNgffHeader,
+  ZarrHeader
 }
-import com.scalableminds.webknossos.datastore.jzarr.{OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -123,7 +124,7 @@ class ZarrStreamingController @Inject()(
           d.category,
           d.boundingBox,
           d.elementClass,
-          d.resolutions.map(x => ZarrMag(x, None, None)),
+          d.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1)
         )
       case s: WKWSegmentationLayer =>
@@ -131,7 +132,7 @@ class ZarrStreamingController @Inject()(
           s.name,
           s.boundingBox,
           s.elementClass,
-          s.resolutions.map(x => ZarrMag(x, None, None)),
+          s.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
@@ -142,7 +143,7 @@ class ZarrStreamingController @Inject()(
           z.category,
           z.boundingBox,
           z.elementClass,
-          z.resolutions.map(x => ZarrMag(x, None, None)),
+          z.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
           numChannels = Some(if (z.elementClass == ElementClass.uint24) 3 else 1)
         )
       case zs: ZarrSegmentationLayer =>
@@ -150,7 +151,7 @@ class ZarrStreamingController @Inject()(
           zs.name,
           zs.boundingBox,
           zs.elementClass,
-          zs.resolutions.map(x => ZarrMag(x, None, None)),
+          zs.resolutions.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
           mappings = zs.mappings,
           largestSegmentId = zs.largestSegmentId,
           numChannels = Some(if (zs.elementClass == ElementClass.uint24) 3 else 1)
@@ -501,7 +502,7 @@ class ZarrStreamingController @Inject()(
   ): Fox[Result] =
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                       token) {
-      Future(Ok(Json.obj("zarr_format" -> 2)))
+      Future(Ok(Json.toJson(OmeNgffGroupHeader(zarr_format = 2))))
     }
 
   def zGroupPrivateLink(accessToken: String, dataLayerName: String): Action[AnyContent] = Action.async {

@@ -1,13 +1,12 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { Tabs, Modal, Button, Layout } from "antd";
-import { BarsOutlined, DatabaseOutlined, GoogleOutlined, UploadOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, GoogleOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import type { APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view";
 import DatasetAddNeuroglancerView from "admin/dataset/dataset_add_neuroglancer_view";
 import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
 import DatasetAddZarrView from "admin/dataset/dataset_add_zarr_view";
@@ -25,7 +24,7 @@ const fetchCategorizedDatastores = async (): Promise<{
 }> => {
   const fetchedDatastores = await getDatastores();
   return {
-    own: fetchedDatastores.filter((ds) => !ds.isForeign && !ds.isConnector),
+    own: fetchedDatastores.filter((ds) => !ds.isConnector),
     wkConnect: fetchedDatastores.filter((ds) => ds.isConnector),
   };
 };
@@ -176,19 +175,6 @@ function DatasetAddView({ history }: RouteComponentProps) {
                   // @ts-expect-error ts-migrate(2322) FIXME: Type '(datasetOrganization: string, uploadedDatase... Remove this comment to see the full error message
                   onAdded={handleDatasetAdded}
                 />
-              </TabPane>
-            )}
-            {features().addForeignDataset && (
-              <TabPane
-                tab={
-                  <span>
-                    <BarsOutlined />
-                    Add Foreign Dataset
-                  </span>
-                }
-                key="5"
-              >
-                <DatasetAddForeignView onAdded={() => history.push("/dashboard")} />
               </TabPane>
             )}
           </Tabs>

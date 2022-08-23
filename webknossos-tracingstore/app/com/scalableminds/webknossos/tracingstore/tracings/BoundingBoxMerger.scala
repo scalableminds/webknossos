@@ -13,7 +13,7 @@ trait BoundingBoxMerger extends ProtoGeometryImplicits {
       boundinBoxB <- boundingBoxBOpt
     } yield {
       com.scalableminds.util.geometry.BoundingBox
-        .combine(List[com.scalableminds.util.geometry.BoundingBox](boundinBoxA, boundinBoxB))
+        .union(List[com.scalableminds.util.geometry.BoundingBox](boundinBoxA, boundinBoxB))
     }
 
   protected def combineUserBoundingBoxes(singleBoundingBoxAOpt: Option[ProtoBoundingBox],

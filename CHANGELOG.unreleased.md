@@ -31,6 +31,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The default name for volume annotation layers with fallback segmentations is now set to the name of their fallback segmentation layer, no longer “Volume”. [#6373](https://github.com/scalableminds/webknossos/pull/6373)
 - The “reload data” button for dataset and annotation layers is now only shown to users who have administrative permissions for the dataset (because the button clears server caches and file handles). [#6380](https://github.com/scalableminds/webknossos/pull/6380)
 - Requests for missing chunks in zarr datasets now return status code 404 instead of 200 with an empty response. [#6381](https://github.com/scalableminds/webknossos/pull/6381)
+- Dataset layer thumbnails now by default show the center of the intersection of all layer bounding boxes, so all layer thumbnails show the same region. [6411](https://github.com/scalableminds/webknossos/pull/6411)
 
 ### Fixed
 - Fixed a regression where the mapping activation confirmation dialog was never shown. [#6346](https://github.com/scalableminds/webknossos/pull/6346)
@@ -40,8 +41,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where uploads of wkw datasets with numerical-only layer names would fail. [#6382](https://github.com/scalableminds/webknossos/pull/6382)
 - Public datasets of other organizations are no longer listed during task creation. [#6377](https://github.com/scalableminds/webknossos/pull/6377)
 - Tightened organization isolation security for dataset uploads. [#6378](https://github.com/scalableminds/webknossos/pull/6378)
+- Fixed a bug with undo/redo and volume interpolation/extrusion. [#6403](https://github.com/scalableminds/webknossos/pull/6403)
+- Fixed a regression which caused that uint16 and uint8 segmentations could not be rendered. [#6406](https://github.com/scalableminds/webknossos/pull/6406)
+- Fixed a bug which prevented keyboard shortcuts from taking affect after expanding/collapsing the sidebar panels using the button icons.[#6410](https://github.com/scalableminds/webknossos/pull/6410) 
+- Fixed a bug with the clip histogram button to prevent it from showing a loading spinner forever in some cases. [#6407](https://github.com/scalableminds/webknossos/pull/6407)
+
 
 ### Removed
 - Annotation Type was removed from the info tab. [#6330](https://github.com/scalableminds/webknossos/pull/6330)
+- Removed the possibility to load data from foreign webKnossos datastores. Use Zarr streaming instead. [#6392](https://github.com/scalableminds/webknossos/pull/6392)
 
 ### Breaking Changes

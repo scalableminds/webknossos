@@ -215,7 +215,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
   }
 
   private def boundingBoxFromMags(magsWithAttributes: List[MagWithAttributes]): BoundingBox =
-    BoundingBox.combine(magsWithAttributes.map(_.boundingBox))
+    BoundingBox.union(magsWithAttributes.map(_.boundingBox))
 
   private def guessNameFromPath(path: Path)(implicit ec: ExecutionContext): Fox[String] =
     path.toString.split("/").lastOption.toFox

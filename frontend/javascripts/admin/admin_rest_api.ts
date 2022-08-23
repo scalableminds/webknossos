@@ -1419,21 +1419,6 @@ export function addWkConnectDataset(
   );
 }
 
-export async function addForeignDataSet(
-  dataStoreName: string,
-  url: string,
-  dataSetName: string,
-): Promise<string> {
-  const { result } = await Request.sendJSONReceiveJSON("/api/datasets/addForeign", {
-    data: {
-      dataStoreName,
-      url,
-      dataSetName,
-    },
-  });
-  return result;
-}
-
 type ExplorationResult = {
   dataSource: DatasourceConfiguration | undefined;
   report: string;

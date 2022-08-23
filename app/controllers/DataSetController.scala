@@ -2,18 +2,17 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataLayerLike, GenericDataSource}
 import io.swagger.annotations._
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
 import models.organization.OrganizationDAO
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.{Box, Failure, Full, Empty}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -22,6 +21,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
+import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -78,7 +78,7 @@ class DataSetController @Inject()(userService: UserService,
                 w: Option[Int],
                 h: Option[Int]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
+      def imageFromCacheIfPossible(dataSet: DataSet, dataSource: GenericDataSource[DataLayerLike]): Fox[Array[Byte]] = {
         val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
         val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
         dataSetService.thumbnailCache.find(
@@ -86,9 +86,11 @@ class DataSetController @Inject()(userService: UserService,
           case Some(a) =>
             Fox.successful(a)
           case _ =>
-            val defaultCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
+            val configuredCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
               c.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Vec3Int])))
-            val defaultZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
+            val centerOpt = configuredCenterOpt.orElse(
+              BoundingBox.intersection(dataSource.dataLayers.map(_.boundingBox)).map(_.center))
+            val configuredZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
               c.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
             dataSetService
               .clientFor(dataSet)(GlobalAccessContext)
@@ -97,8 +99,8 @@ class DataSetController @Inject()(userService: UserService,
                                             dataLayerName,
                                             width,
                                             height,
-                                            defaultZoomOpt,
-                                            defaultCenterOpt))
+                                            configuredZoomOpt,
+                                            centerOpt))
               .map { result =>
                 // We don't want all images to expire at the same time. Therefore, we add some random variation
                 dataSetService.thumbnailCache.insert(
@@ -114,33 +116,17 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
-        _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages(
+        dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound" ~> NOT_FOUND
+        usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+        _ <- bool2Fox(usableDataSource.dataLayers.exists(_.name == dataLayerName)) ?~> Messages(
           "dataLayer.notFound",
           dataLayerName) ~> NOT_FOUND
-        image <- imageFromCacheIfPossible(dataSet)
+        image <- imageFromCacheIfPossible(dataSet, usableDataSource)
       } yield {
         addRemoteOriginHeaders(Ok(image)).as(jpegMimeType).withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def addForeignDataStoreAndDataSet(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      body <- request.body.asJson.toFox
-      url <- (body \ "url").asOpt[String] ?~> "dataSet.url.missing" ~> NOT_FOUND
-      dataStoreName <- (body \ "dataStoreName").asOpt[String].toFox ?~> "dataSet.dataStore.missing" ~> NOT_FOUND
-      dataSetName <- (body \ "dataSetName").asOpt[String] ?~> "dataSet.dataSet.missing" ~> NOT_FOUND
-      _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
-      noDataStoreBox <- dataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
-      _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
-      _ <- dataSetService.assertValidDataSetName(dataSetName) ?~> "dataSet.name.invalid"
-      _ <- dataSetDAO
-        .findOneByNameAndOrganization(dataSetName, request.identity._organization)
-        .reverse ?~> "dataSet.name.alreadyTaken"
-      organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext).map(_.name)
-      _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
-    } yield Ok
-  }
   @ApiOperation(hidden = true, value = "")
   def exploreRemoteDataset(): Action[List[ExploreRemoteDatasetParameters]] =
     sil.SecuredAction.async(validateJson[List[ExploreRemoteDatasetParameters]]) { implicit request =>

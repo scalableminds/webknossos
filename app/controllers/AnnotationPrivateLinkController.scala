@@ -64,7 +64,7 @@ class AnnotationPrivateLinkController @Inject()(
     Array(
       new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
       new ApiResponse(code = 400, message = badRequestLabel),
-      new ApiResponse(code = NOT_FOUND, message = badRequestLabel)
+      new ApiResponse(code = 404, message = badRequestLabel)
     ))
   def get(@ApiParam(value = "The id of the private link") id: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
@@ -98,8 +98,8 @@ Expects:
     Array(
       new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
       new ApiResponse(code = 400, message = badRequestLabel),
-      new ApiResponse(code = NOT_FOUND, message = badRequestLabel),
-      new ApiResponse(code = FORBIDDEN, message = badRequestLabel)
+      new ApiResponse(code = 404, message = badRequestLabel),
+      new ApiResponse(code = 403, message = badRequestLabel)
     ))
   def create: Action[AnnotationPrivateLinkParams] = sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) {
     implicit request =>
@@ -135,8 +135,8 @@ Expects:
     Array(
       new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
       new ApiResponse(code = 400, message = badRequestLabel),
-      new ApiResponse(code = NOT_FOUND, message = badRequestLabel),
-      new ApiResponse(code = FORBIDDEN, message = badRequestLabel)
+      new ApiResponse(code = 404, message = badRequestLabel),
+      new ApiResponse(code = 403, message = badRequestLabel)
     ))
   def update(@ApiParam(value = "The id of the private link") id: String): Action[AnnotationPrivateLinkParams] =
     sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) { implicit request =>
@@ -159,8 +159,8 @@ Expects:
     Array(
       new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
       new ApiResponse(code = 400, message = badRequestLabel),
-      new ApiResponse(code = NOT_FOUND, message = badRequestLabel),
-      new ApiResponse(code = FORBIDDEN, message = badRequestLabel)
+      new ApiResponse(code = 404, message = badRequestLabel),
+      new ApiResponse(code = 403, message = badRequestLabel)
     ))
   def delete(@ApiParam(value = "The id of the private link") id: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>

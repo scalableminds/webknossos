@@ -145,7 +145,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
       zarrMag = ZarrMag(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
       layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        ZarrSegmentationLayer(name, boundingBox, elementClass, List(zarrMag), largestSegmentId = 0L)
+        ZarrSegmentationLayer(name, boundingBox, elementClass, List(zarrMag), largestSegmentId = None)
       } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag))
     } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
 
@@ -182,7 +182,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       name = multiscale.name.getOrElse(nameFromPath)
       voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
       layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        ZarrSegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = 0L)
+        ZarrSegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = None)
       } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
     } yield (layer, voxelSizeNanometers)
 

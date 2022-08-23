@@ -33,42 +33,6 @@ export class CuckooTable {
     this._texture.isDataTexture = true;
     this._texture.internalFormat = "RGBA32UI";
 
-    // const renderer = getRenderer();
-    // const gl = renderer.getContext();
-    // const sizeX = textureWidth;
-    // const sizeY = textureWidth;
-    // const glTex = gl.createTexture();
-    // gl.bindTexture(gl.TEXTURE_2D, glTex);
-    // const arr = new Uint32Array(4 * sizeX * sizeY).fill(1280);
-    // gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32UI, sizeX, sizeY);
-
-    // // const subarr = new Uint32Array(4 * 100 * 100).fill(64);
-    // gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, sizeX, sizeY, gl.RGBA_INTEGER, gl.UNSIGNED_INT, arr);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    // gl.bindTexture(gl.TEXTURE_2D, null);
-
-    // const forceTextureInitialization = (function () {
-    //   const material = new THREE.MeshBasicMaterial();
-    //   const geometry = new THREE.PlaneBufferGeometry();
-    //   const scene = new THREE.Scene();
-    //   scene.add(new THREE.Mesh(geometry, material));
-    //   const camera = new THREE.Camera();
-
-    //   return function forceTextureInitialization(texture) {
-    //     material.map = texture;
-    //     renderer.render(scene, camera);
-    //   };
-    // })();
-
-    // const texture = new THREE.Texture();
-    // forceTextureInitialization(texture);
-
-    // const texProps = renderer.properties.get(texture);
-    // texProps.__webglTexture = glTex;
-
-    // this._texture = texture;
-
     this.entryCapacity = Math.floor(
       (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY,
     );

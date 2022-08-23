@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKW
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrMag, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.jzarr.{
-  ArrayOrder,
   AxisOrder,
   OmeNgffGroupHeader,
   OmeNgffHeader,

@@ -5,7 +5,7 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, Menu } from "antd";
+import { List, Tooltip, Dropdown, Menu, MenuItemProps } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import Checkbox from "antd/lib/checkbox/Checkbox";
 import React from "react";
@@ -49,8 +49,10 @@ function ColoredDotIconForSegment({ segmentId }: { segmentId: number }) {
   );
 }
 
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof MenuItem' is not assignab... Remove this comment to see the full error message
-const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
+const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
+  MenuItemProps,
+  typeof Menu.Item
+>(Menu.Item);
 
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
@@ -81,7 +83,6 @@ const getLoadPrecomputedMeshMenuItem = (
           loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
         );
       }}
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; onClick: () => void; di... Remove this comment to see the full error message
       disabled={!currentMeshFile}
       mappingName={mappingName}
       descriptor="mesh file"

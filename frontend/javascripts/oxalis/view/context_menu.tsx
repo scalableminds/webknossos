@@ -138,8 +138,11 @@ type NoNodeContextMenuProps = Props & {
   activeTool: AnnotationTool;
   infoRows: Array<React.ReactNode>;
 };
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof MenuItem' is not assignab... Remove this comment to see the full error message
-const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
+
+const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
+  MenuItemProps,
+  typeof Menu.Item
+>(Menu.Item);
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
@@ -698,7 +701,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
       currentConnectomeFile != null ? currentConnectomeFile.mappingName : undefined;
     const loadSynapsesItem = (
       <MenuItemWithMappingActivationConfirmation
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string | Element; className: str... Remove this comment to see the full error message
         className="node-context-menu-item"
         key="load-synapses"
         disabled={!isConnectomeMappingEnabled.value}
@@ -726,7 +728,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     <MenuItemWithMappingActivationConfirmation
       key="load-precomputed-mesh"
       onClick={loadPrecomputedMesh}
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; key: string; onClick: ()... Remove this comment to see the full error message
       disabled={!currentMeshFile}
       mappingName={meshFileMappingName}
       descriptor="mesh file"

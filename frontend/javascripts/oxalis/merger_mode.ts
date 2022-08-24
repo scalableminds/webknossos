@@ -15,7 +15,7 @@ import { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 
 type MergerModeState = {
   treeColors: Record<number, number | null | undefined>;
-  colorMapping: Record<number, number>;
+  idMapping: Record<number, number>;
   nodesPerSegment: Record<number, number>;
   nodes: Array<NodeWithTreeId>;
   // A properly initialized merger mode should always
@@ -33,26 +33,26 @@ let isCodeActive = false;
 
 function mapSegmentColorToTree(segId: number, treeId: number, mergerModeState: MergerModeState) {
   // add segment to color mapping
-  const color = getTreeColor(treeId, mergerModeState);
-  mergerModeState.colorMapping[segId] = color;
+  const color = getTreeColor(treeId, segId, mergerModeState);
+  mergerModeState.idMapping[segId] = color;
 }
 
-function getTreeColor(treeId: number, mergerModeState: MergerModeState) {
+function getTreeColor(treeId: number, segId: number, mergerModeState: MergerModeState) {
   const { treeColors } = mergerModeState;
   let color = treeColors[treeId];
 
   // Generate a new color if tree was never seen before
   if (color == null) {
-    color = Math.ceil(127 * Math.random());
+    color = segId;
     treeColors[treeId] = color;
   }
 
   return color;
 }
 
-function deleteColorMappingOfSegment(segId: number, mergerModeState: MergerModeState) {
+function deleteIdMappingOfSegment(segId: number, mergerModeState: MergerModeState) {
   // Remove segment from color mapping
-  delete mergerModeState.colorMapping[segId];
+  delete mergerModeState.idMapping[segId];
 }
 
 /* This function is used to increment the reference count /
@@ -119,7 +119,7 @@ async function createNodeOverwrite(
   if (!segmentId) {
     api.utils.showToast("warning", messages["tracing.merger_mode_node_outside_segment"]);
   } else {
-    await call(action);
+    call(action);
 
     // Center the created cell manually, as somehow without this call the previous node would be centered.
     if (Store.getState().userConfiguration.centerNewNode) {
@@ -137,7 +137,7 @@ async function onCreateNode(
   position: Vector3,
   updateMapping: boolean = true,
 ) {
-  const { colorMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
+  const { idMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
 
   if (segmentationLayerName == null) {
     return;
@@ -160,7 +160,7 @@ async function onCreateNode(
 
   if (updateMapping) {
     // Update mapping
-    await api.data.setMapping(segmentationLayerName, colorMapping);
+    api.data.setMapping(segmentationLayerName, idMapping);
   }
 }
 
@@ -183,10 +183,10 @@ async function onDeleteNode(
 
   if (numberOfNodesMappedToSegment === 0) {
     // Reset color of all segments that were mapped to this tree
-    deleteColorMappingOfSegment(segmentId, mergerModeState);
+    deleteIdMappingOfSegment(segmentId, mergerModeState);
 
     if (updateMapping) {
-      await api.data.setMapping(segmentationLayerName, mergerModeState.colorMapping);
+      api.data.setMapping(segmentationLayerName, mergerModeState.idMapping);
     }
   }
 }
@@ -215,7 +215,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTree
       delete nodeSegmentMap[id];
     }
 
-    api.data.setMapping(segmentationLayerName, mergerModeState.colorMapping);
+    api.data.setMapping(segmentationLayerName, mergerModeState.idMapping);
   }
 }
 
@@ -270,41 +270,44 @@ function changeOpacity(mergerModeState: MergerModeState) {
 }
 
 function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
-  const { treeColors, colorMapping, segmentationLayerName } = mergerModeState;
+  const { treeColors, idMapping, segmentationLayerName } = mergerModeState;
 
   if (segmentationLayerName == null) {
     return;
   }
 
-  const setNewColorOfCurrentActiveTree = () => {
-    const activeTreeId = api.tracing.getActiveTreeId();
+  // const setNewColorOfCurrentActiveTree = () => {
+  //   const activeTreeId = api.tracing.getActiveTreeId();
 
-    if (activeTreeId == null) {
-      Modal.info({
-        title: "Could not find an active tree.",
-      });
-      return;
-    }
+  //   if (activeTreeId == null) {
+  //     Modal.info({
+  //       title: "Could not find an active tree.",
+  //     });
+  //     return;
+  //   }
 
-    const oldColor = getTreeColor(activeTreeId, mergerModeState);
-    // Reset the color of the active tree
-    treeColors[activeTreeId] = undefined;
-    // Applies the change of the color to all connected segments
-    Object.keys(colorMapping).forEach((key) => {
-      if (colorMapping[+key] === oldColor) {
-        colorMapping[+key] = getTreeColor(activeTreeId, mergerModeState);
-      }
-    });
-    // Update the segmentation
-    api.data.setMapping(segmentationLayerName, colorMapping);
-  };
+  //   const oldColor = getTreeColor(activeTreeId, mergerModeState);
+  //   // Reset the color of the active tree
+  //   treeColors[activeTreeId] = undefined;
+  //   // Applies the change of the color to all connected segments
+  //   Object.keys(idMapping).forEach((key) => {
+  //     if (idMapping[+key] === oldColor) {
+  //       idMapping[+key] = getTreeColor(activeTreeId, mergerModeState);
+  //     }
+  //   });
+  //   // Update the segmentation
+  //   api.data.setMapping(segmentationLayerName, idMapping);
+  // };
 
-  Modal.confirm({
-    title: "Do you want to set a new Color?",
-    onOk: setNewColorOfCurrentActiveTree,
+  // Modal.confirm({
+  //   title: "Do you want to set a new Color?",
+  //   onOk: setNewColorOfCurrentActiveTree,
 
-    onCancel() {},
-  });
+  //   onCancel() {},
+  // });
+
+  // todo?
+  api.utils.showToast("warning", "Shuffling the color is not currently supported.");
 }
 
 async function mergeSegmentsOfAlreadyExistingTrees(
@@ -313,7 +316,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
   mergerModeState: MergerModeState,
   onProgressUpdate: (arg0: number) => void,
 ) {
-  const { nodes, segmentationLayerName, nodeSegmentMap, colorMapping } = mergerModeState;
+  const { nodes, segmentationLayerName, nodeSegmentMap, idMapping } = mergerModeState;
   const numbOfNodes = nodes.length;
 
   if (index >= numbOfNodes) {
@@ -367,7 +370,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
     await Promise.all(nodesMappedPromises);
   }
 
-  api.data.setMapping(segmentationLayerName, colorMapping);
+  api.data.setMapping(segmentationLayerName, idMapping);
 }
 
 function resetState(mergerModeState: Partial<MergerModeState> = {}) {
@@ -376,7 +379,7 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
   const segmentationLayerName = visibleLayer != null ? visibleLayer.name : null;
   const defaults = {
     treeColors: {},
-    colorMapping: {},
+    idMapping: {},
     nodesPerSegment: {},
     nodes: getAllNodesWithTreeId(),
     segmentationLayerName,
@@ -439,6 +442,7 @@ export async function enableMergerMode(
   await mergeSegmentsOfAlreadyExistingTrees(0, mergerModeState, onProgressUpdate);
   return mergerModeState.segmentationLayerName;
 }
+
 export function disableMergerMode(segmentationLayerName: string | null | undefined) {
   if (!isCodeActive) {
     return;

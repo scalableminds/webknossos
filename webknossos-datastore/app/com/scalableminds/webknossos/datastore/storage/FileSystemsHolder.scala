@@ -5,11 +5,12 @@ import java.net.URI
 import java.nio.file.spi.FileSystemProvider
 import java.nio.file.{FileSystem, FileSystemAlreadyExistsException, FileSystems}
 import java.util.ServiceLoader
-
 import com.google.common.collect.ImmutableMap
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
 import com.typesafe.scalalogging.LazyLogging
+import com.upplication.s3fsfork
+import com.upplication.s3fsfork.AmazonS3Factory
 
 import scala.collection.JavaConverters._
 
@@ -77,8 +78,8 @@ object FileSystemsHolder extends LazyLogging {
       if (scheme == schemeS3) {
         ImmutableMap
           .builder[String, Any]
-          .put(com.upplication.s3fs.AmazonS3Factory.ACCESS_KEY, user)
-          .put(com.upplication.s3fs.AmazonS3Factory.SECRET_KEY, password)
+          .put(AmazonS3Factory.ACCESS_KEY, user)
+          .put(s3fsfork.AmazonS3Factory.SECRET_KEY, password)
           .build
       } else if (scheme == schemeHttps) {
         ImmutableMap.builder[String, Any].put("user", user).put("password", password).build

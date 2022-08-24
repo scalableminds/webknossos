@@ -14,7 +14,7 @@ import { Action } from "oxalis/model/actions/actions";
 import { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 
 type MergerModeState = {
-  treeColors: Record<number, number | null | undefined>;
+  treeIdToRepresentativeSegmentId: Record<number, number | null | undefined>;
   idMapping: Record<number, number>;
   nodesPerSegment: Record<number, number>;
   nodes: Array<NodeWithTreeId>;
@@ -31,23 +31,26 @@ const unregisterKeyHandlers: UnregisterHandler[] = [];
 const unsubscribeFunctions: Array<() => void> = [];
 let isCodeActive = false;
 
-function mapSegmentColorToTree(segId: number, treeId: number, mergerModeState: MergerModeState) {
-  // add segment to color mapping
-  const color = getTreeColor(treeId, segId, mergerModeState);
-  mergerModeState.idMapping[segId] = color;
+function mapSegmentToRepresentative(
+  segId: number,
+  treeId: number,
+  mergerModeState: MergerModeState,
+) {
+  const representative = getRepresentativeForTree(treeId, segId, mergerModeState);
+  mergerModeState.idMapping[segId] = representative;
 }
 
-function getTreeColor(treeId: number, segId: number, mergerModeState: MergerModeState) {
-  const { treeColors } = mergerModeState;
-  let color = treeColors[treeId];
+function getRepresentativeForTree(treeId: number, segId: number, mergerModeState: MergerModeState) {
+  const { treeIdToRepresentativeSegmentId } = mergerModeState;
+  let representative = treeIdToRepresentativeSegmentId[treeId];
 
-  // Generate a new color if tree was never seen before
-  if (color == null) {
-    color = segId;
-    treeColors[treeId] = color;
+  // Use the passed segment id as a representative, if the tree was never seen before
+  if (representative == null) {
+    representative = segId;
+    treeIdToRepresentativeSegmentId[treeId] = representative;
   }
 
-  return color;
+  return representative;
 }
 
 function deleteIdMappingOfSegment(segId: number, mergerModeState: MergerModeState) {
@@ -156,7 +159,7 @@ async function onCreateNode(
   nodeSegmentMap[nodeId] = segmentId;
   // Count references
   increaseNodesOfSegment(segmentId, mergerModeState);
-  mapSegmentColorToTree(segmentId, treeId, mergerModeState);
+  mapSegmentToRepresentative(segmentId, treeId, mergerModeState);
 
   if (updateMapping) {
     // Update mapping
@@ -270,7 +273,8 @@ function changeOpacity(mergerModeState: MergerModeState) {
 }
 
 function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
-  const { treeColors, idMapping, segmentationLayerName } = mergerModeState;
+  // const { treeIdToRepresentativeSegmentId, idMapping, segmentationLayerName } = mergerModeState;
+  const { segmentationLayerName } = mergerModeState;
 
   if (segmentationLayerName == null) {
     return;
@@ -286,13 +290,13 @@ function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
   //     return;
   //   }
 
-  //   const oldColor = getTreeColor(activeTreeId, mergerModeState);
+  //   const oldColor = getRepresentativeForTree(activeTreeId, mergerModeState);
   //   // Reset the color of the active tree
-  //   treeColors[activeTreeId] = undefined;
+  //   treeIdToRepresentativeSegmentId[activeTreeId] = undefined;
   //   // Applies the change of the color to all connected segments
   //   Object.keys(idMapping).forEach((key) => {
   //     if (idMapping[+key] === oldColor) {
-  //       idMapping[+key] = getTreeColor(activeTreeId, mergerModeState);
+  //       idMapping[+key] = getRepresentativeForTree(activeTreeId, mergerModeState);
   //     }
   //   });
   //   // Update the segmentation
@@ -353,7 +357,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
       nodeSegmentMap[node.id] = segmentId;
       // Add to agglomerate
       increaseNodesOfSegment(segmentId, mergerModeState);
-      mapSegmentColorToTree(segmentId, treeId, mergerModeState);
+      mapSegmentToRepresentative(segmentId, treeId, mergerModeState);
     }
   };
 
@@ -378,7 +382,7 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
   const visibleLayer = getVisibleSegmentationLayer(Store.getState());
   const segmentationLayerName = visibleLayer != null ? visibleLayer.name : null;
   const defaults = {
-    treeColors: {},
+    treeIdToRepresentativeSegmentId: {},
     idMapping: {},
     nodesPerSegment: {},
     nodes: getAllNodesWithTreeId(),

@@ -76,7 +76,6 @@ import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
-import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import type {
@@ -471,11 +470,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       textureInformation.textureSize,
       textureInformation.textureCount,
     );
-  }
-
-  if (hasSegmentation(dataset) != null && isMappingSupported) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'mappings' does not exist on type '(Windo... Remove this comment to see the full error message
-    window.mappings = setupGlobalMappingsObject();
   }
 
   if (getDataLayers(dataset).length === 0) {

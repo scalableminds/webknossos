@@ -109,11 +109,9 @@ function* maybeFetchMapping(
     "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
       ? layerInfo.fallbackLayer
       : layerInfo.name,
-  ];
+  ] as const;
   const [jsonMappings, serverHdf5Mappings] = yield* all([
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getMappingsForDatasetLayer, ...params),
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getAgglomeratesForDatasetLayer, ...params),
   ]);
   // Make sure the available mappings are persisted in the store if they are not already
@@ -259,19 +257,20 @@ function* buildMappingObject(
       "Mappings must have been fetched at this point. Ensure that the mapping JSON contains a classes property.",
     );
 
-    if (mapping.classes) {
-      for (const mappingClass of mapping.classes) {
-        const minId = assignNewIds ? newMappedId : _.min(mappingClass);
-        // @ts-expect-error ts-migrate(2538) FIXME: Type 'undefined' cannot be used as an index type.
-        const mappedId = mappingObject[minId] || minId;
-
-        for (const id of mappingClass) {
-          mappingObject[id] = mappedId;
-          mappingKeys.push(id);
-        }
-
-        newMappedId++;
+    for (const mappingClass of mapping.classes) {
+      const minId = assignNewIds ? newMappedId : _.min(mappingClass);
+      if (minId == null) {
+        // The class is empty and can be ignored
+        continue;
       }
+      const mappedId = mappingObject[minId] || minId;
+
+      for (const id of mappingClass) {
+        mappingObject[id] = mappedId;
+        mappingKeys.push(id);
+      }
+
+      newMappedId++;
     }
   }
 

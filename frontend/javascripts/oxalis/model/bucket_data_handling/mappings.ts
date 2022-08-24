@@ -9,31 +9,10 @@ import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import messages from "messages";
+
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
 export const MAPPING_MESSAGE_KEY = "mappings";
-// Remove soon (e.g., October 2021)
-export function setupGlobalMappingsObject() {
-  return {
-    getAll(): string[] {
-      throw new Error(
-        "Using mappings.getAll() is deprecated. Please use the official front-end API function getMappingNames() instead.",
-      );
-    },
-
-    getActive(): string | null | undefined {
-      throw new Error(
-        "Using mappings.getActive() is deprecated. Please use the official front-end API function getActiveMapping() instead.",
-      );
-    },
-
-    activate(_mapping: string) {
-      throw new Error(
-        "Using mappings.activate() is deprecated. Please use the official front-end API function activateMapping() instead.",
-      );
-    },
-  };
-}
 
 class Mappings {
   layerName: string;

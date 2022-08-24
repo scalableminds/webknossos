@@ -66,7 +66,6 @@ export const convertCellIdToRGB: ShaderModule = {
       // Since collisions of ids are bound to happen, using all 64 bits is not
       // necessary, which is why we simply combine the 32-bit tuple into one 32-bit value.
       vec4 id = idHigh + idLow;
-      float lastEightBits = id.r;
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
       float colorCount = 19.;
@@ -75,7 +74,9 @@ export const convertCellIdToRGB: ShaderModule = {
       float colorHue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       float colorSaturation = 1.;
       float colorValue = 1.;
-      // For historical reference: the old color generation was: colorHue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
+      // For historical reference: the old color generation was:
+      // float lastEightBits = id.r;
+      // float colorHue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
 
       uint integerValue = vec4ToUint(idLow);
       vec3 customColor = attemptCustomColorLookUp(integerValue, seed0);
@@ -91,23 +92,6 @@ export const convertCellIdToRGB: ShaderModule = {
         colorSaturation = customHSV.y;
         colorValue = customHSV.z;
       }
-
-      // <% if (isMappingSupported) { %>
-      //   // If the first element of the mapping colors texture is still the initialized
-      //   // colorHue of -1, no mapping colors have been specified
-      //   bool hasCustomMappingColors = getRgbaAtIndex(
-      //     segmentation_mapping_color_texture,
-      //     <%= mappingColorTextureWidth %>,
-      //     0.0
-      //   ).r != -1.0;
-      //   if (isMappingEnabled && hasCustomMappingColors) {
-      //     colorHue = getRgbaAtIndex(
-      //       segmentation_mapping_color_texture,
-      //       <%= mappingColorTextureWidth %>,
-      //       lastEightBits
-      //     ).r;
-      //   }
-      // <% } %>
 
       // The following code scales the world coordinates so that the coordinate frequency is in a "pleasant" range.
       // Also, when zooming out, coordinates change faster which make the pattern more turbulent. Dividing by the

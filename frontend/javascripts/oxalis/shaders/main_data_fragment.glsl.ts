@@ -1,8 +1,5 @@
 import _ from "lodash";
-import {
-  MAPPING_TEXTURE_WIDTH,
-  MAPPING_COLOR_TEXTURE_WIDTH,
-} from "oxalis/model/bucket_data_handling/mappings";
+import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
 import type { Vector3 } from "oxalis/constants";
 import constants, { ViewModeValuesIndices, OrthoViewIndices } from "oxalis/constants";
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
@@ -75,7 +72,6 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
     uniform bool hideUnmappedIds;
     uniform sampler2D segmentation_mapping_texture;
     uniform sampler2D segmentation_mapping_lookup_texture;
-    uniform sampler2D segmentation_mapping_color_texture;
   <% } %>
 <% } %>
 
@@ -231,10 +227,9 @@ void main() {
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
     l_texture_width: formatNumberAsGLSLFloat(params.lookupTextureWidth),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
-    mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vector3' implicitly has an 'any' type.
-    formatVector3AsVec3: (vector3) => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
+    formatVector3AsVec3: (vector3: Vector3) =>
+      `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
   });

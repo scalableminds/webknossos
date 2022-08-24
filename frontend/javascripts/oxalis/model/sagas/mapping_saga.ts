@@ -280,10 +280,7 @@ function* buildMappingObject(
   const mappingKeys = [];
   const largestSegmentID = yield* call(getLargestSegmentId, layerName);
   const maxId = largestSegmentID + 1;
-  // Initialize to the next multiple of 256 that is larger than maxId
-  // todo:
-  // because only the lowest 8 bit were used to access the color texture. still necessary?
-  let newMappedId = Math.ceil(maxId / 256) * 256;
+  let newMappedId = maxId;
 
   for (const currentMappingName of getMappingChain(mappingName, fetchedMappings)) {
     const mapping = fetchedMappings[currentMappingName];

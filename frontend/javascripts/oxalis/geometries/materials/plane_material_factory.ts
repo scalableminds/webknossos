@@ -259,7 +259,7 @@ class PlaneMaterialFactory {
 
   attachSegmentationMappingTextures(): void {
     const segmentationLayer = Model.getSegmentationLayerWithMappingSupport();
-    const [mappingTexture, mappingLookupTexture, mappingColorTexture] =
+    const [mappingTexture, mappingLookupTexture] =
       Model.isMappingSupported && segmentationLayer != null && segmentationLayer.mappings != null
         ? segmentationLayer.mappings.getMappingTextures() // It's important to set up the uniforms (even when they are null), since later
         : // additions to `this.uniforms` won't be properly attached otherwise.
@@ -270,9 +270,6 @@ class PlaneMaterialFactory {
     };
     this.uniforms.segmentation_mapping_lookup_texture = {
       value: mappingLookupTexture,
-    };
-    this.uniforms.segmentation_mapping_color_texture = {
-      value: mappingColorTexture,
     };
   }
 

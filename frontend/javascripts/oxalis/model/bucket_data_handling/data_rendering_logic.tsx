@@ -217,8 +217,8 @@ function calculateNecessaryTextureCount<Layer>(
 }
 
 function calculateMappingTextureCount(): number {
-  // If there is a segmentation layer, we need one lookup, one data and one color texture for mappings
-  const textureCountForCellMappings = 3;
+  // If there is a segmentation layer, we need one lookup and one data texture for mappings
+  const textureCountForCellMappings = 2;
   return textureCountForCellMappings;
 }
 

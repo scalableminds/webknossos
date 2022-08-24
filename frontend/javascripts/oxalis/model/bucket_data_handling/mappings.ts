@@ -78,19 +78,19 @@ class Mappings {
   }
 
   updateMappingColorTexture(mappingColors: Array<number> | null | undefined) {
-    mappingColors = mappingColors || [];
-    const maxNumberOfColors = MAPPING_COLOR_TEXTURE_WIDTH ** 2;
-    const float32Colors = new Float32Array(maxNumberOfColors);
-    // Initialize the array with -1
-    float32Colors.fill(-1);
-    float32Colors.set(mappingColors.slice(0, maxNumberOfColors));
-    this.mappingColorTexture.update(
-      float32Colors,
-      0,
-      0,
-      MAPPING_COLOR_TEXTURE_WIDTH,
-      MAPPING_COLOR_TEXTURE_WIDTH,
-    );
+    // mappingColors = mappingColors || [];
+    // const maxNumberOfColors = MAPPING_COLOR_TEXTURE_WIDTH ** 2;
+    // const float32Colors = new Float32Array(maxNumberOfColors);
+    // // Initialize the array with -1
+    // float32Colors.fill(-1);
+    // float32Colors.set(mappingColors.slice(0, maxNumberOfColors));
+    // this.mappingColorTexture.update(
+    //   float32Colors,
+    //   0,
+    //   0,
+    //   MAPPING_COLOR_TEXTURE_WIDTH,
+    //   MAPPING_COLOR_TEXTURE_WIDTH,
+    // );
   }
 
   async updateMappingTextures(

@@ -602,7 +602,13 @@ function* ensureSegmentExists(
   const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
   const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
 
-  if (cellId === 0 || cellId == null || segments == null || segments.getNullable(cellId) != null) {
+  if (
+    cellId === 0 ||
+    cellId == null ||
+    segments == null ||
+    // If the segment was already registered with a position, don't do anything
+    segments.getNullable(cellId)?.somePosition != null
+  ) {
     return;
   }
 

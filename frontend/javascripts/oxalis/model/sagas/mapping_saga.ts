@@ -4,6 +4,7 @@ import { all, call, takeEvery, takeLatest, take, put, fork, actionChannel } from
 import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
+  OptionalMappingProperties,
   SetMappingAction,
   SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
@@ -23,6 +24,8 @@ import api from "oxalis/api/internal_api";
 import { MappingStatusEnum } from "oxalis/constants";
 import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
+import { updateSegmentAction } from "../actions/volumetracing_actions";
+import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 type APIMappings = Record<string, APIMapping>;
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {
@@ -169,16 +172,18 @@ function* maybeFetchMapping(
     yield* put(setMappingAction(layerName, null, mappingType));
     return;
   }
-  const { hideUnmappedIds, colors: mappingColors } = fetchedMappings[mappingName];
+  const fetchedMapping = fetchedMappings[mappingName];
+  const { hideUnmappedIds, colors: mappingColors } = fetchedMapping;
+
   // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
   // class will get the first color, and so on
-  const assignNewIds = mappingColors != null && mappingColors.length > 0;
+  const usesCustomColors = mappingColors != null && mappingColors.length > 0;
   const [mappingObject, mappingKeys] = yield* call(
     buildMappingObject,
     layerName,
     mappingName,
     fetchedMappings,
-    assignNewIds,
+    usesCustomColors, // assign new ids when using custom colors
   );
   const mappingProperties = {
     mapping: mappingObject,
@@ -186,6 +191,10 @@ function* maybeFetchMapping(
     mappingColors,
     hideUnmappedIds,
   };
+
+  if (usesCustomColors) {
+    yield* call(setCustomColors, mappingProperties, fetchedMapping, layerName);
+  }
 
   if (layerInfo.elementClass === "uint64") {
     yield* call(
@@ -196,6 +205,30 @@ function* maybeFetchMapping(
   }
 
   yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
+}
+
+function* setCustomColors(
+  mappingProperties: OptionalMappingProperties,
+  fetchedMapping: APIMapping,
+  layerName: string,
+) {
+  if (mappingProperties.mapping == null || mappingProperties.mappingColors == null) {
+    return;
+  }
+  let classIdx = 0;
+  for (const aClass of fetchedMapping.classes || []) {
+    const firstIdEntry = aClass[0];
+    if (firstIdEntry == null) {
+      continue;
+    }
+    const representativeId = mappingProperties.mapping[firstIdEntry];
+
+    const hueValue = mappingProperties.mappingColors[classIdx];
+    const color = jsHsv2rgb(360 * hueValue, 1, 1);
+    yield* put(updateSegmentAction(representativeId, { color }, layerName));
+
+    classIdx++;
+  }
 }
 
 function* fetchMappings(
@@ -248,6 +281,8 @@ function* buildMappingObject(
   const largestSegmentID = yield* call(getLargestSegmentId, layerName);
   const maxId = largestSegmentID + 1;
   // Initialize to the next multiple of 256 that is larger than maxId
+  // todo:
+  // because only the lowest 8 bit were used to access the color texture. still necessary?
   let newMappedId = Math.ceil(maxId / 256) * 256;
 
   for (const currentMappingName of getMappingChain(mappingName, fetchedMappings)) {

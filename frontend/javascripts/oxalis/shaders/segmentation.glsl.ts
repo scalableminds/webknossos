@@ -92,22 +92,22 @@ export const convertCellIdToRGB: ShaderModule = {
         colorValue = customHSV.z;
       }
 
-      <% if (isMappingSupported) { %>
-        // If the first element of the mapping colors texture is still the initialized
-        // colorHue of -1, no mapping colors have been specified
-        bool hasCustomMappingColors = getRgbaAtIndex(
-          segmentation_mapping_color_texture,
-          <%= mappingColorTextureWidth %>,
-          0.0
-        ).r != -1.0;
-        if (isMappingEnabled && hasCustomMappingColors) {
-          colorHue = getRgbaAtIndex(
-            segmentation_mapping_color_texture,
-            <%= mappingColorTextureWidth %>,
-            lastEightBits
-          ).r;
-        }
-      <% } %>
+      // <% if (isMappingSupported) { %>
+      //   // If the first element of the mapping colors texture is still the initialized
+      //   // colorHue of -1, no mapping colors have been specified
+      //   bool hasCustomMappingColors = getRgbaAtIndex(
+      //     segmentation_mapping_color_texture,
+      //     <%= mappingColorTextureWidth %>,
+      //     0.0
+      //   ).r != -1.0;
+      //   if (isMappingEnabled && hasCustomMappingColors) {
+      //     colorHue = getRgbaAtIndex(
+      //       segmentation_mapping_color_texture,
+      //       <%= mappingColorTextureWidth %>,
+      //       lastEightBits
+      //     ).r;
+      //   }
+      // <% } %>
 
       // The following code scales the world coordinates so that the coordinate frequency is in a "pleasant" range.
       // Also, when zooming out, coordinates change faster which make the pattern more turbulent. Dividing by the

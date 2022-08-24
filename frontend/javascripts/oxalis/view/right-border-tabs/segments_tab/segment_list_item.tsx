@@ -26,6 +26,7 @@ import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs
 import type { ActiveMappingInfo, IsosurfaceInformation, OxalisState, Segment } from "oxalis/store";
 import Store from "oxalis/store";
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
+import Toast from "libs/toast";
 
 const hslaToCSS = (hsla: Vector4) => {
   const [h, s, l, a] = hsla;
@@ -55,7 +56,7 @@ const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile: APIMeshFile | null | undefined,
   loadPrecomputedMesh: (arg0: number, arg1: Vector3, arg2: string) => void,
-  andCloseContextMenu: (_ignore: any) => void,
+  andCloseContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
 ) => {
@@ -63,12 +64,23 @@ const getLoadPrecomputedMeshMenuItem = (
   return (
     <MenuItemWithMappingActivationConfirmation
       key="loadPrecomputedMesh"
-      onClick={() =>
+      onClick={() => {
+        if (!currentMeshFile) {
+          return;
+        }
+        if (!segment.somePosition) {
+          Toast.info(
+            <React.Fragment>
+              Cannot load a mesh for this segment, because its position is unknown.
+            </React.Fragment>,
+          );
+          andCloseContextMenu();
+          return;
+        }
         andCloseContextMenu(
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
           loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
-        )
-      }
+        );
+      }}
       // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; onClick: () => void; di... Remove this comment to see the full error message
       disabled={!currentMeshFile}
       mappingName={mappingName}
@@ -94,13 +106,25 @@ const getComputeMeshAdHocMenuItem = (
   segment: Segment,
   loadAdHocMesh: (arg0: number, arg1: Vector3) => void,
   isSegmentationLayerVisible: boolean,
-  andCloseContextMenu: (_ignore: any) => void,
+  andCloseContextMenu: (_ignore?: any) => void,
 ) => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
   return (
     <Menu.Item
       key="loadAdHocMesh"
-      onClick={() => andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition))}
+      onClick={() => {
+        if (!segment.somePosition) {
+          Toast.info(
+            <React.Fragment>
+              Cannot load a mesh for this segment, because its position is unknown.
+            </React.Fragment>,
+          );
+          andCloseContextMenu();
+          return;
+        }
+
+        andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition));
+      }}
       disabled={disabled}
     >
       <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>
@@ -112,7 +136,7 @@ const getMakeSegmentActiveMenuItem = (
   segment: Segment,
   setActiveCell: (arg0: number, somePosition?: Vector3) => void,
   activeCellId: number | null | undefined,
-  andCloseContextMenu: (_ignore: any) => void,
+  andCloseContextMenu: (_ignore?: any) => void,
 ) => {
   const disabled = segment.id === activeCellId;
   const title = disabled
@@ -327,7 +351,7 @@ function _SegmentListItem({
     return null;
   }
 
-  const andCloseContextMenu = (_ignore: any) => handleSegmentDropdownMenuVisibility(0, false);
+  const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(0, false);
 
   const createSegmentContextMenu = () => (
     <Menu>

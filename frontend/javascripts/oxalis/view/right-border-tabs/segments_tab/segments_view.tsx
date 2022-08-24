@@ -128,7 +128,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   };
 };
 
-const mapDispatchToProps = (dispatch: Dispatch<any>): any => ({
+const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   setHoveredSegmentId(segmentId: number | null | undefined) {
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
   },
@@ -335,6 +335,15 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState({
       selectedSegmentId: segment.id,
     });
+
+    if (!segment.somePosition) {
+      Toast.info(
+        <React.Fragment>
+          Cannot go to this segment, because its position is unknown.
+        </React.Fragment>,
+      );
+      return;
+    }
     this.props.setPosition(segment.somePosition);
   };
 
@@ -363,8 +372,10 @@ class SegmentsView extends React.Component<Props, State> {
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
         : datasetResolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
-    const meshfileResolution =
-      datasetResolutionInfo.getResolutionByIndexWithFallback(meshfileResolutionIndex);
+    const meshfileResolution = datasetResolutionInfo.getResolutionByIndexWithFallback(
+      meshfileResolutionIndex,
+      null,
+    );
 
     if (this.props.visibleSegmentationLayer != null) {
       const job = await startComputeMeshFileJob(
@@ -395,7 +406,7 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  handleMeshFileSelected = async (meshFileName: SelectValue) => {
+  handleMeshFileSelected = async (meshFileName: string) => {
     if (this.props.visibleSegmentationLayer != null && meshFileName != null) {
       this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, meshFileName);
     }

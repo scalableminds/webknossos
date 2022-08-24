@@ -211,7 +211,7 @@ export type SkeletonTracing = TracingBase & {
 export type Segment = {
   id: number;
   name: string | null | undefined;
-  somePosition: Vector3;
+  somePosition: Vector3 | undefined;
   creationTime: number | null | undefined;
   color: Vector3 | null;
 };

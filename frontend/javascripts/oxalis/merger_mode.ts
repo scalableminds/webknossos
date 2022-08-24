@@ -272,48 +272,6 @@ function changeOpacity(mergerModeState: MergerModeState) {
   api.data.setConfiguration("layers", copyOfLayerSettings);
 }
 
-function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
-  // const { treeIdToRepresentativeSegmentId, idMapping, segmentationLayerName } = mergerModeState;
-  const { segmentationLayerName } = mergerModeState;
-
-  if (segmentationLayerName == null) {
-    return;
-  }
-
-  // const setNewColorOfCurrentActiveTree = () => {
-  //   const activeTreeId = api.tracing.getActiveTreeId();
-
-  //   if (activeTreeId == null) {
-  //     Modal.info({
-  //       title: "Could not find an active tree.",
-  //     });
-  //     return;
-  //   }
-
-  //   const oldColor = getRepresentativeForTree(activeTreeId, mergerModeState);
-  //   // Reset the color of the active tree
-  //   treeIdToRepresentativeSegmentId[activeTreeId] = undefined;
-  //   // Applies the change of the color to all connected segments
-  //   Object.keys(idMapping).forEach((key) => {
-  //     if (idMapping[+key] === oldColor) {
-  //       idMapping[+key] = getRepresentativeForTree(activeTreeId, mergerModeState);
-  //     }
-  //   });
-  //   // Update the segmentation
-  //   api.data.setMapping(segmentationLayerName, idMapping);
-  // };
-
-  // Modal.confirm({
-  //   title: "Do you want to set a new Color?",
-  //   onOk: setNewColorOfCurrentActiveTree,
-
-  //   onCancel() {},
-  // });
-
-  // todo?
-  api.utils.showToast("warning", "Shuffling the color is not currently supported.");
-}
-
 async function mergeSegmentsOfAlreadyExistingTrees(
   // eslint-disable-next-line @typescript-eslint/default-param-last
   index = 0,
@@ -431,12 +389,7 @@ export async function enableMergerMode(
       createNodeOverwrite(store, next, originalAction as CreateNodeAction, mergerModeState),
     ),
   );
-  // Register the additional key handlers
-  unregisterKeyHandlers.push(
-    api.utils.registerKeyHandler("8", () => {
-      shuffleColorOfCurrentTree(mergerModeState);
-    }),
-  );
+  // Register the additional key handler
   unregisterKeyHandlers.push(
     api.utils.registerKeyHandler("9", () => {
       changeOpacity(mergerModeState);

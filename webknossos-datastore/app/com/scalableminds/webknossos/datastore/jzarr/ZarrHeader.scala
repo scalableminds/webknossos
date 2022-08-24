@@ -133,7 +133,7 @@ object ZarrHeader {
 
   implicit object ZarrHeaderFormat extends Format[ZarrHeader] {
     override def reads(json: JsValue): JsResult[ZarrHeader] =
-      Json.reads[ZarrHeader].reads(json)
+      Json.using[Json.WithDefaultValues].reads[ZarrHeader].reads(json)
 
     override def writes(zarrHeader: ZarrHeader): JsValue =
       Json.obj(

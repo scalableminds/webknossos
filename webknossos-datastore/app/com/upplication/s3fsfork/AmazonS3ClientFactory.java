@@ -11,5 +11,14 @@ public class AmazonS3ClientFactory extends AmazonS3Factory {
     @Override
     protected AmazonS3 createAmazonS3(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, RequestMetricCollector requestMetricsCollector) {
         return new AmazonS3Client(credentialsProvider, clientConfiguration, requestMetricsCollector);
+        /*
+                return AmazonS3ClientBuilder
+          .standard()
+          .withCredentials(credentialsProvider)
+          .withClientConfiguration(clientConfiguration)
+          .withRegion(Regions.EU_WEST_1)
+          .withMetricsCollector(requestMetricsCollector)
+          .build();
+         */
     }
 }

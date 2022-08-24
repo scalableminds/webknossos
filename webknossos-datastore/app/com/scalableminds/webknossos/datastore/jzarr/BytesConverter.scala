@@ -38,17 +38,18 @@ object BytesConverter {
       case ZarrDataType.i8 | ZarrDataType.u8 =>
         val arrayTyped = array.asInstanceOf[Array[Long]]
         val byteBuffer = makeByteBuffer(arrayTyped.length * bytesPerElement, byteOrder)
-        byteBuffer.asLongBuffer().put(arrayTyped).array()
+        byteBuffer.asLongBuffer().put(arrayTyped)
         byteBuffer.array()
       case ZarrDataType.f4 =>
         val arrayTyped = array.asInstanceOf[Array[Float]]
         val byteBuffer = makeByteBuffer(arrayTyped.length * bytesPerElement, byteOrder)
-        byteBuffer.asFloatBuffer().put(arrayTyped).array()
+        val asFloat = byteBuffer.asFloatBuffer()
+        asFloat.put(arrayTyped)
         byteBuffer.array()
       case ZarrDataType.f8 =>
         val arrayTyped = array.asInstanceOf[Array[Double]]
         val byteBuffer = makeByteBuffer(arrayTyped.length * bytesPerElement, byteOrder)
-        byteBuffer.asDoubleBuffer().put(arrayTyped).array()
+        byteBuffer.asDoubleBuffer().put(arrayTyped)
         byteBuffer.array()
     }
   }

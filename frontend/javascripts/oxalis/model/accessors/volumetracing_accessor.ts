@@ -501,9 +501,9 @@ export function getSegmentColorAsHSL(state: OxalisState, mappedId: number): Vect
     state.temporaryConfiguration.activeMappingByLayer,
     visibleSegmentationLayer.name,
   );
-  const activeVolumeTracing = getActiveSegmentationTracing(state);
-  if (activeVolumeTracing) {
-    const segment = activeVolumeTracing.segments.getNullable(mappedId);
+  const visibleSegments = getVisibleSegments(state);
+  if (visibleSegments) {
+    const segment = visibleSegments.getNullable(mappedId);
 
     if (segment?.color) {
       const [hue, saturation, value] = jsRgb2hsl(segment.color);

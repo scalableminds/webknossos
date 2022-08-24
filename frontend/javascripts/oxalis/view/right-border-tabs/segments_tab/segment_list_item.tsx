@@ -346,62 +346,58 @@ function _SegmentListItem({
         andCloseContextMenu,
       )}
       {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
+      <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled || segment.id !== mappedId}>
+        <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
+          Change Segment Color
+          <input
+            type="color"
+            value={Utils.rgbToHex(Utils.map3((value) => value * 255, segment.color ?? [0, 0, 0]))}
+            disabled={isEditingDisabled}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: "100%",
+              opacity: 0,
+              cursor: isEditingDisabled ? "unset" : "pointer",
+            }}
+            onChange={(event) => {
+              if (isEditingDisabled || visibleSegmentationLayer == null) {
+                return;
+              }
 
-      {visibleSegmentationLayer?.tracingId != null && (
-        <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled || segment.id !== mappedId}>
-          <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
-            Change Segment Color
-            <input
-              type="color"
-              value={Utils.rgbToHex(Utils.map3((value) => value * 255, segment.color ?? [0, 0, 0]))}
-              disabled={isEditingDisabled}
-              style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                width: "100%",
-                opacity: 0,
-                cursor: isEditingDisabled ? "unset" : "pointer",
-              }}
-              onChange={(event) => {
-                if (isEditingDisabled || visibleSegmentationLayer == null) {
-                  return;
-                }
+              let color = Utils.hexToRgb(event.target.value);
+              color = Utils.map3((component) => component / 255, color);
+              updateSegment(
+                segment.id,
+                {
+                  color: [color[0], color[1], color[2]],
+                },
+                visibleSegmentationLayer.name,
+              );
+            }}
+          />
+        </div>
+      </Menu.Item>
 
-                let color = Utils.hexToRgb(event.target.value);
-                color = Utils.map3((component) => component / 255, color);
-                updateSegment(
-                  segment.id,
-                  {
-                    color: [color[0], color[1], color[2]],
-                  },
-                  visibleSegmentationLayer.name,
-                );
-              }}
-            />
-          </div>
-        </Menu.Item>
-      )}
-      {visibleSegmentationLayer?.tracingId != null && (
-        <Menu.Item
-          key="resetSegmentColor"
-          disabled={isEditingDisabled}
-          onClick={() => {
-            if (isEditingDisabled || visibleSegmentationLayer == null) {
-              return;
-            }
-            updateSegment(
-              segment.id,
-              {
-                color: null,
-              },
-              visibleSegmentationLayer.name,
-            );
-          }}
-        >
-          Reset Segment Color
-        </Menu.Item>
-      )}
+      <Menu.Item
+        key="resetSegmentColor"
+        disabled={isEditingDisabled || segment.color == null}
+        onClick={() => {
+          if (isEditingDisabled || visibleSegmentationLayer == null) {
+            return;
+          }
+          updateSegment(
+            segment.id,
+            {
+              color: null,
+            },
+            visibleSegmentationLayer.name,
+          );
+        }}
+      >
+        Reset Segment Color
+      </Menu.Item>
     </Menu>
   );
 

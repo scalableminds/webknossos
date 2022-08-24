@@ -1,6 +1,6 @@
 import { Modal } from "antd";
 import _ from "lodash";
-import type { NodeWithTreeId } from "oxalis/model/sagas/update_actions";
+import type { DeleteNodeUpdateAction, NodeWithTreeId } from "oxalis/model/sagas/update_actions";
 import type { TreeMap, SkeletonTracing, OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
@@ -53,9 +53,10 @@ function getRepresentativeForTree(treeId: number, segId: number, mergerModeState
   return representative;
 }
 
-function deleteIdMappingOfSegment(segId: number, mergerModeState: MergerModeState) {
+function deleteIdMappingOfSegment(segId: number, treeId: number, mergerModeState: MergerModeState) {
   // Remove segment from color mapping
   delete mergerModeState.idMapping[segId];
+  delete mergerModeState.treeIdToRepresentativeSegmentId[treeId];
 }
 
 /* This function is used to increment the reference count /
@@ -172,7 +173,7 @@ async function onCreateNode(
  */
 async function onDeleteNode(
   mergerModeState: MergerModeState,
-  nodeId: number,
+  nodeWithTreeId: DeleteNodeUpdateAction["value"],
   updateMapping: boolean = true,
 ) {
   const { segmentationLayerName } = mergerModeState;
@@ -181,12 +182,12 @@ async function onDeleteNode(
     return;
   }
 
-  const segmentId = mergerModeState.nodeSegmentMap[nodeId];
+  const segmentId = mergerModeState.nodeSegmentMap[nodeWithTreeId.nodeId];
   const numberOfNodesMappedToSegment = decreaseNodesOfSegment(segmentId, mergerModeState);
 
   if (numberOfNodesMappedToSegment === 0) {
     // Reset color of all segments that were mapped to this tree
-    deleteIdMappingOfSegment(segmentId, mergerModeState);
+    deleteIdMappingOfSegment(segmentId, nodeWithTreeId.treeId, mergerModeState);
 
     if (updateMapping) {
       api.data.setMapping(segmentationLayerName, mergerModeState.idMapping);
@@ -208,7 +209,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTree
     // If the segment of the node changed, it is like the node got deleted and a copy got created somewhere else.
     // Thus we use the onNodeDelete and onNodeCreate method to update the mapping.
     if (nodeSegmentMap[id] != null) {
-      await onDeleteNode(mergerModeState, id, false);
+      await onDeleteNode(mergerModeState, { nodeId: id, treeId }, false);
     }
 
     if (segmentId != null && segmentId > 0) {
@@ -234,7 +235,7 @@ function updateState(mergerModeState: MergerModeState, skeletonTracing: Skeleton
       }
 
       case "deleteNode":
-        onDeleteNode(mergerModeState, action.value.nodeId);
+        onDeleteNode(mergerModeState, action.value);
         break;
 
       case "updateNode":

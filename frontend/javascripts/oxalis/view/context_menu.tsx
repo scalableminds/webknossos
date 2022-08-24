@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input } from "antd";
+import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input, MenuItemProps } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import React, { useEffect } from "react";
 import type {
@@ -874,6 +874,21 @@ function ContextMenuContainer(props: Props) {
   );
 }
 
+function InfoMenuItem(propsWithEventKey: MenuItemProps) {
+  /*
+   * This component can be used within an antd Menu, even though
+   * the docs dictate to always use a <Menu.Item /> or <Menu.Divider />.
+   * However, we want non-clickable info rows with a special styling here.
+   * Note that we must not pass along all props here, since antd will pass
+   * an eventKey prop to this component. Delegating this to <div /> will
+   * produce a "React does not recognize the `eventKey` prop on a DOM element"
+   * warning.
+   */
+
+  const { children } = propsWithEventKey;
+  return <div className="node-context-menu-item">{children}</div>;
+}
+
 function ContextMenuInner(propsWithInputRef: PropsWithRef) {
   const { inputRef, ...props } = propsWithInputRef;
   const {
@@ -926,47 +941,47 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
 
     if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
       infoRows.push(
-        <div key="nodeInfo" className="node-context-menu-item">
+        <InfoMenuItem key="nodeInfo">
           {/* @ts-expect-error ts-migrate(2339) FIXME: Property 'treeId' does not exist on type 'never'.*/}
           Node with Id {maybeClickedNodeId} in Tree {nodeContextMenuTree.treeId}
-        </div>,
+        </InfoMenuItem>,
       );
     }
 
     if (nodeContextMenuNode != null) {
       infoRows.push(
-        <div key="positionInfo" className="node-context-menu-item">
+        <InfoMenuItem key="positionInfo">
           Position: {nodePositionAsString}
           {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
-        </div>,
+        </InfoMenuItem>,
       );
     } else if (globalPosition != null) {
       const positionAsString = positionToString(globalPosition);
       infoRows.push(
-        <div key="positionInfo" className="node-context-menu-item">
+        <InfoMenuItem key="positionInfo">
           Position: {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
-        </div>,
+        </InfoMenuItem>,
       );
     }
 
     if (distanceToSelection != null) {
       infoRows.push(
-        <div key="distanceInfo" className="node-context-menu-item">
+        <InfoMenuItem key="distanceInfo">
           <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
           {maybeClickedNodeId != null ? "Node" : "Position"}
           {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-        </div>,
+        </InfoMenuItem>,
       );
     }
 
     if (segmentIdAtPosition > 0) {
       infoRows.push(
-        <div key="copy-cell" className="node-context-menu-item">
+        <InfoMenuItem key="copy-cell">
           <div className="cell-context-icon" />
           Segment ID: {`${segmentIdAtPosition}`}{" "}
           {copyIconWithTooltip(segmentIdAtPosition, "Copy Segment ID")}
-        </div>,
+        </InfoMenuItem>,
       );
     }
 

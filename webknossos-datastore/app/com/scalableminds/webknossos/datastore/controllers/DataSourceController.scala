@@ -458,10 +458,21 @@ Expects:
           _ <- Fox.successful(())
           dataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND
-          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
-        } yield {
-          Ok
-        }
+          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id), expectExisting = true)
+        } yield Ok
+      }
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def add(token: Option[String], organizationName: String, dataSetName: String): Action[DataSource] =
+    Action.async(validateJson[DataSource]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
+        for {
+          _ <- bool2Fox(dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).isEmpty) ?~> Messages(
+            "dataSource.alreadyPresent")
+          _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(dataSetName, organizationName)),
+                                                  expectExisting = false)
+        } yield Ok
       }
     }
 

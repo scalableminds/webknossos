@@ -27,7 +27,7 @@ class HttpsPath(uri: URI, fileSystem: HttpsFileSystem) extends Path {
 
   override def endsWith(path: Path): Boolean = ???
 
-  override def endsWith(s: String): Boolean = ???
+  override def endsWith(s: String): Boolean = uri.getPath.endsWith(s)
 
   override def normalize(): Path = ???
 
@@ -63,7 +63,7 @@ class HttpsPath(uri: URI, fileSystem: HttpsFileSystem) extends Path {
 
   def getKey: String = uri.toString
 
-  override def toString: String = s"HttpsPath(${uri.toString})@${hashCode()}"
+  override def toString: String = uri.toString
 
   def getBasicAuthCredentials: Option[HttpsBasicAuthCredentials] = fileSystem.getBasicAuthCredentials
 }

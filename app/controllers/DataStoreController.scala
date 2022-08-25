@@ -30,7 +30,6 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ 'publicUrl).read[String] and
       (__ \ 'key).read[String] and
       (__ \ 'isScratch).readNullable[Boolean] and
-      (__ \ 'isForeign).readNullable[Boolean] and
       (__ \ 'isConnector).readNullable[Boolean] and
       (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromForm _)
 
@@ -39,7 +38,6 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ 'url).read[String] and
       (__ \ 'publicUrl).read[String] and
       (__ \ 'isScratch).readNullable[Boolean] and
-      (__ \ 'isForeign).readNullable[Boolean] and
       (__ \ 'isConnector).readNullable[Boolean] and
       (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromUpdateForm _)
   @ApiOperation(value = "List all available datastores", nickname = "datastoreList")

@@ -1,4 +1,4 @@
-package models.annotation
+package com.scalableminds.webknossos.datastore.models.annotation
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 

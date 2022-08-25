@@ -206,7 +206,7 @@ function DatasetAddZarrView(props: Props) {
               value={showCredentialsFields ? "show" : "hide"}
               onChange={(e) => setShowCredentialsFields(e.target.value === "show")}
             >
-              <Radio value="hide" disabled={selectedProtocol === "s3"}>
+              <Radio value="hide">
                 {selectedProtocol === "https" ? "None" : "Anonymous"}
               </Radio>
               <Radio value="show">

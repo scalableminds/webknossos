@@ -22,14 +22,18 @@ import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import Store from "oxalis/store";
+import Store, { SegmentMap } from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import UpdatableTexture from "libs/UpdatableTexture";
 import type { ViewMode, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import window from "libs/window";
-// import { SeedSubscriberFn } from "./cuckoo_table";
+import { CuckooTable } from "./cuckoo_table";
+import { listenToStoreProperty } from "../helpers/listener_helpers";
+import DiffableMap from "libs/diffable_map";
+import { diffSegmentLists } from "../sagas/volumetracing_saga";
+import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 
 const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
 const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
@@ -119,6 +123,9 @@ export default class LayerRenderingManager {
   currentBucketPickerTick: number = 0;
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
 
+  cuckooTable: CuckooTable | undefined;
+  storePropertyUnsubscribers: Array<() => void> = [];
+
   constructor(
     name: string,
     pullQueue: PullQueue,
@@ -151,6 +158,10 @@ export default class LayerRenderingManager {
     );
     this.textureBucketManager.setupDataTextures(bytes);
     shaderEditor.addBucketManagers(this.textureBucketManager);
+
+    if (this.cube.isSegmentation) {
+      this.listenToCustomSegmentColors();
+    }
   }
 
   getDataTextures(): Array<THREE.DataTexture | UpdatableTexture> {
@@ -298,5 +309,61 @@ export default class LayerRenderingManager {
 
     this.cachedAnchorPoint = anchorPoint;
     return true;
+  }
+
+  destroy() {
+    this.storePropertyUnsubscribers.forEach((fn) => fn());
+  }
+
+  /* Methods related to custom segment colors: */
+
+  getCustomColorCuckooTable() {
+    if (this.cuckooTable != null) {
+      return this.cuckooTable;
+    }
+    if (!this.cube.isSegmentation) {
+      throw new Error(
+        "getCustomColorCuckooTable should not be called for non-segmentation layers.",
+      );
+    }
+    const TEXTURE_WIDTH = 512;
+    this.cuckooTable = new CuckooTable(TEXTURE_WIDTH);
+    return this.cuckooTable;
+  }
+
+  listenToCustomSegmentColors() {
+    let prevSegments: SegmentMap = new DiffableMap();
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getSegmentsForLayer(storeState, this.name),
+        (newSegments) => {
+          if (!newSegments) {
+            return;
+          }
+
+          const cuckoo = this.getCustomColorCuckooTable();
+          for (const updateAction of diffSegmentLists(prevSegments, newSegments)) {
+            if (
+              updateAction.name === "updateSegment" ||
+              updateAction.name === "createSegment" ||
+              updateAction.name === "deleteSegment"
+            ) {
+              const { id } = updateAction.value;
+              const color = "color" in updateAction.value ? updateAction.value.color : null;
+              if (color != null) {
+                cuckoo.set(
+                  id,
+                  map3((el) => el * 255, color),
+                );
+              } else {
+                cuckoo.unset(id);
+              }
+            }
+          }
+
+          prevSegments = newSegments;
+        },
+      ),
+    );
   }
 }

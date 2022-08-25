@@ -314,7 +314,7 @@ export function getSegmentsForLayer(
   state: OxalisState,
   layerName: string | null | undefined,
 ): SegmentMap | null | undefined {
-  const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
+  const layer = layerName != null ? getSegmentationLayerByName(state.dataset, layerName) : null;
 
   if (layer == null) {
     return null;

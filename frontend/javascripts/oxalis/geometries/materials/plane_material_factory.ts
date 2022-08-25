@@ -7,7 +7,6 @@ import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
-  getVisibleSegments,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getAddressSpaceDimensions,
@@ -30,15 +29,13 @@ import {
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
-import type { DatasetLayerConfiguration, SegmentMap } from "oxalis/store";
+import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
-import { diffSegmentLists } from "oxalis/model/sagas/volumetracing_saga";
-import DiffableMap from "libs/diffable_map";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -112,6 +109,7 @@ class PlaneMaterialFactory {
 
   stopListening() {
     this.storePropertyUnsubscribers.forEach((fn) => fn());
+    this.storePropertyUnsubscribers = [];
   }
 
   setupUniforms(): void {
@@ -276,7 +274,7 @@ class PlaneMaterialFactory {
   attachSegmentationColorTexture(): void {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
     if (segmentationLayer != null) {
-      const cuckoo = segmentationLayer.getCustomColorCuckooTable();
+      const cuckoo = segmentationLayer.layerRenderingManager.getCustomColorCuckooTable();
       const customColorTexture = cuckoo.getTexture();
 
       if (this.unsubscribeSeedsFn != null) {
@@ -584,46 +582,6 @@ class PlaneMaterialFactory {
             this.uniforms.showBrush.value = isBrushTool(annotationTool);
           },
           true,
-        ),
-      );
-
-      let prevSegments: SegmentMap = new DiffableMap();
-      this.storePropertyUnsubscribers.push(
-        listenToStoreProperty(
-          (storeState) => getVisibleSegments(storeState),
-          (visibleSegments) => {
-            if (!visibleSegments) {
-              return;
-            }
-
-            const segmentationLayer = Model.getVisibleSegmentationLayer();
-            if (!segmentationLayer) {
-              return;
-            }
-
-            // todo: needs to diff against correct layer
-            const cuckoo = segmentationLayer.getCustomColorCuckooTable();
-            for (const updateAction of diffSegmentLists(prevSegments, visibleSegments)) {
-              if (
-                updateAction.name === "updateSegment" ||
-                updateAction.name === "createSegment" ||
-                updateAction.name === "deleteSegment"
-              ) {
-                const { id } = updateAction.value;
-                const color = "color" in updateAction.value ? updateAction.value.color : null;
-                if (color != null) {
-                  cuckoo.set(
-                    id,
-                    Utils.map3((el) => el * 255, color),
-                  );
-                } else {
-                  cuckoo.unset(id);
-                }
-              }
-            }
-
-            prevSegments = visibleSegments;
-          },
         ),
       );
     }

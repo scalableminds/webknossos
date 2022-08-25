@@ -1,6 +1,6 @@
-package com.upplication.s3fsfork.attribute;
+package com.scalableminds.webknossos.datastore.s3fs.attribute;
 
-import com.upplication.s3fsfork.S3Path;
+import com.scalableminds.webknossos.datastore.s3fs.S3Path;
 
 import java.io.IOException;
 import java.nio.file.attribute.*;

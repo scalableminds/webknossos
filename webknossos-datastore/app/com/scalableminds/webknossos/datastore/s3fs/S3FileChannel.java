@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
@@ -20,7 +20,7 @@ import static java.lang.String.format;
 
 public class S3FileChannel extends FileChannel {
 
-    private com.upplication.s3fsfork.S3Path path;
+    private S3Path path;
     private Set<? extends OpenOption> options;
     private FileChannel filechannel;
     private Path tempFile;

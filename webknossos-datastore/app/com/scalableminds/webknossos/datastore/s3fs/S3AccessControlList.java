@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import static java.lang.String.format;
 

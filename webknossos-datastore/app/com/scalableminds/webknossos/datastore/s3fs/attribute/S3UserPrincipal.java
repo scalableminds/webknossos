@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork.attribute;
+package com.scalableminds.webknossos.datastore.s3fs.attribute;
 
 import java.nio.file.attribute.UserPrincipal;
 

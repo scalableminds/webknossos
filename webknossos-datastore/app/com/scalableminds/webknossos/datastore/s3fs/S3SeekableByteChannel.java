@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import static java.lang.String.format;
 
@@ -19,7 +19,7 @@ import com.amazonaws.services.s3.model.S3Object;
 
 public class S3SeekableByteChannel implements SeekableByteChannel {
 
-    private com.upplication.s3fsfork.S3Path path;
+    private S3Path path;
     private Set<? extends OpenOption> options;
     private SeekableByteChannel seekable;
     private Path tempFile;

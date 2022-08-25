@@ -1,6 +1,6 @@
-package com.upplication.s3fsfork.util;
+package com.scalableminds.webknossos.datastore.s3fs.util;
 
-import com.upplication.s3fsfork.attribute.S3BasicFileAttributes;
+import com.scalableminds.webknossos.datastore.s3fs.attribute.S3BasicFileAttributes;
 
 public class Cache {
 

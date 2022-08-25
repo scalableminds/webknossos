@@ -39,19 +39,18 @@ object Dependencies {
   private val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   private val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
   private val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
-  private val jackson = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.7"
   private val redis = "net.debasishg" %% "redisclient" % "3.9"
   private val spire = "org.typelevel" %% "spire" % "0.14.1"
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
   private val swagger = "io.swagger" %% "swagger-play2" % "1.7.1"
   private val jhdf = "cisd" % "jhdf5" % "19.04.0"
   private val ucarCdm = "edu.ucar" % "cdm-core" % "5.3.3"
-  // private val s3fs = "org.lasersonlab" % "s3fs" % "2.2.3"
   private val jblosc = "org.lasersonlab" % "jblosc" % "1.0.1"
   private val scalajHttp = "org.scalaj" %% "scalaj-http" % "2.4.2"
   private val guava = "com.google.guava" % "guava" % "18.0"
-  private val awsS3 = "com.amazonaws" % "aws-java-sdk-s3" % "1.12.288" // "1.11.232"
+  private val awsS3 = "com.amazonaws" % "aws-java-sdk-s3" % "1.12.288"
   private val tika = "org.apache.tika" % "tika-core" % "1.5"
+  private val jackson = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.7"
 
 
   private val sql = Seq(

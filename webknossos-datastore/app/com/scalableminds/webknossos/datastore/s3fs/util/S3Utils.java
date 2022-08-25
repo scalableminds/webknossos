@@ -1,12 +1,12 @@
-package com.upplication.s3fsfork.util;
+package com.scalableminds.webknossos.datastore.s3fs.util;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import com.google.common.collect.Sets;
-import com.upplication.s3fsfork.S3Path;
-import com.upplication.s3fsfork.attribute.S3BasicFileAttributes;
-import com.upplication.s3fsfork.attribute.S3PosixFileAttributes;
-import com.upplication.s3fsfork.attribute.S3UserPrincipal;
+import com.scalableminds.webknossos.datastore.s3fs.attribute.S3BasicFileAttributes;
+import com.scalableminds.webknossos.datastore.s3fs.attribute.S3PosixFileAttributes;
+import com.scalableminds.webknossos.datastore.s3fs.attribute.S3UserPrincipal;
+import com.scalableminds.webknossos.datastore.s3fs.S3Path;
 
 import java.nio.file.NoSuchFileException;
 import java.nio.file.attribute.FileTime;
@@ -24,11 +24,11 @@ public class S3Utils {
     /**
      * Get the {@link S3ObjectSummary} that represent this Path or her first child if this path not exists
      *
-     * @param s3Path {@link com.upplication.s3fsfork.S3Path}
+     * @param s3Path {@link S3Path}
      * @return {@link S3ObjectSummary}
      * @throws NoSuchFileException if not found the path and any child
      */
-    public S3ObjectSummary getS3ObjectSummary(com.upplication.s3fsfork.S3Path s3Path) throws NoSuchFileException {
+    public S3ObjectSummary getS3ObjectSummary(S3Path s3Path) throws NoSuchFileException {
         String key = s3Path.getKey();
         String bucketName = s3Path.getFileStore().name();
         AmazonS3 client = s3Path.getFileSystem().getClient();
@@ -73,7 +73,7 @@ public class S3Utils {
         } catch (Exception e) {
             //
         }
-        throw new NoSuchFileException(bucketName + com.upplication.s3fsfork.S3Path.PATH_SEPARATOR + key);
+        throw new NoSuchFileException(bucketName + S3Path.PATH_SEPARATOR + key);
     }
 
     /**
@@ -82,7 +82,7 @@ public class S3Utils {
      * @param s3Path S3Path mandatory not null
      * @return S3FileAttributes never null
      */
-    public com.upplication.s3fsfork.attribute.S3BasicFileAttributes getS3FileAttributes(com.upplication.s3fsfork.S3Path s3Path) throws NoSuchFileException {
+    public S3BasicFileAttributes getS3FileAttributes(S3Path s3Path) throws NoSuchFileException {
         S3ObjectSummary objectSummary = getS3ObjectSummary(s3Path);
         return toS3FileAttributes(objectSummary, s3Path.getKey());
     }
@@ -93,14 +93,14 @@ public class S3Utils {
      * @return S3PosixFileAttributes never null
      * @throws NoSuchFileException if the Path doesnt exists
      */
-    public com.upplication.s3fsfork.attribute.S3PosixFileAttributes getS3PosixFileAttributes(S3Path s3Path) throws NoSuchFileException {
+    public S3PosixFileAttributes getS3PosixFileAttributes(S3Path s3Path) throws NoSuchFileException {
         S3ObjectSummary objectSummary = getS3ObjectSummary(s3Path);
 
         String key = s3Path.getKey();
         String bucketName = s3Path.getFileStore().name();
 
-        com.upplication.s3fsfork.attribute.S3BasicFileAttributes attrs = toS3FileAttributes(objectSummary, key);
-        com.upplication.s3fsfork.attribute.S3UserPrincipal userPrincipal = null;
+        S3BasicFileAttributes attrs = toS3FileAttributes(objectSummary, key);
+        S3UserPrincipal userPrincipal = null;
         Set<PosixFilePermission> permissions = null;
 
         if (!attrs.isDirectory()) {
@@ -167,7 +167,7 @@ public class S3Utils {
      * @param key           String the real key that can be exactly equal than the objectSummary or
      * @return S3FileAttributes
      */
-    public com.upplication.s3fsfork.attribute.S3BasicFileAttributes toS3FileAttributes(S3ObjectSummary objectSummary, String key) {
+    public S3BasicFileAttributes toS3FileAttributes(S3ObjectSummary objectSummary, String key) {
         // parse the data to BasicFileAttributes.
         FileTime lastModifiedTime = null;
         if (objectSummary.getLastModified() != null) {

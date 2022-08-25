@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.upplication.s3fsfork.util.S3Utils;
+import com.scalableminds.webknossos.datastore.s3fs.util.S3Utils;
 
 /**
  * S3 iterator over folders at first level.
@@ -32,7 +32,7 @@ public class S3Iterator implements Iterator<Path> {
     private int size;
     private boolean incremental;
 
-    private com.upplication.s3fsfork.util.S3Utils s3Utils = new S3Utils();
+    private S3Utils s3Utils = new S3Utils();
 
     public S3Iterator(S3Path path) {
         this(path, false);

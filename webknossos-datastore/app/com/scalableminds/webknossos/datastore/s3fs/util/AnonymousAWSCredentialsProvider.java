@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork.util;
+package com.scalableminds.webknossos.datastore.s3fs.util;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;

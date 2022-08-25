@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import java.nio.file.attribute.FileStoreAttributeView;
 import java.util.Date;

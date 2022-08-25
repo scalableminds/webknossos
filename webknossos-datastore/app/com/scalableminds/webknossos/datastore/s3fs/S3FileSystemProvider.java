@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.internal.Constants;
@@ -10,18 +10,18 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.upplication.s3fsfork.attribute.S3BasicFileAttributeView;
-import com.upplication.s3fsfork.attribute.S3BasicFileAttributes;
-import com.upplication.s3fsfork.attribute.S3PosixFileAttributeView;
-import com.upplication.s3fsfork.attribute.S3PosixFileAttributes;
-import com.upplication.s3fsfork.util.AttributesUtils;
-import com.upplication.s3fsfork.util.Cache;
-import com.upplication.s3fsfork.util.S3Utils;
+import com.scalableminds.webknossos.datastore.s3fs.attribute.S3BasicFileAttributes;
+import com.scalableminds.webknossos.datastore.s3fs.attribute.S3PosixFileAttributes;
+import com.scalableminds.webknossos.datastore.s3fs.util.AttributesUtils;
+import com.scalableminds.webknossos.datastore.s3fs.util.Cache;
+import com.scalableminds.webknossos.datastore.s3fs.util.S3Utils;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.*;
@@ -72,8 +72,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
             AmazonS3Factory.PROXY_HOST, AmazonS3Factory.PROXY_PASSWORD, AmazonS3Factory.PROXY_PORT, AmazonS3Factory.PROXY_USERNAME, AmazonS3Factory.PROXY_WORKSTATION, AmazonS3Factory.SOCKET_SEND_BUFFER_SIZE_HINT, AmazonS3Factory.SOCKET_RECEIVE_BUFFER_SIZE_HINT, AmazonS3Factory.SOCKET_TIMEOUT,
             AmazonS3Factory.USER_AGENT, AMAZON_S3_FACTORY_CLASS, AmazonS3Factory.SIGNER_OVERRIDE, AmazonS3Factory.PATH_STYLE_ACCESS);
 
-    private com.upplication.s3fsfork.util.S3Utils s3Utils = new S3Utils();
-    private com.upplication.s3fsfork.util.Cache cache = new com.upplication.s3fsfork.util.Cache();
+    private S3Utils s3Utils = new S3Utils();
+    private Cache cache = new Cache();
 
     @Override
     public String getScheme() {
@@ -472,16 +472,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
-        S3Path s3Path = toS3Path(path);
-        if (type == BasicFileAttributeView.class) {
-            return (V) new S3BasicFileAttributeView(s3Path);
-        } else if (type == PosixFileAttributeView.class) {
-            return (V) new S3PosixFileAttributeView(s3Path);
-        } else if (type == null) {
-            throw new NullPointerException("Type is mandatory");
-        } else {
-            return null;
-        }
+        throw new NotImplementedException();
     }
 
     @Override
@@ -525,10 +516,10 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         if (attributes.equals("*") || attributes.equals("basic:*")) {
             BasicFileAttributes attr = readAttributes(path, BasicFileAttributes.class, options);
-            return com.upplication.s3fsfork.util.AttributesUtils.fileAttributeToMap(attr);
+            return AttributesUtils.fileAttributeToMap(attr);
         } else if (attributes.equals("posix:*")) {
             PosixFileAttributes attr = readAttributes(path, PosixFileAttributes.class, options);
-            return com.upplication.s3fsfork.util.AttributesUtils.fileAttributeToMap(attr);
+            return AttributesUtils.fileAttributeToMap(attr);
         } else {
             String[] filters = new String[]{attributes};
             if (attributes.contains(",")) {
@@ -557,23 +548,24 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @return S3FileSystem never null
      */
     public S3FileSystem createFileSystem(URI uri, Properties props) {
-        return new S3FileSystem(this, getFileSystemKey(uri, props), getAmazonS3(uri, props), uri.getHost());
+        URI uriWithNormalizedHost = resolveShortcutHost(uri);
+        return new S3FileSystem(this, getFileSystemKey(uriWithNormalizedHost, props), getAmazonS3(uriWithNormalizedHost, props), uriWithNormalizedHost.getHost());
+    }
+
+    private URI resolveShortcutHost(URI uri) {
+      String host = uri.getHost();
+      if (!uri.getHost().contains(".")) {
+        host += ".s3.amazonaws.com";
+      }
+      try {
+        return new URI(uri.getScheme(), uri.getUserInfo(), host, uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+      } catch (URISyntaxException e) {
+        return uri;
+      }
     }
 
     protected AmazonS3 getAmazonS3(URI uri, Properties props) {
-        return getAmazonS3Factory(props).getAmazonS3(uri, props);
-    }
-
-    protected AmazonS3Factory getAmazonS3Factory(Properties props) {
-        if (props.containsKey(AMAZON_S3_FACTORY_CLASS)) {
-            String amazonS3FactoryClass = props.getProperty(AMAZON_S3_FACTORY_CLASS);
-            try {
-                return (AmazonS3Factory) Class.forName(amazonS3FactoryClass).newInstance();
-            } catch (InstantiationException | IllegalAccessException | ClassNotFoundException | ClassCastException e) {
-                throw new S3FileSystemConfigurationException("Configuration problem, couldn't instantiate AmazonS3Factory (" + amazonS3FactoryClass + "): ", e);
-            }
-        }
-        return new AmazonS3ClientFactory();
+        return new AmazonS3Factory().getAmazonS3Client(uri, props);
     }
 
     /**
@@ -635,7 +627,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
         return fileSystems;
     }
 
-    public com.upplication.s3fsfork.util.Cache getCache() {
+    public Cache getCache() {
         return cache;
     }
 

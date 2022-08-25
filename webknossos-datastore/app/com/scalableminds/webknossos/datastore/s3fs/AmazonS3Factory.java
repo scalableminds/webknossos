@@ -1,16 +1,17 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.AnonymousAWSCredentials;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.metrics.RequestMetricCollector;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.S3ClientOptions;
-import com.upplication.s3fsfork.util.AnonymousAWSCredentialsProvider;
+import com.scalableminds.webknossos.datastore.s3fs.util.AnonymousAWSCredentialsProvider;
 
 import java.net.URI;
 import java.util.Properties;
@@ -19,7 +20,7 @@ import java.util.Properties;
 /**
  * Factory base class to create a new AmazonS3 instance.
  */
-public abstract class AmazonS3Factory {
+public class AmazonS3Factory {
 
     public static final String ACCESS_KEY = "s3fs_access_key";
     public static final String SECRET_KEY = "s3fs_secret_key";
@@ -47,55 +48,27 @@ public abstract class AmazonS3Factory {
      * @param props Properties with the credentials and others options
      * @return AmazonS3
      */
-    public AmazonS3 getAmazonS3(URI uri, Properties props) {
-        AmazonS3 client = createAmazonS3(getCredentialsProvider(props), getClientConfiguration(props), getRequestMetricsCollector(props));
-        if (uri.getHost() != null) {
-            if (uri.getPort() != -1)
-                client.setEndpoint(uri.getHost() + ':' + uri.getPort());
-            else
-                client.setEndpoint(uri.getHost());
-        }
-
-        client.setS3ClientOptions(getClientOptions(props));
-
-        return client;
+    public AmazonS3 getAmazonS3Client(URI uri, Properties props) {
+        return AmazonS3ClientBuilder
+            .standard()
+            .withCredentials(getCredentialsProvider(props))
+            .withClientConfiguration(getClientConfiguration(props))
+            .withEndpointConfiguration(getEndpointConfiguration(uri))
+            .build();
     }
 
-    /**
-     * should return a new AmazonS3
-     *
-     * @param credentialsProvider     AWSCredentialsProvider mandatory
-     * @param clientConfiguration     ClientConfiguration mandatory
-     * @param requestMetricsCollector RequestMetricCollector mandatory
-     * @return {@link com.amazonaws.services.s3.AmazonS3}
-     */
-    protected abstract AmazonS3 createAmazonS3(AWSCredentialsProvider credentialsProvider, ClientConfiguration clientConfiguration, RequestMetricCollector requestMetricsCollector);
+    protected AwsClientBuilder.EndpointConfiguration getEndpointConfiguration(URI uri) {
+        String endpoint = uri.getHost();
+        if (uri.getPort() != -1)
+            endpoint = uri.getHost() + ':' + uri.getPort();
+        return new AwsClientBuilder.EndpointConfiguration(endpoint, Regions.DEFAULT_REGION.toString());
+    }
 
     protected AWSCredentialsProvider getCredentialsProvider(Properties props) {
-      System.out.println("Hello from getCredentialsProvider");
-        AWSCredentialsProvider credentialsProvider;
         if (props.getProperty(ACCESS_KEY) == null && props.getProperty(SECRET_KEY) == null) {
-            System.out.println("No access key and secret key present, returning anonymous credentials provider");
-            // credentialsProvider = new DefaultAWSCredentialsProviderChain();
-            credentialsProvider = new AnonymousAWSCredentialsProvider();
+            return new AnonymousAWSCredentialsProvider();
         }
-        else {
-            System.out.println("Access key and secret key present, returning static credentials provider");
-            credentialsProvider = new AWSStaticCredentialsProvider(getAWSCredentials(props));
-        }
-        return credentialsProvider;
-    }
-
-    protected RequestMetricCollector getRequestMetricsCollector(Properties props) {
-        RequestMetricCollector requestMetricCollector = null;
-        if (props.containsKey(REQUEST_METRIC_COLLECTOR_CLASS)) {
-            try {
-                requestMetricCollector = (RequestMetricCollector) Class.forName(props.getProperty(REQUEST_METRIC_COLLECTOR_CLASS)).newInstance();
-            } catch (Throwable t) {
-                throw new IllegalArgumentException("Can't instantiate REQUEST_METRIC_COLLECTOR_CLASS " + props.getProperty(REQUEST_METRIC_COLLECTOR_CLASS), t);
-            }
-        }
-        return requestMetricCollector;
+        return new AWSStaticCredentialsProvider(getAWSCredentials(props));
     }
 
     protected S3ClientOptions getClientOptions(Properties props) {

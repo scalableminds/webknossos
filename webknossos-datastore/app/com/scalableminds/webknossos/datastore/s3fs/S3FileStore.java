@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import java.io.IOException;
 import java.nio.file.FileStore;
@@ -11,10 +11,10 @@ import com.amazonaws.services.s3.model.Owner;
 
 public class S3FileStore extends FileStore implements Comparable<S3FileStore> {
 
-    private com.upplication.s3fsfork.S3FileSystem fileSystem;
+    private S3FileSystem fileSystem;
     private String name;
 
-    public S3FileStore(com.upplication.s3fsfork.S3FileSystem s3FileSystem, String name) {
+    public S3FileStore(S3FileSystem s3FileSystem, String name) {
         this.fileSystem = s3FileSystem;
         this.name = name;
     }

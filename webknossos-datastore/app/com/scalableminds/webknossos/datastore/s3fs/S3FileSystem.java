@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import java.io.IOException;
 import java.nio.file.FileStore;
@@ -21,13 +21,13 @@ import com.google.common.collect.ImmutableSet;
  */
 public class S3FileSystem extends FileSystem implements Comparable<S3FileSystem> {
 
-    private final com.upplication.s3fsfork.S3FileSystemProvider provider;
+    private final S3FileSystemProvider provider;
     private final String key;
     private final AmazonS3 client;
     private final String endpoint;
     private int cache;
 
-    public S3FileSystem(com.upplication.s3fsfork.S3FileSystemProvider provider, String key, AmazonS3 client, String endpoint) {
+    public S3FileSystem(S3FileSystemProvider provider, String key, AmazonS3 client, String endpoint) {
         this.provider = provider;
         this.key = key;
         this.client = client;

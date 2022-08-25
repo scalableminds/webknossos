@@ -1,9 +1,9 @@
-package com.upplication.s3fsfork;
+package com.scalableminds.webknossos.datastore.s3fs;
 
 import com.google.common.base.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.upplication.s3fsfork.attribute.S3BasicFileAttributes;
+import com.scalableminds.webknossos.datastore.s3fs.attribute.S3BasicFileAttributes;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,7 +24,7 @@ public class S3Path implements Path {
     /**
      * S3FileStore which represents the Bucket this path resides in.
      */
-    private final com.upplication.s3fsfork.S3FileStore fileStore;
+    private final S3FileStore fileStore;
 
     /**
      * URI not encoded
@@ -35,12 +35,12 @@ public class S3Path implements Path {
     /**
      * actual filesystem
      */
-    private com.upplication.s3fsfork.S3FileSystem fileSystem;
+    private S3FileSystem fileSystem;
 
     /**
      * S3BasicFileAttributes cache
      */
-    private com.upplication.s3fsfork.attribute.S3BasicFileAttributes fileAttributes;
+    private S3BasicFileAttributes fileAttributes;
 
     /**
      * Build an S3Path from path segments. '/' are stripped from each segment.
@@ -49,7 +49,7 @@ public class S3Path implements Path {
      * @param first should be start with a '/' and is the bucket name
      * @param more  directories and files
      */
-    public S3Path(com.upplication.s3fsfork.S3FileSystem fileSystem, String first, String... more) {
+    public S3Path(S3FileSystem fileSystem, String first, String... more) {
 
         Preconditions.checkArgument(first != null, "first path must be not null");
         Preconditions.checkArgument(!first.startsWith("//"), "first path doesnt start with '//'. Miss bucket");
@@ -69,7 +69,7 @@ public class S3Path implements Path {
             Preconditions.checkArgument(pathsURI.size() >= 1, "path must start with bucket name");
             Preconditions.checkArgument(!pathsURI.get(0).isEmpty(), "bucket name must be not empty");
             String bucket = pathsURI.get(0);
-            this.fileStore = new com.upplication.s3fsfork.S3FileStore(fileSystem, bucket);
+            this.fileStore = new S3FileStore(fileSystem, bucket);
             // the filestore is not part of the uri
             pathsURI.remove(0);
         }
@@ -604,7 +604,7 @@ public class S3Path implements Path {
         }
     }
 
-    public com.upplication.s3fsfork.attribute.S3BasicFileAttributes getFileAttributes() {
+    public S3BasicFileAttributes getFileAttributes() {
         return fileAttributes;
     }
 

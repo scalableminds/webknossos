@@ -8,9 +8,8 @@ import java.util.ServiceLoader
 import com.google.common.collect.ImmutableMap
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
+import com.scalableminds.webknossos.datastore.s3fs.AmazonS3Factory
 import com.typesafe.scalalogging.LazyLogging
-import com.upplication.s3fsfork
-import com.upplication.s3fsfork.AmazonS3Factory
 
 import scala.collection.JavaConverters._
 
@@ -79,9 +78,9 @@ object FileSystemsHolder extends LazyLogging {
         ImmutableMap
           .builder[String, Any]
           .put(AmazonS3Factory.ACCESS_KEY, user)
-          .put(s3fsfork.AmazonS3Factory.SECRET_KEY, password)
+          .put(AmazonS3Factory.SECRET_KEY, password)
           .build
-      } else if (scheme == schemeHttps) {
+      } else if (scheme == schemeHttps || scheme == schemeHttp) {
         ImmutableMap.builder[String, Any].put("user", user).put("password", password).build
       } else emptyEnv
     }).getOrElse(emptyEnv)

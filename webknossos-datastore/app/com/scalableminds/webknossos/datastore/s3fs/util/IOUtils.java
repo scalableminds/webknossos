@@ -1,4 +1,4 @@
-package com.upplication.s3fsfork.util;
+package com.scalableminds.webknossos.datastore.s3fs.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

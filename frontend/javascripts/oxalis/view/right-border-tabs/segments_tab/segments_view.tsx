@@ -1,5 +1,4 @@
 import { Button, ConfigProvider, List, Tooltip, Select, Popover, Empty } from "antd";
-import { SelectValue } from "antd/lib/select";
 import type { Dispatch } from "redux";
 import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";

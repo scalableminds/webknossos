@@ -115,15 +115,13 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
 
   if (segment.somePosition) {
     somePosition = Utils.floor3(segment.somePosition);
+  } else if (oldSegment != null) {
+    somePosition = oldSegment.somePosition;
   } else {
-    if (oldSegment != null) {
-      somePosition = oldSegment.somePosition;
-    } else {
-      // UPDATE_SEGMENT was called for a non-existing segment without providing
-      // a position. This is necessary to define custom colors for segments
-      // which are listed in a JSON mapping. The action will store the segment
-      // without a position.
-    }
+    // UPDATE_SEGMENT was called for a non-existing segment without providing
+    // a position. This is necessary to define custom colors for segments
+    // which are listed in a JSON mapping. The action will store the segment
+    // without a position.
   }
 
   const newSegment = {

@@ -24,8 +24,8 @@ import api from "oxalis/api/internal_api";
 import { MappingStatusEnum } from "oxalis/constants";
 import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
-import { updateSegmentAction } from "../actions/volumetracing_actions";
 import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
+import { updateSegmentAction } from "../actions/volumetracing_actions";
 type APIMappings = Record<string, APIMapping>;
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {

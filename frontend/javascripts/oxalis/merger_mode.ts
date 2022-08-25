@@ -1,4 +1,3 @@
-import { Modal } from "antd";
 import _ from "lodash";
 import type { DeleteNodeUpdateAction, NodeWithTreeId } from "oxalis/model/sagas/update_actions";
 import type { TreeMap, SkeletonTracing, OxalisState } from "oxalis/store";

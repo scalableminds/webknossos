@@ -91,7 +91,6 @@ import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
 import constants, { ControlModeEnum, AnnotationToolEnum, Vector3 } from "oxalis/constants";
 import messages from "messages";
-import window from "libs/window";
 import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,

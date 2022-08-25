@@ -29,9 +29,9 @@ import type { ViewMode, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants"
 import constants from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import window from "libs/window";
+import DiffableMap from "libs/diffable_map";
 import { CuckooTable } from "./cuckoo_table";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
-import DiffableMap from "libs/diffable_map";
 import { diffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 

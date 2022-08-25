@@ -31,7 +31,7 @@ export const hsvToRgb: ShaderModule = {
 // From: https://stackoverflow.com/a/54024653
 // input: h in [0,360] and s,v in [0,1] - output: r,g,b in [0,1]
 export function jsHsv2rgb(h: number, s: number, v: number): Vector3 {
-  let f = (n: number, k = (n + h / 60) % 6) => v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+  const f = (n: number, k = (n + h / 60) % 6) => v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
   return [f(5), f(3), f(1)];
 }
 

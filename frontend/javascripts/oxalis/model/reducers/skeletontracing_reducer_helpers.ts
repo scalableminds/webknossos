@@ -867,7 +867,7 @@ export function extractNodesAsNewTree(
   const newTree = createTree(state, Date.now()).get();
   let lastNodeId = null;
   for (const nodeId of nodeIds) {
-    const node = sourceTree.nodes.get(nodeId);
+    const node: MutableNode = { ...sourceTree.nodes.get(nodeId) };
     newTree.nodes.mutableSet(nodeId, node);
     if (lastNodeId != null) {
       const newEdge: Edge = {

@@ -183,7 +183,7 @@ function extractShortestPathAsNewTree(
   const { shortestPath } = api.tracing.measurePathLengthBetweenNodes(sourceNodeId, targetNodeId);
 
   const newTree = extractNodesAsNewTree(Store.getState(), sourceTree, shortestPath);
-  const treeMap: MutableTreeMap = { "0": newTree };
+  const treeMap = { [newTree.treeId]: newTree };
   Store.dispatch(addTreesAndGroupsAction(treeMap, null));
 }
 

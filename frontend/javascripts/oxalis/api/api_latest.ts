@@ -747,11 +747,10 @@ class TracingApi {
   }
 
   /**
-   * Returns the length of the shortest path between two nodes in nanometer and in voxels
-   * as well as the shortest path between two nodes as an array of node IDs.
-   * Note that the array is ordered from target to source node.
+   * Returns the shortest path between two nodes in nanometer and voxels as well as
+   * an array of the node IDs in the shortest path.
    */
-  measurePathLengthBetweenNodes(
+  findShortestPathBetweenNodes(
     sourceNodeId: number,
     targetNodeId: number,
   ): {
@@ -827,7 +826,7 @@ class TracingApi {
     const shortestPath = [targetNodeId];
     while (parentMap[nodeId] !== -1) {
       nodeId = parentMap[nodeId];
-      shortestPath.push(nodeId);
+      shortestPath.unshift(nodeId);
     }
 
     return {
@@ -835,6 +834,14 @@ class TracingApi {
       lengthVx: distanceMapVx[targetNodeId],
       shortestPath,
     };
+  }
+
+  /**
+   * Returns the length of the shortest path between two nodes in nanometer and in voxels.
+   */
+  measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
+    const { lengthNm, lengthVx } = this.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
+    return [lengthNm, lengthVx];
   }
 
   /**

@@ -163,7 +163,7 @@ function copyIconWithTooltip(value: string | number, title: string) {
 }
 
 function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: number) {
-  const { lengthNm, lengthVx } = api.tracing.measurePathLengthBetweenNodes(
+  const [lengthNm, lengthVx] = api.tracing.measurePathLengthBetweenNodes(
     sourceNodeId,
     targetNodeId,
   );
@@ -180,8 +180,7 @@ function extractShortestPathAsNewTree(
   sourceNodeId: number,
   targetNodeId: number,
 ) {
-  const { shortestPath } = api.tracing.measurePathLengthBetweenNodes(sourceNodeId, targetNodeId);
-
+  const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
   const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath).getOrElse(null);
   if (newTree != null) {
     const treeMap = { [newTree.treeId]: newTree };
@@ -449,7 +448,7 @@ function NodeContextMenuOptions({
                   : null
               }
             >
-              Extract shortest Tree to this Node
+              Extract shortest Path to this Node
             </Menu.Item>
           )}
         </>

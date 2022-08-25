@@ -36,6 +36,7 @@ import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
+import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -273,40 +274,41 @@ class PlaneMaterialFactory {
 
   attachSegmentationColorTexture(): void {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
-    if (segmentationLayer != null) {
-      const cuckoo = segmentationLayer.layerRenderingManager.getCustomColorCuckooTable();
-      const customColorTexture = cuckoo.getTexture();
-
-      if (this.unsubscribeSeedsFn != null) {
-        this.unsubscribeSeedsFn();
-      }
-      this.unsubscribeSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
-        seeds.forEach((seed, idx) => {
-          this.uniforms[`seed${idx}`] = {
-            value: seed,
-          };
-        });
-      });
-      const {
-        CUCKOO_ENTRY_CAPACITY,
-        CUCKOO_ELEMENTS_PER_ENTRY,
-        CUCKOO_ELEMENTS_PER_TEXEL,
-        CUCKOO_TWIDTH,
-      } = cuckoo.getUniformValues();
-      this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
-      this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
-      this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
-      this.uniforms.CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
-      this.uniforms.custom_color_texture = {
-        value: customColorTexture,
-      };
-    } else {
+    if (segmentationLayer == null) {
       this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: 0 };
       this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
       this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
       this.uniforms.CUCKOO_TWIDTH = { value: 0 };
-      this.uniforms.custom_color_texture = { value: null };
+
+      this.uniforms.custom_color_texture = { value: CuckooTable.getNullTexture() };
+      return;
     }
+    const cuckoo = segmentationLayer.layerRenderingManager.getCustomColorCuckooTable();
+    const customColorTexture = cuckoo.getTexture();
+
+    if (this.unsubscribeSeedsFn != null) {
+      this.unsubscribeSeedsFn();
+    }
+    this.unsubscribeSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
+      seeds.forEach((seed, idx) => {
+        this.uniforms[`seed${idx}`] = {
+          value: seed,
+        };
+      });
+    });
+    const {
+      CUCKOO_ENTRY_CAPACITY,
+      CUCKOO_ELEMENTS_PER_ENTRY,
+      CUCKOO_ELEMENTS_PER_TEXEL,
+      CUCKOO_TWIDTH,
+    } = cuckoo.getUniformValues();
+    this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
+    this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+    this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+    this.uniforms.CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
+    this.uniforms.custom_color_texture = {
+      value: customColorTexture,
+    };
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {

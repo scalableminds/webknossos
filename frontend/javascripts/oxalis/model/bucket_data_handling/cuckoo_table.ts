@@ -13,6 +13,8 @@ type Entry = [number, Vector3];
 
 export type SeedSubscriberFn = (seeds: number[]) => void;
 
+let cachedNullTexture: UpdatableTexture | undefined;
+
 export class CuckooTable {
   entryCapacity: number;
   table!: Uint32Array;
@@ -46,6 +48,23 @@ export class CuckooTable {
       Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / ELEMENTS_PER_ENTRY),
     );
     return new CuckooTable(textureWidth);
+  }
+
+  static getNullTexture(): UpdatableTexture {
+    if (cachedNullTexture) {
+      return cachedNullTexture;
+    }
+    cachedNullTexture = createUpdatableTexture(
+      1,
+      TEXTURE_CHANNEL_COUNT,
+      THREE.UnsignedIntType,
+      getRenderer(),
+      THREE.RGBAIntegerFormat,
+    );
+    cachedNullTexture.isDataTexture = true;
+    cachedNullTexture.internalFormat = "RGBA32UI";
+
+    return cachedNullTexture;
   }
 
   private initializeTableArray() {

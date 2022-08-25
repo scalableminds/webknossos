@@ -23,7 +23,7 @@ const getImageData = _.memoize(
     }
 
     if (isInt) {
-      return { width, height, data: new Uint32Array(4 * width * height).fill(255) };
+      return { width, height, data: new Uint32Array(4 * width * height) };
     }
 
     const imageData = ctx.createImageData(width, height);

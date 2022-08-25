@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.Dimension
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import net.liftweb.common.Box.tryo
+import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
 case class ZarrHeader(
@@ -133,7 +134,7 @@ object ZarrHeader {
 
   implicit object ZarrHeaderFormat extends Format[ZarrHeader] {
     override def reads(json: JsValue): JsResult[ZarrHeader] =
-      Json.using[Json.WithDefaultValues].reads[ZarrHeader].reads(json)
+      Json.using[WithDefaultValues].reads[ZarrHeader].reads(json)
 
     override def writes(zarrHeader: ZarrHeader): JsValue =
       Json.obj(

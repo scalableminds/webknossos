@@ -43,8 +43,7 @@ object BytesConverter {
       case ZarrDataType.f4 =>
         val arrayTyped = array.asInstanceOf[Array[Float]]
         val byteBuffer = makeByteBuffer(arrayTyped.length * bytesPerElement, byteOrder)
-        val asFloat = byteBuffer.asFloatBuffer()
-        asFloat.put(arrayTyped)
+        byteBuffer.asFloatBuffer().put(arrayTyped)
         byteBuffer.array()
       case ZarrDataType.f8 =>
         val arrayTyped = array.asInstanceOf[Array[Double]]

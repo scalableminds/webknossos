@@ -11,6 +11,8 @@ import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.zarr.RemoteSourceDescriptor
 import com.typesafe.scalalogging.LazyLogging
 
+import scala.collection.JavaConverters._
+
 class FileSystemsCache(val maxEntries: Int) extends LRUConcurrentCache[RemoteSourceDescriptor, FileSystem]
 class FileSystemsProvidersCache(val maxEntries: Int) extends LRUConcurrentCache[String, FileSystemProvider]
 
@@ -18,12 +20,13 @@ object FileSystemsHolder extends LazyLogging {
 
   private val schemeS3 = "s3"
   private val schemeHttps = "https"
+  private val schemeHttp = "http"
 
   private val fileSystemsCache = new FileSystemsCache(maxEntries = 100)
   private val fileSystemsProvidersCache = new FileSystemsProvidersCache(maxEntries = 100)
 
   def isSupportedRemoteScheme(uriScheme: String): Boolean =
-    List(schemeS3, schemeHttps).contains(uriScheme)
+    List(schemeS3, schemeHttps, schemeHttp).contains(uriScheme)
 
   def getOrCreate(remoteSource: RemoteSourceDescriptor): Option[FileSystem] =
     fileSystemsCache.getOrLoadAndPutOptional(remoteSource)(loadFromProvider)
@@ -89,14 +92,8 @@ object FileSystemsHolder extends LazyLogging {
 
   private def findProvider(scheme: String): Option[FileSystemProvider] = {
     val providersIterator =
-      ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator()
-    while (providersIterator.hasNext) {
-      val provider = providersIterator.next()
-      if (provider.getScheme.equalsIgnoreCase(scheme)) {
-        return Some(provider)
-      }
-    }
-    None
+      ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator().asScala
+    providersIterator.find(p => p.getScheme.equalsIgnoreCase(scheme))
   }
 
 }

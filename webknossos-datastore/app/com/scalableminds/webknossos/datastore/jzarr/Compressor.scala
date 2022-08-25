@@ -42,12 +42,13 @@ object CompressorFactory {
       case _        => throw new IllegalArgumentException("Compressor id must be string")
     }
 
-  def create(id: String, properties: Map[String, Either[String, Int]]): Compressor = {
-    if ("null" == id) return nullCompressor
-    if ("zlib" == id) return new CompressorFactory.ZlibCompressor(properties)
-    if ("blosc" == id) return new CompressorFactory.BloscCompressor(properties)
-    throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.")
-  }
+  def create(id: String, properties: Map[String, Either[String, Int]]): Compressor =
+    id match {
+      case "null"  => nullCompressor
+      case "zlib"  => new CompressorFactory.ZlibCompressor(properties)
+      case "blosc" => new CompressorFactory.BloscCompressor(properties)
+      case _       => throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.")
+    }
 
   class NullCompressor extends Compressor {
     override def getId: String = null

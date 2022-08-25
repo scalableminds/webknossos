@@ -859,24 +859,25 @@ export function removeMissingGroupsFromTrees(
   });
   return changedTrees;
 }
-export function extractNodesAsNewTree(
+export function extractPathAsNewTree(
   state: OxalisState,
   sourceTree: Tree,
-  nodeIds: number[],
-): Tree {
-  const newTree = createTree(state, Date.now()).get();
-  let lastNodeId = null;
-  for (const nodeId of nodeIds) {
-    const node: MutableNode = { ...sourceTree.nodes.get(nodeId) };
-    newTree.nodes.mutableSet(nodeId, node);
-    if (lastNodeId != null) {
-      const newEdge: Edge = {
-        source: nodeId,
-        target: lastNodeId,
-      };
-      newTree.edges.addEdge(newEdge, true);
+  pathOfNodeIds: number[],
+): Maybe<Tree> {
+  return createTree(state, Date.now()).map((newTree) => {
+    let lastNodeId = null;
+    for (const nodeId of pathOfNodeIds) {
+      const node: MutableNode = { ...sourceTree.nodes.get(nodeId) };
+      newTree.nodes.mutableSet(nodeId, node);
+      if (lastNodeId != null) {
+        const newEdge: Edge = {
+          source: nodeId,
+          target: lastNodeId,
+        };
+        newTree.edges.addEdge(newEdge, true);
+      }
+      lastNodeId = nodeId;
     }
-    lastNodeId = nodeId;
-  }
-  return newTree;
+    return newTree;
+  });
 }

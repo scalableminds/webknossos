@@ -81,7 +81,7 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
-import { extractNodesAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Store from "oxalis/store";
 const { SubMenu } = Menu;
 
@@ -182,9 +182,11 @@ function extractShortestPathAsNewTree(
 ) {
   const { shortestPath } = api.tracing.measurePathLengthBetweenNodes(sourceNodeId, targetNodeId);
 
-  const newTree = extractNodesAsNewTree(Store.getState(), sourceTree, shortestPath);
-  const treeMap = { [newTree.treeId]: newTree };
-  Store.dispatch(addTreesAndGroupsAction(treeMap, null));
+  const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath).getOrElse(null);
+  if (newTree != null) {
+    const treeMap = { [newTree.treeId]: newTree };
+    Store.dispatch(addTreesAndGroupsAction(treeMap, null));
+  }
 }
 
 function measureAndShowFullTreeLength(treeId: number, treeName: string) {
@@ -437,33 +439,33 @@ function NodeContextMenuOptions({
               Mark as Branchpoint {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
             </Menu.Item>
           )}
+          {isTheSameNode ? null : (
+            <Menu.Item
+              key="extract-shortest-path"
+              disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+              onClick={() =>
+                activeNodeId != null
+                  ? extractShortestPathAsNewTree(clickedTree, activeNodeId, clickedNodeId)
+                  : null
+              }
+            >
+              Extract shortest Tree to this Node
+            </Menu.Item>
+          )}
         </>
       ) : null}
       {isTheSameNode ? null : (
-        <>
-          <Menu.Item
-            key="extract-shortest-path"
-            disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
-            onClick={() =>
-              activeNodeId != null
-                ? extractShortestPathAsNewTree(clickedTree, activeNodeId, clickedNodeId)
-                : null
-            }
-          >
-            Extract shortest Tree to this Node
-          </Menu.Item>
-          <Menu.Item
-            key="measure-node-path-length"
-            disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
-            onClick={() =>
-              activeNodeId != null
-                ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
-                : null
-            }
-          >
-            Path Length to this Node
-          </Menu.Item>
-        </>
+        <Menu.Item
+          key="measure-node-path-length"
+          disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+          onClick={() =>
+            activeNodeId != null
+              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
+              : null
+          }
+        >
+          Path Length to this Node
+        </Menu.Item>
       )}
       <Menu.Item
         key="measure-whole-tree-length"

@@ -677,6 +677,7 @@ export default function* isosurfaceSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
   const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
+  yield* take("SCENE_CONTROLLER_READY");
   yield* take("WK_READY");
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocIsosurfaceFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);

@@ -1,3 +1,4 @@
+import React from "react";
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
 import type {
@@ -124,7 +125,7 @@ A reload is necessary to return to a valid state.`,
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
   "data.bounding_box_export_not_supported":
-    "Exporting data from a foreign dataset is not supported.",
+    "Exporting data is not supported for datasets on this datastore server.",
   "sampling.could_not_get_or_create_bucket": (zoomedAddress: Vector4) =>
     `While sampling could not get or create bucket at address ${zoomedAddress.toString()}.`,
   "tracing.unhandled_initialization_error":
@@ -141,6 +142,15 @@ instead. Only enable this option if you understand its effect. All layers will n
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""
     } current position, zoom value and ID mapping. Consider fine-tuning your current view before copying the URL.`,
+  "tracing.sharing_modal_zarr_information": (
+    <span>
+      This{" "}
+      <a href="https://zarr.dev" target="_blank" rel="noreferrer">
+        Zarr
+      </a>{" "}
+      link may be used by other tools to load the dataset&apos;s data in a streaming manner.
+    </span>
+  ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
@@ -263,6 +273,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Cancel”.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
+  "dataset.add_zarr_different_scale_warning":
+    "The explored data has a different voxel size from the datasource that was already loaded. The explored voxel size was:",
   "dataset.segmentationlayer_not_existing": "This annotation has no segmentation layer.",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",

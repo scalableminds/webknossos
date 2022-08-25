@@ -111,8 +111,15 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       )
     }
 
-  override def anonymousReadAccessQ(sharingToken: Option[String]): String =
-    "isPublic" + sharingToken.map(t => s" or sharingToken = '$t'").getOrElse("")
+  override def anonymousReadAccessQ(token: Option[String]): String =
+    "isPublic" + token
+      .map(
+        t =>
+          " or sharingToken = '$t' or _id in (select ans._dataset " +
+            "from webknossos.annotation_privateLinks_ apl " +
+            "join webknossos.annotations_ ans ON apl._annotation = ans._id " +
+            s"where apl.accessToken = '$t')")
+      .getOrElse("")
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""isPublic

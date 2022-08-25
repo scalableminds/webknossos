@@ -20,7 +20,6 @@ case class DataStore(
     key: String,
     isScratch: Boolean = false,
     isDeleted: Boolean = false,
-    isForeign: Boolean = false,
     isConnector: Boolean = false,
     allowsUpload: Boolean = true,
     onlyAllowedOrganization: Option[ObjectId] = None
@@ -34,7 +33,6 @@ object DataStore {
                publicUrl: String,
                key: String,
                isScratch: Option[Boolean],
-               isForeign: Option[Boolean],
                isConnector: Option[Boolean],
                allowsUpload: Option[Boolean]): DataStore =
     DataStore(
@@ -44,7 +42,6 @@ object DataStore {
       key,
       isScratch.getOrElse(false),
       isDeleted = false,
-      isForeign.getOrElse(false),
       isConnector.getOrElse(false),
       allowsUpload.getOrElse(true),
       None
@@ -54,10 +51,9 @@ object DataStore {
                      url: String,
                      publicUrl: String,
                      isScratch: Option[Boolean],
-                     isForeign: Option[Boolean],
                      isConnector: Option[Boolean],
                      allowsUpload: Option[Boolean]): DataStore =
-    fromForm(name, url, publicUrl, "", isScratch, isForeign, isConnector, allowsUpload)
+    fromForm(name, url, publicUrl, "", isScratch, isConnector, allowsUpload)
 }
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
@@ -69,7 +65,6 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
       Json.obj(
         "name" -> dataStore.name,
         "url" -> dataStore.publicUrl,
-        "isForeign" -> dataStore.isForeign,
         "isScratch" -> dataStore.isScratch,
         "isConnector" -> dataStore.isConnector,
         "allowsUpload" -> dataStore.allowsUpload
@@ -104,7 +99,6 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.key,
         r.isscratch,
         r.isdeleted,
-        r.isforeign,
         r.isconnector,
         r.allowsupload,
         r.onlyallowedorganization.map(ObjectId(_))
@@ -139,8 +133,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def insertOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector, allowsUpload)
-                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector}, ${d.allowsUpload})""")
+        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isConnector, allowsUpload)
+                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isConnector}, ${d.allowsUpload})""")
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =
@@ -151,7 +145,7 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def updateOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(
-        sqlu""" update webknossos.dataStores set url = ${d.url}, publicUrl = ${d.publicUrl}, isScratch = ${d.isScratch}, isForeign = ${d.isForeign}, isConnector = ${d.isConnector}, allowsUpload = ${d.allowsUpload} where name = ${d.name}""")
+        sqlu""" update webknossos.dataStores set url = ${d.url}, publicUrl = ${d.publicUrl}, isScratch = ${d.isScratch}, isConnector = ${d.isConnector}, allowsUpload = ${d.allowsUpload} where name = ${d.name}""")
     } yield ()
 
 }

@@ -96,6 +96,9 @@ object Vec3Int {
 
   def full(i: Int): Vec3Int = Vec3Int(i, i, i)
 
+  def zeros: Vec3Int = Vec3Int(0, 0, 0)
+  def ones: Vec3Int = Vec3Int(1, 1, 1)
+
   implicit object Vec3IntReads extends Reads[Vec3Int] {
     def reads(json: JsValue): JsResult[Vec3Int] = json match {
       case JsArray(ts) if ts.size == 3 =>

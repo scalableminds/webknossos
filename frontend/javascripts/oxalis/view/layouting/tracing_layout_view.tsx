@@ -123,16 +123,27 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     // Replace entire document with loading message
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-    document.body.removeChild(document.getElementById("main-container"));
+    if (document.body != null) {
+      const mainContainer = document.getElementById("main-container");
+      if (mainContainer) {
+        document.body.removeChild(mainContainer);
+      }
+    }
     window.removeEventListener("resize", this.debouncedOnLayoutChange);
-    const refreshMessage = document.createElement("p");
+
+    const refreshMessageContainer = document.createElement("div");
+    refreshMessageContainer.style.display = "grid";
+    // @ts-ignore
+    refreshMessageContainer.style["place-items"] = "center";
+    refreshMessageContainer.style.height = "75vh";
+
+    const refreshMessage = document.createElement("div");
     refreshMessage.innerHTML = "Reloading webKnossos...";
-    refreshMessage.style.position = "absolute";
-    refreshMessage.style.top = "10px";
-    refreshMessage.style.left = "10px";
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-    document.body.appendChild(refreshMessage);
+    refreshMessageContainer.appendChild(refreshMessage);
+
+    if (document.body != null) {
+      document.body.appendChild(refreshMessageContainer);
+    }
     // Do a complete page refresh to make sure all tracing data is garbage
     // collected and all events are canceled, etc.
     location.reload();

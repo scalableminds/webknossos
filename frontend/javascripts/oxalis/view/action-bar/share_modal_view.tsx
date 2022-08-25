@@ -31,6 +31,7 @@ import {
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ControlModeEnum } from "oxalis/constants";
 import { makeComponentLazy } from "libs/react_helpers";
+
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
 type Props = {

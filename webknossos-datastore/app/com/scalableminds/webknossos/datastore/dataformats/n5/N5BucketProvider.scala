@@ -1,0 +1,73 @@
+package com.scalableminds.webknossos.datastore.dataformats.n5
+
+import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{N5Layer, N5Mag, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
+import com.scalableminds.webknossos.datastore.jzarr.ZarrArray
+import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
+import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
+import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.util.Helpers.tryo
+
+import java.nio.file.{FileSystem, Path}
+import scala.concurrent.ExecutionContext
+
+class N5CubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLogging with RateLimitedErrorLogging {
+
+  def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+    val shape = Vec3Int.full(bucket.bucketLength)
+    val offset = Vec3Int(bucket.voxelXInMag, bucket.voxelYInMag, bucket.voxelZInMag)
+    zarrArray.readBytesXYZ(shape, offset).recover {
+      case t: Throwable => logError(t); Failure(t.getMessage, Full(t), Empty)
+    }
+  }
+
+  override protected def onFinalize(): Unit = ()
+
+}
+
+class N5BucketProvider(layer: N5Layer) extends BucketProvider with LazyLogging with RateLimitedErrorLogging {
+
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[N5CubeHandle] = {
+    val zarrMagOpt: Option[N5Mag] =
+      layer.mags.find(_.mag == readInstruction.bucket.mag)
+
+    zarrMagOpt match {
+      case None => Empty
+      case Some(n5Mag) => {
+        val magPathOpt: Option[Path] =
+          n5Mag.remoteSource match {
+            case Some(remoteSource) => remotePathFrom(remoteSource)
+            case None               => localPathFrom(readInstruction, n5Mag.pathWithFallback)
+          }
+        magPathOpt match {
+          case None => Empty
+          case Some(magPath) =>
+            tryo(onError = e => logError(e))(ZarrArray.open(magPath, n5Mag.axisOrder)).map(new N5CubeHandle(_))
+        }
+      }
+    }
+
+  }
+
+  private def remotePathFrom(remoteSource: RemoteSourceDescriptor): Option[Path] =
+    FileSystemsHolder.getOrCreate(remoteSource).map { fileSystem: FileSystem =>
+      fileSystem.getPath(remoteSource.remotePath)
+    }
+
+  private def localPathFrom(readInstruction: DataReadInstruction, relativeMagPath: String): Option[Path] = {
+    val magPath = readInstruction.baseDir
+      .resolve(readInstruction.dataSource.id.team)
+      .resolve(readInstruction.dataSource.id.name)
+      .resolve(readInstruction.dataLayer.name)
+      .resolve(relativeMagPath)
+    if (magPath.toFile.exists()) {
+      Some(magPath)
+    } else None
+  }
+
+}

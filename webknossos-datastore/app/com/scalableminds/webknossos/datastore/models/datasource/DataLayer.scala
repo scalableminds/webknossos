@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, zarr, tracing = Value
+  val wkw, zarr, n5, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {
@@ -189,6 +189,8 @@ object DataLayer {
           case (DataFormat.wkw, _)                      => json.validate[WKWDataLayer]
           case (DataFormat.zarr, Category.segmentation) => json.validate[ZarrSegmentationLayer]
           case (DataFormat.zarr, _)                     => json.validate[ZarrDataLayer]
+          case (DataFormat.n5, Category.segmentation)   => json.validate[N5SegmentationLayer]
+          case (DataFormat.n5, _)                       => json.validate[N5DataLayer]
           case _                                        => json.validate[WKWDataLayer]
         }
       } yield {

@@ -12,6 +12,7 @@ import type {
 import type {
   ActiveMappingInfo,
   MutableNode,
+  MutableTreeMap,
   OxalisState,
   SkeletonTracing,
   Tree,
@@ -44,6 +45,7 @@ import {
   setTreeVisibilityAction,
   createBranchPointAction,
   deleteBranchpointByIdAction,
+  addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -79,6 +81,8 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
+import { extractNodesAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import Store from "oxalis/store";
 const { SubMenu } = Menu;
 
 /* eslint-disable react/no-unused-prop-types */
@@ -98,6 +102,7 @@ type DispatchProps = {
   setActiveNode: (arg0: number) => void;
   hideTree: (arg0: number) => void;
   createTree: () => void;
+  addTreesAndGroups: (arg0: MutableTreeMap) => void;
   hideBoundingBox: (arg0: number) => void;
   setBoundingBoxColor: (arg0: number, arg1: Vector3) => void;
   setBoundingBoxName: (arg0: number, arg1: string) => void;
@@ -158,7 +163,7 @@ function copyIconWithTooltip(value: string | number, title: string) {
 }
 
 function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: number) {
-  const [lengthNm, lengthVx] = api.tracing.measurePathLengthBetweenNodes(
+  const { lengthNm, lengthVx } = api.tracing.measurePathLengthBetweenNodes(
     sourceNodeId,
     targetNodeId,
   );
@@ -168,6 +173,18 @@ function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: nu
     )} (${formatLengthAsVx(lengthVx)}).`,
     icon: <i className="fas fa-ruler" />,
   });
+}
+
+function extractShortestPathAsNewTree(
+  sourceTree: Tree,
+  sourceNodeId: number,
+  targetNodeId: number,
+) {
+  const { shortestPath } = api.tracing.measurePathLengthBetweenNodes(sourceNodeId, targetNodeId);
+
+  const newTree = extractNodesAsNewTree(Store.getState(), sourceTree, shortestPath);
+  const treeMap: MutableTreeMap = { "0": newTree };
+  Store.dispatch(addTreesAndGroupsAction(treeMap, null));
 }
 
 function measureAndShowFullTreeLength(treeId: number, treeName: string) {
@@ -423,17 +440,30 @@ function NodeContextMenuOptions({
         </>
       ) : null}
       {isTheSameNode ? null : (
-        <Menu.Item
-          key="measure-node-path-length"
-          disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
-          onClick={() =>
-            activeNodeId != null
-              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
-              : null
-          }
-        >
-          Path Length to this Node
-        </Menu.Item>
+        <>
+          <Menu.Item
+            key="extract-shortest-path"
+            disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+            onClick={() =>
+              activeNodeId != null
+                ? extractShortestPathAsNewTree(clickedTree, activeNodeId, clickedNodeId)
+                : null
+            }
+          >
+            Extract shortest Tree to this Node
+          </Menu.Item>
+          <Menu.Item
+            key="measure-node-path-length"
+            disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+            onClick={() =>
+              activeNodeId != null
+                ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
+                : null
+            }
+          >
+            Path Length to this Node
+          </Menu.Item>
+        </>
       )}
       <Menu.Item
         key="measure-whole-tree-length"
@@ -1037,6 +1067,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   createBranchPoint(nodeId: number, treeId: number) {
     dispatch(createBranchPointAction(nodeId, treeId));
+  },
+
+  addTreesAndGroups(treeMap: MutableTreeMap) {
+    dispatch(addTreesAndGroupsAction(treeMap, null));
   },
 
   deleteBranchpointById(nodeId: number, treeId: number) {

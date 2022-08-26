@@ -17,7 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for 64-bit segmentations (uint64). Note that the actual support only covers IDs up to 2^53 - 1 (matches the JavaScript number type). Also note that JSON mappings are only compatible with segment ids that only use the lower 32 bits. [#6317](https://github.com/scalableminds/webknossos/pull/6317)
 - WebKnossos now remembers the tool that was active in between disabling and enabling the segmentation layer. [#6362](https://github.com/scalableminds/webknossos/pull/6362)
 - The Add Dataset view now hosts an Add Zarr Dataset tab to explore, configure and import remote Zarr datasets. [#6335](https://github.com/scalableminds/webknossos/pull/6335)
-- Added a UI to manage Zarr links for an annotation so that the annotation can be streamed to 3rd party tools. This change also includes new backend API routes for using the (private) zarr links to annotations as well as creating them. [#6367](https://github.com/scalableminds/webknossos/pull/6367)
+- Added a UI to manage Zarr links for an annotation so that the annotation can be streamed to third-party tools. This change also includes new backend API routes for using the (private) zarr links to annotations as well as creating them. [#6367](https://github.com/scalableminds/webknossos/pull/6367)
 
 ### Added
 - Segmentation layers which were not previously editable now show an (un)lock icon button which shortcuts to the Add Volume Layer modal with the layer being preselected. [#6330](https://github.com/scalableminds/webknossos/pull/6330)

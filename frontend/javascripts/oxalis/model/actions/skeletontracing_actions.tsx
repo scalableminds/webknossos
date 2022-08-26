@@ -488,7 +488,6 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
       Store.dispatch(deleteTreeAction(treeId));
     } else {
       renderIndependently((destroy) => (
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         <RemoveTreeModal onOk={() => Store.dispatch(deleteTreeAction(treeId))} destroy={destroy} />
       ));
     }

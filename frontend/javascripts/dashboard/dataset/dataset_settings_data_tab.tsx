@@ -22,6 +22,7 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "./helper_components";
+import { Vector3 } from "oxalis/constants";
 
 const FormItem = Form.Item;
 
@@ -150,8 +151,7 @@ function SimpleDatasetForm({
               },
               {
                 validator: syncValidator(
-                  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
-                  (value) => value && value.every((el) => el > 0),
+                  (value: Vector3) => value && value.every((el) => el > 0),
                   "Each component of the scale must be larger than 0",
                 ),
               },
@@ -260,15 +260,11 @@ function SimpleLayerForm({
             name={["dataSource", "dataLayers", index, "largestSegmentId"]}
             label="Largest segment ID"
             info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
-            initialValue={`${layer.largestSegmentId}`}
+            initialValue={layer.largestSegmentId != null ? `${layer.largestSegmentId}` : undefined}
             rules={[
               {
-                required: true,
-                message: "Please provide a largest segment ID for the segmentation layer",
-              },
-              {
                 validator: (rule, value) =>
-                  value > 0 && value < 2 ** bitDepth
+                  value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
                     ? Promise.resolve()
                     : Promise.reject(
                         new Error(
@@ -278,7 +274,16 @@ function SimpleLayerForm({
               },
             ]}
           >
-            <InputNumber disabled={isReadOnlyDataset} />
+            <InputNumber
+              disabled={isReadOnlyDataset}
+              // @ts-ignore returning undefined does work without problems
+              parser={(value: string | undefined) => {
+                if (value == null || value === "") {
+                  return undefined;
+                }
+                return parseInt(value, 10);
+              }}
+            />
           </FormItemWithInfo>
         ) : null}
       </Col>

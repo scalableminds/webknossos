@@ -1,4 +1,4 @@
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
@@ -60,6 +60,13 @@ import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handl
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import {
+  getActiveSegmentationTracing,
+  getRequestedOrVisibleSegmentationLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { Button, InputNumber, Modal } from "antd";
+import renderIndependently from "libs/render_independently";
+import { EnterMaximumSegmentIdModal } from "oxalis/view/maximum_segment_id_modal";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -129,7 +136,34 @@ class SkeletonKeybindings {
 class VolumeKeybindings {
   static getKeyboardControls() {
     return {
-      c: () => Store.dispatch(createCellAction()),
+      c: () => {
+        const volumeLayer = getActiveSegmentationTracing(Store.getState());
+
+        if (volumeLayer == null || volumeLayer.tracingId == null) {
+          return;
+        }
+
+        if (volumeLayer.maxCellId != null) {
+          Store.dispatch(createCellAction(volumeLayer.maxCellId));
+        } else {
+          // todo: explain more and/or link to docs?
+          const openEnterMaximumSegmentIdModal = () => {
+            renderIndependently((destroy) => <EnterMaximumSegmentIdModal destroy={destroy} />);
+          };
+          Toast.warning(
+            <div>
+              Cannot create a new segment id, because the maximum segment id is not known.
+              <Button
+                type="primary"
+                style={{ marginTop: 8, marginLeft: 8 }}
+                onClick={openEnterMaximumSegmentIdModal}
+              >
+                Enter maximum segment id
+              </Button>
+            </div>,
+          );
+        }
+      },
       v: () => {
         Store.dispatch(interpolateSegmentationLayerAction());
       },

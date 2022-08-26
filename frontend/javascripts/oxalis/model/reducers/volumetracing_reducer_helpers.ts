@@ -47,22 +47,19 @@ export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTr
     activeCellId: id,
   });
 }
-export function createCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id?: number) {
-  if (id === 0) {
-    // cellId 0 means there is no annotation, so there must not be a cell with id 0
-    return state;
-  }
-
+export function createCellReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+  maxCellId: number,
+) {
   // The maxCellId is only updated if a voxel using that id was annotated. Therefore, it can happen
   // that the activeCellId is larger than the maxCellId. Choose the larger of the two ids and increase it by one.
-  const { activeCellId, maxCellId } = volumeTracing;
+  const { activeCellId } = volumeTracing;
 
-  if (id == null) {
-    id = Math.max(activeCellId, maxCellId) + 1;
-  }
+  const newId = Math.max(activeCellId, maxCellId) + 1;
 
   return updateVolumeTracing(state, volumeTracing.tracingId, {
-    activeCellId: id,
+    activeCellId: newId,
   });
 }
 

@@ -226,7 +226,7 @@ export type VolumeTracing = TracingBase & {
   // Note that there are also SegmentMaps in `state.localSegmentationData`
   // for non-annotation volume layers.
   readonly segments: SegmentMap;
-  readonly maxCellId: number;
+  readonly maxCellId: number | null;
   readonly activeCellId: number;
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;

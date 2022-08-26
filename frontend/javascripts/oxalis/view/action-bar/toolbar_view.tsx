@@ -53,6 +53,7 @@ import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import Toast from "libs/toast";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -116,7 +117,18 @@ const handleSetTool = (event: RadioChangeEvent) => {
 };
 
 const handleCreateCell = () => {
-  Store.dispatch(createCellAction());
+  const volumeLayer = getActiveSegmentationTracing(Store.getState());
+
+  if (volumeLayer == null || volumeLayer.tracingId == null) {
+    return;
+  }
+
+  if (volumeLayer.maxCellId != null) {
+    Store.dispatch(createCellAction(volumeLayer.maxCellId));
+  } else {
+    // todo: explain more and/or link to docs?
+    Toast.warning("Cannot create a new segment id, because the maximum segment id is not known.");
+  }
 };
 
 const handleAddNewUserBoundingBox = () => {

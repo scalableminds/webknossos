@@ -169,11 +169,11 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
         },
       ]),
     ),
-    activeCellId: 0,
+    activeCellId: tracing.activeSegmentId ?? 0,
     lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,
     contourList: [],
-    maxCellId,
+    maxCellId: maxCellId <= 0 ? null : maxCellId,
     tracingId: tracing.id,
     version: tracing.version,
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
@@ -203,7 +203,8 @@ function VolumeTracingReducer(
           },
         },
       });
-      return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
+
+      return newState;
     }
 
     case "INITIALIZE_EDITABLE_MAPPING": {
@@ -255,7 +256,7 @@ function VolumeTracingReducer(
     }
 
     case "CREATE_CELL": {
-      return createCellReducer(state, volumeTracing);
+      return createCellReducer(state, volumeTracing, action.maxCellId);
     }
 
     case "UPDATE_DIRECTION": {
@@ -285,6 +286,13 @@ function VolumeTracingReducer(
     case "FINISH_ANNOTATION_STROKE": {
       // Possibly update the maxCellId after volume annotation
       const { activeCellId, maxCellId } = volumeTracing;
+      if (maxCellId == null) {
+        // If no maximum cell id was known, no volume annotation action
+        // should have been dispatched in the first place. If it was for
+        // some reason, we should not assume that the used segment id
+        // is the highest one.
+        return state;
+      }
       return setMaxCellReducer(state, volumeTracing, Math.max(activeCellId, maxCellId));
     }
 

@@ -87,9 +87,15 @@ export const initializeEditableMappingAction = (mapping: ServerEditableMapping) 
     mapping,
   } as const);
 
-export const createCellAction = () =>
+/*
+ * The maxCellId parameter is required to enforce that the dispatcher of the action
+ * has dealt with the case where the maximum cell id is not set. In that case,
+ * the create cell action should not be exposed via the UI.
+ */
+export const createCellAction = (maxCellId: number) =>
   ({
     type: "CREATE_CELL",
+    maxCellId,
   } as const);
 
 export const startEditingAction = (position: Vector3, planeId: OrthoView) =>

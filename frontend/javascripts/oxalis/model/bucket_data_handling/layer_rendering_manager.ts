@@ -35,6 +35,8 @@ import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { diffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 
+const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
+
 const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
 const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
   asyncBucketPickRaw,
@@ -326,8 +328,7 @@ export default class LayerRenderingManager {
         "getCustomColorCuckooTable should not be called for non-segmentation layers.",
       );
     }
-    const TEXTURE_WIDTH = 512;
-    this.cuckooTable = new CuckooTable(TEXTURE_WIDTH);
+    this.cuckooTable = new CuckooTable(CUSTOM_COLORS_TEXTURE_WIDTH);
     return this.cuckooTable;
   }
 

@@ -275,11 +275,14 @@ class PlaneMaterialFactory {
   attachSegmentationColorTexture(): void {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
     if (segmentationLayer == null) {
+      this.uniforms.seed0 = { value: 0 };
+      this.uniforms.seed1 = { value: 0 };
+      this.uniforms.seed2 = { value: 0 };
+
       this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: 0 };
       this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
       this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
       this.uniforms.CUCKOO_TWIDTH = { value: 0 };
-
       this.uniforms.custom_color_texture = { value: CuckooTable.getNullTexture() };
       return;
     }

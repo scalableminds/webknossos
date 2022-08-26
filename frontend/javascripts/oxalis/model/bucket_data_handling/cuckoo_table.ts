@@ -55,7 +55,7 @@ export class CuckooTable {
       return cachedNullTexture;
     }
     cachedNullTexture = createUpdatableTexture(
-      1,
+      0,
       TEXTURE_CHANNEL_COUNT,
       THREE.UnsignedIntType,
       getRenderer(),

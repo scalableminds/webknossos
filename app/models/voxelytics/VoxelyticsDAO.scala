@@ -86,7 +86,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       r <- run(sql"""
         WITH latest_chunk_states AS (
           SELECT DISTINCT ON (_chunk) _chunk, timestamp, state
-          FROM webknossos.voxelytics_chunk_state_change_events
+          FROM webknossos.voxelytics_chunkStateChangeEvents
           ORDER BY _chunk, timestamp DESC
         )
         SELECT
@@ -108,27 +108,27 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         JOIN webknossos.voxelytics_tasks t ON t._run = r._id
         JOIN (
           SELECT DISTINCT ON (_task) _task, state
-          FROM webknossos.voxelytics_task_state_change_events
+          FROM webknossos.voxelytics_taskStateChangeEvents
           ORDER BY _task, timestamp DESC
         ) task_state
           ON t._id = task_state._task
         LEFT JOIN (
           SELECT DISTINCT ON (_task) _task, timestamp
-          FROM webknossos.voxelytics_task_state_change_events
+          FROM webknossos.voxelytics_taskStateChangeEvents
           WHERE state = 'RUNNING'
           ORDER BY _task, timestamp
         ) task_begin
           ON t._id = task_begin._task
         LEFT JOIN (
           SELECT DISTINCT ON (_task) _task, timestamp
-          FROM webknossos.voxelytics_task_state_change_events
+          FROM webknossos.voxelytics_taskStateChangeEvents
           WHERE state IN ('COMPLETE', 'FAILED', 'CANCELLED')
           ORDER BY _task, timestamp DESC
         ) task_end
           ON t._id = task_end._task
         LEFT JOIN (
           SELECT _run, timestamp
-          FROM webknossos.voxelytics_run_heartbeat_events
+          FROM webknossos.voxelytics_runHeartbeatEvents
         ) run_heartbeat
           ON r._id = run_heartbeat._run
         LEFT JOIN (
@@ -211,27 +211,27 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_runs r
         JOIN (
           SELECT DISTINCT ON (_run) _run, state
-          FROM webknossos.voxelytics_run_state_change_events
+          FROM webknossos.voxelytics_runStateChangeEvents
           ORDER BY _run, timestamp DESC
         ) run_state
           ON r._id = run_state._run
         JOIN (
           SELECT DISTINCT ON (_run) _run, timestamp
-          FROM webknossos.voxelytics_run_state_change_events
+          FROM webknossos.voxelytics_runStateChangeEvents
           WHERE state = 'RUNNING'
           ORDER BY _run, timestamp
         ) run_begin
           ON r._id = run_begin._run
         LEFT JOIN (
           SELECT DISTINCT ON (_run) _run, timestamp
-          FROM webknossos.voxelytics_run_state_change_events
+          FROM webknossos.voxelytics_runStateChangeEvents
           WHERE state IN ('COMPLETE', 'FAILED', 'CANCELLED')
           ORDER BY _run, timestamp DESC
         ) run_end
           ON r._id = run_end._run
         LEFT JOIN (
           SELECT _run, timestamp
-          FROM webknossos.voxelytics_run_heartbeat_events
+          FROM webknossos.voxelytics_runHeartbeatEvents
         ) run_heartbeat
           ON r._id = run_heartbeat._run
         WHERE r._organization = $organizationId
@@ -265,7 +265,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def upsertArtifactChecksumEvent(artifactId: ObjectId, ev: ArtifactFileChecksumEvent): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""INSERT INTO webknossos.voxelytics_artifact_file_checksum_events (_artifact, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp)
+        sqlu"""INSERT INTO webknossos.voxelytics_artifactFileChecksumEvents (_artifact, path, resolvedPath, checksumMethod, checksum, fileSize, lastModified, timestamp)
                VALUES ($artifactId, ${ev.path}, ${ev.resolvedPath}, ${ev.checksumMethod}, ${ev.checksum}, ${ev.fileSize}, ${Timestamp
           .from(ev.lastModified)}, ${Timestamp.from(ev.timestamp)})
                ON CONFLICT (_artifact, path, timestamp)
@@ -281,7 +281,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def upsertChunkProfilingEvent(chunkId: ObjectId, ev: ChunkProfilingEvent): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""INSERT INTO webknossos.voxelytics_chunk_profiling_events (_chunk, hostname, pid, memory, cpuUser, cpuSystem, timestamp)
+        sqlu"""INSERT INTO webknossos.voxelytics_chunkProfilingEvents (_chunk, hostname, pid, memory, cpuUser, cpuSystem, timestamp)
                  VALUES ($chunkId, ${ev.hostname}, ${ev.pid}, ${ev.memory}, ${ev.cpuUser}, ${ev.cpuSystem}, ${Timestamp
           .from(ev.timestamp)})
                  ON CONFLICT (_chunk, timestamp)
@@ -296,7 +296,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def upsertRunHeartbeatEvent(runId: ObjectId, ev: RunHeartbeatEvent): Fox[Unit] =
     for {
-      _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_run_heartbeat_events (_run, timestamp)
+      _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_runHeartbeatEvents (_run, timestamp)
                      VALUES ($runId, ${Timestamp.from(ev.timestamp)})
                      ON CONFLICT (_run)
                        DO UPDATE SET timestamp = EXCLUDED.timestamp
@@ -305,7 +305,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def upsertChunkStateChangeEvent(chunkId: ObjectId, ev: ChunkStateChangeEvent): Fox[Unit] =
     for {
-      _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_chunk_state_change_events (_chunk, timestamp, state)
+      _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_chunkStateChangeEvents (_chunk, timestamp, state)
                       VALUES ($chunkId, ${Timestamp
         .from(ev.timestamp)}, ${ev.state.toString}::webknossos.VOXELYTICS_RUN_STATE)
                       ON CONFLICT (_chunk, timestamp)
@@ -315,7 +315,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def upsertTaskStateChangeEvent(taskId: ObjectId, ev: TaskStateChangeEvent): Fox[Unit] =
     for {
-      _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_task_state_change_events (_task, timestamp, state)
+      _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_taskStateChangeEvents (_task, timestamp, state)
                 VALUES ($taskId, ${Timestamp.from(ev.timestamp)}, ${ev.state.toString}::webknossos.VOXELYTICS_RUN_STATE)
                 ON CONFLICT (_task, timestamp)
                   DO UPDATE SET state = EXCLUDED.state
@@ -324,7 +324,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def upsertRunStateChangeEvent(runId: ObjectId, ev: RunStateChangeEvent): Fox[Unit] =
     for {
-      _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_run_state_change_events (_run, timestamp, state)
+      _ <- run(sqlu"""INSERT INTO webknossos.voxelytics_runStateChangeEvents (_run, timestamp, state)
                 VALUES ($runId, ${Timestamp.from(ev.timestamp)}, ${ev.state.toString}::webknossos.VOXELYTICS_RUN_STATE)
                 ON CONFLICT (_run, timestamp)
                   DO UPDATE SET state = EXCLUDED.state
@@ -498,7 +498,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         sql"""
           WITH latest_chunk_states AS (
             SELECT DISTINCT ON (_chunk) _chunk, timestamp, state
-            FROM webknossos.voxelytics_chunk_state_change_events
+            FROM webknossos.voxelytics_chunkStateChangeEvents
             ORDER BY _chunk, timestamp DESC
           )
           SELECT
@@ -541,7 +541,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
               c.executionId,
               MIN(chunk_events.timestamp) AS beginTime,
               MAX(chunk_events.timestamp) AS endTime
-            FROM webknossos.voxelytics_chunk_state_change_events chunk_events
+            FROM webknossos.voxelytics_chunkStateChangeEvents chunk_events
             JOIN webknossos.voxelytics_chunks c ON c._id = chunk_events._chunk
             GROUP BY c._task, c.executionId
           ) times ON times._task = exec._task AND times.executionId = exec.executionId
@@ -559,7 +559,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cp.cpuSystem) AS median_cpuSystem,
               STDDEV(cp.cpuSystem) AS stddev_cpuSystem
             FROM
-              webknossos.voxelytics_chunk_profiling_events cp,
+              webknossos.voxelytics_chunkProfilingEvents cp,
               webknossos.voxelytics_chunks c
             WHERE
               c._id = cp._chunk
@@ -576,13 +576,13 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
             FROM
               (
                 SELECT DISTINCT ON (_chunk) _chunk, timestamp
-                FROM webknossos.voxelytics_chunk_state_change_events
+                FROM webknossos.voxelytics_chunkStateChangeEvents
                 WHERE state = 'RUNNING'
                 ORDER BY _chunk, timestamp
               ) c_begin,
               (
                 SELECT DISTINCT ON (_chunk) _chunk, timestamp
-                FROM webknossos.voxelytics_chunk_state_change_events
+                FROM webknossos.voxelytics_chunkStateChangeEvents
                 WHERE state = 'COMPLETE'
                 ORDER BY _chunk, timestamp
               ) c_end,
@@ -648,7 +648,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         FROM
           (
           SELECT DISTINCT ON(_artifact, path) *
-            FROM webknossos.voxelytics_artifact_file_checksum_events
+            FROM webknossos.voxelytics_artifactFileChecksumEvents
           ORDER BY _artifact, path, timestamp
         ) af
         JOIN webknossos.voxelytics_artifacts a ON a._id = af._artifact

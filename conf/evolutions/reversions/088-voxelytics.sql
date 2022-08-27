@@ -6,12 +6,12 @@ DROP TABLE
   webknossos.voxelytics_tasks,
   webknossos.voxelytics_chunks,
   webknossos.voxelytics_workflows,
-  webknossos.voxelytics_run_state_change_events,
-  webknossos.voxelytics_run_heartbeat_events,
-  webknossos.voxelytics_task_state_change_events,
-  webknossos.voxelytics_chunk_state_change_events,
-  webknossos.voxelytics_chunk_profiling_events,
-  webknossos.voxelytics_artifact_file_checksum_events
+  webknossos.voxelytics_runStateChangeEvents,
+  webknossos.voxelytics_runHeartbeatEvents,
+  webknossos.voxelytics_taskStateChangeEvents,
+  webknossos.voxelytics_chunkStateChangeEvents,
+  webknossos.voxelytics_chunkProfilingEvents,
+  webknossos.voxelytics_artifactFileChecksumEvents
   CASCADE;
 
 DROP TYPE webknossos.VOXELYTICS_RUN_STATE;

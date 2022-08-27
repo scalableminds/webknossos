@@ -105,8 +105,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     var hasBackslash = false
     val escaped = new StringBuffer("'")
 
-    for (i <- 0 until aString.length) {
-      val c = aString.charAt(i)
+    aString.foreach { c =>
       if (c == '\'') {
         escaped.append(c).append(c)
       } else if (c == '\\') {
@@ -118,14 +117,14 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     }
     escaped.append('\'')
 
-    if (hasBackslash == true) {
-      "E" + escaped.toString()
+    if (hasBackslash) {
+      "E" + escaped.toString
     } else {
-      escaped.toString()
+      escaped.toString
     }
   }
 
-  def writeEscapedTuple(seq: List[String]) =
+  def writeEscapedTuple(seq: List[String]): String =
     "(" + seq.map(escapeLiteral).mkString(", ") + ")"
 
   def sanitize(aString: String): String = aString.replaceAll("'", "")
@@ -254,7 +253,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
   def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: String): Fox[C] =
     for {
       firstRow <- rowSeq.headOption.toFox // No error chain here, as this should stay Fox.Empty
-      parsed <- parse(firstRow) ?~> s"Parsing failed for row in ${collectionName} queried by $queryLabel"
+      parsed <- parse(firstRow) ?~> s"Parsing failed for row in $collectionName queried by $queryLabel"
     } yield parsed
 
   def parseAll(rowSeq: Seq[X#TableElementType]): Fox[List[C]] =

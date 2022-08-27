@@ -21,6 +21,10 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
   private lazy val conf = wkConf.Voxelytics.Elasticsearch
   val SCROLL_SIZE = 10000
 
+  private def pollUntilServerIsAvailable: Fox[Unit] =
+    // TODO: Implement polling with conf.startupTimeout
+    Fox.successful()
+
   def queryLogs(runName: String,
                 organizationName: String,
                 taskName: Option[String],
@@ -43,20 +47,21 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
     val buffer = ListBuffer[JsValue]()
 
     for {
-      scroll <- rpc(s"${conf.host}/${conf.index}/_search?scroll=1m")
+      _ <- pollUntilServerIsAvailable
+      scroll <- rpc(s"${conf.uri}/${conf.index}/_search?scroll=1m")
         .postJsonWithJsonResponse[JsValue, JsValue](scrollBody) ~> "Could not fetch logs"
       scrollId = (scroll \ "_scroll_id").as[String]
       scrollHits = (scroll \ "hits" \ "hits").as[List[JsValue]]
       _ = buffer ++= scrollHits
       lastScrollId <- fetchBatch(buffer, scrollId)
-      _ <- rpc(s"${conf.host}/_search/scroll/$lastScrollId").delete()
+      _ <- rpc(s"${conf.uri}/_search/scroll/$lastScrollId").delete()
     } yield JsArray(buffer)
 
   }
 
   private def fetchBatch(buffer: ListBuffer[JsValue], scrollId: String): Fox[String] =
     for {
-      batch <- rpc(s"${conf.host}/_search/scroll")
+      batch <- rpc(s"${conf.uri}/_search/scroll")
         .postJsonWithJsonResponse[JsValue, JsValue](Json.obj("scroll" -> "1m", "scroll_id" -> scrollId))
       batchScrollId = (batch \ "_scroll_id").as[String]
       batchHits = (batch \ "hits" \ "hits").as[List[JsValue]]
@@ -69,8 +74,8 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
     } yield returnedScrollId
 
   def bulkInsert(logEntries: List[JsValue]): Fox[Unit] =
-    if (conf.host.nonEmpty && logEntries.nonEmpty) {
-      val uri = s"${conf.host}/_bulk"
+    if (conf.uri.nonEmpty && logEntries.nonEmpty) {
+      val uri = s"${conf.uri}/_bulk"
       val bytes = logEntries
         .flatMap(entry =>
           List(Json.toBytes(Json.obj("create" -> Json.obj("_index" -> conf.index, "_id" -> UUID.randomUUID.toString))),
@@ -78,6 +83,7 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
         .fold(Array.emptyByteArray)((rest, entry) => rest ++ entry ++ "\n".getBytes)
 
       for {
+        _ <- pollUntilServerIsAvailable
         res <- rpc(uri)
           .addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType)
           .postBytesWithJsonResponse[JsValue](bytes)

@@ -23,6 +23,10 @@ case class RunEntry(id: ObjectId,
                     beginTime: Instant,
                     endTime: Option[Instant])
 
+object RunEntry {
+  implicit val jsonFormat: OFormat[RunEntry] = Json.format[RunEntry]
+}
+
 case class TaskRunEntry(runName: String,
                         runId: ObjectId,
                         taskId: ObjectId,
@@ -33,6 +37,10 @@ case class TaskRunEntry(runName: String,
                         currentExecutionId: Option[String],
                         chunksTotal: Long,
                         chunksFinished: Long)
+
+object TaskRunEntry {
+  implicit val jsonFormat: OFormat[TaskRunEntry] = Json.format[TaskRunEntry]
+}
 
 case class WorkflowEntry(
     name: String,
@@ -110,33 +118,11 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
     } yield bool2Fox(user.isAdmin || runUserId.forall(_ == user._id))
 
   def runWrites(run: RunEntry, tasks: List[TaskRunEntry]): JsObject =
-    Json.obj(
-      "id" -> run.id.id,
-      "name" -> run.name,
-      "username" -> run.username,
-      "hostname" -> run.hostname,
-      "voxelyticsVersion" -> run.voxelyticsVersion,
-      "beginTime" -> run.beginTime,
-      "endTime" -> run.endTime,
-      "state" -> run.state,
-      "tasks" -> tasks.map(taskRunWrites)
+    Json.toJson(run) ++ Json.obj(
+      "tasks" -> tasks.map(Json.toJson(_))
     )
 
-  private def taskRunWrites(taskRun: TaskRunEntry): JsObject =
-    Json.obj(
-      "runName" -> taskRun.runName,
-      "runId" -> taskRun.runId.id,
-      "taskId" -> taskRun.taskId.id,
-      "taskName" -> taskRun.taskName,
-      "state" -> taskRun.state,
-      "beginTime" -> taskRun.beginTime,
-      "endTime" -> taskRun.endTime,
-      "currentExecutionId" -> taskRun.currentExecutionId,
-      "chunksTotal" -> taskRun.chunksTotal,
-      "chunksFinished" -> taskRun.chunksFinished
-    )
-
-  private def writesArtifactEntry(artifact: ArtifactEntry): (String, JsObject) =
+  private def artifactEntryWrites(artifact: ArtifactEntry): (String, JsObject) =
     (artifact.name,
      artifact.metadata ++
        Json.obj(
@@ -150,16 +136,16 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
          "taskName" -> artifact.taskName
        ))
 
-  def writesArtifacts(artifacts: List[ArtifactEntry]): JsObject = {
+  def artifactsWrites(artifacts: List[ArtifactEntry]): JsObject = {
     val artifactsByTask = artifacts.groupBy(_.taskName)
     JsObject(artifactsByTask.map(artifactKV => {
-      val artifactName = artifactKV._1
+      val taskName = artifactKV._1
       val artifacts = artifactKV._2
-      (artifactName, JsObject(artifacts.map(writesArtifactEntry)))
+      (taskName, JsObject(artifacts.map(artifactEntryWrites)))
     }))
   }
 
-  def writesWorkflowConfig(workflowConfig: JsObject, tasks: List[TaskEntry]): JsObject =
+  def workflowConfigWrites(workflowConfig: JsObject, tasks: List[TaskEntry]): JsObject =
     workflowConfig ++ Json.obj("tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
 
   def aggregateBeginEndTime(runs: List[RunEntry]): (VoxelyticsRunState, Instant, Option[Instant]) = {

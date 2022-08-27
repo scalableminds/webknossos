@@ -45,7 +45,7 @@ class VoxelyticsController @Inject()(
           request.body.run.voxelyticsVersion,
           request.body.workflow.hash,
           request.body.workflow.yamlContent,
-          request.body.config.withoutTasks()
+          request.body.config.asJsonWithoutTasks
         )
         _ <- Fox.combined(
           request.body.config.tasks
@@ -142,8 +142,8 @@ class VoxelyticsController @Inject()(
         // Assemble workflow report JSON
         (state, beginTime, endTime) = voxelyticsService.aggregateBeginEndTime(runs)
         result = Json.obj(
-          "config" -> voxelyticsService.writesWorkflowConfig(mostRecentRun.workflow_config, tasks),
-          "artifacts" -> voxelyticsService.writesArtifacts(artifacts),
+          "config" -> voxelyticsService.workflowConfigWrites(mostRecentRun.workflow_config, tasks),
+          "artifacts" -> voxelyticsService.artifactsWrites(artifacts),
           "run" -> voxelyticsService
             .runWrites(mostRecentRun.copy(state = state, beginTime = beginTime, endTime = endTime), combinedTaskRuns),
           "workflow" -> Json.obj(
@@ -180,7 +180,7 @@ class VoxelyticsController @Inject()(
                                                  artifact.file_size,
                                                  artifact.inode_count,
                                                  artifact.version,
-                                                 artifact.metadata)
+                                                 artifact.metadataAsJson)
                   })
                   .toList)
             } yield ()

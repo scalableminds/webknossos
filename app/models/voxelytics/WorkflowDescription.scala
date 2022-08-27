@@ -14,7 +14,7 @@ case class WorkflowDescriptionConfig(global_parameters: Map[String, JsValue],
                                      schema_version: Option[Long],
                                      git_hash: Option[String],
                                      tasks: Map[String, WorkflowDescriptionTaskConfig]) {
-  def withoutTasks(): JsValue =
+  def asJsonWithoutTasks: JsValue =
     Json.obj("global_parameters" -> global_parameters, "paths" -> paths, "schema_version" -> schema_version)
 }
 
@@ -25,7 +25,7 @@ case class WorkflowDescriptionArtifact(path: String,
                                        attributes: JsValue,
                                        iframes: JsValue,
                                        links: JsValue) {
-  def metadata: JsObject =
+  def metadataAsJson: JsObject =
     Json.obj("attributes" -> attributes, "iframes" -> iframes, "links" -> links)
 }
 

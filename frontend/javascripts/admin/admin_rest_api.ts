@@ -59,6 +59,9 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
+  VoxelyticsWorkflowInfo,
+  VoxelyticsWorkflowReport,
+  VoxelyticsChunkStatistics,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -2269,5 +2272,53 @@ export function getSynapseTypes(
         },
       },
     ),
+  );
+}
+
+// ### Voxelytics
+export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowInfo>> {
+  return Request.receiveJSON("/api/voxelytics/workflows");
+}
+
+export function getVoxelyticsWorkflow(
+  workflowHash: string,
+  runId: string | null,
+): Promise<VoxelyticsWorkflowReport> {
+  return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}?runId=${runId}`);
+}
+
+export function getVoxelyticsLogs(
+  runId: string,
+  taskName: string | null,
+  minLevel: string,
+): Promise<Array<{}>> {
+  return Request.receiveJSON(
+    `/api/voxelytics/logs?runId=${runId}&taskName=${encodeURIComponent(
+      taskName,
+    )}&minLevel=${minLevel}`,
+  );
+}
+
+export function getVoxelyticsChunkStatistics(
+  workflowHash: string,
+  runId: string,
+  taskName: string,
+): Promise<Array<VoxelyticsChunkStatistics>> {
+  return Request.receiveJSON(
+    `/api/voxelytics/workflows/${workflowHash}/chunkStatistics?runId=${runId}&taskName=${encodeURIComponent(
+      taskName,
+    )}`,
+  );
+}
+export function getVoxelyticsArtifactChecksums(
+  workflowHash: string,
+  runId: string,
+  taskName: string,
+  artifactName?: string,
+): Promise<Array<Record<string, string | number>>> {
+  return Request.receiveJSON(
+    `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?runId=${runId}&taskName=${encodeURIComponent(
+      taskName,
+    )}&artifactName=${encodeURIComponent(artifactName)}`,
   );
 }

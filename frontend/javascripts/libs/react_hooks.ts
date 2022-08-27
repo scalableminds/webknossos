@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams as useSearchParamsReactRouter } from "react-router-dom";
+
 // Adapted from: https://usehooks.com/usePrevious/
 export function usePrevious<T>(value: T): T | null | undefined {
   // The ref object is a generic container whose current property is mutable ...
@@ -84,4 +86,20 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
   }, []);
   // Empty array ensures that effect is only run on mount and unmount
   return keyPressed;
+}
+
+export function useSearchParams() {
+  const [searchParams] = useSearchParamsReactRouter();
+  return Object.fromEntries(searchParams.entries());
+}
+
+export function useUpdateEvery(interval: number) {
+  const [, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setSeconds((seconds) => seconds + 1);
+    }, interval);
+    return () => window.clearInterval(intervalId);
+  }, [interval]);
 }

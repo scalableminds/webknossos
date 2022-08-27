@@ -173,3 +173,44 @@ export function formatDurationToMinutesAndSeconds(durationInMillisecons: number)
 export function formatHash(id: string): string {
   return id.slice(-6);
 }
+
+export function formatDateMedium(date: Date): string {
+  return new Intl.DateTimeFormat(navigator.language, {
+    dateStyle: "medium",
+    timeStyle: "medium",
+  }).format(date);
+}
+
+export function formatCPU(cpuShare: number) {
+  if (cpuShare == null || !Number.isFinite(cpuShare)) {
+    return "";
+  }
+  return `${(cpuShare * 100).toFixed(0)}%`;
+}
+
+export function formatBytes(nbytes: number) {
+  if (nbytes == null || !Number.isFinite(nbytes)) {
+    return "";
+  }
+  if (nbytes > 2 ** 50) {
+    // Pebibyte
+    return `${(nbytes / 2 ** 50).toPrecision(4)} PiB`;
+  }
+  if (nbytes > 2 ** 40) {
+    // Tebibyte
+    return `${(nbytes / 2 ** 40).toPrecision(4)} TiB`;
+  }
+  if (nbytes > 2 ** 30) {
+    // Gibibyte
+    return `${(nbytes / 2 ** 30).toPrecision(4)} GiB`;
+  }
+  if (nbytes > 2 ** 20) {
+    // Mebibyte
+    return `${(nbytes / 2 ** 20).toPrecision(4)} MiB`;
+  }
+  if (nbytes > 2 ** 10) {
+    // Kibibyte
+    return `${(nbytes / 2 ** 10).toPrecision(4)} KiB`;
+  }
+  return `${nbytes} B`;
+}

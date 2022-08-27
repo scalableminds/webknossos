@@ -1,9 +1,9 @@
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter } from "react-router-dom";
-import { Redirect, Route, Router, Switch, useLocation } from "react-router-dom";
+import { Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
-import React, { useEffect } from "react";
+import React from "react";
 import { createBrowserHistory } from "history";
 import _ from "lodash";
 import AcceptInviteView from "admin/auth/accept_invite_view";
@@ -52,9 +52,11 @@ import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
 import * as Utils from "libs/utils";
 import features from "features";
-import window, { location as windowLocation } from "libs/window";
+import window from "libs/window";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { coalesce } from "libs/utils";
+import WorkflowView from "admin/voxelytics/workflow_view";
+import WorkflowListView from "admin/voxelytics/workflow_list_view";
 const { Content } = Layout;
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -98,16 +100,6 @@ function PageNotFoundView() {
       />
     </div>
   );
-}
-
-function RedirectToWorkflowViewer() {
-  const location = useLocation();
-
-  useEffect(() => {
-    windowLocation.assign(`https://workflows.voxelytics.com${location.pathname}${location.search}`);
-  }, []);
-
-  return null;
 }
 
 class ReactRouter extends React.Component<Props> {
@@ -603,9 +595,18 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <Redirect from="/publication/:id" to="/publications/:id" />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/workflows"
+                render={WorkflowListView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/workflows/:workflowName"
+                render={WorkflowView}
+              />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
-              <Route path="/workflows" component={RedirectToWorkflowViewer} />
               {!features().isDemoInstance && <Route path="/onboarding" component={Onboarding} />}
               <Route component={PageNotFoundView} />
             </Switch>

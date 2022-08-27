@@ -241,6 +241,9 @@ function AdministrationSubMenu({
           <Link to={`/organizations/${organization}/edit`}>Organization</Link>
         </Menu.Item>
       )}
+      <Menu.Item key="/workflows">
+        <Link to="/workflows">Voxelytics</Link>
+      </Menu.Item>
     </SubMenu>
   );
 }

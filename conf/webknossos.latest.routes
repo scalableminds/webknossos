@@ -230,10 +230,10 @@ GET           /publications/:id                                                 
 
 
 # Voxelytics
-POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.createWorkflow
+POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.storeWorkflow
 GET           /voxelytics/workflows                                                     controllers.VoxelyticsController.listWorkflows(workflowHash: Option[String])
 GET           /voxelytics/workflows/:workflowHash                                       controllers.VoxelyticsController.getWorkflow(workflowHash: String, runId: Option[String])
-POST          /voxelytics/workflows/:workflowHash/events                                controllers.VoxelyticsController.createWorkflowEvents(workflowHash: String, runName: String)
+POST          /voxelytics/workflows/:workflowHash/events                                controllers.VoxelyticsController.storeWorkflowEvents(workflowHash: String, runName: String)
 GET           /voxelytics/workflows/:workflowHash/chunkStatistics                       controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: String, taskName: String)
 GET           /voxelytics/workflows/:workflowHash/artifactChecksums                     controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: String, taskName: String, artifactName: Option[String])
 POST          /voxelytics/logs                                                          controllers.VoxelyticsController.appendLogs

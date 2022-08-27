@@ -2,7 +2,7 @@ package models.voxelytics
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.User
-import models.voxelytics.RunState.RunState
+import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json.{JsObject, Json, OFormat}
 import utils.ObjectId
 
@@ -11,7 +11,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-case class RunEntry(runId: ObjectId,
+case class RunEntry(id: ObjectId,
                     name: String,
                     username: String,
                     hostname: String,
@@ -19,7 +19,7 @@ case class RunEntry(runId: ObjectId,
                     workflow_hash: String,
                     workflow_yamlContent: String,
                     workflow_config: JsObject,
-                    state: RunState,
+                    state: VoxelyticsRunState,
                     beginTime: Instant,
                     endTime: Option[Instant])
 
@@ -27,7 +27,7 @@ case class TaskRunEntry(runName: String,
                         runId: ObjectId,
                         taskId: ObjectId,
                         taskName: String,
-                        state: RunState,
+                        state: VoxelyticsRunState,
                         beginTime: Option[Instant],
                         endTime: Option[Instant],
                         currentExecutionId: Option[String],
@@ -104,14 +104,14 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
       runUserId <- voxelyticsDAO.getUserIdForRun(runId)
     } yield bool2Fox(user.isAdmin || runUserId == user._id)
 
-  def checkAuthCreateWorkflow(runName: String, user: User): Fox[Unit] =
+  def checkAuthForWorkflowCreation(runName: String, user: User): Fox[Unit] =
     for {
       runUserId <- voxelyticsDAO.getUserIdForRunOpt(runName, user._organization)
     } yield bool2Fox(user.isAdmin || runUserId.forall(_ == user._id))
 
-  def writesRun(run: RunEntry, tasks: List[TaskRunEntry]): JsObject =
+  def runWrites(run: RunEntry, tasks: List[TaskRunEntry]): JsObject =
     Json.obj(
-      "id" -> run.runId.id,
+      "id" -> run.id.id,
       "name" -> run.name,
       "username" -> run.username,
       "hostname" -> run.hostname,
@@ -119,10 +119,10 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
       "beginTime" -> run.beginTime,
       "endTime" -> run.endTime,
       "state" -> run.state,
-      "tasks" -> tasks.map(writesTaskRun)
+      "tasks" -> tasks.map(taskRunWrites)
     )
 
-  private def writesTaskRun(taskRun: TaskRunEntry): JsObject =
+  private def taskRunWrites(taskRun: TaskRunEntry): JsObject =
     Json.obj(
       "runName" -> taskRun.runName,
       "runId" -> taskRun.runId.id,
@@ -162,7 +162,7 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
   def writesWorkflowConfig(workflowConfig: JsObject, tasks: List[TaskEntry]): JsObject =
     workflowConfig ++ Json.obj("tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
 
-  def aggregateBeginEndTime(runs: List[RunEntry]): (RunState, Instant, Option[Instant]) = {
+  def aggregateBeginEndTime(runs: List[RunEntry]): (VoxelyticsRunState, Instant, Option[Instant]) = {
     val state = runs.maxBy(_.beginTime).state
     val beginTime = runs.map(_.beginTime).min
     val endTime = Try(runs.flatMap(_.endTime).max).toOption
@@ -185,7 +185,7 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
                  "inputs" -> task.inputs,
                  "output_paths" -> task.output_paths)
       )
-      _ <- Fox.sequence(
+      _ <- Fox.combined(
         artifacts
           .getOrElse(taskName, List.empty)
           .map(artifactKV => {

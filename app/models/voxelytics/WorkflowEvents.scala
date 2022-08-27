@@ -1,16 +1,16 @@
 package models.voxelytics
 
-import models.voxelytics.RunState.RunState
+import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json._
 
 import java.time.Instant
 
 trait WorkflowEvent {}
 
-case class RunStateChangeEvent(state: RunState, timestamp: Instant) extends WorkflowEvent
+case class RunStateChangeEvent(state: VoxelyticsRunState, timestamp: Instant) extends WorkflowEvent
 
 case class TaskStateChangeEvent(taskName: String,
-                                state: RunState,
+                                state: VoxelyticsRunState,
                                 timestamp: Instant,
                                 artifacts: Map[String, WorkflowDescriptionArtifact])
     extends WorkflowEvent
@@ -19,7 +19,7 @@ case class ChunkStateChangeEvent(taskName: String,
                                  executionId: String,
                                  chunkName: String,
                                  timestamp: Instant,
-                                 state: RunState)
+                                 state: VoxelyticsRunState)
     extends WorkflowEvent
 
 case class RunHeartbeatEvent(timestamp: Instant) extends WorkflowEvent

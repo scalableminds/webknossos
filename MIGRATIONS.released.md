@@ -5,6 +5,19 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [22.09.0](https://github.com/scalableminds/webknossos/releases/tag/22.09.0) - 2022-08-25
+[Commits](https://github.com/scalableminds/webknossos/compare/22.08.0...22.09.0)
+
+- webKnossos requires node 16 now. [#6350](https://github.com/scalableminds/webknossos/pull/6350)
+- Removed the foreign datastore feature. If you have any foreign datastores registered in your webKnossos, running this upgrade may result in undefined behavior. [#6392](https://github.com/scalableminds/webknossos/pull/6392)
+
+### Postgres Evolutions:
+- [084-annotation-contributors.sql](conf/evolutions/084-annotation-contributors.sql)
+- [085-add-annotations-publicationforeignkey](conf/evolutions/085-add-annotations-publicationforeignkey.sql)
+- [086-drop-foreign-datastores.sql](conf/evolutions/086-drop-foreign-datastores.sql.sql)
+- [087-zarr-private-links](conf/evolutions/087-zarr-private-links.sql)
+
+
 ## [22.08.0](https://github.com/scalableminds/webknossos/releases/tag/22.08.0) - 2022-07-20
 [Commits](https://github.com/scalableminds/webknossos/compare/22.07.0...22.08.0)
 

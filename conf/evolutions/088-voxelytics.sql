@@ -133,6 +133,6 @@ ALTER TABLE webknossos.voxelytics_chunk_profiling_events
 ALTER TABLE webknossos.voxelytics_artifact_file_checksum_events
   ADD FOREIGN KEY (_artifact) REFERENCES webknossos.voxelytics_artifacts(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 86;
+UPDATE webknossos.releaseInformation SET schemaVersion = 88;
 
 COMMIT TRANSACTION;

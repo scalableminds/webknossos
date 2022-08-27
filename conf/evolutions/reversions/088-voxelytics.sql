@@ -16,6 +16,6 @@ DROP TABLE
 
 DROP TYPE webknossos.VOXELYTICS_RUN_STATE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 85;
+UPDATE webknossos.releaseInformation SET schemaVersion = 87;
 
 COMMIT TRANSACTION;

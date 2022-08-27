@@ -118,7 +118,7 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
     } yield bool2Fox(user.isAdmin || runUserId.forall(_ == user._id))
 
   def runWrites(run: RunEntry, tasks: List[TaskRunEntry]): JsObject =
-    Json.toJson(run) ++ Json.obj(
+    Json.toJson(run).as[JsObject] ++ Json.obj(
       "tasks" -> tasks.map(Json.toJson(_))
     )
 
@@ -156,6 +156,21 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
     (state, beginTime, endTime)
   }
 
+  def combineTaskRuns(allTaskRuns: List[TaskRunEntry], mostRecentRunId: ObjectId): List[TaskRunEntry] =
+    allTaskRuns
+      .filter(task => task.runId == mostRecentRunId)
+      .map(task => {
+        val thisTaskRuns = allTaskRuns.filter(t => t.taskName == task.taskName).sortBy(_.beginTime)
+        val nonWaitingTaskRuns = thisTaskRuns.filter(t => {
+          t.state == VoxelyticsRunState.RUNNING || t.state == VoxelyticsRunState.COMPLETE || t.state == VoxelyticsRunState.FAILED || t.state == VoxelyticsRunState.CANCELLED
+        })
+        if (nonWaitingTaskRuns.nonEmpty) {
+          nonWaitingTaskRuns.head
+        } else {
+          thisTaskRuns.head
+        }
+      })
+
   def upsertTask(runId: ObjectId,
                  taskName: String,
                  task: WorkflowDescriptionTaskConfig,
@@ -183,7 +198,7 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
                                          artifact.file_size,
                                          artifact.inode_count,
                                          artifact.version,
-                                         artifact.metadata)
+                                         artifact.metadataAsJson)
           })
           .toList)
     } yield ()

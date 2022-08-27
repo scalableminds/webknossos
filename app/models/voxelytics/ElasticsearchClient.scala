@@ -23,7 +23,7 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
 
   private def pollUntilServerIsAvailable: Fox[Unit] =
     // TODO: Implement polling with conf.startupTimeout
-    Fox.successful()
+    Fox.successful(())
 
   def queryLogs(runName: String,
                 organizationName: String,

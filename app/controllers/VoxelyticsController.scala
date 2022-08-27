@@ -66,7 +66,7 @@ class VoxelyticsController @Inject()(
         // Auth is implemented in `voxelyticsDAO.selectRuns`
         runs <- voxelyticsDAO.findRuns(request.identity, None, workflowHash, conf.staleTimeout)
         _ <- bool2Fox(runs.nonEmpty) ?~> "No run found" ~> NOT_FOUND
-        taskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization, runs.map(_.runId), conf.staleTimeout)
+        taskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization, runs.map(_.id), conf.staleTimeout)
         _ <- bool2Fox(taskRuns.nonEmpty) ?~> "No tasks found" ~> NOT_FOUND
         workflows <- voxelyticsDAO.findWorkflowsByHash(request.identity._organization, runs.map(_.workflow_hash).toSet)
         _ <- bool2Fox(workflows.nonEmpty) ?~> "No workflows found" ~> NOT_FOUND
@@ -83,7 +83,7 @@ class VoxelyticsController @Inject()(
                 "endTime" -> endTime,
                 "state" -> state.toString(),
                 "runs" -> workflowRuns.map(run => {
-                  val tasks = taskRuns.filter(taskRun => taskRun.runId == run.runId)
+                  val tasks = taskRuns.filter(taskRun => taskRun.runId == run.id)
                   voxelyticsService.runWrites(run, tasks)
                 })
               ))
@@ -115,25 +115,13 @@ class VoxelyticsController @Inject()(
         mostRecentRun = sortedRuns.head
 
         // Fetch task runs for all runs
-        taskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization,
-                                               sortedRuns.map(_.runId),
-                                               conf.staleTimeout)
+        allTaskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization,
+                                                  sortedRuns.map(_.id),
+                                                  conf.staleTimeout)
 
         // Select one representative "task run" for each task
         // This will be the most recent run that is running or finished or the most recent run
-        combinedTaskRuns = taskRuns
-          .filter(task => task.runId == mostRecentRun.runId)
-          .map(task => {
-            val thisTaskRuns = taskRuns.filter(t => t.taskName == task.taskName).sortBy(_.beginTime)
-            val nonWaitingTaskRuns = thisTaskRuns.filter(t => {
-              t.state == VoxelyticsRunState.RUNNING || t.state == VoxelyticsRunState.COMPLETE || t.state == VoxelyticsRunState.FAILED || t.state == VoxelyticsRunState.CANCELLED
-            })
-            if (nonWaitingTaskRuns.nonEmpty) {
-              nonWaitingTaskRuns.head
-            } else {
-              thisTaskRuns.head
-            }
-          })
+        combinedTaskRuns = voxelyticsService.combineTaskRuns(allTaskRuns, mostRecentRun.id)
 
         // Fetch artifact data for selected/combined task runs
         artifacts <- voxelyticsDAO.findArtifacts(combinedTaskRuns.map(_.taskId))

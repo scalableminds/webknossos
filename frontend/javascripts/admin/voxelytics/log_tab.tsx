@@ -6,12 +6,14 @@ import chalk from "chalk";
 import usePolling from "libs/polling";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
+import { VX_POLLING_INTERVAL } from "./workflow_view";
+import { Result } from "./task_view";
 
 type LogResult = Result<Array<any>>;
 
 const LOG_LEVELS = ["NOTSET", "DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "CRITICAL"];
 
-function formatLog(
+export function formatLog(
   logEntry: any,
   options: { timestamps: boolean; pid: boolean; level: boolean; logger: boolean },
 ): string {
@@ -68,7 +70,7 @@ export default function LogTab({
     }
   }
 
-  usePolling(loadLog, isRunning ? POLL_INTERVAL : null);
+  usePolling(loadLog, isRunning ? VX_POLLING_INTERVAL : null);
 
   const logText = useMemo(() => {
     switch (logResult.type) {
@@ -87,6 +89,8 @@ export default function LogTab({
                 logger: true,
               }),
             );
+      default:
+        return [];
     }
   }, [logResult, showTimestamps]);
 

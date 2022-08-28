@@ -5,8 +5,12 @@ import { CopyOutlined } from "@ant-design/icons";
 
 import { VoxelyticsArtifactConfig } from "types/api_flow_types";
 import { getVoxelyticsArtifactChecksums } from "admin/admin_rest_api";
-import { formatBytes, isObjectEmpty } from "../utils/helpers";
+import { formatBytes } from "libs/format_utils";
 import { theme } from "./task_view";
+
+function isObjectEmpty(obj: Record<string, any>) {
+  return Object.keys(obj).length === 0 && obj.constructor === Object;
+}
 
 function ArtifactsView({
   artifacts,
@@ -73,12 +77,13 @@ function ArtifactsView({
     );
   }
 
-  function renderIframes(artifact: VoxelyticsArtifactConfig) {
-    if (!isObjectEmpty(artifact.iframes)) {
-      return Object.entries(artifact.iframes).map(([iframeKey, iframeUrl]) => {
+  function renderIframes(iframes: VoxelyticsArtifactConfig["metadata"]["iframes"]) {
+    return (
+      !isObjectEmpty(iframes) &&
+      Object.entries(iframes).map(([iframeKey, iframeUrl]) => {
         const isImage = iframeUrl.match(/\.(jpg|png|gif)$/);
         return isImage ? (
-          <img src={iframeUrl} style={{ maxWidth: "100%" }} alt={iframeKey} />
+          <img src={iframeUrl} style={{ maxWidth: "100%" }} alt={iframeKey} key={iframeKey} />
         ) : (
           <iframe
             key={iframeKey}
@@ -92,16 +97,15 @@ function ArtifactsView({
             }}
           />
         );
-      });
-    }
-    return null;
+      })
+    );
   }
 
-  function renderLinks(artifact: VoxelyticsArtifactConfig) {
-    if (!isObjectEmpty(artifact.links)) {
-      return (
+  function renderLinks(links: VoxelyticsArtifactConfig["metadata"]["links"]) {
+    return (
+      !isObjectEmpty(links) && (
         <ul>
-          {Object.entries(artifact.links).map(([linkKey, linkUrl]) => (
+          {Object.entries(links).map(([linkKey, linkUrl]) => (
             <li key={linkKey}>
               <a href={linkUrl} target="_blank" rel="noreferrer">
                 {linkKey}
@@ -109,18 +113,12 @@ function ArtifactsView({
             </li>
           ))}
         </ul>
-      );
-    }
-
-    return null;
+      )
+    );
   }
 
-  function renderAttributes(artifact: VoxelyticsArtifactConfig) {
-    if (!isObjectEmpty(artifact.attributes)) {
-      return <JSONTree data={artifact.attributes} hideRoot theme={theme} />;
-    }
-
-    return null;
+  function renderAttributes(attributes: VoxelyticsArtifactConfig["metadata"]["attributes"]) {
+    return !isObjectEmpty(attributes) && <JSONTree data={attributes} hideRoot theme={theme} />;
   }
 
   function renderArtifact(artifactName: string, artifact: VoxelyticsArtifactConfig) {
@@ -150,9 +148,9 @@ function ArtifactsView({
         }
         style={{ marginBottom: 10 }}
       >
-        {renderLinks(artifact)}
-        {renderAttributes(artifact)}
-        {renderIframes(artifact)}
+        {renderLinks(artifact.metadata.links)}
+        {renderAttributes(artifact.metadata.attributes)}
+        {renderIframes(artifact.metadata.iframes)}
         {renderArtifactPath(artifact)}
       </Card>
     );

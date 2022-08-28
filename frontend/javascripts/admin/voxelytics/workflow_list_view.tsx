@@ -11,6 +11,7 @@ import {
 } from "types/api_flow_types";
 import usePolling from "libs/polling";
 import { formatDateMedium } from "libs/format_utils";
+import { VX_POLLING_INTERVAL } from "./workflow_view";
 
 function parseTaskInfo(taskInfo: VoxelyticsTaskInfo): VoxelyticsTaskInfo {
   return {
@@ -99,7 +100,7 @@ export default function WorkflowListView() {
     }
   }
 
-  usePolling(loadData, POLL_INTERVAL);
+  usePolling(loadData, VX_POLLING_INTERVAL);
 
   const renderRuns = useMemo(
     () =>

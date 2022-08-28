@@ -1,28 +1,29 @@
 import React, { useState } from "react";
-import { formatDistanceStrict } from "date-fns";
 import { Button } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
 import usePolling from "libs/polling";
-import { formatBytes, formatCPU } from "libs/format_utils";
+import { formatBytes, formatCPU, formatDistanceStrict } from "libs/format_utils";
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
+import { Result } from "./task_view";
+import { VX_POLLING_INTERVAL } from "./workflow_view";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
 
-function parseStatistics(row: VoxelyticsChunkStatistics):VoxelyticsChunkStatistics{
-return Object.fromEntries(
-  Object.entries(row).map(([key, value]) => {
-    if (key === "executionId") {
-      return [key, value];
-    } else if (value == null) {
-      return [key, null];
-    } else if (key === "beginTime" || key === "endTime") {
-      return [key, new Date(value as string)];
-    } else {
-      return [key, value];
-    }
-  }),
-) as VoxelyticsChunkStatistics,
+function parseStatistics(row: VoxelyticsChunkStatistics): VoxelyticsChunkStatistics {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => {
+      if (key === "executionId") {
+        return [key, value];
+      } else if (value == null) {
+        return [key, null];
+      } else if (key === "beginTime" || key === "endTime") {
+        return [key, new Date(value as string)];
+      } else {
+        return [key, value];
+      }
+    }),
+  ) as VoxelyticsChunkStatistics;
 }
 
 export default function StatisticsTab({
@@ -42,10 +43,12 @@ export default function StatisticsTab({
   async function loadStatistics() {
     try {
       setIsLoading(true);
-      const statistics = (await getVoxelyticsChunkStatistics(workflowHash, runId, taskName)).map(parseStatistics);
+      const statistics = (await getVoxelyticsChunkStatistics(workflowHash, runId, taskName)).map(
+        parseStatistics,
+      );
       setStatisticsResult({
         type: "SUCCESS",
-        value: statistics
+        value: statistics,
       });
     } catch {
       setStatisticsResult({ type: "ERROR" });
@@ -54,7 +57,7 @@ export default function StatisticsTab({
     }
   }
 
-  usePolling(loadStatistics, isRunning ? POLL_INTERVAL : null);
+  usePolling(loadStatistics, isRunning ? VX_POLLING_INTERVAL : null);
 
   function renderContent() {
     if (statisticsResult.type === "LOADING") {
@@ -79,7 +82,7 @@ export default function StatisticsTab({
           </tr>
         </thead>
         <tbody>
-          {statisticsResult.value.map((row:VoxelyticsChunkStatistics) => (
+          {statisticsResult.value.map((row: VoxelyticsChunkStatistics) => (
             <tr key={row.executionId}>
               <td>
                 {row.executionId}

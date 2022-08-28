@@ -175,10 +175,28 @@ export function formatHash(id: string): string {
 }
 
 export function formatDateMedium(date: Date): string {
-  return new Intl.DateTimeFormat(navigator.language, {
-    dateStyle: "medium",
-    timeStyle: "medium",
-  }).format(date);
+  return moment(date).format("lll");
+}
+export function formatDistance(start: Date | number, end: Date | number): string {
+  return moment.duration(moment(start).diff(moment(end))).humanize(true);
+}
+export function formatDistanceStrict(start: Date | number, end: Date | number): string {
+  const duration = moment.duration(moment(start).diff(moment(end)));
+
+  const parts: Array<string> = [];
+  if (Math.floor(duration.asDays()) > 0) {
+    parts.push(`${Math.floor(duration.asDays())} days`);
+  }
+  if (duration.hours() > 0) {
+    parts.push(`${duration.hours()} hours`);
+  }
+  if (duration.minutes() > 0) {
+    parts.push(`${duration.minutes()} minutes`);
+  }
+  if (duration.seconds() > 0) {
+    parts.push(`${duration.seconds()} seconds`);
+  }
+  return parts.join(" ");
 }
 
 export function formatCPU(cpuShare: number) {

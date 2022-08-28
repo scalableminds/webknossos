@@ -2284,7 +2284,11 @@ export function getVoxelyticsWorkflow(
   workflowHash: string,
   runId: string | null,
 ): Promise<VoxelyticsWorkflowReport> {
-  return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}?runId=${runId}`);
+  const params = new URLSearchParams();
+  if (runId != null) {
+    params.append("runId", runId);
+  }
+  return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}?${params}`);
 }
 
 export function getVoxelyticsLogs(
@@ -2292,11 +2296,11 @@ export function getVoxelyticsLogs(
   taskName: string | null,
   minLevel: string,
 ): Promise<Array<{}>> {
-  return Request.receiveJSON(
-    `/api/voxelytics/logs?runId=${runId}&taskName=${encodeURIComponent(
-      taskName,
-    )}&minLevel=${minLevel}`,
-  );
+  const params = new URLSearchParams({ runId, minLevel });
+  if (taskName != null) {
+    params.append("taskName", taskName);
+  }
+  return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
 }
 
 export function getVoxelyticsChunkStatistics(
@@ -2305,9 +2309,10 @@ export function getVoxelyticsChunkStatistics(
   taskName: string,
 ): Promise<Array<VoxelyticsChunkStatistics>> {
   return Request.receiveJSON(
-    `/api/voxelytics/workflows/${workflowHash}/chunkStatistics?runId=${runId}&taskName=${encodeURIComponent(
+    `/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${new URLSearchParams({
+      runId,
       taskName,
-    )}`,
+    })}`,
   );
 }
 export function getVoxelyticsArtifactChecksums(
@@ -2316,9 +2321,14 @@ export function getVoxelyticsArtifactChecksums(
   taskName: string,
   artifactName?: string,
 ): Promise<Array<Record<string, string | number>>> {
+  const params = new URLSearchParams({
+    runId,
+    taskName,
+  });
+  if (artifactName != null) {
+    params.append("artifactName", artifactName);
+  }
   return Request.receiveJSON(
-    `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?runId=${runId}&taskName=${encodeURIComponent(
-      taskName,
-    )}&artifactName=${encodeURIComponent(artifactName)}`,
+    `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?${params}`,
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams as useSearchParamsReactRouter } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 // Adapted from: https://usehooks.com/usePrevious/
 export function usePrevious<T>(value: T): T | null | undefined {
@@ -89,8 +89,8 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
 }
 
 export function useSearchParams() {
-  const [searchParams] = useSearchParamsReactRouter();
-  return Object.fromEntries(searchParams.entries());
+  const location = useLocation();
+  return Object.fromEntries(new URLSearchParams(location.search).entries());
 }
 
 export function useUpdateEvery(interval: number) {

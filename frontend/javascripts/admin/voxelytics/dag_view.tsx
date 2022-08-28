@@ -10,19 +10,12 @@ import dagre from "dagre";
 
 import ColorHash from "color-hash";
 import { memoize } from "lodash";
-import { VoxelyticsRunState, VoxelyticsTaskConfigWithName } from "types/api_flow_types";
-
-export type WorkflowDagEdge = { source: string; target: string; label: string };
-export type WorkflowDagNode = {
-  id: string;
-  label: string;
-  state: VoxelyticsRunState;
-  isMetaTask?: boolean;
-};
-export type WorkflowDag = {
-  edges: Array<WorkflowDagEdge>;
-  nodes: Array<WorkflowDagNode>;
-};
+import {
+  VoxelyticsRunState,
+  VoxelyticsTaskConfigWithName,
+  VoxelyticsWorkflowDag,
+  VoxelyticsWorkflowDagEdge,
+} from "types/api_flow_types";
 
 const getNodeWidth = (() => {
   const NODE_PADDING = 10;
@@ -48,7 +41,7 @@ type DagNodeMapItem = {
   hasInput: boolean;
   hasOutput: boolean;
 };
-type DagEdgeMapItem = WorkflowDagEdge & {
+type DagEdgeMapItem = VoxelyticsWorkflowDagEdge & {
   labels: Array<string>;
 };
 const addAsHasInput = (map: Map<string, DagNodeMapItem>, nodeId: string) => {
@@ -71,7 +64,7 @@ const addAsHasOutput = (map: Map<string, DagNodeMapItem>, nodeId: string) => {
   }
 };
 
-const addEdgeToMap = (map: Map<string, DagEdgeMapItem>, edge: WorkflowDagEdge) => {
+const addEdgeToMap = (map: Map<string, DagEdgeMapItem>, edge: VoxelyticsWorkflowDagEdge) => {
   const id = `${edge.source}#${edge.target}`;
   const oldElement = map.get(id);
   if (oldElement) {
@@ -92,7 +85,7 @@ const getNodeType = (e: DagNodeMapItem | null) => {
 };
 
 function getEdgesAndNodes(
-  dag: WorkflowDag,
+  dag: VoxelyticsWorkflowDag,
   filteredTasks: Array<VoxelyticsTaskConfigWithName>,
   isDraggable: boolean,
   selectedNodeId: string | null,
@@ -210,7 +203,7 @@ function DAGView({
   filteredTasks,
   onClickHandler,
 }: {
-  dag: WorkflowDag;
+  dag: VoxelyticsWorkflowDag;
   filteredTasks: Array<VoxelyticsTaskConfigWithName>;
   onClickHandler: (id: string) => void;
 }) {

@@ -735,14 +735,16 @@ export type VoxelyticsTaskConfigWithHierarchy =
       subtasks: Array<VoxelyticsTaskConfigWithHierarchy>;
     };
 export type VoxelyticsArtifactConfig = {
-  attributes: any;
   fileSize: number;
-  iframes: Record<string, string>;
   inodeCount: number;
   createdAt: Date;
-  links: Record<string, string>;
   path: string;
   version: string;
+  metadata: {
+    attributes: any;
+    iframes: Record<string, string>;
+    links: Record<string, string>;
+  };
 };
 
 export type VoxelyticsRunInfo = (
@@ -767,6 +769,18 @@ export type VoxelyticsRunInfo = (
   hostname: string;
   voxelyticsVersion: string;
   tasks: Array<VoxelyticsTaskInfo>;
+};
+
+export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };
+export type VoxelyticsWorkflowDagNode = {
+  id: string;
+  label: string;
+  state: VoxelyticsRunState;
+  isMetaTask?: boolean;
+};
+export type VoxelyticsWorkflowDag = {
+  edges: Array<VoxelyticsWorkflowDagEdge>;
+  nodes: Array<VoxelyticsWorkflowDagNode>;
 };
 
 export type VoxelyticsTaskInfo = {
@@ -814,7 +828,7 @@ export type VoxelyticsWorkflowReport = {
     schema_version: number;
     tasks: Record<string, VoxelyticsTaskConfig>;
   };
-  dag: WorkflowDag;
+  dag: VoxelyticsWorkflowDag;
   artifacts: Record<string, Record<string, VoxelyticsArtifactConfig>>;
   run: VoxelyticsRunInfo;
   workflow: {

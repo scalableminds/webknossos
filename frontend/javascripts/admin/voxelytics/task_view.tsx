@@ -1,14 +1,28 @@
-/* eslint-disable jsx-a11y/anchor-is-valid */
 import React from "react";
 import { JSONTree } from "react-json-tree";
 import { Progress, Tabs, Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
-import ReactMarkdown from "react-markdown";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
+import Markdown from "react-remarkable";
+import {
+  VoxelyticsArtifactConfig,
+  VoxelyticsRunState,
+  VoxelyticsTaskConfig,
+  VoxelyticsTaskInfo,
+  VoxelyticsWorkflowDagEdge,
+} from "types/api_flow_types";
 import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
 
 const { TabPane } = Tabs;
+
+export type Result<T> =
+  | {
+      type: "SUCCESS";
+      value: T;
+    }
+  | { type: "ERROR" }
+  | { type: "LOADING" };
 
 // https://github.com/reduxjs/redux-devtools/blob/75322b15ee7ba03fddf10ac3399881e302848874/src/react/themes/default.js
 export const theme = {
@@ -32,11 +46,16 @@ export const theme = {
   base0F: "#a16946",
 };
 
+function labelRenderer(_keyPath: Array<string | number>) {
+  const keyPath = _keyPath.slice().reverse();
+  const divWithId = <div id={`label-${keyPath.join(".")}`}>{keyPath.slice(-1)[0]}</div>;
+  return divWithId;
+}
+
 function TaskView({
   taskName,
   workflowHash,
   task,
-  docs,
   artifacts,
   dag,
   taskInfo,
@@ -44,43 +63,21 @@ function TaskView({
 }: {
   workflowHash: string;
   taskName: string;
-  task: TaskConfig;
-  docs: Record<string, Record<string, string>>;
-  artifacts: Record<string, ArtifactConfig>;
-  dag: { edges: Array<WorkflowDagEdge> };
-  taskInfo: TaskInfo;
+  task: VoxelyticsTaskConfig;
+  artifacts: Record<string, VoxelyticsArtifactConfig>;
+  dag: { edges: Array<VoxelyticsWorkflowDagEdge> };
+  taskInfo: VoxelyticsTaskInfo;
   onSelectTask: (id: string) => void;
 }) {
-  const shouldExpandNode = (keyPath: Array<string | number>, data: any, level: number) => {
+  const shouldExpandNode = (keyPath: Array<string | number>, data: any) =>
     // Expand all with at most 10 keys
-    return (data.length || 0) <= 10;
-  };
-
-  function labelRenderer(_keyPath: Array<string | number>, task: TaskConfig) {
-    const keyPath = _keyPath.slice().reverse();
-    const taskClass = task.task;
-
-    const taskDocs = docs[taskClass] || {};
-    const docString = taskDocs[keyPath.join(".")];
-
-    const divWithId = (
-      <div id={"label-" + keyPath.join(".")}>
-        {keyPath.slice(-1)[0]}
-        {docString != null && (
-          <Tooltip title={docString} placement="left">
-            <InfoCircleOutlined style={{ marginLeft: 10 }} />
-          </Tooltip>
-        )}
-      </div>
-    );
-    return divWithId;
-  }
+    (data.length || 0) <= 10;
 
   const ingoingEdges = dag.edges.filter((edge) => edge.target === taskName);
 
   return (
     <div>
-      {taskInfo.state === RunState.RUNNING && (
+      {taskInfo.state === VoxelyticsRunState.RUNNING && (
         <div style={{ display: "flex", flexDirection: "row" }}>
           Approx. Chunk Progress:
           <Tooltip
@@ -119,7 +116,14 @@ function TaskView({
       <Tabs defaultActiveKey="1">
         {task.description != null ? (
           <TabPane tab="Description" key="0">
-            <ReactMarkdown children={task.description} />
+            <Markdown
+              source={task.description}
+              options={{
+                html: false,
+                breaks: true,
+                linkify: true,
+              }}
+            />
           </TabPane>
         ) : null}
         <TabPane tab="Config" key="1">
@@ -130,7 +134,7 @@ function TaskView({
             data={task.config}
             hideRoot
             shouldExpandNode={shouldExpandNode}
-            labelRenderer={(keyPath) => labelRenderer(keyPath, task)}
+            labelRenderer={labelRenderer}
             theme={theme}
           />
         </TabPane>
@@ -150,33 +154,33 @@ function TaskView({
           </TabPane>
         ) : null}
         {[
-          RunState.COMPLETE,
-          RunState.RUNNING,
-          RunState.STALE,
-          RunState.FAILED,
-          RunState.CANCELLED,
+          VoxelyticsRunState.COMPLETE,
+          VoxelyticsRunState.RUNNING,
+          VoxelyticsRunState.STALE,
+          VoxelyticsRunState.FAILED,
+          VoxelyticsRunState.CANCELLED,
         ].includes(taskInfo.state) && (
           <TabPane tab="Logs" key="4">
             <LogTab
               runId={taskInfo.runId}
               taskName={taskInfo.taskName}
-              isRunning={taskInfo.state === RunState.RUNNING}
+              isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
             />
           </TabPane>
         )}
         {[
-          RunState.COMPLETE,
-          RunState.RUNNING,
-          RunState.STALE,
-          RunState.FAILED,
-          RunState.CANCELLED,
+          VoxelyticsRunState.COMPLETE,
+          VoxelyticsRunState.RUNNING,
+          VoxelyticsRunState.STALE,
+          VoxelyticsRunState.FAILED,
+          VoxelyticsRunState.CANCELLED,
         ].includes(taskInfo.state) && (
           <TabPane tab="Statistics" key="5">
             <StatisticsTab
               workflowHash={workflowHash}
               runId={taskInfo.runId}
               taskName={taskInfo.taskName}
-              isRunning={taskInfo.state === RunState.RUNNING}
+              isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
             />
           </TabPane>
         )}
@@ -187,7 +191,7 @@ function TaskView({
 
 function renderInputs(
   inputs: Record<string, string | Record<string, string>>,
-  ingoingEdges: Array<WorkflowDagEdge>,
+  ingoingEdges: Array<VoxelyticsWorkflowDagEdge>,
   onSelectTask: (id: string) => void,
   prevKeys: Array<string> = [],
 ) {
@@ -232,9 +236,12 @@ function renderInputs(
   });
 }
 
-function getTaskProducerOfInput(ingoingEdges: Array<WorkflowDagEdge>, inputKeys: Array<string>) {
+function getTaskProducerOfInput(
+  ingoingEdges: Array<VoxelyticsWorkflowDagEdge>,
+  inputKeys: Array<string>,
+) {
   const inputLabel = inputKeys.join(".");
-  const edge = ingoingEdges.find((edge) => edge.label === inputLabel);
+  const edge = ingoingEdges.find((_edge) => _edge.label === inputLabel);
   if (edge == null) {
     return null;
   }

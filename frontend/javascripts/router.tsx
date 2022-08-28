@@ -598,12 +598,13 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/workflows"
-                render={WorkflowListView}
+                component={WorkflowListView}
+                exact
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/workflows/:workflowName"
-                render={WorkflowView}
+                component={WorkflowView}
               />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />

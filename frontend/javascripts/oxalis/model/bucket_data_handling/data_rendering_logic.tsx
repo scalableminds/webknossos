@@ -145,7 +145,7 @@ function getAvailableVoxelCount(textureSize: number, packingDegree: number) {
   return packingDegree * textureSize ** 2;
 }
 
-function getTextureCount(
+function getDataTextureCount(
   textureSize: number,
   packingDegree: number,
   requiredBucketCapacity: number,
@@ -168,13 +168,13 @@ export function calculateTextureSizeAndCountForLayer(
   // Try to half the texture size as long as it does not require more
   // data textures
   while (
-    getTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity) <=
-    getTextureCount(textureSize, packingDegree, requiredBucketCapacity)
+    getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity) <=
+    getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity)
   ) {
     textureSize /= 2;
   }
 
-  const textureCount = getTextureCount(textureSize, packingDegree, requiredBucketCapacity);
+  const textureCount = getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity);
   return {
     textureSize,
     textureCount,
@@ -205,46 +205,6 @@ function buildTextureInformationMap<
   return textureInformationPerLayer;
 }
 
-function calculateNecessaryTextureCount<Layer>(
-  textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
-): number {
-  const layers = Array.from(textureInformationPerLayer.values());
-
-  const totalDataTextureCount = _.sum(layers.map((info) => info.textureCount));
-
-  const necessaryTextureCount = layers.length * lookupTextureCountPerLayer + totalDataTextureCount;
-  return necessaryTextureCount;
-}
-
-function calculateMappingTextureCount(): number {
-  // If there is a segmentation layer, we need one lookup and one data texture for mappings
-  const textureCountForCellMappings = 2;
-  return textureCountForCellMappings;
-}
-
-function deriveSupportedFeatures<Layer>(
-  specs: GpuSpecs,
-  textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
-  hasSegmentation: boolean,
-): {
-  isMappingSupported: boolean;
-} {
-  const necessaryTextureCount = calculateNecessaryTextureCount(textureInformationPerLayer);
-  let isMappingSupported = true;
-  // Count textures needed for mappings separately, because they are not strictly necessary
-  const notEnoughTexturesForMapping =
-    necessaryTextureCount + calculateMappingTextureCount() > specs.maxTextureCount;
-
-  if (hasSegmentation && notEnoughTexturesForMapping) {
-    // Only mark mappings as unsupported if a segmentation exists
-    isMappingSupported = false;
-  }
-
-  return {
-    isMappingSupported,
-  };
-}
-
 function getSmallestCommonBucketCapacity<
   Layer extends {
     elementClass: ElementClass;
@@ -264,20 +224,28 @@ function getRenderSupportedLayerCount<
   Layer extends {
     elementClass: ElementClass;
   },
->(specs: GpuSpecs, textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>) {
+>(
+  specs: GpuSpecs,
+  textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
+  hasSegmentation: boolean,
+) {
   // Find out which layer needs the most textures. We assume that value is equal for all layers
   // so that we can tell the user that X layers can be rendered simultaneously. We could be more precise
   // here (because some layers might need fewer textures), but this would be harder to communicate to
   // the user and also more complex to maintain code-wise.
-  const maximumTextureCountForLayer = _.max(
-    Array.from(textureInformationPerLayer.values()).map(
-      (sizeAndCount) => sizeAndCount.textureCount,
-    ),
-  );
+  const maximumTextureCountForLayer =
+    _.max(
+      Array.from(textureInformationPerLayer.values()).map(
+        (sizeAndCount) => sizeAndCount.textureCount,
+      ),
+    ) ?? 0;
 
+  // If a segmentation layer exists, we need to allocate a texture for custom colors,
+  // and two for mappings.
+  const textureCountForSegmentation = hasSegmentation ? 3 : 0;
   const maximumLayerCountToRender = Math.floor(
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-    specs.maxTextureCount / (lookupTextureCountPerLayer + maximumTextureCountForLayer),
+    (specs.maxTextureCount - textureCountForSegmentation) /
+      (lookupTextureCountPerLayer + maximumTextureCountForLayer),
   );
   return {
     maximumLayerCountToRender,
@@ -306,19 +274,14 @@ export function computeDataTexturesSetup<
   const { maximumLayerCountToRender, maximumTextureCountForLayer } = getRenderSupportedLayerCount(
     specs,
     textureInformationPerLayer,
+    hasSegmentation,
   );
 
   if (process.env.BABEL_ENV !== "test") {
     console.log("maximumLayerCountToRender", maximumLayerCountToRender);
   }
 
-  const { isMappingSupported } = deriveSupportedFeatures(
-    specs,
-    textureInformationPerLayer,
-    hasSegmentation,
-  );
   return {
-    isMappingSupported,
     textureInformationPerLayer,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,

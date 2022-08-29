@@ -241,27 +241,25 @@ export const getSegmentationId: ShaderModule = {
         volume_color[1] = vec4(volume_color[1].r, volume_color[1].g, 0.0, 0.0);
       <% } %>
 
-      <% if (isMappingSupported) { %>
-        if (isMappingEnabled) {
-          // Note that currently only the lower 32 bits of the segmentation
-          // are used for applying the JSON mapping.
+      if (isMappingEnabled) {
+        // Note that currently only the lower 32 bits of the segmentation
+        // are used for applying the JSON mapping.
 
-          float index = binarySearchIndex(
-            segmentation_mapping_lookup_texture,
-            mappingSize,
-            volume_color[1]
+        float index = binarySearchIndex(
+          segmentation_mapping_lookup_texture,
+          mappingSize,
+          volume_color[1]
+        );
+        if (index != -1.0) {
+          volume_color[1] = getRgbaAtIndex(
+            segmentation_mapping_texture,
+            <%= mappingTextureWidth %>,
+            index
           );
-          if (index != -1.0) {
-            volume_color[1] = getRgbaAtIndex(
-              segmentation_mapping_texture,
-              <%= mappingTextureWidth %>,
-              index
-            );
-          } else if (hideUnmappedIds) {
-            volume_color[1] = vec4(0.0);
-          }
+        } else if (hideUnmappedIds) {
+          volume_color[1] = vec4(0.0);
         }
-      <% } %>
+      }
 
       volume_color[0] *= 255.0;
       volume_color[1] *= 255.0;

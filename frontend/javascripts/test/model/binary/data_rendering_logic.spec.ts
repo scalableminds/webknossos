@@ -102,14 +102,8 @@ const volumeLayer1 = {
 
 const getByteCount = (layer) => layer.byteCount;
 
-function testSupportFlags(
-  t,
-  supportFlags,
-  expectedMaximumLayerCountToRender,
-  expectedMappingSupport,
-) {
+function testSupportFlags(t, supportFlags, expectedMaximumLayerCountToRender) {
   t.is(supportFlags.maximumLayerCountToRender, expectedMaximumLayerCountToRender);
-  t.is(supportFlags.isMappingSupported, expectedMappingSupport);
 }
 
 function computeDataTexturesSetupCurried(spec, hasSegmentation): any {
@@ -131,34 +125,26 @@ test("Basic support (no segmentation): all specs", (t) => {
     [betterSpecs, 16],
   ]) {
     const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(spec, false);
-    testSupportFlags(
-      t,
-      computeDataTexturesSetupPartial([grayscaleLayer1]),
-      expectedLayerCount,
-      true,
-    );
+    testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1]), expectedLayerCount);
     testSupportFlags(
       t,
       computeDataTexturesSetupPartial([grayscaleLayer1, grayscaleLayer2]),
       expectedLayerCount,
-      true,
     );
     testSupportFlags(
       t,
       computeDataTexturesSetupPartial([grayscaleLayer1, grayscaleLayer2, grayscaleLayer3]),
       expectedLayerCount,
-      true,
     );
   }
 });
 test.skip("Basic support + volume: min specs", (t) => {
   const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(minSpecs, true);
-  testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]), 2, false);
+  testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]), 2);
   testSupportFlags(
     t,
     computeDataTexturesSetupPartial([grayscaleLayer1, grayscaleLayer2, volumeLayer1]),
     2,
-    false,
   );
   testSupportFlags(
     t,
@@ -169,17 +155,15 @@ test.skip("Basic support + volume: min specs", (t) => {
       volumeLayer1,
     ]),
     2,
-    false,
   );
 });
 test("Basic support + volume: mid specs", (t) => {
   const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(midSpecs, true);
-  testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]), 8, true);
+  testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]), 6, true);
   testSupportFlags(
     t,
     computeDataTexturesSetupPartial([grayscaleLayer1, grayscaleLayer2, volumeLayer1]),
-    8,
-    true,
+    6,
   );
   testSupportFlags(
     t,
@@ -189,7 +173,6 @@ test("Basic support + volume: mid specs", (t) => {
       grayscaleLayer3,
       volumeLayer1,
     ]),
-    8,
-    true,
+    6,
   );
 });

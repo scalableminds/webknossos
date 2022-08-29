@@ -11,7 +11,6 @@ type Params = {
   colorLayerNames: string[];
   segmentationLayerNames: string[];
   packingDegreeLookup: Record<string, number>;
-  isMappingSupported: boolean;
   dataTextureCountPerLayer: number;
   resolutions: Array<Vector3>;
   datasetScale: Vector3;
@@ -66,13 +65,11 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform bool showBrush;
   uniform float segmentationPatternOpacity;
 
-  <% if (isMappingSupported) { %>
-    uniform bool isMappingEnabled;
-    uniform float mappingSize;
-    uniform bool hideUnmappedIds;
-    uniform sampler2D segmentation_mapping_texture;
-    uniform sampler2D segmentation_mapping_lookup_texture;
-  <% } %>
+  uniform bool isMappingEnabled;
+  uniform float mappingSize;
+  uniform bool hideUnmappedIds;
+  uniform sampler2D segmentation_mapping_texture;
+  uniform sampler2D segmentation_mapping_lookup_texture;
 <% } %>
 
 uniform float sphericalCapRadius;

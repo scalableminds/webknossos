@@ -259,7 +259,7 @@ class PlaneMaterialFactory {
   attachSegmentationMappingTextures(): void {
     const segmentationLayer = Model.getSegmentationLayerWithMappingSupport();
     const [mappingTexture, mappingLookupTexture] =
-      Model.isMappingSupported && segmentationLayer != null && segmentationLayer.mappings != null
+      segmentationLayer != null && segmentationLayer.mappings != null
         ? segmentationLayer.mappings.getMappingTextures() // It's important to set up the uniforms (even when they are null), since later
         : // additions to `this.uniforms` won't be properly attached otherwise.
           [null, null, null];
@@ -739,7 +739,6 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       packingDegreeLookup,
-      isMappingSupported: Model.isMappingSupported,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
       resolutions: getResolutions(dataset),

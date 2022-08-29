@@ -1112,10 +1112,6 @@ class DataApi {
       showLoadingIndicator?: boolean;
     } = {},
   ) {
-    if (!Model.isMappingSupported) {
-      throw new Error(messages["mapping.too_few_textures"]);
-    }
-
     const layer = this.model.getLayerByName(layerName);
 
     if (!layer.isSegmentation) {

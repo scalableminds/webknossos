@@ -107,7 +107,6 @@ export async function initialize(
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
-      isMappingSupported: boolean;
       maximumTextureCountForLayer: number;
     }
   | null
@@ -255,10 +254,6 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
     hasSegmentation(dataset),
     requiredBucketCapacity,
   );
-
-  if (!setupDetails.isMappingSupported) {
-    console.warn(messages["mapping.too_few_textures"]);
-  }
 
   maybeWarnAboutUnsupportedLayers(layers);
   return setupDetails;
@@ -432,7 +427,6 @@ function initializeSettings(
 
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   dataLayers: DataLayerCollection;
-  isMappingSupported: boolean;
   maximumTextureCountForLayer: number;
   smallestCommonBucketCapacity: number;
   maximumLayerCountToRender: number;
@@ -443,7 +437,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     (gpuFactor != null ? gpuFactor : constants.DEFAULT_GPU_MEMORY_FACTOR);
   const {
     textureInformationPerLayer,
-    isMappingSupported,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,
     maximumTextureCountForLayer,
@@ -478,7 +471,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
 
   return {
     dataLayers,
-    isMappingSupported,
     maximumTextureCountForLayer,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,

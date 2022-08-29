@@ -414,8 +414,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "users.change_email_confirmation": "The email has been changed",
   "mapping.too_big":
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
-  "mapping.too_few_textures":
-    "Not enough textures available to support mappings. Mappings are disabled.",
   "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
   "project.report.failed_to_refresh":
     "The project report page could not be refreshed. Please try to reload the page.",

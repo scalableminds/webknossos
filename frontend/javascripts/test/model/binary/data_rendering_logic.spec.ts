@@ -138,13 +138,14 @@ test("Basic support (no segmentation): all specs", (t) => {
     );
   }
 });
-test.skip("Basic support + volume: min specs", (t) => {
+test("Basic support + volume: min specs", (t) => {
   const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(minSpecs, true);
-  testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]), 2);
+  testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1, grayscaleLayer2]), 2);
+  testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]), 1);
   testSupportFlags(
     t,
     computeDataTexturesSetupPartial([grayscaleLayer1, grayscaleLayer2, volumeLayer1]),
-    2,
+    1,
   );
   testSupportFlags(
     t,
@@ -154,7 +155,7 @@ test.skip("Basic support + volume: min specs", (t) => {
       grayscaleLayer3,
       volumeLayer1,
     ]),
-    2,
+    1,
   );
 });
 test("Basic support + volume: mid specs", (t) => {

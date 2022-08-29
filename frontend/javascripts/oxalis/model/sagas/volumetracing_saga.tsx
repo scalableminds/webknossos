@@ -180,7 +180,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
     if (isDrawing && activeCellId === 0) {
       yield* call(
         [Toast, Toast.warning],
-        "The current segment ID is 0. Please change the active segment ID via the status bar, by creating a new one from the toolbar or by selecting an existing one via context menu.",
+        "The current segment ID is 0. Please change the active segment ID via the status bar, by creating a new segment from the toolbar or by selecting an existing one via context menu.",
         { timeout: 10000 },
       );
       continue;

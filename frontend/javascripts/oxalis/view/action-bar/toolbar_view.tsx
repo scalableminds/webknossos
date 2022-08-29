@@ -3,6 +3,7 @@ import { DownOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useState } from "react";
 
+import { showToastWarningForMaximumSegmentIdMissing } from "oxalis/view/maximum_segment_id_modal";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
@@ -53,7 +54,6 @@ import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
-import Toast from "libs/toast";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -126,8 +126,7 @@ const handleCreateCell = () => {
   if (volumeLayer.maxCellId != null) {
     Store.dispatch(createCellAction(volumeLayer.maxCellId));
   } else {
-    // todo: explain more and/or link to docs?
-    Toast.warning("Cannot create a new segment id, because the maximum segment id is not known.");
+    showToastWarningForMaximumSegmentIdMissing();
   }
 };
 

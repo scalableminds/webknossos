@@ -1,7 +1,27 @@
 import * as React from "react";
-import { Modal, InputNumber } from "antd";
+import { Button, Modal, InputNumber } from "antd";
 import { useDispatch } from "react-redux";
-import { setMaxCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { createCellAction, setMaxCellAction } from "oxalis/model/actions/volumetracing_actions";
+import renderIndependently from "libs/render_independently";
+import Toast from "libs/toast";
+
+export function showToastWarningForMaximumSegmentIdMissing() {
+  const openEnterMaximumSegmentIdModal = () => {
+    renderIndependently((destroy) => <EnterMaximumSegmentIdModal destroy={destroy} />);
+  };
+  Toast.warning(
+    <div>
+      Cannot create a new segment id, because the maximum segment id is not known.
+      <Button
+        type="primary"
+        style={{ marginTop: 8, marginLeft: 8 }}
+        onClick={openEnterMaximumSegmentIdModal}
+      >
+        Enter maximum segment id
+      </Button>
+    </div>,
+  );
+}
 
 export default function EnterMaximumSegmentIdModal({
   destroy,
@@ -11,7 +31,12 @@ export default function EnterMaximumSegmentIdModal({
   const [maximumSegmentId, setMaximumSegmentId] = React.useState(0);
   const dispatch = useDispatch();
   const handleOk = () => {
+    if (maximumSegmentId < 1) {
+      Toast.warning("Please enter a segment id greater than 0.");
+      return;
+    }
     dispatch(setMaxCellAction(maximumSegmentId));
+    dispatch(createCellAction(maximumSegmentId));
     destroy();
   };
   const handleCancel = () => {
@@ -27,8 +52,8 @@ export default function EnterMaximumSegmentIdModal({
       </p>
 
       <p>
-        If you know the largest segment ID in this segmentation layer or if you know which ID would
-        be safe to use, please input it below:
+        If you know the largest segment ID in this segmentation layer or if you know which value
+        would be safe to use, please input it below:
       </p>
       <div style={{ display: "grid", placeItems: "center" }}>
         <InputNumber

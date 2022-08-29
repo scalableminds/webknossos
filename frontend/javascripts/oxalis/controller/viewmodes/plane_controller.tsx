@@ -61,9 +61,7 @@ import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers"
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { Button } from "antd";
-import renderIndependently from "libs/render_independently";
-import EnterMaximumSegmentIdModal from "oxalis/view/maximum_segment_id_modal";
+import { showToastWarningForMaximumSegmentIdMissing } from "oxalis/view/maximum_segment_id_modal";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -143,22 +141,7 @@ class VolumeKeybindings {
         if (volumeLayer.maxCellId != null) {
           Store.dispatch(createCellAction(volumeLayer.maxCellId));
         } else {
-          // todo: explain more and/or link to docs?
-          const openEnterMaximumSegmentIdModal = () => {
-            renderIndependently((destroy) => <EnterMaximumSegmentIdModal destroy={destroy} />);
-          };
-          Toast.warning(
-            <div>
-              Cannot create a new segment id, because the maximum segment id is not known.
-              <Button
-                type="primary"
-                style={{ marginTop: 8, marginLeft: 8 }}
-                onClick={openEnterMaximumSegmentIdModal}
-              >
-                Enter maximum segment id
-              </Button>
-            </div>,
-          );
+          showToastWarningForMaximumSegmentIdMissing();
         }
       },
       v: () => {

@@ -94,8 +94,6 @@ class VolumeTracingService @Inject()(
               case a: UpdateBucketVolumeAction =>
                 if (tracing.getMappingIsEditable) {
                   Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
-                } else if (tracing.largestSegmentId.isEmpty) {
-                  Fox.failure("Cannot mutate volume data while largest segment id is not set.")
                 } else updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(

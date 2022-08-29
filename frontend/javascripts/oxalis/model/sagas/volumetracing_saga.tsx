@@ -521,7 +521,7 @@ function updateTracingPredicate(
 ): boolean {
   return (
     prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
-    prevVolumeTracing.maxCellId !== volumeTracing.maxCellId ||
+    prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId ||
     prevFlycam !== flycam
   );
 }

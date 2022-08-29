@@ -1,7 +1,10 @@
 import * as React from "react";
 import { Button, Modal, InputNumber } from "antd";
 import { useDispatch } from "react-redux";
-import { createCellAction, setMaxCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  createCellAction,
+  setLargestSegmentIdAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 
@@ -35,7 +38,7 @@ export default function EnterMaximumSegmentIdModal({
       Toast.warning("Please enter a segment id greater than 0.");
       return;
     }
-    dispatch(setMaxCellAction(maximumSegmentId));
+    dispatch(setLargestSegmentIdAction(maximumSegmentId));
     dispatch(createCellAction(maximumSegmentId));
     destroy();
   };

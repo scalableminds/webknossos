@@ -123,8 +123,8 @@ const handleCreateCell = () => {
     return;
   }
 
-  if (volumeLayer.maxCellId != null) {
-    Store.dispatch(createCellAction(volumeLayer.maxCellId));
+  if (volumeLayer.largestSegmentId != null) {
+    Store.dispatch(createCellAction(volumeLayer.largestSegmentId));
   } else {
     showToastWarningForMaximumSegmentIdMissing();
   }

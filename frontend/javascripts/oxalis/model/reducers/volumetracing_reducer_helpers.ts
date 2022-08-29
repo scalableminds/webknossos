@@ -50,13 +50,13 @@ export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTr
 export function createCellReducer(
   state: OxalisState,
   volumeTracing: VolumeTracing,
-  maxCellId: number,
+  largestSegmentId: number,
 ) {
-  // The maxCellId is only updated if a voxel using that id was annotated. Therefore, it can happen
-  // that the activeCellId is larger than the maxCellId. Choose the larger of the two ids and increase it by one.
+  // The largestSegmentId is only updated if a voxel using that id was annotated. Therefore, it can happen
+  // that the activeCellId is larger than the largestSegmentId. Choose the larger of the two ids and increase it by one.
   const { activeCellId } = volumeTracing;
 
-  const newId = Math.max(activeCellId, maxCellId) + 1;
+  const newId = Math.max(activeCellId, largestSegmentId) + 1;
 
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     activeCellId: newId,
@@ -132,9 +132,13 @@ export function setContourTracingModeReducer(
     contourTracingMode: mode,
   });
 }
-export function setMaxCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
+export function setLargestSegmentIdReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+  id: number,
+) {
   return updateVolumeTracing(state, volumeTracing.tracingId, {
-    maxCellId: id,
+    largestSegmentId: id,
   });
 }
 export function setMappingNameReducer(

@@ -44,7 +44,7 @@ import {
 import { getBuildInfo, importVolumeTracing, clearCache } from "admin/admin_rest_api";
 import {
   importVolumeTracingAction,
-  setMaxCellAction,
+  setLargestSegmentIdAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import { readFileAsText, readFileAsArrayBuffer } from "libs/read_file";
@@ -256,7 +256,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
                 oldVolumeTracing.tracingId,
               ),
             );
-            Store.dispatch(setMaxCellAction(newLargestSegmentId));
+            Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
             await clearCache(dataset, oldVolumeTracing.tracingId);
             await api.data.reloadBuckets(oldVolumeTracing.tracingId);
             // @ts-ignore

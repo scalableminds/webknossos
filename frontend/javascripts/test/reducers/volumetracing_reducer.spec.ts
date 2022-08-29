@@ -54,34 +54,34 @@ test("VolumeTracing should create a cell and set it as the activeCell", (t) => {
     t.is(tracing.activeCellId, 1);
   });
 });
-test("VolumeTracing should create a non-existing cell and not update the maxCellId", (t) => {
+test("VolumeTracing should create a non-existing cell and not update the largestSegmentId", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction();
-  // Create a cell with an id that is higher than the maxCellId
+  // Create a cell with an id that is higher than the largestSegmentId
   const newState = VolumeTracingReducer(initialState, createCellAction);
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
-    t.is(tracing.maxCellId, 0);
+    t.is(tracing.largestSegmentId, 0);
   });
 });
-test("VolumeTracing should create an existing cell and not update the maxCellId", (t) => {
+test("VolumeTracing should create an existing cell and not update the largestSegmentId", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction();
   const alteredState = update(initialState, {
     tracing: {
       volumes: {
         "0": {
-          maxCellId: {
+          largestSegmentId: {
             $set: 5,
           },
         },
       },
     },
   });
-  // Create cell with an id that is lower than the maxCellId
+  // Create cell with an id that is lower than the largestSegmentId
   const newState = VolumeTracingReducer(alteredState, createCellAction);
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
-    t.is(tracing.maxCellId, 5);
+    t.is(tracing.largestSegmentId, 5);
   });
 });
-test("VolumeTracing should create cells and only update the maxCellId after a voxel was annotated", (t) => {
+test("VolumeTracing should create cells and only update the largestSegmentId after a voxel was annotated", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction();
   const finishAnnotationStrokeAction =
     VolumeTracingActions.finishAnnotationStrokeAction("tracingId");
@@ -89,7 +89,7 @@ test("VolumeTracing should create cells and only update the maxCellId after a vo
     tracing: {
       volumes: {
         "0": {
-          maxCellId: {
+          largestSegmentId: {
             $set: 5,
           },
         },
@@ -99,15 +99,15 @@ test("VolumeTracing should create cells and only update the maxCellId after a vo
   // Create two cells without specifying an id
   let newState = VolumeTracingReducer(alteredState, createCellAction);
   newState = VolumeTracingReducer(newState, createCellAction);
-  // The maxCellId should not be updated, since no voxel was annotated yet
+  // The largestSegmentId should not be updated, since no voxel was annotated yet
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
-    t.is(tracing.maxCellId, 5);
+    t.is(tracing.largestSegmentId, 5);
   });
   newState = VolumeTracingReducer(newState, createCellAction);
   newState = VolumeTracingReducer(newState, finishAnnotationStrokeAction);
-  // The maxCellId should be updated, since a voxel was annotated with id 8
+  // The largestSegmentId should be updated, since a voxel was annotated with id 8
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
-    t.is(tracing.maxCellId, 8);
+    t.is(tracing.largestSegmentId, 8);
   });
 });
 test("VolumeTracing should set trace/view tool", (t) => {

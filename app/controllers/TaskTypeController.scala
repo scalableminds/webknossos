@@ -29,7 +29,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
   private val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
-      (__ \ 'teamId).read[String](ObjectId.stringObjectIdReads("teamId")) and
+      (__ \ 'teamId).read[ObjectId] and
       (__ \ 'settings).read[AnnotationSettings] and
       (__ \ 'recommendedConfiguration).readNullable[JsValue] and
       (__ \ 'tracingType).read[TracingType.Value])(taskTypeService.fromForm _)

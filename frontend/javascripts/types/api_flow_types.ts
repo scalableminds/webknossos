@@ -695,3 +695,10 @@ export type APIConnectomeFile = {
   connectomeFileName: string;
   mappingName: string;
 };
+
+export type ZarrPrivateLink = {
+  id: string;
+  annotation: string;
+  accessToken: string;
+  expirationDateTime: number | null;
+};

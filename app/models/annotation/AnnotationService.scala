@@ -17,6 +17,12 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerType,
+  AnnotationSource,
+  FetchedAnnotationLayer
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   DataSourceLike => DataSource,
@@ -47,7 +53,7 @@ import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -844,6 +850,24 @@ class AnnotationService @Inject()(
         "tracingStore" -> tracingStoreJs,
         "dataSet" -> dataSetJs
       )
+  }
+
+  def writesAsAnnotationSource(annotation: Annotation): Fox[JsValue] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
+      tracingStore <- tracingStoreDAO.findFirst
+      annotationSource = AnnotationSource(
+        id = annotation.id,
+        annotationLayers = annotation.annotationLayers,
+        dataSetName = dataSet.name,
+        organizationName = organization.name,
+        dataStoreUrl = dataStore.publicUrl,
+        tracingStoreUrl = tracingStore.publicUrl
+      )
+    } yield Json.toJson(annotationSource)
   }
 
   private def userJsonForAnnotation(userId: ObjectId, userOpt: Option[User] = None): Fox[Option[JsObject]] =

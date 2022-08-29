@@ -3,8 +3,9 @@ package backend
 import java.io.ByteArrayInputStream
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
 import models.annotation.nml.{NmlParser, NmlWriter}
-import models.annotation.{AnnotationLayer, FetchedAnnotationLayer, UploadedVolumeLayer}
+import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.{Box, Full}
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}

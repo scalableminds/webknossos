@@ -34,7 +34,7 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execu
     val queryStringParts = List(
       Some(s"""vx.run_name:"$runName""""),
       Some(s"""vx.wk_org:"$organizationName""""),
-      Some(s"level:(${levels.map(_.toString).mkString(" OR ")}))"),
+      Some(s"level:(${levels.map(_.toString).mkString(" OR ")})"),
       taskName.map(t => s"""vx.task_name:"$t"""")
     ).flatten
 

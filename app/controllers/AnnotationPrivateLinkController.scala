@@ -48,7 +48,7 @@ class AnnotationPrivateLinkController @Inject()(
       annotationIdValidated <- ObjectId.fromString(annotationId)
       userBox <- bearerTokenService.userForTokenOpt(userToken).futureBox
       ctx = DBAccessContext(userBox.toOption)
-      annotation <- annotationDAO.findOne(annotationIdValidated)(ctx)
+      annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> "annotation.notFound"
     } yield annotation
 
   private def findAnnotationByPrivateLinkIfNotExpired(accessToken: String): Fox[Annotation] =

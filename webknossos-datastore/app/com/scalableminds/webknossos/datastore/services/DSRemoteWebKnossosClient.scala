@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
@@ -105,9 +106,18 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryStringOptional("token", userToken)
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 
+  // The annotation source needed for every chunk request. 5 seconds gets updates to the user fast enough,
+  // while still limiting the number of remote lookups during streaming
+  private lazy val annotationSourceCacheCache: AlfuFoxCache[(String, Option[String]), AnnotationSource] =
+    AlfuFoxCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
+
   def getAnnotationSource(accessToken: String, userToken: Option[String]): Fox[AnnotationSource] =
-    rpc(s"$webKnossosUri/api/annotations/source/$accessToken")
-      .addQueryString("key" -> dataStoreKey)
-      .addQueryStringOptional("userToken", userToken)
-      .getWithJsonResponse[AnnotationSource]
+    annotationSourceCacheCache.getOrLoad(
+      (accessToken, userToken),
+      _ =>
+        rpc(s"$webKnossosUri/api/annotations/source/$accessToken")
+          .addQueryString("key" -> dataStoreKey)
+          .addQueryStringOptional("userToken", userToken)
+          .getWithJsonResponse[AnnotationSource]
+    )
 }

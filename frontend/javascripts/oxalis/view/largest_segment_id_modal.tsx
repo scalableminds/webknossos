@@ -8,6 +8,8 @@ import {
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 
+const TOAST_KEY = "enter-largest-segment-id";
+
 export function showToastWarningForLargestSegmentIdMissing() {
   const openEnterLargestSegmentIdModal = () => {
     renderIndependently((destroy) => <EnterLargestSegmentIdModal destroy={destroy} />);
@@ -15,14 +17,17 @@ export function showToastWarningForLargestSegmentIdMissing() {
   Toast.warning(
     <div>
       Cannot create a new segment id, because the largest segment id is not known.
-      <Button
-        type="primary"
-        style={{ marginTop: 8, marginLeft: 8 }}
-        onClick={openEnterLargestSegmentIdModal}
-      >
-        Enter largest segment id
-      </Button>
+      <div>
+        <Button
+          type="primary"
+          style={{ marginTop: 8, marginLeft: 8 }}
+          onClick={openEnterLargestSegmentIdModal}
+        >
+          Enter largest segment id
+        </Button>
+      </div>
     </div>,
+    { key: TOAST_KEY },
   );
 }
 
@@ -40,6 +45,7 @@ export default function EnterLargestSegmentIdModal({
     }
     dispatch(setLargestSegmentIdAction(largestSegmentId));
     dispatch(createCellAction(largestSegmentId));
+    Toast.close(TOAST_KEY);
     destroy();
   };
   const handleCancel = () => {

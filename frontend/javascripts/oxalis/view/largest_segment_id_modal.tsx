@@ -1,12 +1,14 @@
 import * as React from "react";
 import { Button, Modal, InputNumber } from "antd";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   createCellAction,
   setLargestSegmentIdAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
+import { OxalisState } from "oxalis/store";
+import { mayUserEditDataset } from "libs/utils";
 
 const TOAST_KEY = "enter-largest-segment-id";
 
@@ -37,6 +39,8 @@ export default function EnterLargestSegmentIdModal({
   destroy: (...args: Array<any>) => any;
 }) {
   const [largestSegmentId, setLargestSegmentId] = React.useState(0);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
   const dispatch = useDispatch();
   const handleOk = () => {
     if (largestSegmentId < 1) {
@@ -51,6 +55,15 @@ export default function EnterLargestSegmentIdModal({
   const handleCancel = () => {
     destroy();
   };
+
+  const editString = "edit the same property in the dataset";
+  const editLinkOrText = mayUserEditDataset(activeUser, dataset) ? (
+    <a href={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`} target="_blank">
+      {editString}
+    </a>
+  ) : (
+    editString
+  );
 
   return (
     <Modal visible title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
@@ -73,6 +86,8 @@ export default function EnterLargestSegmentIdModal({
           onChange={setLargestSegmentId}
         />
       </div>
+
+      <p>Additionally, it is recommended to {editLinkOrText} or ask an administrator to do so.</p>
     </Modal>
   );
 }

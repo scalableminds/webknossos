@@ -600,7 +600,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
      * @return true if exists
      */
     boolean exists(S3Path path) {
-        System.out.println("Exists check!");
         S3Path s3Path = toS3Path(path);
         try {
             s3Utils.getS3ObjectSummary(s3Path);

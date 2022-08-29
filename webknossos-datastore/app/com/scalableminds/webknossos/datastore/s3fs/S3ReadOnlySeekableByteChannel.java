@@ -56,10 +56,7 @@ public class S3ReadOnlySeekableByteChannel implements SeekableByteChannel {
             throw new ReadOnlyFileSystemException();
         }
 
-
-        System.out.println("Determining length...");
-        this.length = 10 ;
-/*            path
+        this.length = path
                 .getFileSystem()
                 .getClient()
                 .getObjectMetadata(
@@ -68,9 +65,7 @@ public class S3ReadOnlySeekableByteChannel implements SeekableByteChannel {
                         .name(),
                     key
                 )
-                .getContentLength();*/
-
-        System.out.println("Opening Stream...");
+                .getContentLength();
         openStreamAt(0);
     }
 
@@ -86,24 +81,18 @@ public class S3ReadOnlySeekableByteChannel implements SeekableByteChannel {
             )
             .withRange(position);
 
-
-        System.out.println("Get object...");
         S3Object s3Object =
             path
                 .getFileSystem()
                 .getClient()
                 .getObject(rangeObjectRequest);
 
-
-        System.out.println("Get object content...");
         bufferedStream =
             new ExtBufferedInputStream(
                 s3Object.getObjectContent(),
                 DEFAULT_BUFFER_SIZE
             );
 
-
-        System.out.println("Wrap in stream...");
         rbc = Channels.newChannel(bufferedStream);
         this.position = position;
     }

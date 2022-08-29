@@ -32,7 +32,6 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
      * @throws IOException if an I/O error occurs
      */
     public S3SeekableByteChannel(S3Path path, Set<? extends OpenOption> options) throws IOException {
-        System.out.println("Hello from S3SeekableByteChannel");
         this.path = path;
         this.options = Collections.unmodifiableSet(new HashSet<>(options));
         String key = path.getKey();
@@ -48,7 +47,6 @@ public class S3SeekableByteChannel implements SeekableByteChannel {
         boolean removeTempFile = true;
         try {
             if (exists) {
-                System.out.println("Exists! Let's call getObject!");
                 try (S3Object object = path.getFileSystem()
                         .getClient()
                         .getObject(path.getFileStore().getBucket().getName(), key)) {

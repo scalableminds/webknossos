@@ -16,6 +16,8 @@ import {
   VoxelyticsWorkflowDag,
   VoxelyticsWorkflowDagEdge,
 } from "types/api_flow_types";
+import { useSelector } from "react-redux";
+import { OxalisState, Theme } from "oxalis/store";
 
 const getNodeWidth = (() => {
   const NODE_PADDING = 10;
@@ -89,6 +91,7 @@ function getEdgesAndNodes(
   filteredTasks: Array<VoxelyticsTaskConfigWithName>,
   isDraggable: boolean,
   selectedNodeId: string | null,
+  theme: Theme,
 ) {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -171,6 +174,7 @@ function getEdgesAndNodes(
         opacity,
         color: fontColor,
         width: nodeWidth,
+        backgroundColor: theme === "light" ? "white" : "black",
       },
     };
   });
@@ -182,7 +186,7 @@ function getEdgesAndNodes(
     const opacity = filteredTaskNames.includes(source) ? 1 : 0.4;
     const isSourceSelected = selectedNodeId === source;
     const strokeWidth = isSourceSelected ? 3 : 1;
-    const labelFontColor = isSourceSelected ? "red" : "black";
+    const labelFontColor = isSourceSelected ? "red" : null;
 
     edges.push({
       id,
@@ -190,7 +194,15 @@ function getEdgesAndNodes(
       target,
       label: edge.labels.join(", "),
       style: { opacity, strokeWidth },
-      labelStyle: { opacity, fill: labelFontColor },
+      labelStyle: {
+        opacity,
+        fill: labelFontColor ?? theme === "light" ? "black" : "white",
+      },
+      labelBgStyle: {
+        fill: theme === "light" ? "white" : "black",
+        stroke: "#b1b1b7",
+      },
+      labelShowBg: true,
       type: "smoothstep",
       animated: isSourceSelected,
     });
@@ -210,6 +222,7 @@ function DAGView({
   const [isDraggable, setIsDraggable] = useState(true);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const allTaskIds = dag.nodes.map((node) => node.id);
+  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
 
   const handleNodeClick = (_event: any, element: FlowNode) => {
     if (selectedNodeId !== element.id) {
@@ -232,7 +245,7 @@ function DAGView({
     }
   };
 
-  const { nodes, edges } = getEdgesAndNodes(dag, filteredTasks, isDraggable, selectedNodeId);
+  const { nodes, edges } = getEdgesAndNodes(dag, filteredTasks, isDraggable, selectedNodeId, theme);
 
   return (
     <ReactFlow

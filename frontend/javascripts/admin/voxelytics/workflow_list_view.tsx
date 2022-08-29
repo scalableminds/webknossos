@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { SyncOutlined } from "@ant-design/icons";
-import { Table, Progress, Tooltip, Layout, Button, message } from "antd";
+import { Table, Progress, Tooltip, Button } from "antd";
 import { Link } from "react-router-dom";
 import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
 import {
@@ -11,6 +11,7 @@ import {
 } from "types/api_flow_types";
 import usePolling from "libs/polling";
 import { formatDateMedium } from "libs/format_utils";
+import Toast from "libs/toast";
 import { VX_POLLING_INTERVAL } from "./workflow_view";
 
 function parseTaskInfo(taskInfo: VoxelyticsTaskInfo): VoxelyticsTaskInfo {
@@ -94,7 +95,7 @@ export default function WorkflowListView() {
       setWorkflows(_workflows);
     } catch (err) {
       console.error(err);
-      message.error("Could not load workflow list.");
+      Toast.error("Could not load workflow list.");
     } finally {
       setIsLoading(false);
     }
@@ -183,16 +184,13 @@ export default function WorkflowListView() {
   }
 
   return (
-    <Layout.Content
-      style={{
-        padding: 24,
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "end", marginBottom: 8 }}>
+    <div className="container voxelytics-view">
+      <div className="pull-right">
         <Button onClick={() => loadData()}>
           <SyncOutlined spin={isLoading} /> Refresh
         </Button>
       </div>
+      <h3>Voxelytics Workflows</h3>
       <Table
         bordered
         rowKey={(run: RenderRunInfo) => `${run.id}-${run.workflowHash}`}
@@ -260,6 +258,6 @@ export default function WorkflowListView() {
         ]}
         dataSource={renderRuns}
       />
-    </Layout.Content>
+    </div>
   );
 }

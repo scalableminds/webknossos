@@ -3,6 +3,7 @@ import { Button, Select, Switch } from "antd";
 import useResizeObserver from "use-resize-observer";
 import ReactAnsi from "react-ansi";
 import chalk from "chalk";
+import classnames from "classnames";
 import usePolling from "libs/polling";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
@@ -95,33 +96,8 @@ export default function LogTab({
   }, [logResult, showTimestamps]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        ...(isFullscreen
-          ? {
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              zIndex: 1001,
-              background: "white",
-              paddingTop: 8,
-            }
-          : {}),
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "end",
-          alignItems: "center",
-          marginBottom: 8,
-          paddingRight: isFullscreen ? 8 : undefined,
-        }}
-      >
+    <div className={classnames("log-tab", { "log-tab-fullscreen": isFullscreen })}>
+      <div className="log-tab-header">
         <span style={{ marginRight: 16 }}>
           <Switch
             checked={showTimestamps}
@@ -156,15 +132,7 @@ export default function LogTab({
           ))}
         </Select>
       </div>
-      <div
-        ref={logContainerRef}
-        style={{
-          width: "100%",
-          height: isFullscreen ? undefined : 500,
-          flex: isFullscreen ? 1 : undefined,
-          position: "relative",
-        }}
-      >
+      <div ref={logContainerRef} className="log-tab-content">
         {logHeight > 0 && <LogContent logText={logText} height={logHeight} />}
       </div>
     </div>

@@ -10,6 +10,8 @@ import {
   VoxelyticsTaskInfo,
   VoxelyticsWorkflowDagEdge,
 } from "types/api_flow_types";
+import { useSelector } from "react-redux";
+import { OxalisState } from "oxalis/store";
 import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
@@ -25,7 +27,7 @@ export type Result<T> =
   | { type: "LOADING" };
 
 // https://github.com/reduxjs/redux-devtools/blob/75322b15ee7ba03fddf10ac3399881e302848874/src/react/themes/default.js
-export const theme = {
+const theme = {
   scheme: "default",
   author: "chris kempson (http://chriskempson.com)",
   base00: "#181818",
@@ -45,6 +47,11 @@ export const theme = {
   base0E: "#ba8baf",
   base0F: "#a16946",
 };
+
+export function useTheme(): [typeof theme, boolean] {
+  const selectedTheme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  return [theme, selectedTheme === "light"];
+}
 
 function labelRenderer(_keyPath: Array<string | number>) {
   const keyPath = _keyPath.slice().reverse();
@@ -74,6 +81,7 @@ function TaskView({
     (data.length || 0) <= 10;
 
   const ingoingEdges = dag.edges.filter((edge) => edge.target === taskName);
+  const [, invertTheme] = useTheme();
 
   return (
     <div>
@@ -136,6 +144,7 @@ function TaskView({
             shouldExpandNode={shouldExpandNode}
             labelRenderer={labelRenderer}
             theme={theme}
+            invertTheme={invertTheme}
           />
         </TabPane>
         {Object.keys(artifacts).length > 0 ? (
@@ -217,7 +226,7 @@ function renderInputs(
               {linkLabel}
             </a>
           ) : (
-            <code style={{ background: "#f7f7f7" }}>{linkLabel}</code>
+            <code>{linkLabel}</code>
           )}
         </li>
       );

@@ -102,7 +102,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
       );
     case VoxelyticsRunState.RUNNING:
       return (
-        <Tooltip title={`Begin Time: ${formatDateMedium(taskInfo.beginTime)}`}>
+        <Tooltip title={<>Begin Time: {formatDateMedium(taskInfo.beginTime)}</>}>
           <Tag icon={<SyncOutlined spin />} color="processing">
             running
           </Tag>
@@ -112,9 +112,13 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
     case VoxelyticsRunState.STALE:
       return (
         <Tooltip
-          title={`Begin Time: ${formatDateMedium(
-            taskInfo.beginTime,
-          )}, Last Heartbeat: ${formatDateMedium(taskInfo.endTime)}`}
+          title={
+            <>
+              Begin Time: {formatDateMedium(taskInfo.beginTime)}
+              <br />
+              Last Heartbeat: {formatDateMedium(taskInfo.endTime)}
+            </>
+          }
         >
           <Tag icon={<CloseCircleOutlined />} color="error">
             timed out
@@ -126,10 +130,13 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
     case VoxelyticsRunState.CANCELLED:
       return (
         <Tooltip
-          title={`End Time: ${formatDateMedium(taskInfo.endTime)}, Duration: ${formatDistanceStrict(
-            taskInfo.endTime,
-            taskInfo.beginTime,
-          )}`}
+          title={
+            <>
+              End Time: {formatDateMedium(taskInfo.endTime)}
+              <br />
+              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+            </>
+          }
         >
           <Tag icon={<ExclamationCircleOutlined />} color="error">
             cancelled
@@ -141,10 +148,13 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
     case VoxelyticsRunState.FAILED:
       return (
         <Tooltip
-          title={`End Time: ${formatDateMedium(taskInfo.endTime)}, Duration: ${formatDistanceStrict(
-            taskInfo.endTime,
-            taskInfo.beginTime,
-          )}`}
+          title={
+            <>
+              End Time: {formatDateMedium(taskInfo.endTime)}
+              <br />
+              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+            </>
+          }
         >
           <Tag icon={<CloseCircleOutlined />} color="error">
             failed
@@ -156,10 +166,13 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
     case VoxelyticsRunState.COMPLETE:
       return (
         <Tooltip
-          title={`End Time: ${formatDateMedium(taskInfo.endTime)}, Duration: ${formatDistanceStrict(
-            taskInfo.endTime,
-            taskInfo.beginTime,
-          )}`}
+          title={
+            <>
+              End Time: {formatDateMedium(taskInfo.endTime)}
+              <br />
+              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+            </>
+          }
         >
           <Tag icon={<CheckCircleOutlined />} color="success">
             completed
@@ -437,20 +450,34 @@ export default function TaskListView({
     );
   };
 
+  const {
+    workflow: { name: readableWorkflowName },
+    run: { beginTime: runBeginTimeString },
+  } = report;
+
   return (
     <Row
       gutter={16}
       style={{
-        minHeight: "calc(100vh - 182px)",
+        minHeight: "calc(100vh - 100px)",
       }}
     >
-      <Col xs={10}>
-        <DAGView
-          key={filteredTasks.map((t) => t.taskName).join("_")}
-          dag={report.dag}
-          filteredTasks={filteredTasks}
-          onClickHandler={handleSelectTask}
-        />
+      <Col xs={10} style={{ display: "flex", flexDirection: "column" }}>
+        <h3>
+          {readableWorkflowName}{" "}
+          <span style={{ color: "#51686e" }}>
+            {" "}
+            {formatDateMedium(new Date(runBeginTimeString))}
+          </span>
+        </h3>
+        <div style={{ flex: 1, position: "relative" }}>
+          <DAGView
+            key={filteredTasks.map((t) => t.taskName).join("_")}
+            dag={report.dag}
+            filteredTasks={filteredTasks}
+            onClickHandler={handleSelectTask}
+          />
+        </div>
       </Col>
       <Col xs={14} className="task-panel">
         {openMetatask != null && (
@@ -461,12 +488,10 @@ export default function TaskListView({
           </div>
         )}
         <div
-          className="ant-collapse"
+          className="ant-collapse tasks-header"
           style={{
             marginBottom: 10,
             padding: 5,
-            backgroundColor: "#fbfbfb",
-            border: "1px solid #d9d9d9",
             zIndex: 1,
             display: "flex",
           }}

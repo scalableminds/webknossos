@@ -1,7 +1,6 @@
 import _ from "lodash";
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { Layout, message } from "antd";
 import usePolling from "libs/polling";
 import {
   VoxelyticsRunInfo,
@@ -16,7 +15,7 @@ import {
   VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
 import { useSearchParams } from "libs/react_hooks";
-import { formatDateMedium } from "libs/format_utils";
+import Toast from "libs/toast";
 import { getVoxelyticsWorkflow } from "admin/admin_rest_api";
 import TaskListView from "./task_list_view";
 
@@ -343,7 +342,7 @@ export default function WorkflowView() {
       setReport(_report);
     } catch (err) {
       console.error(err);
-      message.error("Could not load workflow report.");
+      Toast.error("Could not load workflow report.");
     } finally {
       setIsLoading(false);
     }
@@ -376,35 +375,20 @@ export default function WorkflowView() {
   );
 
   if (report == null || collapsedReport == null || tasksWithHierarchy == null) {
-    return <div style={{ color: "black", textAlign: "center" }}>Loading...</div>;
+    return <div style={{ textAlign: "center" }}>Loading...</div>;
   }
 
-  const {
-    workflow: { name: readableWorkflowName },
-    run: { beginTime: runBeginTimeString },
-  } = report;
-
   return (
-    <>
-      <div>
-        {readableWorkflowName}
-        <span style={{ color: "#51686e" }}> {formatDateMedium(new Date(runBeginTimeString))}</span>
-      </div>
-      <Layout.Content
-        style={{
-          padding: 24,
-        }}
-      >
-        <TaskListView
-          report={collapsedReport}
-          tasksWithHierarchy={tasksWithHierarchy}
-          expandedMetaTaskKeys={expandedMetaTaskKeys}
-          onToggleExpandedMetaTaskKey={handleToggleExpandedMetaTaskKey}
-          openMetatask={metatask}
-          onReload={loadData}
-          isLoading={isLoading}
-        />
-      </Layout.Content>
-    </>
+    <div className="container voxelytics-view">
+      <TaskListView
+        report={collapsedReport}
+        tasksWithHierarchy={tasksWithHierarchy}
+        expandedMetaTaskKeys={expandedMetaTaskKeys}
+        onToggleExpandedMetaTaskKey={handleToggleExpandedMetaTaskKey}
+        openMetatask={metatask}
+        onReload={loadData}
+        isLoading={isLoading}
+      />
+    </div>
   );
 }

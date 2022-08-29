@@ -392,3 +392,88 @@ i.without-icon-margin,
     border: transparent;
   }
 }
+
+.voxelytics-view {
+  .tasks-header {
+    border-bottom: 1px solid @border-color-base;
+  }
+
+  .task-panel {
+    height: calc(100vh - 100px);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .task-panel-name {
+    color: #777;
+    font-size: 0.9em;
+    padding-left: 1em;
+  }
+
+  .task-panel-state {
+    color: #777;
+    font-size: 0.9em;
+    padding-left: 1em;
+
+    .ant-tag {
+      margin-bottom: 0;
+    }
+    .ant-tag-default {
+      color: #888;
+      border-color: #ddd;
+    }
+  }
+
+  .stats-table {
+    text-align: right;
+
+    tbody tr:nth-child(odd) {
+      background-color: rgba(128,128,128, 0.1);
+    }
+    td, th {
+      padding: 8px;
+    }
+    .stats-label {
+      color: #aaa;
+    }
+  }
+
+  .log-tab {
+    display: flex;
+    flex-direction: column;
+
+    .log-tab-header {
+      display: flex;
+      justify-content: end;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .log-tab-content {
+      width: 100%;
+      height: 500px;
+      position: relative;
+    }
+
+    &.log-tab-fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1001;
+      background: @body-background;
+      padding-top: 8px;
+
+      .log-tab-header {
+        padding-right: 8px;
+      }
+
+      .log-tab-content {
+        height: unset;
+        flex: 1;
+      }
+    }
+  }
+}

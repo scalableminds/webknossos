@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Zarr-based remote dataset import now also works for public AWS S3 endpoints with no credentials. [#6421](https://github.com/scalableminds/webknossos/pull/6421)
 
 ### Changed
+- The largestSegmentId is not a required property for segmentation layers. It is still recommended to set the property, since the generation of new segment id is blocked during volume annotation. However, annotating with manually set IDs is still possible. This change simplifies the import of datasets into webKnossos. [#6414](https://github.com/scalableminds/webknossos/pull/6414)
 
 ### Fixed
 

@@ -50,11 +50,9 @@ class ZarrStreamingController @Inject()(
                                                                                   dataSetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        existingMags = dataLayer.resolutions
-
-        omeNgffHeader = OmeNgffHeader.fromDataLayerName(dataLayerName,
-                                                        dataSourceScale = dataSource.scale,
-                                                        mags = existingMags)
+        omeNgffHeader = OmeNgffHeader.fromNameScaleAndMags(dataLayerName,
+                                                           dataSource.scale,
+                                                           dataLayer.resolutions)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
@@ -64,7 +62,6 @@ class ZarrStreamingController @Inject()(
       for {
         annotationSource <- remoteWebKnossosClient.getAnnotationForPrivateLink(accessToken) ~> NOT_FOUND
         annotationLayer = annotationSource.getAnnotationLayer(dataLayerName)
-
         omeNgffHeader <- annotationLayer match {
           case Some(layer) =>
             remoteTracingstoreClient.getOmeNgffHeader(layer.tracingId, annotationSource.tracingStoreUrl, accessToken)
@@ -74,11 +71,7 @@ class ZarrStreamingController @Inject()(
                 annotationSource.organizationName,
                 annotationSource.dataSetName,
                 dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
-              existingMags = dataLayer.resolutions
-
-              dataSourceOmeNgffHeader = OmeNgffHeader.fromDataLayerName(dataLayerName,
-                                                                        dataSourceScale = dataSource.scale,
-                                                                        mags = existingMags)
+              dataSourceOmeNgffHeader = OmeNgffHeader.fromNameScaleAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
             } yield dataSourceOmeNgffHeader
         }
       } yield Ok(Json.toJson(omeNgffHeader))

@@ -9,6 +9,7 @@ import play.api.libs.json._
 
 import javax.inject.Inject
 import models.annotation._
+import net.liftweb.common.Full
 import oxalis.security.WkEnv
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
@@ -25,14 +26,22 @@ class AnnotationPrivateLinkController @Inject()(
     with FoxImplicits {
 
   @ApiOperation(hidden = true, value = "")
-  def lookupPrivateLink(accessToken: String): Action[AnyContent] = Action.async { implicit request =>
+  def annotationSource(accessTokenOrId: String): Action[AnyContent] = Action.async { implicit request =>
     for {
-      annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessToken(accessToken)
-      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> 404
-      annotation: Annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
+      annotationByLinkBox <- findAnnotationByPrivateLinkIfNotExpired(accessTokenOrId).futureBox
+      annotation <- annotationByLinkBox match {
+        case Full(a) => Fox.successful(a)
+        case _ => ObjectId.fromString(accessTokenOrId).toFox.flatMap(id => annotationDAO.findOne(id)(GlobalAccessContext)) // TODO create context from user token
+      }
       writtenAnnotation <- annotationService.writesAsAnnotationSource(annotation)
     } yield Ok(writtenAnnotation)
   }
+
+  private def findAnnotationByPrivateLinkIfNotExpired(accessToken: String): Fox[Annotation] = for {
+    annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessToken(accessToken)
+    _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> 404
+    annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
+  } yield annotation
 
   @ApiOperation(value = "List all existing private zarr links for a user", nickname = "listPrivateLinks")
   @ApiResponses(

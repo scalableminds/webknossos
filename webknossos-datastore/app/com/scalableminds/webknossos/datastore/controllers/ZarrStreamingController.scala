@@ -3,24 +3,14 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{
-  ZarrDataLayer,
-  ZarrLayer,
-  ZarrMag,
-  ZarrSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrMag, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.jzarr.{AxisOrder, OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{
-  Cuboid,
-  DataServiceDataRequest,
-  DataServiceRequestSettings
-}
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.services._
 import io.swagger.annotations._
 import play.api.i18n.{Messages, MessagesProvider}
@@ -32,7 +22,6 @@ import scala.concurrent.{ExecutionContext, Future}
 @Api(tags = Array("datastore", "zarr-streaming"))
 class ZarrStreamingController @Inject()(
     dataSourceRepository: DataSourceRepository,
-    config: DataStoreConfig,
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     remoteWebKnossosClient: DSRemoteWebKnossosClient,
@@ -45,9 +34,8 @@ class ZarrStreamingController @Inject()(
   override def allowRemoteOrigin: Boolean = true
 
   /**
-    * Handles a request for .zattrs file for a wkw dataset via a HTTP GET.
+    * Serve .zattrs file for a dataset
     * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
-    * Used by zarr-streaming.
     */
   def requestZAttrs(
       token: Option[String],
@@ -97,7 +85,8 @@ class ZarrStreamingController @Inject()(
     }
 
   /**
-    * Zarr-specific datasource-properties.json file for a datasource. Note that the result here is not necessarily equal to the file used in the underlying storage.
+    * Zarr-specific datasource-properties.json file for a datasource.
+    * Note that the result here is not necessarily equal to the file used in the underlying storage.
     */
   def requestDataSource(
       token: Option[String],
@@ -184,9 +173,6 @@ class ZarrStreamingController @Inject()(
     } yield Ok(Json.toJson(zarrSource))
   }
 
-  /**
-    * Handles requests for raw binary data via HTTP GET. Used by zarr streaming.
-    */
   def requestRawZarrCube(
       token: Option[String],
       organizationName: String,
@@ -195,9 +181,7 @@ class ZarrStreamingController @Inject()(
       mag: String,
       cxyz: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    for {
-      result <- rawZarrCube(urlOrHeaderToken(token, request), organizationName, dataSetName, dataLayerName, mag, cxyz)
-    } yield result
+    rawZarrCube(urlOrHeaderToken(token, request), organizationName, dataSetName, dataLayerName, mag, cxyz)
   }
 
   def rawZarrCubePrivateLink(accessToken: String,
@@ -265,18 +249,13 @@ class ZarrStreamingController @Inject()(
       } yield Ok(data)
     }
 
-  /**
-    * Handles a request for .zarray file for a wkw dataset via a HTTP GET. Used by zarr-streaming.
-    */
   def requestZArray(token: Option[String],
                     organizationName: String,
                     dataSetName: String,
                     dataLayerName: String,
                     mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    for {
-      result <- zArray(urlOrHeaderToken(token, request), organizationName, dataSetName, dataLayerName, mag)
-    } yield result
+    zArray(urlOrHeaderToken(token, request), organizationName, dataSetName, dataLayerName, mag)
   }
 
   def zArray(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String, mag: String)(
@@ -319,13 +298,11 @@ class ZarrStreamingController @Inject()(
                                         dataLayerName: String,
                                         mag: String): Action[AnyContent] =
     Action.async { implicit request =>
-      for {
-        result <- dataLayerMagFolderContents(urlOrHeaderToken(token, request),
+      dataLayerMagFolderContents(urlOrHeaderToken(token, request),
                                              organizationName,
                                              dataSetName,
                                              dataLayerName,
                                              mag)
-      } yield result
     }
 
   private def dataLayerMagFolderContents(token: Option[String],
@@ -385,12 +362,10 @@ class ZarrStreamingController @Inject()(
                                      organizationName: String,
                                      dataSetName: String,
                                      dataLayerName: String): Action[AnyContent] = Action.async { implicit request =>
-    for {
-      result <- dataLayerFolderContents(urlOrHeaderToken(token, request), organizationName, dataSetName, dataLayerName)
-    } yield result
+    dataLayerFolderContents(urlOrHeaderToken(token, request), organizationName, dataSetName, dataLayerName)
   }
 
-  def dataLayerFolderContents(token: Option[String],
+  private def dataLayerFolderContents(token: Option[String],
                               organizationName: String,
                               dataSetName: String,
                               dataLayerName: String)(implicit m: MessagesProvider): Fox[Result] =
@@ -489,9 +464,7 @@ class ZarrStreamingController @Inject()(
                     organizationName: String,
                     dataSetName: String,
                     dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>
-    for {
-      result <- zGroup(urlOrHeaderToken(token, request), organizationName, dataSetName)
-    } yield result
+    zGroup(urlOrHeaderToken(token, request), organizationName, dataSetName)
   }
 
   private def zGroup(

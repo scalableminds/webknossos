@@ -14,9 +14,14 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:implicitConversions",
   "-language:postfixOps",
   "-Xlint:unused",
+  "-Xlint:deprecation",
   s"-Wconf:src=target/.*:s",
   s"-Wconf:src=webknossos-datastore/target/.*:s",
   s"-Wconf:src=webknossos-tracingstore/target/.*:s"
+)
+ThisBuild / javacOptions ++= Seq(
+  "-Xlint:unchecked",
+  "-Xlint:deprecation"
 )
 
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)

@@ -3,7 +3,7 @@ import { DownOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useState } from "react";
 
-import { showToastWarningForMaximumSegmentIdMissing } from "oxalis/view/maximum_segment_id_modal";
+import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
@@ -126,7 +126,7 @@ const handleCreateCell = () => {
   if (volumeLayer.largestSegmentId != null) {
     Store.dispatch(createCellAction(volumeLayer.largestSegmentId));
   } else {
-    showToastWarningForMaximumSegmentIdMissing();
+    showToastWarningForLargestSegmentIdMissing();
   }
 };
 

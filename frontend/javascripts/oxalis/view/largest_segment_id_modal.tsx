@@ -8,38 +8,38 @@ import {
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 
-export function showToastWarningForMaximumSegmentIdMissing() {
-  const openEnterMaximumSegmentIdModal = () => {
-    renderIndependently((destroy) => <EnterMaximumSegmentIdModal destroy={destroy} />);
+export function showToastWarningForLargestSegmentIdMissing() {
+  const openEnterLargestSegmentIdModal = () => {
+    renderIndependently((destroy) => <EnterLargestSegmentIdModal destroy={destroy} />);
   };
   Toast.warning(
     <div>
-      Cannot create a new segment id, because the maximum segment id is not known.
+      Cannot create a new segment id, because the largest segment id is not known.
       <Button
         type="primary"
         style={{ marginTop: 8, marginLeft: 8 }}
-        onClick={openEnterMaximumSegmentIdModal}
+        onClick={openEnterLargestSegmentIdModal}
       >
-        Enter maximum segment id
+        Enter largest segment id
       </Button>
     </div>,
   );
 }
 
-export default function EnterMaximumSegmentIdModal({
+export default function EnterLargestSegmentIdModal({
   destroy,
 }: {
   destroy: (...args: Array<any>) => any;
 }) {
-  const [maximumSegmentId, setMaximumSegmentId] = React.useState(0);
+  const [largestSegmentId, setLargestSegmentId] = React.useState(0);
   const dispatch = useDispatch();
   const handleOk = () => {
-    if (maximumSegmentId < 1) {
+    if (largestSegmentId < 1) {
       Toast.warning("Please enter a segment id greater than 0.");
       return;
     }
-    dispatch(setLargestSegmentIdAction(maximumSegmentId));
-    dispatch(createCellAction(maximumSegmentId));
+    dispatch(setLargestSegmentIdAction(largestSegmentId));
+    dispatch(createCellAction(largestSegmentId));
     destroy();
   };
   const handleCancel = () => {
@@ -47,9 +47,9 @@ export default function EnterMaximumSegmentIdModal({
   };
 
   return (
-    <Modal visible title="Enter Maximum Segment ID" onOk={handleOk} onCancel={handleCancel}>
+    <Modal visible title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
       <p>
-        No maximum segment ID was configured for this dataset layer. This means that webKnossos does
+        No largest segment ID was configured for this dataset layer. This means that webKnossos does
         not know which segment ID would be safe to use for annotating new segments (because it is
         not in use yet).
       </p>
@@ -63,8 +63,8 @@ export default function EnterMaximumSegmentIdModal({
           size="large"
           min={1}
           max={100000}
-          value={maximumSegmentId}
-          onChange={setMaximumSegmentId}
+          value={largestSegmentId}
+          onChange={setLargestSegmentId}
         />
       </div>
     </Modal>

@@ -1,4 +1,4 @@
-import { connect, useDispatch } from "react-redux";
+import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
@@ -60,13 +60,10 @@ import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handl
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import {
-  getActiveSegmentationTracing,
-  getRequestedOrVisibleSegmentationLayer,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { Button, InputNumber, Modal } from "antd";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { Button } from "antd";
 import renderIndependently from "libs/render_independently";
-import { EnterMaximumSegmentIdModal } from "oxalis/view/maximum_segment_id_modal";
+import EnterMaximumSegmentIdModal from "oxalis/view/maximum_segment_id_modal";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,

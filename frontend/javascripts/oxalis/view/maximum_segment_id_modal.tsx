@@ -3,7 +3,11 @@ import { Modal, InputNumber } from "antd";
 import { useDispatch } from "react-redux";
 import { setMaxCellAction } from "oxalis/model/actions/volumetracing_actions";
 
-export function EnterMaximumSegmentIdModal({ destroy }: { destroy: (...args: Array<any>) => any }) {
+export default function EnterMaximumSegmentIdModal({
+  destroy,
+}: {
+  destroy: (...args: Array<any>) => any;
+}) {
   const [maximumSegmentId, setMaximumSegmentId] = React.useState(0);
   const dispatch = useDispatch();
   const handleOk = () => {
@@ -18,8 +22,8 @@ export function EnterMaximumSegmentIdModal({ destroy }: { destroy: (...args: Arr
     <Modal visible title="Enter Maximum Segment ID" onOk={handleOk} onCancel={handleCancel}>
       <p>
         No maximum segment ID was configured for this dataset layer. This means that webKnossos does
-        not know which segment ID would be safe (because it was not used yet) to use for annotating
-        new segments.
+        not know which segment ID would be safe to use for annotating new segments (because it is
+        not in use yet).
       </p>
 
       <p>

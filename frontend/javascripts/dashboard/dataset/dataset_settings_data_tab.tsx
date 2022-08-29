@@ -16,13 +16,13 @@ import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
 import { APIDataLayer } from "types/api_flow_types";
 import { BoundingBoxObject } from "oxalis/store";
+import { Vector3 } from "oxalis/constants";
 import {
   Hideable,
   FormItemWithInfo,
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "./helper_components";
-import { Vector3 } from "oxalis/constants";
 
 const FormItem = Form.Item;
 

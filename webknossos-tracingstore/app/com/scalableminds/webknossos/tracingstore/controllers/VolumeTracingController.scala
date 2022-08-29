@@ -365,8 +365,8 @@ class VolumeTracingController @Inject()(
         dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName) ~> NOT_FOUND
 
         omeNgffHeader = OmeNgffHeader.fromNameScaleAndMags(tracingId,
-                                                        dataSourceScale = dataSource.scale,
-                                                        mags = existingMags.toList)
+                                                           dataSourceScale = dataSource.scale,
+                                                           mags = existingMags.toList)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }

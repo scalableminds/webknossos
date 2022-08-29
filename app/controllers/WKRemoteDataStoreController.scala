@@ -50,7 +50,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { dataStore =>
         val uploadInfo = request.body
         for {
-          user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
+          user <- bearerTokenService.userForToken(token)
           organization <- organizationDAO.findOneByName(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             uploadInfo.organization) ~> NOT_FOUND
@@ -86,7 +86,7 @@ class WKRemoteDataStoreController @Inject()(
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
-          user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
+          user <- bearerTokenService.userForToken(token)
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND

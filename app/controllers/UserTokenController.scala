@@ -96,7 +96,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
-        userBox <- bearerTokenService.userForTokenOpt(token)(GlobalAccessContext).futureBox
+        userBox <- bearerTokenService.userForTokenOpt(token).futureBox
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
@@ -108,9 +108,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
-      } yield {
-        Ok(Json.toJson(answer))
-      }
+      } yield Ok(Json.toJson(answer))
     }
 
   private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(

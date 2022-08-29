@@ -99,14 +99,15 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .getWithJsonResponse[JobExportProperties]
 
-  override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
+  override def requestUserAccess(userToken: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryString("key" -> dataStoreKey)
-      .addQueryStringOptional("token", token)
+      .addQueryStringOptional("token", userToken)
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 
-  def getAnnotationForPrivateLink(accessToken: String): Fox[AnnotationSource] =
-    rpc(s"$webKnossosUri/api/zarrPrivateLinks/byAccessToken/$accessToken")
+  def getAnnotationSource(accessToken: String, userToken: Option[String]): Fox[AnnotationSource] =
+    rpc(s"$webKnossosUri/api/annotations/source/$accessToken")
       .addQueryString("key" -> dataStoreKey)
+      .addQueryStringOptional("userToken", userToken)
       .getWithJsonResponse[AnnotationSource]
 }

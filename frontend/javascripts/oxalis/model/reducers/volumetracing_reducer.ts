@@ -204,6 +204,12 @@ function VolumeTracingReducer(
         },
       });
 
+      if (volumeTracing.largestSegmentId != null && volumeTracing.activeCellId === 0) {
+        // If a largest segment id is known, but the active cell is 0, we can automatically
+        // create a new segment ID for the user.
+        return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId);
+      }
+
       return newState;
     }
 
@@ -287,10 +293,8 @@ function VolumeTracingReducer(
       // Possibly update the largestSegmentId after volume annotation
       const { activeCellId, largestSegmentId } = volumeTracing;
       if (largestSegmentId == null) {
-        // If no largest segment id was known, no volume annotation action
-        // should have been dispatched in the first place. If it was for
-        // some reason, we should not assume that the used segment id
-        // is the highest one.
+        // If no largest segment id was known, we should not assume that
+        // the used segment id is the highest one.
         return state;
       }
       return setLargestSegmentIdReducer(

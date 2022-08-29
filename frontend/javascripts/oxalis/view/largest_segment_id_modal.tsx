@@ -58,7 +58,11 @@ export default function EnterLargestSegmentIdModal({
 
   const editString = "edit the same property in the dataset";
   const editLinkOrText = mayUserEditDataset(activeUser, dataset) ? (
-    <a href={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`} target="_blank">
+    <a
+      href={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
+      target="_blank"
+      rel="noreferrer"
+    >
       {editString}
     </a>
   ) : (

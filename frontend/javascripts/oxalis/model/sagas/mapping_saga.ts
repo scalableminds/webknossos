@@ -234,6 +234,12 @@ function* getLargestSegmentId(layerName: string): Saga<number> {
     throw new Error("Mappings only exist for segmentation layers.");
   }
 
+  if (segmentationLayer.largestSegmentId == null) {
+    // todo: fix this once the custom segment colors are merged into master
+    // https://github.com/scalableminds/webknossos/tree/segment-color
+    throw new Error("");
+  }
+
   return segmentationLayer.largestSegmentId;
 }
 

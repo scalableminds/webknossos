@@ -28,7 +28,7 @@ message VolumeTracing {
     required Vec3DoubleProto editRotation = 6;
     required ElementClass elementClass = 7;
     optional string fallbackLayer = 8;
-    required int64 largestSegmentId = 9;
+    optional int64 largestSegmentId = 9;
     required int64 version = 10;
     required double zoomLevel = 11;
     optional BoundingBoxProto userBoundingBox = 12;

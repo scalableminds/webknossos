@@ -9,9 +9,7 @@ object VolumeTracingDefaults {
 
   val elementClass: ElementClass.Value = ElementClass.uint32
 
-  val largestSegmentId = 0L
-
-  val unsetLargestSegmentId = -1L
+  val largestSegmentId: Option[Long] = Some(0L)
 
   val zoomLevel = 1.0
 

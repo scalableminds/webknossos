@@ -1,22 +1,21 @@
 package models.annotation.nml
 
-import java.io.InputStream
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
 import play.api.i18n.{Messages, MessagesProvider}
 
+import java.io.InputStream
 import scala.collection.{immutable, mutable}
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
@@ -82,7 +81,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 editRotation,
                 ElementClass.uint32,
                 v.fallbackLayerName,
-                v.largestSegmentId.getOrElse(VolumeTracingDefaults.largestSegmentId),
+                v.largestSegmentId,
                 0,
                 zoomLevel,
                 None,

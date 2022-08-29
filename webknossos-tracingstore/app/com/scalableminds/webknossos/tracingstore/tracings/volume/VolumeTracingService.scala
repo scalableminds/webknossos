@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io._
 import java.nio.file.Paths
 import java.util.zip.Deflater
-
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -95,8 +94,8 @@ class VolumeTracingService @Inject()(
               case a: UpdateBucketVolumeAction =>
                 if (tracing.getMappingIsEditable) {
                   Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
-                } else if (tracing.largestSegmentId == VolumeTracingDefaults.unsetLargestSegmentId) {
-                  Fox.failure("Cannot mutate volume data while largest segment id is unset.")
+                } else if (tracing.largestSegmentId.isEmpty) {
+                  Fox.failure("Cannot mutate volume data while largest segment id is not set.")
                 } else updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
@@ -104,7 +103,7 @@ class VolumeTracingService @Inject()(
                     activeSegmentId = Some(a.activeSegmentId),
                     editPosition = a.editPosition,
                     editRotation = a.editRotation,
-                    largestSegmentId = a.largestSegmentId,
+                    largestSegmentId = Some(a.largestSegmentId),
                     zoomLevel = a.zoomLevel
                   ))
               case a: RevertToVersionVolumeAction =>
@@ -420,7 +419,7 @@ class VolumeTracingService @Inject()(
       )
 
   private def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
-    val largestSegmentId = Math.max(tracingA.largestSegmentId, tracingB.largestSegmentId)
+    val largestSegmentId = combineLargestSegmentIds(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                      tracingB.userBoundingBox,
@@ -438,6 +437,14 @@ class VolumeTracingService @Inject()(
       userBoundingBoxes = userBoundingBoxes
     )
   }
+
+  private def combineLargestSegmentIds(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
+    (aOpt, bOpt) match {
+      case (Some(a), Some(b)) => Some(Math.max(a, b))
+      case (Some(a), None)    => Some(a)
+      case (None, Some(b))    => Some(b)
+      case (None, None)       => None
+    }
 
   private def bucketStreamFromSelector(selector: TracingSelector,
                                        tracing: VolumeTracing): Iterator[(BucketPosition, Array[Byte])] = {
@@ -515,8 +522,9 @@ class VolumeTracingService @Inject()(
         Fox.failure("annotation.volume.resolutionsDoNotMatch")
       else {
         val volumeLayer = volumeTracingLayer(tracingId, tracing)
-        val mergedVolume = new MergedVolume(tracing.elementClass, tracing.largestSegmentId)
         for {
+          largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
+          mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
           _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox

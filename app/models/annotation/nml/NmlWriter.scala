@@ -6,18 +6,16 @@ import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.Segment
 import com.scalableminds.webknossos.datastore.geometry._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayerType, FetchedAnnotationLayer}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
-
-import javax.inject.Inject
-import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import models.annotation.Annotation
 import models.task.Task
 import models.user.User
 import org.joda.time.DateTime
 import play.api.libs.iteratee.Enumerator
 
+import javax.inject.Inject
+import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import scala.concurrent.ExecutionContext
 
 case class NmlParameters(
@@ -214,9 +212,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         volumeLayer.tracing match {
           case Right(volumeTracing) =>
             volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
-            if (volumeTracing.largestSegmentId != VolumeTracingDefaults.unsetLargestSegmentId) {
-              writer.writeAttribute("largestSegmentId", volumeTracing.largestSegmentId.toString)
-            }
+            volumeTracing.largestSegmentId.foreach(id => writer.writeAttribute("largestSegmentId", id.toString))
             writeVolumeSegmentMetadata(volumeTracing.segments)
           case _ => ()
         }

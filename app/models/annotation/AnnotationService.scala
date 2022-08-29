@@ -155,15 +155,18 @@ class AnnotationService @Inject()(
         elementClassToProto(
           fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
         fallbackLayer.map(_.name),
-        fallbackLayer
-          .map(_.largestSegmentId.getOrElse(VolumeTracingDefaults.unsetLargestSegmentId))
-          .getOrElse(VolumeTracingDefaults.largestSegmentId),
+        initialLargestSegmentId(fallbackLayer.map(_.largestSegmentId)),
         0,
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(organizationName),
         resolutions = resolutionsRestricted.map(vec3IntToProto)
       )
   }
+
+  private def initialLargestSegmentId(fromFallbackLayer: Option[Option[Long]]): Option[Long] =
+    if (fromFallbackLayer.isDefined) {
+      fromFallbackLayer.flatten
+    } else VolumeTracingDefaults.largestSegmentId
 
   def addAnnotationLayer(annotation: Annotation,
                          organizationName: String,

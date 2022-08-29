@@ -272,9 +272,6 @@ Expects:
         case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
         case _                                                                                   => None
       }.headOption
-      largestSegmentIdFromFallback = fallbackLayer
-        .map(_.largestSegmentId.getOrElse(VolumeTracingDefaults.unsetLargestSegmentId))
-        .getOrElse(VolumeTracingDefaults.largestSegmentId)
     } yield {
       volumeTracing.copy(
         boundingBox =
@@ -285,10 +282,17 @@ Expects:
           .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass)),
         fallbackLayer = fallbackLayer.map(_.name),
         largestSegmentId =
-          if (volumeTracing.largestSegmentId == VolumeTracingDefaults.largestSegmentId) largestSegmentIdFromFallback
-          else volumeTracing.largestSegmentId
+          combineLargestSegmentIds(volumeTracing.largestSegmentId, fallbackLayer.map(_.largestSegmentId))
       )
     }
+
+  private def combineLargestSegmentIds(fromNml: Option[Long], fromFallbackLayer: Option[Option[Long]]): Option[Long] =
+    if (fromNml.nonEmpty)
+      fromNml
+    else if (fromFallbackLayer.nonEmpty)
+      fromFallbackLayer.flatten
+    else
+      VolumeTracingDefaults.largestSegmentId
 
   @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownloadByType")
   @ApiResponses(

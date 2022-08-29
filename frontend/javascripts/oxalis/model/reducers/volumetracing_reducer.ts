@@ -173,7 +173,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,
     contourList: [],
-    maxCellId: maxCellId <= 0 ? null : maxCellId,
+    maxCellId,
     tracingId: tracing.id,
     version: tracing.version,
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),

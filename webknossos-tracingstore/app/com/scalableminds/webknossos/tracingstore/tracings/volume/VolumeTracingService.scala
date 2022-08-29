@@ -103,7 +103,7 @@ class VolumeTracingService @Inject()(
                     activeSegmentId = Some(a.activeSegmentId),
                     editPosition = a.editPosition,
                     editRotation = a.editRotation,
-                    largestSegmentId = Some(a.largestSegmentId),
+                    largestSegmentId = a.largestSegmentId,
                     zoomLevel = a.zoomLevel
                   ))
               case a: RevertToVersionVolumeAction =>
@@ -538,7 +538,7 @@ class VolumeTracingService @Inject()(
             tracing.version + 1,
             System.currentTimeMillis(),
             None,
-            List(ImportVolumeData(mergedVolume.largestSegmentId.toPositiveLong)),
+            List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
             None,

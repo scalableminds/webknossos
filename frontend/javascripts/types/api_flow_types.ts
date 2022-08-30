@@ -551,6 +551,7 @@ export type APIFeatureToggles = {
   readonly taskReopenAllowedInSeconds: number;
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
+  readonly voxelyticsEnabled: boolean;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;

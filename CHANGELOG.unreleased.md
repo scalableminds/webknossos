@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed a crash which could happen when using the "Automatically clip histogram" feature in certain scenarios. [#6433](https://github.com/scalableminds/webknossos/pull/6433)
 
 ### Removed
 

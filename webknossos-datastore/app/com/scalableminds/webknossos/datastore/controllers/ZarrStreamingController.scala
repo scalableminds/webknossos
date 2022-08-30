@@ -105,7 +105,7 @@ class ZarrStreamingController @Inject()(
       dataSetName: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                      token) {
+                                      urlOrHeaderToken(token, request)) {
       for {
         dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ~> NOT_FOUND
         dataLayers = dataSource.dataLayers

@@ -13,9 +13,9 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [084-annotation-contributors.sql](conf/evolutions/084-annotation-contributors.sql)
-- [085-add-annotations-publicationforeignkey](conf/evolutions/085-add-annotations-publicationforeignkey.sql)
-- [086-drop-foreign-datastores.sql](conf/evolutions/086-drop-foreign-datastores.sql.sql)
-- [087-zarr-private-links](conf/evolutions/087-zarr-private-links.sql)
+- [085-annotation-publication.sql](conf/evolutions/085-annotation-publication.sql)
+- [086-drop-foreign-datastores.sql](conf/evolutions/086-drop-foreign-datastores.sql)
+- [087-zarr-private-links.sql](conf/evolutions/087-zarr-private-links.sql)
 
 
 ## [22.08.0](https://github.com/scalableminds/webknossos/releases/tag/22.08.0) - 2022-07-20

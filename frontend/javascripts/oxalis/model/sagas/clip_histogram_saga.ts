@@ -6,7 +6,7 @@ import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions"
 import Toast from "libs/toast";
 import { OrthoViews } from "oxalis/constants";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { getLayerByName, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import api from "oxalis/api/internal_api";
 import { getRequestLogZoomStep } from "../accessors/flycam_accessor";
 
@@ -19,24 +19,20 @@ function onThresholdChange(layerName: string, [firstVal, secVal]: [number, numbe
 }
 
 async function getClippingValues(layerName: string, thresholdRatio: number = 0.0001) {
-  const state = Store.getState();
-  const { dataset } = state;
-  const { elementClass } = getLayerByName(dataset, layerName);
+  const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
 
   // Find a viable resolution to compute the histogram on
   // Ideally, we want to avoid resolutions 1 and 2 to keep
   // the amount of data that has to be loaded small and
   // to de-noise the data
-  const layer = getLayerByName(dataset, layerName);
-  const resolutionInfo = getResolutionInfo(layer.resolutions);
-  const desiredResolutionIndex = Math.max(2, getRequestLogZoomStep(state) + 1);
-  const resolutionIndex = resolutionInfo.getClosestExistingIndex(desiredResolutionIndex);
+  const state = Store.getState();
+  const maybeResolutionIndex = Math.max(2, getRequestLogZoomStep(state) + 1);
 
   const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
-    api.data.getViewportData(OrthoViews.PLANE_XY, layerName, resolutionIndex),
-    api.data.getViewportData(OrthoViews.PLANE_XZ, layerName, resolutionIndex),
-    api.data.getViewportData(OrthoViews.PLANE_YZ, layerName, resolutionIndex),
+    api.data.getViewportData(OrthoViews.PLANE_XY, layerName, maybeResolutionIndex),
+    api.data.getViewportData(OrthoViews.PLANE_XZ, layerName, maybeResolutionIndex),
+    api.data.getViewportData(OrthoViews.PLANE_YZ, layerName, maybeResolutionIndex),
   ]);
   const dataForAllViewPorts = new TypedArrayClass(
     cuboidXY.length + cuboidXZ.length + cuboidYZ.length,

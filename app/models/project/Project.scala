@@ -41,14 +41,14 @@ object Project {
   // format: off
   val projectPublicReads: Reads[Project] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[String](ObjectId.stringObjectIdReads("team")) and
+      (__ \ 'team).read[ObjectId] and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Long] and
-      (__ \ 'owner).read[String](ObjectId.stringObjectIdReads("owner")) and
+      (__ \ 'owner).read[ObjectId] and
       (__ \ 'isBlacklistedFromReport).read[Boolean]) (
       (name, team, priority, paused, expectedTime, owner, isBlacklistedFromReport) =>
-        Project(ObjectId.generate, ObjectId(team), ObjectId(owner), name, priority, paused getOrElse false, expectedTime, isBlacklistedFromReport))
+        Project(ObjectId.generate, team, owner, name, priority, paused getOrElse false, expectedTime, isBlacklistedFromReport))
   // format: on
 
 }

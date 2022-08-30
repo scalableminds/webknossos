@@ -33,12 +33,12 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
   def fromForm(
       summary: String,
       description: String,
-      team: String,
+      team: ObjectId,
       settings: AnnotationSettings,
       recommendedConfiguration: Option[JsValue],
       tracingType: TracingType
   ): TaskType =
-    TaskType(ObjectId.generate, ObjectId(team), summary, description, settings, recommendedConfiguration, tracingType)
+    TaskType(ObjectId.generate, team, summary, description, settings, recommendedConfiguration, tracingType)
 
   def publicWrites(taskType: TaskType): Fox[JsObject] =
     for {

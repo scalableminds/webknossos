@@ -1,4 +1,5 @@
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+
 export default {
   $schema: "http://json-schema.org/draft-06/schema#",
   ...baseDatasetViewConfiguration,
@@ -64,36 +65,44 @@ export default {
       },
       required: ["dataFormat", "boundingBox", "wkwResolutions"],
     },
-    "types::DataLayerKnossosPartial": {
-      title: "DataLayerKnossos",
+    "types::DataLayerZarrPartial": {
+      title: "DataLayerZarr",
       type: "object",
       properties: {
         dataFormat: {
-          const: "knossos",
+          const: "zarr",
         },
-        sections: {
+        boundingBox: {
+          $ref: "#/definitions/types::BoundingBox",
+        },
+        mags: {
           type: "array",
           items: {
             type: "object",
             properties: {
-              name: {
+              mag: {
+                anyOf: [
+                  {
+                    type: "number",
+                  },
+                  {
+                    $ref: "#/definitions/types::Vector3",
+                  },
+                ],
+              },
+              path: {
                 type: "string",
               },
-              resolutions: {
-                type: "array",
-                items: {
-                  type: "number",
-                },
-              },
-              boundingBox: {
-                $ref: "#/definitions/types::BoundingBox",
+              axisOrder: {
+                type: "object",
+                additionalProperties: { type: "number" },
               },
             },
-            required: ["name", "resolutions", "boundingBox"],
+            required: ["mag", "path"],
           },
         },
       },
-      required: ["dataFormat", "sections"],
+      required: ["dataFormat", "mags"],
     },
     "types::DataLayer": {
       title: "DataLayer",
@@ -171,7 +180,7 @@ export default {
               $ref: "#/definitions/types::DataLayerWKWPartial",
             },
             {
-              $ref: "#/definitions/types::DataLayerKnossosPartial",
+              $ref: "#/definitions/types::DataLayerZarrPartial",
             },
           ],
         },

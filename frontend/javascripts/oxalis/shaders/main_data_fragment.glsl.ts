@@ -49,6 +49,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_maxZoomStep;
   uniform float <%= name %>_alpha;
+  uniform float <%= name %>_gammaCorrectionValue;
   uniform float <%= name %>_unrenderable;
 <% }) %>
 
@@ -174,6 +175,8 @@ void main() {
       // Note: max == min would cause a division by 0. Thus we add 1 in this case and filter out the whole value below.
       float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
       color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
+
+      color_value = pow(color_value, vec3(<%= name %>_gammaCorrectionValue));
 
       // Maybe invert the color using the inverting_factor
       color_value = abs(color_value - <%= name %>_is_inverted);

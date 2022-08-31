@@ -230,6 +230,10 @@ class PlaneMaterialFactory {
         type: "f",
         value: 1,
       };
+      this.uniforms[`${layerName}_gammaCorrectionValue`] = {
+        type: "f",
+        value: 1,
+      };
       // If the `_unrenderable` uniform is true, the layer
       // cannot (and should not) be rendered in the
       // current mag.
@@ -601,7 +605,7 @@ class PlaneMaterialFactory {
     elementClass: ElementClass,
     isSegmentationLayer: boolean,
   ): void {
-    const { alpha, intensityRange, isDisabled, isInverted } = settings;
+    const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue } = settings;
 
     // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
     if (!isSegmentationLayer) {
@@ -617,6 +621,7 @@ class PlaneMaterialFactory {
     }
 
     this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
+    this.uniforms[`${name}_gammaCorrectionValue`].value = gammaCorrectionValue;
   }
 
   getMaterial(): THREE.ShaderMaterial {

@@ -85,6 +85,7 @@ export const initialState = update(defaultState, {
           isDisabled: false,
           isInverted: false,
           isInEditMode: false,
+          gammaCorrectionValue: 1,
         },
       },
     },

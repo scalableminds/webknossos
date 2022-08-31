@@ -81,6 +81,7 @@ export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfigura
   isDisabled: "Disabled Layer",
   isInverted: "Inverted Layer",
   isInEditMode: "Configuration Mode",
+  gammaCorrectionValue: "Gamma Correction",
 };
 export default {
   yes: "Yes",

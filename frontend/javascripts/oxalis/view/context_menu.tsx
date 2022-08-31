@@ -39,6 +39,7 @@ import {
 import {
   deleteEdgeAction,
   mergeTreesAction,
+  minCutAgglomerateAction,
   deleteNodeAction,
   setActiveNodeAction,
   createTreeAction,
@@ -98,6 +99,7 @@ type OwnProps = {
 type DispatchProps = {
   deleteEdge: (arg0: number, arg1: number) => void;
   mergeTrees: (arg0: number, arg1: number) => void;
+  minCutAgglomerate: (arg0: number, arg1: number) => void;
   deleteNode: (arg0: number, arg1: number) => void;
   setActiveNode: (arg0: number) => void;
   hideTree: (arg0: number) => void;
@@ -342,6 +344,7 @@ function NodeContextMenuOptions({
   hideContextMenu,
   deleteEdge,
   mergeTrees,
+  minCutAgglomerate,
   deleteNode,
   createBranchPoint,
   deleteBranchpointById,
@@ -375,6 +378,8 @@ function NodeContextMenuOptions({
     );
   }
 
+  const isProofreadingActive = Store.getState().uiInformation.activeTool === "PROOFREAD";
+
   return (
     <Menu
       onClick={hideContextMenu}
@@ -401,6 +406,17 @@ function NodeContextMenuOptions({
             Create Edge & Merge with this Tree{" "}
             {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
           </Menu.Item>
+          {isProofreadingActive ? (
+            <Menu.Item
+              key="min-cut-node"
+              disabled={!areInSameTree || areNodesConnected}
+              onClick={() =>
+                activeNodeId != null ? minCutAgglomerate(clickedNodeId, activeNodeId) : null
+              }
+            >
+              Perform Min-Cut between these Nodes
+            </Menu.Item>
+          ) : null}
           <Menu.Item
             key="delete-edge"
             disabled={!areNodesConnected}
@@ -1060,6 +1076,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   mergeTrees(sourceNodeId: number, targetNodeId: number) {
     dispatch(mergeTreesAction(sourceNodeId, targetNodeId));
+  },
+
+  minCutAgglomerate(sourceNodeId: number, targetNodeId: number) {
+    dispatch(minCutAgglomerateAction(sourceNodeId, targetNodeId));
   },
 
   deleteNode(nodeId: number, treeId: number) {

@@ -76,7 +76,6 @@ object EdgeWithPositions {
   implicit val jsonFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
 }
 
-
 trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient
 

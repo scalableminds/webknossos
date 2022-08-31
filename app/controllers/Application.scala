@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
+import javax.inject.Inject
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.user.{MultiUserDAO, User}
 import oxalis.security.WkEnv
@@ -13,7 +14,6 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.jdbc.PostgresProfile.api._
 import utils.{SQLClient, SimpleSQLDAO, StoreModules, WkConf}
 
-import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 @Api
@@ -68,10 +68,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
 
   @ApiOperation(hidden = true, value = "")
   def features: Action[AnyContent] = sil.UserAwareAction {
-    val jsonFeatureConf = Json
-      .parse(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
-      .as[JsObject]
-    JsonOk(jsonFeatureConf ++ Json.obj("voxelyticsEnabled" -> conf.Voxelytics.enabled))
+    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
   }
 
   @ApiOperation(value = "Health endpoint")

@@ -1,11 +1,9 @@
-module.exports = function(env = {}) {
+module.exports = function (env = {}) {
   /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   const webpack = require("webpack");
-  const fs = require("fs");
   const path = require("path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const TerserPlugin = require("terser-webpack-plugin");
-  const CopyWebpackPlugin = require("copy-webpack-plugin");
 
   const srcPath = path.resolve(__dirname, "frontend/javascripts/");
   const nodePath = "node_modules";
@@ -27,17 +25,6 @@ module.exports = function(env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: "./public/tf-models/**",
-          to: "tf-models/[name][ext]",
-          globOptions: {
-            dot: true,
-          },
-        },
-      ],
-    }),
   ];
 
   if (env.production) {
@@ -56,7 +43,7 @@ module.exports = function(env = {}) {
 
   const cssLoaderUrlFilter = {
     // Don't try to handle urls that already point to the assets directory
-    filter: url => !url.startsWith("/assets/"),
+    filter: (url) => !url.startsWith("/assets/"),
   };
 
   return {
@@ -83,8 +70,8 @@ module.exports = function(env = {}) {
                 // This property crashes webpack for some reason:
                 // filename: "[name].[contenthash].worker.ts",
               },
-            }
-          ]
+            },
+          ],
         },
         {
           test: /\.tsx?$/,
@@ -145,7 +132,7 @@ module.exports = function(env = {}) {
       alias: {
         react: path.resolve("./node_modules/react"),
       },
-      extensions: ['.ts', '.tsx', '.js', '.json'],
+      extensions: [".ts", ".tsx", ".js", ".json"],
       fallback: {
         // Needed for jsonschema
         url: require.resolve("url/"),

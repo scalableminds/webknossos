@@ -747,9 +747,17 @@ class TracingApi {
   }
 
   /**
-   * Returns the length of the shortest path between two nodes in nanometer and in voxels.
+   * Returns the shortest path between two nodes in nanometer and voxels as well as
+   * an array of the node IDs in the shortest path.
    */
-  measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
+  findShortestPathBetweenNodes(
+    sourceNodeId: number,
+    targetNodeId: number,
+  ): {
+    lengthNm: number;
+    lengthVx: number;
+    shortestPath: number[];
+  } {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
     const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
       skeletonTracing,
@@ -775,6 +783,10 @@ class TracingApi {
     // used when returning the final distance. The actual path finding is only done in
     // the physical space (nm-based).
     const distanceMapVx: Record<number, number> = {};
+    // We keep track of each nodes parent node ID in order to reconstruct an array of
+    // node IDs for the shortest path.
+    const parentMap: Record<number, number> = {};
+    parentMap[sourceNode.id] = -1;
 
     const getDistance = (nodeId: number) =>
       distanceMap[nodeId] != null ? distanceMap[nodeId] : Number.POSITIVE_INFINITY;
@@ -801,6 +813,7 @@ class TracingApi {
 
         if (neighbourDistance < getDistance(neighbourNodeId)) {
           distanceMap[neighbourNodeId] = neighbourDistance;
+          parentMap[neighbourNodeId] = source === nextNodeId ? source : target;
           const neighbourDistanceVx = V3.length(V3.sub(nextNodePosition, neighbourPosition));
           distanceMapVx[neighbourNodeId] = neighbourDistanceVx;
           priorityQueue.queue([neighbourNodeId, neighbourDistance]);
@@ -808,7 +821,27 @@ class TracingApi {
       }
     }
 
-    return [distanceMap[targetNodeId], distanceMapVx[targetNodeId]];
+    // Retrace the shortest path from the target node.
+    let nodeId = targetNodeId;
+    const shortestPath = [targetNodeId];
+    while (parentMap[nodeId] !== -1) {
+      nodeId = parentMap[nodeId];
+      shortestPath.unshift(nodeId);
+    }
+
+    return {
+      lengthNm: distanceMap[targetNodeId],
+      lengthVx: distanceMapVx[targetNodeId],
+      shortestPath,
+    };
+  }
+
+  /**
+   * Returns the length of the shortest path between two nodes in nanometer and in voxels.
+   */
+  measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
+    const { lengthNm, lengthVx } = this.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
+    return [lengthNm, lengthVx];
   }
 
   /**

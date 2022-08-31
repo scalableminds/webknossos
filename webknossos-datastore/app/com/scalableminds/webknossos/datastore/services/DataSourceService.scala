@@ -7,6 +7,7 @@ import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
@@ -133,13 +134,16 @@ class DataSourceService @Inject()(
       Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
       Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
       Check(
-        dataSource.dataLayers.forall {
-          case layer: SegmentationLayer =>
-            layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxSegmentIdValue(layer.elementClass)
-          case _ =>
-            true
+        dataSource.segmentationLayers.forall { layer =>
+          ElementClass.segmentationElementClasses.contains(layer.elementClass)
         },
-        "Largest segment ID invalid"
+        s"Invalid element class for segmentation layer"
+      ),
+      Check(
+        dataSource.segmentationLayers.forall { layer =>
+          ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
+        },
+        "Largest segment id exceeds range (must be nonnegative, within element class range, and < 2^53)"
       ),
       Check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
@@ -154,12 +158,14 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource): Fox[Unit] =
+  def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] =
     for {
       _ <- validateDataSource(dataSource).toFox
       dataSourcePath = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
-      _ <- backupPreviousProperties(dataSourcePath) ?~> "Could not update datasource-properties.json"
+      _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath))
+      _ <- Fox.runIf(!expectExisting)(bool2Fox(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
+      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath)) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()

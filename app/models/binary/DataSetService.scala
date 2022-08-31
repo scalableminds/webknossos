@@ -15,18 +15,17 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
-import models.team._
-import models.user.{User, UserService}
-import net.liftweb.common.{Box, Full}
-import oxalis.security.CompactRandomIDGenerator
-import play.api.libs.json.{JsObject, Json}
-import utils.{ObjectId, WkConf}
+
 import javax.inject.Inject
 import models.job.WorkerDAO
 import models.organization.{Organization, OrganizationDAO}
-import play.api.i18n.{Messages, MessagesProvider}
+import models.team._
+import models.user.{User, UserService}
+import net.liftweb.common.{Box, Full}
+import oxalis.security.RandomIDGenerator
+import play.api.libs.json.{JsObject, Json}
+import utils.{ObjectId, WkConf}
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
@@ -36,8 +35,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
                                workerDAO: WorkerDAO,
-                               publicationDAO: PublicationDAO,
-                               publicationService: PublicationService,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
@@ -47,13 +44,17 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  val unreportedStatus = "No longer available on datastore."
-  val notYetUploadedStatus = "Not yet fully uploaded."
-  val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
-  val initialTeamsTimeout: FiniteDuration = 1 day
+  private val unreportedStatus = "No longer available on datastore."
+  private val notYetUploadedStatus = "Not yet fully uploaded."
+  private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
 
-  def isProperDataSetName(name: String): Boolean =
-    name.matches("[A-Za-z0-9_\\-]*")
+  def assertValidDataSetName(name: String): Fox[Unit] =
+    for {
+      _ <- bool2Fox(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataSet.name.invalid.characters"
+      _ <- bool2Fox(!name.startsWith(".")) ?~> "dataSet.name.invalid.startsWithDot"
+      _ <- bool2Fox(!name.endsWith(".")) ?~> "dataSet.name.invalid.endsWithDot"
+      _ <- bool2Fox(name.length >= 3) ?~> "dataSet.name.invalid.lessThanThreeCharacters"
+    } yield ()
 
   def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Unit] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
@@ -100,26 +101,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
       _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
     } yield dataSet
-  }
-
-  def addForeignDataSet(dataStoreName: String, dataSetName: String, organizationName: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      dataStore <- dataStoreDAO.findOneByName(dataStoreName)
-      foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)
-      _ <- createDataSet(dataStore, organizationName, foreignDataset)
-    } yield ()
-
-  def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] =
-    rpc(s"$dataStoreUrl/data/datasets/$dataSetName/readInboxDataSourceLike")
-      .addQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
-      .getWithJsonResponse[InboxDataSource]
-
-  def addForeignDataStore(name: String, url: String): Fox[Unit] = {
-    val dataStore = DataStore(name, url, url, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
-    for {
-      _ <- dataStoreDAO.insertOne(dataStore)
-    } yield ()
   }
 
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(
@@ -230,7 +211,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
     def createAndSaveSharingToken(dataSetName: String)(implicit ctx: DBAccessContext): Fox[String] =
       for {
-        tokenValue <- new CompactRandomIDGenerator().generate
+        tokenValue <- new RandomIDGenerator().generate
         _ <- dataSetDAO.updateSharingTokenByName(dataSetName, organizationId, Some(tokenValue))
       } yield tokenValue
 
@@ -311,20 +292,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         } yield
           (user.isAdminOf(dataSet._organization)
             || user.isDatasetManager
+            || dataSet._uploader.contains(user._id)
             || teamManagerMemberships.map(_.teamId).intersect(dataSetAllowedTeams).nonEmpty)
       case _ => Fox.successful(false)
     }
 
   def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
 
-  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext,
-                                                             m: MessagesProvider): Fox[Unit] =
+  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      now <- Fox.successful(System.currentTimeMillis())
-      _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeout.toMillis) ?~> Messages(
-        "dataset.initialTeams.timeout",
-        now,
-        dataSet.created)
       previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
       userTeams <- teamDAO.findAllEditable
@@ -343,12 +319,18 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def publicWrites(dataSet: DataSet,
                    requestingUserOpt: Option[User],
-                   organization: Organization,
-                   dataStore: DataStore,
+                   organization: Option[Organization],
+                   dataStore: Option[DataStore],
                    skipResolutions: Boolean = false,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
       implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
+      organization <- Fox.fillOption(organization) {
+        organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      }
+      dataStore <- Fox.fillOption(dataStore) {
+        dataStoreFor(dataSet)
+      }
       teams <- allowedTeamsFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
       logoUrl <- logoUrlFor(dataSet, Some(organization)) ?~> "dataset.list.fetchLogoUrlFailed"
@@ -356,8 +338,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions) ?~> "dataset.list.fetchDataSourceFailed"
-      publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_)) ?~> "dataset.list.fetchPublicationFailed"
-      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites) ?~> "dataset.list.publicationWritesFailed"
       worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
       jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
     } yield {
@@ -377,11 +357,11 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "logoUrl" -> logoUrl,
         "sortingKey" -> dataSet.sortingKey,
         "details" -> dataSet.details,
-        "publication" -> publicationJson,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
-        "isForeign" -> dataStore.isForeign,
         "jobsEnabled" -> jobsEnabled,
-        "tags" -> dataSet.tags
+        "tags" -> dataSet.tags,
+        // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented
+        "publication" -> None
       )
     }
 }

@@ -42,7 +42,6 @@ type APIColorLayer = APIDataLayerBase & {
 export type APISegmentationLayer = APIDataLayerBase & {
   readonly category: "segmentation";
   readonly largestSegmentId: number;
-  readonly originalElementClass?: ElementClass;
   readonly mappings?: Array<string>;
   readonly agglomerates?: Array<string>;
   readonly fallbackLayer?: string | null | undefined;
@@ -74,7 +73,6 @@ export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {
   readonly name: string;
   readonly url: string;
-  readonly isForeign: boolean;
   readonly isScratch: boolean;
   readonly isConnector: boolean;
   readonly allowsUpload: boolean;
@@ -88,13 +86,22 @@ export type APITeam = {
   readonly name: string;
   readonly organization: string;
 };
-type APIPublication = {
-  readonly created: number;
-  readonly description: string;
+export type APIPublicationAnnotation = {
   readonly id: string;
-  readonly imageUrl: string;
+  readonly name: string;
+  readonly description: string;
+  readonly tracingStore: APITracingStore;
+  readonly dataSet: APIDataset;
+};
+export type APIPublication = {
+  readonly id: string;
   readonly publicationDate: number;
+  readonly imageUrl: string;
   readonly title: string;
+  readonly description: string;
+  readonly created: number;
+  readonly datasets: Array<APIDataset>;
+  readonly annotations: Array<APIPublicationAnnotation>;
 };
 export type MutableAPIDatasetId = {
   owningOrganization: string;
@@ -118,11 +125,10 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   displayName: string | null | undefined;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
-  isForeign: boolean;
   jobsEnabled: boolean;
   sortingKey: number;
   owningOrganization: string;
-  publication: APIPublication | null | undefined;
+  publication: null | undefined;
   tags: Array<string>;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
@@ -540,7 +546,6 @@ export type APIBuildInfo = {
 export type APIFeatureToggles = {
   readonly discussionBoard: string | false;
   readonly discussionBoardRequiresAdmin: boolean;
-  readonly addForeignDataset: boolean;
   readonly hideNavbarLogin: boolean;
   readonly isDemoInstance: boolean;
   readonly taskReopenAllowedInSeconds: number;
@@ -560,6 +565,7 @@ export type APIJob = {
   readonly datasetName: string | null | undefined;
   readonly exportFileName: string | null | undefined;
   readonly layerName: string | null | undefined;
+  readonly annotationLayerName: string | null | undefined;
   readonly tracingId: string | null | undefined;
   readonly annotationId: string | null | undefined;
   readonly annotationType: string | null | undefined;
@@ -688,4 +694,11 @@ export type APIMeshFile = {
 export type APIConnectomeFile = {
   connectomeFileName: string;
   mappingName: string;
+};
+
+export type ZarrPrivateLink = {
+  id: string;
+  annotation: string;
+  accessToken: string;
+  expirationDateTime: number | null;
 };

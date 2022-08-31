@@ -1,3 +1,4 @@
+import React from "react";
 import _ from "lodash";
 import { document } from "libs/window";
 import type { Vector3 } from "oxalis/constants";
@@ -14,13 +15,13 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   const canvas = document.createElement("canvas");
   const contextProvider =
     "getContext" in canvas
-      ? (ctxName: "webgl") => canvas.getContext(ctxName)
+      ? (ctxName: "webgl2") => canvas.getContext(ctxName)
       : (ctxName: string) => ({
           MAX_TEXTURE_SIZE: 0,
           MAX_TEXTURE_IMAGE_UNITS: 1,
 
           getParameter(param: number) {
-            if (ctxName === "webgl") {
+            if (ctxName === "webgl2") {
               const dummyValues: Record<string, any> = {
                 "0": 4096,
                 "1": 16,
@@ -42,10 +43,23 @@ export function getSupportedTextureSpecs(): GpuSpecs {
             throw new Error(`Unknown call to getExtension: ${param}`);
           },
         });
-  const gl = contextProvider("webgl");
+  const gl = contextProvider("webgl2");
 
   if (!gl) {
-    throw new Error("WebGL context could not be constructed.");
+    Toast.error(
+      <span>
+        Your browser does not seem to support WebGL 2. Please upgrade your browser or hardware and
+        ensure that WebGL 2 is supported. You might want to use{" "}
+        <a href="https://get.webgl.org/webgl2/" target="_blank" rel="noreferrer">
+          this site
+        </a>{" "}
+        to check the WebGL support yourself.
+      </span>,
+      {
+        sticky: true,
+      },
+    );
+    throw new Error("WebGL2 context could not be constructed.");
   }
 
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
@@ -93,8 +107,10 @@ export type DataTextureSizeAndCount = {
 export function getPackingDegree(byteCount: number, elementClass: ElementClass) {
   // If the layer holds less than 4 byte per voxel, we can pack multiple voxels using rgba channels
   // Float textures can hold a float per channel, adjust the packing degree accordingly
+  // 64-bit values need two texel per data voxel which is why their packing degree is lower than 1.
   if (byteCount === 1 || elementClass === "float") return 4;
   if (byteCount === 2) return 2;
+  if (byteCount === 8) return 0.5;
   return 1;
 }
 export function getChannelCount(

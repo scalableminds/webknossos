@@ -3,19 +3,17 @@ package utils
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
 import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
-import play.api.libs.json.{Json, JsonValidationError, OFormat, Reads}
-import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 
+import javax.inject.Inject
 import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
@@ -25,26 +23,9 @@ class SQLClient @Inject()(configuration: Configuration, slackNotificationService
   def getSlackNotificationService: SlackNotificationService = slackNotificationService
 }
 
-case class ObjectId(id: String) {
-  override def toString: String = id
-}
-
-object ObjectId extends FoxImplicits {
-  implicit val jsonFormat: OFormat[ObjectId] = Json.format[ObjectId]
-  def generate: ObjectId = fromBsonId(BSONObjectID.generate)
-  def fromString(input: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
-    fromStringSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
-  private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
-  private def fromStringSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
-  def dummyId: ObjectId = ObjectId("dummyObjectId")
-
-  def stringObjectIdReads(key: String): Reads[String] =
-    Reads.filter[String](JsonValidationError("bsonid.invalid", key))(fromStringSync(_).isDefined)
-}
-
 trait SQLTypeImplicits {
   implicit object SetObjectId extends SetParameter[ObjectId] {
-    def apply(v: ObjectId, pp: PositionedParameters) { pp.setString(v.id) }
+    def apply(v: ObjectId, pp: PositionedParameters): Unit = pp.setString(v.id)
   }
 }
 
@@ -107,13 +88,15 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def parseArrayTuple(literal: String): List[String] = {
     val trimmed = literal.drop(1).dropRight(1)
-    if (trimmed.isEmpty) return List()
-
-    val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
-    split.map { item =>
-      if (item.startsWith("\"") && item.endsWith("\"")) {
-        item.drop(1).dropRight(1)
-      } else item
+    if (trimmed.isEmpty)
+      List.empty
+    else {
+      val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
+      split.map { item =>
+        if (item.startsWith("\"") && item.endsWith("\"")) {
+          item.drop(1).dropRight(1)
+        } else item
+      }
     }
   }
 

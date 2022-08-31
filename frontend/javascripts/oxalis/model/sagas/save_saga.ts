@@ -12,7 +12,7 @@ import type {
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   VolumeTracingSaveRelevantActions,
-  setSegmentsActions,
+  setSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { UserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -615,6 +615,9 @@ function mergeDataWithBackendDataInPlace(
   }
 
   // Transfer backend to originalData
+  // The `set` operation is not problematic, since the BucketDataArray types
+  // won't be mixed (either, they are BigInt or they aren't)
+  // @ts-ignore
   originalData.set(backendData);
 
   for (const op of pendingOperations) {
@@ -716,7 +719,7 @@ function* applyAndGetRevertingVolumeBatch(
   );
   // The SegmentMap is immutable. So, no need to copy.
   const currentSegments = activeVolumeTracing.segments;
-  yield* put(setSegmentsActions(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
+  yield* put(setSegmentsAction(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
   cube.triggerPushQueue();
   return {
     type: "volume",

@@ -7,6 +7,7 @@ import Constants, {
   OverwriteModeEnum,
   FillModeEnum,
   TDViewDisplayModeEnum,
+  InterpolationModeEnum,
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
 const defaultViewportRect = {
@@ -75,6 +76,7 @@ const defaultState: OxalisState = {
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
+    interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
   },
   temporaryConfiguration: {
@@ -118,7 +120,6 @@ const defaultState: OxalisState = {
       name: "localhost",
       url: "http://localhost:9000",
       isScratch: false,
-      isForeign: false,
       isConnector: false,
       allowsUpload: true,
     },
@@ -128,7 +129,6 @@ const defaultState: OxalisState = {
     allowedTeams: [],
     logoUrl: null,
     lastUsedByUser: 0,
-    isForeign: false,
     jobsEnabled: false,
     sortingKey: 123,
     publication: null,

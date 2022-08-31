@@ -440,7 +440,7 @@ export function isRgb(dataset: APIDataset, layerName: string): boolean {
   );
 }
 export function getByteCountFromLayer(layerInfo: DataLayerType): number {
-  return getBitDepth(layerInfo) >> 3;
+  return getBitDepth(layerInfo) / 8;
 }
 export function getByteCount(dataset: APIDataset, layerName: string): number {
   return getByteCountFromLayer(getLayerByName(dataset, layerName));
@@ -658,11 +658,11 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
     case "int16":
     case "int32":
     case "float":
+    case "uint64":
       return true;
 
-    case "int64":
-    case "uint64":
     case "double":
+    case "int64":
     default:
       return false;
   }
@@ -698,6 +698,12 @@ export function getVisibleOrLastSegmentationLayer(
 
   return null;
 }
+
+export function hasVisibleUint64Segmentation(state: OxalisState) {
+  const segmentationLayer = getVisibleSegmentationLayer(state);
+  return segmentationLayer ? segmentationLayer.elementClass === "uint64" : false;
+}
+
 export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegmentationLayer> {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;
@@ -768,10 +774,7 @@ export function doesSupportVolumeWithFallback(
     return false;
   }
 
-  const isUint64 =
-    segmentationLayer.elementClass === "uint64" || segmentationLayer.elementClass === "int64";
-  const isFallbackSupported = !isUint64;
-  return isFallbackSupported;
+  return true;
 }
 export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter((dataLayer) => isColorLayer(dataset, dataLayer.name));

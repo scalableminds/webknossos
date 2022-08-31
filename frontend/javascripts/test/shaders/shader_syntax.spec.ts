@@ -1,12 +1,26 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'glsl... Remove this comment to see the full error message
-import glslParser from "glsl-parser";
 import { getLookupBufferSize } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import constants from "oxalis/constants";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import resolutions from "test/fixtures/resolutions";
-import test from "ava";
+import test, { ExecutionContext } from "ava";
+import { parser } from "@shaderfrog/glsl-parser";
+
 const DEFAULT_LOOK_UP_TEXTURE_WIDTH = getLookupBufferSize(constants.DEFAULT_GPU_MEMORY_FACTOR);
-test("Shader syntax: Ortho Mode", (t) => {
+
+test.beforeEach((t: ExecutionContext<any>) => {
+  t.context.originalWarn = console.warn;
+  t.context.warningEmittedCount = 0;
+  console.warn = (...args) => {
+    t.context.warningEmittedCount++;
+    t.context.originalWarn(...args);
+  };
+});
+
+test.afterEach(async (t: ExecutionContext<any>) => {
+  console.warn = t.context.originalWarn;
+});
+
+test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
@@ -16,17 +30,23 @@ test("Shader syntax: Ortho Mode", (t) => {
     segmentationLayerNames: [],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
     lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
-  const parseResult = glslParser.check(code);
-  t.is(parseResult.log.warningCount, 0);
-  t.is(parseResult.log.errorCount, 0);
+
+  /*
+   * If the code contains a syntax error, parse() will throw an exception
+   * which makes the test fail.
+   * If a warning was emitted during parsing, the `warningEmittedCount`
+   * will reflect this.
+   */
+  parser.parse(code);
+  t.true(t.context.warningEmittedCount === 0);
 });
-test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t) => {
+
+test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
@@ -37,17 +57,16 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t) => {
     segmentationLayerNames: ["segmentationLayer"],
     isMappingSupported: false,
     dataTextureCountPerLayer: 3,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
     lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
-  const parseResult = glslParser.check(code);
-  t.is(parseResult.log.warningCount, 0);
-  t.is(parseResult.log.errorCount, 0);
+  parser.parse(code);
+  t.true(t.context.warningEmittedCount === 0);
 });
-test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t) => {
+
+test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
@@ -58,17 +77,16 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t) => {
     segmentationLayerNames: ["segmentationLayer"],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
     lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
-  const parseResult = glslParser.check(code);
-  t.is(parseResult.log.warningCount, 0);
-  t.is(parseResult.log.errorCount, 0);
+  parser.parse(code);
+  t.true(t.context.warningEmittedCount === 0);
 });
-test("Shader syntax: Arbitrary Mode (no segmentation available)", (t) => {
+
+test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
@@ -78,17 +96,16 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t) => {
     segmentationLayerNames: [],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
     lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
-  const parseResult = glslParser.check(code);
-  t.is(parseResult.log.warningCount, 0);
-  t.is(parseResult.log.errorCount, 0);
+  parser.parse(code);
+  t.true(t.context.warningEmittedCount === 0);
 });
-test("Shader syntax: Arbitrary Mode (segmentation available)", (t) => {
+
+test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
@@ -99,17 +116,16 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t) => {
     segmentationLayerNames: ["segmentationLayer"],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
     lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
-  const parseResult = glslParser.check(code);
-  t.is(parseResult.log.warningCount, 0);
-  t.is(parseResult.log.errorCount, 0);
+  parser.parse(code);
+  t.true(t.context.warningEmittedCount === 0);
 });
-test("Shader syntax: Ortho Mode (rgb and float layer)", (t) => {
+
+test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: {
@@ -119,13 +135,11 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t) => {
     segmentationLayerNames: [],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
     lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
-  const parseResult = glslParser.check(code);
-  t.is(parseResult.log.warningCount, 0);
-  t.is(parseResult.log.errorCount, 0);
+  parser.parse(code);
+  t.true(t.context.warningEmittedCount === 0);
 });

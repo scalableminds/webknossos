@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -103,4 +104,9 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .addQueryStringOptional("token", token)
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
+
+  def getAnnotationForPrivateLink(accessToken: String): Fox[AnnotationSource] =
+    rpc(s"$webKnossosUri/api/zarrPrivateLinks/byAccessToken/$accessToken")
+      .addQueryString("key" -> dataStoreKey)
+      .getWithJsonResponse[AnnotationSource]
 }

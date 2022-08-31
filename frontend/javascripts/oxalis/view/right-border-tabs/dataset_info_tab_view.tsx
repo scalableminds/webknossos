@@ -394,7 +394,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     if (isDatasetViewMode) return null;
     let annotationTypeLabel;
     const { annotationType, name } = this.props.tracing;
-    const tracingName = name || "[untitled]";
+    const tracingName = name || "[unnamed]";
 
     if (this.props.task != null) {
       // In case we have a task display its id

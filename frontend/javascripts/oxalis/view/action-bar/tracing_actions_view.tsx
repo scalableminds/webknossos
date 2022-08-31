@@ -4,6 +4,7 @@ import {
   CheckCircleOutlined,
   CheckOutlined,
   CodeSandboxOutlined,
+  CopyOutlined,
   DeleteOutlined,
   DisconnectOutlined,
   DownloadOutlined,
@@ -30,7 +31,7 @@ import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import {
-  copyAnnotationToUserAccount,
+  duplicateAnnotation,
   finishAnnotation,
   reOpenAnnotation,
   createExplorational,
@@ -67,6 +68,7 @@ import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
+import { PrivateLinksModal } from "./private_links_view";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -91,6 +93,7 @@ type Props = OwnProps & StateProps;
 type State = {
   isMergeModalOpen: boolean;
   isUserScriptsModalOpen: boolean;
+  isZarrPrivateLinksModalOpen: boolean;
   isReopenAllowed: boolean;
 };
 export type LayoutProps = {
@@ -244,6 +247,7 @@ export function LayoutMenu(props: LayoutMenuProps) {
 class TracingActionsView extends React.PureComponent<Props, State> {
   state: State = {
     isMergeModalOpen: false,
+    isZarrPrivateLinksModalOpen: false,
     isUserScriptsModalOpen: false,
     isReopenAllowed: false,
   };
@@ -302,11 +306,21 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleCopyToAccount = async () => {
-    const newAnnotation = await copyAnnotationToUserAccount(
+    // duplicates the annotation in the current user account
+    const newAnnotation = await duplicateAnnotation(
       this.props.annotationId,
       this.props.annotationType,
     );
-    location.href = `/annotations/Explorational/${newAnnotation.id}`;
+    location.href = `/annotations/${newAnnotation.id}`;
+  };
+
+  handleDuplicate = async () => {
+    await Model.ensureSavedState();
+    const newAnnotation = await duplicateAnnotation(
+      this.props.annotationId,
+      this.props.annotationType,
+    );
+    location.href = `/annotations/${newAnnotation.id}`;
   };
 
   handleCopySandboxToAccount = async () => {
@@ -574,6 +588,16 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         Share
       </Menu.Item>,
     );
+    elements.push(
+      <Menu.Item
+        key="zarr-links-button"
+        onClick={() => this.setState({ isZarrPrivateLinksModalOpen: true })}
+      >
+        <LinkOutlined />
+        Zarr Links
+      </Menu.Item>,
+    );
+
     modals.push(
       <ShareModalView
         key="share-modal"
@@ -583,6 +607,22 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         annotationId={annotationId}
       />,
     );
+    modals.push(
+      <PrivateLinksModal
+        key="private-links-modal"
+        isVisible={this.state.isZarrPrivateLinksModalOpen}
+        onOk={() => this.setState({ isZarrPrivateLinksModalOpen: false })}
+        annotationId={annotationId}
+      />,
+    );
+    if (activeUser != null) {
+      elements.push(
+        <Menu.Item key="duplicate-button" onClick={this.handleDuplicate}>
+          <CopyOutlined />
+          Duplicate
+        </Menu.Item>,
+      );
+    }
     elements.push(screenshotMenuItem);
     elements.push(
       <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>

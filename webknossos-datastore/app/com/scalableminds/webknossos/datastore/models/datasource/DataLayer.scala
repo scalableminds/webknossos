@@ -28,6 +28,8 @@ object Category extends ExtendedEnumeration {
 object ElementClass extends ExtendedEnumeration {
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
 
+  def segmentationElementClasses: Set[Value] = Set(uint8, uint16, uint32, uint64)
+
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
     case ElementClass.uint16 => 2
@@ -57,8 +59,12 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.uint8  => 1L << 8L
     case ElementClass.uint16 => 1L << 16L
     case ElementClass.uint32 => 1L << 32L
-    case ElementClass.uint64 => (1L << 63L) - 1
+    case ElementClass.uint64 => (1L << 53L) - 1 // Front-end can only handle segment-ids up to (2^53)-1
   }
+
+  def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =
+    largestSegmentId >= 0L && segmentationElementClasses.contains(elementClass) && largestSegmentId <= maxSegmentIdValue(
+      elementClass)
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")
@@ -72,6 +78,20 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int16  => (1, "<i2")
     case ElementClass.int32  => (1, "<i4")
     case ElementClass.int64  => (1, "<i8")
+  }
+
+  def guessFromZarrString(zarrDtype: String): Option[ElementClass.Value] = zarrDtype.drop(1) match {
+    case "u1" => Some(ElementClass.uint8)
+    case "u2" => Some(ElementClass.uint16)
+    case "u4" => Some(ElementClass.uint32)
+    case "u8" => Some(ElementClass.uint64)
+    case "f4" => Some(ElementClass.float)
+    case "f8" => Some(ElementClass.double)
+    case "i1" => Some(ElementClass.int8)
+    case "i2" => Some(ElementClass.int16)
+    case "i4" => Some(ElementClass.int32)
+    case "i8" => Some(ElementClass.int64)
+    case _    => None
   }
 }
 
@@ -165,10 +185,11 @@ object DataLayer {
         dataFormat <- json.validate((JsPath \ "dataFormat").read[DataFormat.Value])
         category <- json.validate((JsPath \ "category").read[Category.Value])
         layer <- (dataFormat, category) match {
-          case (DataFormat.wkw, Category.segmentation) => json.validate[WKWSegmentationLayer]
-          case (DataFormat.wkw, _)                     => json.validate[WKWDataLayer]
-          case (DataFormat.zarr, _)                    => json.validate[ZarrDataLayer]
-          case _                                       => json.validate[WKWDataLayer]
+          case (DataFormat.wkw, Category.segmentation)  => json.validate[WKWSegmentationLayer]
+          case (DataFormat.wkw, _)                      => json.validate[WKWDataLayer]
+          case (DataFormat.zarr, Category.segmentation) => json.validate[ZarrSegmentationLayer]
+          case (DataFormat.zarr, _)                     => json.validate[ZarrDataLayer]
+          case _                                        => json.validate[WKWDataLayer]
         }
       } yield {
         layer

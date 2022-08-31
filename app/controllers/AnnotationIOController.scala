@@ -2,7 +2,6 @@ package controllers
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.zip.Deflater
-
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.mohiva.play.silhouette.api.Silhouette
@@ -12,6 +11,11 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerType,
+  FetchedAnnotationLayer
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractSegmentationLayer,
   DataLayerLike,
@@ -22,6 +26,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
 import io.swagger.annotations._
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
@@ -139,11 +144,12 @@ Expects:
 
   private def mergeAndSaveVolumeLayers(volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
-                                       otherFiles: Map[String, File]): Fox[List[AnnotationLayer]] = {
-    if (volumeLayersGrouped.isEmpty) return Fox.successful(List())
-    if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
-      return Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
-    if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
+                                       otherFiles: Map[String, File]): Fox[List[AnnotationLayer]] =
+    if (volumeLayersGrouped.isEmpty)
+      Fox.successful(List())
+    else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
+      Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
+    else if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
       Fox.serialCombined(volumeLayersGrouped.toList.flatten.zipWithIndex) { volumeLayerWithIndex =>
         val uploadedVolumeLayer = volumeLayerWithIndex._1
         val idx = volumeLayerWithIndex._2
@@ -173,18 +179,19 @@ Expects:
             AnnotationLayer.defaultVolumeLayerName
           ))
     }
-  }
 
   private def mergeAndSaveSkeletonLayers(skeletonTracings: List[SkeletonTracing],
-                                         tracingStoreClient: WKRemoteTracingStoreClient): Fox[List[AnnotationLayer]] = {
-    if (skeletonTracings.isEmpty) return Fox.successful(List())
-    for {
-      mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
-        SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
-        persistTracing = true)
-    } yield
-      List(AnnotationLayer(mergedTracingId, AnnotationLayerType.Skeleton, AnnotationLayer.defaultSkeletonLayerName))
-  }
+                                         tracingStoreClient: WKRemoteTracingStoreClient): Fox[List[AnnotationLayer]] =
+    if (skeletonTracings.isEmpty)
+      Fox.successful(List())
+    else {
+      for {
+        mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
+          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
+          persistTracing = true)
+      } yield
+        List(AnnotationLayer(mergedTracingId, AnnotationLayerType.Skeleton, AnnotationLayer.defaultSkeletonLayerName))
+    }
 
   private def assertNonEmpty(parseSuccesses: List[NmlParseSuccess]) =
     bool2Fox(parseSuccesses.exists(p => p.skeletonTracing.nonEmpty || p.volumeLayers.nonEmpty)) ?~> "nml.file.noFile"

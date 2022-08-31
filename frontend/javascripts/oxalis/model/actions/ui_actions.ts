@@ -1,63 +1,21 @@
 import type { AnnotationTool } from "oxalis/constants";
 import type { BorderOpenStatus, Theme } from "oxalis/store";
-export type SetToolAction = {
-  type: "SET_TOOL";
-  tool: AnnotationTool;
-};
-export type CycleToolAction = {
-  type: "CYCLE_TOOL";
-};
-type SetDropzoneModalVisibilityAction = {
-  type: "SET_DROPZONE_MODAL_VISIBILITY";
-  visible: boolean;
-};
-type SetVersionRestoreVisibilityAction = {
-  type: "SET_VERSION_RESTORE_VISIBILITY";
-  active: boolean;
-};
-type SetStoredLayoutsAction = {
-  type: "SET_STORED_LAYOUTS";
-  storedLayouts: Record<string, any>;
-};
-type SetBorderOpenStatusAction = {
-  type: "SET_BORDER_OPEN_STATUS";
-  borderOpenStatus: BorderOpenStatus;
-};
-type SetImportingMeshStateAction = {
-  type: "SET_IMPORTING_MESH_STATE";
-  isImporting: boolean;
-};
-type SetIsInAnnotationViewAction = {
-  type: "SET_IS_IN_ANNOTATION_VIEW";
-  value: boolean;
-};
-type SetHasOrganizationsAction = {
-  type: "SET_HAS_ORGANIZATIONS";
-  value: boolean;
-};
-type SetBusyBlockingInfoAction = {
-  type: "SET_BUSY_BLOCKING_INFO_ACTION";
-  value: {
-    isBusy: boolean;
-    reason?: string;
-  };
-};
-type SetThemeAction = {
-  type: "SET_THEME";
-  value: Theme;
-};
-type SetDownloadModalVisibilityAction = {
-  type: "SET_DOWNLOAD_MODAL_VISIBILITY";
-  visible: boolean;
-};
-type SetPythonClientModalVisibilityAction = {
-  type: "SET_PYTHON_MODAL_VISIBILITY";
-  visible: boolean;
-};
-type SetShareModalVisibilityAction = {
-  type: "SET_SHARE_MODAL_VISIBILITY";
-  visible: boolean;
-};
+
+type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
+type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
+type SetStoredLayoutsAction = ReturnType<typeof setStoredLayoutsAction>;
+type SetBorderOpenStatusAction = ReturnType<typeof setBorderOpenStatusAction>;
+type SetImportingMeshStateAction = ReturnType<typeof setImportingMeshStateAction>;
+type SetIsInAnnotationViewAction = ReturnType<typeof setIsInAnnotationViewAction>;
+type SetHasOrganizationsAction = ReturnType<typeof setHasOrganizationsAction>;
+export type SetToolAction = ReturnType<typeof setToolAction>;
+export type CycleToolAction = ReturnType<typeof cycleToolAction>;
+type SetThemeAction = ReturnType<typeof setThemeAction>;
+type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
+type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
+type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
+type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
@@ -73,76 +31,76 @@ export type UiAction =
   | SetPythonClientModalVisibilityAction
   | SetShareModalVisibilityAction
   | SetBusyBlockingInfoAction;
-export const setDropzoneModalVisibilityAction = (
-  visible: boolean,
-): SetDropzoneModalVisibilityAction => ({
-  type: "SET_DROPZONE_MODAL_VISIBILITY",
-  visible,
-});
-export const setVersionRestoreVisibilityAction = (
-  active: boolean,
-): SetVersionRestoreVisibilityAction => ({
-  type: "SET_VERSION_RESTORE_VISIBILITY",
-  active,
-});
-export const setStoredLayoutsAction = (
-  storedLayouts: Record<string, any>,
-): SetStoredLayoutsAction => ({
-  type: "SET_STORED_LAYOUTS",
-  storedLayouts,
-});
-export const setBorderOpenStatusAction = (
-  borderOpenStatus: BorderOpenStatus,
-): SetBorderOpenStatusAction => ({
-  type: "SET_BORDER_OPEN_STATUS",
-  borderOpenStatus,
-});
-export const setImportingMeshStateAction = (isImporting: boolean): SetImportingMeshStateAction => ({
-  type: "SET_IMPORTING_MESH_STATE",
-  isImporting,
-});
-export const setIsInAnnotationViewAction = (value: boolean): SetIsInAnnotationViewAction => ({
-  type: "SET_IS_IN_ANNOTATION_VIEW",
-  value,
-});
-export const setHasOrganizationsAction = (value: boolean): SetHasOrganizationsAction => ({
-  type: "SET_HAS_ORGANIZATIONS",
-  value,
-});
-export const setToolAction = (tool: AnnotationTool): SetToolAction => ({
-  type: "SET_TOOL",
-  tool,
-});
-export const cycleToolAction = (): CycleToolAction => ({
-  type: "CYCLE_TOOL",
-});
-export const setThemeAction = (value: Theme): SetThemeAction => ({
-  type: "SET_THEME",
-  value,
-});
-export const setDownloadModalVisibilityAction = (
-  visible: boolean,
-): SetDownloadModalVisibilityAction => ({
-  type: "SET_DOWNLOAD_MODAL_VISIBILITY",
-  visible,
-});
-export const setPythonClientModalVisibilityAction = (
-  visible: boolean,
-): SetPythonClientModalVisibilityAction => ({
-  type: "SET_PYTHON_MODAL_VISIBILITY",
-  visible,
-});
-export const setShareModalVisibilityAction = (visible: boolean): SetShareModalVisibilityAction => ({
-  type: "SET_SHARE_MODAL_VISIBILITY",
-  visible,
-});
-export const setBusyBlockingInfoAction = (
-  isBusy: boolean,
-  reason?: string,
-): SetBusyBlockingInfoAction => ({
-  type: "SET_BUSY_BLOCKING_INFO_ACTION",
-  value: {
-    isBusy,
-    reason,
-  },
-});
+
+export const setDropzoneModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_DROPZONE_MODAL_VISIBILITY",
+    visible,
+  } as const);
+export const setVersionRestoreVisibilityAction = (active: boolean) =>
+  ({
+    type: "SET_VERSION_RESTORE_VISIBILITY",
+    active,
+  } as const);
+export const setStoredLayoutsAction = (storedLayouts: Record<string, any>) =>
+  ({
+    type: "SET_STORED_LAYOUTS",
+    storedLayouts,
+  } as const);
+export const setBorderOpenStatusAction = (borderOpenStatus: BorderOpenStatus) =>
+  ({
+    type: "SET_BORDER_OPEN_STATUS",
+    borderOpenStatus,
+  } as const);
+export const setImportingMeshStateAction = (isImporting: boolean) =>
+  ({
+    type: "SET_IMPORTING_MESH_STATE",
+    isImporting,
+  } as const);
+export const setIsInAnnotationViewAction = (value: boolean) =>
+  ({
+    type: "SET_IS_IN_ANNOTATION_VIEW",
+    value,
+  } as const);
+export const setHasOrganizationsAction = (value: boolean) =>
+  ({
+    type: "SET_HAS_ORGANIZATIONS",
+    value,
+  } as const);
+export const setToolAction = (tool: AnnotationTool) =>
+  ({
+    type: "SET_TOOL",
+    tool,
+  } as const);
+export const cycleToolAction = () =>
+  ({
+    type: "CYCLE_TOOL",
+  } as const);
+export const setThemeAction = (value: Theme) =>
+  ({
+    type: "SET_THEME",
+    value,
+  } as const);
+export const setDownloadModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_DOWNLOAD_MODAL_VISIBILITY",
+    visible,
+  } as const);
+export const setShareModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_SHARE_MODAL_VISIBILITY",
+    visible,
+  } as const);
+export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
+  ({
+    type: "SET_BUSY_BLOCKING_INFO_ACTION",
+    value: {
+      isBusy,
+      reason,
+    },
+  } as const);
+export const setPythonClientModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_PYTHON_MODAL_VISIBILITY",
+    visible,
+  } as const);

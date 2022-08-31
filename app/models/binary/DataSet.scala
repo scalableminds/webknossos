@@ -111,8 +111,13 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       )
     }
 
-  override def anonymousReadAccessQ(sharingToken: Option[String]): String =
-    "isPublic" + sharingToken.map(t => s" or sharingToken = '$t'").getOrElse("")
+  override def anonymousReadAccessQ(token: Option[String]): String =
+    "isPublic" + token.map(t => s""" or sharingToken = '$t'
+               or _id in
+                 (select ans._dataset
+                 from webknossos.annotation_privateLinks_ apl
+                 join webknossos.annotations_ ans ON apl._annotation = ans._id
+                 where apl.accessToken = '$t')""").getOrElse("")
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""isPublic
@@ -172,6 +177,15 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from #$existingCollectionName where name in #${writeStructTupleWithQuotes(
         names.map(sanitize))} and _organization = $organizationId and #$accessQuery".as[DatasetsRow]).map(_.toList)
+      parsed <- parseAll(r)
+    } yield parsed
+
+  def findAllByPublication(publicationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _publication = $publicationId and #$accessQuery"
+          .as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)
     } yield parsed
 

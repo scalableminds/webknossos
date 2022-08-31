@@ -158,7 +158,7 @@ export const inverse: ShaderModule = {
   requirements: [],
   code: `
     // https://github.com/glslify/glsl-inverse/blob/master/index.glsl
-    mat4 inverse(mat4 m) {
+    mat4 inverseMatrix(mat4 m) {
       float
         a00 = m[0][0], a01 = m[0][1], a02 = m[0][2], a03 = m[0][3],
         a10 = m[1][0], a11 = m[1][1], a12 = m[1][2], a13 = m[1][3],
@@ -211,22 +211,6 @@ export const div: ShaderModule = {
       return floor(a / b);
     }
   `,
-};
-export const round: ShaderModule = {
-  requirements: [],
-  code: `
-    float round(float a) {
-      return floor(a + 0.5);
-    }
-
-    vec3 round(vec3 a) {
-      return floor(a + 0.5);
-    }
-
-    vec4 round(vec4 a) {
-      return floor(a + 0.5);
-    }
-`,
 };
 export const isNan: ShaderModule = {
   requirements: [],

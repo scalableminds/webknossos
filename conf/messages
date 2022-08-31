@@ -99,8 +99,11 @@ dataSet.notFoundForAnnotation=The Dataset for this annotation does not exist or 
 dataSet.noAccess=Could not access DataSet {0}. Does your team have access?
 dataSet.noAccessById=Could not access the corresponding DataSet. This is likely because you are not a member of a team that has access to it.
 dataSet.notImported=Dataset {0} is not imported
-dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
-dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
+dataSet.name.invalid=The dataset name is invalid
+dataSet.name.invalid.characters=Dataset names may only contain letters, digits, dots, underscorees, dashes.
+dataSet.name.invalid.startsWithDot=Dataset names cannot start with a dot.
+dataSet.name.invalid.endsWithDot=Dataset names cannot end with a dot.
+dataSet.name.invalid.lessThanThreeCharacters=Dataset names must be at least three characters.
 dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.name.notInSamples=This dataset name is not one of the available sample datasets.
 dataSet.source.notFound=The data source for the data source couldn’t be found
@@ -161,6 +164,7 @@ dataLayer.invalidMag=Supplied “{0}” is not a valid mag format. Please use �
 
 zarr.invalidChunkCoordinates=The requested chunk coordinates are in an invalid format. Expected c.x.y.z
 zarr.invalidFirstChunkCoord="First Channel must be 0"
+zarr.chunkNotFound=Could not find the requested chunk
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"
@@ -224,7 +228,7 @@ tracing.wrongMag=Tracing “{0}” does not have mag “{1}”
 
 annotation.create.failed=Failed to create annotation.
 annotation.create.forbidden=You do not have permission to create annotations for this dataset.
-annotation.volume.uint64=Creating volume annotations with uint64 fallback layer is not supported by wK yet.
+annotation.volume.negativeLargestSegmentId=The resulting volume annotation would have an invalid largest segment id (must be nonnegative, within element class range, and < 2^53)
 annotation.volume.resolutionRestrictionsTooTight=Task type resolution restrictions are too tight, resulting annotation has no resolutions.
 annotation.volume.resolutionsDoNotMatch=Could not merge volume annotations, as their resolutions differ. Please ensure each annotation has the same set of resolutions.
 annotation.notFound=Annotation couldn’t be found
@@ -362,6 +366,8 @@ job.inferNeurons.notAllowed.organization = Currently neuron inferral is only all
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
+
+publication.notFound = Publication could not be found.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 

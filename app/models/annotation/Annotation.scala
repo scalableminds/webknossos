@@ -2,8 +2,10 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
@@ -341,6 +343,15 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         sql"""select #$columns from #$existingCollectionName
                      where _task = ${taskId.id} and typ = '#${typ.toString}' and state != '#${AnnotationState.Cancelled.toString}' and #$accessQuery"""
           .as[AnnotationsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
+  def findAllByPublication(publicationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _publication = $publicationId and #$accessQuery"
+          .as[AnnotationsRow]).map(_.toList)
       parsed <- parseAll(r)
     } yield parsed
 

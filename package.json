@@ -3,7 +3,7 @@
   "version": "0.17.146",
   "license": "AGPL-3.0",
   "engines": {
-    "node": ">=7"
+    "node": ">=16"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
     "@babel/preset-react": "^7.0.0",
     "@babel/preset-typescript": "^7.16.7",
     "@babel/register": "^7.0.0",
+    "@shaderfrog/glsl-parser": "^0.2.2",
     "@types/cwise": "^1.0.4",
     "@types/lodash": "^4.14.181",
     "@types/memoize-one": "^5.1.2",
@@ -41,7 +42,6 @@
     "babel-plugin-import": "^1.9.1",
     "babel-plugin-istanbul": "^5.1.0",
     "commander": "^2.17.1",
-    "copy-webpack-plugin": "^10.2.0",
     "coveralls": "^3.0.2",
     "css-loader": "^6.5.1",
     "documentation": "^13.2.5",
@@ -95,9 +95,7 @@
     "webpack-cli": "^4.9.1",
     "webpack-dev-server": "^4.7.3"
   },
-  "optionalDependencies": {
-    "gl": "stackgl/headless-gl#4.5.0"
-  },
+  "optionalDependencies": {},
   "scripts": {
     "start": "node tools/proxy/proxy.js",
     "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
@@ -154,7 +152,9 @@
     "@fortawesome/fontawesome-free": "^5.14.0",
     "@rehooks/document-title": "^1.0.2",
     "@scalableminds/prop-types": "^15.6.1",
+    "@tanstack/react-query": "^4.0.8",
     "@types/file-saver": "^2.0.5",
+    "@types/three": "^0.142.0",
     "@use-it/interval": "^1.0.0",
     "antd": "^4.20.6",
     "backbone-events-standalone": "^0.2.7",
@@ -169,13 +169,12 @@
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^2.1.0",
     "distance-transform": "^1.0.2",
+    "eslint-plugin-ava": "^13.2.0",
     "file-saver": "^2.0.1",
     "flexlayout-react": "^0.5.5",
-    "glsl-parser": "git+https://github.com/anvaka/glslx.git#glsl-parser",
     "hammerjs": "^2.0.8",
     "history": "^4.7.2",
     "immutability-helper": "^2.6.6",
-    "import-js": "^3.2.0",
     "javascript-natural-sort": "^0.7.1",
     "js-priority-queue": "^0.1.5",
     "jsonschema": "^1.2.4",
@@ -208,9 +207,9 @@
     "redux-batched-actions": "^0.4.1",
     "redux-saga": "^1.0.0",
     "resumablejs": "^1.1.0",
-    "saxophone": "^0.7.1",
+    "saxophone": "^0.8.0",
     "terser-webpack-plugin": "^5.3.0",
-    "three": "^0.110.0",
+    "three": "^0.137.0",
     "tween.js": "^16.3.1",
     "typed-redux-saga": "^1.4.0",
     "url": "^0.11.0",

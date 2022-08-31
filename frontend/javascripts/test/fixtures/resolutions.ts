@@ -5,4 +5,4 @@ export default [
   [8, 8, 8],
   [16, 16, 16],
   [32, 32, 32],
-];
+] as Array<[number, number, number]>;

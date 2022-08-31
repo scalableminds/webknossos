@@ -22,7 +22,7 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
     val shape = Vec3Int.full(bucket.bucketLength)
     val offset = Vec3Int(bucket.voxelXInMag, bucket.voxelYInMag, bucket.voxelZInMag)
     zarrArray.readBytesXYZ(shape, offset).recover {
-      case t: Throwable => logError(t); return Failure(t.getMessage, Full(t), Empty)
+      case t: Throwable => logError(t); Failure(t.getMessage, Full(t), Empty)
     }
   }
 
@@ -36,18 +36,22 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
     val zarrMagOpt: Option[ZarrMag] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
-    val magPathOpt: Option[Path] = zarrMagOpt.flatMap { zarrMag =>
-      zarrMag.remoteSource match {
-        case Some(remoteSource) => remotePathFrom(remoteSource)
-        case None               => localPathFrom(readInstruction, zarrMag.pathWithFallback)
+    zarrMagOpt match {
+      case None => Empty
+      case Some(zarrMag) => {
+        val magPathOpt: Option[Path] =
+          zarrMag.remoteSource match {
+            case Some(remoteSource) => remotePathFrom(remoteSource)
+            case None               => localPathFrom(readInstruction, zarrMag.pathWithFallback)
+          }
+        magPathOpt match {
+          case None => Empty
+          case Some(magPath) =>
+            tryo(onError = e => logError(e))(ZarrArray.open(magPath, zarrMag.axisOrder)).map(new ZarrCubeHandle(_))
+        }
       }
     }
 
-    magPathOpt match {
-      case None => Empty
-      case Some(magPath) =>
-        tryo(onError = e => logError(e))(ZarrArray.open(magPath)).map(new ZarrCubeHandle(_))
-    }
   }
 
   private def remotePathFrom(remoteSource: RemoteSourceDescriptor): Option[Path] =

@@ -1,7 +1,6 @@
 package models.annotation
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
-
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
@@ -18,6 +17,12 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerType,
+  AnnotationSource,
+  FetchedAnnotationLayer
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   DataSourceLike => DataSource,
@@ -31,6 +36,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
+
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
@@ -47,7 +53,7 @@ import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -98,7 +104,8 @@ class AnnotationService @Inject()(
     temporaryFileCreator: TemporaryFileCreator,
     meshDAO: MeshDAO,
     meshService: MeshService,
-    sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext, val materializer: Materializer)
+    sharedAnnotationsDAO: SharedAnnotationsDAO
+)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
     with ProtoGeometryImplicits
@@ -188,7 +195,9 @@ class AnnotationService @Inject()(
           }
           .headOption
           .toFox
-        _ <- bool2Fox(fallbackLayer.elementClass != ElementClass.uint64) ?~> "annotation.volume.uint64"
+        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(
+          fallbackLayer.largestSegmentId,
+          fallbackLayer.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
       } yield fallbackLayer
 
     def createAndSaveAnnotationLayer(
@@ -484,7 +493,7 @@ class AnnotationService @Inject()(
           case _                        => None
         }.headOption
       } else None
-      _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+      _ <- bool2Fox(fallbackLayer.forall(_.largestSegmentId >= 0L)) ?~> "annotation.volume.negativeLargestSegmentId"
 
       volumeTracing <- createVolumeTracing(
         dataSource,
@@ -821,6 +830,42 @@ class AnnotationService @Inject()(
         "othersMayEdit" -> annotation.othersMayEdit
       )
     }
+  }
+
+  def writesWithDataset(annotation: Annotation): Fox[JsObject] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      tracingStore <- tracingStoreDAO.findFirst
+      tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+      dataSetJs <- dataSetService.publicWrites(dataSet, None, None, None)
+    } yield
+      Json.obj(
+        "id" -> annotation._id.id,
+        "name" -> annotation.name,
+        "description" -> annotation.description,
+        "typ" -> annotation.typ,
+        "tracingStore" -> tracingStoreJs,
+        "dataSet" -> dataSetJs
+      )
+  }
+
+  def writesAsAnnotationSource(annotation: Annotation): Fox[JsValue] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
+      tracingStore <- tracingStoreDAO.findFirst
+      annotationSource = AnnotationSource(
+        id = annotation.id,
+        annotationLayers = annotation.annotationLayers,
+        dataSetName = dataSet.name,
+        organizationName = organization.name,
+        dataStoreUrl = dataStore.publicUrl,
+        tracingStoreUrl = tracingStore.publicUrl
+      )
+    } yield Json.toJson(annotationSource)
   }
 
   private def userJsonForAnnotation(userId: ObjectId, userOpt: Option[User] = None): Fox[Option[JsObject]] =

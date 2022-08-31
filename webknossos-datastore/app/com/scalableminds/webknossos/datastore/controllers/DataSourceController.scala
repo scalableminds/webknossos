@@ -37,16 +37,6 @@ class DataSourceController @Inject()(
     with FoxImplicits {
 
   override def allowRemoteOrigin: Boolean = true
-  @ApiOperation(hidden = true, value = "")
-  def list(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
-    {
-      accessTokenService
-        .validateAccessForSyncBlock(UserAccessRequest.listDataSources, urlOrHeaderToken(token, request)) {
-          val ds = dataSourceRepository.findAll
-          Ok(Json.toJson(ds))
-        }
-    }
-  }
 
   @ApiOperation(hidden = true, value = "")
   def read(token: Option[String],
@@ -103,7 +93,8 @@ Expects:
                            paramType = "body")))
   def reserveUpload(token: Option[String]): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organization),
+                                        urlOrHeaderToken(token, request)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
@@ -146,28 +137,31 @@ Expects:
           "resumableIdentifier" -> nonEmptyText
         )).fill((-1, -1, -1, ""))
 
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
-        uploadForm
-          .bindFromRequest(request.body.dataParts)
-          .fold(
-            hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-            success = {
-              case (chunkNumber, chunkSize, totalChunkCount, uploadId) =>
-                for {
-                  isKnownUpload <- uploadService.isKnownUploadByFileId(uploadId)
-                  _ <- bool2Fox(isKnownUpload) ?~> "dataSet.upload.validation.failed"
-                  chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
-                  _ <- uploadService.handleUploadChunk(uploadId,
-                                                       chunkSize,
-                                                       totalChunkCount,
-                                                       chunkNumber,
-                                                       new File(chunkFile.ref.path.toString))
-                } yield {
-                  Ok
+      uploadForm
+        .bindFromRequest(request.body.dataParts)
+        .fold(
+          hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+          success = {
+            case (chunkNumber, chunkSize, totalChunkCount, uploadFileId) =>
+              for {
+                dataSourceId <- uploadService.getDataSourceIdByUploadId(
+                  uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataSet.upload.validation.failed"
+                result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
+                                                            urlOrHeaderToken(token, request)) {
+                  for {
+                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
+                    _ <- bool2Fox(isKnownUpload) ?~> "dataSet.upload.validation.failed"
+                    chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
+                    _ <- uploadService.handleUploadChunk(uploadFileId,
+                                                         chunkSize,
+                                                         totalChunkCount,
+                                                         chunkNumber,
+                                                         new File(chunkFile.ref.path.toString))
+                  } yield Ok
                 }
-            }
-          )
-      }
+              } yield result
+          }
+        )
     }
 
   @ApiOperation(
@@ -198,13 +192,18 @@ Expects:
   def finishUpload(token: Option[String]): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
     implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
-          for {
-            (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-            _ <- remoteWebKnossosClient
-              .reportUpload(dataSourceId, dataSetSizeBytes, urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
-          } yield Ok
-        }
+        for {
+          dataSourceId <- uploadService
+            .getDataSourceIdByUploadId(request.body.uploadId) ?~> "dataSet.upload.validation.failed"
+          result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
+                                                      urlOrHeaderToken(token, request)) {
+            for {
+              (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
+              _ <- remoteWebKnossosClient
+                .reportUpload(dataSourceId, dataSetSizeBytes, urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+            } yield Ok
+          }
+        } yield result
       }
   }
 
@@ -254,7 +253,7 @@ Expects:
         urlOrHeaderToken(token, request)) {
         for {
           previousDataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)) ?~ Messages(
-            "dataSource.notFound") ~> 404
+            "dataSource.notFound") ~> NOT_FOUND
           (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id,
                                                                         previousDataSource.toUsable)
           previousDataSourceJson = previousDataSource match {
@@ -458,25 +457,37 @@ Expects:
         for {
           _ <- Fox.successful(())
           dataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-            "dataSource.notFound") ~> 404
-          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
-        } yield {
-          Ok
-        }
+            "dataSource.notFound") ~> NOT_FOUND
+          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id), expectExisting = true)
+        } yield Ok
+      }
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def add(token: Option[String], organizationName: String, dataSetName: String): Action[DataSource] =
+    Action.async(validateJson[DataSource]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
+        for {
+          _ <- bool2Fox(dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).isEmpty) ?~> Messages(
+            "dataSource.alreadyPresent")
+          _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(dataSetName, organizationName)),
+                                                  expectExisting = false)
+        } yield Ok
       }
     }
 
   @ApiOperation(hidden = true, value = "")
   def createOrganizationDirectory(token: Option[String], organizationName: String): Action[AnyContent] = Action.async {
     implicit request =>
-      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources, token) {
-        val newOrganizationFolder = new File(dataSourceService.dataBaseDir + "/" + organizationName)
-        newOrganizationFolder.mkdirs()
-        if (newOrganizationFolder.isDirectory)
-          Ok
-        else
-          BadRequest
-      }
+      accessTokenService
+        .validateAccessForSyncBlock(UserAccessRequest.administrateDataSources(organizationName), token) {
+          val newOrganizationFolder = new File(dataSourceService.dataBaseDir + "/" + organizationName)
+          newOrganizationFolder.mkdirs()
+          if (newOrganizationFolder.isDirectory)
+            Ok
+          else
+            BadRequest
+        }
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -485,7 +496,8 @@ Expects:
              dataSetName: String,
              layerName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
+                                        urlOrHeaderToken(token, request)) {
         val (closedAgglomerateFileHandleCount, closedDataCubeHandleCount) =
           binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
         logger.info(

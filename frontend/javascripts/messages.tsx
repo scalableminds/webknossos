@@ -1,3 +1,4 @@
+import React from "react";
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
 import type {
@@ -124,7 +125,7 @@ A reload is necessary to return to a valid state.`,
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
   "data.bounding_box_export_not_supported":
-    "Exporting data from a foreign dataset is not supported.",
+    "Exporting data is not supported for datasets on this datastore server.",
   "sampling.could_not_get_or_create_bucket": (zoomedAddress: Vector4) =>
     `While sampling could not get or create bucket at address ${zoomedAddress.toString()}.`,
   "tracing.unhandled_initialization_error":
@@ -141,6 +142,15 @@ instead. Only enable this option if you understand its effect. All layers will n
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""
     } current position, zoom value and ID mapping. Consider fine-tuning your current view before copying the URL.`,
+  "tracing.sharing_modal_zarr_information": (
+    <span>
+      This{" "}
+      <a href="https://zarr.dev" target="_blank" rel="noreferrer">
+        Zarr
+      </a>{" "}
+      link may be used by other tools to load the dataset&apos;s data in a streaming manner.
+    </span>
+  ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
@@ -155,7 +165,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.uint64_segmentation_warning":
-    "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 32-bit. Thus, they might not match the ids on the server.",
+    "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 53 bits. Thus, they might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":
     "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
@@ -263,6 +273,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Cancel”.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
+  "dataset.add_zarr_different_scale_warning":
+    "The explored data has a different voxel size from the datasource that was already loaded. The explored voxel size was:",
   "dataset.segmentationlayer_not_existing": "This annotation has no segmentation layer.",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",
@@ -286,8 +298,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
-  "dataset.unsupported_segmentation_class":
+  "dataset.unsupported_segmentation_class_uint24":
     "The segmentation layer was defined as uint24. This format is not supported for segmentations. Please convert the layer to a supported format.",
+  "dataset.unsupported_segmentation_class_int64":
+    "The segmentation layer was defined as int64. This format is not supported for segmentations. Please convert the layer to the unsigned uint64 format.",
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.resolution_mismatch":
@@ -302,6 +316,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.was_edited": "Successfully updated annotation",
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
+  "annotation.shared_teams_edited_failed":
+    "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
   "annotation.download": "The following annotation data is available for download immediately.",
   "annotation.export":
     "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the ",

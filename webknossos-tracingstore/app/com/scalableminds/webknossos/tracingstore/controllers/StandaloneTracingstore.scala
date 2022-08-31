@@ -1,14 +1,24 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.controllers.Controller
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, InjectedController}
+import play.api.mvc.{Action, AnyContent}
 
-class StandaloneTracingstore extends InjectedController {
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext
 
-  def buildInfo: Action[AnyContent] = Action {
-    Ok(
-      Json.obj(
-        "webknossosTracingstore" -> webknossosTracingstore.BuildInfo.toMap.mapValues(_.toString)
-      ))
+class StandaloneTracingstore @Inject()(implicit ec: ExecutionContext) extends Controller {
+
+  override def allowRemoteOrigin: Boolean = true
+
+  def buildInfo: Action[AnyContent] = Action.async { implicit request =>
+    Fox.successful(
+      Ok(
+        Json.obj(
+          "webknossosTracingstore" -> webknossosTracingstore.BuildInfo.toMap.mapValues(_.toString)
+        )
+      )
+    )
   }
 }

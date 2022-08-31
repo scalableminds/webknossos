@@ -1,5 +1,5 @@
-import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent } from "antd";
-import { ExportOutlined } from "@ant-design/icons";
+import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, Menu } from "antd";
+import { DownOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useState } from "react";
 
@@ -44,6 +44,8 @@ import {
   AnnotationTool,
   OverwriteMode,
   ToolsWithInterpolationCapabilities,
+  InterpolationModeEnum,
+  InterpolationMode,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store, { OxalisState, VolumeTracing } from "oxalis/store";
@@ -233,10 +235,18 @@ function OverwriteModeSwitch({
   );
 }
 
+const INTERPOLATION_ICON = {
+  [InterpolationModeEnum.INTERPOLATE]: <i className="fas fa-align-center fa-rotate-90" />,
+  [InterpolationModeEnum.EXTRUDE]: <i className="fas fa-align-justify fa-rotate-90" />,
+};
 function VolumeInterpolationButton() {
   const dispatch = useDispatch();
+  const interpolationMode = useSelector(
+    (state: OxalisState) => state.userConfiguration.interpolationMode,
+  );
 
-  const onClick = () => {
+  const onInterpolateClick = (e: React.MouseEvent<HTMLButtonElement> | null) => {
+    e?.currentTarget.blur();
     dispatch(interpolateSegmentationLayerAction());
   };
 
@@ -244,14 +254,42 @@ function VolumeInterpolationButton() {
     getInterpolationInfo(state, "Not available since"),
   );
 
-  return (
-    <ButtonComponent
-      disabled={isDisabled}
-      title={tooltipTitle}
-      icon={<i className="fas fa-align-center fa-rotate-90" style={{ marginLeft: 4 }} />}
-      onClick={onClick}
-      style={{ marginLeft: 12 }}
+  const menu = (
+    <Menu
+      onClick={(e) => {
+        dispatch(updateUserSettingAction("interpolationMode", e.key as InterpolationMode));
+        onInterpolateClick(null);
+      }}
+      items={[
+        {
+          label: "Interpolate current segment",
+          key: InterpolationModeEnum.INTERPOLATE,
+          icon: INTERPOLATION_ICON[InterpolationModeEnum.INTERPOLATE],
+        },
+        {
+          label: "Extrude (copy) current segment",
+          key: InterpolationModeEnum.EXTRUDE,
+          icon: INTERPOLATION_ICON[InterpolationModeEnum.EXTRUDE],
+        },
+      ]}
     />
+  );
+
+  return (
+    <Dropdown.Button
+      icon={<DownOutlined />}
+      overlay={menu}
+      onClick={onInterpolateClick}
+      style={{ padding: "0 5px 0 6px" }}
+      buttonsRender={([leftButton, rightButton]) => [
+        <Tooltip title={tooltipTitle} key="leftButton">
+          {React.cloneElement(leftButton as React.ReactElement<any, string>, { isDisabled })}
+        </Tooltip>,
+        rightButton,
+      ]}
+    >
+      {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
+    </Dropdown.Button>
   );
 }
 
@@ -515,6 +553,9 @@ export default function ToolbarView() {
     const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
     return (visibleSegmentationLayer?.agglomerates?.length ?? 0) > 0;
   });
+  const [lastForcefulDisabledTool, setLastForcefulDisabledTool] = useState<AnnotationTool | null>(
+    null,
+  );
   const isVolumeModificationAllowed = useSelector(
     (state: OxalisState) => !hasEditableMapping(state),
   );
@@ -546,9 +587,21 @@ export default function ToolbarView() {
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
+      setLastForcefulDisabledTool(activeTool);
       Store.dispatch(setToolAction(AnnotationToolEnum.MOVE));
+    } else if (
+      lastForcefulDisabledTool != null &&
+      !disabledInfosForTools[lastForcefulDisabledTool].isDisabled &&
+      activeTool === AnnotationToolEnum.MOVE
+    ) {
+      // Reenable the tool that was disabled before.
+      setLastForcefulDisabledTool(null);
+      Store.dispatch(setToolAction(lastForcefulDisabledTool));
+    } else if (activeTool !== AnnotationToolEnum.MOVE) {
+      // Forget the last disabled tool as another tool besides the move tool was selected.
+      setLastForcefulDisabledTool(null);
     }
-  }, [activeTool, disabledInfoForCurrentTool]);
+  }, [activeTool, disabledInfoForCurrentTool, lastForcefulDisabledTool]);
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
   const isAltPressed = useKeyPress("Alt");

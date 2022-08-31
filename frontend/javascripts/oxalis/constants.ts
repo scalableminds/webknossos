@@ -56,7 +56,7 @@ export const enum OrthoViewsToName {
   TDView = "3D",
 }
 export type OrthoView = keyof typeof OrthoViews;
-export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, OrthoViews.TDView>;
+export type OrthoViewWithoutTD = Exclude<keyof typeof OrthoViews, "TDView">;
 
 export type OrthoViewMap<T> = Record<OrthoView, T>;
 export type OrthoViewWithoutTDMap<T> = Record<OrthoViewWithoutTD, T>;
@@ -85,7 +85,7 @@ export const OrthoViewIndices = {
   PLANE_XZ: OrthoViewValues.indexOf("PLANE_XZ"),
   TDView: OrthoViewValues.indexOf("TDView"),
 };
-export const OrthoViewValuesWithoutTDView = [
+export const OrthoViewValuesWithoutTDView: Array<OrthoViewWithoutTD> = [
   OrthoViews.PLANE_XY,
   OrthoViews.PLANE_YZ,
   OrthoViews.PLANE_XZ,
@@ -212,6 +212,12 @@ export enum OverwriteModeEnum {
   OVERWRITE_EMPTY = "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
 }
 export type OverwriteMode = keyof typeof OverwriteModeEnum;
+
+export enum InterpolationModeEnum {
+  INTERPOLATE = "INTERPOLATE",
+  EXTRUDE = "EXTRUDE",
+}
+export type InterpolationMode = keyof typeof InterpolationModeEnum;
 export enum FillModeEnum {
   // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.
@@ -316,4 +322,7 @@ export type TypedArray =
   | Int32Array
   | Uint32Array
   | Float32Array
-  | Float64Array;
+  | Float64Array
+  | BigUint64Array;
+
+export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;

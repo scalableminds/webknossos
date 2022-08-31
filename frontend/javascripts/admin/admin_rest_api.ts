@@ -2277,7 +2277,7 @@ type MinCutTargetEdge = {
   position2: Vector3;
   segmentId1: number;
   segmentId2: number;
-}
+};
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,

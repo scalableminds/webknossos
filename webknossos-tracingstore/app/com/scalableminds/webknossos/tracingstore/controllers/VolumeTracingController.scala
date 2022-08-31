@@ -542,7 +542,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
-            remoteFallbackLayer <- editableMappingService.remoteFallbackLayer(tracing)
+            remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
             edges <- editableMappingService.agglomerateGraphMinCut(request.body, remoteFallbackLayer, token)
           } yield Ok(Json.toJson(edges))
         }

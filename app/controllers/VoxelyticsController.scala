@@ -32,7 +32,8 @@ class VoxelyticsController @Inject()(
   def storeWorkflow: Action[WorkflowDescription] =
     sil.SecuredAction.async(validateJson[WorkflowDescription]) { implicit request =>
       for {
-        _ <- voxelyticsService.checkAuthForWorkflowCreation(request.body.run.name, request.identity) ?~> "Workflow run already exists by other user" ~> UNAUTHORIZED
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
+        _ <- voxelyticsService.checkAuthForWorkflowCreation(request.body.run.name, request.identity) ?~> "voxelytics.workflowUserMismatch" ~> UNAUTHORIZED
         _ <- voxelyticsDAO.upsertWorkflow(request.body.workflow.hash,
                                           request.body.workflow.name,
                                           request.identity._organization)
@@ -63,34 +64,41 @@ class VoxelyticsController @Inject()(
   def listWorkflows(workflowHash: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         // Auth is implemented in `voxelyticsDAO.selectRuns`
         runs <- voxelyticsDAO.findRuns(request.identity, None, workflowHash, conf.staleTimeout)
-        _ <- bool2Fox(runs.nonEmpty) ?~> "No run found" ~> NOT_FOUND
-        taskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization, runs.map(_.id), conf.staleTimeout)
-        _ <- bool2Fox(taskRuns.nonEmpty) ?~> "No tasks found" ~> NOT_FOUND
-        workflows <- voxelyticsDAO.findWorkflowsByHash(request.identity._organization, runs.map(_.workflow_hash).toSet)
-        _ <- bool2Fox(workflows.nonEmpty) ?~> "No workflows found" ~> NOT_FOUND
+        result <- if (runs.nonEmpty) {
+          for {
+            taskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization, runs.map(_.id), conf.staleTimeout)
+            _ <- bool2Fox(taskRuns.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
+            workflows <- voxelyticsDAO.findWorkflowsByHash(request.identity._organization,
+                                                           runs.map(_.workflow_hash).toSet)
+            _ <- bool2Fox(workflows.nonEmpty) ?~> "voxelytics.noWorkflowFound" ~> NOT_FOUND
 
-        result = JsArray(workflows.flatMap(workflow => {
-          val workflowRuns = runs.filter(run => run.workflow_hash == workflow.hash)
-          if (workflowRuns.nonEmpty) {
-            val state, beginTime, endTime = voxelyticsService.aggregateBeginEndTime(workflowRuns)
-            Some(
-              Json.obj(
-                "name" -> workflow.name,
-                "hash" -> workflow.hash,
-                "beginTime" -> beginTime,
-                "endTime" -> endTime,
-                "state" -> state.toString(),
-                "runs" -> workflowRuns.map(run => {
-                  val tasks = taskRuns.filter(taskRun => taskRun.runId == run.id)
-                  voxelyticsService.runWrites(run, tasks)
-                })
-              ))
-          } else {
-            None
-          }
-        }))
+            workflowsAsJson = JsArray(workflows.flatMap(workflow => {
+              val workflowRuns = runs.filter(run => run.workflow_hash == workflow.hash)
+              if (workflowRuns.nonEmpty) {
+                val state, beginTime, endTime = voxelyticsService.aggregateBeginEndTime(workflowRuns)
+                Some(
+                  Json.obj(
+                    "name" -> workflow.name,
+                    "hash" -> workflow.hash,
+                    "beginTime" -> beginTime,
+                    "endTime" -> endTime,
+                    "state" -> state.toString(),
+                    "runs" -> workflowRuns.map(run => {
+                      val tasks = taskRuns.filter(taskRun => taskRun.runId == run.id)
+                      voxelyticsService.runWrites(run, tasks)
+                    })
+                  ))
+              } else {
+                None
+              }
+            }))
+          } yield workflowsAsJson
+        } else {
+          Fox.successful(Json.arr())
+        }
       } yield JsonOk(result)
     }
 
@@ -98,9 +106,10 @@ class VoxelyticsController @Inject()(
   def getWorkflow(workflowHash: String, runId: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         runIdValidated <- Fox.runOptional(runId)(ObjectId.fromString(_))
         // Auth is implemented in `voxelyticsDAO.selectRuns`
-        workflow <- voxelyticsDAO.findWorkflowByHash(request.identity._organization, workflowHash) ?~> "Workflow not found" ~> NOT_FOUND
+        workflow <- voxelyticsDAO.findWorkflowByHash(request.identity._organization, workflowHash) ?~> "voxelytics.workflowNotFound" ~> NOT_FOUND
 
         // Fetching all runs for this workflow or specified run
         // If all runs are fetched, a combined version of the workflow report
@@ -109,7 +118,7 @@ class VoxelyticsController @Inject()(
           .map(runIdValidated =>
             voxelyticsDAO.findRuns(request.identity, Some(List(runIdValidated)), Some(workflowHash), conf.staleTimeout))
           .getOrElse(voxelyticsDAO.findRuns(request.identity, None, Some(workflowHash), conf.staleTimeout))
-        _ <- bool2Fox(runs.nonEmpty) ?~> "Runs not found" ~> NOT_FOUND
+        _ <- bool2Fox(runs.nonEmpty) ?~> "voxelytics.runNotFound" ~> NOT_FOUND
         sortedRuns = runs.sortBy(_.beginTime).reverse
         // All workflows have at least one run, because they are created at the same time
         mostRecentRun = sortedRuns.head
@@ -201,7 +210,8 @@ class VoxelyticsController @Inject()(
         }
 
       for {
-        runId <- voxelyticsDAO.getRunIdByName(runName, request.identity._organization) ?~> "Run not found" ~> NOT_FOUND
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
+        runId <- voxelyticsDAO.getRunIdByName(runName, request.identity._organization) ?~> "voxelytics.runNotFound" ~> NOT_FOUND
         _ <- voxelyticsService.checkAuth(runId, request.identity) ~> UNAUTHORIZED
         _ <- Fox.serialCombined(request.body)(event => createWorkflowEvent(runId, event))
       } yield Ok
@@ -212,9 +222,10 @@ class VoxelyticsController @Inject()(
     sil.SecuredAction.async { implicit request =>
       {
         for {
+          _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
           runIdValidated <- ObjectId.fromString(runId)
           _ <- voxelyticsService.checkAuth(runIdValidated, request.identity) ~> UNAUTHORIZED
-          taskId <- voxelyticsDAO.getTaskIdByName(taskName, runIdValidated) ?~> "Task not found" ~> NOT_FOUND
+          taskId <- voxelyticsDAO.getTaskIdByName(taskName, runIdValidated) ?~> "voxelytics.taskNotFound" ~> NOT_FOUND
           results <- voxelyticsDAO.getChunkStatistics(taskId)
         } yield JsonOk(Json.toJson(results))
       }
@@ -228,9 +239,10 @@ class VoxelyticsController @Inject()(
     sil.SecuredAction.async { implicit request =>
       {
         for {
+          _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
           runIdValidated <- ObjectId.fromString(runId)
           _ <- voxelyticsService.checkAuth(runIdValidated, request.identity) ~> UNAUTHORIZED
-          taskId <- voxelyticsDAO.getTaskIdByName(taskName, runIdValidated) ?~> "Task not found" ~> NOT_FOUND
+          taskId <- voxelyticsDAO.getTaskIdByName(taskName, runIdValidated) ?~> "voxelytics.taskNotFound" ~> NOT_FOUND
           results <- voxelyticsDAO.getArtifactChecksums(taskId, artifactName)
         } yield JsonOk(Json.toJson(results))
       }
@@ -240,6 +252,7 @@ class VoxelyticsController @Inject()(
   def appendLogs: Action[List[JsObject]] =
     sil.SecuredAction.async(validateJson[List[JsObject]]) { implicit request =>
       for {
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         organization <- organizationDAO.findOne(request.identity._organization)
         logEntries = request.body.map(
           entry =>
@@ -254,6 +267,7 @@ class VoxelyticsController @Inject()(
     sil.SecuredAction.async { implicit request =>
       {
         for {
+          _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
           runIdValidated <- ObjectId.fromString(runId)
           runName <- voxelyticsDAO.getRunNameById(runIdValidated, request.identity._organization)
           _ <- voxelyticsService.checkAuth(runIdValidated, request.identity) ~> UNAUTHORIZED

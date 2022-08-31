@@ -367,6 +367,14 @@ job.meshFile.notAllowed.organization = Calculating mesh files is only allowed fo
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
 
+voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this webKnossos instance.
+voxelytics.runNotFound = Workflow runs not found
+voxelytics.taskNotFound = Task not found
+voxelytics.workflowNotFound = Workflow not found
+voxelytics.noTaskFound = No tasks found
+voxelytics.noWorkflowFound = No workflows found
+voxelytics.workflowUserMismatch = Workflow run already exists by other user
+
 publication.notFound = Publication could not be found.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.

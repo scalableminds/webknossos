@@ -67,6 +67,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
   object Features {
     val isDemoInstance: Boolean = get[Boolean]("features.isDemoInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
+    val voxelyticsEnabled: Boolean = get[Boolean]("features.voxelyticsEnabled")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
@@ -173,7 +174,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
   }
 
   object Voxelytics {
-    val enabled: Boolean = get[Boolean]("voxelytics.enabled")
     val staleTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.staleTimeout")
 
     object Elasticsearch {

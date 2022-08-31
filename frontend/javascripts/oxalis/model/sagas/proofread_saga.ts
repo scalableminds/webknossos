@@ -410,15 +410,15 @@ function* splitOrMergeOrMinCutAgglomerate(
       for (const node of sourceTree.nodes.values()) {
         console.log(node.position);
         if (_.isEqual(node.position, edge.position1)) {
-          firstNodeId = node.id
+          firstNodeId = node.id;
         } else if (_.isEqual(node.position, edge.position2)) {
-          secondNodeId = node.id
+          secondNodeId = node.id;
         }
         if (firstNodeId && secondNodeId) {
           break;
         }
       }
-      console.log({firstNodeId, secondNodeId});
+      console.log({ firstNodeId, secondNodeId });
       if (!firstNodeId || !secondNodeId) {
         Toast.warning(`Unable to find any nodes for positions
 ${!firstNodeId ? edge.position1 : null}

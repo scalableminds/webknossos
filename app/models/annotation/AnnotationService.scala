@@ -155,7 +155,7 @@ class AnnotationService @Inject()(
         elementClassToProto(
           fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
         fallbackLayer.map(_.name),
-        initialLargestSegmentId(fallbackLayer.map(_.largestSegmentId)),
+        combineLargestSegmentIdsByPrecedence(fromNml = None, fromFallbackLayer = fallbackLayer.map(_.largestSegmentId)),
         0,
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(organizationName),
@@ -163,10 +163,19 @@ class AnnotationService @Inject()(
       )
   }
 
-  private def initialLargestSegmentId(fromFallbackLayer: Option[Option[Long]]): Option[Long] =
-    if (fromFallbackLayer.isDefined) {
+  def combineLargestSegmentIdsByPrecedence(fromNml: Option[Long],
+                                           fromFallbackLayer: Option[Option[Long]]): Option[Long] =
+    if (fromNml.nonEmpty)
+      // This was called for an NML upload. The NML had an explicit largestSegmentId. Use that.
+      fromNml
+    else if (fromFallbackLayer.nonEmpty)
+      // There is a fallback layer. Use its largestSegmentId, even if it is None.
+      // Some tracing functionality will be disabled until a segment id is set by the user.
       fromFallbackLayer.flatten
-    } else VolumeTracingDefaults.largestSegmentId
+    else {
+      // There is no fallback layer. Start at default segment id for fresh volume layers
+      VolumeTracingDefaults.largestSegmentId
+    }
 
   def addAnnotationLayer(annotation: Annotation,
                          organizationName: String,

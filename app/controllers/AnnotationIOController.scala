@@ -254,45 +254,35 @@ Expects:
                                                  dataSet: DataSet): Fox[List[List[UploadedVolumeLayer]]] =
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
-      allAdapted <- Fox.serialCombined(volumeLayersGrouped) { volumeLayers =>
-        Fox.serialCombined(volumeLayers) { volumeLayer =>
-          for {
-            tracingAdapted <- adaptPropertiesToFallbackLayer(volumeLayer.tracing, dataSource)
-          } yield volumeLayer.copy(tracing = tracingAdapted)
+      allAdapted = volumeLayersGrouped.map { volumeLayers =>
+        volumeLayers.map { volumeLayer =>
+          volumeLayer.copy(tracing = adaptPropertiesToFallbackLayer(volumeLayer.tracing, dataSource))
         }
       }
     } yield allAdapted
 
   private def adaptPropertiesToFallbackLayer[T <: DataLayerLike](volumeTracing: VolumeTracing,
-                                                                 dataSource: GenericDataSource[T]): Fox[VolumeTracing] =
-    for {
-      _ <- Fox.successful(())
-      fallbackLayer = dataSource.dataLayers.flatMap {
-        case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
-        case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
-        case _                                                                                   => None
-      }.headOption
-    } yield {
-      volumeTracing.copy(
-        boundingBox =
-          if (volumeTracing.boundingBox.isEmpty) boundingBoxToProto(dataSource.boundingBox)
-          else volumeTracing.boundingBox,
-        elementClass = fallbackLayer
-          .map(layer => elementClassToProto(layer.elementClass))
-          .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass)),
-        fallbackLayer = fallbackLayer.map(_.name),
-        largestSegmentId =
-          combineLargestSegmentIds(volumeTracing.largestSegmentId, fallbackLayer.map(_.largestSegmentId))
-      )
-    }
-
-  private def combineLargestSegmentIds(fromNml: Option[Long], fromFallbackLayer: Option[Option[Long]]): Option[Long] =
-    if (fromNml.nonEmpty)
-      fromNml
-    else if (fromFallbackLayer.nonEmpty)
-      fromFallbackLayer.flatten
-    else
-      VolumeTracingDefaults.largestSegmentId
+                                                                 dataSource: GenericDataSource[T]): VolumeTracing = {
+    val fallbackLayerOpt = dataSource.dataLayers.flatMap {
+      case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
+      case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
+      case _                                                                                   => None
+    }.headOption
+    val bbox =
+      if (volumeTracing.boundingBox.isEmpty) boundingBoxToProto(dataSource.boundingBox)
+      else volumeTracing.boundingBox
+    val elementClass = fallbackLayerOpt
+      .map(layer => elementClassToProto(layer.elementClass))
+      .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass))
+    volumeTracing.copy(
+      boundingBox = bbox,
+      elementClass = elementClass,
+      fallbackLayer = fallbackLayerOpt.map(_.name),
+      largestSegmentId =
+        annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
+                                                               fallbackLayerOpt.map(_.largestSegmentId))
+    )
+  }
 
   @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownloadByType")
   @ApiResponses(

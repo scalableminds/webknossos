@@ -417,7 +417,7 @@ class VolumeTracingService @Inject()(
       )
 
   private def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
-    val largestSegmentId = combineLargestSegmentIds(tracingA.largestSegmentId, tracingB.largestSegmentId)
+    val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                      tracingB.userBoundingBox,
@@ -436,7 +436,7 @@ class VolumeTracingService @Inject()(
     )
   }
 
-  private def combineLargestSegmentIds(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
+  private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
     (aOpt, bOpt) match {
       case (Some(a), Some(b)) => Some(Math.max(a, b))
       case (Some(a), None)    => Some(a)

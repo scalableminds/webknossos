@@ -108,11 +108,11 @@ class DSRemoteWebKnossosClient @Inject()(
 
   // The annotation source needed for every chunk request. 5 seconds gets updates to the user fast enough,
   // while still limiting the number of remote lookups during streaming
-  private lazy val annotationSourceCacheCache: AlfuFoxCache[(String, Option[String]), AnnotationSource] =
+  private lazy val annotationSourceCache: AlfuFoxCache[(String, Option[String]), AnnotationSource] =
     AlfuFoxCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
 
   def getAnnotationSource(accessToken: String, userToken: Option[String]): Fox[AnnotationSource] =
-    annotationSourceCacheCache.getOrLoad(
+    annotationSourceCache.getOrLoad(
       (accessToken, userToken),
       _ =>
         rpc(s"$webKnossosUri/api/annotations/source/$accessToken")

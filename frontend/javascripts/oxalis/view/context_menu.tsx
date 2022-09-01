@@ -409,7 +409,7 @@ function NodeContextMenuOptions({
           {isProofreadingActive ? (
             <Menu.Item
               key="min-cut-node"
-              disabled={!areInSameTree || areNodesConnected}
+              disabled={!areInSameTree}
               onClick={() =>
                 activeNodeId != null ? minCutAgglomerate(clickedNodeId, activeNodeId) : null
               }

@@ -50,13 +50,14 @@ import { Tree } from "oxalis/store";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import _ from "lodash";
+import { sleep } from "libs/utils";
 
 export default function* proofreadMapping(): Saga<any> {
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
   yield* takeEvery(
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE"],
-    splitOrMergeOrMinCutAgglomerate,
+    editAgglomerate,
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
 }
@@ -257,7 +258,7 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
   return true;
 }
 
-function* splitOrMergeOrMinCutAgglomerate(
+function* editAgglomerate(
   action: MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
 ) {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
@@ -287,20 +288,20 @@ function* splitOrMergeOrMinCutAgglomerate(
   const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
   if (!isHdf5MappingEnabled) return;
 
-  const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-  if (busyBlockingInfo.isBusy) {
-    console.warn(`Ignoring proofreading action (reason: ${busyBlockingInfo.reason || "null"})`);
-    return;
-  }
+  // const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+  // if (busyBlockingInfo.isBusy) {
+  //   console.warn(`Ignoring proofreading action (reason: ${busyBlockingInfo.reason || "null"})`);
+  //   return;
+  // }
 
-  yield* put(setBusyBlockingInfoAction(true, "Proofreading action"));
+  // yield* put(setBusyBlockingInfoAction(true, "Proofreading action"));
 
   if (!volumeTracing.mappingIsEditable) {
     try {
       yield* call(createEditableMapping);
     } catch (e) {
       console.error(e);
-      yield* put(setBusyBlockingInfoAction(false));
+      // yield* put(setBusyBlockingInfoAction(false));
       return;
     }
   }
@@ -320,7 +321,7 @@ function* splitOrMergeOrMinCutAgglomerate(
   const targetTree = findTreeByNodeId(trees, targetNodeId).getOrElse(null);
 
   if (sourceTree == null || targetTree == null) {
-    yield* put(setBusyBlockingInfoAction(false));
+    // yield* put(setBusyBlockingInfoAction(false));
     return;
   }
 
@@ -346,7 +347,7 @@ function* splitOrMergeOrMinCutAgglomerate(
     volumeTracingWithEditableMapping == null ||
     volumeTracingWithEditableMapping.mappingName == null
   ) {
-    yield* put(setBusyBlockingInfoAction(false));
+    // yield* put(setBusyBlockingInfoAction(false));
     return;
   }
   const editableMappingId = volumeTracingWithEditableMapping.mappingName;
@@ -358,7 +359,7 @@ function* splitOrMergeOrMinCutAgglomerate(
   if (action.type === "MERGE_TREES") {
     if (sourceNodeAgglomerateId === targetNodeAgglomerateId) {
       Toast.error("Segments that should be merged need to be in different agglomerates.");
-      yield* put(setBusyBlockingInfoAction(false));
+      // yield* put(setBusyBlockingInfoAction(false));
       return;
     }
     items.push(
@@ -373,7 +374,7 @@ function* splitOrMergeOrMinCutAgglomerate(
   } else if (action.type === "DELETE_EDGE") {
     if (sourceNodeAgglomerateId !== targetNodeAgglomerateId) {
       Toast.error("Segments that should be split need to be in the same agglomerate.");
-      yield* put(setBusyBlockingInfoAction(false));
+      // yield* put(setBusyBlockingInfoAction(false));
       return;
     }
     items.push(
@@ -386,8 +387,9 @@ function* splitOrMergeOrMinCutAgglomerate(
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceNodeAgglomerateId !== targetNodeAgglomerateId) {
+      console.log({ sourceNodeAgglomerateId, targetNodeAgglomerateId});
       Toast.error("Segments need to be in the same agglomerate to perform a min-cut.");
-      yield* put(setBusyBlockingInfoAction(false));
+      // yield* put(setBusyBlockingInfoAction(false));
       return;
     }
     const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
@@ -398,17 +400,20 @@ function* splitOrMergeOrMinCutAgglomerate(
       agglomerateId: sourceNodeAgglomerateId,
       editableMappingId,
     };
-    const edgesToBeCut = yield* call(
+
+    const edgesForMinCut = yield* call(
       getEdgesForAgglomerateMinCut,
       tracingStoreUrl,
       volumeTracingId,
       JSON.stringify(segmentsInfo),
     );
-    for (const edge of edgesToBeCut) {
+
+    // We need to find the node IDs for the frontend deletes
+    // via the position of the node returned by the backend.
+    for (const edge of edgesForMinCut) {
       let firstNodeId;
       let secondNodeId;
       for (const node of sourceTree.nodes.values()) {
-        console.log(node.position);
         if (_.isEqual(node.position, edge.position1)) {
           firstNodeId = node.id;
         } else if (_.isEqual(node.position, edge.position2)) {
@@ -419,29 +424,23 @@ function* splitOrMergeOrMinCutAgglomerate(
         }
       }
       console.log({ firstNodeId, secondNodeId });
+
       if (!firstNodeId || !secondNodeId) {
         Toast.warning(`Unable to find any nodes for positions
 ${!firstNodeId ? edge.position1 : null}
 ${!secondNodeId ? edge.position2 : null}
 in ${sourceTree.name}.`);
-        yield* put(setBusyBlockingInfoAction(false));
+
+        // yield* put(setBusyBlockingInfoAction(false));
         return;
       }
-      //collect all edges first
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId));
-      // items.push(
-      //   splitAgglomerate(
-      //     sourceNodeAgglomerateId,
-      //     edge.position1,
-      //     edge.position2,
-      //     agglomerateFileMag,
-      //   ),
-      // );
+      yield* call(sleep, 1000);
     }
   }
 
   if (items.length === 0) {
-    yield* put(setBusyBlockingInfoAction(false));
+    // yield* put(setBusyBlockingInfoAction(false));
     return;
   }
 
@@ -457,7 +456,7 @@ in ${sourceTree.name}.`);
     volumeTracingWithEditableMapping == null ||
     volumeTracingWithEditableMapping.mappingName == null
   ) {
-    yield* put(setBusyBlockingInfoAction(false));
+    // yield* put(setBusyBlockingInfoAction(false));
     return;
   }
 
@@ -498,7 +497,7 @@ in ${sourceTree.name}.`);
     );
   }
 
-  yield* put(setBusyBlockingInfoAction(false));
+  // yield* put(setBusyBlockingInfoAction(false));
 
   /* Remove old meshes and load updated meshes */
 

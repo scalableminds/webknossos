@@ -93,12 +93,20 @@ export default {
               path: {
                 type: "string",
               },
+              credentials: {
+                type: "object",
+                properties: {
+                  user: { type: "string" },
+                  password: { type: "string" },
+                },
+                required: ["user", "password"],
+              },
               axisOrder: {
                 type: "object",
                 additionalProperties: { type: "number" },
               },
             },
-            required: ["mag", "path"],
+            required: ["mag"],
           },
         },
       },

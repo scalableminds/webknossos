@@ -430,7 +430,9 @@ function* splitOrMergeOrMinCutAgglomerate(
 
       if (!firstNodeId || !secondNodeId) {
         Toast.warning(
-          `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${!secondNodeId ? [", ", edge.position2] : null} in ${sourceTree.name}.`,
+          `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${
+            !secondNodeId ? [", ", edge.position2] : null
+          } in ${sourceTree.name}.`,
           //TODO: remove
           { sticky: true },
         );

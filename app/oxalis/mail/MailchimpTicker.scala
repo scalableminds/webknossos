@@ -39,13 +39,14 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
     block(multiUser).futureBox.map {
       case Full(_)    => ()
       case f: Failure => logger.debug(s"Failed to tag multiuser ${multiUser._id} by activity: $f")
-      case Empty      => logger.debug("Failed to tag multiuser ${multiUser._id} by activity: Empty")
+      case Empty      => logger.debug(s"Failed to tag multiuser ${multiUser._id} by activity: Empty")
     }
 
   private def tagUserByActivity(multiUser: MultiUser): Fox[Unit] =
     for {
       isActivated <- multiUserDAO.hasAtLeastOneActiveUser(multiUser._id) ?~> "Could not determine isActivated"
-      lastActivity <- multiUserDAO.lastActivity(multiUser._id) ?~> "Could not determine lastActivity"
+      lastActivity <- if (isActivated) multiUserDAO.lastActivity(multiUser._id) ?~> "Could not determine lastActivity"
+      else Fox.successful(0L)
       now = System.currentTimeMillis()
       registeredAtLeast21DaysAgo = multiUser.created < now - (21 days).toMillis
       registeredAtMost22DaysAgo = multiUser.created > now - (22 days).toMillis

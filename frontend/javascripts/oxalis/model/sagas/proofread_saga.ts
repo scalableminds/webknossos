@@ -395,7 +395,9 @@ function* splitOrMergeOrMinCutAgglomerate(
       yield* put(setBusyBlockingInfoAction(false));
       return;
     }
+
     currentlyPerformingMinCut = true;
+
     const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
     const segmentsInfo = {
       segmentPosition1: sourceNodePosition,
@@ -404,18 +406,18 @@ function* splitOrMergeOrMinCutAgglomerate(
       agglomerateId: sourceNodeAgglomerateId,
       editableMappingId,
     };
+
     const edgesToBeCut = yield* call(
       getEdgesForAgglomerateMinCut,
       tracingStoreUrl,
       volumeTracingId,
       JSON.stringify(segmentsInfo),
     );
+
     for (const edge of edgesToBeCut) {
       let firstNodeId;
       let secondNodeId;
       for (const node of sourceTree.nodes.values()) {
-        //TODO: remove
-        console.log(node.position);
         if (_.isEqual(node.position, edge.position1)) {
           firstNodeId = node.id;
         } else if (_.isEqual(node.position, edge.position2)) {
@@ -425,21 +427,18 @@ function* splitOrMergeOrMinCutAgglomerate(
           break;
         }
       }
-      //TODO: remove
-      console.log({ firstNodeId, secondNodeId });
 
       if (!firstNodeId || !secondNodeId) {
         Toast.warning(
           `Unable to find all nodes for positions ${!firstNodeId ? edge.position1 : null}${
             !secondNodeId ? [", ", edge.position2] : null
           } in ${sourceTree.name}.`,
-          //TODO: remove
-          { sticky: true },
         );
         yield* put(setBusyBlockingInfoAction(false));
         currentlyPerformingMinCut = false;
         return;
       }
+
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId));
       items.push(
         splitAgglomerate(

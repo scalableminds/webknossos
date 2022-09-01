@@ -12,6 +12,7 @@ import type {
 import type {
   ActiveMappingInfo,
   MutableNode,
+  MutableTreeMap,
   OxalisState,
   SkeletonTracing,
   Tree,
@@ -44,6 +45,7 @@ import {
   setTreeVisibilityAction,
   createBranchPointAction,
   deleteBranchpointByIdAction,
+  addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -79,6 +81,8 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
+import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import Store from "oxalis/store";
 const { SubMenu } = Menu;
 
 /* eslint-disable react/no-unused-prop-types */
@@ -98,6 +102,7 @@ type DispatchProps = {
   setActiveNode: (arg0: number) => void;
   hideTree: (arg0: number) => void;
   createTree: () => void;
+  addTreesAndGroups: (arg0: MutableTreeMap) => void;
   hideBoundingBox: (arg0: number) => void;
   setBoundingBoxColor: (arg0: number, arg1: Vector3) => void;
   setBoundingBoxName: (arg0: number, arg1: string) => void;
@@ -168,6 +173,19 @@ function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: nu
     )} (${formatLengthAsVx(lengthVx)}).`,
     icon: <i className="fas fa-ruler" />,
   });
+}
+
+function extractShortestPathAsNewTree(
+  sourceTree: Tree,
+  sourceNodeId: number,
+  targetNodeId: number,
+) {
+  const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
+  const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath).getOrElse(null);
+  if (newTree != null) {
+    const treeMap = { [newTree.treeId]: newTree };
+    Store.dispatch(addTreesAndGroupsAction(treeMap, null));
+  }
 }
 
 function measureAndShowFullTreeLength(treeId: number, treeName: string) {
@@ -418,6 +436,19 @@ function NodeContextMenuOptions({
               }
             >
               Mark as Branchpoint {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
+            </Menu.Item>
+          )}
+          {isTheSameNode ? null : (
+            <Menu.Item
+              key="extract-shortest-path"
+              disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+              onClick={() =>
+                activeNodeId != null
+                  ? extractShortestPathAsNewTree(clickedTree, activeNodeId, clickedNodeId)
+                  : null
+              }
+            >
+              Extract shortest Path to this Node
             </Menu.Item>
           )}
         </>
@@ -1037,6 +1068,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   createBranchPoint(nodeId: number, treeId: number) {
     dispatch(createBranchPointAction(nodeId, treeId));
+  },
+
+  addTreesAndGroups(treeMap: MutableTreeMap) {
+    dispatch(addTreesAndGroupsAction(treeMap, null));
   },
 
   deleteBranchpointById(nodeId: number, treeId: number) {

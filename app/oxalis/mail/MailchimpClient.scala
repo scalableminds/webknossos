@@ -82,7 +82,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
 }
 
 case class MailchimpTagsResponse(tags: List[MailchimpTagResponse])
-case class MailchimpTagResponse(id: String, name: String, date_added: String)
+case class MailchimpTagResponse(name: String, date_added: String)
 
 object MailchimpTagResponse {
   implicit val jsonFormat: OFormat[MailchimpTagResponse] = Json.format[MailchimpTagResponse]

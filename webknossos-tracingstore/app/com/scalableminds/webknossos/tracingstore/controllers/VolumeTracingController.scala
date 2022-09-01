@@ -560,7 +560,6 @@ class VolumeTracingController @Inject()(
           _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update group must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
           _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
-          _ <- bool2Fox(updateGroup.actions.length == 1) ?~> "Editable mapping update group must contain exactly one update action"
           _ <- editableMappingService.update(mappingName, updateGroup, updateGroup.version)
         } yield Ok
       }

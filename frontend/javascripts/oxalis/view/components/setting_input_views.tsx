@@ -6,22 +6,18 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import features from "features";
 import messages from "messages";
-const rowGutter = {
-  xs: 6,
-  sm: 14,
-  md: 14,
-  lg: 14,
-};
+
+const ROW_GUTTER = 1;
 
 // Always the left part:
-const SETTING_LABEL_COL = 10;
+export const SETTING_LEFT_SPAN = 10;
 
 // Second part for 2-part setting row:
-const SETTING_RIGHT_PART = 14;
+const SETTING_RIGHT_SPAN = 14;
 
 // Second and third part for 3-part setting row:
-const LOG_SLIDER_SPAN = 10;
-const NUMBER_INPUT_SPAN = 4;
+export const SETTING_MIDDLE_SPAN = 10;
+export const SETTING_VALUE_SPAN = 4;
 
 type NumberSliderSettingProps = {
   onChange: (value: number) => void;
@@ -55,11 +51,11 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     // checked more thoroughly against invalid values.
     const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
     return (
-      <Row align="middle" gutter={rowGutter}>
-        <Col span={SETTING_LABEL_COL}>
+      <Row align="middle" gutter={ROW_GUTTER}>
+        <Col span={SETTING_LEFT_SPAN}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={LOG_SLIDER_SPAN}>
+        <Col span={SETTING_MIDDLE_SPAN}>
           <Slider
             min={min}
             max={max}
@@ -69,7 +65,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             disabled={disabled}
           />
         </Col>
-        <Col span={NUMBER_INPUT_SPAN}>
+        <Col span={SETTING_VALUE_SPAN}>
           <InputNumber
             controls={false}
             bordered={false}
@@ -148,11 +144,11 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
-      <Row align="middle" gutter={rowGutter}>
-        <Col span={SETTING_LABEL_COL}>
+      <Row align="middle" gutter={ROW_GUTTER}>
+        <Col span={SETTING_LEFT_SPAN}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={LOG_SLIDER_SPAN}>
+        <Col span={SETTING_MIDDLE_SPAN}>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
@@ -163,7 +159,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             disabled={disabled}
           />
         </Col>
-        <Col span={NUMBER_INPUT_SPAN}>
+        <Col span={SETTING_VALUE_SPAN}>
           <InputNumber
             controls={false}
             bordered={false}
@@ -202,11 +198,11 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   render() {
     const { label, onChange, value, disabled, tooltipText, loading } = this.props;
     return (
-      <Row className="margin-bottom" align="middle" gutter={rowGutter}>
-        <Col span={SETTING_LABEL_COL}>
+      <Row className="margin-bottom" align="middle" gutter={ROW_GUTTER}>
+        <Col span={SETTING_LEFT_SPAN}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={SETTING_RIGHT_PART}>
+        <Col span={SETTING_RIGHT_SPAN}>
           <Tooltip title={tooltipText} placement="top">
             {/* This div is necessary for the tooltip to be displayed */}
             <div
@@ -246,14 +242,12 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
   render() {
     const { onChange, value, label, max, min, step } = this.props;
     return (
-      <Row className="margin-bottom" align="top" gutter={rowGutter}>
-        <Col span={SETTING_LABEL_COL}>
+      <Row className="margin-bottom" align="top" gutter={ROW_GUTTER}>
+        <Col span={SETTING_LEFT_SPAN}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={SETTING_RIGHT_PART}>
+        <Col span={SETTING_RIGHT_SPAN}>
           <InputNumber
-            controls={false}
-            bordered={false}
             style={{
               width: "100%",
             }}
@@ -481,7 +475,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
             />
           </Col>
 
-          <Col span={SETTING_RIGHT_PART}>
+          <Col span={SETTING_RIGHT_SPAN}>
             <Tooltip title={allowUpdate ? null : messages["tracing.read_only_mode_notification"]}>
               <span>
                 <Input
@@ -526,7 +520,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               <label className="settings-label"> Bounds: </label>
             </Tooltip>
           </Col>
-          <Col span={SETTING_RIGHT_PART}>
+          <Col span={SETTING_RIGHT_SPAN}>
             <Tooltip
               trigger={allowUpdate ? ["focus"] : ["hover"]}
               title={allowUpdate ? tooltipTitle : messages["tracing.read_only_mode_notification"]}
@@ -625,11 +619,11 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
   render() {
     const { onChange, label, value } = this.props;
     return (
-      <Row className="margin-bottom" align="top">
-        <Col span={SETTING_LABEL_COL}>
+      <Row className="margin-bottom" align="top" gutter={ROW_GUTTER}>
+        <Col span={SETTING_LEFT_SPAN}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={SETTING_RIGHT_PART}>
+        <Col span={SETTING_RIGHT_SPAN}>
           <Select
             onChange={onChange}
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message

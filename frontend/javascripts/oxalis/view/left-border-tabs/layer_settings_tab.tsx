@@ -30,6 +30,9 @@ import {
   NumberSliderSetting,
   LogSliderSetting,
   ColorSetting,
+  SETTING_LEFT_SPAN,
+  SETTING_MIDDLE_SPAN,
+  SETTING_VALUE_SPAN,
 } from "oxalis/view/components/setting_input_views";
 import { V3 } from "libs/mjs";
 import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
@@ -571,10 +574,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           marginTop: 6,
         }}
       >
-        <Col span={12}>
+        <Col span={SETTING_LEFT_SPAN}>
           <label className="setting-label">Color</label>
         </Col>
-        <Col span={10}>
+        <Col span={SETTING_MIDDLE_SPAN}>
           <ColorSetting
             value={Utils.rgbToHex(layerConfiguration.color)}
             onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
@@ -583,7 +586,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
           />
         </Col>
-        <Col span={2}>
+        <Col span={SETTING_VALUE_SPAN}>
           <Tooltip title="Invert the color of this layer.">
             <div
               onClick={() =>
@@ -597,6 +600,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 top: 4,
                 right: 0,
                 marginTop: 0,
+                marginLeft: 10,
                 display: "inline-flex",
               }}
             >

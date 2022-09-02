@@ -83,6 +83,12 @@ export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfigura
   isInEditMode: "Configuration Mode",
   gammaCorrectionValue: "Gamma Correction",
 };
+export const layerViewConfigurationTooltips: Partial<
+  Record<keyof DatasetLayerConfiguration, string>
+> = {
+  gammaCorrectionValue:
+    "Applies a non-linear mapping to the intensity values of this layer (the default is 1).",
+};
 export default {
   yes: "Yes",
   no: "No",

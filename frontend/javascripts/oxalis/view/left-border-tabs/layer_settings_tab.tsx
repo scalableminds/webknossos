@@ -93,7 +93,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import { settings } from "messages";
+import { layerViewConfigurations, layerViewConfigurationTooltips, settings } from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
@@ -561,7 +561,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   ) => (
     <div>
       <LogSliderSetting
-        label="Gamma Correction"
+        label={
+          <Tooltip title={layerViewConfigurationTooltips.gammaCorrectionValue}>
+            {layerViewConfigurations.gammaCorrectionValue}
+          </Tooltip>
+        }
         min={0.01}
         max={10}
         roundTo={3}

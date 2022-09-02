@@ -6,6 +6,7 @@ export function getDefaultLayerViewConfiguration(
   const defaultLayerViewConfiguration: Partial<DatasetLayerConfiguration> = {
     color: [255, 255, 255],
     alpha: 100,
+    gammaCorrectionValue: 1,
     intensityRange: [0, 255],
     isDisabled: false,
     isInverted: false,
@@ -26,6 +27,11 @@ export const layerViewConfiguration = {
     type: "number",
     minimum: 0,
     maximum: 100,
+  },
+  gammaCorrectionValue: {
+    type: "number",
+    minimum: 0,
+    maximum: 10,
   },
   intensityRange: {
     type: "array",

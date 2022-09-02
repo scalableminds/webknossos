@@ -122,6 +122,15 @@ class EditableMappingService @Inject()(
                                                                               emptyFallback = Some(-1L))
     } yield versionOrMinusOne >= 0
 
+  def duplicate(editableMappingIdOpt: Option[String], tracing: VolumeTracing, userToken: Option[String]): Fox[String] =
+    for {
+      editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
+      remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
+      editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
+      newId = generateId
+      _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(editableMapping.toProto))
+    } yield newId
+
   def updateActionLog(editableMappingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[EditableMappingUpdateAction])): JsObject =
       Json.obj(

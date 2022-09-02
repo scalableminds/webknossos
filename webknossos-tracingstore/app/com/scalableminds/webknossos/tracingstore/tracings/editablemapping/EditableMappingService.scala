@@ -97,6 +97,7 @@ class EditableMappingService @Inject()(
         "mappingName" -> editableMappingId,
         "version" -> version,
         "tracingId" -> tracingId,
+        "baseMappingName" -> editableMapping.baseMappingName,
         "createdTimestamp" -> editableMapping.createdTimestamp
       )
 

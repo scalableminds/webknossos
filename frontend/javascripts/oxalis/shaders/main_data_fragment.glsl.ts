@@ -176,7 +176,7 @@ void main() {
       float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
       color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
 
-      color_value = pow(color_value, vec3(<%= name %>_gammaCorrectionValue));
+      color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
 
       // Maybe invert the color using the inverting_factor
       color_value = abs(color_value - <%= name %>_is_inverted);

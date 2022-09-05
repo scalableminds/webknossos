@@ -1,6 +1,6 @@
 import { Form, Input, Button, Col, Radio, Row, Collapse } from "antd";
 import { connect } from "react-redux";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
@@ -8,7 +8,6 @@ import messages from "messages";
 import { jsonStringify } from "libs/utils";
 import { CardContainer } from "admin/dataset/dataset_components";
 import Password from "antd/lib/input/Password";
-import TextArea from "antd/lib/input/TextArea";
 import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
 import _ from "lodash";

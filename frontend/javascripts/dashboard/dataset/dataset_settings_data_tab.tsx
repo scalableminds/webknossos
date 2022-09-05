@@ -21,7 +21,7 @@ import {
   FormItemWithInfo,
   RetryingErrorBoundary,
   jsonEditStyle,
-} from "./helper_components";
+} from "dashboard/dataset/helper_components";
 import { jsonStringify } from "libs/utils";
 import { DataLayer } from "types/schemas/datasource.types";
 
@@ -267,7 +267,6 @@ function SimpleLayerForm({
 }) {
   const isSegmentation = layer.category === "segmentation";
   const bitDepth = getBitDepth(layer);
-  const boundingBoxValue = layer.boundingBox;
   return (
     <Row
       gutter={48}

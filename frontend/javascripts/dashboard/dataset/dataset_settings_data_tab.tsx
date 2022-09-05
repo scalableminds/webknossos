@@ -9,6 +9,7 @@ import {
   Switch,
   Tooltip,
   FormInstance,
+  Select,
 } from "antd";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
@@ -164,6 +165,29 @@ function SimpleDatasetForm({
       >
         <List.Item>
           <FormItemWithInfo
+            name={["dataSource", "id", "name"]}
+            label="Name"
+            info="The name of the dataset"
+            rules={[
+              {
+                required: true,
+                message: "Please provide a name for the dataset.",
+              },
+              {
+                validator: syncValidator((value) => value.length > 3, "..."),
+              },
+            ]}
+          >
+            <Input
+              disabled={isReadOnlyDataset}
+              style={{
+                width: 400,
+              }}
+            />
+          </FormItemWithInfo>
+        </List.Item>
+        <List.Item>
+          <FormItemWithInfo
             name={["dataSource", "scale"]}
             label="Voxel Size"
             info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
@@ -236,16 +260,34 @@ function SimpleLayerForm({
         width: "100%",
       }}
     >
-      <Col span={5}>
-        <div
+      <Col span={10}>
+        <FormItemWithInfo
+          name={["dataSource", "dataLayers", index, "name"]}
+          label="Name"
           style={{
-            paddingTop: 9,
+            marginBottom: 2,
           }}
+          info="The name of the layer."
+          initialValue={boundingBoxValue}
+          rules={[
+            {
+              required: true,
+              message: "Please provide a valid layer name.",
+            },
+            {
+              validator: syncValidator((value: string) => value.length > 3, "..."),
+            },
+          ]}
         >
-          {index + 1}. Layer &ldquo;{layer.name}&rdquo;
-        </div>
+          <Input
+            disabled={isReadOnlyDataset}
+            style={{
+              width: 300,
+            }}
+          />
+        </FormItemWithInfo>
       </Col>
-      <Col span={17}>
+      <Col span={12}>
         <FormItemWithInfo
           name={["dataSource", "dataLayers", index, "boundingBox"]}
           label="Bounding box"
@@ -275,6 +317,22 @@ function SimpleLayerForm({
             }}
           />
         </FormItemWithInfo>
+
+        <Form.Item
+          name={["dataSource", "dataLayers", index, "category"]}
+          label="Category"
+          rules={[{ required: true }]}
+        >
+          <Select
+            placeholder="Select the category of the layer"
+            style={{
+              width: 300,
+            }}
+          >
+            <Select.Option value="color">Color / grayscale</Select.Option>
+            <Select.Option value="segmentation">Segmentation</Select.Option>
+          </Select>
+        </Form.Item>
 
         {isSegmentation ? (
           <FormItemWithInfo

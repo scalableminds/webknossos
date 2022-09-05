@@ -73,6 +73,9 @@ export function useDatasetSharingToken(dataset: APIDataset) {
       setDatasetToken(urlToken);
       return;
     }
+    if (!activeUser) {
+      return;
+    }
     try {
       const sharingToken = await getDatasetSharingToken(dataset, {
         doNotInvestigate: true,
@@ -84,11 +87,8 @@ export function useDatasetSharingToken(dataset: APIDataset) {
   };
 
   useEffect(() => {
-    if (!activeUser) {
-      return;
-    }
     getAndSetToken();
-  }, [dataset, activeUser]);
+  }, [dataset]);
   return datasetToken;
 }
 export function getUrl(sharingToken: string, includeToken: boolean) {

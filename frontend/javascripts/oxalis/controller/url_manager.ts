@@ -200,7 +200,6 @@ class UrlManager {
   startUrlUpdater(): void {
     Store.subscribe(() => this.update());
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'onhashchange' does not exist on type '(W... Remove this comment to see the full error message
     window.onhashchange = () => this.onHashChange();
   }
 

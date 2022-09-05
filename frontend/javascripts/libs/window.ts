@@ -59,12 +59,13 @@ let performanceCounterForMocking = 0;
 
 const _window =
   typeof window === "undefined"
-    ? {
+    ? ({
         alert: console.log.bind(console),
         app: null,
         location: dummyLocation,
-        // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'resolve' implicitly has an 'any' type.
-        requestAnimationFrame: (resolve) => resolve(),
+        requestAnimationFrame: (resolver: any) => {
+          setTimeout(resolver, 16);
+        },
         document,
         navigator: {
           onLine: true,
@@ -75,7 +76,7 @@ const _window =
         removeEventListener,
         open: (_url: string) => {},
         performance: { now: () => ++performanceCounterForMocking },
-      }
+      } as typeof window)
     : window;
 
 export default _window;

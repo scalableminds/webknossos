@@ -469,7 +469,7 @@ export function busyWaitDevHelper(time: number) {
     }
   }
 }
-export function animationFrame(maxTimeout?: number): Promise<void> {
+export function animationFrame(maxTimeout?: number): Promise<number | void> {
   const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise(
     (resolve) => {
       window.requestAnimationFrame(resolve);
@@ -859,7 +859,6 @@ export function convertBufferToImage(
 }
 export function getIsInIframe() {
   try {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'self' does not exist on type '(Window & ... Remove this comment to see the full error message
     return window.self !== window.top;
   } catch (e) {
     return true;
@@ -870,12 +869,9 @@ export function getWindowBounds(): [number, number] {
   let width = 0;
   let height = 0;
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'innerWidth' does not exist on type '(Win... Remove this comment to see the full error message
   if (typeof window.innerWidth === "number") {
     // Non-IE
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'innerWidth' does not exist on type '(Win... Remove this comment to see the full error message
     width = window.innerWidth;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'innerHeight' does not exist on type '(Wi... Remove this comment to see the full error message
     height = window.innerHeight;
   } else if (
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'documentElement' does not exist on type ... Remove this comment to see the full error message

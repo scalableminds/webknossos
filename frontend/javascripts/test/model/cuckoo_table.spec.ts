@@ -57,20 +57,14 @@ test.serial("CuckooTable: Basic", (t) => {
     const readValue = ct.get(entry[0]);
 
     isValueEqual(t, entry[1], readValue);
-    if (entry[1][0] !== readValue[0]) {
-      throw new Error("failed");
-    }
+    n++;
+  }
 
-    // Check that all previously set items are still
-    // intact.
-    let nn = 0;
-    for (const innerEntry of entries) {
-      if (nn > n) {
-        break;
-      }
-      isValueEqual(t, innerEntry[1], ct.get(innerEntry[0]));
-      nn++;
-    }
+  // Check that all previously set items are still
+  // intact.
+  n = 0;
+  for (const innerEntry of entries) {
+    isValueEqual(t, innerEntry[1], ct.get(innerEntry[0]));
     n++;
   }
 });
@@ -78,14 +72,11 @@ test.serial("CuckooTable: Basic", (t) => {
 test.serial("CuckooTable: Speed should be alright", (t) => {
   const RUNS = 100;
   const hashSets = _.range(RUNS).map(() => generateRandomEntrySet());
-
-  const cts = _.range(RUNS).map(() => CuckooTable.fromCapacity(hashSets[0].length));
-
-  console.time("many runs");
+  const tables = _.range(RUNS).map(() => CuckooTable.fromCapacity(hashSets[0].length));
 
   const durations = [];
   for (let idx = 0; idx < RUNS; idx++) {
-    const ct = cts[idx];
+    const ct = tables[idx];
     const entries = hashSets[idx];
     for (const entry of entries) {
       const then = performance.now();
@@ -94,7 +85,6 @@ test.serial("CuckooTable: Speed should be alright", (t) => {
       durations.push(now - then);
     }
   }
-  console.timeEnd("many runs");
 
   t.true(_.mean(durations) < 0.1);
 });

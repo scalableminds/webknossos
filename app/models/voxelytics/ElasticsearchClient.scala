@@ -99,7 +99,7 @@ class ElasticsearchClient @Inject()(wkConf: WkConf,
           }
           case e =>
             logger.error(s"Unexpected error $e")
-            Fox.failure(s"Unexpected error while trying to connect to Elasticsearch.", Full(e))
+            Fox.failure("Unexpected error while trying to connect to Elasticsearch.", Full(e))
         })
       isServerAvailable <- isServerAvailableBox.toFox
       _ <- if (!isServerAvailable) {

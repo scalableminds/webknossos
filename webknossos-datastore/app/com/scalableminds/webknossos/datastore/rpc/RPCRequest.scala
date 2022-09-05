@@ -61,6 +61,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)
     performRequest
   }
 
+  def head: Fox[WSResponse] = {
+    request = request.withMethod("HEAD")
+    performRequest
+  }
+
   def getWithJsonResponse[T: Reads]: Fox[T] = {
     request = request.withMethod("GET")
     parseJsonResponse(performRequest)

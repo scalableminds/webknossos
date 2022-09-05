@@ -80,7 +80,6 @@ function DatasetAddZarrView(props: Props) {
   const { activeUser, onAdded } = props;
 
   const [exploreLog, setExploreLog] = useState<string>("");
-  const [datasourceUrl, setDatasourceUrl] = useState<string>("");
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
@@ -88,17 +87,14 @@ function DatasetAddZarrView(props: Props) {
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
   const datasourceConfigStr = Form.useWatch("dataSourceJson", form);
-  const setDatasourceConfigStr = (dataSourceJson: string) =>
-    form.setFieldsValue({ dataSourceJson });
+  const datasourceUrl = Form.useWatch("url", form);
 
-  useEffect(() => {
-    try {
-      form.setFieldsValue({
-        dataSource: JSON.parse(datasourceConfigStr),
-        dataSourceJson: datasourceConfigStr,
-      });
-    } catch {}
-  }, [datasourceConfigStr]);
+  const setDatasourceConfigStr = (dataSourceJson: string) => {
+    form.setFieldsValue({ dataSourceJson });
+    // Since this function sets the JSON string, we have to update the
+    // data which is rendered by the "simple" page.
+    syncDataSourceFields(form, "simple");
+  };
 
   function validateUrls(userInput: string) {
     if (
@@ -212,10 +208,7 @@ function DatasetAddZarrView(props: Props) {
             ]}
             validateFirst
           >
-            <Input
-              defaultValue={datasourceUrl}
-              onChange={(e) => setDatasourceUrl(e.target.value)}
-            />
+            <Input />
           </FormItem>
           <FormItem label="Authentication">
             <RadioGroup

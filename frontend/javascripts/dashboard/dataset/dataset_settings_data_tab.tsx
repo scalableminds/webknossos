@@ -194,6 +194,7 @@ function SimpleDatasetForm({
       </List>
 
       <List
+        locale={{ emptyText: "No Layers" }}
         header={
           <div
             style={{
@@ -204,7 +205,7 @@ function SimpleDatasetForm({
           </div>
         }
       >
-        {(dataSource || { dataLayers: [] }).dataLayers.map((layer: APIDataLayer, idx: number) => (
+        {dataSource?.dataLayers?.map((layer: APIDataLayer, idx: number) => (
           <List.Item key={`layer-${layer.name}`}>
             <SimpleLayerForm isReadOnlyDataset={isReadOnlyDataset} layer={layer} index={idx} />
           </List.Item>

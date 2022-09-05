@@ -25,6 +25,7 @@ import { aggregateBoundingBox, map3 } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
+import { DataLayer } from "types/schemas/datasource.types";
 export type ResolutionsMap = Map<number, Vector3>;
 export type SmallerOrHigherInfo = {
   smaller: boolean;
@@ -609,7 +610,7 @@ export function determineAllowedModes(
     allowedModes,
   };
 }
-export function getBitDepth(layerInfo: DataLayerType): number {
+export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {
   switch (layerInfo.elementClass) {
     case "uint8":
       return 8;

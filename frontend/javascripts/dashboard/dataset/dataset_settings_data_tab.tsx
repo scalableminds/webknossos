@@ -15,7 +15,6 @@ import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
-import { APIDataLayer } from "types/api_flow_types";
 import { BoundingBoxObject } from "oxalis/store";
 import {
   Hideable,
@@ -24,6 +23,7 @@ import {
   jsonEditStyle,
 } from "./helper_components";
 import { jsonStringify } from "libs/utils";
+import { DataLayer } from "types/schemas/datasource.types";
 
 const FormItem = Form.Item;
 
@@ -164,56 +164,65 @@ function SimpleDatasetForm({
         }
       >
         <List.Item>
-          <FormItemWithInfo
-            name={["dataSource", "id", "name"]}
-            label="Name"
-            info="The name of the dataset"
-            rules={[
-              {
-                required: true,
-                message: "Please provide a name for the dataset.",
-              },
-              {
-                validator: syncValidator((value) => value.length > 3, "..."),
-              },
-            ]}
+          <Row
+            gutter={48}
+            style={{
+              width: "100%",
+            }}
           >
-            <Input
-              disabled={isReadOnlyDataset}
-              style={{
-                width: 400,
-              }}
-            />
-          </FormItemWithInfo>
-        </List.Item>
-        <List.Item>
-          <FormItemWithInfo
-            name={["dataSource", "scale"]}
-            label="Voxel Size"
-            info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
-            initialValue={dataSource != null ? dataSource.scale : [0, 0, 0]}
-            rules={[
-              {
-                required: true,
-                message: "Please provide a scale for the dataset.",
-              },
-              {
-                validator: syncValidator(
-                  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
-                  (value) => value && value.every((el) => el > 0),
-                  "Each component of the scale must be larger than 0",
-                ),
-              },
-            ]}
-          >
-            <Vector3Input
-              disabled={isReadOnlyDataset}
-              style={{
-                width: 400,
-              }}
-              allowDecimals
-            />
-          </FormItemWithInfo>
+            <Col span={10}>
+              <FormItemWithInfo
+                name={["dataSource", "id", "name"]}
+                label="Name"
+                info="The name of the dataset"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a name for the dataset.",
+                  },
+                  {
+                    validator: syncValidator((value) => value.length > 3, "..."),
+                  },
+                ]}
+              >
+                <Input
+                  disabled={isReadOnlyDataset}
+                  style={{
+                    width: 400,
+                  }}
+                />
+              </FormItemWithInfo>
+            </Col>
+            <Col span={12}>
+              <FormItemWithInfo
+                name={["dataSource", "scale"]}
+                label="Voxel Size"
+                info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                initialValue={dataSource != null ? dataSource.scale : [0, 0, 0]}
+                rules={[
+                  {
+                    required: true,
+                    message: "Please provide a scale for the dataset.",
+                  },
+                  {
+                    validator: syncValidator(
+                      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
+                      (value) => value && value.every((el) => el > 0),
+                      "Each component of the scale must be larger than 0",
+                    ),
+                  },
+                ]}
+              >
+                <Vector3Input
+                  disabled={isReadOnlyDataset}
+                  style={{
+                    width: 400,
+                  }}
+                  allowDecimals
+                />
+              </FormItemWithInfo>
+            </Col>
+          </Row>
         </List.Item>
       </List>
 
@@ -229,7 +238,7 @@ function SimpleDatasetForm({
           </div>
         }
       >
-        {dataSource?.dataLayers?.map((layer: APIDataLayer, idx: number) => (
+        {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
           <List.Item key={`layer-${layer.name}`}>
             <SimpleLayerForm isReadOnlyDataset={isReadOnlyDataset} layer={layer} index={idx} />
           </List.Item>
@@ -239,20 +248,26 @@ function SimpleDatasetForm({
   );
 }
 
+function getMags(layer: DataLayer) {
+  if ("wkwResolutions" in layer) {
+    return layer.wkwResolutions.map((res) => res.resolution);
+  }
+
+  return layer.mags.map((res) => res.mag);
+}
+
 function SimpleLayerForm({
   isReadOnlyDataset,
   layer,
   index,
 }: {
   isReadOnlyDataset: boolean;
-  layer: APIDataLayer;
+  layer: DataLayer;
   index: number;
 }) {
   const isSegmentation = layer.category === "segmentation";
   const bitDepth = getBitDepth(layer);
-  const boundingBoxValue =
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataFormat' does not exist on type 'APID... Remove this comment to see the full error message
-    layer.dataFormat === "knossos" ? layer.sections[0].boundingBox : layer.boundingBox;
+  const boundingBoxValue = layer.boundingBox;
   return (
     <Row
       gutter={48}
@@ -265,10 +280,9 @@ function SimpleLayerForm({
           name={["dataSource", "dataLayers", index, "name"]}
           label="Name"
           style={{
-            marginBottom: 2,
+            marginBottom: 24,
           }}
           info="The name of the layer."
-          initialValue={boundingBoxValue}
           rules={[
             {
               required: true,
@@ -286,16 +300,27 @@ function SimpleLayerForm({
             }}
           />
         </FormItemWithInfo>
+        <p>
+          <div>Additional information</div>
+          <div>Data Format: {layer.dataFormat}</div>
+          <div>Voxel type: {layer.elementClass}</div>
+          {"numChannels" in layer ? <div>Channel count: {layer.numChannels}</div> : null}
+          <div>
+            Magnifications:{" "}
+            {getMags(layer)
+              .map((mag) => (typeof mag === "number" ? mag : mag.join("-")))
+              .join(", ")}
+          </div>
+        </p>
       </Col>
       <Col span={12}>
         <FormItemWithInfo
           name={["dataSource", "dataLayers", index, "boundingBox"]}
           label="Bounding box"
           style={{
-            marginBottom: 2,
+            marginBottom: 24,
           }}
           info="The bounding box defines the extent of the data in the format x, y, z, width, height, depth (in voxel coordinates)."
-          initialValue={boundingBoxValue}
           rules={[
             {
               required: true,

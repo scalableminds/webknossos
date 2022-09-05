@@ -310,15 +310,8 @@ export function getNameOfRequestedOrVisibleSegmentationLayer(
   return layer != null ? layer.name : null;
 }
 
-export function getSegmentsForLayer(
-  state: OxalisState,
-  layerName: string | null | undefined,
-): SegmentMap | null | undefined {
-  const layer = layerName != null ? getSegmentationLayerByName(state.dataset, layerName) : null;
-
-  if (layer == null) {
-    return null;
-  }
+export function getSegmentsForLayer(state: OxalisState, layerName: string): SegmentMap {
+  const layer = getSegmentationLayerByName(state.dataset, layerName);
 
   if (layer.tracingId != null) {
     return getVolumeTracingById(state.tracing, layer.tracingId).segments;

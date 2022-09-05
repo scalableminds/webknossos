@@ -338,10 +338,6 @@ export default class LayerRenderingManager {
       listenToStoreProperty(
         (storeState) => getSegmentsForLayer(storeState, this.name),
         (newSegments) => {
-          if (!newSegments) {
-            return;
-          }
-
           const cuckoo = this.getCustomColorCuckooTable();
           for (const updateAction of diffSegmentLists(prevSegments, newSegments)) {
             if (

@@ -371,6 +371,12 @@ function _SegmentListItem({
         andCloseContextMenu,
       )}
       {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
+      {/*
+       * Disable the change-color menu if the segment was mapped to another segment, because
+       * changing the color wouldn't do anything as long as the mapping is still active.
+       * This is because the id (A) is mapped to another one (B). So, the user would need
+       * to change the color of B to see the effect for A.
+       */}
       <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled || segment.id !== mappedId}>
         <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
           Change Segment Color

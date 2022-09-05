@@ -75,6 +75,9 @@ export default {
         boundingBox: {
           $ref: "#/definitions/types::BoundingBox",
         },
+        numChannels: {
+          type: "number",
+        },
         mags: {
           type: "array",
           items: {

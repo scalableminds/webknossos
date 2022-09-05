@@ -13,15 +13,19 @@ validator.addSchema(UrlStateSchema, "/");
 const validateWithSchemaSync = (type: string, value: string) => {
   try {
     const json = JSON.parse(value);
-    const result = validator.validate(json, {
-      $ref: `#/definitions/${type}`,
-    });
+    const result = validator.validate(
+      json,
+      {
+        $ref: `#/definitions/${type}`,
+      },
+      { nestedErrors: true },
+    );
 
     if (result.valid) {
       return json;
     } else {
       throw new Error(
-        `Invalid schema: ${result.errors.map((e) => `${e.property} ${e.message}`).join("; ")}`,
+        `${result.toString()}. Note that in case of multiple errors, it might be sufficient to only fix one of them.`,
       );
     }
   } catch (e) {

@@ -54,7 +54,7 @@ import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
-import DatasetSettingsDataTab from "./dataset_settings_data_tab";
+import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
@@ -611,12 +611,15 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 
   handleSubmit = () => {
     // Ensure that all form fields are in sync
-    this.syncDataSourceFields();
     const form = this.formRef.current;
 
     if (!form) {
       return;
     }
+    syncDataSourceFields(
+      form,
+      this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple",
+    );
 
     const afterForceUpdateCallback = () =>
       // Trigger validation manually, because fields may have been updated
@@ -742,32 +745,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     );
   }
 
-  syncDataSourceFields = (_syncTargetTabKey?: "simple" | "advanced"): void => {
-    // If no sync target was provided, update the non-active tab with the values of the active one
-    const syncTargetTabKey =
-      _syncTargetTabKey ||
-      (this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple");
-    const form = this.formRef.current;
-
-    if (!form) {
-      return;
-    }
-
-    if (syncTargetTabKey === "advanced") {
-      // Copy from simple to advanced: update json
-      const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
-      form.setFieldsValue({
-        dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
-      });
-    } else {
-      const dataSourceFromAdvancedTab = JSON.parse(form.getFieldValue("dataSourceJson"));
-      // Copy from advanced to simple: update form values
-      form.setFieldsValue({
-        dataSource: dataSourceFromAdvancedTab,
-      });
-    }
-  };
-
   onValuesChange = (changedValues: FormData, allValues: FormData) => {
     const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
     this.setState({
@@ -853,28 +830,30 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                     // to hidden form elements.
                   }
                   <Hideable hidden={this.state.activeTabKey !== "data"}>
-                    <DatasetSettingsDataTab
-                      key="SimpleAdvancedDataForm"
-                      isReadOnlyDataset={
-                        this.state.dataset != null && this.state.dataset.dataStore.isConnector
-                      }
-                      form={form}
-                      activeDataSourceEditMode={this.state.activeDataSourceEditMode}
-                      onChange={(activeEditMode) => {
-                        const currentForm = this.formRef.current;
-
-                        if (!currentForm) {
-                          return;
+                    {form && (
+                      <DatasetSettingsDataTab
+                        key="SimpleAdvancedDataForm"
+                        isReadOnlyDataset={
+                          this.state.dataset != null && this.state.dataset.dataStore.isConnector
                         }
+                        form={form}
+                        activeDataSourceEditMode={this.state.activeDataSourceEditMode}
+                        onChange={(activeEditMode) => {
+                          const currentForm = this.formRef.current;
 
-                        this.syncDataSourceFields(activeEditMode);
-                        currentForm.validateFields();
-                        this.setState({
-                          activeDataSourceEditMode: activeEditMode,
-                        });
-                      }}
-                      additionalAlert={this.getDatasourceDiffAlert()}
-                    />
+                          if (!currentForm) {
+                            return;
+                          }
+
+                          syncDataSourceFields(currentForm, activeEditMode);
+                          currentForm.validateFields();
+                          this.setState({
+                            activeDataSourceEditMode: activeEditMode,
+                          });
+                        }}
+                        additionalAlert={this.getDatasourceDiffAlert()}
+                      />
+                    )}
                   </Hideable>
                 </TabPane>
 

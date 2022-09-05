@@ -22,8 +22,32 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "./helper_components";
+import { jsonStringify } from "libs/utils";
 
 const FormItem = Form.Item;
+
+export const syncDataSourceFields = (
+  form: FormInstance,
+  syncTargetTabKey: "simple" | "advanced",
+): void => {
+  if (!form) {
+    return;
+  }
+
+  if (syncTargetTabKey === "advanced") {
+    // Copy from simple to advanced: update json
+    const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
+    form.setFieldsValue({
+      dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
+    });
+  } else {
+    const dataSourceFromAdvancedTab = JSON.parse(form.getFieldValue("dataSourceJson"));
+    // Copy from advanced to simple: update form values
+    form.setFieldsValue({
+      dataSource: dataSourceFromAdvancedTab,
+    });
+  }
+};
 
 export default function DatasetSettingsDataTab({
   isReadOnlyDataset,
@@ -33,16 +57,17 @@ export default function DatasetSettingsDataTab({
   additionalAlert,
 }: {
   isReadOnlyDataset: boolean;
-  form: FormInstance | null;
+  form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
-  additionalAlert: React.ReactNode | null | undefined;
+  additionalAlert?: React.ReactNode | null | undefined;
 }) {
-  if (!form) return null;
+  const dataSourceJson = Form.useWatch("dataSourceJson", form);
   const dataSource =
-    form.getFieldValue("dataSourceJson") && isValidJSON(form.getFieldValue("dataSourceJson"))
+    dataSourceJson && isValidJSON(dataSourceJson)
       ? JSON.parse(form.getFieldValue("dataSourceJson"))
       : null;
+
   const isJSONInvalid = dataSource == null;
   return (
     <div>
@@ -221,12 +246,7 @@ function SimpleLayerForm({
       </Col>
       <Col span={17}>
         <FormItemWithInfo
-          name={
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'dataFormat' does not exist on type 'APID... Remove this comment to see the full error message
-            layer.dataFormat === "knossos"
-              ? ["dataSource", "dataLayers", index, "sections", 0, "boundingBox"]
-              : ["dataSource", "dataLayers", index, "boundingBox"]
-          }
+          name={["dataSource", "dataLayers", index, "boundingBox"]}
           label="Bounding box"
           style={{
             marginBottom: 2,

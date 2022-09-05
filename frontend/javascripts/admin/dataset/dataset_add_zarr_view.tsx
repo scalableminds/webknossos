@@ -1,6 +1,6 @@
 import { Form, Input, Button, Col, Radio, Row, Collapse } from "antd";
 import { connect } from "react-redux";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
@@ -15,6 +15,9 @@ import _ from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import { formatScale } from "libs/format_utils";
 import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import DatasetSettingsDataTab, {
+  syncDataSourceFields,
+} from "dashboard/dataset/dataset_settings_data_tab";
 const { Panel } = Collapse;
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -75,13 +78,27 @@ function mergeNewLayers(
 
 function DatasetAddZarrView(props: Props) {
   const { activeUser, onAdded } = props;
-  const [datasourceConfig, setDatasourceConfig] = useState<string>("");
+
   const [exploreLog, setExploreLog] = useState<string>("");
   const [datasourceUrl, setDatasourceUrl] = useState<string>("");
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
   const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https">("https");
+  const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
+  const [form] = Form.useForm();
+  const datasourceConfigStr = Form.useWatch("dataSourceJson", form);
+  const setDatasourceConfigStr = (dataSourceJson: string) =>
+    form.setFieldsValue({ dataSourceJson });
+
+  useEffect(() => {
+    try {
+      form.setFieldsValue({
+        dataSource: JSON.parse(datasourceConfigStr),
+        dataSourceJson: datasourceConfigStr,
+      });
+    } catch {}
+  }, [datasourceConfigStr]);
 
   function validateUrls(userInput: string) {
     if (
@@ -113,13 +130,13 @@ function DatasetAddZarrView(props: Props) {
       return;
     }
     ensureLargestSegmentIdsInPlace(dataSource);
-    if (!datasourceConfig) {
-      setDatasourceConfig(jsonStringify(dataSource));
+    if (!datasourceConfigStr) {
+      setDatasourceConfigStr(jsonStringify(dataSource));
       return;
     }
     let loadedDatasource;
     try {
-      loadedDatasource = JSON.parse(datasourceConfig);
+      loadedDatasource = JSON.parse(datasourceConfigStr);
     } catch (e) {
       Toast.error(
         "The current datasource config contains invalid JSON. Cannot add the new Zarr data.",
@@ -132,14 +149,14 @@ function DatasetAddZarrView(props: Props) {
         { timeout: 10000 },
       );
     }
-    setDatasourceConfig(jsonStringify(mergeNewLayers(loadedDatasource, dataSource)));
+    setDatasourceConfigStr(jsonStringify(mergeNewLayers(loadedDatasource, dataSource)));
   }
 
   async function handleStoreDataset() {
-    if (datasourceConfig && activeUser) {
+    if (datasourceConfigStr && activeUser) {
       let configJSON;
       try {
-        configJSON = JSON.parse(datasourceConfig);
+        configJSON = JSON.parse(datasourceConfigStr);
         const nameValidationResult = await isDatasetNameValid({
           name: configJSON.id.name,
           owningOrganization: activeUser.organization,
@@ -150,7 +167,7 @@ function DatasetAddZarrView(props: Props) {
         const response = await storeRemoteDataset(
           configJSON.id.name,
           activeUser.organization,
-          datasourceConfig,
+          datasourceConfigStr,
         );
         if (response.status !== 200) {
           const errorJSONString = JSON.stringify(await response.json());
@@ -172,7 +189,7 @@ function DatasetAddZarrView(props: Props) {
         specify the credentials for the dataset. More layers can be added to the datasource
         specification below using the Add button. Once you have approved of the resulting datasource
         you can import it.
-        <Form style={{ marginTop: 20 }} layout="vertical">
+        <Form form={form} style={{ marginTop: 20 }} layout="vertical">
           <FormItem
             name="url"
             label="Dataset URL"
@@ -248,7 +265,7 @@ function DatasetAddZarrView(props: Props) {
               <Col span={6}>
                 <AsyncButton
                   size="large"
-                  type={datasourceConfig ? "default" : "primary"}
+                  type={datasourceConfigStr ? "default" : "primary"}
                   style={{ width: "100%" }}
                   onClick={handleExplore}
                 >
@@ -264,18 +281,16 @@ function DatasetAddZarrView(props: Props) {
               </Hint>
             </Panel>
           </Collapse>
-          <FormItem label="Datasource">
-            <TextArea
-              rows={4}
-              autoSize={{ minRows: 3, maxRows: 15 }}
-              style={{
-                fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
-              }}
-              placeholder="No datasource loaded yet"
-              value={datasourceConfig}
-              onChange={(e) => setDatasourceConfig(e.target.value)}
-            />
-          </FormItem>
+          <DatasetSettingsDataTab
+            isReadOnlyDataset={false}
+            form={form}
+            activeDataSourceEditMode={dataSourceEditMode}
+            onChange={(activeEditMode) => {
+              syncDataSourceFields(form, activeEditMode);
+              form.validateFields();
+              setDataSourceEditMode(activeEditMode);
+            }}
+          />
           <Row gutter={8}>
             <Col span={6} />
             <Col span={6} />
@@ -285,7 +300,7 @@ function DatasetAddZarrView(props: Props) {
                   size="large"
                   type="default"
                   style={{ width: "100%" }}
-                  onClick={() => setDatasourceConfig("")}
+                  onClick={() => setDatasourceConfigStr("")}
                 >
                   Reset
                 </Button>
@@ -297,7 +312,7 @@ function DatasetAddZarrView(props: Props) {
                 type="primary"
                 style={{ width: "100%" }}
                 onClick={handleStoreDataset}
-                disabled={!datasourceConfig}
+                disabled={!datasourceConfigStr}
               >
                 Import
               </Button>

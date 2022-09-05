@@ -32,7 +32,17 @@ export class CuckooTable {
       getRenderer(),
       THREE.RGBAIntegerFormat,
     );
+    // This is needed so that the initialization of the texture
+    // can be done with an Image-like object ({ width, height, data })
+    // which is needed for integer textures, since createImageData results
+    // cannot be used for the combination THREE.UnsignedIntType + THREE.RGBAIntegerFormat.
+    // See the definition of texImage2D here: https://registry.khronos.org/webgl/specs/latest/2.0/
+    // Note that there are two overloads of texImage2D.
     this._texture.isDataTexture = true;
+    // The internal format has to be set manually, since ThreeJS does not
+    // derive this value by itself.
+    // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
+    // for a reference of the internal formats.
     this._texture.internalFormat = "RGBA32UI";
 
     this.entryCapacity = Math.floor(
@@ -264,8 +274,7 @@ export class CuckooTable {
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
       this._texture.update(
-        // todo: perf?
-        this.table.slice(offset, offset + ELEMENTS_PER_ENTRY),
+        this.table.subarray(offset, offset + ELEMENTS_PER_ENTRY),
         texelOffset % this.textureWidth,
         Math.floor(texelOffset / this.textureWidth),
         1,
@@ -277,7 +286,9 @@ export class CuckooTable {
   }
 
   _hashCombine(state: number, value: number) {
-    // Based on Murmur3_32
+    // Based on Murmur3_32, since it is supported on the GPU.
+    // See https://github.com/tildeleb/cuckoo for a project
+    // written in golang which also supports Murmur hashes.
     const k1 = 0xcc9e2d51;
     const k2 = 0x1b873593;
 

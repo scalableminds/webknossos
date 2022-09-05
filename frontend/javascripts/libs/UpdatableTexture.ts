@@ -22,6 +22,9 @@ const getImageData = _.memoize(
       throw new Error("Could not get context for texture.");
     }
 
+    // Integer textures cannot be used with four channels, which is why
+    // we are creating an image-like object here which can be used
+    // with ThreeJS if isDataTexture = true is given.
     if (isInt) {
       return { width, height, data: new Uint32Array(4 * width * height) };
     }

@@ -198,25 +198,16 @@ class SceneController {
     return color;
   }
 
-  constructIsosurfaceMesh(
-    cellId: number,
-    geometry: THREE.BufferGeometry,
-    passive: boolean,
-    optMaterial?: THREE.MeshLambertMaterial,
-  ) {
-    const color = this.getColorObjectForSegment(cellId);
-
+  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
     let meshMaterial: THREE.MeshLambertMaterial;
-    if (optMaterial != null) {
-      meshMaterial = optMaterial;
-      meshMaterial.color = color;
-    } else {
-      meshMaterial = new THREE.MeshLambertMaterial({
-        color,
-      });
-      meshMaterial.side = THREE.FrontSide;
-      meshMaterial.transparent = true;
-    }
+
+    const color = this.getColorObjectForSegment(cellId);
+    meshMaterial = new THREE.MeshLambertMaterial({
+      color,
+    });
+    meshMaterial.side = THREE.FrontSide;
+    meshMaterial.transparent = true;
+
     const mesh = new THREE.Mesh(geometry, meshMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -292,19 +283,8 @@ class SceneController {
       newGroup.cellId = segmentationId;
       // @ts-ignore
       newGroup.passive = passive;
-
-      newGroup.userData.sharedMaterial = new THREE.MeshLambertMaterial({
-        color: new THREE.Color(),
-      });
-      newGroup.userData.sharedMaterial.side = THREE.FrontSide;
-      newGroup.userData.sharedMaterial.transparent = true;
     }
-    const mesh = this.constructIsosurfaceMesh(
-      segmentationId,
-      geometry,
-      passive,
-      this.isosurfacesGroupsPerSegmentationId[segmentationId].userData.sharedMaterial,
-    );
+    const mesh = this.constructIsosurfaceMesh(segmentationId, geometry, passive);
 
     this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
@@ -348,7 +328,10 @@ class SceneController {
     const color = this.getColorObjectForSegment(id);
     const group = this.isosurfacesGroupsPerSegmentationId[id];
     if (group) {
-      group.userData.sharedMaterial.color = color;
+      for (const child of group.children) {
+        // @ts-ignore
+        child.material.color = color;
+      }
     }
   }
 

@@ -22,6 +22,7 @@ function getRenderer() {
         })
       : {};
 
+  renderer.setPixelRatio(window.devicePixelRatio);
   return renderer;
 }
 

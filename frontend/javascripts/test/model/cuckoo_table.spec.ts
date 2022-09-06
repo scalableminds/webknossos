@@ -62,10 +62,8 @@ test.serial("CuckooTable: Basic", (t) => {
 
   // Check that all previously set items are still
   // intact.
-  n = 0;
   for (const innerEntry of entries) {
     isValueEqual(t, innerEntry[1], ct.get(innerEntry[0]));
-    n++;
   }
 });
 

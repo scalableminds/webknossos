@@ -63,7 +63,7 @@ const _window =
         alert: console.log.bind(console),
         app: null,
         location: dummyLocation,
-        requestAnimationFrame: (resolver: any) => {
+        requestAnimationFrame: (resolver: Function) => {
           setTimeout(resolver, 16);
         },
         document,

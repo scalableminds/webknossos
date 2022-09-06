@@ -2,7 +2,6 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import io.swagger.annotations._
 import models.organization.OrganizationDAO
 import models.voxelytics._
 import oxalis.security.WkEnv
@@ -13,7 +12,6 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-@Api
 class VoxelyticsController @Inject()(
     organizationDAO: OrganizationDAO,
     voxelyticsDAO: VoxelyticsDAO,
@@ -28,7 +26,6 @@ class VoxelyticsController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  @ApiOperation(hidden = true, value = "")
   def storeWorkflow: Action[WorkflowDescription] =
     sil.SecuredAction.async(validateJson[WorkflowDescription]) { implicit request =>
       for {
@@ -60,7 +57,6 @@ class VoxelyticsController @Inject()(
       } yield Ok
     }
 
-  @ApiOperation(hidden = true, value = "")
   def listWorkflows(workflowHash: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -102,7 +98,6 @@ class VoxelyticsController @Inject()(
       } yield JsonOk(result)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getWorkflow(workflowHash: String, runId: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -152,7 +147,6 @@ class VoxelyticsController @Inject()(
       } yield JsonOk(result)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def storeWorkflowEvents(workflowHash: String, runName: String): Action[List[WorkflowEvent]] =
     sil.SecuredAction.async(validateJson[List[WorkflowEvent]]) { implicit request =>
       def createWorkflowEvent(runId: ObjectId, event: WorkflowEvent): Fox[Unit] =
@@ -217,7 +211,6 @@ class VoxelyticsController @Inject()(
       } yield Ok
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getChunkStatistics(workflowHash: String, runId: String, taskName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {
@@ -231,7 +224,6 @@ class VoxelyticsController @Inject()(
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getArtifactChecksums(workflowHash: String,
                            runId: String,
                            taskName: String,
@@ -248,7 +240,6 @@ class VoxelyticsController @Inject()(
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def appendLogs: Action[List[JsObject]] =
     sil.SecuredAction.async(validateJson[List[JsObject]]) { implicit request =>
       for {
@@ -262,7 +253,6 @@ class VoxelyticsController @Inject()(
       } yield Ok
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getLogs(runId: String, taskName: Option[String], minLevel: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       {

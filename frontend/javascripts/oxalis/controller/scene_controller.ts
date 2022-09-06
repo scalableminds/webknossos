@@ -199,10 +199,8 @@ class SceneController {
   }
 
   constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
-    let meshMaterial: THREE.MeshLambertMaterial;
-
     const color = this.getColorObjectForSegment(cellId);
-    meshMaterial = new THREE.MeshLambertMaterial({
+    const meshMaterial = new THREE.MeshLambertMaterial({
       color,
     });
     meshMaterial.side = THREE.FrontSide;

@@ -33,10 +33,8 @@ const hslaToCSS = (hsla: Vector4) => {
   return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 };
 
-function ColoredDotIconForSegment({ segmentId }: { segmentId: number }) {
-  const hslaCss = useSelector((state: OxalisState) =>
-    hslaToCSS(getSegmentColorAsHSL(state, segmentId)),
-  );
+function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
+  const hslaCss = hslaToCSS(segmentColorHSLA);
 
   return (
     <span
@@ -348,6 +346,11 @@ function _SegmentListItem({
 
   const mappedId = mapId(segment.id);
 
+  const segmentColorHSLA = useSelector((state: OxalisState) =>
+    getSegmentColorAsHSL(state, mappedId),
+  );
+  const segmentColorRGBA = Utils.hslaToRgba(segmentColorHSLA);
+
   if (mappingInfo.hideUnmappedIds && mappedId === 0) {
     return null;
   }
@@ -382,7 +385,7 @@ function _SegmentListItem({
           Change Segment Color
           <input
             type="color"
-            value={Utils.rgbToHex(Utils.map3((value) => value * 255, segment.color ?? [0, 0, 0]))}
+            value={Utils.rgbToHex(Utils.take3(segmentColorRGBA))}
             disabled={isEditingDisabled}
             style={{
               position: "absolute",
@@ -480,7 +483,7 @@ function _SegmentListItem({
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>
-          <ColoredDotIconForSegment segmentId={mappedId} />
+          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
           <EditableTextLabel
             value={segment.name || `Segment ${segment.id}`}
             label="Segment Name"

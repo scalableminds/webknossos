@@ -327,6 +327,7 @@ export function computeDataTexturesSetup<
 }
 export function getGpuFactorsWithLabels() {
   return [
+    ["15", "Ultra"],
     ["12", "Very High"],
     ["6", "High"],
     ["3", "Medium"],

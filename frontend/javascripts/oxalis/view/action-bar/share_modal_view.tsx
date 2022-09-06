@@ -88,7 +88,7 @@ export function useDatasetSharingToken(dataset: APIDataset) {
 
   useEffect(() => {
     getAndSetToken();
-  }, [dataset]);
+  }, [dataset, activeUser]);
   return datasetToken;
 }
 export function getUrl(sharingToken: string, includeToken: boolean) {

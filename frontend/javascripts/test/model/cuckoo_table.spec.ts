@@ -51,13 +51,12 @@ function isValueEqual(t: ExecutionContext<any>, val1: Vector3, val2: Vector3) {
 test.serial("CuckooTable: Basic", (t) => {
   const entries = generateRandomEntrySet();
   const ct = CuckooTable.fromCapacity(entries.length);
-  let n = 0;
+
   for (const entry of entries) {
     ct.set(entry[0], entry[1]);
     const readValue = ct.get(entry[0]);
 
     isValueEqual(t, entry[1], readValue);
-    n++;
   }
 
   // Check that all previously set items are still

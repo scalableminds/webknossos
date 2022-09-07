@@ -6,7 +6,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, ElementClass, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AbstractDataLayer,
+  AbstractSegmentationLayer,
+  Category,
+  ElementClass,
+  DataLayerLike => DataLayer
+}
 import com.scalableminds.webknossos.schema.Tables._
 import models.organization.OrganizationDAO
 import play.api.libs.json._

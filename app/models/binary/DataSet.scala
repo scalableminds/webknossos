@@ -6,15 +6,8 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractDataLayer,
-  AbstractSegmentationLayer,
-  Category,
-  ElementClass,
-  DataLayerLike => DataLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, ElementClass, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
-import javax.inject.Inject
 import models.organization.OrganizationDAO
 import play.api.libs.json._
 import play.utils.UriEncoding
@@ -22,8 +15,10 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
+import utils._
 
+import java.sql.Timestamp
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class DataSet(
@@ -57,9 +52,14 @@ case class DataSet(
 
 class DataSetDAO @Inject()(sqlClient: SQLClient,
                            dataSetDataLayerDAO: DataSetDataLayerDAO,
-                           organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+                           organizationDAO: OrganizationDAO,
+                           conf: WkConf)(implicit ec: ExecutionContext)
     extends SQLDAO[DataSet, DatasetsRow, Datasets](sqlClient) {
   val collection = Datasets
+
+  val unreportedStatus = "No longer available on datastore."
+  val notYetUploadedStatus = "Not yet fully uploaded."
+  val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
 
   def idColumn(x: Datasets): Rep[String] = x._Id
 
@@ -141,6 +141,163 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[DatasetsRow])
       parsed <- parseAll(r)
     } yield parsed
+
+  def findAll2(implicit ctx: DBAccessContext): Fox[JsArray] = {
+    for {
+      userId <- userIdFromCtx
+      r <- run(
+        sql"""
+              WITH at AS (
+          SELECT
+            t._id AS id,
+            t.name AS name,
+            o.name AS organization,
+            at._dataSet AS _dataSet,
+            o._id AS _organization,
+            utr.isteammanager AS isteammanager
+          FROM webknossos.user_team_roles utr
+          JOIN webknossos.users_ u ON utr._user = u._id
+          JOIN webknossos.teams_ t ON utr._team = t._id
+          JOIN webknossos.organizations_ o ON t._organization = o._id
+          JOIN webknossos.dataSet_allowedTeams at ON at._team = t._id
+          WHERE u._id = $userId AND utr.isTeamManager
+        )
+        SELECT
+          d.name AS name,
+          JSON_BUILD_OBJECT(
+            'id', JSON_BUILD_OBJECT(
+              'name', d.name,
+              'team', o.name),
+            'scale', JSON_BUILD_ARRAY(
+              (d.scale).x, (d.scale).y, (d.scale).z),
+            'status', CASE WHEN d.status = '' THEN NULL ELSE d.status END,
+            'dataLayers', COALESCE(dl.dataLayers, JSON_BUILD_ARRAY())) AS dataSource,
+          JSON_BUILD_OBJECT(
+            'allowsUpload', ds.allowsUpload,
+            'isConnector', ds.isConnector,
+            'isScratch', ds.isScratch,
+            'name', ds.name,
+            'url', ds.publicUrl) AS dataStore,
+          o.name AS owningOrganization,
+          COALESCE(at2.allowedTeams, JSON_BUILD_ARRAY()) AS allowedTeams,
+          d.isUsable AS isActive,
+          d.isPublic AS isPublic,
+          d.description AS description,
+          d.displayName AS displayName,
+          d.created AS created,
+          (
+            (u.isAdmin AND u._organization = d._organization) OR
+            u.isDatasetManager OR
+            d._uploader = u._id OR
+            utr._dataset IS NOT NULL) AS isEditable,
+          dlut.lastUsedTime AS lastUsedByUser,
+          o.logoUrl AS logoUrl,
+          d.sortingKey AS sortingKey,
+          d.details AS details,
+          (d.status = '#$unreportedStatus') AS isUnreported,
+          (${conf.Features.jobsEnabled} AND w._id IS NOT NULL) AS jobsEnabled,
+          d.tags AS tags
+        FROM webknossos.datasets_ d
+        LEFT JOIN (
+          SELECT
+            dl._dataset AS _dataset,
+            JSON_AGG(JSON_BUILD_OBJECT(
+              'name', dl.name,
+              'boundingBox', dl.boundingbox,
+              'elementClass', dl.elementClass,
+              'category', dl.category,
+              'resolutions', dl.resolutions,
+              'largestSegmentId', dl.largestSegmentId)) AS dataLayers
+          FROM webknossos.datasets_ d
+          JOIN webknossos.organizations_ o ON o._id = d._organization
+          JOIN (
+            SELECT
+              dl._dataset AS _dataset,
+              dl.name AS name,
+              dl.elementClass AS elementClass,
+              dl.category AS category,
+              JSON_BUILD_OBJECT(
+                'topLeft', JSON_BUILD_ARRAY((dl.boundingbox).x, (dl.boundingbox).y, (dl.boundingbox).z),
+                'width', (dl.boundingbox).width,
+                'height', (dl.boundingbox).height,
+                'depth', (dl.boundingbox).depth) AS boundingbox,
+              dl.largestSegmentId AS largestSegmentId,
+              JSON_AGG(JSON_BUILD_ARRAY(
+                (dlr.resolution).x,
+                (dlr.resolution).y,
+                (dlr.resolution).z)) AS resolutions
+            FROM webknossos.dataset_layers dl
+            JOIN webknossos.dataset_resolutions dlr ON dl._dataset = dlr._dataset AND dl.name = dlr.datalayername
+            GROUP BY dl._dataset, dl.name
+          ) dl ON d._id = dl._dataset
+          GROUP BY dl._dataset
+        ) dl ON d._id = dl._dataset
+        LEFT JOIN (
+          SELECT
+            at._dataset AS _dataset,
+            JSON_AGG(JSON_BUILD_OBJECT(
+              'id', at.id,
+              'name', at.name,
+              'organization', at.organization
+              )) AS allowedTeams
+          FROM at
+          GROUP BY at._dataset
+        ) at2 ON at2._dataset = d._id
+        JOIN webknossos.organizations_ o ON o._id = d._organization
+        JOIN webknossos.dataStores_ ds ON ds.name = d._dataStore
+        JOIN webknossos.users_ u ON u._id = $userId
+        LEFT JOIN (SELECT at._dataset FROM at WHERE at.isTeamManager LIMIT 1) utr ON d._id = utr._dataset
+        LEFT JOIN webknossos.dataset_lastUsedTimes dlut ON d._id = dlut._dataset AND dlut._user = u._id
+        LEFT JOIN webknossos.workers_ w ON w._dataStore = ds.name
+        WHERE d.isPublic
+            or d._organization in (select _organization from webknossos.users_ where _id = u._id and isAdmin)
+            or d._id in (select _dataSet
+              from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = u._id) ut on dt._team = ut._team))
+            or (u._id in (select _id from webknossos.users where isDatasetManager and _id = u._id)
+                and d._organization in (select _organization from webknossos.users_ where _id = u._id))
+              """.as[(String,
+                      String,
+                      String,
+                      String,
+                      String,
+                      Boolean,
+                      Boolean,
+                      Option[String],
+                      Option[String],
+                      Timestamp,
+                      Boolean,
+                      Option[Timestamp],
+                      String,
+                      Timestamp,
+                      Option[String],
+                      Boolean,
+                      Boolean,
+                      String)])
+    } yield
+      JsArray(
+        r.map(row =>
+          Json.obj(
+            "name" -> row._1,
+            "dataSource" -> Json.parse(row._2),
+            "dataStore" -> Json.parse(row._3),
+            "owningOrganization" -> row._4,
+            "allowedTeams" -> Json.parse(row._5),
+            "isActive" -> row._6,
+            "isPublic" -> row._7,
+            "description" -> row._8,
+            "displayName" -> row._9,
+            "created" -> row._10,
+            "isEditable" -> row._11,
+            "lastUsedByUser" -> row._12,
+            "logoUrl" -> row._13,
+            "sortingKey" -> row._14,
+            "details" -> row._15.map(Json.parse),
+            "isUnreported" -> row._16,
+            "jobsEnabled" -> row._17,
+            "tags" -> parseArrayTuple(row._18),
+            "publication" -> None
+        )))
+  }
 
   def isEmpty: Fox[Boolean] =
     for {
@@ -485,6 +642,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
     def getSpecificClearQuery(dataLayers: List[DataLayer]) =
       sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet} and name not in #${writeStructTupleWithQuotes(
         dataLayers.map(d => sanitize(d.name)))}"
+
     val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet}"
 
     val queries = source.toUsable match {

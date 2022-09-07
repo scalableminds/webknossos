@@ -3,20 +3,11 @@ package models.binary
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.JsonHelper.box2Option
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  UnusableDataSource,
-  InboxDataSourceLike => InboxDataSource
-}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataSourceId,
-  GenericDataSource,
-  DataLayerLike => DataLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
-
-import javax.inject.Inject
 import models.job.WorkerDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
@@ -26,6 +17,7 @@ import oxalis.security.RandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
@@ -44,9 +36,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val unreportedStatus = "No longer available on datastore."
-  private val notYetUploadedStatus = "Not yet fully uploaded."
-  private val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
 
   def assertValidDataSetName(name: String): Fox[Unit] =
     for {
@@ -60,7 +49,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
   def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
-    val unreportedDatasource = UnusableDataSource(DataSourceId(dataSetName, organizationName), notYetUploadedStatus)
+    val unreportedDatasource =
+      UnusableDataSource(DataSourceId(dataSetName, organizationName), dataSetDAO.notYetUploadedStatus)
     createDataSet(dataStore, organizationName, unreportedDatasource)
   }
 
@@ -205,7 +195,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     } else Fox.successful(None)
 
   def deactivateUnreportedDataSources(existingDataSetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
-    dataSetDAO.deactivateUnreported(existingDataSetIds, dataStore.name, unreportedStatus, inactiveStatusList)
+    dataSetDAO.deactivateUnreported(existingDataSetIds,
+                                    dataStore.name,
+                                    dataSetDAO.unreportedStatus,
+                                    dataSetDAO.inactiveStatusList)
 
   def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
@@ -297,7 +290,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       case _ => Fox.successful(false)
     }
 
-  def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
+  def isUnreported(dataSet: DataSet): Boolean = dataSet.status == dataSetDAO.unreportedStatus
 
   def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -357,7 +350,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "logoUrl" -> logoUrl,
         "sortingKey" -> dataSet.sortingKey,
         "details" -> dataSet.details,
-        "isUnreported" -> Json.toJson(isUnreported(dataSet)),
+        "isUnreported" -> isUnreported(dataSet),
         "jobsEnabled" -> jobsEnabled,
         "tags" -> dataSet.tags,
         // included temporarily for compatibility with webknossos-libs, until a better versioning mechanism is implemented

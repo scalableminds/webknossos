@@ -201,12 +201,12 @@ class DataSetController @Inject()(userService: UserService,
       )
     ) { filter =>
       for {
-        dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
-        filtered <- filter.applyOn(dataSets)
-        js <- listGrouped(filtered, request.identity) ?~> "dataSet.list.failed"
+        json <- dataSetDAO.findAll2 ?~> "dataSet.list.failed"
+        // filtered <- filter.applyOn(dataSets)
+        // js <- listGrouped(filtered, request.identity) ?~> "dataSet.list.failed"
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
       } yield {
-        addRemoteOriginHeaders(Ok(Json.toJson(js)))
+        addRemoteOriginHeaders(Ok(json))
       }
     }
   }

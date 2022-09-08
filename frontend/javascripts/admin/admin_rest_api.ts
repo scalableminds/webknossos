@@ -120,7 +120,7 @@ function requestUserToken(): Promise<string> {
   return tokenRequestPromise;
 }
 
-export function getSharingToken(): string | null | undefined {
+export function getSharingTokenFromUrlParameters(): string | null | undefined {
   if (location != null) {
     const params = Utils.getUrlParamsObject();
 
@@ -134,7 +134,7 @@ export function getSharingToken(): string | null | undefined {
 
 let tokenPromise: Promise<string>;
 export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<any> {
-  const sharingToken = getSharingToken();
+  const sharingToken = getSharingTokenFromUrlParameters();
 
   if (sharingToken != null) {
     return fn(sharingToken);

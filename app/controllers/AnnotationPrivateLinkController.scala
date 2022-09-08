@@ -1,7 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.FoxImplicits
 import io.swagger.annotations._
@@ -9,7 +9,8 @@ import play.api.libs.json._
 
 import javax.inject.Inject
 import models.annotation._
-import oxalis.security.WkEnv
+import net.liftweb.common.Full
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
@@ -19,20 +20,43 @@ class AnnotationPrivateLinkController @Inject()(
     annotationDAO: AnnotationDAO,
     annotationService: AnnotationService,
     annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     annotationPrivateLinkService: AnnotationPrivateLinkService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
+  private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+
   @ApiOperation(hidden = true, value = "")
-  def lookupPrivateLink(accessToken: String): Action[AnyContent] = Action.async { implicit request =>
+  def annotationSource(accessTokenOrId: String, userToken: Option[String]): Action[AnyContent] = Action.async {
+    implicit request =>
+      for {
+        annotationByLinkBox <- findAnnotationByPrivateLinkIfNotExpired(accessTokenOrId).futureBox
+        annotation <- annotationByLinkBox match {
+          case Full(a) => Fox.successful(a)
+          case _       => findAnnotationByIdAndUserToken(accessTokenOrId, userToken)
+        }
+        writtenAnnotation <- annotationService.writesAsAnnotationSource(annotation,
+                                                                        accessViaPrivateLink =
+                                                                          annotationByLinkBox.nonEmpty)
+      } yield Ok(writtenAnnotation)
+  }
+
+  private def findAnnotationByIdAndUserToken(annotationId: String, userToken: Option[String]): Fox[Annotation] =
+    for {
+      annotationIdValidated <- ObjectId.fromString(annotationId)
+      userBox <- bearerTokenService.userForTokenOpt(userToken).futureBox
+      ctx = DBAccessContext(userBox.toOption)
+      annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> "annotation.notFound"
+    } yield annotation
+
+  private def findAnnotationByPrivateLinkIfNotExpired(accessToken: String): Fox[Annotation] =
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessToken(accessToken)
       _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> 404
-      annotation: Annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
-      writtenAnnotation <- annotationService.writesAsAnnotationSource(annotation)
-    } yield Ok(writtenAnnotation)
-  }
+      annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
+    } yield annotation
 
   @ApiOperation(value = "List all existing private zarr links for a user", nickname = "listPrivateLinks")
   @ApiResponses(

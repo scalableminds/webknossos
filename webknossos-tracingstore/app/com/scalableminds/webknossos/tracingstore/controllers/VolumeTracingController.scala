@@ -365,9 +365,9 @@ class VolumeTracingController @Inject()(
         existingMags = tracing.resolutions.map(vec3IntFromProto)
         dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName) ~> NOT_FOUND
 
-        omeNgffHeader = OmeNgffHeader.fromDataLayerName(tracingId,
-                                                        dataSourceScale = dataSource.scale,
-                                                        mags = existingMags.toList)
+        omeNgffHeader = OmeNgffHeader.fromNameScaleAndMags(tracingId,
+                                                           dataSourceScale = dataSource.scale,
+                                                           mags = existingMags.toList)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
@@ -416,15 +416,14 @@ class VolumeTracingController @Inject()(
             (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
               editableMappingService.volumeData(tracing, List(wkRequest), urlOrHeaderToken(token, request))
             else tracingService.data(tracingId, tracing, List(wkRequest))
-            dataWithFallback <- getFallbackLayerDataIfEmpty(
-              tracing,
-              data,
-              missingBucketIndices,
-              magParsed,
-              Vec3Int(x, y, z),
-              cubeSize,
-              urlOrHeaderToken(token, request)) ?~> "Getting fallback layer data failed" ~> NOT_FOUND
-          } yield Ok(dataWithFallback).withHeaders()
+            dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
+                                                            data,
+                                                            missingBucketIndices,
+                                                            magParsed,
+                                                            Vec3Int(x, y, z),
+                                                            cubeSize,
+                                                            urlOrHeaderToken(token, request)) ~> NOT_FOUND
+          } yield Ok(dataWithFallback)
         }
       }
     }
@@ -436,10 +435,7 @@ class VolumeTracingController @Inject()(
                                           position: Vec3Int,
                                           cubeSize: Int,
                                           urlToken: Option[String]): Fox[Array[Byte]] = {
-    def fallbackLayerData(): Fox[Array[Byte]] = {
-      val organizationName = tracing.organizationName
-      val dataSetName = tracing.dataSetName
-      val dataLayerName = tracing.getFallbackLayer
+    def fallbackLayerData(fallbackLayerName: String): Fox[Array[Byte]] = {
       val request = WebKnossosDataRequest(
         position = position * mag * cubeSize,
         mag = mag,
@@ -448,25 +444,25 @@ class VolumeTracingController @Inject()(
         applyAgglomerate = tracing.mappingName,
         version = None
       )
-
-      organizationName match {
-        case Some(orgName) =>
-          for {
-            (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(
-              RemoteFallbackLayer(orgName, dataSetName, dataLayerName, tracing.elementClass),
-              List(request),
-              urlToken)
-
-            _ <- bool2Fox(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer"
-          } yield fallbackData
-        case None => Fox.failure("Organization Name is not set (Consider creating a new annotation).")
-      }
+      for {
+        organizationName <- tracing.organizationName ?~> "Zarr streaming not supported for legacy volume annotations (organizationName is not set)"
+        remoteFallbackLayer = RemoteFallbackLayer(organizationName,
+                                                  tracing.dataSetName,
+                                                  fallbackLayerName,
+                                                  tracing.elementClass)
+        (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(remoteFallbackLayer,
+                                                                                      List(request),
+                                                                                      urlToken)
+        _ <- bool2Fox(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer"
+      } yield fallbackData
     }
-    if (missingBucketIndices.nonEmpty && tracing.fallbackLayer.isDefined) {
-      fallbackLayerData()
-    } else {
-      Fox.successful(data)
-    }
+
+    if (missingBucketIndices.nonEmpty) {
+      for {
+        fallbackLayer <- tracing.fallbackLayer.toFox ?~> "No data at coordinates, no fallback layer defined"
+        data <- fallbackLayerData(fallbackLayer) ?~> "No data at coordinates, no fallback layer data at coordinates."
+      } yield data
+    } else Fox.successful(data)
   }
 
   private def getNeighborIndices(neighbors: List[Int]) =

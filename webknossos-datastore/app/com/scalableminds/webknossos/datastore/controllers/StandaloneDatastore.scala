@@ -10,13 +10,13 @@ import scala.concurrent.ExecutionContext
 
 class StandaloneDatastore @Inject()(implicit ec: ExecutionContext) extends Controller {
 
-  override def allowRemoteOrigin: Boolean = true
-
-  def buildInfo: Action[AnyContent] = Action.async { implicit request =>
-    Fox.successful(
-      Ok(Json.obj(
-        "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
-        "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
-      )))
+  def buildInfo: Action[AnyContent] = Action { implicit request =>
+    addRemoteOriginHeaders(
+      Ok(
+        Json.obj(
+          "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
+          "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
+        ))
+    )
   }
 }

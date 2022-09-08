@@ -27,7 +27,7 @@ import {
 } from "admin/admin_rest_api";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
-import { useFetch } from "libs/react_helpers";
+import { useFetch, useInterval } from "libs/react_helpers";
 import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
 import type { OxalisState } from "oxalis/store";
@@ -293,11 +293,13 @@ function getTimeTrackingMenu({ collapse }: { collapse: boolean }) {
 function HelpSubMenu({
   isAdminOrTeamManager,
   version,
+  polledVersion,
   collapse,
   ...other
 }: {
   isAdminOrTeamManager: boolean;
   version: string | null;
+  polledVersion: string | null;
   collapse: boolean;
 } & SubMenuProps) {
   return (
@@ -350,6 +352,7 @@ function HelpSubMenu({
       {version !== "" ? (
         <Menu.Item disabled key="version">
           Version: {version}
+          {polledVersion !== version ? ` (Server already has ${polledVersion}!)` : null}
         </Menu.Item>
       ) : null}
     </SubMenu>
@@ -596,6 +599,10 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   };
 
   const version = useFetch(getAndTrackVersion, null, []);
+  const [polledVersion, setPolledVersion] = useState<string>("");
+  useInterval(async () => {
+    setPolledVersion(await getAndTrackVersion());
+  }, 2000);
   const navbarStyle: Record<string, any> = {
     padding: 0,
     overflowX: "auto",
@@ -658,6 +665,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     <HelpSubMenu
       key="helpMenu"
       version={version}
+      polledVersion={polledVersion}
       isAdminOrTeamManager={isAdminOrTeamManager}
       collapse={collapseAllNavItems}
     />,

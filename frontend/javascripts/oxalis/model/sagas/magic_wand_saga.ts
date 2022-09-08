@@ -1,73 +1,21 @@
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
-import {
-  BoundingBoxType,
-  ContourModeEnum,
-  TypedArray,
-  Vector2,
-  Vector3,
-  Vector4,
-} from "oxalis/constants";
-import type { MutableNode, Node } from "oxalis/store";
+import { ContourModeEnum, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V2, V3 } from "libs/mjs";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getResolutionInfo, ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import createProgressCallback from "libs/progress_callback";
 import api from "oxalis/api/internal_api";
-import window from "libs/window";
-import { APISegmentationLayer } from "types/api_flow_types";
 import ndarray, { NdArray } from "ndarray";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
-import Dimensions from "../dimensions";
 // const ort = require("onnxruntime-web");
-
-// By default, a new bounding box is created around
-// the seed nodes with a padding. Within the bounding box
-// the min-cut is computed.
-const DEFAULT_PADDING: Vector3 = [50, 50, 50];
-// Voxels which are close to the seeds must not be relabeled.
-// Otherwise, trivial min-cuts are performed which cut right
-// around one seed.
-// This distance is specified in voxels of the current mag (i.e.,
-// a distance of 30 vx should be respected) and does not need scaling
-// to another mag.
-// For seeds that are very close to each other, their distance
-// overrides this threshold.
-const MIN_DIST_TO_SEED = 30;
-const TimeoutError = new Error("Timeout");
-const PartitionFailedError = new Error(
-  "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
-);
-// If the min-cut does not succeed after 10 seconds
-// in the selected mag, the next mag is tried.
-const MIN_CUT_TIMEOUT = 10 * 1000; // 10 seconds
-
-// During the refinement phase, the timeout is more forgiving.
-// Even if the refinement is slow, we typically don't want to
-// abort it, since the initial min-cut has already been performed.
-// Note that the timeout is used for each refining min-cut phase.
-const MIN_CUT_TIMEOUT_REFINEMENT = 30 * 1000; // 30 seconds
-
-// To choose the initial mag, a voxel threshold is defined
-// as a heuristic. This avoids that an unrealistic mag
-// is tried in the first place.
-// 2 MV corresponds to ~8MB for uint32 data.
-const VOXEL_THRESHOLD = 2000000;
-// The first magnification is always ignored initially as a performance
-// optimization (unless it's the only existent mag).
-const ALWAYS_IGNORE_FIRST_MAG_INITIALLY = true;
 
 const EXPECTED_INPUT_SHAPE: Vector4 = [1, 4, 58, 58];
 const OUTPUT_SHAPE: Vector4 = [1, 1, 26, 26];
@@ -76,36 +24,6 @@ const OUTPUT_SIZE = OUTPUT_SHAPE.reduce((agg, val) => agg * val, 1);
 function takeLatest2(vec4: Vector4): Vector2 {
   return [vec4[2], vec4[3]];
 }
-
-function selectAppropriateResolutions(
-  boundingBoxMag1: BoundingBox,
-  resolutionInfo: ResolutionInfo,
-): Array<[number, Vector3]> {
-  const resolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
-  const appropriateResolutions: Array<[number, Vector3]> = [];
-
-  for (const [resolutionIndex, resolution] of resolutionsWithIndices) {
-    if (
-      resolutionIndex === 0 &&
-      resolutionsWithIndices.length > 1 &&
-      ALWAYS_IGNORE_FIRST_MAG_INITIALLY
-    ) {
-      // Don't consider Mag 1, as it's usually too fine-granular
-      continue;
-    }
-
-    const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(resolution);
-
-    if (boundingBoxTarget.getVolume() < VOXEL_THRESHOLD) {
-      appropriateResolutions.push([resolutionIndex, resolution]);
-    }
-  }
-
-  return appropriateResolutions;
-}
-
-type L = (x: number, y: number, z: number) => number;
-type LL = (vec: Vector3) => number;
 
 function* performMagicWand(action: Action): Saga<void> {
   // @ts-ignore
@@ -133,20 +51,11 @@ function* performMagicWand(action: Action): Saga<void> {
     console.log("No volumeTracing available.");
     return;
   }
-
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  const appropriateResolutionInfos = selectAppropriateResolutions(boundingBoxMag1, resolutionInfo);
   const resolutionIndex = 0;
 
   const targetMag: Vector3 = [1, 1, 1];
-  const targetMagString = `${targetMag.join(",")}`;
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
-  const globalSeedA = V3.fromMag1ToMag(startPosition, targetMag);
-  const globalSeedB = V3.fromMag1ToMag(endPosition, targetMag);
-  const minDistToSeed = Math.min(V3.length(V3.sub(globalSeedA, globalSeedB)) / 2, MIN_DIST_TO_SEED);
-  console.log("Setting minDistToSeed to ", minDistToSeed);
-  const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
-  const seedB = V3.sub(globalSeedB, boundingBoxTarget.min);
+
   console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
   const inputData = yield* call(
     [api.data, api.data.getDataForBoundingBox],
@@ -166,7 +75,6 @@ function* performMagicWand(action: Action): Saga<void> {
   const firstDim = 0;
   const secondDim = 1;
   const thirdDim = 2;
-  const transpose = (vector: Vector3) => Dimensions.transDim(vector, activeViewport);
   const interpolationLayer = yield* call(
     createVolumeLayer,
     volumeTracing,
@@ -236,17 +144,6 @@ function mockedPredict(input: NdArray) {
   }
 
   return output;
-}
-
-function isPositionOutside(position: Vector3, size: Vector3) {
-  return (
-    position[0] < 0 ||
-    position[1] < 0 ||
-    position[2] < 0 ||
-    position[0] >= size[0] ||
-    position[1] >= size[1] ||
-    position[2] >= size[2]
-  );
 }
 
 export default function* listenToMinCut(): Saga<void> {

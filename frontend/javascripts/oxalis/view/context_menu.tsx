@@ -355,6 +355,9 @@ function NodeContextMenuOptions({
   infoRows,
   allowUpdate,
 }: NodeContextMenuOptionsProps): JSX.Element {
+  const isProofreadingActive = useSelector(
+    (state: OxalisState) => state.uiInformation.activeTool === "PROOFREAD",
+  );
   const dispatch = useDispatch();
 
   if (skeletonTracing == null) {
@@ -377,8 +380,6 @@ function NodeContextMenuOptions({
       (edge) => edge.source === clickedNodeId || edge.target === clickedNodeId,
     );
   }
-
-  const isProofreadingActive = Store.getState().uiInformation.activeTool === "PROOFREAD";
 
   return (
     <Menu
@@ -409,7 +410,7 @@ function NodeContextMenuOptions({
           {isProofreadingActive ? (
             <Menu.Item
               key="min-cut-node"
-              disabled={!areInSameTree}
+              disabled={!areInSameTree || isTheSameNode}
               onClick={() =>
                 activeNodeId != null ? minCutAgglomerate(clickedNodeId, activeNodeId) : null
               }

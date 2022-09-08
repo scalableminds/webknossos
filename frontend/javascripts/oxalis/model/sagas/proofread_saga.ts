@@ -262,6 +262,7 @@ let currentlyPerformingMinCut = false;
 function* splitOrMergeOrMinCutAgglomerate(
   action: MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
 ) {
+  // Prevent this method from running recursively into itself during Min-Cut.
   if (currentlyPerformingMinCut) {
     return;
   }
@@ -344,7 +345,7 @@ function* splitOrMergeOrMinCutAgglomerate(
     agglomerateFileZoomstep,
   );
 
-  let volumeTracingWithEditableMapping = yield* select((state) =>
+  const volumeTracingWithEditableMapping = yield* select((state) =>
     getActiveSegmentationTracing(state),
   );
   if (
@@ -407,14 +408,14 @@ function* splitOrMergeOrMinCutAgglomerate(
       editableMappingId,
     };
 
-    const edgesToBeCut = yield* call(
+    const edgesToRemove = yield* call(
       getEdgesForAgglomerateMinCut,
       tracingStoreUrl,
       volumeTracingId,
-      JSON.stringify(segmentsInfo),
+      segmentsInfo,
     );
 
-    for (const edge of edgesToBeCut) {
+    for (const edge of edgesToRemove) {
       let firstNodeId;
       let secondNodeId;
       for (const node of sourceTree.nodes.values()) {
@@ -463,15 +464,6 @@ function* splitOrMergeOrMinCutAgglomerate(
   /* Reload the segmentation */
 
   yield* call([api.data, api.data.reloadBuckets], layerName);
-
-  volumeTracingWithEditableMapping = yield* select((state) => getActiveSegmentationTracing(state));
-  if (
-    volumeTracingWithEditableMapping == null ||
-    volumeTracingWithEditableMapping.mappingName == null
-  ) {
-    yield* put(setBusyBlockingInfoAction(false));
-    return;
-  }
 
   const newSourceNodeAgglomerateId = yield* call(
     [api.data, api.data.getDataValue],

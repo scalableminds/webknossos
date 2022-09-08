@@ -2281,7 +2281,7 @@ type MinCutTargetEdge = {
 export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
-  segmentsInfo: string,
+  segmentsInfo: Object,
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(

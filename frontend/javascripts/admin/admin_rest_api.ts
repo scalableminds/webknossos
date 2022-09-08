@@ -2271,3 +2271,24 @@ export function getSynapseTypes(
     ),
   );
 }
+
+type MinCutTargetEdge = {
+  position1: Vector3;
+  position2: Vector3;
+  segmentId1: number;
+  segmentId2: number;
+};
+export async function getEdgesForAgglomerateMinCut(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentsInfo: Object,
+): Promise<Array<MinCutTargetEdge>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      {
+        data: segmentsInfo,
+      },
+    ),
+  );
+}

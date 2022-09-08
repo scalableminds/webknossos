@@ -25,6 +25,7 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
   EditableMappingUpdateActionGroup,
+  MinCutParameters,
   RemoteFallbackLayer
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
@@ -530,6 +531,20 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  def agglomerateGraphMinCut(token: Option[String], tracingId: String): Action[MinCutParameters] =
+    Action.async(validateJson[MinCutParameters]) { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
+            edges <- editableMappingService.agglomerateGraphMinCut(request.body, remoteFallbackLayer, token)
+          } yield Ok(Json.toJson(edges))
+        }
+      }
+    }
+
   def updateEditableMapping(token: Option[String], tracingId: String): Action[List[EditableMappingUpdateActionGroup]] =
     Action.async(validateJson[List[EditableMappingUpdateActionGroup]]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
@@ -541,7 +556,6 @@ class VolumeTracingController @Inject()(
           _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update group must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
           _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
-          _ <- bool2Fox(updateGroup.actions.length == 1) ?~> "Editable mapping update group must contain exactly one update action"
           _ <- editableMappingService.update(mappingName, updateGroup, updateGroup.version)
         } yield Ok
       }

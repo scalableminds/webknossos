@@ -31,6 +31,8 @@ import { APISegmentationLayer } from "types/api_flow_types";
 import ndarray, { NdArray } from "ndarray";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import Dimensions from "../dimensions";
+// const ort = require("onnxruntime-web");
+
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
 // the min-cut is computed.
@@ -110,6 +112,10 @@ function* performMagicWand(action: Action): Saga<void> {
   if (action.type !== "MAGIC_WAND_FOR_RECT") {
     throw new Error("Satisfy typescript.");
   }
+
+  // const session = yield ort.InferenceSession.create("/public/ml-models/FFN.onnx");
+  // console.log(session);
+  // const results = yield* session.run(input);
 
   const { startPosition, endPosition } = action;
   const boundingBoxObj = {

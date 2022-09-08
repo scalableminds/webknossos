@@ -38,7 +38,7 @@ import {
   getAnnotationInformation,
   getEmptySandboxAnnotationInformation,
   getDataset,
-  getSharingToken,
+  getSharingTokenFromUrlParameters,
   getUserConfiguration,
   getDatasetViewConfiguration,
   getEditableMapping,
@@ -148,7 +148,7 @@ export async function initialize(
     annotation = await getEmptySandboxAnnotationInformation(
       datasetId,
       initialCommandType.tracingType,
-      getSharingToken(),
+      getSharingTokenFromUrlParameters(),
     );
   } else {
     const { name, owningOrganization } = initialCommandType;
@@ -169,7 +169,7 @@ export async function initialize(
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
     serverVolumeTracingIds,
-    getSharingToken(),
+    getSharingTokenFromUrlParameters(),
   );
   const annotationSpecificDatasetSettings = applyAnnotationSpecificViewConfiguration(
     annotation,
@@ -230,7 +230,7 @@ async function fetchParallel(
   versions?: Versions,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
-    getDataset(datasetId, getSharingToken()),
+    getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     annotation ? getTracingsForAnnotation(annotation, versions) : [],
   ]);

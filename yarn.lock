@@ -3309,7 +3309,7 @@ bisect@^1.0.0:
   resolved "https://registry.yarnpkg.com/bisect/-/bisect-1.0.0.tgz#9d3ee7de8476108a6c31b7c044bae224469aaf9e"
   integrity sha1-nT7n3oR2EIpsMbfARLriJEaar54=
 
-bit-twiddle@^1.0.0:
+bit-twiddle@^1.0.0, bit-twiddle@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/bit-twiddle/-/bit-twiddle-1.0.2.tgz#0c6c1fabe2b23d17173d9a61b7b7093eb9e1769e"
   integrity sha1-DGwfq+KyPRcXPZpht7cJPrnhdp4=
@@ -4621,7 +4621,7 @@ cwise-parser@^1.0.0:
     esprima "^1.0.3"
     uniq "^1.0.0"
 
-cwise@^1.0.10, cwise@^1.0.6:
+cwise@^1.0.10, cwise@^1.0.4, cwise@^1.0.5, cwise@^1.0.6:
   version "1.0.10"
   resolved "https://registry.yarnpkg.com/cwise/-/cwise-1.0.10.tgz#24eee6072ebdfd6b8c6f5dadb17090b649b12bef"
   integrity sha1-JO7mBy69/WuMb12tsXCQtkmxK+8=
@@ -9524,6 +9524,11 @@ mute-stream@0.0.8:
   resolved "https://registry.yarnpkg.com/mute-stream/-/mute-stream-0.0.8.tgz#1630c42b2251ff81e2a283de96a5497ea92e5e0d"
   integrity sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==
 
+n-dimensional-flood-fill@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/n-dimensional-flood-fill/-/n-dimensional-flood-fill-1.0.0.tgz#c1b99ed55901f9edcd50e86997ee355109b3601b"
+  integrity sha512-AF6lR0k/7OYDtqyaLVM12WomMhGUIPOm0859bolzMSYHHoY48WxWoOw9GVn+VB98WZw/HHJA2DxtKFxPqJw2gg==
+
 n-gram@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/n-gram/-/n-gram-2.0.1.tgz#055adb9d4e12e16205b95e6213b9b865e611bc81"
@@ -9571,14 +9576,46 @@ ncp@^2.0.0:
   resolved "https://registry.yarnpkg.com/ncp/-/ncp-2.0.0.tgz#195a21d6c46e361d2fb1281ba38b91e9df7bdbb3"
   integrity sha1-GVoh1sRuNh0vsSgbo4uR6d9727M=
 
-ndarray-ops@^1.2.2:
+ndarray-complex@^1.0.1:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/ndarray-complex/-/ndarray-complex-1.0.3.tgz#48c8a07f72cd6fb775915b2059573dc44e538154"
+  integrity sha512-nVBfVJQnyGfLouItm1sAxEv0obvESCfwM2mkAYfFbkLb9lTgtjxEAzkN9izJgZENXEzvddSiohJ101SkxA/rSA==
+  dependencies:
+    cwise "^1.0.5"
+    ndarray-ops "^1.1.1"
+
+ndarray-convolve@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/ndarray-convolve/-/ndarray-convolve-2.0.0.tgz#ffe6c85c5a69a45ce77017ec876e3e197609bd76"
+  integrity sha512-BfZDM6IgrvB4J2eIwWbWmsdqxDPRX/kOrk5FPbPLNEvYTt32rNmTgY0892yamAamDdNxvw/oEzLLsiN5noJECA==
+  dependencies:
+    bit-twiddle "^1.0.2"
+    cwise "^1.0.4"
+    ndarray "^1.0.15"
+    ndarray-complex "^1.0.1"
+    ndarray-fft "^1.0.0"
+    ndarray-ops "^1.2.2"
+    typedarray-pool "^1.1.0"
+
+ndarray-fft@^1.0.0:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/ndarray-fft/-/ndarray-fft-1.0.3.tgz#dc5bba18e3ab82c997adbaebb78e79f82c93a22a"
+  integrity sha512-p7OPcNAHP616TdoQdmroW666To530jY1q32Gy1DvK3fkaAQ4BuGu715UDDPIARkVQGhHC2qhbjwrhYG2eUQPCw==
+  dependencies:
+    bit-twiddle "^1.0.2"
+    cwise "^1.0.4"
+    ndarray "^1.0.15"
+    ndarray-ops "^1.2.2"
+    typedarray-pool "^1.0.0"
+
+ndarray-ops@^1.1.1, ndarray-ops@^1.2.2:
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/ndarray-ops/-/ndarray-ops-1.2.2.tgz#59e88d2c32a7eebcb1bc690fae141579557a614e"
   integrity sha1-WeiNLDKn7ryxvGkPrhQVeVV6YU4=
   dependencies:
     cwise-compiler "^1.0.0"
 
-ndarray@^1.0.18, ndarray@^1.0.19:
+ndarray@^1.0.15, ndarray@^1.0.18, ndarray@^1.0.19:
   version "1.0.19"
   resolved "https://registry.yarnpkg.com/ndarray/-/ndarray-1.0.19.tgz#6785b5f5dfa58b83e31ae5b2a058cfd1ab3f694e"
   integrity sha512-B4JHA4vdyZU30ELBw3g7/p9bZupyew5a7tX1Y/gGeF2hafrPaQZhgrGQfsvgfYbgdFZjYwuEcnaobeM/WMW+HQ==
@@ -13870,7 +13907,7 @@ typed-styles@^0.0.7:
   resolved "https://registry.yarnpkg.com/typed-styles/-/typed-styles-0.0.7.tgz#93392a008794c4595119ff62dde6809dbc40a3d9"
   integrity sha512-pzP0PWoZUhsECYjABgCGQlRGL1n7tOHsgwYv3oIiEpJwGhFTuty/YNeduxQYzXXa3Ge5BdT6sHYIQYpl4uJ+5Q==
 
-typedarray-pool@^1.1.0:
+typedarray-pool@^1.0.0, typedarray-pool@^1.1.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/typedarray-pool/-/typedarray-pool-1.2.0.tgz#e7e90720144ba02b9ed660438af6f3aacfe33ac3"
   integrity sha512-YTSQbzX43yvtpfRtIDAYygoYtgT+Rpjuxy9iOpczrjpXLgGoyG7aS5USJXV2d3nn8uHTeb9rXDvzS27zUg5KYQ==

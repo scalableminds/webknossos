@@ -190,54 +190,6 @@ function isPositionOutside(position: Vector3, size: Vector3) {
   );
 }
 
-// function labelDeletedEdges(
-//   visitedField: Uint8Array,
-//   boundingBoxTarget: BoundingBox,
-//   size: Vector3,
-//   originalEdgeBuffer: Uint16Array,
-//   targetMag: Vector3,
-//   l: L,
-//   ll: LL,
-// ) {
-//   for (let z = 0; z < size[2]; z++) {
-//     for (let y = 0; y < size[1]; y++) {
-//       for (let x = 0; x < size[0]; x++) {
-//         const idx = l(x, y, z);
-
-//         if (visitedField[idx] === 1) {
-//           const neighbors = getNeighborsFromBitMask(originalEdgeBuffer[idx]).outgoing;
-//           const currentPos: Vector3 = [x, y, z];
-
-//           for (const neighbor of neighbors) {
-//             const neighborPos = V3.add(currentPos, neighbor);
-
-//             if (visitedField[ll(neighborPos)] === 0) {
-//               const position = V3.fromMagToMag1(
-//                 V3.add(boundingBoxTarget.min, neighborPos),
-//                 targetMag,
-//               );
-
-//               for (let dz = 0; dz < targetMag[2]; dz++) {
-//                 for (let dy = 0; dy < targetMag[1]; dy++) {
-//                   for (let dx = 0; dx < targetMag[0]; dx++) {
-//                     api.data.labelVoxels([V3.add(position, [dx, dy, dz])], 0);
-//                   }
-//                 }
-//               }
-
-//               // @ts-ignore
-//               if (window.visualizeRemovedVoxelsOnMinCut) {
-//                 // @ts-ignore
-//                 window.addVoxelMesh(position, targetMag);
-//               }
-//             }
-//           }
-//         }
-//       }
-//     }
-//   }
-//}
-
 export default function* listenToMinCut(): Saga<void> {
   yield* takeEveryUnlessBusy("MAGIC_WAND_FOR_RECT", performMagicWand, "Min-cut is being computed.");
 }

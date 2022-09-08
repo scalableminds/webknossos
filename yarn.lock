@@ -3251,6 +3251,16 @@ balanced-match@^1.0.0:
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"
   integrity sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==
 
+ball-morphology@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/ball-morphology/-/ball-morphology-0.1.0.tgz#eedc9d9295e80923732bce6b0f4cdfee8d807e3f"
+  integrity sha512-sg5U5zPKcTeZcjA+RV3djfaJgRtO9gf9Xo0NG+9FKMdO7UG2MC+EUIvk9pVOb0lKa5DxW3eWTdTFuScZHQQQoQ==
+  dependencies:
+    distance-transform "~0.1.0"
+    ndarray "~1.0.0"
+    ndarray-ops "~1.1.0"
+    typedarray-pool "~0.1.1"
+
 base64-js@^1.2.1, base64-js@^1.3.1:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/base64-js/-/base64-js-1.5.1.tgz#1b1b440160a5bf7ad40b650f095963481903930a"
@@ -3319,10 +3329,20 @@ bisect@^1.0.0:
   resolved "https://registry.yarnpkg.com/bisect/-/bisect-1.0.0.tgz#9d3ee7de8476108a6c31b7c044bae224469aaf9e"
   integrity sha1-nT7n3oR2EIpsMbfARLriJEaar54=
 
+bisect@~0.0.0:
+  version "0.0.0"
+  resolved "https://registry.yarnpkg.com/bisect/-/bisect-0.0.0.tgz#6f75db671510819900c51e3bd9466c427243be80"
+  integrity sha512-coTGaJdPXOZ/eKAmT88dBkouV23/OgwsTljgDjk2TQrzyS/0w75L5uGAYIiquLJ4nsrOSvAF+sEYzy2kvBKD8Q==
+
 bit-twiddle@^1.0.0, bit-twiddle@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/bit-twiddle/-/bit-twiddle-1.0.2.tgz#0c6c1fabe2b23d17173d9a61b7b7093eb9e1769e"
   integrity sha1-DGwfq+KyPRcXPZpht7cJPrnhdp4=
+
+bit-twiddle@~0.0.2:
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/bit-twiddle/-/bit-twiddle-0.0.2.tgz#c2eaebb952a3b94acc140497e1cdcd2f1a33f58e"
+  integrity sha512-76iFAOrkcuw5UPA30Pt32XaytMHXz/04JembgIwsQAp7ImHYSWNq1shBbrlWf6CUvh1+amQ81LI8hNhqQgsBEw==
 
 bl@^4.0.3:
   version "4.0.3"
@@ -4644,6 +4664,13 @@ cwise-compiler@^1.0.0, cwise-compiler@^1.1.1:
   dependencies:
     uniq "^1.0.0"
 
+cwise-compiler@~0.0.0:
+  version "0.0.0"
+  resolved "https://registry.yarnpkg.com/cwise-compiler/-/cwise-compiler-0.0.0.tgz#fc1866a8d7c9d24dd00d476880514d4817216a8a"
+  integrity sha512-/5nnqrsLRh0WvV4Aem13Ye7LbAKzP4lQL/YtFO2sXVQ5nLkPLqu/4+1A050jMd2ONHCpkNf3AqXw4FaSvetYhg==
+  dependencies:
+    uniq "~0.0.2"
+
 cwise-parser@^1.0.0:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/cwise-parser/-/cwise-parser-1.0.3.tgz#8e493c17d54f97cb030a9e9854bc86c9dfb354fe"
@@ -4651,6 +4678,14 @@ cwise-parser@^1.0.0:
   dependencies:
     esprima "^1.0.3"
     uniq "^1.0.0"
+
+cwise-parser@~0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/cwise-parser/-/cwise-parser-0.0.1.tgz#cea2dbb9fc84d93ec6f14414b4f162a39c7e61e6"
+  integrity sha512-3LcDHl1MUy4qXQzCnEH9DU2ZRXHcFv9cJGjUHz5lC5yhKxwqkbeLckrZyRe2kBcV+RsairmVgZS2MDGwZu4cNw==
+  dependencies:
+    esprima "~1.0.3"
+    uniq "~0.0.2"
 
 cwise@^1.0.10, cwise@^1.0.4, cwise@^1.0.5, cwise@^1.0.6:
   version "1.0.10"
@@ -4661,6 +4696,14 @@ cwise@^1.0.10, cwise@^1.0.4, cwise@^1.0.5, cwise@^1.0.6:
     cwise-parser "^1.0.0"
     static-module "^1.0.0"
     uglify-js "^2.6.0"
+
+cwise@~0.3.2:
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/cwise/-/cwise-0.3.4.tgz#ff04746f4f7f0ba66020a9c81b15887a7e4cc881"
+  integrity sha512-zHcnX9/SCzdWeb6IHqDR8cqH6fPGfEkbS8YzArZnTlX+YsU08WQKIkVKfyhoN2bH4rL4Aq6VHtKcR2J5lvEzrA==
+  dependencies:
+    cwise-compiler "~0.0.0"
+    cwise-parser "~0.0.1"
 
 damerau-levenshtein@^1.0.7:
   version "1.0.8"
@@ -4997,6 +5040,17 @@ distance-transform@^1.0.2:
     ndarray-ops "^1.2.2"
     typedarray-pool "^1.1.0"
 
+distance-transform@~0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/distance-transform/-/distance-transform-0.1.0.tgz#a3a0def19928765ad939458e8ff585af96cc3f3e"
+  integrity sha512-UpoEhm+r8GTBd6Ja2FXFoyCWxsRx15etLXs7zgaVyueCBBuVjwyhtvZ2YykWlNP3o17zj2zS81U+kbhhvINS+w==
+  dependencies:
+    bisect "~0.0.0"
+    cwise "~0.3.2"
+    ndarray "~1.0.0"
+    ndarray-ops "~1.1.0"
+    typedarray-pool "~0.1.1"
+
 dnd-core@^11.1.3:
   version "11.1.3"
   resolved "https://registry.yarnpkg.com/dnd-core/-/dnd-core-11.1.3.tgz#f92099ba7245e49729d2433157031a6267afcc98"
@@ -5216,6 +5270,11 @@ dup@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/dup/-/dup-1.0.0.tgz#51fc5ac685f8196469df0b905e934b20af5b4029"
   integrity sha1-UfxaxoX4GWRp3wuQXpNLIK9bQCk=
+
+dup@~0.0.0:
+  version "0.0.0"
+  resolved "https://registry.yarnpkg.com/dup/-/dup-0.0.0.tgz#680c4c51ace6ab9fe3bc6e48d9cab26c0396abd7"
+  integrity sha512-gfPVn3o0/vNDPsVcLGQqwrVXBELWi4EyIo+Pl6ImnYpXEHbfGPfc6m5bfJlBQI8dr8d8A4AlDaH/inn331GIEA==
 
 duplexer2@^0.1.2, duplexer2@~0.1.0:
   version "0.1.4"
@@ -5959,7 +6018,7 @@ esprima@^4.0.0, esprima@^4.0.1, esprima@~4.0.0:
   resolved "https://registry.yarnpkg.com/esprima/-/esprima-4.0.1.tgz#13b04cdb3e6c5d19df91ab6987a8695619b0aa71"
   integrity sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A==
 
-esprima@~1.0.2:
+esprima@~1.0.2, esprima@~1.0.3:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/esprima/-/esprima-1.0.4.tgz#9f557e08fc3b4d26ece9dd34f8fbf476b62585ad"
   integrity sha1-n1V+CPw7TSbs6d00+Pv0drYlha0=
@@ -9681,7 +9740,14 @@ ndarray-ops@^1.1.1, ndarray-ops@^1.2.2:
   dependencies:
     cwise-compiler "^1.0.0"
 
-ndarray@^1.0.15, ndarray@^1.0.18, ndarray@^1.0.19:
+ndarray-ops@~1.1.0:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/ndarray-ops/-/ndarray-ops-1.1.1.tgz#1859e725ba786d8ea3a282c4ae6693862331741b"
+  integrity sha512-9mwCfttvX6BcYdX+BpOUs95wxhqOItxatAe+9mOU5925JGuHw5wx67cKPV20HV8HOzwOASv/eMYV/jsuOv3FpQ==
+  dependencies:
+    cwise-compiler "~0.0.0"
+
+ndarray@^1.0.15, ndarray@^1.0.18, ndarray@^1.0.19, ndarray@~1.0.0:
   version "1.0.19"
   resolved "https://registry.yarnpkg.com/ndarray/-/ndarray-1.0.19.tgz#6785b5f5dfa58b83e31ae5b2a058cfd1ab3f694e"
   integrity sha512-B4JHA4vdyZU30ELBw3g7/p9bZupyew5a7tX1Y/gGeF2hafrPaQZhgrGQfsvgfYbgdFZjYwuEcnaobeM/WMW+HQ==
@@ -14034,6 +14100,14 @@ typedarray-pool@^1.0.0, typedarray-pool@^1.1.0:
     bit-twiddle "^1.0.0"
     dup "^1.0.0"
 
+typedarray-pool@~0.1.1:
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/typedarray-pool/-/typedarray-pool-0.1.2.tgz#c01a4a95d35f05f990f53456b63ff698557d928f"
+  integrity sha512-VwKhM9XrrG2aCWsKmELft4NU0EDgkPNMAXJud8x04UrFjJMlib9ET2G0TlphKaHtn688T1ZGmaOtJ7PshHl9PA==
+  dependencies:
+    bit-twiddle "~0.0.2"
+    dup "~0.0.0"
+
 typedarray-to-buffer@^3.1.5:
   version "3.1.5"
   resolved "https://registry.yarnpkg.com/typedarray-to-buffer/-/typedarray-to-buffer-3.1.5.tgz#a97ee7a9ff42691b9f783ff1bc5112fe3fca9080"
@@ -14192,6 +14266,11 @@ uniq@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/uniq/-/uniq-1.0.1.tgz#b31c5ae8254844a3a8281541ce2b04b865a734ff"
   integrity sha1-sxxa6CVIRKOoKBVBzisEuGWnNP8=
+
+uniq@~0.0.2:
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/uniq/-/uniq-0.0.2.tgz#614e868ba288651d351262369317acc43b901823"
+  integrity sha512-5FZ2X1SBajH/GNCRkBaMJOpa5y9aEyeS6fLnTTDP0b25RmsmG+11QRt5b0852RcJw6+rqqIYUq8XuAZJS3eHPQ==
 
 unique-stream@^2.0.2:
   version "2.3.1"

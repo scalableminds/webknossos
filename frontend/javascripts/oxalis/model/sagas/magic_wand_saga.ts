@@ -15,6 +15,9 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import api from "oxalis/api/internal_api";
 import ndarray, { NdArray } from "ndarray";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import morphology from "ball-morphology";
+import floodFill from "n-dimensional-flood-fill";
+
 // const ort = require("onnxruntime-web");
 
 const EXPECTED_INPUT_SHAPE: Vector4 = [1, 4, 58, 58];
@@ -41,8 +44,8 @@ function* performMagicWand(action: Action): Saga<void> {
     max: V3.floor(V3.add(V3.max(startPosition, endPosition), [0, 0, 1])),
   };
 
-  const unpaddedBoundingBoxMag1 = new BoundingBox(boundingBoxObj);
-  const boundingBoxMag1 = unpaddedBoundingBoxMag1.paddedWithMargins([16, 16, 0]);
+  const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
+  // const paddedboundingBoxMag1 = unpaddedBoundingBoxMag1.paddedWithMargins([16, 16, 0]);
 
   const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
@@ -88,21 +91,51 @@ function* performMagicWand(action: Action): Saga<void> {
     size[secondDim],
   );
 
-  const USE_SIMPLE_HEURISTIC = false;
+  const { min, max } = boundingBoxMag1;
+  const center = V3.floor(V3.scale(V3.add(min, max), 0.5));
+  const margin2D = V2.scale(takeLatest2(EXPECTED_INPUT_SHAPE), 0.5);
+
+  const USE_SIMPLE_HEURISTIC = true;
   if (USE_SIMPLE_HEURISTIC) {
+    // for (let u = 0; u < inputNd.shape[0]; u++) {
+    //   for (let v = 0; v < inputNd.shape[1]; v++) {
+    //     if (inputNd.get(u, v, 0) > 128) {
+    //       output.set(u, v, 0, 1);
+    //     }
+    //   }
+    // }
+
+    const result = floodFill({
+      getter: (x, y) => {
+        if (x < 0 || y < 0 || x > inputNd.shape[0] || 1 > inputNd.shape[1]) {
+          return null;
+        }
+        return inputNd.get(x, y, 0);
+      },
+      equals: (a, b) => {
+        if (a == null || b == null) {
+          return false;
+        }
+        return a > 128 || Math.abs(a - b) / b < 0.1;
+      },
+      seed: [Math.floor(inputNd.shape[0] / 2), Math.floor(inputNd.shape[1] / 2)],
+      onFlood: (x, y) => {
+        output.set(x, y, 0, 1);
+      },
+    });
+
+    morphology.erode(output, 3);
+    morphology.dilate(output, 6);
+    // morphology.dilate(output, 1);
+
     for (let u = 0; u < inputNd.shape[0]; u++) {
       for (let v = 0; v < inputNd.shape[1]; v++) {
-        if (inputNd.get(u, v, 0) > 128) {
-          output.set(u, v, 0, 1);
+        if (output.get(u, v, 0) > 0) {
           voxelBuffer2D.setValue(u, v, 1);
         }
       }
     }
   } else {
-    const { min, max } = boundingBoxMag1;
-    const center = V3.floor(V3.scale(V3.add(min, max), 0.5));
-    const margin2D = V2.scale(takeLatest2(EXPECTED_INPUT_SHAPE), 0.5);
-
     // todo: off-by-one error ?
     const marginLeft: Vector3 = [margin2D[0], margin2D[1], 0];
     const marginRight: Vector3 = [margin2D[0], margin2D[1], 1];

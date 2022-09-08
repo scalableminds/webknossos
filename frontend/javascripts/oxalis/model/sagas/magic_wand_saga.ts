@@ -105,6 +105,7 @@ function* performMagicWand(action: Action): Saga<void> {
     //   }
     // }
 
+    console.time("floodfill");
     const result = floodFill({
       getter: (x, y) => {
         if (x < 0 || y < 0 || x > inputNd.shape[0] || 1 > inputNd.shape[1]) {
@@ -124,9 +125,11 @@ function* performMagicWand(action: Action): Saga<void> {
       },
     });
 
+    morphology.close(output, 6);
     morphology.erode(output, 3);
     morphology.dilate(output, 6);
     // morphology.dilate(output, 1);
+    console.timeEnd("floodfill");
 
     for (let u = 0; u < inputNd.shape[0]; u++) {
       for (let v = 0; v < inputNd.shape[1]; v++) {

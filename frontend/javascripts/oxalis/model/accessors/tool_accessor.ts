@@ -87,6 +87,7 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     [AnnotationToolEnum.TRACE]: disabledInfo,
     [AnnotationToolEnum.ERASE_TRACE]: disabledInfo,
     [AnnotationToolEnum.FILL_CELL]: disabledInfo,
+    [AnnotationToolEnum.RECTANGLE]: notDisabledInfo,
     [AnnotationToolEnum.PICK_CELL]: disabledInfo,
     [AnnotationToolEnum.BOUNDING_BOX]: notDisabledInfo,
     [AnnotationToolEnum.PROOFREAD]: {
@@ -142,6 +143,10 @@ function _getDisabledInfoFromArgs(
     [AnnotationToolEnum.BOUNDING_BOX]: {
       isDisabled: false,
       explanation: disabledSkeletonExplanation,
+    },
+    [AnnotationToolEnum.RECTANGLE]: {
+      isDisabled: false,
+      explanation: genericDisabledExplanation,
     },
     [AnnotationToolEnum.PROOFREAD]: {
       isDisabled: !hasSkeleton || !hasAgglomerateMappings,

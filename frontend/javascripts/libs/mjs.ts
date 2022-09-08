@@ -246,6 +246,10 @@ const V3 = {
     return [Math.floor(vec[0]), Math.floor(vec[1]), Math.floor(vec[2])];
   },
 
+  abs(vec: ArrayLike<number>): Vector3 {
+    return [Math.abs(vec[0]), Math.abs(vec[1]), Math.abs(vec[2])];
+  },
+
   ceil(vec: ArrayLike<number>): Vector3 {
     return [Math.ceil(vec[0]), Math.ceil(vec[1]), Math.ceil(vec[2])];
   },

@@ -72,6 +72,7 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
+import listenToMagicWand from "oxalis/model/sagas/magic_wand_saga";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import {
@@ -772,6 +773,7 @@ export default [
   maintainSegmentsMap,
   maintainHoveredSegmentId,
   listenToMinCut,
+  listenToMagicWand,
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,

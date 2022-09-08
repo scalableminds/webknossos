@@ -21,7 +21,7 @@ import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import ContourGeometry from "oxalis/geometries/contourgeometry";
+import ContourGeometry, { RectangleGeometry } from "oxalis/geometries/contourgeometry";
 import Cube from "oxalis/geometries/cube";
 import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
@@ -57,6 +57,8 @@ class SceneController {
   taskBoundingBox: Cube | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rectangleContour' has no initializer and is not d... Remove this comment to see the full error message
+  rectangleContour: RectangleGeometry;
   // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
   planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
@@ -347,6 +349,10 @@ class SceneController {
     if (state.tracing.volumes.length > 0) {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+
+      this.rectangleContour = new RectangleGeometry();
+      window.rectangleContour = this.rectangleContour;
+      this.rectangleContour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
     }
 
     if (state.tracing.skeleton != null) {

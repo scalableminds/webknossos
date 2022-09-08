@@ -1,5 +1,11 @@
 import type { ModifierKeys } from "libs/input";
-import type { OrthoView, Point2, ShowContextMenuFunction, AnnotationTool } from "oxalis/constants";
+import type {
+  OrthoView,
+  Point2,
+  ShowContextMenuFunction,
+  AnnotationTool,
+  Vector3,
+} from "oxalis/constants";
 import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import {
   enforceActiveVolumeTracing,
@@ -623,6 +629,87 @@ export class BoundingBoxTool {
     getSceneController().highlightUserBoundingBox(null);
   }
 }
+
+export class RectangleTool {
+  static getPlaneMouseControls(
+    planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ): any {
+    let startPos: Vector3 | null = null;
+    let currentPos: Vector3 | null = null;
+    let isDragging = false;
+    const SceneController = getSceneController();
+    const { rectangleContour } = SceneController;
+    return {
+      leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        startPos = calculateGlobalPos(Store.getState(), pos);
+        currentPos = startPos;
+        isDragging = true;
+      },
+      leftMouseUp: () => {
+        isDragging = false;
+        // identity equality
+        if (startPos === currentPos) {
+          // clear rectangle because user didn't drag
+          rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
+        }
+      },
+      leftDownMove: (
+        delta: Point2,
+        pos: Point2,
+        _id: string | null | undefined,
+        _event: MouseEvent,
+      ) => {
+        if (!isDragging || startPos == null) {
+          return;
+        }
+        currentPos = calculateGlobalPos(Store.getState(), pos);
+        rectangleContour.setCoordinates(startPos, currentPos);
+      },
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        Store.dispatch({
+          type: "MAGIC_WAND_FOR_RECT",
+          startPosition: startPos,
+          endPosition: currentPos,
+        });
+        rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
+
+        // SkeletonHandlers.handleOpenContextMenu(
+        //   planeView,
+        //   pos,
+        //   plane,
+        //   isTouch,
+        //   event,
+        //   showNodeContextMenuAt,
+        // );
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftDrag: "Resize Bounding Boxes",
+      rightClick: "Context Menu",
+    };
+  }
+
+  static onToolDeselected() {
+    const { body } = document;
+
+    if (body == null) {
+      return;
+    }
+    getSceneController().highlightUserBoundingBox(null);
+  }
+}
+
 export class ProofreadTool {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
@@ -681,6 +768,7 @@ const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
   [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
+  [AnnotationToolEnum.RECTANGLE]: RectangleTool,
   [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,

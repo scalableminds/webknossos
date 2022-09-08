@@ -806,6 +806,21 @@ export default function ToolbarView() {
             }}
           />
         </RadioButtonWithTooltip>
+        <RadioButtonWithTooltip
+          title="Rectangle Tool - ..."
+          disabledTitle={disabledInfosForTools[AnnotationToolEnum.RECTANGLE].explanation}
+          disabled={disabledInfosForTools[AnnotationToolEnum.RECTANGLE].isDisabled}
+          style={narrowButtonStyle}
+          value={AnnotationToolEnum.RECTANGLE}
+        >
+          <i
+            className="fas fa-vector-square"
+            style={{
+              opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
+              transform: "scaleX(-1)",
+            }}
+          />
+        </RadioButtonWithTooltip>
 
         {hasSkeleton && hasVolume && hasAgglomerateMappings ? (
           <RadioButtonWithTooltip

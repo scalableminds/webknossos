@@ -1,6 +1,13 @@
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
-import { BoundingBoxType, ContourModeEnum, TypedArray, Vector3 } from "oxalis/constants";
+import {
+  BoundingBoxType,
+  ContourModeEnum,
+  TypedArray,
+  Vector2,
+  Vector3,
+  Vector4,
+} from "oxalis/constants";
 import type { MutableNode, Node } from "oxalis/store";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put } from "typed-redux-saga";
@@ -21,7 +28,7 @@ import createProgressCallback from "libs/progress_callback";
 import api from "oxalis/api/internal_api";
 import window from "libs/window";
 import { APISegmentationLayer } from "types/api_flow_types";
-import ndarray from "ndarray";
+import ndarray, { NdArray } from "ndarray";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import Dimensions from "../dimensions";
 // By default, a new bounding box is created around
@@ -59,6 +66,14 @@ const VOXEL_THRESHOLD = 2000000;
 // The first magnification is always ignored initially as a performance
 // optimization (unless it's the only existent mag).
 const ALWAYS_IGNORE_FIRST_MAG_INITIALLY = true;
+
+const EXPECTED_INPUT_SHAPE: Vector4 = [1, 4, 58, 58];
+const OUTPUT_SHAPE: Vector4 = [1, 1, 26, 26];
+const OUTPUT_SIZE = OUTPUT_SHAPE.reduce((agg, val) => agg * val, 1);
+
+function takeLatest2(vec4: Vector4): Vector2 {
+  return [vec4[2], vec4[3]];
+}
 
 function selectAppropriateResolutions(
   boundingBoxMag1: BoundingBox,
@@ -102,7 +117,8 @@ function* performMagicWand(action: Action): Saga<void> {
     max: V3.floor(V3.add(V3.max(startPosition, endPosition), [0, 0, 1])),
   };
 
-  const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
+  const unpaddedBoundingBoxMag1 = new BoundingBox(boundingBoxObj);
+  const boundingBoxMag1 = unpaddedBoundingBoxMag1.paddedWithMargins([16, 16, 0]);
 
   const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
@@ -158,14 +174,30 @@ function* performMagicWand(action: Action): Saga<void> {
     size[secondDim],
   );
 
-  for (let u = 0; u < inputNd.shape[0]; u++) {
-    for (let v = 0; v < inputNd.shape[1]; v++) {
-      if (inputNd.get(u, v, 0) > 128) {
-        output.set(u, v, 0, 1);
-        voxelBuffer2D.setValue(u, v, 1);
+  const USE_SIMPLE_HEURISTIC = false;
+  if (USE_SIMPLE_HEURISTIC) {
+    for (let u = 0; u < inputNd.shape[0]; u++) {
+      for (let v = 0; v < inputNd.shape[1]; v++) {
+        if (inputNd.get(u, v, 0) > 128) {
+          output.set(u, v, 0, 1);
+          voxelBuffer2D.setValue(u, v, 1);
+        }
       }
     }
+  } else {
+    const { min, max } = boundingBoxMag1;
+    const center = V3.floor(V3.scale(V3.add(min, max), 0.5));
+    const margin2D = V2.scale(takeLatest2(EXPECTED_INPUT_SHAPE), 0.5);
+
+    // todo: off-by-one error ?
+    const marginLeft: Vector3 = [margin2D[0], margin2D[1], 0];
+    const marginRight: Vector3 = [margin2D[0], margin2D[1], 1];
+    const inputCutoutBBox = new BoundingBox({ min: center, max: center }).paddedWithMargins(
+      marginLeft,
+      marginRight,
+    );
   }
+
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   yield* call(
@@ -177,6 +209,27 @@ function* performMagicWand(action: Action): Saga<void> {
     activeViewport,
   );
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+}
+
+function mockedPredict(input: NdArray) {
+  // - stride is 8
+  // - input shape (1, 4, 58, 58)
+  //     - graustufe, predicted_mask, gt_mask, distance_gt_mask
+  // - output shape (1, 1, 26, 26)
+  // - predicted_mask ist initialisiert mit nullen außer am mittelpunkt (1)
+  if (!_.isEqual(input.shape, EXPECTED_INPUT_SHAPE)) {
+    throw new Error(`Did not expect input shape: ${input.shape}`);
+  }
+
+  const output = ndarray(new Uint8Array(OUTPUT_SIZE), OUTPUT_SHAPE);
+
+  for (let u = 0; u < OUTPUT_SHAPE[0] / 2; u++) {
+    for (let v = 0; v < OUTPUT_SHAPE[1]; v++) {
+      output.set(0, 0, u, v, 1);
+    }
+  }
+
+  return output;
 }
 
 function isPositionOutside(position: Vector3, size: Vector3) {

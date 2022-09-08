@@ -653,7 +653,14 @@ export class RectangleTool {
         if (startPos === currentPos) {
           // clear rectangle because user didn't drag
           rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
+          return;
         }
+        Store.dispatch({
+          type: "MAGIC_WAND_FOR_RECT",
+          startPosition: startPos,
+          endPosition: currentPos,
+        });
+        rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
       },
       leftDownMove: (
         delta: Point2,
@@ -668,21 +675,14 @@ export class RectangleTool {
         rectangleContour.setCoordinates(startPos, currentPos);
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        Store.dispatch({
-          type: "MAGIC_WAND_FOR_RECT",
-          startPosition: startPos,
-          endPosition: currentPos,
-        });
-        rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
-
-        // SkeletonHandlers.handleOpenContextMenu(
-        //   planeView,
-        //   pos,
-        //   plane,
-        //   isTouch,
-        //   event,
-        //   showNodeContextMenuAt,
-        // );
+        SkeletonHandlers.handleOpenContextMenu(
+          planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
       },
     };
   }

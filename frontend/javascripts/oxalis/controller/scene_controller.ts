@@ -301,10 +301,10 @@ class SceneController {
     // so that the light moves along the cam.
     const ambientLightForIsosurfaces = new THREE.AmbientLight(0x404040, 15); // soft white light
 
-    this.isosurfacesRootGroup.add(ambientLightForIsosurfaces);
+    this.rootGroup.add(ambientLightForIsosurfaces);
     const ambientLightForMeshes = new THREE.AmbientLight(0x404040, 15); // soft white light
 
-    this.meshesRootGroup.add(ambientLightForMeshes);
+    this.rootGroup.add(ambientLightForMeshes);
   }
 
   removeSTL(id: string): void {

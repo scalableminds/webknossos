@@ -148,17 +148,40 @@ function* performMagicWand(action: Action): Saga<void> {
     );
   }
 
-  const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+  const { rectangleContour } = action;
+  const channelCount = 4;
+  const outputRGBA = new Uint8Array(inputNd.size * channelCount);
+  let idx = 0;
+  for (let v = 0; v < inputNd.shape[1]; v++) {
+    for (let u = 0; u < inputNd.shape[0]; u++) {
+      if (output.get(u, v, 0) > 0) {
+        outputRGBA[idx] = 255;
+        outputRGBA[idx + 1] = 255;
+        outputRGBA[idx + 2] = 255;
+        outputRGBA[idx + 3] = 255;
+      } else {
+        outputRGBA[idx] = 0;
+        outputRGBA[idx + 1] = 0;
+        outputRGBA[idx + 2] = 0;
+        outputRGBA[idx + 3] = 0;
+      }
+      idx += channelCount;
+    }
+  }
 
-  yield* call(
-    labelWithVoxelBuffer2D,
-    voxelBuffer2D,
-    ContourModeEnum.DRAW,
-    overwriteMode,
-    labeledZoomStep,
-    activeViewport,
-  );
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  rectangleContour.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
+
+  // const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+
+  // yield* call(
+  //   labelWithVoxelBuffer2D,
+  //   voxelBuffer2D,
+  //   ContourModeEnum.DRAW,
+  //   overwriteMode,
+  //   labeledZoomStep,
+  //   activeViewport,
+  // );
+  // yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 }
 
 function mockedPredict(input: NdArray) {

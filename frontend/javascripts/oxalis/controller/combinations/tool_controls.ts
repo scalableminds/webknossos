@@ -39,6 +39,7 @@ import {
   getNodeAndTree,
   getSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { V3 } from "libs/mjs";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -643,9 +644,11 @@ export class RectangleTool {
     const { rectangleContour } = SceneController;
     return {
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        startPos = calculateGlobalPos(Store.getState(), pos);
+        startPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
         currentPos = startPos;
         isDragging = true;
+
+        rectangleContour.unattachTexture();
       },
       leftMouseUp: () => {
         isDragging = false;
@@ -659,8 +662,10 @@ export class RectangleTool {
           type: "MAGIC_WAND_FOR_RECT",
           startPosition: startPos,
           endPosition: currentPos,
+          rectangleContour,
         });
-        rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
+
+        // rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
       },
       leftDownMove: (
         delta: Point2,
@@ -671,7 +676,7 @@ export class RectangleTool {
         if (!isDragging || startPos == null) {
           return;
         }
-        currentPos = calculateGlobalPos(Store.getState(), pos);
+        currentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
         rectangleContour.setCoordinates(startPos, currentPos);
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {

@@ -95,57 +95,46 @@ function* performMagicWand(action: Action): Saga<void> {
   const center = V3.floor(V3.scale(V3.add(min, max), 0.5));
   const margin2D = V2.scale(takeLatest2(EXPECTED_INPUT_SHAPE), 0.5);
 
-  const USE_SIMPLE_HEURISTIC = true;
-  if (USE_SIMPLE_HEURISTIC) {
-    // for (let u = 0; u < inputNd.shape[0]; u++) {
-    //   for (let v = 0; v < inputNd.shape[1]; v++) {
-    //     if (inputNd.get(u, v, 0) > 128) {
-    //       output.set(u, v, 0, 1);
-    //     }
-    //   }
-    // }
+  // for (let u = 0; u < inputNd.shape[0]; u++) {
+  //   for (let v = 0; v < inputNd.shape[1]; v++) {
+  //     if (inputNd.get(u, v, 0) > 128) {
+  //       output.set(u, v, 0, 1);
+  //     }
+  //   }
+  // }
 
-    console.time("floodfill");
-    const result = floodFill({
-      getter: (x, y) => {
-        if (x < 0 || y < 0 || x > inputNd.shape[0] || 1 > inputNd.shape[1]) {
-          return null;
-        }
-        return inputNd.get(x, y, 0);
-      },
-      equals: (a, b) => {
-        if (a == null || b == null) {
-          return false;
-        }
-        return a > 128 || Math.abs(a - b) / b < 0.1;
-      },
-      seed: [Math.floor(inputNd.shape[0] / 2), Math.floor(inputNd.shape[1] / 2)],
-      onFlood: (x, y) => {
-        output.set(x, y, 0, 1);
-      },
-    });
+  console.time("floodfill");
+  const result = floodFill({
+    getter: (x, y) => {
+      if (x < 0 || y < 0 || x > inputNd.shape[0] || 1 > inputNd.shape[1]) {
+        return null;
+      }
+      return inputNd.get(x, y, 0);
+    },
+    equals: (a, b) => {
+      if (a == null || b == null) {
+        return false;
+      }
+      return a > 128 || Math.abs(a - b) / b < 0.1;
+    },
+    seed: [Math.floor(inputNd.shape[0] / 2), Math.floor(inputNd.shape[1] / 2)],
+    onFlood: (x, y) => {
+      output.set(x, y, 0, 1);
+    },
+  });
 
-    morphology.close(output, 6);
-    morphology.erode(output, 3);
-    morphology.dilate(output, 6);
-    // morphology.dilate(output, 1);
-    console.timeEnd("floodfill");
+  morphology.close(output, 6);
+  morphology.erode(output, 3);
+  morphology.dilate(output, 6);
+  // morphology.dilate(output, 1);
+  console.timeEnd("floodfill");
 
-    for (let u = 0; u < inputNd.shape[0]; u++) {
-      for (let v = 0; v < inputNd.shape[1]; v++) {
-        if (output.get(u, v, 0) > 0) {
-          voxelBuffer2D.setValue(u, v, 1);
-        }
+  for (let u = 0; u < inputNd.shape[0]; u++) {
+    for (let v = 0; v < inputNd.shape[1]; v++) {
+      if (output.get(u, v, 0) > 0) {
+        voxelBuffer2D.setValue(u, v, 1);
       }
     }
-  } else {
-    // todo: off-by-one error ?
-    const marginLeft: Vector3 = [margin2D[0], margin2D[1], 0];
-    const marginRight: Vector3 = [margin2D[0], margin2D[1], 1];
-    const inputCutoutBBox = new BoundingBox({ min: center, max: center }).paddedWithMargins(
-      marginLeft,
-      marginRight,
-    );
   }
 
   const { rectangleContour } = action;
@@ -182,27 +171,6 @@ function* performMagicWand(action: Action): Saga<void> {
   //   activeViewport,
   // );
   // yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
-}
-
-function mockedPredict(input: NdArray) {
-  // - stride is 8
-  // - input shape (1, 4, 58, 58)
-  //     - graustufe, predicted_mask, gt_mask, distance_gt_mask
-  // - output shape (1, 1, 26, 26)
-  // - predicted_mask ist initialisiert mit nullen außer am mittelpunkt (1)
-  if (!_.isEqual(input.shape, EXPECTED_INPUT_SHAPE)) {
-    throw new Error(`Did not expect input shape: ${input.shape}`);
-  }
-
-  const output = ndarray(new Uint8Array(OUTPUT_SIZE), OUTPUT_SHAPE);
-
-  for (let u = 0; u < OUTPUT_SHAPE[0] / 2; u++) {
-    for (let v = 0; v < OUTPUT_SHAPE[1]; v++) {
-      output.set(0, 0, u, v, 1);
-    }
-  }
-
-  return output;
 }
 
 export default function* listenToMinCut(): Saga<void> {

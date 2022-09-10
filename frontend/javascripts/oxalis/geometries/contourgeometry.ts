@@ -75,6 +75,8 @@ export class RectangleGeometry {
   color: THREE.Color;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'edge' has no initializer and is not defi... Remove this comment to see the full error message
   plane: THREE.Mesh;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'edge' has no initializer and is not defi... Remove this comment to see the full error message
+  centerMarker: THREE.Mesh;
 
   constructor() {
     this.color = CONTOUR_COLOR_NORMAL;
@@ -85,16 +87,20 @@ export class RectangleGeometry {
     const geometry = new THREE.PlaneGeometry(1, 1);
     const material = new THREE.MeshLambertMaterial({
       // color: 0xffff00,
-      // side: THREE.BackSide,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.5,
     });
     this.plane = new THREE.Mesh(geometry, material);
 
-    this.plane.position.x = 3584;
-    this.plane.position.y = 3584;
-    this.plane.position.z = 1024;
+    const centerGeometry = new THREE.PlaneGeometry(2, 2);
+    const centerMaterial = new THREE.MeshLambertMaterial({
+      color: 0xff00ff,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.9,
+    });
+    this.centerMarker = new THREE.Mesh(centerGeometry, centerMaterial);
 
     this.reset();
   }
@@ -110,11 +116,12 @@ export class RectangleGeometry {
     this.plane.position.set(...position);
     this.plane.scale.set(extent[0], extent[1], 1);
     this.plane.geometry.computeBoundingSphere();
+    this.centerMarker.position.set(...position);
     app.vent.trigger("rerender");
   }
 
   getMeshes() {
-    return [this.plane];
+    return [this.plane, this.centerMarker];
   }
 
   attachData(ndData: Uint8Array, width: number, height: number) {

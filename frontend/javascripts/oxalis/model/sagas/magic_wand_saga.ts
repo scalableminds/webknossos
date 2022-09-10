@@ -2,7 +2,7 @@ import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import { ContourModeEnum, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put } from "typed-redux-saga";
+import { call, put, takeEvery, race, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V2, V3 } from "libs/mjs";
 import {
@@ -17,6 +17,8 @@ import ndarray, { NdArray } from "ndarray";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import morphology from "ball-morphology";
 import floodFill from "n-dimensional-flood-fill";
+import Toast from "libs/toast";
+import { copyNdArray } from "./volume/volume_interpolation_saga";
 
 // const ort = require("onnxruntime-web");
 
@@ -70,6 +72,26 @@ function* performMagicWand(action: Action): Saga<void> {
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride);
 
+  const center2D = [Math.floor(inputNd.shape[0] / 2), Math.floor(inputNd.shape[1] / 2)];
+  const rectCenterBrushExtent = [
+    Math.floor(inputNd.shape[0] / 10),
+    Math.floor(inputNd.shape[1] / 10),
+  ];
+
+  for (
+    let u = center2D[0] - rectCenterBrushExtent[0];
+    u < center2D[0] + rectCenterBrushExtent[0];
+    u++
+  ) {
+    for (
+      let v = center2D[1] - rectCenterBrushExtent[1];
+      v < center2D[1] + rectCenterBrushExtent[1];
+      v++
+    ) {
+      inputNd.set(u, v, 0, 255);
+    }
+  }
+
   const output = ndarray(new Uint8Array(inputNd.size), inputNd.shape);
 
   const labeledResolution = [1, 1, 1];
@@ -78,66 +100,104 @@ function* performMagicWand(action: Action): Saga<void> {
   const firstDim = 0;
   const secondDim = 1;
   const thirdDim = 2;
-  const interpolationLayer = yield* call(
-    createVolumeLayer,
-    volumeTracing,
-    activeViewport,
-    labeledResolution,
-    boundingBoxMag1.min[thirdDim],
-  );
-  const voxelBuffer2D = interpolationLayer.createVoxelBuffer2D(
-    V2.floor(interpolationLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
-    size[firstDim],
-    size[secondDim],
-  );
-
-  const { min, max } = boundingBoxMag1;
-  const center = V3.floor(V3.scale(V3.add(min, max), 0.5));
-  const margin2D = V2.scale(takeLatest2(EXPECTED_INPUT_SHAPE), 0.5);
-
-  // for (let u = 0; u < inputNd.shape[0]; u++) {
-  //   for (let v = 0; v < inputNd.shape[1]; v++) {
-  //     if (inputNd.get(u, v, 0) > 128) {
-  //       output.set(u, v, 0, 1);
-  //     }
-  //   }
-  // }
+  // const interpolationLayer = yield* call(
+  //   createVolumeLayer,
+  //   volumeTracing,
+  //   activeViewport,
+  //   labeledResolution,
+  //   boundingBoxMag1.min[thirdDim],
+  // );
+  // const voxelBuffer2D = interpolationLayer.createVoxelBuffer2D(
+  //   V2.floor(interpolationLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
+  //   size[firstDim],
+  //   size[secondDim],
+  // );
 
   console.time("floodfill");
-  const result = floodFill({
-    getter: (x, y) => {
+  floodFill({
+    getter: (x: number, y: number) => {
       if (x < 0 || y < 0 || x > inputNd.shape[0] || 1 > inputNd.shape[1]) {
         return null;
       }
       return inputNd.get(x, y, 0);
     },
-    equals: (a, b) => {
+    equals: (a: number, b: number) => {
       if (a == null || b == null) {
         return false;
       }
-      return a > 128 || Math.abs(a - b) / b < 0.1;
+      return a > 128; // || Math.abs(a - b) / b < 0.1;
     },
-    seed: [Math.floor(inputNd.shape[0] / 2), Math.floor(inputNd.shape[1] / 2)],
-    onFlood: (x, y) => {
+    seed: center2D,
+    onFlood: (x: number, y: number) => {
       output.set(x, y, 0, 1);
     },
   });
 
+  const seedIntensity = inputNd.get(
+    Math.floor(inputNd.shape[0] / 2),
+    Math.floor(inputNd.shape[1] / 2),
+    0,
+  );
+  console.log({ seedIntensity });
+
+  const floodfillCopy = copyNdArray(Uint8Array, output);
+
   morphology.close(output, 6);
   morphology.erode(output, 3);
   morphology.dilate(output, 6);
-  // morphology.dilate(output, 1);
+  // // morphology.dilate(output, 1);
   console.timeEnd("floodfill");
 
-  for (let u = 0; u < inputNd.shape[0]; u++) {
-    for (let v = 0; v < inputNd.shape[1]; v++) {
-      if (output.get(u, v, 0) > 0) {
-        voxelBuffer2D.setValue(u, v, 1);
-      }
+  // for (let u = 0; u < inputNd.shape[0]; u++) {
+  //   for (let v = 0; v < inputNd.shape[1]; v++) {
+  //     if (output.get(u, v, 0) > 0) {
+  //       voxelBuffer2D.setValue(u, v, 1);
+  //     }
+  //   }
+  // }
+
+  const outputRGBA = maskToRGBA(inputNd, output);
+  const { rectangleContour } = action;
+  rectangleContour.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
+
+  // const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+
+  while (true) {
+    const { newMagicWandAction, finetuneAction, cancelMagicWandAction } = yield* race({
+      newMagicWandAction: take("MAGIC_WAND_FOR_RECT"),
+      finetuneAction: take("FINE_TUNE_MAGIC_WAND"),
+      cancelMagicWandAction: take("CANCEL_MAGIC_WAND"),
+    });
+
+    if (newMagicWandAction || cancelMagicWandAction) {
+      rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
+
+      return;
+    } else if (finetuneAction) {
+      const newOutput = copyNdArray(Uint8Array, floodfillCopy);
+
+      morphology.close(newOutput, finetuneAction.closeValue);
+      morphology.erode(newOutput, finetuneAction.erodeValue);
+      morphology.dilate(newOutput, finetuneAction.dilateValue);
+
+      const outputRGBA = maskToRGBA(inputNd, newOutput);
+      const { rectangleContour } = action;
+      rectangleContour.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
     }
   }
 
-  const { rectangleContour } = action;
+  // yield* call(
+  //   labelWithVoxelBuffer2D,
+  //   voxelBuffer2D,
+  //   ContourModeEnum.DRAW,
+  //   overwriteMode,
+  //   labeledZoomStep,
+  //   activeViewport,
+  // );
+  // yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+}
+
+function maskToRGBA(inputNd: ndarray.NdArray<TypedArray>, output: ndarray.NdArray) {
   const channelCount = 4;
   const outputRGBA = new Uint8Array(inputNd.size * channelCount);
   let idx = 0;
@@ -157,22 +217,21 @@ function* performMagicWand(action: Action): Saga<void> {
       idx += channelCount;
     }
   }
-
-  rectangleContour.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
-
-  // const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
-
-  // yield* call(
-  //   labelWithVoxelBuffer2D,
-  //   voxelBuffer2D,
-  //   ContourModeEnum.DRAW,
-  //   overwriteMode,
-  //   labeledZoomStep,
-  //   activeViewport,
-  // );
-  // yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  return outputRGBA;
 }
 
 export default function* listenToMinCut(): Saga<void> {
-  yield* takeEveryUnlessBusy("MAGIC_WAND_FOR_RECT", performMagicWand, "Min-cut is being computed.");
+  // yield* takeEveryUnlessBusy(
+  yield* takeEvery(
+    "MAGIC_WAND_FOR_RECT",
+    function* guard(action) {
+      try {
+        yield* call(performMagicWand, action);
+      } catch (ex) {
+        Toast.error(ex);
+        console.error(ex);
+      }
+    },
+    // "Magic wand is being computed.",
+  );
 }

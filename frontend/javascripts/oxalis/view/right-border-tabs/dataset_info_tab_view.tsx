@@ -4,7 +4,7 @@ import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/i
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
@@ -27,6 +27,7 @@ import {
   NeuronInferralModal,
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { NumberSliderSetting } from "../components/setting_input_views";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -633,11 +634,67 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </div>
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
+        <MagicWandControls />
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
       </div>
     );
   }
+}
+
+function MagicWandControls() {
+  const [dilateValue, setDilateValue] = useState(5);
+  const [closeValue, setCloseValue] = useState(5);
+
+  const onChangeCloseValue = (closeValue: number) => {
+    setCloseValue(closeValue);
+    Store.dispatch({ type: "FINE_TUNE_MAGIC_WAND", closeValue, erodeValue, dilateValue });
+  };
+  const onChangeDilateValue = (dilateValue: number) => {
+    setDilateValue(dilateValue);
+    Store.dispatch({ type: "FINE_TUNE_MAGIC_WAND", closeValue, erodeValue, dilateValue });
+  };
+  const [erodeValue, setErodeValue] = useState(5);
+  const onChangeErodeValue = (erodeValue: number) => {
+    setErodeValue(erodeValue);
+    Store.dispatch({ type: "FINE_TUNE_MAGIC_WAND", closeValue, erodeValue, dilateValue });
+  };
+
+  return (
+    <div>
+      <NumberSliderSetting
+        label={"Close"}
+        min={0}
+        value={closeValue}
+        max={10}
+        step={1}
+        onChange={onChangeCloseValue}
+      />
+      <NumberSliderSetting
+        label={"Erode"}
+        min={0}
+        value={erodeValue}
+        max={10}
+        step={1}
+        onChange={onChangeErodeValue}
+      />
+      <NumberSliderSetting
+        label={"Dilate"}
+        min={0}
+        value={dilateValue}
+        max={10}
+        step={1}
+        onChange={onChangeDilateValue}
+      />
+      <Button
+        onClick={() => {
+          Store.dispatch({ type: "CANCEL_MAGIC_WAND" });
+        }}
+      >
+        Ok
+      </Button>
+    </div>
+  );
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

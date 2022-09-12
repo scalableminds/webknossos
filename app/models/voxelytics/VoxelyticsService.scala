@@ -121,7 +121,7 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
     Json.toJson(run).as[JsObject] ++ Json.obj(
       "tasks" -> tasks.map(Json.toJson(_))
     )
-  
+
   def artifactsPublicWrites(artifacts: List[ArtifactEntry]): JsObject = {
     val artifactsByTask = artifacts.groupBy(_.taskName)
     JsObject(artifactsByTask.map(artifactKV => {

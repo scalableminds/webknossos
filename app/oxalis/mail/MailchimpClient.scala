@@ -18,16 +18,16 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
 
   private lazy val conf = wkConf.Mail.Mailchimp
 
-  def registerUser(user: User, multiUser: MultiUser, tag: MailchimpTag): Unit = {
-    if (conf.host.isEmpty) return
-    val emailMd5 = SCrypt.md5(multiUser.email)
-    logger.info(s"Registering user ${user._id} for Mailchimp, tag=${MailchimpTag.format(tag)}")
-    for {
-      _ <- registerUser(user.firstName, user.lastName, multiUser.email, emailMd5)
-      _ <- tagByEmailMd5(emailMd5, tag)
-    } yield ()
-    ()
-  }
+  def registerUser(user: User, multiUser: MultiUser, tag: MailchimpTag): Unit =
+    if (conf.host.nonEmpty) {
+      val emailMd5 = SCrypt.md5(multiUser.email)
+      logger.info(s"Registering user ${user._id} for Mailchimp, tag=${MailchimpTag.format(tag)}")
+      for {
+        _ <- registerUser(user.firstName, user.lastName, multiUser.email, emailMd5)
+        _ <- tagByEmailMd5(emailMd5, tag)
+      } yield ()
+      ()
+    }
 
   private def registerUser(firstName: String, lastName: String, email: String, emailMd5: String): Fox[WSResponse] = {
     val uri = s"${conf.host}/lists/${conf.listId}/members/$emailMd5"
@@ -42,21 +42,21 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
     rpc(uri).silent.withBasicAuth(conf.user, conf.password).put(userBody)
   }
 
-  def tagUser(user: User, tag: MailchimpTag): Unit = {
-    if (conf.host.isEmpty) return
-    for {
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      _ = tagMultiUser(multiUser, tag)
-    } yield ()
-    ()
-  }
+  def tagUser(user: User, tag: MailchimpTag): Unit =
+    if (conf.host.nonEmpty) {
+      for {
+        multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+        _ = tagMultiUser(multiUser, tag)
+      } yield ()
+      ()
+    }
 
-  def tagMultiUser(multiUser: MultiUser, tag: MailchimpTag): Unit = {
-    if (conf.host.isEmpty) return
-    val emailMd5 = SCrypt.md5(multiUser.email)
-    tagByEmailMd5(emailMd5, tag)
-    ()
-  }
+  def tagMultiUser(multiUser: MultiUser, tag: MailchimpTag): Unit =
+    if (conf.host.nonEmpty) {
+      val emailMd5 = SCrypt.md5(multiUser.email)
+      tagByEmailMd5(emailMd5, tag)
+      ()
+    }
 
   private def tagByEmailMd5(emailMd5: String, tag: MailchimpTag): Fox[WSResponse] = {
     val uri = s"${conf.host}/lists/${conf.listId}/members/$emailMd5/tags"
@@ -82,7 +82,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
 }
 
 case class MailchimpTagsResponse(tags: List[MailchimpTagResponse])
-case class MailchimpTagResponse(id: String, name: String, date_added: String)
+case class MailchimpTagResponse(name: String, date_added: String)
 
 object MailchimpTagResponse {
   implicit val jsonFormat: OFormat[MailchimpTagResponse] = Json.format[MailchimpTagResponse]

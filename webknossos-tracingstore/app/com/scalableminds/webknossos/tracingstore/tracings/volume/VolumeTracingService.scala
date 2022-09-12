@@ -273,7 +273,8 @@ class VolumeTracingService @Inject()(
                 resolutionRestrictions: ResolutionRestrictions,
                 editPosition: Option[Vec3Int],
                 editRotation: Option[Vec3Double],
-                boundingBox: Option[BoundingBox]): Fox[(String, VolumeTracing)] = {
+                boundingBox: Option[BoundingBox],
+                mappingName: Option[String]): Fox[(String, VolumeTracing)] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
     val tracingWithResolutionRestrictions = restrictMagList(tracingWithBB, resolutionRestrictions)
     val newTracing = tracingWithResolutionRestrictions.copy(
@@ -281,6 +282,7 @@ class VolumeTracingService @Inject()(
       editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithResolutionRestrictions.editPosition),
       editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithResolutionRestrictions.editRotation),
       boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
+      mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
       version = 0
     )
     for {

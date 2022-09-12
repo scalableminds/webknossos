@@ -329,7 +329,7 @@ class AuthenticationController @Inject()(
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
+        bearerTokenAuthenticatorService.userForToken(passwords.token.trim).futureBox.flatMap {
           case Full(user) =>
             for {
               _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(

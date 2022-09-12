@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
 import java.nio.file.Paths
+import java.util
 import java.util.UUID
 
 import com.google.inject.Inject
@@ -14,8 +15,6 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.Elemen
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
-
-import scala.concurrent.duration._
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.{
   BinaryDataService,
@@ -31,11 +30,15 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Empty, Full}
-import play.api.libs.json.{JsObject, JsValue, Json}
+import net.liftweb.common.{Box, Empty, Full}
+import org.jgrapht.alg.flow.PushRelabelMFImpl
+import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
+import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.jdk.CollectionConverters.asScalaSetConverter
 
 case class EditableMappingKey(
     editableMappingId: String,
@@ -49,6 +52,29 @@ case class FallbackDataKey(
     dataRequests: List[WebKnossosDataRequest],
     userToken: Option[String]
 )
+
+case class MinCutParameters(
+    segmentPosition1: Vec3Int,
+    segmentPosition2: Vec3Int,
+    mag: Vec3Int,
+    agglomerateId: Long,
+    editableMappingId: String
+)
+
+object MinCutParameters {
+  implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
+}
+
+case class EdgeWithPositions(
+    segmentId1: Long,
+    segmentId2: Long,
+    position1: Vec3Int,
+    position2: Vec3Int
+)
+
+object EdgeWithPositions {
+  implicit val jsonFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
+}
 
 trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient
@@ -97,6 +123,7 @@ class EditableMappingService @Inject()(
         "mappingName" -> editableMappingId,
         "version" -> version,
         "tracingId" -> tracingId,
+        "baseMappingName" -> editableMapping.baseMappingName,
         "createdTimestamp" -> editableMapping.createdTimestamp
       )
 
@@ -120,6 +147,15 @@ class EditableMappingService @Inject()(
                                                                               version = Some(0L),
                                                                               emptyFallback = Some(-1L))
     } yield versionOrMinusOne >= 0
+
+  def duplicate(editableMappingIdOpt: Option[String], tracing: VolumeTracing, userToken: Option[String]): Fox[String] =
+    for {
+      editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
+      remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
+      editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
+      newId = generateId
+      _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(editableMapping.toProto))
+    } yield newId
 
   def updateActionLog(editableMappingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[EditableMappingUpdateAction])): JsObject =
@@ -563,5 +599,53 @@ class EditableMappingService @Inject()(
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result
+
+  def agglomerateGraphMinCut(parameters: MinCutParameters,
+                             remoteFallbackLayer: RemoteFallbackLayer,
+                             userToken: Option[String]): Fox[List[EdgeWithPositions]] =
+    for {
+      segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
+      segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition2, parameters.mag, userToken)
+      mapping <- get(parameters.editableMappingId, remoteFallbackLayer, userToken)
+      agglomerateGraph <- agglomerateGraphForId(mapping, parameters.agglomerateId, remoteFallbackLayer, userToken)
+      edgesToCut <- minCut(agglomerateGraph, segmentId1, segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
+      edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
+    } yield edgesWithPositions
+
+  private def minCut(agglomerateGraph: AgglomerateGraph,
+                     segmentId1: Long,
+                     segmentId2: Long): Box[List[(Long, Long)]] = {
+    val g = new SimpleWeightedGraph[Long, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
+    agglomerateGraph.segments.foreach { segmentId =>
+      g.addVertex(segmentId)
+    }
+    agglomerateGraph.edges.zip(agglomerateGraph.affinities).foreach {
+      case (edge, affinity) =>
+        val e = g.addEdge(edge.source, edge.target)
+        g.setEdgeWeight(e, affinity)
+    }
+    tryo {
+      val minCutImpl = new PushRelabelMFImpl(g)
+      minCutImpl.calculateMinCut(segmentId1, segmentId2)
+      val minCutEdges: util.Set[DefaultWeightedEdge] = minCutImpl.getCutEdges
+      minCutEdges.asScala.toList.map(e => (g.getEdgeSource(e), g.getEdgeTarget(e)))
+    }
+  }
+
+  private def annotateEdgesWithPositions(edges: List[(Long, Long)],
+                                         agglomerateGraph: AgglomerateGraph): List[EdgeWithPositions] =
+    edges.map {
+      case (segmentId1, segmentId2) =>
+        val index1 = agglomerateGraph.segments.indexOf(segmentId1)
+        val index2 = agglomerateGraph.segments.indexOf(segmentId2)
+        val position1 = agglomerateGraph.positions(index1)
+        val position2 = agglomerateGraph.positions(index2)
+        EdgeWithPositions(
+          segmentId1,
+          segmentId2,
+          position1,
+          position2
+        )
+    }
 
 }

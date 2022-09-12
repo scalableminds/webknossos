@@ -15,16 +15,14 @@ trait AbstractRequestLogging extends LazyLogging {
   def logRequestFormatted(request: Request[_],
                           result: Result,
                           notifier: Option[String => Unit],
-                          requesterId: Option[String] = None): Unit = {
-
-    if (Status.isSuccessful(result.header.status)) return
-
-    val userIdMsg = requesterId.map(id => s" for user $id").getOrElse("")
-    val resultMsg = s": ${resultBody(result)}"
-    val msg = s"Answering ${result.header.status} at ${request.uri}$userIdMsg$resultMsg"
-    logger.warn(msg)
-    notifier.foreach(_(msg))
-  }
+                          requesterId: Option[String] = None): Unit =
+    if (!Status.isSuccessful(result.header.status)) {
+      val userIdMsg = requesterId.map(id => s" for user $id").getOrElse("")
+      val resultMsg = s": ${resultBody(result)}"
+      val msg = s"Answering ${result.header.status} at ${request.uri}$userIdMsg$resultMsg"
+      logger.warn(msg)
+      notifier.foreach(_(msg))
+    }
 
   private def resultBody(result: Result): String =
     result.body match {

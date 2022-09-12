@@ -120,7 +120,7 @@ function requestUserToken(): Promise<string> {
   return tokenRequestPromise;
 }
 
-export function getSharingToken(): string | null | undefined {
+export function getSharingTokenFromUrlParameters(): string | null | undefined {
   if (location != null) {
     const params = Utils.getUrlParamsObject();
 
@@ -134,7 +134,7 @@ export function getSharingToken(): string | null | undefined {
 
 let tokenPromise: Promise<string>;
 export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<any> {
-  const sharingToken = getSharingToken();
+  const sharingToken = getSharingTokenFromUrlParameters();
 
   if (sharingToken != null) {
     return fn(sharingToken);
@@ -2267,6 +2267,27 @@ export function getSynapseTypes(
           connectomeFile,
           synapseIds,
         },
+      },
+    ),
+  );
+}
+
+type MinCutTargetEdge = {
+  position1: Vector3;
+  position2: Vector3;
+  segmentId1: number;
+  segmentId2: number;
+};
+export async function getEdgesForAgglomerateMinCut(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentsInfo: Object,
+): Promise<Array<MinCutTargetEdge>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      {
+        data: segmentsInfo,
       },
     ),
   );

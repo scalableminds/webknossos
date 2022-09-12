@@ -6,6 +6,7 @@ import Toast from "libs/toast";
 import {
   deleteEdgeAction,
   DeleteEdgeAction,
+  deleteTreeAction,
   loadAgglomerateSkeletonAction,
   MergeTreesAction,
   MinCutAgglomerateAction,
@@ -59,6 +60,7 @@ export default function* proofreadMapping(): Saga<any> {
     splitOrMergeOrMinCutAgglomerate,
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
+  yield* takeEvery(["CLEAR_PROOF_READING_BY_PRODUCTS"], clearProofReadingByProducts);
 }
 
 function proofreadCoarseResolutionIndex(): number {
@@ -86,6 +88,7 @@ function proofreadSegmentProximityNm(): number {
   return window.__proofreadProximityNm != null ? window.__proofreadProximityNm : 0;
 }
 let oldSegmentIdsInProximity: number[] | null = null;
+let coarselyLoadedSegmentIds: number[] = [];
 
 function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Vector3): Saga<void> {
   const mappingInfo = yield* select((state) =>
@@ -103,7 +106,10 @@ function* loadCoarseAdHocMesh(layerName: string, segmentId: number, position: Ve
       preferredQuality,
     }),
   );
+  coarselyLoadedSegmentIds.push(segmentId);
 }
+
+let loadedAgglomerateSkeletonIds: number[] = [];
 
 function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const { position } = action;
@@ -138,6 +144,8 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   const { trees } = skeletonTracing;
   const tree = findTreeByName(trees, treeName).getOrElse(null);
   if (tree == null) return;
+
+  loadedAgglomerateSkeletonIds.push(tree.treeId);
 
   yield* call(loadFineAdHocMeshesInProximity, layerName, volumeTracingLayer, tree, position);
 }
@@ -529,4 +537,21 @@ function* splitOrMergeOrMinCutAgglomerate(
       yield* call(loadCoarseAdHocMesh, layerName, newTargetNodeAgglomerateId, targetNodePosition);
     }
   }
+}
+
+function* clearProofReadingByProducts() {
+  for (const treeId of loadedAgglomerateSkeletonIds) {
+    yield* put(deleteTreeAction(treeId));
+  }
+
+  loadedAgglomerateSkeletonIds = [];
+
+  const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
+  if (volumeTracingLayer == null || volumeTracingLayer.tracingId == null) return;
+  const layerName = volumeTracingLayer.tracingId;
+
+  for (const segmentId of coarselyLoadedSegmentIds) {
+    yield* put(removeIsosurfaceAction(layerName, segmentId));
+  }
+  coarselyLoadedSegmentIds = [];
 }

@@ -181,23 +181,28 @@ class VolumeTracingController @Inject()(
                 boundingBox: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+        val userToken = urlOrHeaderToken(token, request)
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, userToken) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            _ <- bool2Fox(!tracing.getMappingIsEditable) ?~> "Duplicate is not yet implemented for editable mapping annotations"
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            (newId, newTracing) <- tracingService.duplicate(tracingId,
-                                                            tracing,
-                                                            fromTask.getOrElse(false),
-                                                            dataSetBoundingBox,
-                                                            resolutionRestrictions,
-                                                            editPositionParsed,
-                                                            editRotationParsed,
-                                                            boundingBoxParsed)
+            newEditableMappingId <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
+              editableMappingService.duplicate(tracing.mappingName, tracing, userToken))
+            (newId, newTracing) <- tracingService.duplicate(
+              tracingId,
+              tracing,
+              fromTask.getOrElse(false),
+              dataSetBoundingBox,
+              resolutionRestrictions,
+              editPositionParsed,
+              editRotationParsed,
+              boundingBoxParsed,
+              newEditableMappingId
+            )
             _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
           } yield Ok(Json.toJson(newId))
         }

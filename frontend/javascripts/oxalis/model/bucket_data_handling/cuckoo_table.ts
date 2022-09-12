@@ -177,6 +177,7 @@ export class CuckooTable {
 
       const value = this.getValueAtAddress(key, hashedAddress);
       if (value != null) {
+        console.log(`clear ${key} at ${hashedAddress}`);
         this.writeEntryAtAddress(
           EMPTY_KEY,
           [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY],
@@ -259,6 +260,8 @@ export class CuckooTable {
   ): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
     const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
+
+    console.log(`write ${key} with ${value} to ${hashedAddress}`);
 
     const displacedEntry: Entry = [
       this.table[offset],

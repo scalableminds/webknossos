@@ -516,6 +516,7 @@ function updateTracingPredicate(
   );
 }
 
+// todo: cache this?
 export function* diffSegmentLists(
   prevSegments: SegmentMap,
   newSegments: SegmentMap,

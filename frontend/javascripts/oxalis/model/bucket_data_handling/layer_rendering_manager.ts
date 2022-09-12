@@ -338,6 +338,7 @@ export default class LayerRenderingManager {
       listenToStoreProperty(
         (storeState) => getSegmentsForLayer(storeState, this.name),
         (newSegments) => {
+          console.log("segments changed");
           const cuckoo = this.getCustomColorCuckooTable();
           for (const updateAction of diffSegmentLists(prevSegments, newSegments)) {
             if (
@@ -347,6 +348,7 @@ export default class LayerRenderingManager {
             ) {
               const { id } = updateAction.value;
               const color = "color" in updateAction.value ? updateAction.value.color : null;
+              console.log(`${updateAction.name} for ${id}. color=${color || "null"}`);
               if (color != null) {
                 cuckoo.set(
                   id,

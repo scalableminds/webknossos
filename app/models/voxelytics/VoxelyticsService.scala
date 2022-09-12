@@ -117,12 +117,12 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
       runUserId <- voxelyticsDAO.getUserIdForRunOpt(runName, user._organization)
     } yield bool2Fox(user.isAdmin || runUserId.forall(_ == user._id))
 
-  def runWrites(run: RunEntry, tasks: List[TaskRunEntry]): JsObject =
+  def runPublicWrites(run: RunEntry, tasks: List[TaskRunEntry]): JsObject =
     Json.toJson(run).as[JsObject] ++ Json.obj(
       "tasks" -> tasks.map(Json.toJson(_))
     )
 
-  private def artifactEntryWrites(artifact: ArtifactEntry): (String, JsObject) =
+  private def artifactEntryPublicWrites(artifact: ArtifactEntry): (String, JsObject) =
     (artifact.name,
      artifact.metadata ++
        Json.obj(
@@ -136,16 +136,16 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
          "taskName" -> artifact.taskName
        ))
 
-  def artifactsWrites(artifacts: List[ArtifactEntry]): JsObject = {
+  def artifactsPublicWrites(artifacts: List[ArtifactEntry]): JsObject = {
     val artifactsByTask = artifacts.groupBy(_.taskName)
     JsObject(artifactsByTask.map(artifactKV => {
       val taskName = artifactKV._1
       val artifacts = artifactKV._2
-      (taskName, JsObject(artifacts.map(artifactEntryWrites)))
+      (taskName, JsObject(artifacts.map(artifactEntryPublicWrites)))
     }))
   }
 
-  def workflowConfigWrites(workflowConfig: JsObject, tasks: List[TaskEntry]): JsObject =
+  def workflowConfigPublicWrites(workflowConfig: JsObject, tasks: List[TaskEntry]): JsObject =
     workflowConfig ++ Json.obj("tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
 
   def aggregateBeginEndTime(runs: List[RunEntry]): (VoxelyticsRunState, Instant, Option[Instant]) = {

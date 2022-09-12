@@ -84,7 +84,7 @@ class VoxelyticsController @Inject()(
                     "state" -> state.toString(),
                     "runs" -> workflowRuns.map(run => {
                       val tasks = taskRuns.filter(taskRun => taskRun.runId == run.id)
-                      voxelyticsService.runWrites(run, tasks)
+                      voxelyticsService.runPublicWrites(run, tasks)
                     })
                   ))
               } else {
@@ -134,10 +134,11 @@ class VoxelyticsController @Inject()(
         // Assemble workflow report JSON
         (state, beginTime, endTime) = voxelyticsService.aggregateBeginEndTime(runs)
         result = Json.obj(
-          "config" -> voxelyticsService.workflowConfigWrites(mostRecentRun.workflow_config, tasks),
-          "artifacts" -> voxelyticsService.artifactsWrites(artifacts),
-          "run" -> voxelyticsService
-            .runWrites(mostRecentRun.copy(state = state, beginTime = beginTime, endTime = endTime), combinedTaskRuns),
+          "config" -> voxelyticsService.workflowConfigPublicWrites(mostRecentRun.workflow_config, tasks),
+          "artifacts" -> voxelyticsService.artifactsPublicWrites(artifacts),
+          "run" -> voxelyticsService.runPublicWrites(
+            mostRecentRun.copy(state = state, beginTime = beginTime, endTime = endTime),
+            combinedTaskRuns),
           "workflow" -> Json.obj(
             "name" -> workflow.name,
             "hash" -> workflowHash,

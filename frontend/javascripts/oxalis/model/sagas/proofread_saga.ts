@@ -60,7 +60,7 @@ export default function* proofreadMapping(): Saga<any> {
     splitOrMergeOrMinCutAgglomerate,
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
-  yield* takeEvery(["CLEAR_PROOF_READING_BY_PRODUCTS"], clearProofReadingByProducts);
+  yield* takeEvery(["CLEAR_PROOFREADING_BY_PRODUCTS"], clearProofreadingByProducts);
 }
 
 function proofreadCoarseResolutionIndex(): number {
@@ -539,7 +539,7 @@ function* splitOrMergeOrMinCutAgglomerate(
   }
 }
 
-function* clearProofReadingByProducts() {
+function* clearProofreadingByProducts() {
   for (const treeId of loadedAgglomerateSkeletonIds) {
     yield* put(deleteTreeAction(treeId));
   }

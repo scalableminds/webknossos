@@ -1,9 +1,9 @@
 import { Vector3 } from "oxalis/constants";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;
-export type ClearProofReadingByProductsAction = ReturnType<typeof clearProofReadingByProducts>;
+export type ClearProofreadingByProductsAction = ReturnType<typeof clearProofreadingByProducts>;
 
-export type ProofreadAction = ProofreadAtPositionAction | ClearProofReadingByProductsAction;
+export type ProofreadAction = ProofreadAtPositionAction | ClearProofreadingByProductsAction;
 
 export const proofreadAtPosition = (position: Vector3) =>
   ({
@@ -11,7 +11,7 @@ export const proofreadAtPosition = (position: Vector3) =>
     position,
   } as const);
 
-export const clearProofReadingByProducts = () =>
+export const clearProofreadingByProducts = () =>
   ({
-    type: "CLEAR_PROOF_READING_BY_PRODUCTS",
+    type: "CLEAR_PROOFREADING_BY_PRODUCTS",
   } as const);

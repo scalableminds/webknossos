@@ -53,7 +53,7 @@ import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
-import { clearProofReadingByProducts } from "oxalis/model/actions/proofread_actions";
+import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -858,7 +858,7 @@ function ToolSpecificSettings({
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
       adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
   const dispatch = useDispatch();
-  const handleClearProofReading = () => dispatch(clearProofReadingByProducts());
+  const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
 
   return (
     <>
@@ -915,7 +915,7 @@ function ToolSpecificSettings({
       {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? (
         <ButtonComponent
           title="Clear auxiliary skeletons and meshes which were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
-          onClick={handleClearProofReading}
+          onClick={handleClearProofreading}
           className="narrow"
           style={{ marginLeft: 12 }}
         >

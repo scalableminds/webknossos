@@ -461,8 +461,10 @@ function* splitOrMergeOrMinCutAgglomerate(
 
   yield* call([api.data, api.data.reloadBuckets], layerName);
 
-  const newSourceNodeAgglomerateId = yield* call(getDataValue, sourceNodePosition);
-  const newTargetNodeAgglomerateId = yield* call(getDataValue, targetNodePosition);
+  const [newSourceNodeAgglomerateId, newTargetNodeAgglomerateId] = yield* all([
+    call(getDataValue, sourceNodePosition),
+    call(getDataValue, targetNodePosition),
+  ]);
 
   /* Rename agglomerate skeleton(s) according to their new id and mapping name */
 
@@ -610,8 +612,10 @@ function* handleProofreadMergeAndSplit(action: ProofreadMergeAction) {
 
   yield* call([api.data, api.data.reloadBuckets], layerName);
 
-  const newSourceNodeAgglomerateId = yield* call(getDataValue, sourceNodePosition);
-  const newTargetNodeAgglomerateId = yield* call(getDataValue, targetNodePosition);
+  const [newSourceNodeAgglomerateId, newTargetNodeAgglomerateId] = yield* all([
+    call(getDataValue, sourceNodePosition),
+    call(getDataValue, targetNodePosition),
+  ]);
 
   /* Reload agglomerate skeleton */
   if (volumeTracing.mappingName == null) return;
@@ -690,8 +694,10 @@ function* getPartnerAgglomerateIds(
   sourceNodeAgglomerateId: number;
   targetNodeAgglomerateId: number;
 } | null> {
-  const sourceNodeAgglomerateId = yield* call(getDataValue, sourceNodePosition);
-  const targetNodeAgglomerateId = yield* call(getDataValue, targetNodePosition);
+  const [sourceNodeAgglomerateId, targetNodeAgglomerateId] = yield* all([
+    call(getDataValue, sourceNodePosition),
+    call(getDataValue, targetNodePosition),
+  ]);
 
   const volumeTracingWithEditableMapping = yield* select((state) =>
     getActiveSegmentationTracing(state),

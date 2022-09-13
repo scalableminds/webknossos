@@ -374,11 +374,16 @@ export function* loadAgglomerateSkeletonWithId(
       addTreesAndGroupsAction(
         createMutableTreeMapFromTreeArray(parsedTracing.trees),
         parsedTracing.treeGroups,
-        (newTreeIds) => (usedTreeIds = newTreeIds),
+        (newTreeIds) => {
+          usedTreeIds = newTreeIds;
+        },
       ),
     );
+    // @ts-ignore TS infers usedTreeIds to be never, but it should be number[] if its not null
     if (usedTreeIds == null || usedTreeIds.length !== 1) {
-      throw new Error("Assumption violated while adding agglomerate skeleton");
+      throw new Error(
+        "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
+      );
     } else {
       console.log(usedTreeIds);
     }

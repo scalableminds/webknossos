@@ -711,7 +711,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     dispatch(loadAdHocMeshAction(segmentId, globalPosition));
   };
 
-  const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
+  const activeNodeId = skeletonTracing?.activeNodeId;
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions =
@@ -986,7 +986,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
 
   if (contextMenuPosition != null && maybeViewport != null) {
     const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
-    const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
+    const activeNodeId = skeletonTracing?.activeNodeId;
 
     let nodeContextMenuTree: Tree | null = null;
     let nodeContextMenuNode: MutableNode | null = null;

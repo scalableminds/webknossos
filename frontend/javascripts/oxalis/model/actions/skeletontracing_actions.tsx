@@ -59,7 +59,7 @@ export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSke
 export type RemoveAgglomerateSkeletonAction = ReturnType<typeof removeAgglomerateSkeletonAction>;
 type NoAction = ReturnType<typeof noAction>;
 
-export type SkeletonTracingAction = 
+export type SkeletonTracingAction =
   | InitializeSkeletonTracingAction
   | CreateNodeAction
   | DeleteNodeAction
@@ -262,11 +262,13 @@ export const createTreeAction = (timestamp: number = Date.now()) =>
 export const addTreesAndGroupsAction = (
   trees: MutableTreeMap,
   treeGroups: Array<TreeGroup> | null | undefined,
+  treeIdsCallback: ((ids: number[]) => void) | undefined = undefined,
 ) =>
   ({
     type: "ADD_TREES_AND_GROUPS",
     trees,
     treeGroups: treeGroups || [],
+    treeIdsCallback,
   } as const);
 
 export const deleteTreeAction = (treeId?: number, suppressActivatingNextNode: boolean = false) =>

@@ -803,8 +803,11 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           const { trees, treeGroups } = action;
           const treesWithNames = ensureTreeNames(state, trees);
           return addTreesAndGroups(skeletonTracing, treesWithNames, treeGroups)
-            .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) =>
-              update(state, {
+            .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) => {
+              if (action.treeIdsCallback) {
+                action.treeIdsCallback(Utils.values(updatedTrees).map((tree) => tree.treeId));
+              }
+              return update(state, {
                 tracing: {
                   skeleton: {
                     treeGroups: {
@@ -818,8 +821,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                     },
                   },
                 },
-              }),
-            )
+              });
+            })
             .getOrElse(state);
         }
 

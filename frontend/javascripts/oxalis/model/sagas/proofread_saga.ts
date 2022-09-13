@@ -141,7 +141,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   /* Load agglomerate skeleton of the agglomerate at the click position */
 
-  const treeName = yield* call(
+  const treeNameAndId = yield* call(
     loadAgglomerateSkeletonWithId,
     loadAgglomerateSkeletonAction(layerName, volumeTracing.mappingName, segmentId),
   );
@@ -152,7 +152,8 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   yield* call(loadCoarseAdHocMesh, layerName, segmentId, position);
 
-  if (treeName == null) return;
+  if (treeNameAndId == null) return;
+  const [treeName] = treeNameAndId;
 
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
   const { trees } = skeletonTracing;
@@ -667,10 +668,13 @@ function* handleProofreadMergeOrSplitOrMinCut(
   /* Reload agglomerate skeleton */
   if (volumeTracing.mappingName == null) return;
   yield* put(deleteTreeAction(sourceTree.treeId, true));
-  yield* call(
+  const treeNameAndId = yield* call(
     loadAgglomerateSkeletonWithId,
     loadAgglomerateSkeletonAction(layerName, volumeTracing.mappingName, newSourceNodeAgglomerateId),
   );
+  if (treeNameAndId) {
+    loadedAgglomerateSkeletonIds.push(treeNameAndId[1]);
+  }
 
   yield* put(setBusyBlockingInfoAction(false));
 

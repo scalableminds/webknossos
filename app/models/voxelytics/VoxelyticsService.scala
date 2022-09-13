@@ -43,9 +43,9 @@ object TaskRunEntry {
 }
 
 case class WorkflowEntry(
-    name: String,
-    hash: String
-)
+                          name: String,
+                          hash: String
+                        )
 
 object WorkflowEntry {
   implicit val jsonFormat: OFormat[WorkflowEntry] = Json.format[WorkflowEntry]
@@ -124,17 +124,17 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
 
   private def artifactEntryPublicWrites(artifact: ArtifactEntry): (String, JsObject) =
     (artifact.name,
-     artifact.metadata ++
-       Json.obj(
-         "artifactId" -> artifact.artifactId.id,
-         "taskId" -> artifact.taskId.id,
-         "name" -> artifact.name,
-         "path" -> artifact.path,
-         "fileSize" -> artifact.fileSize,
-         "inodeCount" -> artifact.inodeCount,
-         "version" -> artifact.version,
-         "taskName" -> artifact.taskName
-       ))
+      artifact.metadata ++
+        Json.obj(
+          "artifactId" -> artifact.artifactId.id,
+          "taskId" -> artifact.taskId.id,
+          "name" -> artifact.name,
+          "path" -> artifact.path,
+          "fileSize" -> artifact.fileSize,
+          "inodeCount" -> artifact.inodeCount,
+          "version" -> artifact.version,
+          "taskName" -> artifact.taskName
+        ))
 
   def artifactsPublicWrites(artifacts: List[ArtifactEntry]): JsObject = {
     val artifactsByTask = artifacts.groupBy(_.taskName)
@@ -146,9 +146,11 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
   }
 
   def workflowConfigPublicWrites(workflowConfig: JsObject, tasks: List[TaskEntry]): JsObject =
-    workflowConfig ++ Json.obj("tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
+    workflowConfig ++
+      Json.obj("tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
 
   def aggregateBeginEndTime(runs: List[RunEntry]): (VoxelyticsRunState, Instant, Option[Instant]) = {
+    // The calling code needs to make sure that runs is non-empty, otherwise the next lines will throw exceptions
     val state = runs.maxBy(_.beginTime).state
     val beginTime = runs.map(_.beginTime).min
     val endTime = Try(runs.flatMap(_.endTime).max).toOption
@@ -175,10 +177,10 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
         taskName,
         task.task,
         Json.obj("config" -> task.config,
-                 "description" -> task.description,
-                 "distribution" -> task.distribution,
-                 "inputs" -> task.inputs,
-                 "output_paths" -> task.output_paths)
+          "description" -> task.description,
+          "distribution" -> task.distribution,
+          "inputs" -> task.inputs,
+          "output_paths" -> task.output_paths)
       )
       _ <- Fox.combined(
         artifacts
@@ -187,12 +189,12 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
             val artifactName = artifactKV._1
             val artifact = artifactKV._2
             voxelyticsDAO.upsertArtifact(taskId,
-                                         artifactName,
-                                         artifact.path,
-                                         artifact.file_size,
-                                         artifact.inode_count,
-                                         artifact.version,
-                                         artifact.metadataAsJson)
+              artifactName,
+              artifact.path,
+              artifact.file_size,
+              artifact.inode_count,
+              artifact.version,
+              artifact.metadataAsJson)
           })
           .toList)
     } yield ()

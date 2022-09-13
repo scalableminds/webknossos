@@ -271,10 +271,17 @@ export const addTreesAndGroupsAction = (
     treeGroups: treeGroups || [],
   } as const);
 
-export const deleteTreeAction = (treeId?: number) =>
+export const deleteTreeAction = (treeId?: number, suppressActivatingNextNode: boolean = false) =>
+  // If suppressActivatingNextNode is true, the tree will be deleted without activating
+  // another node (nor tree). Use this in cases where you want to avoid changing
+  // the active position (due to the auto-centering). One could also suppress the auto-centering
+  // behavior, but the semantics of changing the active node might also be confusing to the user
+  // (e.g., when proofreading). So, it might be clearer to not have an active node in the first
+  // place.
   ({
     type: "DELETE_TREE",
     treeId,
+    suppressActivatingNextNode,
   } as const);
 
 export const resetSkeletonTracingAction = () =>

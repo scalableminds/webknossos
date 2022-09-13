@@ -824,9 +824,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "DELETE_TREE": {
-          const { treeId } = action;
+          const { treeId, suppressActivatingNextNode } = action;
           return getTree(skeletonTracing, treeId)
-            .chain((tree) => deleteTree(skeletonTracing, tree))
+            .chain((tree) => deleteTree(skeletonTracing, tree, suppressActivatingNextNode))
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {

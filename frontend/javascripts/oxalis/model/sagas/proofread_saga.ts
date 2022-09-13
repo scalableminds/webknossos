@@ -59,7 +59,7 @@ import { APISegmentationLayer } from "types/api_flow_types";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import _ from "lodash";
 
-export default function* proofreadMapping(): Saga<any> {
+export default function* proofreadRootSaga(): Saga<any> {
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
   yield* takeEvery(
@@ -177,21 +177,15 @@ function* loadFineAdHocMeshesInProximity(
     (nodePosition) =>
       V3.scaledSquaredDist(nodePosition, position, scale) <= proximityDistanceSquared,
   );
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  const mag = resolutionInfo.getLowestResolution();
 
-  const fallbackLayerName = volumeTracingLayer.fallbackLayer;
-  if (fallbackLayerName == null) return;
+  const getUnmappedDataValue = yield* call(createGetUnmappedDataValueFn, volumeTracingLayer);
+  if (!getUnmappedDataValue) {
+    return;
+  }
 
   // Request unmapped segmentation ids
-  const TypedArrayClass = yield* select((state) => {
-    const { elementClass } = getLayerByName(state.dataset, layerName);
-    return getConstructorForElementClass(elementClass)[0];
-  });
   const segmentIdsInProximity = yield* all(
-    nodePositionsInProximity.map((nodePosition) =>
-      call(getUnmappedDataValue, TypedArrayClass, nodePosition, fallbackLayerName, mag),
-    ),
+    nodePositionsInProximity.map((nodePosition) => call(getUnmappedDataValue, nodePosition)),
   );
 
   if (oldSegmentIdsInProximity != null) {
@@ -229,21 +223,6 @@ function* loadFineAdHocMeshesInProximity(
       ),
     ),
   );
-}
-
-async function getUnmappedDataValue(
-  TypedArrayClass: TypedArrayConstructor,
-  nodePosition: Vector3,
-  fallbackLayerName: string,
-  mag: Vector3,
-): Promise<number> {
-  const buffer = await api.data.getRawDataCuboid(
-    fallbackLayerName,
-    nodePosition,
-    V3.add(nodePosition, mag),
-  );
-
-  return Number(new TypedArrayClass(buffer)[0]);
 }
 
 function* createEditableMapping(): Saga<void> {
@@ -341,6 +320,7 @@ function* splitOrMergeOrMinCutAgglomerate(
 
   const partnerInfos = yield* call(
     getPartnerAgglomerateIds,
+    volumeTracingLayer,
     getDataValue,
     sourceNodePosition,
     targetNodePosition,
@@ -504,7 +484,7 @@ function* splitOrMergeOrMinCutAgglomerate(
 
 function* clearProofreadingByproducts() {
   for (const treeId of loadedAgglomerateSkeletonIds) {
-    yield* put(deleteTreeAction(treeId));
+    yield* put(deleteTreeAction(treeId, true));
   }
 
   loadedAgglomerateSkeletonIds = [];
@@ -555,6 +535,7 @@ function* handleProofreadMergeAndSplit(action: ProofreadMergeAction) {
 
   const partnerInfos = yield* call(
     getPartnerAgglomerateIds,
+    volumeTracingLayer,
     getDataValue,
     sourceNodePosition,
     targetNodePosition,
@@ -590,6 +571,13 @@ function* handleProofreadMergeAndSplit(action: ProofreadMergeAction) {
       yield* put(setBusyBlockingInfoAction(false));
       return;
     }
+    if (partnerInfos.unmappedSourceId === partnerInfos.unmappedTargetId) {
+      Toast.error(
+        "The selected positions are both part of the same base segment and cannot be split. Please select another position or use the nodes of the agglomerate skeleton to perform the split.",
+      );
+      yield* put(setBusyBlockingInfoAction(false));
+      return;
+    }
     items.push(
       splitAgglomerate(
         sourceNodeAgglomerateId,
@@ -619,7 +607,7 @@ function* handleProofreadMergeAndSplit(action: ProofreadMergeAction) {
 
   /* Reload agglomerate skeleton */
   if (volumeTracing.mappingName == null) return;
-  yield* put(deleteTreeAction(sourceTree.treeId));
+  yield* put(deleteTreeAction(sourceTree.treeId, true));
   yield* call(
     loadAgglomerateSkeletonWithId,
     loadAgglomerateSkeletonAction(layerName, volumeTracing.mappingName, newSourceNodeAgglomerateId),
@@ -686,6 +674,7 @@ function* prepareSplitOrMerge(
 }
 
 function* getPartnerAgglomerateIds(
+  volumeTracingLayer: APISegmentationLayer,
   getDataValue: (position: Vector3) => Promise<number>,
   sourceNodePosition: Vector3,
   targetNodePosition: Vector3,
@@ -693,11 +682,20 @@ function* getPartnerAgglomerateIds(
   volumeTracingWithEditableMapping: VolumeTracing & { mappingName: string };
   sourceNodeAgglomerateId: number;
   targetNodeAgglomerateId: number;
+  unmappedSourceId: number;
+  unmappedTargetId: number;
 } | null> {
-  const [sourceNodeAgglomerateId, targetNodeAgglomerateId] = yield* all([
-    call(getDataValue, sourceNodePosition),
-    call(getDataValue, targetNodePosition),
-  ]);
+  const getUnmappedDataValue = yield* call(createGetUnmappedDataValueFn, volumeTracingLayer);
+  if (!getUnmappedDataValue) {
+    return null;
+  }
+  const [sourceNodeAgglomerateId, targetNodeAgglomerateId, unmappedSourceId, unmappedTargetId] =
+    yield* all([
+      call(getDataValue, sourceNodePosition),
+      call(getDataValue, targetNodePosition),
+      call(getUnmappedDataValue, sourceNodePosition),
+      call(getUnmappedDataValue, targetNodePosition),
+    ]);
 
   const volumeTracingWithEditableMapping = yield* select((state) =>
     getActiveSegmentationTracing(state),
@@ -711,6 +709,8 @@ function* getPartnerAgglomerateIds(
     volumeTracingWithEditableMapping: { ...volumeTracingWithEditableMapping, mappingName },
     sourceNodeAgglomerateId,
     targetNodeAgglomerateId,
+    unmappedSourceId,
+    unmappedTargetId,
   };
 }
 
@@ -746,4 +746,31 @@ function* removeOldMeshesAndLoadUpdatedMeshes(
       yield* call(loadCoarseAdHocMesh, layerName, newTargetNodeAgglomerateId, targetNodePosition);
     }
   }
+}
+
+function* createGetUnmappedDataValueFn(
+  volumeTracingLayer: APISegmentationLayer,
+): Saga<((nodePosition: Vector3) => Promise<number>) | null> {
+  if (volumeTracingLayer.tracingId == null) return null;
+  const layerName = volumeTracingLayer.tracingId;
+
+  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
+  const mag = resolutionInfo.getLowestResolution();
+
+  const fallbackLayerName = volumeTracingLayer.fallbackLayer;
+  if (fallbackLayerName == null) return null;
+  const TypedArrayClass = yield* select((state) => {
+    const { elementClass } = getLayerByName(state.dataset, layerName);
+    return getConstructorForElementClass(elementClass)[0];
+  });
+
+  return async (nodePosition: Vector3) => {
+    const buffer = await api.data.getRawDataCuboid(
+      fallbackLayerName,
+      nodePosition,
+      V3.add(nodePosition, mag),
+    );
+
+    return Number(new TypedArrayClass(buffer)[0]);
+  };
 }

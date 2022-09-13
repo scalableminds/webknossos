@@ -28,13 +28,6 @@ class ShortlinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[
     } yield Ok(Json.toJson(inserted))
   }
 
-  def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      idValidated <- ObjectId.fromString(id)
-      shortLink <- shortLinkDAO.findOne(idValidated)
-    } yield Ok(Json.toJson(shortLink))
-  }
-
   def getByShortLink(shortLink: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       sl <- shortLinkDAO.findOneByShortLink(shortLink)

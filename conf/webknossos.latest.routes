@@ -239,6 +239,5 @@ GET           /publications                                                     
 GET           /publications/:id                                                         controllers.PublicationController.read(id: String)
 
 # Shortlinks
-GET           /shortlinks/:id                                                           controllers.ShortlinkController.get(id: String)
 POST          /shortlinks                                                               controllers.ShortlinkController.create
 GET           /shortlinks/byShortLink/:link                                             controllers.ShortlinkController.getByShortLink(link: String)

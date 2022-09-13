@@ -11,27 +11,24 @@ import slick.jdbc.PostgresProfile.api._
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class ShortLink(_id: ObjectId,
-                     shortLink: String,
-                     longLink: String)
+case class ShortLink(_id: ObjectId, shortLink: String, longLink: String)
 
 object ShortLink {
   implicit val jsonFormat: OFormat[ShortLink] = Json.format[ShortLink]
 }
 
-class ShortLinkService @Inject()()(implicit ec: ExecutionContext){
-  def toJson(sl: ShortLink): Fox[JsObject] = {
+class ShortLinkService @Inject()()(implicit ec: ExecutionContext) {
+  def toJson(sl: ShortLink): Fox[JsObject] =
     Fox.successful(
       Json.obj(
         "id" -> sl._id.toString,
         "shortLink" -> sl.shortLink,
         "longLink" -> sl.longLink,
       ))
-  }
 }
 
 class ShortLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
-  extends SQLDAO[ShortLink, ShortlinksRow, Shortlinks](sqlClient) {
+    extends SQLDAO[ShortLink, ShortlinksRow, Shortlinks](sqlClient) {
   val collection = Shortlinks
 
   def idColumn(x: Shortlinks): Rep[String] = x._Id
@@ -47,31 +44,22 @@ class ShortLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       )
     )
 
-  def insertOne(sl: ShortLink): Fox[Unit] = {
+  def insertOne(sl: ShortLink): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""insert into webknossos.shortlinks(_id, shortlink, longlink)
+      _ <- run(sqlu"""insert into webknossos.shortlinks(_id, shortlink, longlink)
                          values(${sl._id}, ${sl.shortLink}, ${sl.longLink})""")
     } yield ()
-  }
 
   def findOne(id: String): Fox[ShortLink] =
     for {
-      r <- run(
-        sql"select #$columns from webknossos.shortlinks where id = ${id}"
-          .as[ShortlinksRow])
+      r <- run(sql"select #$columns from webknossos.shortlinks where id = ${id}".as[ShortlinksRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
-
   def findOneByShortLink(shortLink: String): Fox[ShortLink] =
     for {
-      r <- run(
-        sql"select #$columns from webknossos.shortlinks where shortLink = ${shortLink}"
-          .as[ShortlinksRow])
+      r <- run(sql"select #$columns from webknossos.shortlinks where shortLink = ${shortLink}".as[ShortlinksRow])
       parsed <- parseFirst(r, shortLink)
     } yield parsed
-
-
 
 }

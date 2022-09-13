@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-DROP TABLE webknossos.shortlinks;
+DROP TABLE webknossos.shortLinks;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 87;
 

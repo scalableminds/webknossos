@@ -241,4 +241,4 @@ GET           /publications/:id                                                 
 # Shortlinks
 GET           /shortlinks/:id                                                           controllers.ShortlinkController.get(id: String)
 POST          /shortlinks                                                               controllers.ShortlinkController.create
-GET           /shortlinks/byValue/:link                                                 controllers.ShortlinkController.get_by_value(link: String)
+GET           /shortlinks/byShortLink/:link                                             controllers.ShortlinkController.getByShortLink(link: String)

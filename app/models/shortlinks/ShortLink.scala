@@ -36,19 +36,19 @@ class ShortLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def insertOne(sl: ShortLink): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.shortlinks(_id, shortlink, longlink)
+      _ <- run(sqlu"""insert into webknossos.shortLinks(_id, shortlink, longlink)
                          values(${sl._id}, ${sl.shortLink}, ${sl.longLink})""")
     } yield ()
 
   def findOne(id: String): Fox[ShortLink] =
     for {
-      r <- run(sql"select #$columns from webknossos.shortlinks where id = ${id}".as[ShortlinksRow])
+      r <- run(sql"select #$columns from webknossos.shortLinks where id = ${id}".as[ShortlinksRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   def findOneByShortLink(shortLink: String): Fox[ShortLink] =
     for {
-      r <- run(sql"select #$columns from webknossos.shortlinks where shortLink = ${shortLink}".as[ShortlinksRow])
+      r <- run(sql"select #$columns from webknossos.shortLinks where shortLink = ${shortLink}".as[ShortlinksRow])
       parsed <- parseFirst(r, shortLink)
     } yield parsed
 

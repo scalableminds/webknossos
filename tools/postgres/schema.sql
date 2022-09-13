@@ -426,7 +426,7 @@ CREATE TABLE webknossos.annotation_privateLinks(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TABLE webknossos.shortlinks(
+CREATE TABLE webknossos.shortLinks(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   shortLink CHAR(16) NOT NULL UNIQUE,
   longLink Text NOT NULL

@@ -374,6 +374,7 @@ voxelytics.workflowNotFound = Workflow not found
 voxelytics.noTaskFound = No tasks found
 voxelytics.noWorkflowFound = No workflows found
 voxelytics.workflowUserMismatch = Workflow run already exists by other user
+voxelytics.zeroRunWorkflow = No run for this workflow found
 
 publication.notFound = Publication could not be found.
 

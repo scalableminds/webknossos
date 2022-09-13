@@ -161,20 +161,14 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
       .filter(task => task.runId == mostRecentRunId)
       .map(task => {
         val thisTaskRuns = allTaskRuns.filter(t => t.taskName == task.taskName).sortBy(_.beginTime)
-        val nonWaitingTaskRuns = thisTaskRuns.filter(t => {
-          t.state == VoxelyticsRunState.RUNNING || t.state == VoxelyticsRunState.COMPLETE || t.state == VoxelyticsRunState.FAILED || t.state == VoxelyticsRunState.CANCELLED
-        })
-        if (nonWaitingTaskRuns.nonEmpty) {
-          nonWaitingTaskRuns.head
-        } else {
-          thisTaskRuns.head
-        }
+        val nonWaitingTaskRuns = thisTaskRuns.filter(t => VoxelyticsRunState.nonWaitingStates.contains(t.state))
+        nonWaitingTaskRuns.headOption.getOrElse(thisTaskRuns.head)
       })
 
-  def upsertTask(runId: ObjectId,
-                 taskName: String,
-                 task: WorkflowDescriptionTaskConfig,
-                 artifacts: Map[String, Map[String, WorkflowDescriptionArtifact]]): Fox[Unit] =
+  def upsertTaskWithArtifacts(runId: ObjectId,
+                              taskName: String,
+                              task: WorkflowDescriptionTaskConfig,
+                              artifacts: Map[String, Map[String, WorkflowDescriptionArtifact]]): Fox[Unit] =
     for {
       taskId <- voxelyticsDAO.upsertTask(
         runId,

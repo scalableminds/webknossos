@@ -12,6 +12,7 @@ import type {
 import type {
   ActiveMappingInfo,
   MutableNode,
+  MutableTreeMap,
   OxalisState,
   SkeletonTracing,
   Tree,
@@ -38,12 +39,14 @@ import {
 import {
   deleteEdgeAction,
   mergeTreesAction,
+  minCutAgglomerateAction,
   deleteNodeAction,
   setActiveNodeAction,
   createTreeAction,
   setTreeVisibilityAction,
   createBranchPointAction,
   deleteBranchpointByIdAction,
+  addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -79,6 +82,8 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
+import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import Store from "oxalis/store";
 const { SubMenu } = Menu;
 
 /* eslint-disable react/no-unused-prop-types */
@@ -94,10 +99,12 @@ type OwnProps = {
 type DispatchProps = {
   deleteEdge: (arg0: number, arg1: number) => void;
   mergeTrees: (arg0: number, arg1: number) => void;
+  minCutAgglomerate: (arg0: number, arg1: number) => void;
   deleteNode: (arg0: number, arg1: number) => void;
   setActiveNode: (arg0: number) => void;
   hideTree: (arg0: number) => void;
   createTree: () => void;
+  addTreesAndGroups: (arg0: MutableTreeMap) => void;
   hideBoundingBox: (arg0: number) => void;
   setBoundingBoxColor: (arg0: number, arg1: Vector3) => void;
   setBoundingBoxName: (arg0: number, arg1: string) => void;
@@ -168,6 +175,19 @@ function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: nu
     )} (${formatLengthAsVx(lengthVx)}).`,
     icon: <i className="fas fa-ruler" />,
   });
+}
+
+function extractShortestPathAsNewTree(
+  sourceTree: Tree,
+  sourceNodeId: number,
+  targetNodeId: number,
+) {
+  const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
+  const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath).getOrElse(null);
+  if (newTree != null) {
+    const treeMap = { [newTree.treeId]: newTree };
+    Store.dispatch(addTreesAndGroupsAction(treeMap, null));
+  }
 }
 
 function measureAndShowFullTreeLength(treeId: number, treeName: string) {
@@ -324,6 +344,7 @@ function NodeContextMenuOptions({
   hideContextMenu,
   deleteEdge,
   mergeTrees,
+  minCutAgglomerate,
   deleteNode,
   createBranchPoint,
   deleteBranchpointById,
@@ -334,6 +355,9 @@ function NodeContextMenuOptions({
   infoRows,
   allowUpdate,
 }: NodeContextMenuOptionsProps): JSX.Element {
+  const isProofreadingActive = useSelector(
+    (state: OxalisState) => state.uiInformation.activeTool === "PROOFREAD",
+  );
   const dispatch = useDispatch();
 
   if (skeletonTracing == null) {
@@ -383,6 +407,17 @@ function NodeContextMenuOptions({
             Create Edge & Merge with this Tree{" "}
             {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
           </Menu.Item>
+          {isProofreadingActive ? (
+            <Menu.Item
+              key="min-cut-node"
+              disabled={!areInSameTree || isTheSameNode}
+              onClick={() =>
+                activeNodeId != null ? minCutAgglomerate(clickedNodeId, activeNodeId) : null
+              }
+            >
+              Perform Min-Cut between these Nodes
+            </Menu.Item>
+          ) : null}
           <Menu.Item
             key="delete-edge"
             disabled={!areNodesConnected}
@@ -418,6 +453,19 @@ function NodeContextMenuOptions({
               }
             >
               Mark as Branchpoint {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
+            </Menu.Item>
+          )}
+          {isTheSameNode ? null : (
+            <Menu.Item
+              key="extract-shortest-path"
+              disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+              onClick={() =>
+                activeNodeId != null
+                  ? extractShortestPathAsNewTree(clickedTree, activeNodeId, clickedNodeId)
+                  : null
+              }
+            >
+              Extract shortest Path to this Node
             </Menu.Item>
           )}
         </>
@@ -1031,12 +1079,20 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(mergeTreesAction(sourceNodeId, targetNodeId));
   },
 
+  minCutAgglomerate(sourceNodeId: number, targetNodeId: number) {
+    dispatch(minCutAgglomerateAction(sourceNodeId, targetNodeId));
+  },
+
   deleteNode(nodeId: number, treeId: number) {
     dispatch(deleteNodeAction(nodeId, treeId));
   },
 
   createBranchPoint(nodeId: number, treeId: number) {
     dispatch(createBranchPointAction(nodeId, treeId));
+  },
+
+  addTreesAndGroups(treeMap: MutableTreeMap) {
+    dispatch(addTreesAndGroupsAction(treeMap, null));
   },
 
   deleteBranchpointById(nodeId: number, treeId: number) {

@@ -17,7 +17,7 @@ import _ from "lodash";
 import moment from "moment";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { withRouter, Link } from "react-router-dom";
 import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
 import type {
   APIDataSource,
@@ -37,7 +37,6 @@ import {
   updateDataset,
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
-  readDatasetDatasource,
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
@@ -237,58 +236,51 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       let dataset = await getDataset(this.props.datasetId);
       let dataSource;
 
-      if (dataset.isForeign) {
-        dataSource = await readDatasetDatasource(dataset);
-        this.setState({
-          savedDataSourceOnServer: dataSource,
-        });
-      } else {
-        const dataSourceSettingsStatus = {
-          appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
-          isJSONFormatValid: IsJSONFormatValidEnum.No,
-        };
-        const {
-          dataSource: inferredDataSource,
-          messages: dataSourceMessages,
-          previousDataSource: savedDataSourceOnServer,
-        } = await getDatasetDatasource(dataset);
-        const didParsingTheSavedDataSourceJSONSucceed =
-          savedDataSourceOnServer != null && savedDataSourceOnServer.status == null;
+      const dataSourceSettingsStatus = {
+        appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
+        isJSONFormatValid: IsJSONFormatValidEnum.No,
+      };
+      const {
+        dataSource: inferredDataSource,
+        messages: dataSourceMessages,
+        previousDataSource: savedDataSourceOnServer,
+      } = await getDatasetDatasource(dataset);
+      const didParsingTheSavedDataSourceJSONSucceed =
+        savedDataSourceOnServer != null && savedDataSourceOnServer.status == null;
 
-        if (didParsingTheSavedDataSourceJSONSucceed) {
-          dataSource = savedDataSourceOnServer;
+      if (didParsingTheSavedDataSourceJSONSucceed) {
+        dataSource = savedDataSourceOnServer;
 
-          if (isDatasourceJSONValid(savedDataSourceOnServer)) {
-            dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.Yes;
-          }
-
-          const diff = diffObjects(inferredDataSource || {}, savedDataSourceOnServer);
-          const areObjectsEqual = _.size(diff) === 0;
-
-          if (!areObjectsEqual) {
-            dataSourceSettingsStatus.appliedSuggestions = AppliedSuggestionsEnum.No;
-            this.setState({
-              differenceBetweenDataSources: diff,
-            });
-          }
-        } else {
-          // If the current datasource json is invalid, the inferred version should be used automatically.
-          dataSource = inferredDataSource;
-          dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.BrokenJson;
-          dataSourceSettingsStatus.appliedSuggestions = AppliedSuggestionsEnum.Yes;
+        if (isDatasourceJSONValid(savedDataSourceOnServer)) {
+          dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.Yes;
         }
 
-        const inferredDataSourceWithCorrectedScale = ensureValidScaleOnInferredDataSource(
-          savedDataSourceOnServer,
-          inferredDataSource,
-        );
-        this.setState({
-          savedDataSourceOnServer,
-          inferredDataSource: inferredDataSourceWithCorrectedScale,
-          messages: dataSourceMessages,
-          dataSourceSettingsStatus,
-        });
+        const diff = diffObjects(inferredDataSource || {}, savedDataSourceOnServer);
+        const areObjectsEqual = _.size(diff) === 0;
+
+        if (!areObjectsEqual) {
+          dataSourceSettingsStatus.appliedSuggestions = AppliedSuggestionsEnum.No;
+          this.setState({
+            differenceBetweenDataSources: diff,
+          });
+        }
+      } else {
+        // If the current datasource json is invalid, the inferred version should be used automatically.
+        dataSource = inferredDataSource;
+        dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.BrokenJson;
+        dataSourceSettingsStatus.appliedSuggestions = AppliedSuggestionsEnum.Yes;
       }
+
+      const inferredDataSourceWithCorrectedScale = ensureValidScaleOnInferredDataSource(
+        savedDataSourceOnServer,
+        inferredDataSource,
+      );
+      this.setState({
+        savedDataSourceOnServer,
+        inferredDataSource: inferredDataSourceWithCorrectedScale,
+        messages: dataSourceMessages,
+        dataSourceSettingsStatus,
+      });
 
       if (dataSource == null) {
         throw new Error("No datasource received from server.");
@@ -662,12 +654,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     await updateDatasetTeams(this.props.datasetId, teamIds);
     const dataSource = JSON.parse(formValues.dataSourceJson);
 
-    if (
-      dataset != null &&
-      !dataset.isForeign &&
-      !dataset.dataStore.isConnector &&
-      this.didDatasourceChange(dataSource)
-    ) {
+    if (dataset != null && !dataset.dataStore.isConnector && this.didDatasourceChange(dataSource)) {
       await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
@@ -798,7 +785,16 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const form = this.formRef.current;
 
     const { isUserAdmin } = this.props;
-    const titleString = this.props.isEditingMode ? "Update" : "Import";
+    const titleString = this.props.isEditingMode ? "Settings for" : "Import";
+    const datasetLinkOrName = this.props.isEditingMode ? (
+      <Link
+        to={`/datasets/${this.props.datasetId.owningOrganization}/${this.props.datasetId.name}`}
+      >
+        {this.props.datasetId.name}
+      </Link>
+    ) : (
+      this.props.datasetId.name
+    );
     const confirmString =
       this.props.isEditingMode ||
       (this.state.dataset != null && this.state.dataset.dataSource.status == null)
@@ -839,7 +835,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           bordered={false}
           title={
             <h3>
-              {titleString} Dataset: {this.props.datasetId.name}
+              {titleString} Dataset {datasetLinkOrName}
             </h3>
           }
         >
@@ -869,8 +865,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                     <DatasetSettingsDataTab
                       key="SimpleAdvancedDataForm"
                       isReadOnlyDataset={
-                        this.state.dataset != null &&
-                        (this.state.dataset.isForeign || this.state.dataset.dataStore.isConnector)
+                        this.state.dataset != null && this.state.dataset.dataStore.isConnector
                       }
                       form={form}
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}

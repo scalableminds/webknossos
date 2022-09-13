@@ -16,6 +16,7 @@ import {
   editAnnotation,
   sendAnalyticsEvent,
   setOthersMayEditForAnnotation,
+  getSharingTokenFromUrlParameters,
 } from "admin/admin_rest_api";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
@@ -31,6 +32,7 @@ import {
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ControlModeEnum } from "oxalis/constants";
 import { makeComponentLazy } from "libs/react_helpers";
+
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
 type Props = {
@@ -60,7 +62,20 @@ export function useDatasetSharingToken(dataset: APIDataset) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [datasetToken, setDatasetToken] = useState("");
 
-  const fetchAndSetToken = async () => {
+  const getAndSetToken = async () => {
+    // If the current URL contains a token, we can simply use
+    // that as a sharing token. Otherwise, users who are currently
+    // visiting a sharing URL might not be able to use the share button,
+    // because they might not have permissions to GET the dataset's
+    // sharing token.
+    const urlToken = getSharingTokenFromUrlParameters();
+    if (urlToken != null) {
+      setDatasetToken(urlToken);
+      return;
+    }
+    if (!activeUser) {
+      return;
+    }
     try {
       const sharingToken = await getDatasetSharingToken(dataset, {
         doNotInvestigate: true,
@@ -72,10 +87,7 @@ export function useDatasetSharingToken(dataset: APIDataset) {
   };
 
   useEffect(() => {
-    if (!activeUser) {
-      return;
-    }
-    fetchAndSetToken();
+    getAndSetToken();
   }, [dataset, activeUser]);
   return datasetToken;
 }

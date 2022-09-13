@@ -15,13 +15,13 @@ class TeamMembershipService @Inject()(teamDAO: TeamDAO) {
       team <- teamDAO.findOne(teamMembership.teamId)
     } yield {
       Json.obj(
-        "id" -> teamMembership.teamId.toString,
+        "id" -> teamMembership.teamId,
         "name" -> team.name,
         "isTeamManager" -> teamMembership.isTeamManager
       )
     }
 
   def publicReads(): Reads[TeamMembership] =
-    ((__ \ "id").read[String](ObjectId.stringObjectIdReads("id")) and
-      (__ \ "isTeamManager").read[Boolean])((id, isTeamManager) => TeamMembership(ObjectId(id), isTeamManager))
+    ((__ \ "id").read[ObjectId] and
+      (__ \ "isTeamManager").read[Boolean])((id, isTeamManager) => TeamMembership(id, isTeamManager))
 }

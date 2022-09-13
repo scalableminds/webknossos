@@ -74,7 +74,7 @@ class VolumeTracingService @Inject()(
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  val binaryDataService = new BinaryDataService(Paths.get(""), 100, null)
+  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None)
 
   isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
@@ -273,7 +273,8 @@ class VolumeTracingService @Inject()(
                 resolutionRestrictions: ResolutionRestrictions,
                 editPosition: Option[Vec3Int],
                 editRotation: Option[Vec3Double],
-                boundingBox: Option[BoundingBox]): Fox[(String, VolumeTracing)] = {
+                boundingBox: Option[BoundingBox],
+                mappingName: Option[String]): Fox[(String, VolumeTracing)] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
     val tracingWithResolutionRestrictions = restrictMagList(tracingWithBB, resolutionRestrictions)
     val newTracing = tracingWithResolutionRestrictions.copy(
@@ -281,6 +282,7 @@ class VolumeTracingService @Inject()(
       editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithResolutionRestrictions.editPosition),
       editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithResolutionRestrictions.editRotation),
       boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
+      mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
       version = 0
     )
     for {
@@ -389,8 +391,8 @@ class VolumeTracingService @Inject()(
         request.segmentId,
         request.subsamplingStrides,
         request.scale,
-        request.mapping,
-        request.mappingType
+        None,
+        None
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result

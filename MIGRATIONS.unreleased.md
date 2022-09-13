@@ -6,10 +6,6 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/22.08.0...HEAD)
-
-- webKnossos requires node 16 now. [#6350](https://github.com/scalableminds/webknossos/pull/6350)
+[Commits](https://github.com/scalableminds/webknossos/compare/22.09.0...HEAD)
 
 ### Postgres Evolutions:
-- [084-annotation-contributors.sql](conf/evolutions/084-annotation-contributors.sql)
-- [085-add-annotations-publicationforeignkey](conf/evolutions/085-add-annotations-publicationforeignkey.sql)

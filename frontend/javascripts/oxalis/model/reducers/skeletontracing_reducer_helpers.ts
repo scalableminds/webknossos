@@ -225,7 +225,7 @@ export function deleteEdge(
   targetTree: Tree,
   targetNode: Node,
   timestamp: number,
-): Maybe<[TreeMap, number]> {
+): Maybe<[TreeMap, number | null]> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     if (sourceTree.treeId !== targetTree.treeId) {
       // The two selected nodes are in different trees
@@ -254,8 +254,11 @@ export function deleteEdge(
       timestamp,
     );
     // The treeId of the tree the active node belongs to could have changed
-    const newActiveTree = findTreeByNodeId(newTrees, sourceNode.id).get();
-    return Maybe.Just([newTrees, newActiveTree.treeId]);
+    const activeNodeId = skeletonTracing.activeNodeId;
+    const newActiveTreeId = activeNodeId
+      ? findTreeByNodeId(newTrees, activeNodeId).get().treeId
+      : null;
+    return Maybe.Just([newTrees, newActiveTreeId]);
   });
 }
 
@@ -475,11 +478,12 @@ export function createTree(
   state: OxalisState,
   timestamp: number,
   addToActiveGroup: boolean = true,
+  name?: string,
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
     const newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
-    const name = generateTreeName(state, timestamp, newTreeId);
+    const newTreeName = name || generateTreeName(state, timestamp, newTreeId);
     let groupId = null;
 
     if (addToActiveGroup) {
@@ -492,7 +496,7 @@ export function createTree(
 
     // Create the new tree
     const tree: Tree = {
-      name,
+      name: newTreeName,
       treeId: newTreeId,
       nodes: new DiffableMap(),
       timestamp,
@@ -858,4 +862,31 @@ export function removeMissingGroupsFromTrees(
     }
   });
   return changedTrees;
+}
+export function extractPathAsNewTree(
+  state: OxalisState,
+  sourceTree: Tree,
+  pathOfNodeIds: number[],
+): Maybe<Tree> {
+  return createTree(
+    state,
+    Date.now(),
+    true,
+    `Path from node ${pathOfNodeIds[0]} to ${pathOfNodeIds[pathOfNodeIds.length - 1]}`,
+  ).map((newTree) => {
+    let lastNodeId = null;
+    for (const nodeId of pathOfNodeIds) {
+      const node: MutableNode = { ...sourceTree.nodes.get(nodeId) };
+      newTree.nodes.mutableSet(nodeId, node);
+      if (lastNodeId != null) {
+        const newEdge: Edge = {
+          source: lastNodeId,
+          target: nodeId,
+        };
+        newTree.edges.addEdge(newEdge, true);
+      }
+      lastNodeId = nodeId;
+    }
+    return newTree;
+  });
 }

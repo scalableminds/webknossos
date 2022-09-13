@@ -1,6 +1,7 @@
 import { saveAs } from "file-saver";
 import ResumableJS from "resumablejs";
 import _ from "lodash";
+import moment from "moment";
 import type {
   APIActiveUser,
   APIAnnotation,
@@ -57,6 +58,7 @@ import type {
   WkConnectDatasetConfig,
   ServerEditableMapping,
   APICompoundType,
+  ZarrPrivateLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -84,6 +86,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { SaveQueueType } from "oxalis/model/actions/save_actions";
+import { DatasourceConfiguration } from "types/schemas/datasource.types";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -117,7 +120,7 @@ function requestUserToken(): Promise<string> {
   return tokenRequestPromise;
 }
 
-export function getSharingToken(): string | null | undefined {
+export function getSharingTokenFromUrlParameters(): string | null | undefined {
   if (location != null) {
     const params = Utils.getUrlParamsObject();
 
@@ -131,7 +134,7 @@ export function getSharingToken(): string | null | undefined {
 
 let tokenPromise: Promise<string>;
 export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<any> {
-  const sharingToken = getSharingToken();
+  const sharingToken = getSharingTokenFromUrlParameters();
 
   if (sharingToken != null) {
     return fn(sharingToken);
@@ -543,6 +546,39 @@ export async function transferActiveTasksOfProject(
 
 export async function getUsersWithActiveTasks(projectId: string): Promise<Array<APIActiveUser>> {
   return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
+}
+
+// ### Private Links
+
+export function createPrivateLink(
+  annotationId: string,
+  initialExpirationPeriodInDays: number = 30,
+): Promise<ZarrPrivateLink> {
+  return Request.sendJSONReceiveJSON("/api/zarrPrivateLinks", {
+    data: {
+      annotation: annotationId,
+      expirationDateTime: moment().add(initialExpirationPeriodInDays, "days").valueOf(),
+    },
+  });
+}
+
+export function getPrivateLinksByAnnotation(annotationId: string): Promise<Array<ZarrPrivateLink>> {
+  return Request.receiveJSON(`/api/zarrPrivateLinks/byAnnotation/${annotationId}`);
+}
+
+export function updatePrivateLink(link: ZarrPrivateLink): Promise<ZarrPrivateLink> {
+  return Request.sendJSONReceiveJSON(`/api/zarrPrivateLinks/${link.id}`, {
+    data: link,
+    method: "PUT",
+  });
+}
+
+export function deletePrivateLink(linkId: string): Promise<{
+  messages: Array<Message>;
+}> {
+  return Request.receiveJSON(`/api/zarrPrivateLinks/${linkId}`, {
+    method: "DELETE",
+  });
 }
 
 // ### Annotations
@@ -1418,20 +1454,45 @@ export function addWkConnectDataset(
   );
 }
 
-export async function addForeignDataSet(
-  dataStoreName: string,
-  url: string,
-  dataSetName: string,
-): Promise<string> {
-  const { result } = await Request.sendJSONReceiveJSON("/api/datasets/addForeign", {
-    data: {
-      dataStoreName,
-      url,
-      dataSetName,
-    },
+type ExplorationResult = {
+  dataSource: DatasourceConfiguration | undefined;
+  report: string;
+};
+
+export async function exploreRemoteDataset(
+  remoteUris: string[],
+  credentials?: { username: string; pass: string },
+): Promise<ExplorationResult> {
+  const { dataSource, report } = await Request.sendJSONReceiveJSON("/api/datasets/exploreRemote", {
+    data: credentials
+      ? remoteUris.map((uri) => ({
+          remoteUri: uri,
+          user: credentials.username,
+          password: credentials.pass,
+        }))
+      : remoteUris.map((uri) => ({ remoteUri: uri })),
   });
-  return result;
+  if (report.indexOf("403 Forbidden") !== -1 || report.indexOf("401 Unauthorized") !== -1) {
+    Toast.error("The data could not be accessed. Please verify the credentials!");
+  }
+  return { dataSource, report };
 }
+
+export async function storeRemoteDataset(
+  datastoreUrl: string,
+  datasetName: string,
+  organizationName: string,
+  datasource: string,
+): Promise<Response> {
+  return doWithToken((token) =>
+    fetch(`${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: datasource,
+    }),
+  );
+}
+
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
 export async function isDatasetNameValid(
   datasetId: APIDatasetId,
@@ -2207,6 +2268,27 @@ export function getSynapseTypes(
           connectomeFile,
           synapseIds,
         },
+      },
+    ),
+  );
+}
+
+type MinCutTargetEdge = {
+  position1: Vector3;
+  position2: Vector3;
+  segmentId1: number;
+  segmentId2: number;
+};
+export async function getEdgesForAgglomerateMinCut(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentsInfo: Object,
+): Promise<Array<MinCutTargetEdge>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      {
+        data: segmentsInfo,
       },
     ),
   );

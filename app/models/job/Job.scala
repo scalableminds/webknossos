@@ -275,11 +275,11 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
-  def trackStatusChange(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
-    if (jobBeforeChange.isEnded) return
-    if (jobAfterChange.state == JobState.SUCCESS) trackNewlySuccessful(jobBeforeChange, jobAfterChange)
-    if (jobAfterChange.state == JobState.FAILURE) trackNewlyFailed(jobBeforeChange, jobAfterChange)
-  }
+  def trackStatusChange(jobBeforeChange: Job, jobAfterChange: Job): Unit =
+    if (!jobBeforeChange.isEnded) {
+      if (jobAfterChange.state == JobState.SUCCESS) trackNewlySuccessful(jobBeforeChange, jobAfterChange)
+      if (jobAfterChange.state == JobState.FAILURE) trackNewlyFailed(jobBeforeChange, jobAfterChange)
+    }
 
   private def trackNewlyFailed(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {

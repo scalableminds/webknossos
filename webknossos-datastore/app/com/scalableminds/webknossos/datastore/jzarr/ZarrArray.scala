@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.jzarr
 
 import java.io.IOException
 import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util
 
@@ -9,45 +10,44 @@ import akka.http.caching.scaladsl.Cache
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.option2Fox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.io.Source
 
 object ZarrArray extends LazyLogging {
   private val chunkSizeLimitBytes = 64 * 1024 * 1024
 
   @throws[IOException]
-  def open(path: Path): ZarrArray = {
+  def open(path: Path, axisOrderOpt: Option[AxisOrder]): ZarrArray = {
     val store = new FileSystemStore(path)
     val rootPath = new ZarrPath("")
     val headerPath = rootPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
-    val headerInputStream = store.getInputStream(headerPath.storeKey)
-    try {
-      if (headerInputStream == null)
-        throw new IOException(
-          "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
-      val headerString = Source.fromInputStream(headerInputStream).mkString
-      val header: ZarrHeader =
-        Json.parse(headerString).validate[ZarrHeader] match {
-          case JsSuccess(parsedHeader, _) =>
-            parsedHeader
-          case errors: JsError =>
-            throw new Exception("Validating json as zarr header failed: " + JsError.toJson(errors).toString())
-        }
-      if (header.bytesPerChunk > chunkSizeLimitBytes) {
-        throw new IllegalArgumentException(
-          f"Chunk size of this Zarr Array exceeds limit of $chunkSizeLimitBytes, got ${header.bytesPerChunk}")
+    val headerBytes = store.readBytes(headerPath.storeKey)
+    if (headerBytes.isEmpty)
+      throw new IOException(
+        "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
+    val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
+    val header: ZarrHeader =
+      Json.parse(headerString).validate[ZarrHeader] match {
+        case JsSuccess(parsedHeader, _) =>
+          parsedHeader
+        case errors: JsError =>
+          throw new Exception("Validating json as zarr header failed: " + JsError.toJson(errors).toString())
       }
-      new ZarrArray(rootPath, store, header)
-    } finally if (headerInputStream != null) headerInputStream.close()
+    if (header.bytesPerChunk > chunkSizeLimitBytes) {
+      throw new IllegalArgumentException(
+        f"Chunk size of this Zarr Array exceeds limit of $chunkSizeLimitBytes, got ${header.bytesPerChunk}")
+    }
+    new ZarrArray(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)))
   }
 
 }
 
-class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extends LazyLogging {
+class ZarrArray(relativePath: ZarrPath, store: FileSystemStore, header: ZarrHeader, axisOrder: AxisOrder)
+    extends LazyLogging {
 
   private val chunkReader =
     ChunkReader.create(store, header)
@@ -63,8 +63,7 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   @throws[IOException]
   @throws[InvalidRangeException]
   def readBytesXYZ(shape: Vec3Int, offset: Vec3Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    // Assumes that the last three dimensions of the array are x, y, z
-    val paddingDimensionsCount = header.shape.length - 3
+    val paddingDimensionsCount = header.rank - 3
     val offsetArray = Array.fill(paddingDimensionsCount)(0) :+ offset.x :+ offset.y :+ offset.z
     val shapeArray = Array.fill(paddingDimensionsCount)(1) :+ shape.x :+ shape.y :+ shape.z
 
@@ -74,36 +73,43 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   // @return Byte array in fortran-order with little-endian values
   @throws[IOException]
   @throws[InvalidRangeException]
-  def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       typedData <- readAsFortranOrder(shape, offset)
     } yield BytesConverter.toByteArray(typedData, header.dataType, ByteOrder.LITTLE_ENDIAN)
 
+  // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
+  // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
   @throws[IOException]
   @throws[InvalidRangeException]
-  def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
-    val buffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
-    val chunkIndices = ChunkUtils.computeChunkIndices(header.shape, header.chunks, shape, offset)
-    val res = Fox.serialCombined(chunkIndices.toList) { chunkIndex: Array[Int] =>
+  private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
+    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.shape),
+                                                      axisOrder.permuteIndicesReverse(header.chunks),
+                                                      shape,
+                                                      offset)
+    if (partialCopyingIsNotNeeded(shape, offset, chunkIndices)) {
       for {
-        sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
-        offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
-        _ = if (partialCopyingIsNotNeeded(shape, offsetInChunk)) {
-          return Future.successful(sourceChunk.getStorage)
-        } else {
-          val sourceChunkInCOrder: MultiArray =
-            if (header.order == ArrayOrder.C)
-              sourceChunk
-            else MultiArrayUtils.orderFlippedView(sourceChunk)
-          val targetInCOrder: MultiArray =
-            MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(buffer, shape.reverse))
-          MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
-        }
-      } yield ()
+        chunkIndex <- chunkIndices.headOption.toFox
+        sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
+      } yield sourceChunk.getStorage
+    } else {
+      val targetBuffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
+      val targetInCOrder: MultiArray =
+        MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
+      val wasCopiedFox = Fox.serialCombined(chunkIndices) { chunkIndex: Array[Int] =>
+        for {
+          sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
+          offsetInChunk = computeOffsetInChunk(chunkIndex, offset)
+          sourceChunkInCOrder: MultiArray = MultiArrayUtils.axisOrderXYZView(sourceChunk,
+                                                                             axisOrder,
+                                                                             flip = header.order != ArrayOrder.C)
+          _ = MultiArrayUtils.copyRange(offsetInChunk, sourceChunkInCOrder, targetInCOrder)
+        } yield ()
+      }
+      for {
+        _ <- wasCopiedFox
+      } yield targetBuffer
     }
-    for {
-      _ <- res
-    } yield buffer
   }
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int]): Future[MultiArray] = {
@@ -117,8 +123,18 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
   private def getChunkFilename(chunkIndex: Array[Int]): String =
     chunkIndex.mkString(header.dimension_separator.toString)
 
-  private def partialCopyingIsNotNeeded(bufferShape: Array[Int], offset: Array[Int]): Boolean =
-    header.order == ArrayOrder.F && isZeroOffset(offset) && isBufferShapeEqualChunkShape(bufferShape)
+  private def partialCopyingIsNotNeeded(bufferShape: Array[Int],
+                                        globalOffset: Array[Int],
+                                        chunkIndices: List[Array[Int]]): Boolean =
+    chunkIndices match {
+      case chunkIndex :: Nil =>
+        val offsetInChunk = computeOffsetInChunk(chunkIndex, globalOffset)
+        header.order == ArrayOrder.F &&
+        isZeroOffset(offsetInChunk) &&
+        isBufferShapeEqualChunkShape(bufferShape) &&
+        axisOrder == AxisOrder.asCxyzFromRank(header.rank)
+      case _ => false
+    }
 
   private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
     util.Arrays.equals(bufferShape, header.chunks)
@@ -128,11 +144,11 @@ class ZarrArray(relativePath: ZarrPath, store: Store, header: ZarrHeader) extend
 
   private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * header.chunks(dim))
+      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(header.chunks)(dim))
     }.toArray
 
   override def toString: String =
-    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' shape=${header.shape.mkString(",")} chunks=${header.chunks
+    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.shape.mkString(",")} chunks=${header.chunks
       .mkString(",")} dtype=${header.dtype} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
 
 }

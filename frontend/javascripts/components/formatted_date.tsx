@@ -15,6 +15,7 @@ export function formatDateInLocalTimeZone(
   format = format || defaultTimeFormat;
   return moment(date).format(format);
 }
+
 export default function FormattedDate({
   timestamp,
   format,

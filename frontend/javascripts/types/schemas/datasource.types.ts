@@ -17,15 +17,18 @@ type DataLayerWKWPartial = {
     cubeLength: number;
   }>;
 };
-type DataLayerKnossosPartial = {
-  dataFormat: "knossos";
-  sections: Array<{
-    name: string;
-    resolutions: Array<number>;
-    boundingBox: BoundingBox;
+
+type AxisKey = "x" | "y" | "z" | "c";
+type DataLayerZarrPartial = {
+  dataFormat: "zarr";
+  boundingBox: BoundingBox;
+  mags: Array<{
+    mag: Vector3;
+    path: string;
+    axisOrder: Record<AxisKey, number>;
   }>;
 };
-type DataLayer = {
+export type DataLayer = {
   name: string;
   category: "color" | "segmentation";
   elementClass:
@@ -51,12 +54,12 @@ type DataLayer = {
       mappings: Array<string>;
     }
 ) &
-  (DataLayerWKWPartial | DataLayerKnossosPartial);
+  (DataLayerWKWPartial | DataLayerZarrPartial);
 export type DatasourceConfiguration = {
   id: {
     name: string;
     team: string;
   };
   dataLayers: Array<DataLayer>;
-  scale: Array<number>;
+  scale: Vector3;
 };

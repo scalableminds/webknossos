@@ -5,8 +5,8 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
-import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
@@ -30,11 +30,7 @@ case class MeshInfoParameters(
     position: Vec3Int,
 )
 object MeshInfoParameters {
-  implicit val meshInfoParametersReads: Reads[MeshInfoParameters] =
-    ((__ \ "annotationId").read[String](ObjectId.stringObjectIdReads("teamId")) and
-      (__ \ "description").read[String] and
-      (__ \ "position").read[Vec3Int])((annotationId, description, position) =>
-      MeshInfoParameters(ObjectId(annotationId), description, position))
+  implicit val jsonFormat: OFormat[MeshInfoParameters] = Json.format[MeshInfoParameters]
 }
 
 class MeshService @Inject()()(implicit ec: ExecutionContext) {

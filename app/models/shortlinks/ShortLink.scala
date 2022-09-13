@@ -1,12 +1,12 @@
-package models
+package models.shortlinks
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables.{Shortlinks, ShortlinksRow}
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{Json, OFormat}
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
-import slick.jdbc.PostgresProfile.api._
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -15,16 +15,6 @@ case class ShortLink(_id: ObjectId, shortLink: String, longLink: String)
 
 object ShortLink {
   implicit val jsonFormat: OFormat[ShortLink] = Json.format[ShortLink]
-}
-
-class ShortLinkService @Inject()()(implicit ec: ExecutionContext) {
-  def toJson(sl: ShortLink): Fox[JsObject] =
-    Fox.successful(
-      Json.obj(
-        "id" -> sl._id.toString,
-        "shortLink" -> sl.shortLink,
-        "longLink" -> sl.longLink,
-      ))
 }
 
 class ShortLinkDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

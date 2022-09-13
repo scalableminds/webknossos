@@ -2,19 +2,18 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
-import models.ShortLinkService
-import models.{ShortLink, ShortLinkDAO}
+import models.shortlinks.{ShortLink, ShortLinkDAO}
 import oxalis.security.{RandomIDGenerator, WkEnv}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class ShortlinkController @Inject()(
-    shortLinkDAO: ShortLinkDAO,
-    shortLinkService: ShortLinkService,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+class ShortlinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv])(
+    implicit ec: ExecutionContext,
+    val bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -25,22 +24,19 @@ class ShortlinkController @Inject()(
     for {
       _ <- shortLinkDAO.insertOne(ShortLink(_id, shortLink, longLink)) ?~> "create.failed"
       inserted <- shortLinkDAO.findOne(_id)
-      js <- shortLinkService.toJson(inserted)
-    } yield Ok(js)
+    } yield Ok(Json.toJson(inserted))
   }
 
   def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       idValidated <- ObjectId.fromString(id)
       shortLink <- shortLinkDAO.findOne(idValidated)
-      js <- shortLinkService.toJson(shortLink)
-    } yield Ok(js)
+    } yield Ok(Json.toJson(shortLink))
   }
 
   def get_by_value(shortLink: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       sl <- shortLinkDAO.findOneByShortLink(shortLink)
-      js <- shortLinkService.toJson(sl)
-    } yield Ok(js)
+    } yield Ok(Json.toJson(sl))
   }
 }

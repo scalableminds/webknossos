@@ -6,12 +6,12 @@ import models.shortlinks.{ShortLink, ShortLinkDAO}
 import oxalis.security.{RandomIDGenerator, WkEnv}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class ShortlinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv])(
+class ShortlinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv], wkConf: WkConf)(
     implicit ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers)
     extends Controller
@@ -22,6 +22,7 @@ class ShortlinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[
     val _id = ObjectId.generate
     val shortLink = RandomIDGenerator.generateBlocking(12)
     for {
+      _ <- bool2Fox(longLink.startsWith(wkConf.Http.uri)) ?~> "URI does not match"
       _ <- shortLinkDAO.insertOne(ShortLink(_id, shortLink, longLink)) ?~> "create.failed"
       inserted <- shortLinkDAO.findOne(_id)
     } yield Ok(Json.toJson(inserted))

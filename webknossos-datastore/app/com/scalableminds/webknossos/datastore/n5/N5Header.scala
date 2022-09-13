@@ -3,38 +3,46 @@ package com.scalableminds.webknossos.datastore.n5
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.jzarr.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.jzarr.BytesConverter.bytesPerElementFor
-import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, AxisOrder, Compressor, CompressorFactory, DimensionSeparator, ZarrDataType}
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, AxisOrder, DimensionSeparator, ZarrDataType}
 import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.n5.N5DataType.N5DataType
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
 import java.nio.ByteOrder
 
+case class N5BlockHeader(blockSize: Array[Int], numElements: Int)
+
+object N5BlockHeader {
+  implicit val jsonFormat: OFormat[N5BlockHeader] = Json.format[N5BlockHeader]
+}
 case class N5Header(
-    zarr_format: Int, // format version number
-    shape: Array[Int], // shape of the entire array
-    chunks: Array[Int], // shape of each chunk
-    compressor: Option[Map[String, Either[String, Int]]] = None, // specifies compressor to use, with parameters
-    filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
-    dimension_separator: DimensionSeparator = DimensionSeparator.SLASH,
-    dtype: String,
-    // is always 0
-    fill_value: Either[String, Number] = Right(0),
-    // is always this
-    order: ArrayOrder = ArrayOrder.F
+                     //    zarr_format: Int, // format version number
+                     dimensions: Array[Int], // shape of the entire array
+                     blockSize: Array[Int], // shape of each chunk
+                     compression: Option[Map[String, Either[String, Int]]] = None, // specifies compressor to use, with parameters
+//                     filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
+//                     transform: Option[List[Map[String, String]]] = None,
+                     dimension_separator: DimensionSeparator = DimensionSeparator.SLASH,
+                     dataType: String,
+                     // is always 0
+                     fill_value: Either[String, Number] = Right(0),
+                     // is always this
+                     order: ArrayOrder = ArrayOrder.F
 ) {
 
   lazy val byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN
 
   lazy val compressorImpl: Compressor =
-    compressor.map(CompressorFactory.create).getOrElse(CompressorFactory.nullCompressor)
+    compression.map(CompressorFactory.create).getOrElse(CompressorFactory.nullCompressor)
 
-  lazy val dataType: ZarrDataType =
-    ZarrDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
+  lazy val resolvedDataType: ZarrDataType =
+    N5DataType.toZarrDataType(N5DataType.fromString(dataType).get)
 
-  lazy val bytesPerChunk: Int = chunks.toList.product * bytesPerElementFor(dataType)
+  lazy val bytesPerChunk: Int = blockSize.toList.product * bytesPerElementFor(resolvedDataType)
 
   lazy val fillValueNumber: Number =
     fill_value match {
@@ -44,18 +52,18 @@ case class N5Header(
 
   lazy val chunkShapeOrdered: Array[Int] =
     if (order == ArrayOrder.C) {
-      chunks
-    } else chunks.reverse
+      blockSize
+    } else blockSize.reverse
 
-  lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
+  lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dataType)
 
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
     if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.z) >= rank)
       None
     else
-      Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), shape(axisOrder.z)))
+      Some(BoundingBox(Vec3Int.zeros, dimensions(axisOrder.x), dimensions(axisOrder.y), dimensions(axisOrder.z)))
 
-  lazy val rank: Int = shape.length
+  lazy val rank: Int = dimensions.length
 
 }
 
@@ -106,17 +114,19 @@ object N5Header {
     override def reads(json: JsValue): JsResult[N5Header] =
       Json.using[WithDefaultValues].reads[N5Header].reads(json)
 
-    override def writes(zarrHeader: N5Header): JsValue =
-      Json.obj(
-        "dtype" -> zarrHeader.dtype,
-        "fill_value" -> 0,
-        "zarr_format" -> zarrHeader.zarr_format,
-        "order" -> zarrHeader.order,
-        "chunks" -> zarrHeader.chunks,
-        "compressor" -> zarrHeader.compressor,
-        "filters" -> None,
-        "shape" -> zarrHeader.shape,
-        "dimension_seperator" -> zarrHeader.dimension_separator
-      )
+    override def writes(zarrheader: N5Header): JsValue =
+      Json.writes[N5Header].writes(zarrheader)
+//    override def writes(zarrHeader: N5Header): JsValue =
+//      Json.obj(
+//        "dtype" -> zarrHeader.dtype,
+//        "fill_value" -> 0,
+//        "zarr_format" -> zarrHeader.zarr_format,
+//        "order" -> zarrHeader.order,
+//        "chunks" -> zarrHeader.chunks,
+//        "compressor" -> zarrHeader.compressor,
+//        "filters" -> None,
+//        "shape" -> zarrHeader.shape,
+//        "dimension_seperator" -> zarrHeader.dimension_separator
+//      )
   }
 }

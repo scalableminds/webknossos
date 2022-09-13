@@ -48,6 +48,7 @@ object Dependencies {
   private val s3fs = "org.lasersonlab" % "s3fs" % "2.2.3"
   private val jblosc = "org.lasersonlab" % "jblosc" % "1.0.1"
   private val scalajHttp = "org.scalaj" %% "scalaj-http" % "2.4.2"
+  private val commonsCompress = "org.apache.commons" % "commons-compress" % "1.21"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",
@@ -93,7 +94,8 @@ object Dependencies {
     ucarCdm,
     s3fs,
     jblosc,
-    scalajHttp
+    scalajHttp,
+    commonsCompress
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

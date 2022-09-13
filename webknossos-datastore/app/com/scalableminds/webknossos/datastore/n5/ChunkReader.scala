@@ -13,7 +13,7 @@ import scala.util.Using
 
 object ChunkReader {
   def create(store: FileSystemStore, header: N5Header): ChunkReader =
-    header.dataType match {
+    header.resolvedDataType match {
       case ZarrDataType.i1 | ZarrDataType.u1 => new ByteChunkReader(store, header)
       case ZarrDataType.i2 | ZarrDataType.u2 => new ShortChunkReader(store, header)
       case ZarrDataType.i4 | ZarrDataType.u4 => new IntChunkReader(store, header)
@@ -26,20 +26,41 @@ object ChunkReader {
 trait ChunkReader {
   val header: N5Header
   val store: FileSystemStore
-  lazy val chunkSize: Int = header.chunks.toList.product
+  lazy val chunkSize: Int = header.blockSize.toList.product
 
   @throws[IOException]
   def read(path: String): Future[MultiArray]
 
-  protected def readBytes(path: String): Option[Array[Byte]] =
-    Using.Manager { use =>
-      store.readBytes(path).map { bytes =>
-        val is = use(new ByteArrayInputStream(bytes))
-        val os = use(new ByteArrayOutputStream())
+  protected def readBlock(path: String): Option[(N5BlockHeader, Array[Byte])] = {
+    Using.Manager { use => {
+      val (blockHeader, data) = store.readHeaderFromFile(path)
+
+      data.map { bytes =>
+        val is = new ByteArrayInputStream(bytes)
+        val os = new ByteArrayOutputStream()
+        header.compressorImpl.bytesSize = blockHeader.numElements
         header.compressorImpl.uncompress(is, os)
-        os.toByteArray
+        val result = (blockHeader, os.toByteArray)
+
+        val numElements = result._1.numElements
+        val blockSize = result._1.blockSize
+
+        val completeArray = if (result._2.length == numElements && numElements == blockSize.product) result._2 else {
+          val fillArray = new Array[Byte](blockSize.product)
+          for ((x, i) <- fillArray.zipWithIndex) {
+            fillArray.update(i, 0)
+          }
+
+          for ((x, i) <- result._2.zipWithIndex) {
+            fillArray.update(i, x)
+          }
+          fillArray
+        }
+        (blockHeader, completeArray)
       }
+    }
     }.get
+  }
 
   def createFilled(dataType: MADataType): MultiArray =
     MultiArrayUtils.createFilledArray(dataType, header.chunkShapeOrdered, header.fillValueNumber)
@@ -49,8 +70,8 @@ class ByteChunkReader(val store: FileSystemStore, val header: N5Header) extends 
   val ma2DataType: MADataType = MADataType.BYTE
 
   override def read(path: String): Future[MultiArray] =
-    Future.successful(readBytes(path).map { bytes =>
-      MultiArray.factory(ma2DataType, header.chunkShapeOrdered, bytes)
+    Future.successful(readBlock(path).map { result =>
+      MultiArray.factory(ma2DataType, result._1.blockSize, result._2)
     }.getOrElse(createFilled(ma2DataType)))
 }
 
@@ -60,13 +81,15 @@ class DoubleChunkReader(val store: FileSystemStore, val header: N5Header) extend
 
   override def read(path: String): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
-      readBytes(path).map { bytes =>
-        val typedStorage = new Array[Double](chunkSize)
+      readBlock(path).map { result =>
+        val bytes = result._2
+        val blockHeader = result._1
+        val typedStorage = new Array[Double](blockHeader.numElements)
         val bais = use(new ByteArrayInputStream(bytes))
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
+        MultiArray.factory(ma2DataType, blockHeader.blockSize, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get)
 }
@@ -77,13 +100,15 @@ class ShortChunkReader(val store: FileSystemStore, val header: N5Header) extends
 
   override def read(path: String): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
-      readBytes(path).map { bytes =>
-        val typedStorage = new Array[Short](chunkSize)
+      readBlock(path).map { result =>
+        val bytes = result._2
+        val blockHeader = result._1
+        val typedStorage = new Array[Short](blockHeader.numElements)
         val bais = use(new ByteArrayInputStream(bytes))
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
+        MultiArray.factory(ma2DataType, blockHeader.blockSize, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get)
 }
@@ -94,13 +119,15 @@ class IntChunkReader(val store: FileSystemStore, val header: N5Header) extends C
 
   override def read(path: String): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
-      readBytes(path).map { bytes =>
-        val typedStorage = new Array[Int](chunkSize)
+      readBlock(path).map { result =>
+        val bytes = result._2
+        val blockHeader = result._1
+        val typedStorage = new Array[Int](blockHeader.numElements)
         val bais = use(new ByteArrayInputStream(bytes))
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
+        MultiArray.factory(ma2DataType, blockHeader.blockSize, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get)
 }
@@ -111,13 +138,15 @@ class LongChunkReader(val store: FileSystemStore, val header: N5Header) extends 
 
   override def read(path: String): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
-      readBytes(path).map { bytes =>
-        val typedStorage = new Array[Long](chunkSize)
+      readBlock(path).map { result =>
+        val bytes = result._2
+        val blockHeader = result._1
+        val typedStorage = new Array[Long](blockHeader.numElements)
         val bais = use(new ByteArrayInputStream(bytes))
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
+        MultiArray.factory(ma2DataType, blockHeader.blockSize, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get)
 }
@@ -128,13 +157,15 @@ class FloatChunkReader(val store: FileSystemStore, val header: N5Header) extends
 
   override def read(path: String): Future[MultiArray] =
     Future.successful(Using.Manager { use =>
-      readBytes(path).map { bytes =>
-        val typedStorage = new Array[Float](chunkSize)
+      readBlock(path).map { result =>
+        val bytes = result._2
+        val blockHeader = result._1
+        val typedStorage = new Array[Float](blockHeader.numElements)
         val bais = use(new ByteArrayInputStream(bytes))
         val iis = use(new MemoryCacheImageInputStream(bais))
         iis.setByteOrder(header.byteOrder)
         iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, header.chunkShapeOrdered, typedStorage)
+        MultiArray.factory(ma2DataType, blockHeader.blockSize, typedStorage)
       }.getOrElse(createFilled(ma2DataType))
     }.get)
 }

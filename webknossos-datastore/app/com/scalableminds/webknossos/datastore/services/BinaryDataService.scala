@@ -74,7 +74,6 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-
       request.dataLayer.bucketProvider.load(readInstruction, cache)
     } else {
       Fox.empty

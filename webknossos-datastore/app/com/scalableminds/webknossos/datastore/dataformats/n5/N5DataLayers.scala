@@ -9,17 +9,6 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import play.api.libs.json.{Json, OFormat}
 
-case class FileSystemCredentials(user: String, password: Option[String])
-
-object FileSystemCredentials {
-  implicit val jsonFormat: OFormat[FileSystemCredentials] = Json.format[FileSystemCredentials]
-}
-
-case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Option[String]) {
-  lazy val remotePath: String = uri.getPath
-  lazy val credentials: Option[FileSystemCredentials] = user.map(u => FileSystemCredentials(u, password))
-}
-
 case class N5Mag(mag: Vec3Int,
                    path: Option[String],
                    credentials: Option[FileSystemCredentials],

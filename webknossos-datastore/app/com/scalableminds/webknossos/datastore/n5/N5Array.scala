@@ -4,7 +4,8 @@ import akka.http.caching.scaladsl.Cache
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.jzarr.{AxisOrder, FileSystemStore}
+import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.webknossos.datastore.jzarr.{ArrayOrder, AxisOrder, BytesConverter, ChunkUtils, FileSystemStore, MultiArrayUtils}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
@@ -34,7 +35,7 @@ object N5Array extends LazyLogging {
         case JsSuccess(parsedHeader, _) =>
           parsedHeader
         case errors: JsError =>
-          throw new Exception("Validating json as zarr header failed: " + JsError.toJson(errors).toString())
+          throw new Exception("Validating json as n5 header failed: " + JsError.toJson(errors).toString())
       }
     if (header.bytesPerChunk > chunkSizeLimitBytes) {
       throw new IllegalArgumentException(
@@ -72,18 +73,19 @@ class N5Array(relativePath: N5Path, store: FileSystemStore, header: N5Header, ax
   // @return Byte array in fortran-order with little-endian values
   @throws[IOException]
   @throws[InvalidRangeException]
-  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     for {
       typedData <- readAsFortranOrder(shape, offset)
-    } yield BytesConverter.toByteArray(typedData, header.dataType, ByteOrder.LITTLE_ENDIAN)
+    } yield BytesConverter.toByteArray(typedData, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
+  }
 
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
   @throws[IOException]
   @throws[InvalidRangeException]
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
-    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.shape),
-                                                      axisOrder.permuteIndicesReverse(header.chunks),
+    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.dimensions),
+                                                      axisOrder.permuteIndicesReverse(header.blockSize),
                                                       shape,
                                                       offset)
     if (partialCopyingIsNotNeeded(shape, offset, chunkIndices)) {
@@ -92,7 +94,7 @@ class N5Array(relativePath: N5Path, store: FileSystemStore, header: N5Header, ax
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
       } yield sourceChunk.getStorage
     } else {
-      val targetBuffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
+      val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetInCOrder: MultiArray =
         MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
       val wasCopiedFox = Fox.serialCombined(chunkIndices) { chunkIndex: Array[Int] =>
@@ -136,18 +138,19 @@ class N5Array(relativePath: N5Path, store: FileSystemStore, header: N5Header, ax
     }
 
   private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
-    util.Arrays.equals(bufferShape, header.chunks)
+    util.Arrays.equals(bufferShape, header.blockSize)
 
   private def isZeroOffset(offset: Array[Int]): Boolean =
     util.Arrays.equals(offset, new Array[Int](offset.length))
 
-  private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
+  private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] = {
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(header.chunks)(dim))
+      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(header.blockSize)(dim))
     }.toArray
+  }
 
   override def toString: String =
-    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.shape.mkString(",")} chunks=${header.chunks
-      .mkString(",")} dtype=${header.dtype} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
+    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.blockSize.mkString(",")} chunks=${header.blockSize
+      .mkString(",")} dtype=${header.resolvedDataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
 
 }

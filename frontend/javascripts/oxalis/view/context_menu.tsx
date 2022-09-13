@@ -84,6 +84,7 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Store from "oxalis/store";
+import { proofreadMerge, proofreadSplit } from "oxalis/model/actions/proofread_actions";
 const { SubMenu } = Menu;
 
 /* eslint-disable react/no-unused-prop-types */
@@ -670,6 +671,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const dispatch = useDispatch();
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   const isConnectomeMappingEnabled = useSelector(hasConnectomeFile);
+
   useEffect(() => {
     (async () => {
       await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
@@ -705,6 +707,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     dispatch(loadAdHocMeshAction(segmentId, globalPosition));
   };
 
+  const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions =
@@ -733,6 +736,32 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
             ) : (
               <Tooltip title={isAgglomerateMappingEnabled.reason}>
                 <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
+              </Tooltip>
+            )}
+          </Menu.Item>,
+          <Menu.Item
+            key="merge-agglomerate-skeleton"
+            disabled={!isAgglomerateMappingEnabled.value || activeNodeId == null}
+            onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
+          >
+            {isAgglomerateMappingEnabled.value ? (
+              <span>Merge with currently active segment</span>
+            ) : (
+              <Tooltip title={isAgglomerateMappingEnabled.reason}>
+                <span>Merge with currently active segment</span>
+              </Tooltip>
+            )}
+          </Menu.Item>,
+          <Menu.Item
+            key="split-agglomerate-skeleton"
+            disabled={!isAgglomerateMappingEnabled.value || activeNodeId == null}
+            onClick={() => Store.dispatch(proofreadSplit(globalPosition))}
+          >
+            {isAgglomerateMappingEnabled.value ? (
+              <span>Split from currently active segment</span>
+            ) : (
+              <Tooltip title={isAgglomerateMappingEnabled.reason}>
+                <span>Split from currently active segment</span>
               </Tooltip>
             )}
           </Menu.Item>,

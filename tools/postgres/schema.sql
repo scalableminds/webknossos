@@ -428,7 +428,7 @@ CREATE TABLE webknossos.annotation_privateLinks(
 
 CREATE TABLE webknossos.shortlinks(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  shortLink CHAR(12) NOT NULL UNIQUE,
+  shortLink CHAR(16) NOT NULL UNIQUE,
   longLink Text NOT NULL
 );
 

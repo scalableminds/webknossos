@@ -39,7 +39,6 @@ import {
 import {
   deleteEdgeAction,
   mergeTreesAction,
-  minCutAgglomerateAction,
   deleteNodeAction,
   setActiveNodeAction,
   createTreeAction,
@@ -84,7 +83,12 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Store from "oxalis/store";
-import { proofreadMerge, proofreadSplit } from "oxalis/model/actions/proofread_actions";
+import {
+  minCutAgglomerateAction,
+  minCutAgglomerateWithPositionAction,
+  proofreadMerge,
+  proofreadSplit,
+} from "oxalis/model/actions/proofread_actions";
 const { SubMenu } = Menu;
 
 /* eslint-disable react/no-unused-prop-types */
@@ -745,10 +749,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
             onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
           >
             {isAgglomerateMappingEnabled.value ? (
-              <span>Merge with currently active segment</span>
+              <span>Merge with active segment</span>
             ) : (
               <Tooltip title={isAgglomerateMappingEnabled.reason}>
-                <span>Merge with currently active segment</span>
+                <span>Merge with active segment</span>
               </Tooltip>
             )}
           </Menu.Item>,
@@ -758,10 +762,26 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
             onClick={() => Store.dispatch(proofreadSplit(globalPosition))}
           >
             {isAgglomerateMappingEnabled.value ? (
-              <span>Split from currently active segment</span>
+              <span>Split from active segment</span>
             ) : (
               <Tooltip title={isAgglomerateMappingEnabled.reason}>
-                <span>Split from currently active segment</span>
+                <span>Split from active segment</span>
+              </Tooltip>
+            )}
+          </Menu.Item>,
+          <Menu.Item
+            key="min-cut-agglomerate-at-position"
+            disabled={!isAgglomerateMappingEnabled.value || activeNodeId == null}
+            onClick={() =>
+              activeNodeId &&
+              Store.dispatch(minCutAgglomerateWithPositionAction(activeNodeId, globalPosition))
+            }
+          >
+            {isAgglomerateMappingEnabled.value ? (
+              <span>(Min-)Cut from active segment</span>
+            ) : (
+              <Tooltip title={isAgglomerateMappingEnabled.reason}>
+                <span>(Min-)Cut from active segment</span>
               </Tooltip>
             )}
           </Menu.Item>,

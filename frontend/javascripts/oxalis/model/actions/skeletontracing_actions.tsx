@@ -41,7 +41,6 @@ type DeselectActiveTreeAction = ReturnType<typeof deselectActiveTreeAction>;
 type SetActiveGroupAction = ReturnType<typeof setActiveGroupAction>;
 type DeselectActiveGroupAction = ReturnType<typeof deselectActiveGroupAction>;
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
-export type MinCutAgglomerateAction = ReturnType<typeof minCutAgglomerateAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
 type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
@@ -60,7 +59,7 @@ export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSke
 export type RemoveAgglomerateSkeletonAction = ReturnType<typeof removeAgglomerateSkeletonAction>;
 type NoAction = ReturnType<typeof noAction>;
 
-export type SkeletonTracingAction =
+export type SkeletonTracingAction = 
   | InitializeSkeletonTracingAction
   | CreateNodeAction
   | DeleteNodeAction
@@ -83,7 +82,6 @@ export type SkeletonTracingAction =
   | SetActiveTreeByNameAction
   | DeselectActiveTreeAction
   | MergeTreesAction
-  | MinCutAgglomerateAction
   | SetTreeNameAction
   | SelectNextTreeAction
   | SetTreeColorAction
@@ -355,13 +353,6 @@ export const deselectActiveGroupAction = () =>
 export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number) =>
   ({
     type: "MERGE_TREES",
-    sourceNodeId,
-    targetNodeId,
-  } as const);
-
-export const minCutAgglomerateAction = (sourceNodeId: number, targetNodeId: number) =>
-  ({
-    type: "MIN_CUT_AGGLOMERATE",
     sourceNodeId,
     targetNodeId,
   } as const);

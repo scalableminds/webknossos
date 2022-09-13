@@ -426,6 +426,12 @@ CREATE TABLE webknossos.annotation_privateLinks(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.shortlinks(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  shortLink CHAR(12) NOT NULL UNIQUE,
+  longLink Text NOT NULL
+);
+
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
@@ -482,6 +488,7 @@ CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
 CREATE INDEX ON webknossos.invites(tokenValue);
 CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
+CREATE INDEX ON webknossos.shortlinks(shortLink);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,

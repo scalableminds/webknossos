@@ -54,6 +54,7 @@ import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
+import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -550,10 +551,8 @@ function ChangeBrushSizeButton() {
 export default function ToolbarView() {
   const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
-  const hasAgglomerateMappings = useSelector((state: OxalisState) => {
-    const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-    return (visibleSegmentationLayer?.agglomerates?.length ?? 0) > 0;
-  });
+  const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
+
   const [lastForcefulDisabledTool, setLastForcefulDisabledTool] = useState<AnnotationTool | null>(
     null,
   );
@@ -808,7 +807,7 @@ export default function ToolbarView() {
           />
         </RadioButtonWithTooltip>
 
-        {hasSkeleton && hasVolume && hasAgglomerateMappings ? (
+        {hasSkeleton && hasVolume && isAgglomerateMappingEnabled.value ? (
           <RadioButtonWithTooltip
             title="Proofreading Tool - Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
             disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}

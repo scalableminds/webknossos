@@ -742,35 +742,39 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
               </Tooltip>
             )}
           </Menu.Item>,
-          <Menu.Item
-            key="merge-agglomerate-skeleton"
-            disabled={!isAgglomerateMappingEnabled.value || activeNodeId == null}
-            onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
-          >
-            {isAgglomerateMappingEnabled.value ? (
-              <span>Merge with active segment</span>
-            ) : (
-              <Tooltip title={isAgglomerateMappingEnabled.reason}>
+          isAgglomerateMappingEnabled.value && (
+            <Menu.Item
+              key="merge-agglomerate-skeleton"
+              disabled={activeNodeId == null}
+              onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
+            >
+              {activeNodeId != null ? (
                 <span>Merge with active segment</span>
-              </Tooltip>
-            )}
-          </Menu.Item>,
-          <Menu.Item
-            key="min-cut-agglomerate-at-position"
-            disabled={!isAgglomerateMappingEnabled.value || activeNodeId == null}
-            onClick={() =>
-              activeNodeId &&
-              Store.dispatch(minCutAgglomerateWithPositionAction(activeNodeId, globalPosition))
-            }
-          >
-            {isAgglomerateMappingEnabled.value ? (
-              <span>Split from active segment (Min-Cut)</span>
-            ) : (
-              <Tooltip title={isAgglomerateMappingEnabled.reason}>
+              ) : (
+                <Tooltip title={"Cannot merge because there's no active node id."}>
+                  <span>Merge with active segment</span>
+                </Tooltip>
+              )}
+            </Menu.Item>
+          ),
+          isAgglomerateMappingEnabled.value && (
+            <Menu.Item
+              key="min-cut-agglomerate-at-position"
+              disabled={activeNodeId == null}
+              onClick={() =>
+                activeNodeId &&
+                Store.dispatch(minCutAgglomerateWithPositionAction(activeNodeId, globalPosition))
+              }
+            >
+              {activeNodeId != null ? (
                 <span>Split from active segment (Min-Cut)</span>
-              </Tooltip>
-            )}
-          </Menu.Item>,
+              ) : (
+                <Tooltip title={"Cannot split because there's no active node id."}>
+                  <span>Split from active segment (Min-Cut)</span>
+                </Tooltip>
+              )}
+            </Menu.Item>
+          ),
         ]
       : [];
   const segmentationLayerName =

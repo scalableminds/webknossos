@@ -21,7 +21,6 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { hasEditableMapping } from "oxalis/model/accessors/volumetracing_accessor";
 const { Option, OptGroup } = Select;
 
@@ -63,16 +62,6 @@ type State = {
   isRefreshingMappingList: boolean;
   didRefreshMappingList: boolean;
 };
-
-const convertHSLAToCSSString = ([h, s, l, a]: Vector4) =>
-  `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
-
-export const convertCellIdToCSS = (
-  id: number,
-  customColors: Array<number> | null | undefined,
-  alpha?: number,
-) =>
-  id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
 const needle = "##";
 

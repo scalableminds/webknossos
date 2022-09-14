@@ -27,11 +27,7 @@ import type { ActiveMappingInfo, IsosurfaceInformation, OxalisState, Segment } f
 import Store from "oxalis/store";
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
-
-const hslaToCSS = (hsla: Vector4) => {
-  const [h, s, l, a] = hsla;
-  return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
-};
+import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);

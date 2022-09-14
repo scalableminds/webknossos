@@ -5,7 +5,6 @@ import React, { useEffect, useState } from "react";
 
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
 import {
   interpolateSegmentationLayerAction,
   createCellAction,
@@ -20,6 +19,7 @@ import {
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
+  getSegmentColorAsHSL,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -53,6 +53,7 @@ import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -389,11 +390,14 @@ function CreateCellButton() {
     return null;
   }
 
-  const customColors = isMappingEnabled ? mappingColors : null;
   const activeCellId = isMappingEnabled
     ? mapId(volumeTracing, unmappedActiveCellId)
     : unmappedActiveCellId;
-  const activeCellColor = convertCellIdToCSS(activeCellId, customColors);
+
+  const activeCellColor = useSelector((state: OxalisState) =>
+    hslaToCSS(getSegmentColorAsHSL(state, activeCellId)),
+  );
+
   const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
   return (
     <Badge

@@ -490,10 +490,7 @@ export function getSegmentColorAsHSL(state: OxalisState, mappedId: number): Vect
   if (!visibleSegmentationLayer) {
     return [1, 1, 1, 1];
   }
-  const mappingInfo = getMappingInfo(
-    state.temporaryConfiguration.activeMappingByLayer,
-    visibleSegmentationLayer.name,
-  );
+
   const visibleSegments = getVisibleSegments(state);
   if (visibleSegments) {
     const segment = visibleSegments.getNullable(mappedId);
@@ -504,5 +501,5 @@ export function getSegmentColorAsHSL(state: OxalisState, mappedId: number): Vect
     }
   }
 
-  return jsConvertCellIdToHSLA(mappedId, mappingInfo.mappingColors);
+  return jsConvertCellIdToHSLA(mappedId);
 }

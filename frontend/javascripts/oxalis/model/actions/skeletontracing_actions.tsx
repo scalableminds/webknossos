@@ -195,11 +195,16 @@ export const deleteEdgeAction = (
     timestamp,
   } as const);
 
-export const setActiveNodeAction = (nodeId: number, suppressAnimation: boolean = false) =>
+export const setActiveNodeAction = (
+  nodeId: number,
+  suppressAnimation: boolean = false,
+  suppressCentering: boolean = false,
+) =>
   ({
     type: "SET_ACTIVE_NODE",
     nodeId,
     suppressAnimation,
+    suppressCentering,
   } as const);
 
 export const centerActiveNodeAction = (suppressAnimation: boolean = false) =>

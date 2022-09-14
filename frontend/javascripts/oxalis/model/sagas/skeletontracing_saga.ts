@@ -80,6 +80,9 @@ import {
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 
 function* centerActiveNode(action: Action): Saga<void> {
+  if ("suppressCentering" in action && action.suppressCentering) {
+    return;
+  }
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
     const centerNewNode = yield* select(
       (state: OxalisState) => state.userConfiguration.centerNewNode,

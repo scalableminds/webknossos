@@ -9,6 +9,7 @@ import {
   deleteTreeAction,
   loadAgglomerateSkeletonAction,
   MergeTreesAction,
+  setActiveNodeAction,
   setTreeNameAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
@@ -26,7 +27,9 @@ import {
   enforceSkeletonTracing,
   findTreeByName,
   findTreeByNodeId,
+  getActiveNode,
   getActiveTree,
+  getTree,
   getTreeNameForAgglomerateSkeleton,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -667,6 +670,10 @@ function* handleProofreadMergeOrSplitOrMinCut(
 
   /* Reload agglomerate skeleton */
   if (volumeTracing.mappingName == null) return;
+
+  const currentlyActiveNode = (yield* call(getActiveNode, skeletonTracing)).getOrElse(null);
+  const activeNodePosition = currentlyActiveNode?.position;
+
   yield* put(deleteTreeAction(sourceTree.treeId, true));
   const treeNameAndId = yield* call(
     loadAgglomerateSkeletonWithId,
@@ -675,6 +682,11 @@ function* handleProofreadMergeOrSplitOrMinCut(
   if (treeNameAndId) {
     loadedAgglomerateSkeletonIds.push(treeNameAndId[1]);
   }
+
+  // Make the "same" node active as before. Since we deleted
+  // and reloaded the skeleton, it's not the same node identity,
+  // which is why we use the old's node position to select the new node.
+  yield* selectNodeByPosition(activeNodePosition, treeNameAndId);
 
   yield* put(setBusyBlockingInfoAction(false));
 
@@ -836,4 +848,33 @@ function* createGetUnmappedDataValueFn(
 
     return Number(new TypedArrayClass(buffer)[0]);
   };
+}
+
+function* selectNodeByPosition(
+  activeNodePosition: Vector3 | undefined,
+  treeNameAndId: [string, number] | null,
+) {
+  if (!activeNodePosition || !treeNameAndId) {
+    return;
+  }
+
+  const newTree = yield* select((state) => {
+    if (!state.tracing.skeleton) {
+      return null;
+    }
+    return getTree(state.tracing.skeleton, treeNameAndId[1]).getOrElse(null);
+  });
+  if (!newTree) {
+    return;
+  }
+  let nodeToActivate = null;
+  for (const node of newTree.nodes.values()) {
+    if (_.isEqual(node.position, activeNodePosition)) {
+      nodeToActivate = node.id;
+      break;
+    }
+  }
+  if (nodeToActivate) {
+    yield* put(setActiveNodeAction(nodeToActivate, false, true));
+  }
 }

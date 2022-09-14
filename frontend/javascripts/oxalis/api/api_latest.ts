@@ -1546,12 +1546,12 @@ class DataApi {
     return (
       `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
       `token=${token}&` +
-      `x=${topLeft[0]}&` +
-      `y=${topLeft[1]}&` +
-      `z=${topLeft[2]}&` +
-      `width=${bottomRight[0] - topLeft[0]}&` +
-      `height=${bottomRight[1] - topLeft[1]}&` +
-      `depth=${bottomRight[2] - topLeft[2]}`
+      `x=${Math.floor(topLeft[0])}&` +
+      `y=${Math.floor(topLeft[1])}&` +
+      `z=${Math.floor(topLeft[2])}&` +
+      `width=${Math.floor(bottomRight[0] - topLeft[0])}&` +
+      `height=${Math.floor(bottomRight[1] - topLeft[1])}&` +
+      `depth=${Math.floor(bottomRight[2] - topLeft[2])}`
     );
   }
 

@@ -39,7 +39,6 @@ import {
 import {
   deleteEdgeAction,
   mergeTreesAction,
-  minCutAgglomerateAction,
   deleteNodeAction,
   setActiveNodeAction,
   createTreeAction,
@@ -84,6 +83,11 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Store from "oxalis/store";
+import {
+  minCutAgglomerateAction,
+  minCutAgglomerateWithPositionAction,
+  proofreadMerge,
+} from "oxalis/model/actions/proofread_actions";
 const { SubMenu } = Menu;
 
 /* eslint-disable react/no-unused-prop-types */
@@ -670,6 +674,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const dispatch = useDispatch();
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   const isConnectomeMappingEnabled = useSelector(hasConnectomeFile);
+
   useEffect(() => {
     (async () => {
       await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
@@ -705,6 +710,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     dispatch(loadAdHocMeshAction(segmentId, globalPosition));
   };
 
+  const activeNodeId = skeletonTracing?.activeNodeId;
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions =
@@ -736,6 +742,39 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
               </Tooltip>
             )}
           </Menu.Item>,
+          isAgglomerateMappingEnabled.value ? (
+            <Menu.Item
+              key="merge-agglomerate-skeleton"
+              disabled={activeNodeId == null}
+              onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
+            >
+              {activeNodeId != null ? (
+                <span>Merge with active segment</span>
+              ) : (
+                <Tooltip title={"Cannot merge because there's no active node id."}>
+                  <span>Merge with active segment</span>
+                </Tooltip>
+              )}
+            </Menu.Item>
+          ) : null,
+          isAgglomerateMappingEnabled.value ? (
+            <Menu.Item
+              key="min-cut-agglomerate-at-position"
+              disabled={activeNodeId == null}
+              onClick={() =>
+                activeNodeId &&
+                Store.dispatch(minCutAgglomerateWithPositionAction(activeNodeId, globalPosition))
+              }
+            >
+              {activeNodeId != null ? (
+                <span>Split from active segment (Min-Cut)</span>
+              ) : (
+                <Tooltip title={"Cannot split because there's no active node id."}>
+                  <span>Split from active segment (Min-Cut)</span>
+                </Tooltip>
+              )}
+            </Menu.Item>
+          ) : null,
         ]
       : [];
   const segmentationLayerName =
@@ -828,7 +867,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   let allActions: Array<JSX.Element | null> = [];
 
   if (isSkeletonToolActive) {
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
   } else if (isBoundingBoxToolActive) {
     allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
@@ -937,7 +975,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
 
   if (contextMenuPosition != null && maybeViewport != null) {
     const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
-    const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
+    const activeNodeId = skeletonTracing?.activeNodeId;
 
     let nodeContextMenuTree: Tree | null = null;
     let nodeContextMenuNode: MutableNode | null = null;

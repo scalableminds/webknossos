@@ -89,11 +89,17 @@ test.serial("CuckooTable: Speed should be alright", (t) => {
 test.serial("CuckooTable: Repeated sets should work", (t) => {
   const ct = CuckooTable.fromCapacity(1);
 
-  for (let _idx = 0; _idx < ct.entryCapacity; _idx++) {
-    const entry: Entry = [1, [2, 3, 4]];
-    ct.set(entry[0], entry[1]);
-    const readValue = ct.get(entry[0]);
-    isValueEqual(t, entry[1], readValue);
+  // This is a regression test for a bug which resulted in the
+  // same key being multiple times in the table. Due to the random
+  // usage of seeds, the bug did not always occur. Therefore,
+  // the following loop iterates 1000th times to be extra thorough.
+  for (let n = 0; n < 1000; n++) {
+    for (let _idx = 0; _idx < ct.entryCapacity; _idx++) {
+      const entry: Entry = [1, [2, 3, n]];
+      ct.set(entry[0], entry[1]);
+      const readValue = ct.get(entry[0]);
+      isValueEqual(t, entry[1], readValue);
+    }
   }
 });
 

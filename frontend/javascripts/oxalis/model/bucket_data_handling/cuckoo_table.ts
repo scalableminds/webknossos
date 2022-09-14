@@ -140,6 +140,15 @@ export class CuckooTable {
       );
     }
 
+    const existingValueWithAddress = this.getWithAddress(pendingKey);
+    if (existingValueWithAddress) {
+      // The key already exists. We only have to overwrite
+      // the corresponding value.
+      const [_value, address] = existingValueWithAddress;
+      this.writeEntryAtAddress(pendingKey, pendingValue, address, rehashAttempt > 0);
+      return;
+    }
+
     let seedIndex = Math.floor(Math.random() * this.seeds.length);
     while (iterationCounter++ < ITERATION_THRESHOLD) {
       const seed = this.seeds[seedIndex];
@@ -177,7 +186,6 @@ export class CuckooTable {
 
       const value = this.getValueAtAddress(key, hashedAddress);
       if (value != null) {
-        console.log(`clear ${key} at ${hashedAddress}`);
         this.writeEntryAtAddress(
           EMPTY_KEY,
           [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY],
@@ -208,16 +216,21 @@ export class CuckooTable {
     }
   }
 
-  get(key: number): Vector3 {
+  get(key: number): Vector3 | null {
+    const result = this.getWithAddress(key);
+    return result ? result[0] : null;
+  }
+
+  getWithAddress(key: number): [Vector3, number] | null {
     for (const seed of this.seeds) {
       const hashedAddress = this._hashKeyToAddress(seed, key);
 
       const value = this.getValueAtAddress(key, hashedAddress);
       if (value != null) {
-        return value;
+        return [value, hashedAddress];
       }
     }
-    return [-1, -1, -1];
+    return null;
   }
 
   getEntryAtAddress(hashedAddress: number): Entry {
@@ -260,8 +273,6 @@ export class CuckooTable {
   ): Entry {
     const offset = hashedAddress * ELEMENTS_PER_ENTRY;
     const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
-
-    console.log(`write ${key} with ${value} to ${hashedAddress}`);
 
     const displacedEntry: Entry = [
       this.table[offset],

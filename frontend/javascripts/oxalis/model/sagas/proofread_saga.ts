@@ -458,7 +458,9 @@ function* performMinCut(
   items: UpdateAction[],
 ): Saga<boolean> {
   if (sourceNodeAgglomerateId !== targetNodeAgglomerateId) {
-    Toast.error("Segments need to be in the same agglomerate to perform a min-cut splitting operation.");
+    Toast.error(
+      "Segments need to be in the same agglomerate to perform a min-cut splitting operation.",
+    );
     yield* put(setBusyBlockingInfoAction(false));
     return true;
   }

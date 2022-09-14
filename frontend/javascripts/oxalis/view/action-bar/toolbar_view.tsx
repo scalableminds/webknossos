@@ -914,7 +914,7 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? (
         <ButtonComponent
-          title="Clear auxiliary skeletons and meshes which were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
+          title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
           onClick={handleClearProofreading}
           className="narrow"
           style={{ marginLeft: 12 }}

@@ -87,7 +87,6 @@ import {
   minCutAgglomerateAction,
   minCutAgglomerateWithPositionAction,
   proofreadMerge,
-  proofreadSplit,
 } from "oxalis/model/actions/proofread_actions";
 const { SubMenu } = Menu;
 
@@ -757,19 +756,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
             )}
           </Menu.Item>,
           <Menu.Item
-            key="split-agglomerate-skeleton"
-            disabled={!isAgglomerateMappingEnabled.value || activeNodeId == null}
-            onClick={() => Store.dispatch(proofreadSplit(globalPosition))}
-          >
-            {isAgglomerateMappingEnabled.value ? (
-              <span>Split from active segment</span>
-            ) : (
-              <Tooltip title={isAgglomerateMappingEnabled.reason}>
-                <span>Split from active segment</span>
-              </Tooltip>
-            )}
-          </Menu.Item>,
-          <Menu.Item
             key="min-cut-agglomerate-at-position"
             disabled={!isAgglomerateMappingEnabled.value || activeNodeId == null}
             onClick={() =>
@@ -778,10 +764,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
             }
           >
             {isAgglomerateMappingEnabled.value ? (
-              <span>(Min-)Cut from active segment</span>
+              <span>Split from active segment (Min-Cut)</span>
             ) : (
               <Tooltip title={isAgglomerateMappingEnabled.reason}>
-                <span>(Min-)Cut from active segment</span>
+                <span>Split from active segment (Min-Cut)</span>
               </Tooltip>
             )}
           </Menu.Item>,

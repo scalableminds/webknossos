@@ -21,7 +21,6 @@ import type {
   MinCutAgglomerateWithPositionAction,
   ProofreadAtPositionAction,
   ProofreadMergeAction,
-  ProofreadSplitAction,
 } from "oxalis/model/actions/proofread_actions";
 import {
   enforceSkeletonTracing,
@@ -75,8 +74,8 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
   yield* takeEvery(["CLEAR_PROOFREADING_BY_PRODUCTS"], clearProofreadingByproducts);
   yield* takeEvery(
-    ["PROOFREAD_MERGE", "PROOFREAD_SPLIT", "MIN_CUT_AGGLOMERATE_WITH_POSITION"],
-    handleProofreadMergeOrSplitOrMinCut,
+    ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION"],
+    handleProofreadMergeOrMinCut,
   );
 }
 
@@ -535,8 +534,8 @@ function* clearProofreadingByproducts() {
   coarselyLoadedSegmentIds = [];
 }
 
-function* handleProofreadMergeOrSplitOrMinCut(
-  action: ProofreadMergeAction | ProofreadSplitAction | MinCutAgglomerateWithPositionAction,
+function* handleProofreadMergeOrMinCut(
+  action: ProofreadMergeAction | MinCutAgglomerateWithPositionAction,
 ) {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
@@ -600,27 +599,6 @@ function* handleProofreadMergeOrSplitOrMinCut(
       mergeAgglomerate(
         sourceNodeAgglomerateId,
         targetNodeAgglomerateId,
-        sourceNodePosition,
-        targetNodePosition,
-        agglomerateFileMag,
-      ),
-    );
-  } else if (action.type === "PROOFREAD_SPLIT") {
-    if (sourceNodeAgglomerateId !== targetNodeAgglomerateId) {
-      Toast.error("Segments that should be split need to be in the same agglomerate.");
-      yield* put(setBusyBlockingInfoAction(false));
-      return;
-    }
-    if (partnerInfos.unmappedSourceId === partnerInfos.unmappedTargetId) {
-      Toast.error(
-        "The selected positions are both part of the same base segment and cannot be split. Please select another position or use the nodes of the agglomerate skeleton to perform the split.",
-      );
-      yield* put(setBusyBlockingInfoAction(false));
-      return;
-    }
-    items.push(
-      splitAgglomerate(
-        sourceNodeAgglomerateId,
         sourceNodePosition,
         targetNodePosition,
         agglomerateFileMag,

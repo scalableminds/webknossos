@@ -387,8 +387,6 @@ export function* loadAgglomerateSkeletonWithId(
       throw new Error(
         "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
       );
-    } else {
-      console.log(usedTreeIds);
     }
   } catch (e) {
     // Hide the progress notification and handle the error

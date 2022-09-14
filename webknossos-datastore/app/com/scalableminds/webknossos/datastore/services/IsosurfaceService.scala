@@ -59,11 +59,6 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
     extends FoxImplicits
     with LazyLogging {
 
-  private val agglomerateService
-    : Option[AgglomerateService] = try { Some(binaryDataService.agglomerateService) } catch {
-    case _: NullPointerException => None
-  }
-
   implicit val timeout: Timeout = Timeout(isosurfaceTimeout)
 
   private val actor: ActorRef = actorSystem.actorOf(
@@ -115,15 +110,17 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
         case Some(_) =>
           request.mappingType match {
             case Some("HDF5") =>
-              val dataRequest = DataServiceDataRequest(
-                request.dataSource.orNull,
-                request.dataLayer,
-                request.mapping,
-                request.cuboid,
-                DataServiceRequestSettings(halfByte = false, request.mapping, None),
-                request.subsamplingStrides
-              )
-              agglomerateService.get.applyAgglomerate(dataRequest)(data)
+              binaryDataService.agglomerateServiceOpt.map { agglomerateService =>
+                val dataRequest = DataServiceDataRequest(
+                  request.dataSource.orNull,
+                  request.dataLayer,
+                  request.mapping,
+                  request.cuboid,
+                  DataServiceRequestSettings(halfByte = false, request.mapping, None),
+                  request.subsamplingStrides
+                )
+                agglomerateService.applyAgglomerate(dataRequest)(data)
+              }.getOrElse(data)
             case _ =>
               data
           }

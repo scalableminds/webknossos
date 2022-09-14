@@ -1,10 +1,10 @@
-package com.scalableminds.webknossos.datastore.n5
+package com.scalableminds.webknossos.datastore.datareaders
 
-class N5Path(storeKeyRaw: String) {
+class DatasetPath(storeKeyRaw: String) {
   lazy val storeKey: String = normalizeStoragePath(storeKeyRaw)
 
-  def resolve(name: String): N5Path =
-    new N5Path(storeKey + "/" + normalizeStoragePath(name))
+  def resolve(name: String): DatasetPath =
+    new DatasetPath(storeKey + "/" + normalizeStoragePath(name))
 
   def normalizeStoragePath(path: String): String =
     if (path.isEmpty)
@@ -23,7 +23,7 @@ class N5Path(storeKeyRaw: String) {
       if (pathMutable.endsWith("/")) pathMutable = pathMutable.substring(0, path.length - 1)
       // don't allow path segments with just '.' or '..'
       for (segment <- pathMutable.split("/")) {
-        if (segment.trim == "." || segment.trim == "..")
+        if (segment.trim == "." || segment.trim == "")
           throw new IllegalArgumentException("path containing '.' or '..' segment not allowed")
       }
       pathMutable

@@ -12,7 +12,8 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{
   ZarrMag,
   ZarrSegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.jzarr.{AxisOrder, OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.{OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource._

@@ -3,16 +3,16 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr
 import java.net.URI
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.n5.N5BucketProvider
-import com.scalableminds.webknossos.datastore.jzarr.AxisOrder
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import play.api.libs.json.{Json, OFormat}
 
 case class N5Mag(mag: Vec3Int,
-                   path: Option[String],
-                   credentials: Option[FileSystemCredentials],
-                   axisOrder: Option[AxisOrder]) {
+                 path: Option[String],
+                 credentials: Option[FileSystemCredentials],
+                 axisOrder: Option[AxisOrder]) {
 
   lazy val pathWithFallback: String =
     path.getOrElse(if (mag.isIsotropic) s"${mag.x}" else s"${mag.x}-${mag.y}-${mag.z}")
@@ -47,32 +47,32 @@ trait N5Layer extends DataLayer {
 }
 
 case class N5DataLayer(
-                        name: String,
-                        category: Category.Value,
-                        boundingBox: BoundingBox,
-                        elementClass: ElementClass.Value,
-                        mags: List[N5Mag],
-                        defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                        adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                        override val numChannels: Option[Int] = Some(1)
-                      ) extends N5Layer
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    mags: List[N5Mag],
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    override val numChannels: Option[Int] = Some(1)
+) extends N5Layer
 
 object N5DataLayer {
   implicit val jsonFormat: OFormat[N5DataLayer] = Json.format[N5DataLayer]
 }
 
 case class N5SegmentationLayer(
-                                name: String,
-                                boundingBox: BoundingBox,
-                                elementClass: ElementClass.Value,
-                                mags: List[N5Mag],
-                                largestSegmentId: Long,
-                                mappings: Option[Set[String]] = None,
-                                defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                                adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                                override val numChannels: Option[Int] = Some(1)
-                              ) extends SegmentationLayer
-  with N5Layer
+    name: String,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    mags: List[N5Mag],
+    largestSegmentId: Long,
+    mappings: Option[Set[String]] = None,
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    override val numChannels: Option[Int] = Some(1)
+) extends SegmentationLayer
+    with N5Layer
 
 object N5SegmentationLayer {
   implicit val jsonFormat: OFormat[N5SegmentationLayer] = Json.format[N5SegmentationLayer]

@@ -3,17 +3,16 @@ package com.scalableminds.webknossos.datastore.dataformats.n5
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{N5Layer, N5Mag, RemoteSourceDescriptor}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{N5Layer, N5Mag}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.n5.N5Array
-import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
+import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 
-import java.nio.file.{FileSystem, Path}
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging with RateLimitedErrorLogging {
@@ -53,21 +52,4 @@ class N5BucketProvider(layer: N5Layer) extends BucketProvider with LazyLogging w
     }
 
   }
-
-  private def remotePathFrom(remoteSource: RemoteSourceDescriptor): Option[Path] =
-    FileSystemsHolder.getOrCreate(remoteSource).map { fileSystem: FileSystem =>
-      fileSystem.getPath(remoteSource.remotePath)
-    }
-
-  private def localPathFrom(readInstruction: DataReadInstruction, relativeMagPath: String): Option[Path] = {
-    val magPath = readInstruction.baseDir
-      .resolve(readInstruction.dataSource.id.team)
-      .resolve(readInstruction.dataSource.id.name)
-      .resolve(readInstruction.dataLayer.name)
-      .resolve(relativeMagPath)
-    if (magPath.toFile.exists()) {
-      Some(magPath)
-    } else None
-  }
-
 }

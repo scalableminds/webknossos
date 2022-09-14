@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.jzarr
+package com.scalableminds.webknossos.datastore.datareaders
 
 import play.api.libs.json.{Json, OFormat}
 

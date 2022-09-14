@@ -1,8 +1,8 @@
-package com.scalableminds.webknossos.datastore.jzarr
+package com.scalableminds.webknossos.datastore.datareaders.jzarr
+
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType.ZarrDataType
 
 import java.nio.{ByteBuffer, ByteOrder}
-
-import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
 
 object BytesConverter {
 

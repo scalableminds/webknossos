@@ -1,9 +1,10 @@
-package com.scalableminds.webknossos.datastore.jzarr
+package com.scalableminds.webknossos.datastore.datareaders
+
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType.ZarrDataType
+import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util
-
-import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
-import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 object MultiArrayUtils {
 

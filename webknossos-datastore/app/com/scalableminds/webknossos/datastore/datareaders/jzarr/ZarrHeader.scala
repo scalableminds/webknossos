@@ -1,14 +1,14 @@
-package com.scalableminds.webknossos.datastore.jzarr
+package com.scalableminds.webknossos.datastore.datareaders.jzarr
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator}
 
 import java.nio.ByteOrder
-import com.scalableminds.webknossos.datastore.jzarr.ArrayOrder.ArrayOrder
-import com.scalableminds.webknossos.datastore.jzarr.BytesConverter.bytesPerElementFor
-import com.scalableminds.webknossos.datastore.jzarr.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.jzarr.ZarrDataType.ZarrDataType
+import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
+import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType.ZarrDataType
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-import net.liftweb.common.Box.tryo
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
@@ -18,47 +18,29 @@ case class ZarrHeader(
     chunks: Array[Int], // shape of each chunk
     compressor: Option[Map[String, Either[String, Int]]] = None, // specifies compressor to use, with parameters
     filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
-    dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
+    override val dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
     dtype: String,
-    fill_value: Either[String, Number] = Right(0),
-    order: ArrayOrder
-) {
+    override val fill_value: Either[String, Number] = Right(0),
+    override val order: ArrayOrder
+) extends DatasetHeader {
 
-  lazy val byteOrder: ByteOrder =
+  lazy val datasetShape: Array[Int] = shape
+  lazy val chunkSize: Array[Int] = chunks
+  lazy val dataType: String = dtype
+
+  override lazy val byteOrder: ByteOrder =
     if (dtype.startsWith(">")) ByteOrder.BIG_ENDIAN
     else if (dtype.startsWith("<")) ByteOrder.LITTLE_ENDIAN
     else if (dtype.startsWith("|")) ByteOrder.nativeOrder
     else ByteOrder.BIG_ENDIAN
 
   lazy val compressorImpl: Compressor =
-    compressor.map(CompressorFactory.create).getOrElse(CompressorFactory.nullCompressor)
+    compressor.map(CompressorFactoryZarr.create).getOrElse(CompressorFactoryZarr.nullCompressor)
 
-  lazy val dataType: ZarrDataType =
+  lazy val resolvedDataType: ZarrDataType =
     ZarrDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
 
-  lazy val bytesPerChunk: Int = chunks.toList.product * bytesPerElementFor(dataType)
-
-  lazy val fillValueNumber: Number =
-    fill_value match {
-      case Right(n) => n
-      case Left(_)  => 0 // parsing fill value from string not currently supported
-    }
-
-  lazy val chunkShapeOrdered: Array[Int] =
-    if (order == ArrayOrder.C) {
-      chunks
-    } else chunks.reverse
-
   lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
-
-  def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
-    if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.z) >= rank)
-      None
-    else
-      Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), shape(axisOrder.z)))
-
-  lazy val rank: Int = shape.length
-
 }
 
 object ZarrHeader {

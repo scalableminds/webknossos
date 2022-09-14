@@ -9,14 +9,9 @@ import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesParser, ZarrMag, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.{OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.jzarr.{
-  ArrayOrder,
-  AxisOrder,
-  OmeNgffGroupHeader,
-  OmeNgffHeader,
-  ZarrHeader
-}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC

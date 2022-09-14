@@ -1,55 +1,23 @@
-package com.scalableminds.webknossos.datastore.jzarr
-
-import java.io.IOException
-import java.nio.ByteOrder
-import java.nio.charset.StandardCharsets
-import java.nio.file.Path
-import java.util
+package com.scalableminds.webknossos.datastore.datareaders
 
 import akka.http.caching.scaladsl.Cache
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.BytesConverter
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{JsError, JsSuccess, Json}
 import ucar.ma2.{InvalidRangeException, Array => MultiArray}
 
+import java.io.IOException
+import java.nio.ByteOrder
+import java.util
 import scala.concurrent.{ExecutionContext, Future}
 
-object ZarrArray extends LazyLogging {
-  private val chunkSizeLimitBytes = 64 * 1024 * 1024
-
-  @throws[IOException]
-  def open(path: Path, axisOrderOpt: Option[AxisOrder]): ZarrArray = {
-    val store = new FileSystemStore(path)
-    val rootPath = new ZarrPath("")
-    val headerPath = rootPath.resolve(ZarrHeader.FILENAME_DOT_ZARRAY)
-    val headerBytes = store.readBytes(headerPath.storeKey)
-    if (headerBytes.isEmpty)
-      throw new IOException(
-        "'" + ZarrHeader.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
-    val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
-    val header: ZarrHeader =
-      Json.parse(headerString).validate[ZarrHeader] match {
-        case JsSuccess(parsedHeader, _) =>
-          parsedHeader
-        case errors: JsError =>
-          throw new Exception("Validating json as zarr header failed: " + JsError.toJson(errors).toString())
-      }
-    if (header.bytesPerChunk > chunkSizeLimitBytes) {
-      throw new IllegalArgumentException(
-        f"Chunk size of this Zarr Array exceeds limit of $chunkSizeLimitBytes, got ${header.bytesPerChunk}")
-    }
-    new ZarrArray(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)))
-  }
-
-}
-
-class ZarrArray(relativePath: ZarrPath, store: FileSystemStore, header: ZarrHeader, axisOrder: AxisOrder)
+class DatasetArray(relativePath: DatasetPath, store: FileSystemStore, header: DatasetHeader, axisOrder: AxisOrder)
     extends LazyLogging {
 
-  private val chunkReader =
+  protected val chunkReader: ChunkReader =
     ChunkReader.create(store, header)
 
   // cache currently limited to 100 MB per array
@@ -76,15 +44,15 @@ class ZarrArray(relativePath: ZarrPath, store: FileSystemStore, header: ZarrHead
   private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       typedData <- readAsFortranOrder(shape, offset)
-    } yield BytesConverter.toByteArray(typedData, header.dataType, ByteOrder.LITTLE_ENDIAN)
+    } yield BytesConverter.toByteArray(typedData, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
 
   // Read from array. Note that shape and offset should be passed in XYZ order, left-padded with 0 and 1 respectively.
   // This function will internally adapt to the array's axis order so that XYZ data in fortran-order is returned.
   @throws[IOException]
   @throws[InvalidRangeException]
   private def readAsFortranOrder(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext): Fox[Object] = {
-    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.shape),
-                                                      axisOrder.permuteIndicesReverse(header.chunks),
+    val chunkIndices = ChunkUtils.computeChunkIndices(axisOrder.permuteIndicesReverse(header.datasetShape),
+                                                      axisOrder.permuteIndicesReverse(header.chunkSize),
                                                       shape,
                                                       offset)
     if (partialCopyingIsNotNeeded(shape, offset, chunkIndices)) {
@@ -93,7 +61,7 @@ class ZarrArray(relativePath: ZarrPath, store: FileSystemStore, header: ZarrHead
         sourceChunk: MultiArray <- getSourceChunkDataWithCache(axisOrder.permuteIndices(chunkIndex))
       } yield sourceChunk.getStorage
     } else {
-      val targetBuffer = MultiArrayUtils.createDataBuffer(header.dataType, shape)
+      val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetInCOrder: MultiArray =
         MultiArrayUtils.orderFlippedView(MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse))
       val wasCopiedFox = Fox.serialCombined(chunkIndices) { chunkIndex: Array[Int] =>
@@ -137,18 +105,18 @@ class ZarrArray(relativePath: ZarrPath, store: FileSystemStore, header: ZarrHead
     }
 
   private def isBufferShapeEqualChunkShape(bufferShape: Array[Int]): Boolean =
-    util.Arrays.equals(bufferShape, header.chunks)
+    util.Arrays.equals(bufferShape, header.chunkSize)
 
   private def isZeroOffset(offset: Array[Int]): Boolean =
     util.Arrays.equals(offset, new Array[Int](offset.length))
 
   private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(header.chunks)(dim))
+      globalOffset(dim) - (chunkIndex(dim) * axisOrder.permuteIndicesReverse(header.chunkSize)(dim))
     }.toArray
 
   override def toString: String =
-    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.shape.mkString(",")} chunks=${header.chunks
-      .mkString(",")} dtype=${header.dtype} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
+    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' axisOrder=$axisOrder shape=${header.datasetShape.mkString(
+      ",")} chunks=${header.chunkSize.mkString(",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
 
 }

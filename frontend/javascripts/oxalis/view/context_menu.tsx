@@ -742,7 +742,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
               </Tooltip>
             )}
           </Menu.Item>,
-          isAgglomerateMappingEnabled.value && (
+          isAgglomerateMappingEnabled.value ? (
             <Menu.Item
               key="merge-agglomerate-skeleton"
               disabled={activeNodeId == null}
@@ -756,8 +756,8 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
                 </Tooltip>
               )}
             </Menu.Item>
-          ),
-          isAgglomerateMappingEnabled.value && (
+          ) : null,
+          isAgglomerateMappingEnabled.value ? (
             <Menu.Item
               key="min-cut-agglomerate-at-position"
               disabled={activeNodeId == null}
@@ -774,7 +774,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
                 </Tooltip>
               )}
             </Menu.Item>
-          ),
+          ) : null,
         ]
       : [];
   const segmentationLayerName =
@@ -867,7 +867,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   let allActions: Array<JSX.Element | null> = [];
 
   if (isSkeletonToolActive) {
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
   } else if (isBoundingBoxToolActive) {
     allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);

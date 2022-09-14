@@ -52,7 +52,6 @@ import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
 

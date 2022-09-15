@@ -6,10 +6,12 @@ The webKnosso-wrap (WKW) container format is used for all internal voxel data re
 
 Any dataset uploaded to webKnossos.org, will automatically be converted to WKW on upload - given its source file format is supported by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html) or use a custom script based on the [webKnossos Python libray](https://docs.webknossos.org/webknossos-py/index.html).
 
-Additionally, webKnossos.org supports connecting and loading data from:
-
-- Neuroglancer Pre-Computed Dataset stored on Google Cloud
+webKnossos natively supports loading and streaming data in the following formats:
+- webKnossos-wrap (WKW)
+- Zarr ([OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/))
+- Neuroglancer `Pre-Computed` stored on Google Cloud
 - BossDB
+- N5
 
 See page on [dataset](./datasets.md) for uploading and configuring datasets.
 See page on [software tooling](./tooling.md) for working with these file formats in Python and MatLab.
@@ -24,6 +26,8 @@ In particular, the following file formats are supported:
   - as an extension, multiple folders with image sequences are interpreted as [separate layers](#Multi-Layer-Image-File-Sequence)
 - Single-file images (tif, czi, nifti, raw)
 - KNOSSOS file hierarchy 
+
+Note, for datasets in the Zarr, N5, Neuroglancer `Pre-Computed` or BossDB formats uploading and automatic conversion is not supported. Rather, directly stream the from a HTTP server or the cloud. See page on [dataset](./datasets.md) for uploading and configuring these formats.
 
 #### Single-Layer Image File Sequence
 When uploading multiple image files, these files are sorted numerically, and each one is interpreted as one section within a 3D dataset.
@@ -220,6 +224,7 @@ When using the [webKnossos Cuber](https://github.com/scalableminds/webknossos-li
 [See below for the full specification](#dataset-metadata-specification).
 
 #### Dataset Metadata Specification
+webKnossos requires a number of metadata properties for each dataset to properly display it. We refer to this a webKnossos `datasource`, in reference to the `datasource-properties.json` file for local datasets.
 
 - `id`: This section contains information about the name and corresponding team of the dataset. However, this information is not used by webKnossos because it will be replaced by more accurate runtime information.
   + `id.name`: Name of the dataset. Just for reference purposes. Will be inferred/overwritten by the folder name.
@@ -264,7 +269,7 @@ Read the full documentation at [webKnossos cuber](https://github.com/scalablemin
 
 Datasets saved as KNOSSOS cubes can be easily converted with the [webKnossos cuber](https://github.com/scalableminds/webknossos-libs/tree/master/wkcuber) tool.
 
-#### Import Datasets
+#### Importing Datasets
 
 After the manual conversion, proceed with the remaining import step.
 See the [Datasets guide](./datasets.md#Importing) for further instructions.

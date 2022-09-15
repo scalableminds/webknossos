@@ -9,6 +9,7 @@ Working with 3D (and 2D) image datasets is at the heart of webKnossos.
 [Read the section on file and data formats](./data_formats.md) if you are interested in the technical background and concepts behind webKnossos datasets.
 
 ## Importing Datasets
+webKnossos supports both loading data from a local hard disk or streaming it from a remote storage server or the cloud. In either case, webKnossos acts as central hub to manage all your datasets in one place, search, and tag them. There are several way to import and add a dataset to webKnossos:
 
 ### Uploading through the web browser
 The easiest way to get started with working on your datasets is through the webKnossos web interface. You can directly upload your dataset through the browser.
@@ -41,31 +42,50 @@ In particular, the following file formats are supported for uploading (and conve
 
 Once the data is uploaded (and potentially converted), you can further configure a dataset [Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
 
-### Working with Neuroglancer and BossDB dataset
-On webKnossos.org you can work directly with 
+### Working with Zarr datasets
+webKnossos supports loading and remotely streaming [Zarr](https://zarr.dev) datasets from a remote HTTP server or the cloud. webKnossos supports loading Zarr v2 datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/).
 
-- datasets in the Neuroglancer precomputed format stored in the Google Cloud
-- datasets provided by a BossDB server
+webKnossos can load several Zarr sources and assemble into a webKnossos dataset with several layer, e.g. one Zarr file/source for the `color` layer and one Zarr file/source for a `segmentation` layer.
+
+1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
+2. Select the *Add Remote Zarr Dataset*
+3. For each layer, provide some metadata information:
+  - a URL or domain/collection identifier to locate the dataset on the remote service
+  - authentication credentials for accessing the resources on the remote service (optional)
+4. Click the *Add Layer* button
+5. webKnossos will automatically try to infer as many dataset properties (voxel size, bounding box, etc) as possible and preview a [webKnossos `datasource` configuration](./data_formats.md#dataset-metadata-specification) for your to review. 
+  Consider setting the dataset `name` property and doubl-check all other properties for correctness.
+6. Click `Import` to finish
+
+webKnossos will NOT download/copy any data from these third-party data providers. 
+Rather, any data viewed in webKnossos will be streamed read-only and directly from the remote source. 
+Any other webKnossos feature, e.g., annotations, access rights, will be stored in webKnossos and do not affect these services. 
+
+Note, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
+
+Hint: If have any Zarr dataset locally that you would like to view in webKnossos, consider running a HTTP server locally to server the dataset. Then webKnossos can easily stream the data.
+
+### Working with Neuroglancer and BossDB datasets
+On webKnossos.org supports loading and remotely streaming datasets in the in the [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) stored in the Google Cloud or datasets served from [BossDB](https://bossdb.org).
 
 To import these datasets:
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Neuroglancer Dataset* or *Add BossDB Dataset* tab
 3. Provide some metadata information:
-  - a *name* 
+  - a *dataset name* 
   - a URL or domain/collection identifier to locate the dataset on the remote service
-  - authentication credentials for accessing the resources on the remote service
+  - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add* button
 
 webKnossos will NOT download/copy any data from these third-party data providers. 
 Rather, any data viewed in webKnossos will be streamed read-only and directly from the remote source. 
 Any other webKnossos feature, e.g., annotations, access rights, will be stored in webKnossos and do not affect these services. 
 
-Note, this may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
+Note, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
-### Working with Zarr dataset
-We are working on integrating full Zarr support into webKnossos. If you have datasets in the Zarr format and would like to work with us on building, testing, and refining the Zarr integration into webKnossos then [please contact us](mailto:hello@webknossos.org).
-
+### Working with N5 datasets
+We are working on integrating [N5](https://github.com/saalfeldlab/n5) support into webKnossos. If you have datasets in the N5 format and would like to work with us on building, testing, and refining the Zarr integration into webKnossos then [please contact us](mailto:hello@webknossos.org).
 
 ### Uploading through the Python API
 For those wishing to automate dataset upload or to do it programmatically, check out the webKnossos [Python library](https://github.com/scalableminds/webknossos-libs). It allows you to create, manage and upload datasets as well. 
@@ -73,7 +93,7 @@ For those wishing to automate dataset upload or to do it programmatically, check
 ### Uploading through the File System
 -- (Self-Hosted Instances Only)-- 
 
-On self-hosted instances, large datasets can be efficiently imported by placing them directly in the file system:
+On self-hosted instances, large datasets can be efficiently imported by placing them directly in the file system (WKW-format only):
 
 * Place the dataset at `<webKnossos directory>/binaryData/<Organization name>/<Dataset name>`. For example `/opt/webknossos/binaryData/Springfield_University/great_dataset`.
 * Go to the [dataset view on the dashboard](./dashboard.md)

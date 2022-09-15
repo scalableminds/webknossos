@@ -8,7 +8,6 @@ import {
   Row,
   Col,
   RadioChangeEvent,
-  Switch,
   Tooltip,
 } from "antd";
 import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";

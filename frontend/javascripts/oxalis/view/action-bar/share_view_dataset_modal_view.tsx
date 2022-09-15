@@ -5,12 +5,7 @@ import React from "react";
 import { makeComponentLazy } from "libs/react_helpers";
 import messages from "messages";
 import { OxalisState } from "oxalis/store";
-import {
-  useDatasetSharingToken,
-  getUrl,
-  copyUrlToClipboard,
-  CopyableSharingLink,
-} from "./share_modal_view";
+import { useDatasetSharingToken, getUrl, CopyableSharingLink } from "./share_modal_view";
 import { useZarrLinkMenu } from "./private_links_view";
 
 const sharingActiveNode = false;

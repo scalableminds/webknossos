@@ -506,7 +506,7 @@ class EditableMappingService @Inject()(
 
       trees = Seq(
         Tree(
-          treeId = agglomerateId.toInt,
+          treeId = 1,
           createdTimestamp = System.currentTimeMillis(),
           nodes = nodes,
           edges = skeletonEdges,

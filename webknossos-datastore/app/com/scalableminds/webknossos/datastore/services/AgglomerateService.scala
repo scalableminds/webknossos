@@ -180,7 +180,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
       val trees = Seq(
         Tree(
-          treeId = agglomerateId.toInt,
+          treeId = 1,
           createdTimestamp = System.currentTimeMillis(),
           nodes = nodes,
           edges = skeletonEdges,

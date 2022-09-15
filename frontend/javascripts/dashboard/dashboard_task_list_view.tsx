@@ -411,7 +411,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                checkout the documentation
+                check out the documentation
               </a>
               .
             </p>

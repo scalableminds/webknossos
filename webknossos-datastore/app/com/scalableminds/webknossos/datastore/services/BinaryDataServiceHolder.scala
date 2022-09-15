@@ -16,6 +16,6 @@ class BinaryDataServiceHolder @Inject()(config: DataStoreConfig, agglomerateServ
 
   val binaryDataService = new BinaryDataService(Paths.get(config.Datastore.baseFolder),
                                                 config.Datastore.Cache.DataCube.maxEntries,
-                                                agglomerateService)
+                                                Some(agglomerateService))
 
 }

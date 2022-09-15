@@ -36,15 +36,15 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
       token <- webKnossosToken(request.identity)
     } yield {
-      Ok(
-        Json.obj(
+      addRemoteOriginHeaders(
+        Ok(Json.obj(
           "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
           "schemaVersion" -> schemaVersion.toOption,
           "token" -> token,
           "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
           "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
-        ))
+        )))
     }
   }
 

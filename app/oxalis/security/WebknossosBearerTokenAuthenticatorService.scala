@@ -10,7 +10,7 @@ import com.mohiva.play.silhouette.impl.authenticators.{
   BearerTokenAuthenticatorService,
   BearerTokenAuthenticatorSettings
 }
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import oxalis.security.TokenType.TokenType
@@ -67,15 +67,15 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
       tokenId <- init(tokenAuthenticator, tokenType, deleteOld)
     } yield tokenId
 
-  def userForToken(tokenValue: String)(implicit ctx: DBAccessContext): Fox[User] =
+  def userForToken(tokenValue: String): Fox[User] =
     for {
       tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> "auth.invalidToken"
       _ <- bool2Fox(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
       idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> "auth.invalidToken"
-      user <- userService.findOneById(idValidated, useCache = true)
+      user <- userService.findOneById(idValidated, useCache = true)(GlobalAccessContext)
     } yield user
 
-  def userForTokenOpt(tokenOpt: Option[String])(implicit ctx: DBAccessContext): Fox[User] = tokenOpt match {
+  def userForTokenOpt(tokenOpt: Option[String]): Fox[User] = tokenOpt match {
     case Some(token) => userForToken(token)
     case _           => Fox.empty
   }

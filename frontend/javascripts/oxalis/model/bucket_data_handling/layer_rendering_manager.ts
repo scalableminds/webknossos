@@ -32,7 +32,7 @@ import window from "libs/window";
 import DiffableMap from "libs/diffable_map";
 import { CuckooTable } from "./cuckoo_table";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
-import { diffSegmentLists } from "../sagas/volumetracing_saga";
+import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
@@ -339,7 +339,7 @@ export default class LayerRenderingManager {
         (storeState) => getSegmentsForLayer(storeState, this.name),
         (newSegments) => {
           const cuckoo = this.getCustomColorCuckooTable();
-          for (const updateAction of diffSegmentLists(prevSegments, newSegments)) {
+          for (const updateAction of cachedDiffSegmentLists(prevSegments, newSegments)) {
             if (
               updateAction.name === "updateSegment" ||
               updateAction.name === "createSegment" ||

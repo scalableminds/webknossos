@@ -78,6 +78,7 @@ import {
   deleteConnectomeTreesAction,
 } from "oxalis/model/actions/connectome_actions";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
+import memoizeOne from "memoize-one";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
@@ -581,17 +582,10 @@ export function* diffTrees(
     }
   }
 }
-const diffTreeCache: { prevTrees?: TreeMap; trees?: TreeMap; diff: UpdateAction[] } = { diff: [] };
-export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<UpdateAction> {
-  // Try to use the cached version of the diff if available to increase performance
-  if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
-    diffTreeCache.prevTrees = prevTrees;
-    diffTreeCache.trees = trees;
-    diffTreeCache.diff = Array.from(diffTrees(prevTrees, trees));
-  }
 
-  return diffTreeCache.diff;
-}
+export const cachedDiffTrees = memoizeOne((prevTrees: TreeMap, trees: TreeMap) =>
+  Array.from(diffTrees(prevTrees, trees)),
+);
 
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
@@ -600,8 +594,9 @@ export function* diffSkeletonTracing(
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
-    yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+    for (const action of cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees)) {
+      yield action;
+    }
 
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
       yield updateTreeGroups(skeletonTracing.treeGroups);

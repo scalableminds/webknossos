@@ -2,8 +2,17 @@ package com.scalableminds.webknossos.datastore.datareaders.n5
 
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator}
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType.ZarrDataType
+import com.scalableminds.webknossos.datastore.datareaders.{
+  ArrayOrder,
+  BoolCompressionOption,
+  CompressionOption,
+  Compressor,
+  DatasetHeader,
+  DimensionSeparator,
+  IntCompressionOption,
+  StringCompressionOption
+}
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
@@ -14,10 +23,11 @@ case class N5BlockHeader(blockSize: Array[Int], numElements: Int)
 object N5BlockHeader {
   implicit val jsonFormat: OFormat[N5BlockHeader] = Json.format[N5BlockHeader]
 }
+
 case class N5Header(
     dimensions: Array[Int], // shape of the entire array
     blockSize: Array[Int], // shape of each chunk
-    compression: Option[Map[String, Either[String, Int]]] = None, // specifies compressor to use, with parameters
+    compression: Option[Map[String, CompressionOption]] = None, // specifies compressor to use, with parameters
     dataType: String,
     dimension_separator: DimensionSeparator = DimensionSeparator.SLASH,
     fill_value: Either[String, Number] = Right(0), // is always 0
@@ -33,7 +43,7 @@ case class N5Header(
   lazy val compressorImpl: Compressor =
     compression.map(CompressorFactoryN5.create).getOrElse(CompressorFactoryN5.nullCompressor)
 
-  lazy val resolvedDataType: ZarrDataType =
+  lazy val resolvedDataType: ArrayDataType =
     N5DataType.toZarrDataType(N5DataType.fromString(dataType).get)
 }
 
@@ -76,6 +86,23 @@ object N5Header {
       stringOrNumber match {
         case Left(s)  => Json.toJson(s)
         case Right(n) => Json.toJson(n)
+      }
+  }
+
+  implicit object StringOrIntOrBooleanFormat extends Format[CompressionOption] {
+
+    override def reads(json: JsValue): JsResult[CompressionOption] =
+      json
+        .validate[String]
+        .map(StringCompressionOption)
+        .orElse(json.validate[Int].map(IntCompressionOption))
+        .orElse(json.validate[Boolean].map(BoolCompressionOption))
+
+    override def writes(stringOrIntOrBool: CompressionOption): JsValue =
+      stringOrIntOrBool match {
+        case StringCompressionOption(x) => Json.toJson(x)
+        case IntCompressionOption(x)    => Json.toJson(x)
+        case BoolCompressionOption(x)   => Json.toJson(x)
       }
   }
 

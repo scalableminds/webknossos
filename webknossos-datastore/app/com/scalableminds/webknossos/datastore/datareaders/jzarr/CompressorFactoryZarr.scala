@@ -1,17 +1,24 @@
 package com.scalableminds.webknossos.datastore.datareaders.jzarr
 
-import com.scalableminds.webknossos.datastore.datareaders.{BloscCompressor, Compressor, NullCompressor, ZlibCompressor}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  BloscCompressor,
+  CompressionOption,
+  Compressor,
+  NullCompressor,
+  StringCompressionOption,
+  ZlibCompressor
+}
 
 object CompressorFactoryZarr {
   val nullCompressor = new NullCompressor
 
-  def create(properties: Map[String, Either[String, Int]]): Compressor =
+  def create(properties: Map[String, CompressionOption]): Compressor =
     properties("id") match {
-      case Left(id) => create(id, properties)
-      case _        => throw new IllegalArgumentException("Compressor id must be string")
+      case StringCompressionOption(id) => create(id, properties)
+      case _                           => throw new IllegalArgumentException("Compressor id must be string")
     }
 
-  def create(id: String, properties: Map[String, Either[String, Int]]): Compressor =
+  def create(id: String, properties: Map[String, CompressionOption]): Compressor =
     id match {
       case "null"  => nullCompressor
       case "zlib"  => new ZlibCompressor(properties)

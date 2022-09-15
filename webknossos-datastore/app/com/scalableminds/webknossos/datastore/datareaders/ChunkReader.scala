@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType
 import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{Array => MultiArray, DataType => MADataType}
 
@@ -15,12 +14,12 @@ object ChunkReader {
 
   def createTypedChunkReader(header: DatasetHeader): TypedChunkReader =
     header.resolvedDataType match {
-      case ZarrDataType.i1 | ZarrDataType.u1 => new ByteChunkReader(header)
-      case ZarrDataType.i2 | ZarrDataType.u2 => new ShortChunkReader(header)
-      case ZarrDataType.i4 | ZarrDataType.u4 => new IntChunkReader(header)
-      case ZarrDataType.i8 | ZarrDataType.u8 => new LongChunkReader(header)
-      case ZarrDataType.f4                   => new FloatChunkReader(header)
-      case ZarrDataType.f8                   => new DoubleChunkReader(header)
+      case ArrayDataType.i1 | ArrayDataType.u1 => new ByteChunkReader(header)
+      case ArrayDataType.i2 | ArrayDataType.u2 => new ShortChunkReader(header)
+      case ArrayDataType.i4 | ArrayDataType.u4 => new IntChunkReader(header)
+      case ArrayDataType.i8 | ArrayDataType.u8 => new LongChunkReader(header)
+      case ArrayDataType.f4                    => new FloatChunkReader(header)
+      case ArrayDataType.f8                    => new DoubleChunkReader(header)
     }
 }
 

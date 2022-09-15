@@ -1,12 +1,22 @@
 package com.scalableminds.webknossos.datastore.datareaders.jzarr
 
-import com.scalableminds.util.geometry.{Vec3Int}
-import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator}
+import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.webknossos.datastore.datareaders.{
+  ArrayDataType,
+  ArrayOrder,
+  BoolCompressionOption,
+  CompressionOption,
+  Compressor,
+  DatasetHeader,
+  DimensionSeparator,
+  IntCompressionOption,
+  StringCompressionOption
+}
 
 import java.nio.ByteOrder
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType.ZarrDataType
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Json.WithDefaultValues
@@ -16,7 +26,7 @@ case class ZarrHeader(
     zarr_format: Int, // format version number
     shape: Array[Int], // shape of the entire array
     chunks: Array[Int], // shape of each chunk
-    compressor: Option[Map[String, Either[String, Int]]] = None, // specifies compressor to use, with parameters
+    compressor: Option[Map[String, CompressionOption]] = None, // specifies compressor to use, with parameters
     filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
     override val dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
     dtype: String,
@@ -37,8 +47,8 @@ case class ZarrHeader(
   lazy val compressorImpl: Compressor =
     compressor.map(CompressorFactoryZarr.create).getOrElse(CompressorFactoryZarr.nullCompressor)
 
-  lazy val resolvedDataType: ZarrDataType =
-    ZarrDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
+  lazy val resolvedDataType: ArrayDataType =
+    ArrayDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
 
   lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
 }
@@ -111,6 +121,23 @@ object ZarrHeader {
       stringOrNumber match {
         case Left(s)  => Json.toJson(s)
         case Right(n) => Json.toJson(n)
+      }
+  }
+
+  implicit object StringOrIntOrBooleanFormat extends Format[CompressionOption] {
+
+    override def reads(json: JsValue): JsResult[CompressionOption] =
+      json
+        .validate[String]
+        .map(StringCompressionOption)
+        .orElse(json.validate[Int].map(IntCompressionOption))
+        .orElse(json.validate[Boolean].map(BoolCompressionOption))
+
+    override def writes(stringOrIntOrBool: CompressionOption): JsValue =
+      stringOrIntOrBool match {
+        case StringCompressionOption(x) => Json.toJson(x)
+        case IntCompressionOption(x)    => Json.toJson(x)
+        case BoolCompressionOption(x)   => Json.toJson(x)
       }
   }
 

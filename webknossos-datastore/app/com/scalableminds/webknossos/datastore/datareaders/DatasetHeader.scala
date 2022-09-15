@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.BytesConverter.bytesPerElementFor
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType.ZarrDataType
+import ArrayDataType.{ArrayDataType, bytesPerElementFor}
 
 import java.nio.ByteOrder
 
@@ -16,7 +15,7 @@ trait DatasetHeader {
   def fill_value: Either[String, Number]
   def order: ArrayOrder
 
-  def resolvedDataType: ZarrDataType
+  def resolvedDataType: ArrayDataType
   def compressorImpl: Compressor
 
   lazy val byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN

@@ -1,22 +1,21 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrDataType.ZarrDataType
+import ArrayDataType.ArrayDataType
 import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util
 
 object MultiArrayUtils {
 
-  def createDataBuffer(dataType: ZarrDataType, shape: Array[Int]): Object = {
+  def createDataBuffer(dataType: ArrayDataType, shape: Array[Int]): Object = {
     val size = shape.product
     dataType match {
-      case ZarrDataType.i1 | ZarrDataType.u1 => new Array[Byte](size)
-      case ZarrDataType.i2 | ZarrDataType.u2 => new Array[Short](size)
-      case ZarrDataType.i4 | ZarrDataType.u4 => new Array[Int](size)
-      case ZarrDataType.i8 | ZarrDataType.u8 => new Array[Long](size)
-      case ZarrDataType.f4                   => new Array[Float](size)
-      case ZarrDataType.f8                   => new Array[Double](size)
+      case ArrayDataType.i1 | ArrayDataType.u1 => new Array[Byte](size)
+      case ArrayDataType.i2 | ArrayDataType.u2 => new Array[Short](size)
+      case ArrayDataType.i4 | ArrayDataType.u4 => new Array[Int](size)
+      case ArrayDataType.i8 | ArrayDataType.u8 => new Array[Long](size)
+      case ArrayDataType.f4                    => new Array[Float](size)
+      case ArrayDataType.f8                    => new Array[Double](size)
     }
   }
 

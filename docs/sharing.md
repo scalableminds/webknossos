@@ -2,10 +2,11 @@
 webKnossos is built for working collaboratively and sharing your work with colleagues, collaborators, and the scientific community.
 Anything in webKnossos can be shared: the raw datasets, any skeleton or volume annotations, or complex segmentations.
 
-When speaking about collaboration and sharing, we imagine two scenarios supported by webKnossos:
+When speaking about collaboration and sharing, we imagine three scenarios supported by webKnossos:
 
-1. Sharing data with outsiders - anyone who is not a member of your webKnossos organization, e.g., colleagues from other institutes, reviewers, publishers, a paper publication, and the research community as a whole.
-2. Share data within your organization to collaborate with other members/co-workers
+1. Sharing data with outsiders - anyone who is not a member of your webKnossos organization, e.g., colleagues from other institutes, reviewers, publishers, a paper publication, and the research community as a whole (read-only).
+2. Sharing data within your organization to collaborate with other members/co-workers (both read-only or modifiable)
+3. Reconstruction of large datasets through a divide-and-conquer strategy with the [projects and tasks system](./tasks.md).
 
 Since webKnossos is a web platform, most resources can be shared as a web link/URL. This makes it super easy to integrate webKnossos in your existing communication workflows, e.g.:
 
@@ -202,7 +203,7 @@ To avoid having to create annotations in advance when programmatically crafting 
 
 ### Team Sharing
 In addition to sharing your annotation via a link, you can also share your annotations with colleagues and make them available on their dashboard from the `Annotations` tab.
-This is the simplest way to share an annotation with a whole team.
+This is the simplest way to share an annotation with a whole team both for review purposes (read-only) or joint work efforts on the same annotation by several people.
 
 To share an annotation with a certain team, follow these steps:
 
@@ -210,12 +211,15 @@ To share an annotation with a certain team, follow these steps:
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Under *Team Sharing*, select the teams from the dropdown menu.
 
-If members of these teams open their [Annotations Dashboard Tab](./dashboard.md#shared-annotations), they will see your annotation.
-
 ![Enable Team Sharing for your annotation](images/sharing_modal_team.jpeg)
 
-**Next to the integrated Annotation Sharing features, you can also download annotations and send them via email to collaborators.**
+Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](./dashboard.md#shared-annotations). By default teaming sharing is read-only, i.e. other team members can not make modifications to your annotation.  
+You can allow others to make changes to your annotation by selecting the respective checkbox from the sharing dialog ("Yes, allow editing").
+
+Note, while webKnossos allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once. webKnossos does not yet resolve changes made by multiple people annotating simulantanously and this may lead to data loss or inconsistencies. Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
+
+**Hint, in addition to the integrated Sharing features, you can also download annotations and send them via email to collaborators.**
 
 ![Video: Connect Publications to Your Dataset](https://www.youtube.com/watch?v=hcm8Jx22DG8)
 
-Dataset sharing allows people outside of your organization or anyone without a webKnossos account to view your datasets and annotations within webKnossos directly from their browser. No additional installation or signup is needed. Anyone with a link can view the data.
+## Collaborative 

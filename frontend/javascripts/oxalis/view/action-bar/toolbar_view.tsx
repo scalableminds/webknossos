@@ -1,11 +1,10 @@
 import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, Menu } from "antd";
 import { DownOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
 import {
   interpolateSegmentationLayerAction,
   createCellAction,
@@ -20,6 +19,7 @@ import {
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
+  getSegmentColorAsHSL,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -53,6 +53,7 @@ import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -275,18 +276,25 @@ function VolumeInterpolationButton() {
     />
   );
 
+  const buttonsRender = useCallback(
+    ([leftButton, rightButton]) => [
+      <Tooltip title={tooltipTitle} key="leftButton">
+        {React.cloneElement(leftButton as React.ReactElement<any, string>, {
+          disabled: isDisabled,
+        })}
+      </Tooltip>,
+      rightButton,
+    ],
+    [tooltipTitle],
+  );
+
   return (
     <Dropdown.Button
       icon={<DownOutlined />}
       overlay={menu}
       onClick={onInterpolateClick}
       style={{ padding: "0 5px 0 6px" }}
-      buttonsRender={([leftButton, rightButton]) => [
-        <Tooltip title={tooltipTitle} key="leftButton">
-          {React.cloneElement(leftButton as React.ReactElement<any, string>, { isDisabled })}
-        </Tooltip>,
-        rightButton,
-      ]}
+      buttonsRender={buttonsRender}
     >
       {React.cloneElement(INTERPOLATION_ICON[interpolationMode], { style: { margin: -4 } })}
     </Dropdown.Button>
@@ -370,7 +378,10 @@ function AdditionalSkeletonModesButtons() {
   );
 }
 
-const mapId = (volumeTracing: VolumeTracing, id: number) => {
+const mapId = (volumeTracing: VolumeTracing | null | undefined, id: number) => {
+  if (!volumeTracing) {
+    return null;
+  }
   const { cube } = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   return cube.mapId(id);
 };
@@ -378,20 +389,26 @@ const mapId = (volumeTracing: VolumeTracing, id: number) => {
 function CreateCellButton() {
   const volumeTracing = useSelector((state: OxalisState) => getActiveSegmentationTracing(state));
   const unmappedActiveCellId = volumeTracing != null ? volumeTracing.activeCellId : 0;
-  const { mappingStatus, mappingColors } = useSelector((state: OxalisState) =>
+  const { mappingStatus } = useSelector((state: OxalisState) =>
     getMappingInfoForVolumeTracing(state, volumeTracing != null ? volumeTracing.tracingId : null),
   );
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
 
-  if (!volumeTracing) {
-    return null;
-  }
-
-  const customColors = isMappingEnabled ? mappingColors : null;
   const activeCellId = isMappingEnabled
     ? mapId(volumeTracing, unmappedActiveCellId)
     : unmappedActiveCellId;
-  const activeCellColor = convertCellIdToCSS(activeCellId, customColors);
+
+  const activeCellColor = useSelector((state: OxalisState) => {
+    if (!activeCellId) {
+      return null;
+    }
+    return hslaToCSS(getSegmentColorAsHSL(state, activeCellId));
+  });
+
+  if (!activeCellId || !activeCellColor) {
+    return null;
+  }
+
   const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
   return (
     <Badge

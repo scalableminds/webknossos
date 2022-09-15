@@ -59,6 +59,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { UpdateSegmentAction } from "../actions/volumetracing_actions";
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
 const MESH_CHUNK_THROTTLE_DELAY = 500;
@@ -665,10 +666,18 @@ function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAct
   SceneController.setIsosurfaceVisibility(id, visibility);
 }
 
+function* handleIsosurfaceColorChange(action: UpdateSegmentAction): Saga<void> {
+  const SceneController = yield* call(getSceneController);
+  if ("color" in action.segment) {
+    SceneController.setIsosurfaceColor(action.segmentId);
+  }
+}
+
 export default function* isosurfaceSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
   const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
+  yield* take("SCENE_CONTROLLER_READY");
   yield* take("WK_READY");
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocIsosurfaceFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
@@ -679,4 +688,5 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
   yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
+  yield* takeEvery(["UPDATE_SEGMENT"], handleIsosurfaceColorChange);
 }

@@ -95,7 +95,20 @@ function* maybeFetchMapping(
   );
   if (!isEditableMappingActivationAllowed) return;
 
-  if (mappingName == null || existingMapping != null) return;
+  if (mappingName == null) {
+    return;
+  }
+  if (existingMapping != null) {
+    // A fully fledged mapping object was already passed
+    // (e.g., via the front-end API).
+    // Only the custom colors have to be configured, if they
+    // were passed.
+    if (action.mappingColors) {
+      const classes = convertMappingObjectToClasses(existingMapping);
+      yield* call(setCustomColors, action, classes, layerName);
+    }
+    return;
+  }
 
   if (showLoadingIndicator) {
     message.loading({
@@ -193,7 +206,7 @@ function* maybeFetchMapping(
   };
 
   if (usesCustomColors) {
-    yield* call(setCustomColors, mappingProperties, fetchedMapping, layerName);
+    yield* call(setCustomColors, mappingProperties, fetchedMapping.classes || [], layerName);
   }
 
   if (layerInfo.elementClass === "uint64") {
@@ -207,16 +220,28 @@ function* maybeFetchMapping(
   yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
 }
 
+function convertMappingObjectToClasses(existingMapping: Mapping) {
+  const classesByRepresentative: Record<number, number[]> = {};
+  for (const unmappedStr of Object.keys(existingMapping)) {
+    const unmapped = Number(unmappedStr);
+    const mapped = existingMapping[unmapped];
+    classesByRepresentative[mapped] = classesByRepresentative[mapped] || [];
+    classesByRepresentative[mapped].push(unmapped);
+  }
+  const classes = Object.values(classesByRepresentative);
+  return classes;
+}
+
 function* setCustomColors(
   mappingProperties: OptionalMappingProperties,
-  fetchedMapping: APIMapping,
+  classes: number[][],
   layerName: string,
 ) {
   if (mappingProperties.mapping == null || mappingProperties.mappingColors == null) {
     return;
   }
   let classIdx = 0;
-  for (const aClass of fetchedMapping.classes || []) {
+  for (const aClass of classes) {
     const firstIdEntry = aClass[0];
     if (firstIdEntry == null) {
       continue;

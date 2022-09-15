@@ -347,7 +347,6 @@ export default class LayerRenderingManager {
             ) {
               const { id } = updateAction.value;
               const color = "color" in updateAction.value ? updateAction.value.color : null;
-              console.log(`${updateAction.name} for ${id}. color=${color || "null"}`);
               if (color != null) {
                 cuckoo.set(
                   id,

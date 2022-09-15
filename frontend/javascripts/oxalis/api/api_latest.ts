@@ -1381,8 +1381,8 @@ class DataApi {
 
     const resolution = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
     const resolutionUVX = dimensions.transDim(resolution, viewport);
-    const widthInVoxel = Math.ceil(halfViewportExtentU * resolutionUVX[0]);
-    const heightInVoxel = Math.ceil(halfViewportExtentV * resolutionUVX[1]);
+    const widthInVoxel = Math.ceil(halfViewportExtentU / resolutionUVX[0]);
+    const heightInVoxel = Math.ceil(halfViewportExtentV / resolutionUVX[1]);
     if (widthInVoxel * heightInVoxel > 1024 ** 2) {
       throw new Error(
         "Requested data for viewport cannot be loaded, since the amount of data is too large for the available resolution. Please zoom in further or ensure that coarser magnifications are available.",

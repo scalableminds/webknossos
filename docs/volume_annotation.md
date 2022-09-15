@@ -14,7 +14,7 @@ Select one of the drawing tools from the toolbar or toggle through with the keyb
 - `Brush`: Draw over the voxels you would like to label. Adjust the brush size with *SHIFT + Mousewheel*.
 - `Erase (Trace/Brush)`: Draw over the voxels you would like to erase. Adjust the brush size with *SHIFT + Mousewheel*.
 - `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of you viewport). All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active segment ID. Useful to either fill whole in a segment or to relabel a segment with a different ID/color.
-- `Segment Picker`: Click on amy segment to select its label ID as the active segment ID and continue any volume annotation operation with that ID.
+- `Segment Picker`: Click on any segment to select its label ID as the active segment ID and continue any volume annotation operation with that ID.
 
 When using the trace or brush tool, a label can be added with *Left Mouse Drag*.
 Erasing is possible with the dedicated erase tools or with *CTRL + Shift + Left Mouse Drag*.
@@ -35,6 +35,20 @@ The following interactions and modifiers are available when working with the vol
 In the `Segmentation` tab on the right-hand sidepanel, you can see the segment IDs which are available in your annotation. You can rename segments as needed.
 
 The active segment ID under the cursor can be found in the status bar at the bottom of the screen or through the context-sensitive menu on right-click.
+
+### Segments List
+
+The right-hand side panel offers a `Segments` tab that lists segments and allows to edit these.
+A segment is added to the list as soon as it was clicked in the data viewport.
+The following functionality is available for each segment:
+
+- jumping to the segment (via left-click; this uses the position at which the segment was initially registered)
+- naming the segment
+- loading meshes for the segments (ad-hoc and precomputed if available)
+- changing the color of the segment
+- activating the segment id (so that you can annotate with that id)
+
+![Segments Tab](images/segments_tab2.jpeg)
 
 ### Merging volume annotation with fallback data
 

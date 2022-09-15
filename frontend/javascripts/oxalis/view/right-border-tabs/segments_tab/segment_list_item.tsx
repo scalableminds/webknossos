@@ -28,6 +28,7 @@ import Store from "oxalis/store";
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
+import { V4 } from "libs/mjs";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -153,7 +154,7 @@ type Props = {
   mapId: (arg0: number) => number;
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
-  hoveredSegmentId: number | null | undefined;
+  isHoveredSegmentId: boolean;
   centeredSegmentId: number | null | undefined;
   selectedSegmentId: number | null | undefined;
   activeCellId: number | null | undefined;
@@ -320,7 +321,7 @@ function _SegmentListItem({
   mapId,
   isJSONMappingEnabled,
   mappingInfo,
-  hoveredSegmentId,
+  isHoveredSegmentId,
   centeredSegmentId,
   selectedSegmentId,
   activeCellId,
@@ -342,9 +343,11 @@ function _SegmentListItem({
 
   const mappedId = mapId(segment.id);
 
-  const segmentColorHSLA = useSelector((state: OxalisState) =>
-    getSegmentColorAsHSL(state, mappedId),
+  const segmentColorHSLA = useSelector(
+    (state: OxalisState) => getSegmentColorAsHSL(state, mappedId),
+    (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
+
   const segmentColorRGBA = Utils.hslaToRgba(segmentColorHSLA);
 
   if (mappingInfo.hideUnmappedIds && mappedId === 0) {
@@ -455,7 +458,7 @@ function _SegmentListItem({
       }}
       className={classnames("segment-list-item", {
         "is-selected-cell": segment.id === selectedSegmentId,
-        "is-hovered-cell": segment.id === hoveredSegmentId,
+        "is-hovered-cell": isHoveredSegmentId,
       })}
       onMouseEnter={() => {
         setHoveredSegmentId(segment.id);
@@ -536,7 +539,7 @@ function _SegmentListItem({
         <MeshInfoItem
           segment={segment}
           isSelectedInList={segment.id === selectedSegmentId}
-          isHovered={segment.id === hoveredSegmentId}
+          isHovered={isHoveredSegmentId}
           isosurface={isosurface}
           handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
           visibleSegmentationLayer={visibleSegmentationLayer}

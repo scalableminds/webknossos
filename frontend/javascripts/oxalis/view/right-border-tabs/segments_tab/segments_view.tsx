@@ -643,7 +643,7 @@ class SegmentsView extends React.Component<Props, State> {
                         isosurface={this.props.isosurfaces[segment.id]}
                         isJSONMappingEnabled={this.props.isJSONMappingEnabled}
                         mappingInfo={this.props.mappingInfo}
-                        hoveredSegmentId={this.props.hoveredSegmentId}
+                        isHoveredSegmentId={this.props.hoveredSegmentId === segment.id}
                         activeCellId={this.props.activeCellId}
                         setHoveredSegmentId={this.props.setHoveredSegmentId}
                         allowUpdate={this.props.allowUpdate}

@@ -80,6 +80,9 @@ import {
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 
 function* centerActiveNode(action: Action): Saga<void> {
+  if ("suppressCentering" in action && action.suppressCentering) {
+    return;
+  }
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
     const centerNewNode = yield* select(
       (state: OxalisState) => state.userConfiguration.centerNewNode,
@@ -331,7 +334,7 @@ function handleAgglomerateLoadingError(
 
 export function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
-): Saga<string | null> {
+): Saga<[string, number] | null> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
@@ -349,7 +352,7 @@ export function* loadAgglomerateSkeletonWithId(
     console.warn(
       `Skeleton for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${treeName}".`,
     );
-    return treeName;
+    return [treeName, maybeTree.treeId];
   }
 
   const progressCallback = createProgressCallback({
@@ -362,6 +365,7 @@ export function* loadAgglomerateSkeletonWithId(
     `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
   );
 
+  let usedTreeIds: number[] | null = null;
   try {
     const parsedTracing = yield* call(
       getAgglomerateSkeletonTracing,
@@ -373,8 +377,17 @@ export function* loadAgglomerateSkeletonWithId(
       addTreesAndGroupsAction(
         createMutableTreeMapFromTreeArray(parsedTracing.trees),
         parsedTracing.treeGroups,
+        (newTreeIds) => {
+          usedTreeIds = newTreeIds;
+        },
       ),
     );
+    // @ts-ignore TS infers usedTreeIds to be never, but it should be number[] if its not null
+    if (usedTreeIds == null || usedTreeIds.length !== 1) {
+      throw new Error(
+        "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
+      );
+    }
   } catch (e) {
     // Hide the progress notification and handle the error
     hideFn();
@@ -384,7 +397,7 @@ export function* loadAgglomerateSkeletonWithId(
   }
 
   yield* call(progressCallback, true, "Skeleton generation done.");
-  return treeName;
+  return [treeName, usedTreeIds[0]];
 }
 
 function* loadConnectomeAgglomerateSkeletonWithId(

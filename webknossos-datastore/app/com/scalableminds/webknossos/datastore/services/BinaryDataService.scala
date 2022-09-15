@@ -14,7 +14,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerateService: AgglomerateService)
+class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerateServiceOpt: Option[AgglomerateService])
     extends FoxImplicits
     with DataSetDeleter
     with LazyLogging {
@@ -53,11 +53,13 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
       case (request, index) =>
         for {
           data <- handleDataRequest(request)
-          mappedData = convertIfNecessary(
-            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
-            data,
-            agglomerateService.applyAgglomerate(request)
-          )
+          mappedData = agglomerateServiceOpt.map { agglomerateService =>
+            convertIfNecessary(
+              request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
+              data,
+              agglomerateService.applyAgglomerate(request)
+            )
+          }.getOrElse(data)
           resultData = convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte)
         } yield (resultData, index)
     }
@@ -176,7 +178,8 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
       agglomerateKey.dataSetName == dataSetName && agglomerateKey.organizationName == organizationName && layerName
         .forall(_ == agglomerateKey.layerName)
 
-    val closedAgglomerateFileHandleCount = agglomerateService.agglomerateFileCache.clear(agglomerateFileMatchPredicate)
+    val closedAgglomerateFileHandleCount =
+      agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)
     val closedDataCubeHandleCount = cache.clear(dataCubeMatchPredicate)
     (closedAgglomerateFileHandleCount, closedDataCubeHandleCount)
   }

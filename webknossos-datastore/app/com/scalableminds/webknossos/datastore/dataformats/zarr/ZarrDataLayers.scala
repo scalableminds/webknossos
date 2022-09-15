@@ -25,8 +25,7 @@ case class ZarrMag(mag: Vec3Int,
                    credentials: Option[FileSystemCredentials],
                    axisOrder: Option[AxisOrder]) {
 
-  lazy val pathWithFallback: String =
-    path.getOrElse(if (mag.isIsotropic) s"${mag.x}" else s"${mag.x}-${mag.y}-${mag.z}")
+  lazy val pathWithFallback: String = path.getOrElse(mag.toMagLiteral(allowScalar = true))
   private lazy val uri: URI = new URI(pathWithFallback)
   private lazy val isRemote: Boolean = FileSystemsHolder.isSupportedRemoteScheme(uri.getScheme)
   lazy val remoteSource: Option[RemoteSourceDescriptor] =

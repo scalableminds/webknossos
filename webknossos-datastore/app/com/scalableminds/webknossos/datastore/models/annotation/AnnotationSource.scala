@@ -7,7 +7,8 @@ case class AnnotationSource(id: String,
                             dataSetName: String,
                             organizationName: String,
                             dataStoreUrl: String,
-                            tracingStoreUrl: String) {
+                            tracingStoreUrl: String,
+                            accessViaPrivateLink: Boolean) {
   def getAnnotationLayer(layerName: String): Option[AnnotationLayer] = annotationLayers.find(_.name == layerName)
 }
 

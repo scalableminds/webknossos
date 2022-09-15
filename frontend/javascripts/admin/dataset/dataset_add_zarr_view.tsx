@@ -1,7 +1,7 @@
 import { Form, Input, Button, Col, Radio, Row, Collapse } from "antd";
 import { connect } from "react-redux";
 import React, { useState } from "react";
-import type { APIUser } from "types/api_flow_types";
+import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
 import messages from "messages";
@@ -21,6 +21,7 @@ const RadioGroup = Radio.Group;
 
 type OwnProps = {
   onAdded: (arg0: string, arg1: string) => Promise<void>;
+  datastores: Array<APIDataStore>;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -136,6 +137,13 @@ function DatasetAddZarrView(props: Props) {
   }
 
   async function handleStoreDataset() {
+    const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
+    const datastoreToUse = uploadableDatastores[0];
+    if (!datastoreToUse) {
+      Toast.error("Could not find datastore that allows uploading.");
+      return;
+    }
+
     if (datasourceConfig && activeUser) {
       let configJSON;
       try {
@@ -148,6 +156,7 @@ function DatasetAddZarrView(props: Props) {
           throw new Error(nameValidationResult);
         }
         const response = await storeRemoteDataset(
+          datastoreToUse.url,
           configJSON.id.name,
           activeUser.organization,
           datasourceConfig,
@@ -206,9 +215,7 @@ function DatasetAddZarrView(props: Props) {
               value={showCredentialsFields ? "show" : "hide"}
               onChange={(e) => setShowCredentialsFields(e.target.value === "show")}
             >
-              <Radio value="hide" disabled={selectedProtocol === "s3"}>
-                {selectedProtocol === "https" ? "None" : "Anonymous"}
-              </Radio>
+              <Radio value="hide">{selectedProtocol === "https" ? "None" : "Anonymous"}</Radio>
               <Radio value="show">
                 {selectedProtocol === "https" ? "Basic authentication" : "With credentials"}
               </Radio>

@@ -1,6 +1,17 @@
-import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, RadioChangeEvent } from "antd";
-import { CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
-import ButtonComponent from "oxalis/view/components/button_component";
+import {
+  Alert,
+  Divider,
+  Radio,
+  Modal,
+  Input,
+  Button,
+  Row,
+  Col,
+  RadioChangeEvent,
+  Switch,
+  Tooltip,
+} from "antd";
+import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import React, { useState, useEffect } from "react";
 import type {
@@ -17,6 +28,7 @@ import {
   sendAnalyticsEvent,
   setOthersMayEditForAnnotation,
   getSharingTokenFromUrlParameters,
+  createShortLink,
 } from "admin/admin_rest_api";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
@@ -32,6 +44,7 @@ import {
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { ControlModeEnum } from "oxalis/constants";
 import { makeComponentLazy } from "libs/react_helpers";
+import { AsyncButton } from "components/async_clickables";
 
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
@@ -115,10 +128,12 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
   // dataset is not public. For datasets or sandboxes, a token is included if the dataset is not public.
   const includeToken = !dataset.isPublic && (isViewMode || isSandboxMode || annotationIsPublic);
 
-  const copySharingUrl = () => {
+  const createAndCopySharingUrl = async () => {
     // Copy the url on-demand as it constantly changes
     const url = getUrl(sharingToken, includeToken);
-    copyUrlToClipboard(url);
+    const shortLink = await createShortLink(url);
+
+    copyUrlToClipboard(`${location.origin}/links/${shortLink.shortLink}`);
 
     if (isTraceMode && !annotationIsPublic) {
       // For public annotations and in dataset view mode, the link will work for all users.
@@ -144,10 +159,10 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
   };
 
   return (
-    <ButtonComponent
+    <AsyncButton
       icon={<ShareAltOutlined />}
       title={messages["tracing.copy_sharing_link"]}
-      onClick={copySharingUrl}
+      onClick={createAndCopySharingUrl}
       style={style}
     />
   );
@@ -314,7 +329,8 @@ function _ShareModalView(props: Props) {
     Private: "lock",
   };
   const includeToken = !dataset.isPublic && visibility === "Public";
-  const url = getUrl(sharingToken, includeToken);
+  const longUrl = getUrl(sharingToken, includeToken);
+
   return (
     <Modal
       title="Share this annotation"
@@ -334,27 +350,10 @@ function _ShareModalView(props: Props) {
           Sharing Link
         </Col>
         <Col span={18}>
-          <Input.Group compact>
-            <Input
-              style={{
-                width: "85%",
-              }}
-              value={url}
-              readOnly
-            />
-            <Button
-              style={{
-                width: "15%",
-              }}
-              onClick={() => copyUrlToClipboard(url)}
-              icon={<CopyOutlined />}
-            >
-              Copy
-            </Button>
-          </Input.Group>
+          <CopyableSharingLink isVisible={isVisible} longUrl={longUrl} />
           <Hint
             style={{
-              margin: "6px 12px",
+              margin: "4px 9px 12px 4px",
             }}
           >
             {messages["tracing.sharing_modal_basic_information"](sharingActiveNode)}
@@ -500,6 +499,61 @@ function _ShareModalView(props: Props) {
         </Col>
       </Row>
     </Modal>
+  );
+}
+
+export function CopyableSharingLink({
+  isVisible,
+  longUrl,
+}: {
+  isVisible: boolean;
+  longUrl: string;
+}) {
+  const [shortUrl, setShortUrl] = useState<string | null>(null);
+
+  const [showShortLink, setShowShortLink] = useState(true);
+  useEffect(() => {
+    if (!isVisible || !showShortLink) {
+      // Don't create new shortlinks when the user does not want/need them.
+      // Set short url to null to avoid keeping a stale value.
+      setShortUrl(null);
+      return;
+    }
+
+    createShortLink(longUrl).then((shortLink) => {
+      setShortUrl(`${location.origin}/links/${shortLink.shortLink}`);
+    });
+  }, [longUrl, isVisible, showShortLink]);
+  const linkToCopy = showShortLink ? shortUrl || longUrl : longUrl;
+
+  return (
+    <Input.Group compact>
+      <Tooltip title="When enabled, the link is shortened automatically.">
+        <Button
+          type={showShortLink ? "primary" : "default"}
+          onClick={() => setShowShortLink(!showShortLink)}
+          style={{ padding: "0px 8px" }}
+        >
+          <CompressOutlined className="without-icon-margin" />
+        </Button>
+      </Tooltip>
+      <Input
+        style={{
+          width: "78%",
+        }}
+        value={linkToCopy}
+        readOnly
+      />
+      <Button
+        style={{
+          width: "15%",
+        }}
+        onClick={() => copyUrlToClipboard(linkToCopy)}
+        icon={<CopyOutlined />}
+      >
+        Copy
+      </Button>
+    </Input.Group>
   );
 }
 

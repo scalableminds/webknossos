@@ -1388,31 +1388,40 @@ class DataApi {
     maybeResolutionIndex: number | null | undefined,
   ) {
     const state = Store.getState();
-    const [curX, curY, curZ] = dimensions.transDim(
+    const [curU, curV, curW] = dimensions.transDim(
       dimensions.roundCoordinate(getPosition(state.flycam)),
       viewport,
     );
-    const [halfViewportExtentX, halfViewportExtentY] = getHalfViewportExtentsFromState(
+    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsFromState(
       state,
       viewport,
     );
+    const layer = getLayerByName(state.dataset, layerName);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    if (maybeResolutionIndex == null) {
+      maybeResolutionIndex = getRequestLogZoomStep(state);
+    }
+    const zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+
     const min = dimensions.transDim(
-      V3.sub([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 0]),
+      V3.sub([curU, curV, curW], [halfViewportExtentU, halfViewportExtentV, 0]),
       viewport,
     );
     const max = dimensions.transDim(
-      V3.add([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 1]),
+      V3.add([curU, curV, curW], [halfViewportExtentU, halfViewportExtentV, 1]),
       viewport,
     );
 
-    let zoomStep;
-    if (maybeResolutionIndex == null) {
-      zoomStep = getRequestLogZoomStep(state);
-    } else {
-      const layer = getLayerByName(state.dataset, layerName);
-      const resolutionInfo = getResolutionInfo(layer.resolutions);
-      zoomStep = resolutionInfo.getClosestExistingIndex(maybeResolutionIndex);
+    const resolution = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
+    const resolutionUVX = dimensions.transDim(resolution, viewport);
+    const widthInVoxel = Math.ceil(halfViewportExtentU / resolutionUVX[0]);
+    const heightInVoxel = Math.ceil(halfViewportExtentV / resolutionUVX[1]);
+    if (widthInVoxel * heightInVoxel > 1024 ** 2) {
+      throw new Error(
+        "Requested data for viewport cannot be loaded, since the amount of data is too large for the available resolution. Please zoom in further or ensure that coarser magnifications are available.",
+      );
     }
+
     const cuboid = await this.getDataForBoundingBox(
       layerName,
       {

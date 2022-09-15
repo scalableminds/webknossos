@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { OrthoView, Vector3, Vector4 } from "oxalis/constants";
+import type { OrthoView, Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";

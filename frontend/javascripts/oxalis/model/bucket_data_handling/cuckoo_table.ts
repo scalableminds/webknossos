@@ -144,7 +144,7 @@ export class CuckooTable {
     if (existingValueWithAddress) {
       // The key already exists. We only have to overwrite
       // the corresponding value.
-      const [_value, address] = existingValueWithAddress;
+      const [, address] = existingValueWithAddress;
       this.writeEntryAtAddress(pendingKey, pendingValue, address, rehashAttempt > 0);
       return;
     }

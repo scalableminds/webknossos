@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.jzarr
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.geometry.{Vec3Int}
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator}
 
 import java.nio.ByteOrder

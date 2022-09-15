@@ -4,14 +4,11 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import com.scalableminds.webknossos.datastore.datareaders.{
-  ArrayOrder,
   AxisOrder,
   ChunkReader,
-  ChunkUtils,
   DatasetArray,
   DatasetHeader,
   FileSystemStore,
-  MultiArrayUtils,
   DatasetPath
 }
 import com.typesafe.scalalogging.LazyLogging

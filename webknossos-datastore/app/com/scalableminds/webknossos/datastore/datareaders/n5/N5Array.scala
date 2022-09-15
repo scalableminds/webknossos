@@ -46,5 +46,5 @@ class N5Array(relativePath: DatasetPath, store: FileSystemStoreN5, header: Datas
     with LazyLogging {
 
   override protected val chunkReader: ChunkReader =
-    ChunkReader.create(store, header)
+    ChunkReaderN5.create(store, header)
 }

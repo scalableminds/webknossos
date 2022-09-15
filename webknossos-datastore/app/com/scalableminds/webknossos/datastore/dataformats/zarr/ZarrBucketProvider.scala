@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
-import java.nio.file.{FileSystem, Path}
+import java.nio.file.Path
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataC
 import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrArray
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo

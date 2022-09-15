@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.scalableminds.webknossos.datastore.datareaders.ChunkReader.createTypedChunkReader
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, ChunkReader, DatasetHeader, TypedChunkReader}
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
@@ -25,11 +24,12 @@ class PaddedChunkReader(header: DatasetHeader, store: FileSystemStoreN5, typedCh
       assert(chunkSize == blockHeader.blockSize.product, "Chunk has to have same size as described in metadata")
 
       data.map { bytes =>
-        val paddedBlock = bytes ++ new Array[Byte](header.bytesPerChunk - bytes.length)
-        val is = use(new ByteArrayInputStream(paddedBlock))
+        val is = use(new ByteArrayInputStream(bytes))
         val os = use(new ByteArrayOutputStream())
         header.compressorImpl.uncompress(is, os)
-        os.toByteArray
+        val output = os.toByteArray
+        val paddedBlock = output ++ new Array[Byte](header.bytesPerChunk - output.length)
+        paddedBlock
       }
     }.get
 }

@@ -1,12 +1,9 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.google.common.io.{ByteArrayDataInput, ByteStreams}
 import com.scalableminds.webknossos.datastore.datareaders.FileSystemStore
 import net.liftweb.util.Helpers.tryo
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, FileInputStream, InputStream}
-import java.nio.ByteBuffer
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, InputStream}
 import java.nio.file.{Files, Path}
 
 class FileSystemStoreN5(override val internalRoot: Path) extends FileSystemStore(internalRoot) {

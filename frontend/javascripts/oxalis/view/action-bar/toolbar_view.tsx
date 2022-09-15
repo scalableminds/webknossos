@@ -1,5 +1,5 @@
 import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, Menu } from "antd";
-import { DownOutlined, ExportOutlined } from "@ant-design/icons";
+import { ClearOutlined, DownOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
 
@@ -52,8 +52,9 @@ import Store, { OxalisState, VolumeTracing } from "oxalis/store";
 
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
+import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
+import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -566,10 +567,8 @@ function ChangeBrushSizeButton() {
 export default function ToolbarView() {
   const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
-  const hasAgglomerateMappings = useSelector((state: OxalisState) => {
-    const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-    return (visibleSegmentationLayer?.agglomerates?.length ?? 0) > 0;
-  });
+  const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
+
   const [lastForcefulDisabledTool, setLastForcefulDisabledTool] = useState<AnnotationTool | null>(
     null,
   );
@@ -824,7 +823,7 @@ export default function ToolbarView() {
           />
         </RadioButtonWithTooltip>
 
-        {hasSkeleton && hasVolume && hasAgglomerateMappings ? (
+        {hasSkeleton && hasVolume && isAgglomerateMappingEnabled.value ? (
           <RadioButtonWithTooltip
             title="Proofreading Tool - Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
             disabledTitle={disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation}
@@ -873,6 +872,9 @@ function ToolSpecificSettings({
     showCreateCellButton &&
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
       adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
+  const dispatch = useDispatch();
+  const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
+
   return (
     <>
       {showCreateTreeButton ? (
@@ -924,6 +926,17 @@ function ToolSpecificSettings({
       ) : null}
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
+
+      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? (
+        <ButtonComponent
+          title="Clear auxiliary skeletons and meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
+          onClick={handleClearProofreading}
+          className="narrow"
+          style={{ marginLeft: 12 }}
+        >
+          <ClearOutlined />
+        </ButtonComponent>
+      ) : null}
     </>
   );
 }

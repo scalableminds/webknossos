@@ -40,8 +40,8 @@ class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
 }
 
 object Script {
-  def fromForm(name: String, gist: String, _owner: String): Script =
-    Script(ObjectId.generate, ObjectId(_owner), name, gist)
+  def fromForm(name: String, gist: String, _owner: ObjectId): Script =
+    Script(ObjectId.generate, _owner, name, gist)
 }
 
 class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

@@ -32,10 +32,10 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging wit
 class N5BucketProvider(layer: N5Layer) extends BucketProvider with LazyLogging with RateLimitedErrorLogging {
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[N5CubeHandle] = {
-    val zarrMagOpt: Option[N5Mag] =
+    val n5MagOpt: Option[N5Mag] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
-    zarrMagOpt match {
+    n5MagOpt match {
       case None => Empty
       case Some(n5Mag) =>
         val magPathOpt: Option[Path] = {

@@ -47,20 +47,7 @@ This button opens up a modal that starts a long-running job which will materiali
 
 ### Proof-Reading and Merging Segments
 
-webKnossos support proof-reading of segments from automatic segmentation. With "Merger Mode" individual segments (e.g. from over-segmentation) can be combined ("merged") to refine the segmentation and fix split errors. 
-
-The "merger mode" is available in skeleton and hybrid annotation mode. Mark connected segments by right-clicking and placing nodes in the corresponding segments to merge them together. Several segments can be combined by making sure that all "correcting nodes" are part of the same tree.
-
-Select the Skeleton tool from the toolbar and enable the "Merger mode" option (double arrow icon).As soon as you enable it, all already existing trees will be used to form merged segments.
-
-To fix split errors see section on flood filling below.
-
-![Video: Proof-Reading Volume Annotations](https://www.youtube.com/watch?v=Sq4AuWanK14)
-
-After finishing the proof-reading, a long-running job can be started to apply the merging of segments into a new dataset with the same layers. The job can be started via a modal. The modal can be opened by clicking on the button next to the merger mode button.
-
-![Button to open the Merger mode long-running job modal](./images/start_merger_mode_job_modal_button.jpg)
-![Modal to start the Merger mode long-running job](./images/start_merger_mode_job_modal.jpg)
+See section on [proof reading](./proof_reading.md).
 
 ### Volume Flood Fills
 webKnossos supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, webKnossos can do this for you. This operation allows you to fix both split and merge errors:

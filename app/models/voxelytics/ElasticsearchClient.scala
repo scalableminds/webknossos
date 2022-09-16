@@ -127,7 +127,8 @@ class ElasticsearchClient @Inject()(wkConf: WkConf,
                 taskName: Option[String],
                 minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO): Fox[JsValue] = {
 
-    val levels = VoxelyticsLogLevel.values - minLevel
+    val levels = VoxelyticsLogLevel.sortedValues.drop(VoxelyticsLogLevel.sortedValues.indexOf(minLevel))
+    logger.info(s"MIN_LEVEL=$minLevel LEVELS=$levels")
     val queryStringParts = List(
       Some(s"""vx.run_name:"$runName""""),
       Some(s"""vx.wk_org:"$organizationName""""),

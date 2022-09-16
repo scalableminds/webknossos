@@ -92,7 +92,7 @@ function useUpdatePrivateLink(annotationId: string) {
     },
     // If the mutation fails, use the context returned from onMutate to roll back
     onError: (err, _updatedLinkItem, context) => {
-      Toast.error(`Could not update link. ${err}`);
+      Toast.error("Could not update link.");
       if (context) {
         queryClient.setQueryData(mutationKey, context.previousLinks);
       }

@@ -278,7 +278,7 @@ function SimpleLayerForm({
                   value == null || value === ""
                     ? Promise.reject(
                         new Error(
-                          `When left empty, annotating this layer later will only be possible with manually chosen segment IDs.`,
+                          "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
                         ),
                       )
                     : Promise.resolve(),

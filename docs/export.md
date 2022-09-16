@@ -17,7 +17,7 @@ Any webKnossos dataset/annotation can be accessed this way regardless of its ori
 
 TODO Image
 
-A unique aspect of webKnossos of webKnossos Zarr streaming are private Zarr links. Any annotation shared through Zarr generates a web link containing a unique access token for authentication such that only allowed users and collaborators may access this data. This is akin to webKnossos ability to [privately share annotations through web URLs](./sharing.md#annotation-sharing). Zarr links can be revoked/deleted at any time (or time-limited by default) to retain control over your data.
+A unique aspect of webKnossos is private Zarr links. Any annotation shared through Zarr generates a web link containing a unique access token for authentication such that only allowed users and collaborators may access this data. This is akin to webKnossos ability to [privately share annotations through web URLs](./sharing.md#annotation-sharing). Zarr links can be revoked/deleted at any time (or time-limited by default) to retain control over your data.
 
 ## Data Export through the UI
 

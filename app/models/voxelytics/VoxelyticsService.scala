@@ -43,9 +43,9 @@ object TaskRunEntry {
 }
 
 case class WorkflowEntry(
-                          name: String,
-                          hash: String
-                        )
+    name: String,
+    hash: String
+)
 
 object WorkflowEntry {
   implicit val jsonFormat: OFormat[WorkflowEntry] = Json.format[WorkflowEntry]
@@ -148,7 +148,7 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
     allTaskRuns
       .filter(task => task.runId == mostRecentRunId)
       .map(task => {
-        val thisTaskRuns = allTaskRuns.filter(t => t.taskName == task.taskName).sortBy(_.beginTime)
+        val thisTaskRuns = allTaskRuns.filter(t => t.taskName == task.taskName).sortBy(_.beginTime).reverse
         val nonWaitingTaskRuns = thisTaskRuns.filter(t => VoxelyticsRunState.nonWaitingStates.contains(t.state))
         nonWaitingTaskRuns.headOption.getOrElse(thisTaskRuns.head)
       })
@@ -163,10 +163,10 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
         taskName,
         task.task,
         Json.obj("config" -> task.config,
-          "description" -> task.description,
-          "distribution" -> task.distribution,
-          "inputs" -> task.inputs,
-          "output_paths" -> task.output_paths)
+                 "description" -> task.description,
+                 "distribution" -> task.distribution,
+                 "inputs" -> task.inputs,
+                 "output_paths" -> task.output_paths)
       )
       _ <- Fox.combined(
         artifacts
@@ -175,12 +175,12 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
             val artifactName = artifactKV._1
             val artifact = artifactKV._2
             voxelyticsDAO.upsertArtifact(taskId,
-              artifactName,
-              artifact.path,
-              artifact.file_size,
-              artifact.inode_count,
-              artifact.version,
-              artifact.metadataAsJson)
+                                         artifactName,
+                                         artifact.path,
+                                         artifact.file_size,
+                                         artifact.inode_count,
+                                         artifact.version,
+                                         artifact.metadataAsJson)
           })
           .toList)
     } yield ()

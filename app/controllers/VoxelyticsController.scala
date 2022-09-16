@@ -1,6 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.organization.OrganizationDAO
 import models.voxelytics._
@@ -50,7 +51,7 @@ class VoxelyticsController @Inject()(
             .map(taskKV => {
               val taskName = taskKV._1
               val task = taskKV._2
-              voxelyticsService.upsertTask(runId, taskName, task, request.body.artifacts)
+              voxelyticsService.upsertTaskWithArtifacts(runId, taskName, task, request.body.artifacts)
             })
             .toList)
 
@@ -61,62 +62,65 @@ class VoxelyticsController @Inject()(
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-        // Auth is implemented in `voxelyticsDAO.selectRuns`
+        // Auth is implemented in `voxelyticsDAO.findRuns`
         runs <- voxelyticsDAO.findRuns(request.identity, None, workflowHash, conf.staleTimeout)
         result <- if (runs.nonEmpty) {
-          for {
-            taskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization, runs.map(_.id), conf.staleTimeout)
-            _ <- bool2Fox(taskRuns.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
-            workflows <- voxelyticsDAO.findWorkflowsByHash(request.identity._organization,
-                                                           runs.map(_.workflow_hash).toSet)
-            _ <- bool2Fox(workflows.nonEmpty) ?~> "voxelytics.noWorkflowFound" ~> NOT_FOUND
-
-            workflowsAsJson = JsArray(workflows.flatMap(workflow => {
-              val workflowRuns = runs.filter(run => run.workflow_hash == workflow.hash)
-              if (workflowRuns.nonEmpty) {
-                val state, beginTime, endTime = voxelyticsService.aggregateBeginEndTime(workflowRuns)
-                Some(
-                  Json.obj(
-                    "name" -> workflow.name,
-                    "hash" -> workflow.hash,
-                    "beginTime" -> beginTime,
-                    "endTime" -> endTime,
-                    "state" -> state.toString(),
-                    "runs" -> workflowRuns.map(run => {
-                      val tasks = taskRuns.filter(taskRun => taskRun.runId == run.id)
-                      voxelyticsService.runPublicWrites(run, tasks)
-                    })
-                  ))
-              } else {
-                None
-              }
-            }))
-          } yield workflowsAsJson
+          listWorkflowsWithRuns(request, runs)
         } else {
           Fox.successful(Json.arr())
         }
       } yield JsonOk(result)
     }
 
+  private def listWorkflowsWithRuns(request: SecuredRequest[WkEnv, AnyContent], runs: List[RunEntry]): Fox[JsArray] =
+    for {
+      _ <- bool2Fox(runs.nonEmpty) // just asserting once more
+      taskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization, runs.map(_.id), conf.staleTimeout)
+      _ <- bool2Fox(taskRuns.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
+      workflows <- voxelyticsDAO.findWorkflowsByHash(request.identity._organization, runs.map(_.workflow_hash).toSet)
+      _ <- bool2Fox(workflows.nonEmpty) ?~> "voxelytics.noWorkflowFound" ~> NOT_FOUND
+
+      workflowsAsJson = JsArray(workflows.flatMap(workflow => {
+        val workflowRuns = runs.filter(run => run.workflow_hash == workflow.hash)
+        if (workflowRuns.nonEmpty) {
+          val state, beginTime, endTime = voxelyticsService.aggregateBeginEndTime(workflowRuns)
+          Some(
+            Json.obj(
+              "name" -> workflow.name,
+              "hash" -> workflow.hash,
+              "beginTime" -> beginTime,
+              "endTime" -> endTime,
+              "state" -> state.toString(),
+              "runs" -> workflowRuns.map(run => {
+                val tasks = taskRuns.filter(taskRun => taskRun.runId == run.id)
+                voxelyticsService.runPublicWrites(run, tasks)
+              })
+            ))
+        } else {
+          None
+        }
+      }))
+    } yield workflowsAsJson
+
   def getWorkflow(workflowHash: String, runId: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-        runIdValidated <- Fox.runOptional(runId)(ObjectId.fromString(_))
-        // Auth is implemented in `voxelyticsDAO.selectRuns`
+        runIdValidatedOpt <- Fox.runOptional(runId)(ObjectId.fromString(_))
+        // Auth is implemented in `voxelyticsDAO.findRuns`
         workflow <- voxelyticsDAO.findWorkflowByHash(request.identity._organization, workflowHash) ?~> "voxelytics.workflowNotFound" ~> NOT_FOUND
 
         // Fetching all runs for this workflow or specified run
         // If all runs are fetched, a combined version of the workflow report
         // will be returned that contains the information of the most recent task runs
-        runs <- runIdValidated
+        runs <- runIdValidatedOpt
           .map(runIdValidated =>
             voxelyticsDAO.findRuns(request.identity, Some(List(runIdValidated)), Some(workflowHash), conf.staleTimeout))
           .getOrElse(voxelyticsDAO.findRuns(request.identity, None, Some(workflowHash), conf.staleTimeout))
         _ <- bool2Fox(runs.nonEmpty) ?~> "voxelytics.runNotFound" ~> NOT_FOUND
         sortedRuns = runs.sortBy(_.beginTime).reverse
         // All workflows have at least one run, because they are created at the same time
-        mostRecentRun = sortedRuns.head
+        mostRecentRun <- sortedRuns.headOption ?~> "voxelytics.zeroRunWorkflow"
 
         // Fetch task runs for all runs
         allTaskRuns <- voxelyticsDAO.findTaskRuns(request.identity._organization,
@@ -152,10 +156,7 @@ class VoxelyticsController @Inject()(
     sil.SecuredAction.async(validateJson[List[WorkflowEvent]]) { implicit request =>
       def createWorkflowEvent(runId: ObjectId, event: WorkflowEvent): Fox[Unit] =
         event match {
-          case ev: RunStateChangeEvent =>
-            for {
-              _ <- voxelyticsDAO.upsertRunStateChangeEvent(runId, ev)
-            } yield ()
+          case ev: RunStateChangeEvent => voxelyticsDAO.upsertRunStateChangeEvent(runId, ev)
 
           case ev: TaskStateChangeEvent =>
             for {
@@ -184,10 +185,7 @@ class VoxelyticsController @Inject()(
               _ <- voxelyticsDAO.upsertChunkStateChangeEvent(chunkId, ev)
             } yield ()
 
-          case ev: RunHeartbeatEvent =>
-            for {
-              _ <- voxelyticsDAO.upsertRunHeartbeatEvent(runId, ev)
-            } yield ()
+          case ev: RunHeartbeatEvent => voxelyticsDAO.upsertRunHeartbeatEvent(runId, ev)
 
           case ev: ChunkProfilingEvent =>
             for {

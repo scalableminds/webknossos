@@ -113,12 +113,12 @@ class ElasticsearchClient @Inject()(wkConf: WkConf,
 
   private def bootstrapIndexOnServer: Fox[Unit] =
     for {
+      // HEAD request will return 2xx if index exists or 404 if it doesn't exist
+      // Here, we convert that HTTP status code logic into a bool
       indexExists <- rpc(s"${conf.uri}/${conf.index}").head.map(_ => true).getOrElse(false)
-      _ <- if (!indexExists) {
+      _ <- Fox.runIf(!indexExists) {
         logger.info("Bootstrapping Elasticsearch index for Voxelytics.")
         rpc(s"${conf.uri}/${conf.index}").put(elasticsearchSchema)
-      } else {
-        Fox.successful(())
       }
     } yield ()
 
@@ -145,28 +145,28 @@ class ElasticsearchClient @Inject()(wkConf: WkConf,
 
     for {
       _ <- serverStartupFuture
-      scroll <- rpc(s"${conf.uri}/${conf.index}/_search?scroll=1m")
+      scroll <- rpc(s"${conf.uri}/${conf.index}/_search?scroll=1m").silent
         .postJsonWithJsonResponse[JsValue, JsValue](scrollBody) ~> "Could not fetch logs"
       scrollId = (scroll \ "_scroll_id").as[String]
       scrollHits = (scroll \ "hits" \ "hits").as[List[JsValue]]
       _ = buffer ++= scrollHits
-      lastScrollId <- fetchBatch(buffer, scrollId)
+      lastScrollId <- fetchBatchToBuffer(buffer, scrollId)
       _ <- rpc(s"${conf.uri}/_search/scroll/$lastScrollId").delete()
     } yield JsArray(buffer)
 
   }
 
-  private def fetchBatch(buffer: ListBuffer[JsValue], scrollId: String): Fox[String] =
+  private def fetchBatchToBuffer(bufferMutable: ListBuffer[JsValue], scrollId: String): Fox[String] =
     for {
-      batch <- rpc(s"${conf.uri}/_search/scroll")
+      batch <- rpc(s"${conf.uri}/_search/scroll").silent
         .postJsonWithJsonResponse[JsValue, JsValue](Json.obj("scroll" -> "1m", "scroll_id" -> scrollId))
       batchScrollId = (batch \ "_scroll_id").as[String]
       batchHits = (batch \ "hits" \ "hits").as[List[JsValue]]
-      _ = buffer ++= batchHits
+      _ = bufferMutable ++= batchHits
       returnedScrollId <- if (batchHits.isEmpty) {
         Fox.successful(scrollId)
       } else {
-        fetchBatch(buffer, batchScrollId)
+        fetchBatchToBuffer(bufferMutable, batchScrollId)
       }
     } yield returnedScrollId
 
@@ -181,7 +181,7 @@ class ElasticsearchClient @Inject()(wkConf: WkConf,
 
       for {
         _ <- serverStartupFuture
-        res <- rpc(uri)
+        res <- rpc(uri).silent
           .addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType)
           .postBytesWithJsonResponse[JsValue](bytes)
         _ <- Fox.bool2Fox((res \ "errors").asOpt[List[JsValue]].forall(_.isEmpty))

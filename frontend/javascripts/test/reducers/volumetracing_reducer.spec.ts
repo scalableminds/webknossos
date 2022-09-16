@@ -17,7 +17,6 @@ mockRequire("app", {
   },
 });
 test("VolumeTracing should set a new active cell", (t) => {
-  // todo
   const createCellAction = VolumeTracingActions.createCellAction();
   const setActiveCellAction = VolumeTracingActions.setActiveCellAction(1);
   // Create two cells, then set first one active

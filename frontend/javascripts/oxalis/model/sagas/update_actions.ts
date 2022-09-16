@@ -109,7 +109,6 @@ type UpdateVolumeTracingUpdateAction = {
     activeSegmentId: number;
     editPosition: Vector3;
     editRotation: Vector3;
-    // todo: clarify that the backend accepts this
     largestSegmentId: number | null;
     zoomLevel: number;
   };

@@ -27,7 +27,9 @@ In particular, the following file formats are supported:
 - Single-file images (tif, czi, nifti, raw)
 - KNOSSOS file hierarchy 
 
-Note, for datasets in the Zarr, N5, Neuroglancer `Pre-Computed` or BossDB formats uploading and automatic conversion are not supported. Rather, directly stream them from an HTTP server or the cloud. See the page on [datasets](./datasets.md) for uploading and configuring these formats.
+Note, for datasets in the Zarr, N5, Neuroglancer `Pre-Computed` or BossDB formats uploading and automatic conversion are not supported.
+Instead, they can be directly streamed from an HTTP server or the cloud.
+See the page on [datasets](./datasets.md) for uploading and configuring these formats.
 
 #### Single-Layer Image File Sequence
 When uploading multiple image files, these files are sorted numerically, and each one is interpreted as one section within a 3D dataset.

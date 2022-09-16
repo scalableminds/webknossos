@@ -84,9 +84,9 @@ export default function EnterLargestSegmentIdModal({
   return (
     <Modal visible title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
       <p>
-        No largest segment ID was configured for this dataset layer. This means that webKnossos does
-        not know which segment ID would be safe to use for annotating new segments (because it is
-        not in use yet).
+        No largest segment ID was configured for this segmentation layer. This means that webKnossos
+        does not know which segment ID would be safe to use for annotating new segments (because it
+        was not used yet).
       </p>
 
       <p>
@@ -103,7 +103,9 @@ export default function EnterLargestSegmentIdModal({
         />
       </div>
 
-      <p>Additionally, it is recommended to {editLinkOrText} or ask an administrator to do so.</p>
+      <p style={{ marginTop: 8 }}>
+        Additionally, it is recommended to {editLinkOrText} or ask an administrator to do so.
+      </p>
     </Modal>
   );
 }

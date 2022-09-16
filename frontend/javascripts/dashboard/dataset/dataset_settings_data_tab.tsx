@@ -152,7 +152,7 @@ function SimpleDatasetForm({
               {
                 validator: syncValidator(
                   (value: Vector3) => value && value.every((el) => el > 0),
-                  "Each component of the scale must be larger than 0",
+                  "Each component of the scale must be greater than 0",
                 ),
               },
             ]}
@@ -268,9 +268,20 @@ function SimpleLayerForm({
                     ? Promise.resolve()
                     : Promise.reject(
                         new Error(
-                          `The largest segmentation ID must be larger than 0 and smaller than 2^${bitDepth}`,
+                          `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
                         ),
                       ),
+              },
+              {
+                warningOnly: true,
+                validator: (rule, value) =>
+                  value == null || value === ""
+                    ? Promise.reject(
+                        new Error(
+                          `When left empty, annotating this layer later will only be possible with manually chosen segment IDs.`,
+                        ),
+                      )
+                    : Promise.resolve(),
               },
             ]}
           >

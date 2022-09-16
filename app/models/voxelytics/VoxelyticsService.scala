@@ -124,17 +124,17 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
 
   private def artifactEntryPublicWrites(artifact: ArtifactEntry): (String, JsObject) =
     (artifact.name,
-      artifact.metadata ++
-        Json.obj(
-          "artifactId" -> artifact.artifactId.id,
-          "taskId" -> artifact.taskId.id,
-          "name" -> artifact.name,
-          "path" -> artifact.path,
-          "fileSize" -> artifact.fileSize,
-          "inodeCount" -> artifact.inodeCount,
-          "version" -> artifact.version,
-          "taskName" -> artifact.taskName
-        ))
+     artifact.metadata ++
+       Json.obj(
+         "artifactId" -> artifact.artifactId.id,
+         "taskId" -> artifact.taskId.id,
+         "name" -> artifact.name,
+         "path" -> artifact.path,
+         "fileSize" -> artifact.fileSize,
+         "inodeCount" -> artifact.inodeCount,
+         "version" -> artifact.version,
+         "taskName" -> artifact.taskName
+       ))
 
   def artifactsPublicWrites(artifacts: List[ArtifactEntry]): JsObject = {
     val artifactsByTask = artifacts.groupBy(_.taskName)

@@ -25,7 +25,7 @@ class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorS
 
   private lazy val conf = wkConf.Voxelytics.Elasticsearch
   private lazy val enabled = wkConf.Features.voxelyticsEnabled && conf.uri.nonEmpty
-  
+
   val SCROLL_SIZE = 10000
   val POLLING_INTERVAL = FiniteDuration(1, SECONDS)
 

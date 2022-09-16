@@ -63,7 +63,7 @@ Any other webKnossos feature, e.g., annotations, access rights, will be stored i
 
 Note, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
-Hint: If have any Zarr dataset locally that you would like to view in webKnossos, consider running a HTTP server locally to server the dataset. Then webKnossos can easily stream the data.
+Hint: If happen to have any Zarr dataset locally that you would like to view in webKnossos, consider running a HTTP server locally to serve the dataset. Then webKnossos can easily stream the data.
 
 ### Working with Neuroglancer and BossDB datasets
 On webKnossos.org supports loading and remotely streaming datasets in the in the [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) stored in the Google Cloud or datasets served from [BossDB](https://bossdb.org).

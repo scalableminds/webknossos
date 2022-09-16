@@ -9,7 +9,7 @@ docker-compose pull webknossos
 ./start-docker.sh
 ```
 
-Open your local webknossos instance on [localhost:9000](http://localhost:9000) and complete the onboarding steps in the browser.
+Open your local webKnossos instance on [localhost:9000](http://localhost:9000) and complete the onboarding steps in the browser.
 Now, you are ready to use your local webKnossos instance.
 
 See the wiki for [instructions on updating](https://github.com/scalableminds/webknossos/wiki/Development-setup) this development setup.
@@ -98,7 +98,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 
 ##### Java
 * Install Java JDK 14 (from Oracle or OpenJDK)
-* make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains path to JDK
+* make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains the path to JDK
 
 ##### sbt
 See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html

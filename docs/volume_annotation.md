@@ -1,6 +1,6 @@
 ## Volume Annotations & Proof-Reading
 
-In addition to [skeleton annotations](./skeleton_annotation.md), webKnossos also supports volume / segmentation annotations.
+In addition to [skeleton annotations](./skeleton_annotation.md), webKnossos also supports volume/segmentation annotations.
 With this type of annotation, you can label groups of voxels with efficient drawing tools.
 
 ![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=372s)
@@ -13,8 +13,8 @@ Select one of the drawing tools from the toolbar or toggle through with the keyb
 - `Trace`: Draw outlines around the voxel you would like to label.
 - `Brush`: Draw over the voxels you would like to label. Adjust the brush size with *SHIFT + Mousewheel*.
 - `Erase (Trace/Brush)`: Draw over the voxels you would like to erase. Adjust the brush size with *SHIFT + Mousewheel*.
-- `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of you viewport). All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active segment ID. Useful to either fill whole in a segment or to relabel a segment with a different ID/color.
-- `Segment Picker`: Click on amy segment to select its label ID as the active segment ID and continue any volume annotation operation with that ID.
+- `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active segment ID. Useful to either fill whole in a segment or to relabel a segment with a different ID/color.
+- `Segment Picker`: Click on any segment to select its label ID as the active segment ID and continue any volume annotation operation with that ID.
 
 When using the trace or brush tool, a label can be added with *Left Mouse Drag*.
 Erasing is possible with the dedicated erase tools or with *CTRL + Shift + Left Mouse Drag*.
@@ -22,17 +22,16 @@ Erasing is possible with the dedicated erase tools or with *CTRL + Shift + Left 
 If you have enabled *Classic Controls* in the settings sidebar, erasing is also possible with *Right Mouse Drag* within the brush and trace tool (otherwise, right-clicking is mapped to open a context menu).
 
 The following interactions and modifiers are available when working with the volume annotation tools:
-- `Create New Segment ID`: Creates a new segment ID for labell. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID.
-- `Change Brush Size`: Changes the size of the brushing tool. 
-- `Overwrite Everything`: When labelling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labelled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
+- `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID.
+- `Change Brush Size`: Changes the size of the brushing tool. `Overwrite Everything`When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
 - `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush/trace tool to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
-- `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labelling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
+- `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
 
 ![Adding labels with the Trace tool](./images/volume_trace.gif)
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
 
-In the `Segmentation` tab on the right-hand sidepanel, you can see the segment IDs which are available in your annotation. You can rename segments as needed.
+In the `Segmentation` tab on the right-hand side panel, you can see the segment IDs which are available in your annotation. You can rename segments as needed.
 
 The active segment ID under the cursor can be found in the status bar at the bottom of the screen or through the context-sensitive menu on right-click.
 
@@ -47,24 +46,24 @@ This button opens up a modal that starts a long-running job which will materiali
 
 ### Proof-Reading and Merging Segments
 
-See section on [proof reading](./proof_reading.md).
+See section on [proofreading](./proof_reading.md).
 
 ### Volume Flood Fills
 webKnossos supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, webKnossos can do this for you. This operation allows you to fix both split and merge errors:
 
-- For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute intensive you might be better of with the `Merger Mode`, explained above.
-- For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply to one of the partial segments that you just divided. 
+- For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute-intensive you might be better of with the `Merger Mode`, explained above.
+- For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided. 
 
-Due to performance reasons, 3D flood-fills only work in a small, local bounding box. webKnossos will add bounding box around the affected area. In order to truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a webKnossos job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill" button. Make sure to do all local fill operations first and apply them all at once.
+Due to performance reasons, 3D flood-fills only work in a small, local bounding box. webKnossos will add a bounding box around the affected area. To truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a webKnossos job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill" button. Make sure to do all local fill operations first and apply them all at once.
 
-Check the `Processing Jobs` page from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, processed dataset will appear as new dataset in your dashboard.
+Check the `Processing Jobs` page from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, processed dataset will appear as a new dataset in your dashboard.
 
 ### Volume Interpolation
 When using the brush or trace tool, you can use the `Volume Interpolation` feature for faster annotation speed (in a task context, this feature has to be enabled explicitly).
 Simply label a segment in one slice (e.g., z=10), move forward by a few slices (e.g., z=14) and label the segment there.
 Now, you can click the "Interpolate" button (or use the shortcut V) to interpolate the segment between the annotated slices (e.g., z=11, z=12, z=13).
 
-Note that it is recommended to proof-read the interpolated slices afterwards, since the interpolation is a heuristic.
+Note that it is recommended to proofread the interpolated slices afterwards since the interpolation is a heuristic.
 
 ![Video: Volume Interpolation](https://www.youtube.com/watch?v=QqU72vHRR2I)
 
@@ -76,7 +75,7 @@ The extrusion can be triggered by using the extrude button in the toolbar (also 
 ### Mappings / On-Demand Agglomeration
 With webKnossos it is possible to apply a precomputed agglomeration file to re-map/combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation. 
 
-This feature work well with automated machine learning segmentation workflows. We typically produce several agglomeration results based on different prediction and size thresholds leading to several possible segmentations based of one initial over-segmentation. We load these ID map into webKnossos to quickly review these results in an interactive session.
+This feature works well with automated machine learning segmentation workflows. We typically produce several agglomeration results based on different prediction and size thresholds leading to several possible segmentations based on one initial over-segmentation. We load these ID maps into webKnossos to quickly review these results in an interactive session.
 
 ![Video: Segmentation Mappings](https://www.youtube.com/watch?v=ZmUqyIoA9Gw)
 
@@ -116,7 +115,7 @@ A hybrid annotation contains both skeleton and volume annotations.
 This is the default behavior when creating a new webKnossos annotation.
 
 With hybrid annotations, you can use an existing skeleton as a guide to support volume annotation tasks.
-Alternatively, comments on skeleton node, could be used to label/mark specific cells and positions during a volume annotation.
+Alternatively, comments on skeleton nodes can be used to label/mark specific cells and positions during a volume annotation.
 
 webKnossos also supports pure skeleton or pure volume annotations for dedicated tasks/projects or backward compatibility. 
 Those can be converted to a hybrid annotation, by clicking the `Convert to Hybrid` button in the info tab.

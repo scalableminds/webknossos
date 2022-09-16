@@ -7,14 +7,21 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
-import { OxalisState } from "oxalis/store";
+import Store from "oxalis/throttled_store";
+import { OxalisState, VolumeTracing } from "oxalis/store";
 import { mayUserEditDataset } from "libs/utils";
+import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import { getSegmentationLayerForTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { APISegmentationLayer } from "types/api_flow_types";
 
 const TOAST_KEY = "enter-largest-segment-id";
 
-export function showToastWarningForLargestSegmentIdMissing() {
+export function showToastWarningForLargestSegmentIdMissing(volumeTracing: VolumeTracing) {
+  const segmentationLayer = getSegmentationLayerForTracing(Store.getState(), volumeTracing);
   const openEnterLargestSegmentIdModal = () => {
-    renderIndependently((destroy) => <EnterLargestSegmentIdModal destroy={destroy} />);
+    renderIndependently((destroy) => (
+      <EnterLargestSegmentIdModal segmentationLayer={segmentationLayer} destroy={destroy} />
+    ));
   };
   Toast.warning(
     <div>
@@ -34,13 +41,16 @@ export function showToastWarningForLargestSegmentIdMissing() {
 }
 
 export default function EnterLargestSegmentIdModal({
+  segmentationLayer,
   destroy,
 }: {
+  segmentationLayer: APISegmentationLayer;
   destroy: (...args: Array<any>) => any;
 }) {
   const [largestSegmentId, setLargestSegmentId] = React.useState(0);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const dataset = useSelector((state: OxalisState) => state.dataset);
+
   const dispatch = useDispatch();
   const handleOk = () => {
     if (largestSegmentId < 1) {
@@ -69,6 +79,8 @@ export default function EnterLargestSegmentIdModal({
     editString
   );
 
+  const maxValue = 2 ** getBitDepth(segmentationLayer);
+
   return (
     <Modal visible title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
       <p>
@@ -85,7 +97,7 @@ export default function EnterLargestSegmentIdModal({
         <InputNumber
           size="large"
           min={1}
-          max={100000}
+          max={maxValue}
           value={largestSegmentId}
           onChange={setLargestSegmentId}
         />

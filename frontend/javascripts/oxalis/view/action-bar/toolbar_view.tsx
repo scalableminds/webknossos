@@ -126,7 +126,7 @@ const handleCreateCell = () => {
   if (volumeLayer.largestSegmentId != null) {
     Store.dispatch(createCellAction(volumeLayer.largestSegmentId));
   } else {
-    showToastWarningForLargestSegmentIdMissing();
+    showToastWarningForLargestSegmentIdMissing(volumeLayer);
   }
 };
 

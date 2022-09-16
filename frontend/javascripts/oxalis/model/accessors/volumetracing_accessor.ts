@@ -107,7 +107,7 @@ export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) 
   return allReadableLayerNames;
 }
 
-function getSegmentationLayerForTracing(
+export function getSegmentationLayerForTracing(
   state: OxalisState,
   volumeTracing: VolumeTracing,
 ): APISegmentationLayer {

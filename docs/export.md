@@ -13,7 +13,7 @@ Any webKnossos dataset/annotation can be accessed this way regardless of its ori
 1. Click on the overflow menu (dropdown), next to the `Save` button in the webKnossos navbar
 2. Select `Zarr Links` entry
 3. Click `Create Zarr Link` to make the resource available through the Zarr streaming interface. Set the `Expiration Date` as required. The default duration is 1 month into the future.
-4. Click on the little copy button (clipboard icon) to copy the Zarr web link. Copy the Due to the nature of the Zarr spec, if you need to individually copy a URL for each webKnossos layer.
+4. Click on the little copy button (clipboard icon) to copy the Zarr web link. Due to the nature of the Zarr spec, if you need to individually copy a URL for each webKnossos layer.
 
 TODO Image
 

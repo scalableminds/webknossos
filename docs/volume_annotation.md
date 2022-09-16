@@ -23,7 +23,8 @@ If you have enabled *Classic Controls* in the settings sidebar, erasing is also 
 
 The following interactions and modifiers are available when working with the volume annotation tools:
 - `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID.
-- `Change Brush Size`: Changes the size of the brushing tool. `Overwrite Everything`When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
+- `Change Brush Size`: Changes the size of the brushing tool. 
+- `Overwrite Everything`: When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
 - `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush/trace tool to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
 - `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
 

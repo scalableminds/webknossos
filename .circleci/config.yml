@@ -42,6 +42,35 @@ jobs:
           keys:
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-
+      - restore_cache:
+          name: Restore yarn cache
+          keys:
+            - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
+            - yarn-cache-{{ checksum ".circleci/cache_version" }}-
+      - run:
+          name: Assert unique evolution numbers
+          command: tools/postgres/assert_unique_evolution_numbers.sh
+      - run:
+          name: Install frontend dependencies
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
+      - restore_cache:
+          name: Restore webpack cache
+          keys:
+            - webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - webpack-cache-{{ checksum ".circleci/cache_version" }}-master
+      - run:
+          name: Assert schema.sql and evolutions are equal
+          command: |
+            docker-compose up -d postgres
+            sleep 3
+            docker-compose run compile tools/postgres/diff_schema.js tools/postgres/schema.sql "conf/evolutions/*.sql"
+      - run:
+          name: Build frontend documentation
+          command: docker-compose run base yarn run docs
+      - run:
+          name: Build webknossos (webpack)
+          command: |
+            docker-compose run base yarn build
       - run:
           name: Build webknossos (sbt)
           command: |

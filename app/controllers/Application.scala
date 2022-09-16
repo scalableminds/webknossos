@@ -46,8 +46,6 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
     }
   }
 
-  private def unused = 5
-
   private def webKnossosToken(issuingUserOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Option[String]] =
     issuingUserOpt match {
       case Some(user) =>

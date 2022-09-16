@@ -1171,7 +1171,6 @@ function* watchForSaveConflicts() {
           key: toastKey,
         });
       } else {
-        console.log("toast close");
         Toast.close(toastKey);
       }
     }

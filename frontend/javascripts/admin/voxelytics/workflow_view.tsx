@@ -1,7 +1,6 @@
 import _ from "lodash";
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import usePolling from "libs/polling";
 import {
   VoxelyticsRunInfo,
   VoxelyticsRunState,
@@ -14,7 +13,7 @@ import {
   VoxelyticsWorkflowDagNode,
   VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
-import { useSearchParams } from "libs/react_hooks";
+import { useSearchParams, usePolling } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getVoxelyticsWorkflow } from "admin/admin_rest_api";
 import TaskListView from "./task_list_view";

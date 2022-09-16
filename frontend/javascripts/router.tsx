@@ -3,7 +3,7 @@ import type { ContextRouter } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { createBrowserHistory } from "history";
 import _ from "lodash";
 import AcceptInviteView from "admin/auth/accept_invite_view";
@@ -55,9 +55,22 @@ import features from "features";
 import window from "libs/window";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { coalesce } from "libs/utils";
-import WorkflowView from "admin/voxelytics/workflow_view";
-import WorkflowListView from "admin/voxelytics/workflow_list_view";
 const { Content } = Layout;
+
+function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {
+  const InternalComponent = lazy(loader);
+  return function AsyncComponent() {
+    return (
+      <Suspense fallback={<div style={{ textAlign: "center" }}>Loading...</div>}>
+        <InternalComponent />
+      </Suspense>
+    );
+  };
+}
+
+const AsyncWorkflowView = loadable(() => import("admin/voxelytics/workflow_view"));
+const AsyncWorkflowListView = loadable(() => import("admin/voxelytics/workflow_list_view"));
+
 type StateProps = {
   activeUser: APIUser | null | undefined;
   hasOrganizations: boolean;
@@ -598,13 +611,13 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/workflows"
-                component={WorkflowListView}
+                component={AsyncWorkflowListView}
                 exact
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/workflows/:workflowName"
-                component={WorkflowView}
+                component={AsyncWorkflowView}
               />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />

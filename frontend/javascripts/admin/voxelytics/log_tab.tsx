@@ -4,7 +4,7 @@ import useResizeObserver from "use-resize-observer";
 import ReactAnsi from "react-ansi";
 import chalk from "chalk";
 import classnames from "classnames";
-import usePolling from "libs/polling";
+import { usePolling } from "libs/react_hooks";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import { VX_POLLING_INTERVAL } from "./workflow_view";
@@ -71,7 +71,7 @@ export default function LogTab({
     }
   }
 
-  usePolling(loadLog, isRunning ? VX_POLLING_INTERVAL : null);
+  usePolling(loadLog, isRunning ? VX_POLLING_INTERVAL : null, [runId, taskName, level]);
 
   const logText = useMemo(() => {
     switch (logResult.type) {

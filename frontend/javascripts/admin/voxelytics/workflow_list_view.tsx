@@ -9,7 +9,7 @@ import {
   VoxelyticsTaskInfo,
   VoxelyticsWorkflowInfo,
 } from "types/api_flow_types";
-import usePolling from "libs/polling";
+import { usePolling } from "libs/react_hooks";
 import { formatDateMedium } from "libs/format_utils";
 import Toast from "libs/toast";
 import { VX_POLLING_INTERVAL } from "./workflow_view";

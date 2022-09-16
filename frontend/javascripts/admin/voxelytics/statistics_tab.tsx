@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
-import usePolling from "libs/polling";
+import { usePolling } from "libs/react_hooks";
 import { formatBytes, formatCPU, formatDistanceStrict } from "libs/format_utils";
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
 import { Result } from "./task_view";

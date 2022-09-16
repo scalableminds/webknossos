@@ -86,6 +86,8 @@ function removeUrlParam(location: ReturnType<typeof useLocation>, key: string) {
 }
 
 function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
+  // Re-render every 10s so that the durations that are relative to the current time
+  // are updated regularly.
   useUpdateEvery(10000);
   switch (taskInfo.state) {
     case VoxelyticsRunState.PENDING:

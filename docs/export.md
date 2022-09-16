@@ -4,7 +4,7 @@ We believe in using the best tool for the job and webKnossos makes it easy to do
 
 ## Data Export through Zarr Streaming 
 
-Any dataset and volume annotation in webKnossos also be accessed by third-party software through the Zarr streaming interface. In other words, webKnossos is a fully, capable server for streaming data according to the Zarr spec to any client and can be viewed as an alternative to cloud storage options such as S3/Google Cloud. 
+Any dataset and volume annotation in webKnossos can also be accessed by third-party software through the Zarr streaming interface. In other words, webKnossos is a fully, capable server for streaming data according to the Zarr spec to any client and can be viewed as an alternative to cloud storage options such as S3/Google Cloud. 
 As an additional benefit, you still retain all the other helpful webKnossos features for managing, searching, tagging, and securing datasets adhering to the FAIR (Findability, Accessibility, Interoperability, and Reuse of digital assets) principles.
 
 Any webKnossos dataset/annotation can be accessed this way regardless of its original file format. webKnossos will automatically convert any data on the fly.

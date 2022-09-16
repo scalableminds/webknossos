@@ -15,7 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a context menu option to extract the shortest path between two nodes as a new tree. Select the source node and open the context menu by right-clicking on another node in the same tree. [#6423](https://github.com/scalableminds/webknossos/pull/6423)
 
 ### Changed
-- The largestSegmentId is not a required property for segmentation layers. It is still recommended to set the property, since the generation of new segment id is blocked during volume annotation. However, annotating with manually set IDs is still possible. This change simplifies the import of datasets into webKnossos. [#6414](https://github.com/scalableminds/webknossos/pull/6414)
+- The largestSegmentId is no longer a required property for segmentation layers. It is still recommended to set the property, since the generation of new segment IDs is blocked during volume annotation. However, annotating with manually set IDs is still possible. This change simplifies the import of datasets into webKnossos. [#6414](https://github.com/scalableminds/webknossos/pull/6414)
 
 ### Fixed
 

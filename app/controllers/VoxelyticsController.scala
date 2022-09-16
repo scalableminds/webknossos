@@ -25,8 +25,6 @@ class VoxelyticsController @Inject()(
 
   private lazy val conf = wkConf.Voxelytics
 
-  override def allowRemoteOrigin: Boolean = true
-
   def storeWorkflow: Action[WorkflowDescription] =
     sil.SecuredAction.async(validateJson[WorkflowDescription]) { implicit request =>
       for {

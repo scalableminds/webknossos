@@ -9,7 +9,6 @@ import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
 import net.liftweb.common.Full
 import play.api.http.{HeaderNames, Status}
-import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsArray, JsNumber, JsValue, Json}
 import utils.WkConf
 
@@ -20,14 +19,13 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
 
-class ElasticsearchClient @Inject()(wkConf: WkConf,
-                                    rpc: RPC,
-                                    val lifecycle: ApplicationLifecycle,
-                                    val system: ActorSystem)(implicit ec: ExecutionContext)
+class ElasticsearchClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging
     with MimeTypes {
 
   private lazy val conf = wkConf.Voxelytics.Elasticsearch
+  private lazy val enabled = wkConf.Features.voxelyticsEnabled && conf.uri.nonEmpty
+  
   val SCROLL_SIZE = 10000
   val POLLING_INTERVAL = FiniteDuration(1, SECONDS)
 
@@ -67,8 +65,9 @@ class ElasticsearchClient @Inject()(wkConf: WkConf,
   )
 
   private lazy val serverStartupFuture: Fox[Unit] = {
-    logger.info("Waiting for Elasticsearch to become available.")
     for {
+      _ <- bool2Fox(enabled) ?~> "Elasticsearch is not enabled."
+      _ = logger.info("Waiting for Elasticsearch to become available.")
       _ <- pollUntilServerStartedUp(LocalDateTime.now.plus(Duration.ofMillis(conf.startupTimeout.toMillis))) ~> 500
       _ <- bootstrapIndexOnServer
     } yield ()
@@ -128,7 +127,6 @@ class ElasticsearchClient @Inject()(wkConf: WkConf,
                 minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO): Fox[JsValue] = {
 
     val levels = VoxelyticsLogLevel.sortedValues.drop(VoxelyticsLogLevel.sortedValues.indexOf(minLevel))
-    logger.info(s"MIN_LEVEL=$minLevel LEVELS=$levels")
     val queryStringParts = List(
       Some(s"""vx.run_name:"$runName""""),
       Some(s"""vx.wk_org:"$organizationName""""),
@@ -172,17 +170,17 @@ class ElasticsearchClient @Inject()(wkConf: WkConf,
     } yield returnedScrollId
 
   def bulkInsert(logEntries: List[JsValue]): Fox[Unit] =
-    if (conf.uri.nonEmpty && logEntries.nonEmpty) {
-      val uri = s"${conf.uri}/_bulk"
-      val bytes = logEntries
-        .flatMap(entry =>
-          List(Json.toBytes(Json.obj("create" -> Json.obj("_index" -> conf.index, "_id" -> UUID.randomUUID.toString))),
-               Json.toBytes(entry)))
-        .fold(Array.emptyByteArray)((rest, entry) => rest ++ entry ++ "\n".getBytes)
-
+    if (logEntries.nonEmpty) {
       for {
         _ <- serverStartupFuture
-        res <- rpc(uri).silent
+        bytes = logEntries
+          .flatMap(
+            entry =>
+              List(
+                Json.toBytes(Json.obj("create" -> Json.obj("_index" -> conf.index, "_id" -> UUID.randomUUID.toString))),
+                Json.toBytes(entry)))
+          .fold(Array.emptyByteArray)((rest, entry) => rest ++ entry ++ "\n".getBytes)
+        res <- rpc(s"${conf.uri}/_bulk").silent
           .addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType)
           .postBytesWithJsonResponse[JsValue](bytes)
         _ <- Fox.bool2Fox((res \ "errors").asOpt[List[JsValue]].forall(_.isEmpty))

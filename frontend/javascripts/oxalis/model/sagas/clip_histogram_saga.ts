@@ -4,7 +4,7 @@ import { takeEvery } from "typed-redux-saga";
 import type { ClipHistogramAction } from "oxalis/model/actions/settings_actions";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import Toast from "libs/toast";
-import { OrthoViews } from "oxalis/constants";
+import { OrthoViews, Vector3 } from "oxalis/constants";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import api from "oxalis/api/internal_api";
@@ -18,33 +18,41 @@ function onThresholdChange(layerName: string, [firstVal, secVal]: [number, numbe
   }
 }
 
-async function getClippingValues(layerName: string, thresholdRatio: number = 0.0001) {
-  const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
+async function getClippingValues(
+  layerName: string,
+  thresholdRatio: number = 0.0001,
+): Promise<{ values: Vector3 } | { message: string }> {
+  const state = Store.getState();
+  const { dataset } = state;
+  const { elementClass } = getLayerByName(dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
 
   // Find a viable resolution to compute the histogram on
   // Ideally, we want to avoid resolutions 1 and 2 to keep
   // the amount of data that has to be loaded small and
   // to de-noise the data
-  const state = Store.getState();
-  const maybeResolutionIndex = Math.max(2, getRequestLogZoomStep(state) + 1);
+  const desiredResolutionIndex = Math.max(2, getRequestLogZoomStep(state) + 1);
 
-  const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
-    api.data.getViewportData(OrthoViews.PLANE_XY, layerName, maybeResolutionIndex),
-    api.data.getViewportData(OrthoViews.PLANE_XZ, layerName, maybeResolutionIndex),
-    api.data.getViewportData(OrthoViews.PLANE_YZ, layerName, maybeResolutionIndex),
-  ]);
-  const dataForAllViewPorts = new TypedArrayClass(
-    cuboidXY.length + cuboidXZ.length + cuboidYZ.length,
-  );
+  let dataForAllViewPorts;
+  try {
+    const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
+      api.data.getViewportData(OrthoViews.PLANE_XY, layerName, desiredResolutionIndex),
+      api.data.getViewportData(OrthoViews.PLANE_XZ, layerName, desiredResolutionIndex),
+      api.data.getViewportData(OrthoViews.PLANE_YZ, layerName, desiredResolutionIndex),
+    ]);
+    dataForAllViewPorts = new TypedArrayClass(cuboidXY.length + cuboidXZ.length + cuboidYZ.length);
+    // If getViewportData returned a BigUint array, dataForAllViewPorts will be an BigUint array, too.
+    // @ts-ignore
+    dataForAllViewPorts.set(cuboidXY);
+    // @ts-ignore
+    dataForAllViewPorts.set(cuboidXZ, cuboidXY.length);
+    // @ts-ignore
+    dataForAllViewPorts.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
+  } catch (exception) {
+    console.error("Could not clip histogram due to", exception);
+    return { message: "Could not clip the histogram. Zoom in further and try again." };
+  }
 
-  // If getViewportData returned a BigUint array, dataForAllViewPorts will be an BigUint array, too.
-  // @ts-ignore
-  dataForAllViewPorts.set(cuboidXY);
-  // @ts-ignore
-  dataForAllViewPorts.set(cuboidXZ, cuboidXY.length);
-  // @ts-ignore
-  dataForAllViewPorts.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
   const localHist = new Map();
   for (let i = 0; i < dataForAllViewPorts.length; i++) {
     if (dataForAllViewPorts[i] !== 0) {
@@ -86,18 +94,23 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
     }
   }
 
+  if (lowerClip === -1 || upperClip === -1) {
+    return {
+      message:
+        "The histogram could not be clipped, because the data did not contain any brightness values greater than 0.",
+    };
+  }
+
   // largest brightness value is first after the keys were reversed
   const wiggleRoom = Math.floor(thresholdRatio * sortedHistKeys[0]);
-  return [lowerClip, upperClip, wiggleRoom];
+  return { values: [lowerClip, upperClip, wiggleRoom] };
 }
 
 async function clipHistogram(action: ClipHistogramAction) {
-  const [lowerClip, upperClip, wiggleRoom] = await getClippingValues(action.layerName);
+  const result = await getClippingValues(action.layerName);
 
-  if (lowerClip === -1 || upperClip === -1) {
-    Toast.warning(
-      "The histogram could not be clipped, because the data did not contain any brightness values greater than 0.",
-    );
+  if ("message" in result) {
+    Toast.warning(result.message);
 
     // this is required to correctly reset the state of the AsyncButton initiating this action
     if (action.callback != null) {
@@ -106,6 +119,7 @@ async function clipHistogram(action: ClipHistogramAction) {
 
     return;
   }
+  const [lowerClip, upperClip, wiggleRoom] = result.values;
 
   if (!action.shouldAdjustClipRange) {
     onThresholdChange(action.layerName, [lowerClip, upperClip]);

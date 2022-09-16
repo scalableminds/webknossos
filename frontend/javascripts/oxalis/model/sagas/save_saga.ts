@@ -1125,14 +1125,29 @@ function* watchForSaveConflicts() {
     ]);
 
     for (const tracing of tracings) {
-      const version = yield* call(
+      const versionOnServer = yield* call(
         getNewestVersionForTracing,
         tracingStoreUrl,
         tracing.tracingId,
         tracing.type,
       );
 
-      if (version > tracing.version) {
+      // Read the tracing version again from the store, since the
+      // old reference to tracing might be outdated now due to the
+      // immutability.
+      const versionOnClient = yield* select((state) => {
+        if (tracing.type === "volume") {
+          return getVolumeTracingById(state.tracing, tracing.tracingId).version;
+        }
+        const { skeleton } = state.tracing;
+        if (skeleton == null) {
+          throw new Error("Skeleton must exist at this point.");
+        }
+        return skeleton.version;
+      });
+
+      const toastKey = `save_conflicts_warning_${tracing.tracingId}`;
+      if (versionOnServer > versionOnClient) {
         // The latest version on the server is greater than the most-recently
         // stored version.
 
@@ -1153,8 +1168,11 @@ function* watchForSaveConflicts() {
         }
         Toast.warning(msg, {
           sticky: true,
-          key: "save_conflicts_warning",
+          key: toastKey,
         });
+      } else {
+        console.log("toast close");
+        Toast.close(toastKey);
       }
     }
   }

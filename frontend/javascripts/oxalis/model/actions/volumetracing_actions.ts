@@ -89,7 +89,7 @@ export const initializeEditableMappingAction = (mapping: ServerEditableMapping) 
 
 /*
  * The largestSegmentId parameter is required to enforce that the dispatcher of the action
- * has dealt with the case where the maximum segment id id is not set. In that case,
+ * has dealt with the case where the maximum segment id is not set. In that case,
  * the create cell action should not be exposed via the UI.
  */
 export const createCellAction = (largestSegmentId: number) =>

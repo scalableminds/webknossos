@@ -30,8 +30,6 @@ export default function renderIndependently(
         resolve();
       }
 
-      // const ContextProvider = createContextProvider(context);
-
       ReactDOM.render(
         // @ts-ignore
         <Provider store={Store}>{getComponent(destroy)}</Provider>,

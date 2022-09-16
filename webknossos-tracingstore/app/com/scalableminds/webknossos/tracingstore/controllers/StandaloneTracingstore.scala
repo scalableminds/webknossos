@@ -5,11 +5,10 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
 
-class StandaloneTracingstore @Inject()(implicit ec: ExecutionContext) extends Controller {
+class StandaloneTracingstore @Inject()() extends Controller {
 
-  def buildInfo: Action[AnyContent] = Action { implicit request =>
+  def buildInfo: Action[AnyContent] = Action {
     addRemoteOriginHeaders(
       Ok(
         Json.obj(

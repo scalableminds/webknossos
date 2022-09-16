@@ -1,16 +1,13 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import com.scalableminds.util.tools.Fox
-
-import javax.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 
-import scala.concurrent.ExecutionContext
+import javax.inject.Inject
 
-class StandaloneDatastore @Inject()(implicit ec: ExecutionContext) extends Controller {
+class StandaloneDatastore @Inject()() extends Controller {
 
-  def buildInfo: Action[AnyContent] = Action { implicit request =>
+  def buildInfo: Action[AnyContent] = Action {
     addRemoteOriginHeaders(
       Ok(
         Json.obj(

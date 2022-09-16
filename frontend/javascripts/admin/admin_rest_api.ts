@@ -1482,12 +1482,13 @@ export async function exploreRemoteDataset(
 }
 
 export async function storeRemoteDataset(
+  datastoreUrl: string,
   datasetName: string,
   organizationName: string,
   datasource: string,
 ): Promise<Response> {
   return doWithToken((token) =>
-    fetch(`/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
+    fetch(`${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: datasource,

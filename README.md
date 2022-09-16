@@ -81,7 +81,7 @@ For non-localhost deployments, check out the [installation guide in the document
 
 ### Dependencies
 
-* [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
+* [Oracle JDK 8 to 14](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8 to 14](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
@@ -99,12 +99,12 @@ arch -x86_64 /bin/zsh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed
-brew install openjdk@8 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn
+brew install openjdk@14 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
 echo 'if [ $(arch) = "i386" ]; then' >> ~/.zshrc
-echo '  export PATH="/usr/local/opt/openjdk@8/bin:$PATH"' >> ~/.zshrc
+echo '  export PATH="/usr/local/opt/openjdk@14/bin:$PATH"' >> ~/.zshrc
 echo '  export PATH="/usr/local/opt/openssl/bin:$PATH"' >> ~/.zshrc
 echo '  export LDFLAGS="-L/usr/local/opt/openssl/lib"' >> ~/.zshrc
 echo '  export CPPFLAGS="-I/usr/local/opt/openssl/include"' >> ~/.zshrc
@@ -143,7 +143,7 @@ curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-8-jdk yarn redis-server build-essential libblosc1
+sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-14-jdk yarn redis-server build-essential libblosc1
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
@@ -151,7 +151,7 @@ sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres'
 git clone -b master --depth=1 https://github.com/scalableminds/webknossos.git
 ```
 
-If you already have a different Java version installed, set the default version to Java 8:
+If you already have a different Java version installed, set the default version to Java 14:
 - run `sudo update-alternatives --config java`
 - when prompted, select the desired version
 
@@ -160,7 +160,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 ### Manual Installation
 
 ##### Java
-* Install Java JDK 8 (from Oracle or OpenJDK)
+* Install Java JDK 14 (from Oracle or OpenJDK)
 * make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains path to JDK
 
 ##### sbt

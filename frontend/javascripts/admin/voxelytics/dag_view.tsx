@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import ReactFlow, {
   MiniMap,
-  Controls,
   Background,
   Node as FlowNode,
   Edge as FlowEdge,
+  ReactFlowInstance,
 } from "react-flow-renderer";
 import dagre from "dagre";
 
@@ -18,6 +18,8 @@ import {
 } from "types/api_flow_types";
 import { useSelector } from "react-redux";
 import { OxalisState, Theme } from "oxalis/store";
+import { Button } from "antd";
+import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
 
 const getNodeWidth = (() => {
   const NODE_PADDING = 10;
@@ -89,7 +91,6 @@ const getNodeType = (e: DagNodeMapItem | null) => {
 function getEdgesAndNodes(
   dag: VoxelyticsWorkflowDag,
   filteredTasks: Array<VoxelyticsTaskConfigWithName>,
-  isDraggable: boolean,
   selectedNodeId: string | null,
   theme: Theme,
 ) {
@@ -164,16 +165,15 @@ function getEdgesAndNodes(
         y: position.y - nodeHeight / 2,
       },
       data: { label: node.label },
-      draggable: isDraggable,
       connectable: false,
       type: nodeType,
       style: {
         borderColor: color,
         borderStyle: node.isMetaTask ? "dashed" : "default",
-        borderWidth: node.isMetaTask ? "medium" : "default",
+        borderWidth: node.isMetaTask ? 2 : 1,
         opacity,
         color: fontColor,
-        width: nodeWidth,
+        width: nodeWidth + (node.isMetaTask ? 4 : 2),
         backgroundColor: theme === "light" ? "white" : "black",
       },
     };
@@ -219,10 +219,10 @@ function DAGView({
   filteredTasks: Array<VoxelyticsTaskConfigWithName>;
   onClickHandler: (id: string) => void;
 }) {
-  const [isDraggable, setIsDraggable] = useState(true);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const allTaskIds = dag.nodes.map((node) => node.id);
   const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  const reactFlowRef = useRef<ReactFlowInstance | null>(null);
 
   const handleNodeClick = (_event: any, element: FlowNode) => {
     if (selectedNodeId !== element.id) {
@@ -245,7 +245,7 @@ function DAGView({
     }
   };
 
-  const { nodes, edges } = getEdgesAndNodes(dag, filteredTasks, isDraggable, selectedNodeId, theme);
+  const { nodes, edges } = getEdgesAndNodes(dag, filteredTasks, selectedNodeId, theme);
 
   return (
     <ReactFlow
@@ -259,6 +259,9 @@ function DAGView({
       attributionPosition="bottom-left"
       onNodeClick={handleNodeClick}
       onSelectionChange={handleSelectionChange}
+      onInit={(reactFlowInstance) => {
+        reactFlowRef.current = reactFlowInstance;
+      }}
     >
       <MiniMap
         nodeStrokeColor={(n) => {
@@ -271,8 +274,39 @@ function DAGView({
         }}
         nodeBorderRadius={2}
       />
-      <Controls onInteractiveChange={setIsDraggable} />
       <Background color="#aaa" gap={16} />
+      <div
+        style={{
+          flexDirection: "column",
+          display: "flex",
+          zIndex: 1000,
+          position: "absolute",
+          bottom: 25,
+          left: 0,
+        }}
+      >
+        <Button
+          icon={<PlusOutlined />}
+          size="small"
+          onClick={() => {
+            reactFlowRef.current?.zoomIn();
+          }}
+        />
+        <Button
+          icon={<MinusOutlined />}
+          size="small"
+          onClick={() => {
+            reactFlowRef.current?.zoomOut();
+          }}
+        />
+        <Button
+          icon={<ExpandOutlined />}
+          size="small"
+          onClick={() => {
+            reactFlowRef.current?.fitView();
+          }}
+        />
+      </div>
     </ReactFlow>
   );
 }

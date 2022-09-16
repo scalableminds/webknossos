@@ -276,7 +276,7 @@ See the [Datasets guide](./datasets.md#Importing) for further instructions.
 
 #### NML Files
 When working with skeleton annotation data, webKnossos uses the NML format.
-It can be downloaded from and uploaded to webKnossos, and used for processing in your scripts.
+It can be [downloaded](./export.md#data-export-and-interoperability) from and uploaded to webKnossos, and used for processing in your scripts.
 NML is an XML-based, human-readable file format.
 See the following example for reference:
 

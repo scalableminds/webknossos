@@ -9,7 +9,7 @@ Working with 3D (and 2D) image datasets is at the heart of webKnossos.
 [Read the section on file and data formats](./data_formats.md) if you are interested in the technical background and concepts behind webKnossos datasets.
 
 ## Importing Datasets
-webKnossos supports both loading data from a local hard disk or streaming it from a remote storage server or the cloud. In either case, webKnossos acts as central hub to manage all your datasets in one place, search, and tag them. There are several way to import and add a dataset to webKnossos:
+webKnossos supports both loading data from a local hard disk or streaming it from a remote storage server or the cloud. In either case, webKnossos acts as the central hub to manage all your datasets in one place, search, and tag them. There are several ways to import and add a dataset to webKnossos:
 
 ### Uploading through the web browser
 The easiest way to get started with working on your datasets is through the webKnossos web interface. You can directly upload your dataset through the browser.
@@ -40,12 +40,12 @@ In particular, the following file formats are supported for uploading (and conve
 - KNOSSOS file hierarchy 
 - [Read more about the supported file formats and details](./data_formats.md#conversion-with-webknossosorg)
 
-Once the data is uploaded (and potentially converted), you can further configure a dataset [Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
+Once the data is uploaded (and potentially converted), you can further configure a dataset's[Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
 
 ### Working with Zarr datasets
 webKnossos supports loading and remotely streaming [Zarr](https://zarr.dev) datasets from a remote HTTP server or the cloud. webKnossos supports loading Zarr v2 datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/).
 
-webKnossos can load several Zarr sources and assemble into a webKnossos dataset with several layer, e.g. one Zarr file/source for the `color` layer and one Zarr file/source for a `segmentation` layer.
+webKnossos can load several Zarr sources and assemble them into a webKnossos dataset with several layers, e.g. one Zarr file/source for the `color` layer and one Zarr file/source for a `segmentation` layer.
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Remote Zarr Dataset*
@@ -54,19 +54,19 @@ webKnossos can load several Zarr sources and assemble into a webKnossos dataset 
   - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add Layer* button
 5. webKnossos will automatically try to infer as many dataset properties (voxel size, bounding box, etc) as possible and preview a [webKnossos `datasource` configuration](./data_formats.md#dataset-metadata-specification) for your to review. 
-  Consider setting the dataset `name` property and doubl-check all other properties for correctness.
+  Consider setting the dataset `name` property and double-check all other properties for correctness.
 6. Click `Import` to finish
 
 webKnossos will NOT download/copy any data from these third-party data providers. 
 Rather, any data viewed in webKnossos will be streamed read-only and directly from the remote source. 
-Any other webKnossos feature, e.g., annotations, access rights, will be stored in webKnossos and do not affect these services. 
+Any other webKnossos feature, e.g., annotations, and access rights, will be stored in webKnossos and do not affect these services. 
 
-Note, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
+Note that, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
-Hint: If happen to have any Zarr dataset locally that you would like to view in webKnossos, consider running a HTTP server locally to serve the dataset. Then webKnossos can easily stream the data.
+Hint: If happen to have any Zarr dataset locally that you would like to view in webKnossos, consider running an HTTP server locally to serve the dataset. Then webKnossos can easily stream the data.
 
 ### Working with Neuroglancer and BossDB datasets
-On webKnossos.org supports loading and remotely streaming datasets in the in the [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) stored in the Google Cloud or datasets served from [BossDB](https://bossdb.org).
+On webKnossos.org supports loading and remotely streaming datasets in the [Neuroglancer precomputed format](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed) stored in the Google Cloud or datasets served from [BossDB](https://bossdb.org).
 
 To import these datasets:
 
@@ -80,9 +80,9 @@ To import these datasets:
 
 webKnossos will NOT download/copy any data from these third-party data providers. 
 Rather, any data viewed in webKnossos will be streamed read-only and directly from the remote source. 
-Any other webKnossos feature, e.g., annotations, access rights, will be stored in webKnossos and do not affect these services. 
+Any other webKnossos feature, e.g., annotations, and access rights, will be stored in webKnossos and do not affect these services. 
 
-Note, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
+Note that, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
 ### Working with N5 datasets
 We are working on integrating [N5](https://github.com/saalfeldlab/n5) support into webKnossos. If you have datasets in the N5 format and would like to work with us on building, testing, and refining the Zarr integration into webKnossos then [please contact us](mailto:hello@webknossos.org).
@@ -135,9 +135,9 @@ Any dataset uploaded through the web interface at [webknossos.org](https://webkn
 For manual conversion, we provide the following software tools and libraries:
 
 - The [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) is a CLI tool that can convert many formats to WKW. 
-- For other file formats, the [Python webKnossos libray](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
+- For other file formats, the [Python webKnossos library](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
-See page on [software tooling](./tooling.md) for more.
+See the page on [software tooling](./tooling.md) for more.
 
 ## Configuring Datasets
 You can configure the metadata, permission, and other properties of a dataset at any time. 
@@ -157,7 +157,7 @@ For each detected layer:
 - `Bounding Box`: The position and extents of the dataset layer in voxel coordinates. The format is `x, y, z, x_size,y_size, z_size` or respectively `min_x, min_y, min_z, (max_x - min_x), (max_y - min_y), (max_z - min_z)`.
 - `Largest Segment ID`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
 
-The `Advanced` view lets you edit the underlying [JSON configuration](./data_formats.md#wkw-metadata-by-example) directly. Toggle between the `Advanced` and `Simple` page in the upper right. Advanced mode is only recommended for low level access to dataset properties and users familiar with the `datasource-properties.json` format.
+The `Advanced` view lets you edit the underlying [JSON configuration](./data_formats.md#wkw-metadata-by-example) directly. Toggle between the `Advanced` and `Simple` page in the upper right. Advanced mode is only recommended for low-level access to dataset properties and users familiar with the `datasource-properties.json` format.
 
 webKnossos automatically periodically checks and detects changes to a dataset's metadata (`datasource-properties.json`) on disk (only relevant for self-hosted instances). Before applying these suggestions, users can preview all the new settings (as JSON) and inspect just the detected difference (as JSON).
 
@@ -173,7 +173,7 @@ Read more in [the Sharing guide](./sharing.md).
 ![Dataset Editing: Sharing Tab](images/sharing_tab.jpeg)
 
 ### Metadata Tab
-- `Display Name`: A meaningful name for a dataset other than its (automatically assigned) technical name which is usually limited by naming rules of file systems. It is displayed in various parts of webKnossos. The display name may contain special characters and can also be changed without invalidating already created sharing URLs. It can also be useful when sharing datasets with outsiders while "hiding" any internal naming schemes or make it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
+- `Display Name`: A meaningful name for a dataset other than its (automatically assigned) technical name which is usually limited by the naming rules of file systems. It is displayed in various parts of webKnossos. The display name may contain special characters and can also be changed without invalidating already created sharing URLs. It can also be useful when sharing datasets with outsiders while "hiding" any internal naming schemes or making it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
 - `Description`: A free-text field for providing more information about your datasets, e.g., authors, paper reference, descriptions, etc. Supports Markdown formatting. The description will be featured in the webKnossos UI when opening a dataset in view mode.
 
 ![Dataset Editing: Metadata Tab](images/metadata_tab.jpeg)
@@ -203,7 +203,7 @@ You don't have to set complete *View Configurations* in either option, as webKno
 
 ### Delete Tab
 
-Offers an option to delete a dataset and completely removes it from webKnossos. Careful, this can not be undone!
+Offers an option to delete a dataset and completely remove it from webKnossos. Be careful, this can not be undone!
 
 ![Dataset Editing: Delete Tab](images/delete_tab.jpeg)
 
@@ -216,7 +216,7 @@ The system architecture of webKnossos allows for versatile deployment options wh
 This may be useful when dealing with large datasets that should remain in your data center.
 [Please contact us](mailto:hello@webknossos.org) or [write a post](https://forum.image.sc/tag/webknossos), if you require any assistance with your setup.
 
-scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
+scalable minds also offer a dataset alignment tool called *Voxelytics Align*.
 [Learn more.](https://scalableminds.com/voxelytics-align)
 
 ![Dataset Alignment](https://www.youtube.com/watch?v=yYauIHZcI_4)
@@ -226,8 +226,8 @@ scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
 For convenience and testing, we provide a list of sample datasets for webKnossos:
 
 - **Sample_e2006_wkw**  
-  [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)  
   Raw SBEM data and segmentation (sample cutout, 120MB).  
+  [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)  
   Connectomic reconstruction of the inner plexiform layer in the mouse retina.  
   M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.  
   Nature. 08 August 2013. [https://doi.org/10.1038/nature12346](https://doi.org/10.1038/nature12346)

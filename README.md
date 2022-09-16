@@ -30,7 +30,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * [Supported dataset formats: WKW](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect), [Zarr](https://zarr.dev)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
 * [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/webknossos/mesh_visualization.html)
-* Export and streaming of any dataset and annotation as a [Zarr file](https://zarr.dev) to third-party tools
+* Export and streaming of any dataset and annotation as [Zarr](https://zarr.dev) to third-party tools
 * [Documented frontend API for user scripts](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development

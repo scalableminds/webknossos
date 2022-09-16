@@ -132,7 +132,7 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
     const url = getUrl(sharingToken, includeToken);
     const shortLink = await createShortLink(url);
 
-    copyUrlToClipboard(`${location.origin}/links/${shortLink.shortLink}`);
+    copyUrlToClipboard(`${location.origin}/links/${shortLink.key}`);
 
     if (isTraceMode && !annotationIsPublic) {
       // For public annotations and in dataset view mode, the link will work for all users.
@@ -520,7 +520,7 @@ export function CopyableSharingLink({
     }
 
     createShortLink(longUrl).then((shortLink) => {
-      setShortUrl(`${location.origin}/links/${shortLink.shortLink}`);
+      setShortUrl(`${location.origin}/links/${shortLink.key}`);
     });
   }, [longUrl, isVisible, showShortLink]);
   const linkToCopy = showShortLink ? shortUrl || longUrl : longUrl;

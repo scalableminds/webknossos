@@ -705,6 +705,6 @@ export type ZarrPrivateLink = {
 
 export type ShortLink = {
   longLink: string;
-  shortLink: string;
+  key: string;
   _id: string;
 };

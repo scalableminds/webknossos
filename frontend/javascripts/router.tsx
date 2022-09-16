@@ -607,12 +607,12 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/privacy" component={Privacy} />
               <Route path="/workflows" component={RedirectToWorkflowViewer} />
               <Route
-                path="/links/:id"
+                path="/links/:key"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     redirectTo={async () => {
-                      const shortLinkId = match.params.id || "";
-                      const shortLink = await getShortLink(shortLinkId);
+                      const key = match.params.key || "";
+                      const shortLink = await getShortLink(key);
                       return shortLink.longLink;
                     }}
                   />

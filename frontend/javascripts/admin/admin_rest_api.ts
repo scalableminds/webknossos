@@ -2298,7 +2298,7 @@ export async function getEdgesForAgglomerateMinCut(
 
 export const createShortLink = _.memoize(
   (longLink: string): Promise<ShortLink> =>
-    Request.sendJSONReceiveJSON("/api/shortlinks", {
+    Request.sendJSONReceiveJSON("/api/shortLinks", {
       method: "POST",
       // stringify is necessary because the back-end expects a JSON string
       // (i.e., a string which contains quotes at the beginning and end).
@@ -2308,6 +2308,6 @@ export const createShortLink = _.memoize(
     }),
 );
 
-export function getShortLink(shortLink: string): Promise<ShortLink> {
-  return Request.receiveJSON(`/api/shortlinks/byShortLink/${shortLink}`);
+export function getShortLink(key: string): Promise<ShortLink> {
+  return Request.receiveJSON(`/api/shortLinks/byKey/${key}`);
 }

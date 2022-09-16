@@ -11,7 +11,7 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class ShortlinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv], wkConf: WkConf)(
+class ShortLinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[WkEnv], wkConf: WkConf)(
     implicit ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers)
     extends Controller
@@ -20,17 +20,17 @@ class ShortlinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[
   def create: Action[String] = sil.SecuredAction.async(validateJson[String]) { implicit request =>
     val longLink = request.body
     val _id = ObjectId.generate
-    val shortLink = RandomIDGenerator.generateBlocking(12)
+    val key = RandomIDGenerator.generateBlocking(12)
     for {
-      _ <- bool2Fox(longLink.startsWith(wkConf.Http.uri)) ?~> "URI does not match"
-      _ <- shortLinkDAO.insertOne(ShortLink(_id, shortLink, longLink)) ?~> "create.failed"
+      _ <- bool2Fox(longLink.startsWith(wkConf.Http.uri)) ?~> "Could not generate short link: URI does not match"
+      _ <- shortLinkDAO.insertOne(ShortLink(_id, key, longLink)) ?~> "create.failed"
       inserted <- shortLinkDAO.findOne(_id)
     } yield Ok(Json.toJson(inserted))
   }
 
-  def getByShortLink(shortLink: String): Action[AnyContent] = Action.async { implicit request =>
+  def getByKey(key: String): Action[AnyContent] = Action.async { implicit request =>
     for {
-      sl <- shortLinkDAO.findOneByShortLink(shortLink)
-    } yield Ok(Json.toJson(sl))
+      shortLink <- shortLinkDAO.findOneByKey(key)
+    } yield Ok(Json.toJson(shortLink))
   }
 }

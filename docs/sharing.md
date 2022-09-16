@@ -221,5 +221,3 @@ Note, while webKnossos allows several people to make modifications to a single a
 **Hint, in addition to the integrated Sharing features, you can also download annotations and send them via email to collaborators.**
 
 ![Video: Connect Publications to Your Dataset](https://www.youtube.com/watch?v=hcm8Jx22DG8)
-
-## Collaborative 

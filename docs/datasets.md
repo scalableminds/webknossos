@@ -40,7 +40,7 @@ In particular, the following file formats are supported for uploading (and conve
 - KNOSSOS file hierarchy 
 - [Read more about the supported file formats and details](./data_formats.md#conversion-with-webknossosorg)
 
-Once the data is uploaded (and potentially converted), you can further configure a dataset's[Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
+Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
 
 ### Working with Zarr datasets
 webKnossos supports loading and remotely streaming [Zarr](https://zarr.dev) datasets from a remote HTTP server or the cloud. webKnossos supports loading Zarr v2 datasets according to the [OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/).
@@ -85,7 +85,7 @@ Any other webKnossos feature, e.g., annotations, and access rights, will be stor
 Note that, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
 ### Working with N5 datasets
-We are working on integrating [N5](https://github.com/saalfeldlab/n5) support into webKnossos. If you have datasets in the N5 format and would like to work with us on building, testing, and refining the Zarr integration into webKnossos then [please contact us](mailto:hello@webknossos.org).
+We are working on integrating [N5](https://github.com/saalfeldlab/n5) support into webKnossos. If you have datasets in the N5 format and would like to work with us on building, testing, and refining the N5 integration into webKnossos then [please contact us](mailto:hello@webknossos.org).
 
 ### Uploading through the Python API
 For those wishing to automate dataset upload or to do it programmatically, check out the webKnossos [Python library](https://github.com/scalableminds/webknossos-libs). It allows you to create, manage and upload datasets as well. 

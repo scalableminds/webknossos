@@ -77,15 +77,15 @@ jobs:
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               docker-compose run compile sbt -no-colors clean compile stage
             else
-              docker-compose run compile sbt -no-colors compile stage
+              docker-compose run compile sbt -no-colors compile -DfailOnWarning stage
             fi
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt -no-colors "project webknossosDatastore" copyMessages compile stage
+          command: docker-compose run base sbt -no-colors "project webknossosDatastore" copyMessages compile -DfailOnWarning stage
 
       - run:
           name: Build webknossos-tracingstore (sbt)
-          command: docker-compose run base sbt -no-colors "project webknossosTracingstore" copyMessages compile stage
+          command: docker-compose run base sbt -no-colors "project webknossosTracingstore" copyMessages compile -DfailOnWarning stage
 
       - run:
           name: Assemble webknossos-datastore fat-jar (sbt)

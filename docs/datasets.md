@@ -203,7 +203,7 @@ You don't have to set complete *View Configurations* in either option, as webKno
 
 ### Delete Tab
 
-Offers an option to delete a dataset and completely remove it from webKnossos. Be careful, this can not be undone!
+Offers an option to delete a dataset and completely remove it from webKnossos. Be careful, this cannot be undone!
 
 ![Dataset Editing: Delete Tab](images/delete_tab.jpeg)
 

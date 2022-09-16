@@ -30,7 +30,7 @@ export type Result<T> =
 const theme = {
   scheme: "default",
   author: "chris kempson (http://chriskempson.com)",
-  base00: "#181818",
+  base00: "transparent",
   base01: "#282828",
   base02: "#383838",
   base03: "#585858",

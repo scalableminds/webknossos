@@ -22,17 +22,13 @@ import {
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store, { SkeletonTracing } from "oxalis/store";
+import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
 import { proofreadAtPosition } from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
-import {
-  getNodeAndTree,
-  getSkeletonTracing,
-} from "oxalis/model/accessors/skeletontracing_accessor";
 
 export type ActionDescriptor = {
   leftClick?: string;

@@ -371,7 +371,7 @@ class AnnotationController @Inject()(
         name = (request.body \ "name").asOpt[String]
         description = (request.body \ "description").asOpt[String]
         visibility = (request.body \ "visibility").asOpt[AnnotationVisibility.Value]
-        _ <- if (visibility.contains("Private"))
+        _ <- if (visibility.contains(AnnotationVisibility.Private))
           annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
         else Fox.successful(())
         tags = (request.body \ "tags").asOpt[List[String]]

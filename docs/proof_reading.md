@@ -29,7 +29,7 @@ To fix a merge error:
 3. webKnossos will perform a min-cut operation to delete all super-voxel graph edges between the source and target segments, effectively splitting the two into individual segments.
 4. webKnossos will merge both segments and reload the updated super-voxel graph and 3D meshes
 
-Note, the proofreading operations rely directly on the information and quality of an initial over-segmentation. If cells/segments are already erroneously connected in this state, then webKnossos can not split them apart.
+Note, the proofreading operations rely directly on the information and quality of an initial over-segmentation. If cells/segments are already erroneously connected in this state, then webKnossos cannot split them apart (this might change in the future, though).
 
 In addition to the handy shortcuts available from the right-click context menu, users can also directly modify the super-voxel graph like any other skeleton to manually add/remove nodes and edges for fine-grained control.
 

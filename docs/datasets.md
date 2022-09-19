@@ -82,7 +82,7 @@ webKnossos will NOT download/copy any data from these third-party data providers
 Rather, any data viewed in webKnossos will be streamed read-only and directly from the remote source. 
 Any other webKnossos feature, e.g., annotations, and access rights, will be stored in webKnossos and do not affect these services. 
 
-Note that, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
+Note that data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
 ### Working with N5 datasets
 We are working on integrating [N5](https://github.com/saalfeldlab/n5) support into webKnossos. If you have datasets in the N5 format and would like to work with us on building, testing, and refining the N5 integration into webKnossos then [please contact us](mailto:hello@webknossos.org).

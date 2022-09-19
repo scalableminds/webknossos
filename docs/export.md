@@ -9,13 +9,12 @@ As an additional benefit, you still retain all the other helpful webKnossos feat
 
 Any webKnossos dataset/annotation can be accessed this way regardless of its original file format. webKnossos will automatically convert any data on the fly.
 
-
 1. Click on the overflow menu (dropdown), next to the `Save` button in the webKnossos navbar
 2. Select `Zarr Links` entry
 3. Click `Create Zarr Link` to make the resource available through the Zarr streaming interface. Set the `Expiration Date` as required. The default duration is 1 month into the future.
 4. Click on the little copy button (clipboard icon) to copy the Zarr web link. Due to the nature of the Zarr spec, if you need to individually copy a URL for each webKnossos layer.
 
-TODO Image
+![The Zarr Link dialog for sharing a dataset/annotation as a Zarr source for streaming to third-party services.](images/zarr_links.jpeg)
 
 A unique aspect of webKnossos is private Zarr links. Any annotation shared through Zarr generates a web link containing a unique access token for authentication such that only allowed users and collaborators may access this data. This is akin to webKnossos ability to [privately share annotations through web URLs](./sharing.md#annotation-sharing). Zarr links can be revoked/deleted at any time (or time-limited by default) to retain control over your data.
 
@@ -33,7 +32,7 @@ To access the download panel:
 2. Select `Download` entry
 3. Select the desired data for download or export 
 
-TODO: Add Image
+![The "Download" dialog for exporting and downloading annotations and dataset layers. WebKnossos offers downloads as Tif stacks, the native webKnossos file formats, and through the Python library.](images/download_dialog.gif)
 
 ## Data Export through Python
 

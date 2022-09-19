@@ -4,15 +4,17 @@ webKnossos uses several file formats for reading large-scale volumetric image da
 
 The webKnosso-wrap (WKW) container format is used for all internal voxel data representations - both for the raw (microscopy) image datasets and segmentations. Skeleton annotations are saved as NML files. 
 
-Any dataset uploaded to webKnossos.org, will automatically be converted to WKW on upload - given its source file format is supported by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html) or use a custom script based on the [webKnossos Python libray](https://docs.webknossos.org/webknossos-py/index.html).
+Any dataset uploaded to webKnossos.org will automatically be converted to WKW on upload - given its source file format is supported by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html) or use a custom script based on the [webKnossos Python library](https://docs.webknossos.org/webknossos-py/index.html).
 
-Additionally, webKnossos.org supports connecting and loading data from:
-
-- Neuroglancer Pre-Computed Dataset stored on Google Cloud
+webKnossos natively supports loading and streaming data in the following formats:
+- webKnossos-wrap (WKW)
+- Zarr ([OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/))
+- Neuroglancer `Pre-Computed` stored on Google Cloud
 - BossDB
+- N5
 
-See page on [dataset](./datasets.md) for uploading and configuring datasets.
-See page on [software tooling](./tooling.md) for working with these file formats in Python and MatLab.
+See the page on [datasets](./datasets.md) for uploading and configuring datasets.
+See the page on [software tooling](./tooling.md) for working with these file formats in Python and MatLab.
 
 ### Conversion with webknossos.org
 When uploading data to [webKnossos](https://webknossos.org), various data formats are automatically detected and converted.
@@ -24,6 +26,10 @@ In particular, the following file formats are supported:
   - as an extension, multiple folders with image sequences are interpreted as [separate layers](#Multi-Layer-Image-File-Sequence)
 - Single-file images (tif, czi, nifti, raw)
 - KNOSSOS file hierarchy 
+
+Note, for datasets in the Zarr, N5, Neuroglancer `Pre-Computed` or BossDB formats uploading and automatic conversion are not supported.
+Instead, they can be directly streamed from an HTTP server or the cloud.
+See the page on [datasets](./datasets.md) for uploading and configuring these formats.
 
 #### Single-Layer Image File Sequence
 When uploading multiple image files, these files are sorted numerically, and each one is interpreted as one section within a 3D dataset.
@@ -77,7 +83,7 @@ A *dataset* consists of [one or more layers](#layers).
 Since webKnossos deals with 3D imagery, the data is organized in *cubes*.
 WKW cubes are 1024^3 voxels in size by default and each cube is stored as one file on disk.
 Each cube contains multiple *buckets* of 32^3 voxel size.
-This is the unit in which the data is streamed to the users' browser.
+This is the unit in which the data is streamed to a user's browser.
 
 ![Datasets, Cubes, and Buckets](images/cubes-and-buckets.jpeg)
 
@@ -88,7 +94,7 @@ A dataset consists of one or more layers.
 For microscopy/CT/MRI data, there is usually a `color` layer that holds the raw grayscale image data.
 Additionally, there may be one or more `segmentation` layers that hold manually or automatically generated volume annotations (one ID per voxel).
 
-A webKnossos dataset can contain several `color` and `segmentation` layers which can be rendered individually or overlayed on top of each other. The maximium number of visible layers depends on your GPU hardware - typically 16 layers.
+A webKnossos dataset can contain several `color` and `segmentation` layers which can be rendered individually or overlayed on top of each other. The maximum number of visible layers depends on your GPU hardware - typically 16 layers.
 
 ![Color and Segmentation Layers](images/datalayers.jpeg)
 
@@ -220,10 +226,11 @@ When using the [webKnossos Cuber](https://github.com/scalableminds/webknossos-li
 [See below for the full specification](#dataset-metadata-specification).
 
 #### Dataset Metadata Specification
+webKnossos requires several metadata properties for each dataset to properly display it. We refer to this as a webKnossos `datasource`, in reference to the `datasource-properties.json` file for local datasets.
 
 - `id`: This section contains information about the name and corresponding team of the dataset. However, this information is not used by webKnossos because it will be replaced by more accurate runtime information.
   + `id.name`: Name of the dataset. Just for reference purposes. Will be inferred/overwritten by the folder name.
-  + `id.team`: Team to which this dataset belongs. Just for reference purposed. Will be inferred/overwritten by webKnossos.
+  + `id.team`: Team to which this dataset belongs. Just for reference purposes. Will be inferred/overwritten by webKnossos.
 
 - `dataLayers`: This array contains information about the layers of the dataset.
   + `dataLayers.name`: Name of the layer. Can be an arbitrary string, but needs to correspond to the folder in the file system. Needs to be unique within the dataset. Usually is either `color`, `segmentation` or `color_0`.
@@ -264,14 +271,14 @@ Read the full documentation at [webKnossos cuber](https://github.com/scalablemin
 
 Datasets saved as KNOSSOS cubes can be easily converted with the [webKnossos cuber](https://github.com/scalableminds/webknossos-libs/tree/master/wkcuber) tool.
 
-#### Import Datasets
+#### Importing Datasets
 
 After the manual conversion, proceed with the remaining import step.
 See the [Datasets guide](./datasets.md#Importing) for further instructions.
 
 #### NML Files
 When working with skeleton annotation data, webKnossos uses the NML format.
-It can be downloaded from and uploaded to webKnossos, and used for processing in your scripts.
+It can be [downloaded](./export.md#data-export-and-interoperability) from and uploaded to webKnossos, and used for processing in your scripts.
 NML is an XML-based, human-readable file format.
 See the following example for reference:
 

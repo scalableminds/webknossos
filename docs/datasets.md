@@ -245,4 +245,4 @@ For convenience and testing, we provide a list of sample datasets for webKnossos
   [https://static.webknossos.org/data/MPRAGE_250um.zip](https://static.webknossos.org/data/MPRAGE_250um.zip)  
   T1-weighted in vivo human whole brain MRI dataset with an ultra-fine isotropic resolution of 250 μm.
   F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.  
-  Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32
+  Scientific Data. 14 March 2017. [https://doi.org/10.1038/sdata.2017.32](https://doi.org/10.1038/sdata.2017.32)

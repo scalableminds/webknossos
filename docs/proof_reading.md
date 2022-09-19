@@ -53,7 +53,7 @@ After finishing the proofreading, a [long-running job](./jobs.md) can be started
 ![Button to open the Merger mode long-running job modal](./images/start_merger_mode_job_modal_button.jpg)
 ![Modal to start the Merger mode long-running job](./images/start_merger_mode_job_modal.jpg)
 
-## ProofReading with skeletons and scripting
+## Proofreading with skeletons and scripting
 In our workflows, we make heavy use of skeleton annotations for proofreading and evaluation. In combination with custom Python scripting we use skeletons:
 
 - to mark error locations as determined by evaluation scripts, e.g. incorrect predictions 

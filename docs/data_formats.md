@@ -7,6 +7,7 @@ The webKnosso-wrap (WKW) container format is used for all internal voxel data re
 Any dataset uploaded to webKnossos.org will automatically be converted to WKW on upload - given its source file format is supported by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html) or use a custom script based on the [webKnossos Python library](https://docs.webknossos.org/webknossos-py/index.html).
 
 webKnossos natively supports loading and streaming data in the following formats:
+
 - webKnossos-wrap (WKW)
 - Zarr ([OME NGFF v0.4 spec](https://ngff.openmicroscopy.org/latest/))
 - Neuroglancer `Pre-Computed` stored on Google Cloud

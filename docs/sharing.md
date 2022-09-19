@@ -20,6 +20,8 @@ In many ways, the sharing by web link works similarly to products like Google Dr
 
 webKnossos sharing is tightly integrated with user permissions and access rights. See the sections [on dataset management](./datasets.md#general) and [user administration](./users.md) for more info.
 
+![Video: Include links to your datasets directly in a publication](https://www.youtube.com/watch?v=hcm8Jx22DG8)
+
 ## Dataset Sharing
 
  Dataset sharing allows outside users to view your datasets and segmentation layers within webKnossos.
@@ -218,4 +220,3 @@ Note that while webKnossos allows several people to make modifications to a sing
 
 **Hint, in addition to the integrated Sharing features, you can also download annotations and send them via email to collaborators.**
 
-![Video: Connect Publications to Your Dataset](https://www.youtube.com/watch?v=hcm8Jx22DG8)

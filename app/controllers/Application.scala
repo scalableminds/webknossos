@@ -34,14 +34,12 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
-      token <- webKnossosToken(request.identity)
     } yield {
       addRemoteOriginHeaders(
         Ok(Json.obj(
           "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
           "schemaVersion" -> schemaVersion.toOption,
-          "token" -> token,
           "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
           "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
         )))

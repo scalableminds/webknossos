@@ -212,7 +212,7 @@ To share an annotation with a certain team, follow these steps:
 
 ![Enable Team Sharing for your annotation](images/sharing_modal_team.jpeg)
 
-Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](./dashboard.md#shared-annotations). By default teaming sharing is read-only, i.e. other team members can not make modifications to your annotation.  
+Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](./dashboard.md#shared-annotations). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.  
 You can allow others to make changes to your annotation by selecting the respective checkbox from the sharing dialog ("Yes, allow editing").
 Note that while webKnossos allows several people to make modifications to a single annotation, it is strongly advised that only one person works on an annotation at once. webKnossos does not yet resolve changes made by multiple people annotating simultaneously and this may lead to data loss or inconsistencies. Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
 

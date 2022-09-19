@@ -20,7 +20,7 @@ To use the proofreading tool you need to enable to have an [ID mapping for your 
 
 To fix a split error:
 1. Left-click to select any node of the source segment's graph
-2. Right-click on the target segment to bring up the context menu. Select `Merge With Activate Segment`
+2. Right-click on the target segment to bring up the context menu. Select `Merge With Active Segment`
 3. webKnossos will merge both segments and reload the updated super-voxel graph and 3D meshes
 
 To fix a merge error:

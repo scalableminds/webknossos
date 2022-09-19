@@ -61,7 +61,7 @@ webKnossos will NOT download/copy any data from these third-party data providers
 Rather, any data viewed in webKnossos will be streamed read-only and directly from the remote source. 
 Any other webKnossos feature, e.g., annotations, and access rights, will be stored in webKnossos and do not affect these services. 
 
-Note that, data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
+Note that data streaming may count against any usage limits or minutes as defined by these third-party services. Check with the service provider or dataset owner.
 
 Hint: If happen to have any Zarr dataset locally that you would like to view in webKnossos, consider running an HTTP server locally to serve the dataset. Then webKnossos can easily stream the data.
 

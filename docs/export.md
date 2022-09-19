@@ -9,6 +9,8 @@ As an additional benefit, you still retain all the other helpful webKnossos feat
 
 Any webKnossos dataset/annotation can be accessed this way regardless of its original file format. webKnossos will automatically convert any data on the fly.
 
+To access and share a dataset through Zarr streaming, follow these steps:
+
 1. Click on the overflow menu (dropdown), next to the `Save` button in the webKnossos navbar
 2. Select `Zarr Links` entry
 3. Click `Create Zarr Link` to make the resource available through the Zarr streaming interface. Set the `Expiration Date` as required. The default duration is 1 month into the future.
@@ -28,6 +30,7 @@ The webKnossos UI comes with a fully featured `Download` panel offering a wide v
 - Instructions for using the webKnossos Python library for download (see below)
 
 To access the download panel:
+
 1. Click on the overflow menu (dropdown), next to the `Save` button in the webKnossos navbar
 2. Select `Download` entry
 3. Select the desired data for download or export 

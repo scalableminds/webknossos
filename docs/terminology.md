@@ -45,4 +45,5 @@ At its lowest-level a **segment** is the collection of several annotated voxels.
 Typically many segments make up a segmentation. Segments can be painted manually using the webKnossos volume annotation tools or created through third-party programs typically resulting in larger segmentations of a dataset.
 
 ## Agglomerates
-An agglomerate is the combination of several (smaller) segments to reconstruct a larger biological structure. Typically an agglomerate combines the fragments of an over-segmentation created by some automated method, e.g. a machine learning system.
+An agglomerate is the combination of several (smaller) segments to reconstruct a larger biological structure. Typically an agglomerate combines the fragments of an over-segmentation created by some automated method, e.g. a machine learning system. 
+Sometimes this is also referred to as a super-voxel graph.

@@ -87,10 +87,6 @@ jobs:
           name: Build webknossos-tracingstore (sbt)
           command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
-      - run:
-          name: Assemble webknossos-datastore fat-jar (sbt)
-          command: docker-compose run base sbt -no-colors "project webknossosDatastore" assembly
-
       - save_cache:
           name: Save target cache
           key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}

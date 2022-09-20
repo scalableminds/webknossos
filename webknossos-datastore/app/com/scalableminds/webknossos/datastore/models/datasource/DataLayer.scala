@@ -116,13 +116,6 @@ trait DataLayerLike {
 
   def resolutions: List[Vec3Int]
 
-  def magFromExponent(resolutionExponent: Int, snapToClosest: Boolean = false): Vec3Int = {
-    val resPower = Math.pow(2, resolutionExponent).toInt
-    val matchOpt = resolutions.find(resolution => resolution.maxDim == resPower)
-    if (snapToClosest) matchOpt.getOrElse(resolutions.minBy(resolution => math.abs(resPower - resolution.maxDim)))
-    else matchOpt.getOrElse(Vec3Int(resPower, resPower, resPower))
-  }
-
   def elementClass: ElementClass.Value
 
   // This is the default from the DataSource JSON.

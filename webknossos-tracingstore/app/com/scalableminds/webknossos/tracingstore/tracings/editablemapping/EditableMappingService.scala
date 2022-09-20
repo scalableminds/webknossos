@@ -506,7 +506,7 @@ class EditableMappingService @Inject()(
 
       trees = Seq(
         Tree(
-          treeId = agglomerateId.toInt,
+          treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
           createdTimestamp = System.currentTimeMillis(),
           nodes = nodes,
           edges = skeletonEdges,

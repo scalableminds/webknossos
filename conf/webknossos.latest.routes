@@ -237,3 +237,7 @@ POST          /jobs/:id/status                                                  
 # Publications
 GET           /publications                                                             controllers.PublicationController.listPublications()
 GET           /publications/:id                                                         controllers.PublicationController.read(id: String)
+
+# Shortlinks
+POST          /shortLinks                                                               controllers.ShortLinkController.create
+GET           /shortLinks/byKey/:key                                                    controllers.ShortLinkController.getByKey(key: String)

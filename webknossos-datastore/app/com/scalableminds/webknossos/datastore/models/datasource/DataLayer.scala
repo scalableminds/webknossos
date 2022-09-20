@@ -111,7 +111,6 @@ trait DataLayerLike {
 
   def resolutions: List[Vec3Int]
 
-
   def elementClass: ElementClass.Value
 
   // This is the default from the DataSource JSON.

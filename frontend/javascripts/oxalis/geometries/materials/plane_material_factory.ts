@@ -208,7 +208,6 @@ class PlaneMaterialFactory {
         value: 1,
       };
       this.uniforms[`${layerName}_gammaCorrectionValue`] = {
-        type: "f",
         value: 1,
       };
       // If the `_unrenderable` uniform is true, the layer

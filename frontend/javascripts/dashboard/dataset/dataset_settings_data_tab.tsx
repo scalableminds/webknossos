@@ -266,8 +266,10 @@ function SimpleLayerForm({
   layer: DataLayer;
   index: number;
 }) {
-  const isSegmentation = layer.category === "segmentation";
+  const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
+  const isSegmentation = category === "segmentation";
   const bitDepth = getBitDepth(layer);
+
   return (
     <Row
       gutter={48}
@@ -302,67 +304,66 @@ function SimpleLayerForm({
             }}
           />
         </FormItemWithInfo>
-        <p>
-          <Space size="large">
-            <FormItemWithInfo
-              label="Data Format"
-              style={{
-                marginBottom: 24,
-              }}
-              info="The data format of the layer."
-            >
-              <Select disabled value={layer.dataFormat} style={{ width: 120 }}>
-                <Select.Option value={layer.dataFormat}>{layer.dataFormat}</Select.Option>
-              </Select>
-            </FormItemWithInfo>
-            <FormItemWithInfo
-              label="Element Class"
-              style={{
-                marginBottom: 24,
-              }}
-              info="The element class (data type) of the layer."
-            >
-              <Select disabled value={layer.elementClass} style={{ width: 120 }}>
-                <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>
-              </Select>
-            </FormItemWithInfo>
-            {"numChannels" in layer ? (
-              <FormItemWithInfo
-                label="Channel Count"
-                style={{
-                  marginBottom: 24,
-                }}
-                info="The channel count of the layer."
-              >
-                <Select disabled value={layer.numChannels} style={{ width: 120 }}>
-                  <Select.Option value={layer.numChannels}>{layer.numChannels}</Select.Option>
-                </Select>
-              </FormItemWithInfo>
-            ) : null}
-          </Space>
 
+        <Space size="large">
           <FormItemWithInfo
-            label="Magnifications"
+            label="Data Format"
             style={{
               marginBottom: 24,
             }}
-            info="The magnifications of the layer."
+            info="The data format of the layer."
           >
-            <Select
-              mode="multiple"
-              disabled
-              allowClear
-              value={getMags(layer).map((mag) => mag.toString())}
-              style={{ width: 360 }}
-            >
-              {getMags(layer).map((mag) => (
-                <Select.Option key={mag.toString()} value={mag.toString()}>
-                  {typeof mag === "number" ? mag : mag.join("-")}
-                </Select.Option>
-              ))}
+            <Select disabled value={layer.dataFormat} style={{ width: 120 }}>
+              <Select.Option value={layer.dataFormat}>{layer.dataFormat}</Select.Option>
             </Select>
           </FormItemWithInfo>
-        </p>
+          <FormItemWithInfo
+            label="Element Class"
+            style={{
+              marginBottom: 24,
+            }}
+            info="The element class (data type) of the layer."
+          >
+            <Select disabled value={layer.elementClass} style={{ width: 120 }}>
+              <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>
+            </Select>
+          </FormItemWithInfo>
+          {"numChannels" in layer ? (
+            <FormItemWithInfo
+              label="Channel Count"
+              style={{
+                marginBottom: 24,
+              }}
+              info="The channel count of the layer."
+            >
+              <Select disabled value={layer.numChannels} style={{ width: 120 }}>
+                <Select.Option value={layer.numChannels}>{layer.numChannels}</Select.Option>
+              </Select>
+            </FormItemWithInfo>
+          ) : null}
+        </Space>
+
+        <FormItemWithInfo
+          label="Magnifications"
+          style={{
+            marginBottom: 24,
+          }}
+          info="The magnifications of the layer."
+        >
+          <Select
+            mode="multiple"
+            disabled
+            allowClear
+            value={getMags(layer).map((mag) => mag.toString())}
+            style={{ width: 360 }}
+          >
+            {getMags(layer).map((mag) => (
+              <Select.Option key={mag.toString()} value={mag.toString()}>
+                {typeof mag === "number" ? mag : mag.join("-")}
+              </Select.Option>
+            ))}
+          </Select>
+        </FormItemWithInfo>
       </Col>
       <Col span={12}>
         <FormItemWithInfo
@@ -410,7 +411,8 @@ function SimpleLayerForm({
           </Select>
         </Form.Item>
 
-        {isSegmentation ? (
+        {/* The in-condition is only necessary to satisfy TypeScript */}
+        {isSegmentation && "largestSegmentId" in layer ? (
           <FormItemWithInfo
             name={["dataSource", "dataLayers", index, "largestSegmentId"]}
             label="Largest segment ID"

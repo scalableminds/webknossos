@@ -114,7 +114,6 @@ class ArbitraryView {
       this.isRunning = false;
 
       if (this.animationRequestId != null) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'cancelAnimationFrame' does not exist on ... Remove this comment to see the full error message
         window.cancelAnimationFrame(this.animationRequestId);
         this.animationRequestId = null;
       }
@@ -133,7 +132,6 @@ class ArbitraryView {
 
     TWEEN.update();
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
     if (this.needsRerender || window.needsRerender) {
       this.trigger("render");
       const { camera, geometries } = this;

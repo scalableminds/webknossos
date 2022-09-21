@@ -558,10 +558,6 @@ class DataApi {
    * api.setMapping("segmentation", mapping);
    */
   setMapping(layerName: string, mapping: Mapping) {
-    if (!Model.isMappingSupported) {
-      throw new Error(messages["mapping.too_few_textures"]);
-    }
-
     const segmentationLayer = this.model.getLayerByName(layerName);
     const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
 

@@ -17,6 +17,7 @@ import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.typ
 import DatasetSettingsDataTab, {
   syncDataSourceFields,
 } from "dashboard/dataset/dataset_settings_data_tab";
+import { Hideable } from "dashboard/dataset/helper_components";
 const { Panel } = Collapse;
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -87,8 +88,9 @@ function DatasetAddZarrView(props: Props) {
   const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https">("https");
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
-  const datasourceConfigStr = Form.useWatch("dataSourceJson", form);
-  const datasourceUrl = Form.useWatch("url", form);
+  const datasourceConfigStr: string | null = Form.useWatch("dataSourceJson", form);
+  const datasourceUrl: string | null = Form.useWatch("url", form);
+  const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
 
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
@@ -283,16 +285,20 @@ function DatasetAddZarrView(props: Props) {
               </Hint>
             </Panel>
           </Collapse>
-          <DatasetSettingsDataTab
-            isReadOnlyDataset={false}
-            form={form}
-            activeDataSourceEditMode={dataSourceEditMode}
-            onChange={(activeEditMode) => {
-              syncDataSourceFields(form, activeEditMode);
-              form.validateFields();
-              setDataSourceEditMode(activeEditMode);
-            }}
-          />
+          <Hideable hidden={maybeDataLayers == null || maybeDataLayers.length == 0}>
+            {/* Only the component's visibility is changed, so that the form is always rendered.
+                This is necessary so that the form's structure is always populated. */}
+            <DatasetSettingsDataTab
+              isReadOnlyDataset={false}
+              form={form}
+              activeDataSourceEditMode={dataSourceEditMode}
+              onChange={(activeEditMode) => {
+                syncDataSourceFields(form, activeEditMode);
+                form.validateFields();
+                setDataSourceEditMode(activeEditMode);
+              }}
+            />
+          </Hideable>
           <Row gutter={8}>
             <Col span={6} />
             <Col span={6} />

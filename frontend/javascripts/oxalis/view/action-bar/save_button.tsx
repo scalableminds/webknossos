@@ -62,12 +62,10 @@ class SaveButton extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // Polling can be removed once VolumeMode saving is reactive
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setInterval' does not exist on type '(Wi... Remove this comment to see the full error message
     this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVE_POLLING_INTERVAL);
   }
 
   componentWillUnmount() {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'clearInterval' does not exist on type '(... Remove this comment to see the full error message
     window.clearInterval(this.savedPollingInterval);
   }
 

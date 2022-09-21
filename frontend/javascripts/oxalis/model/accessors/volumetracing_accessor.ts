@@ -17,7 +17,7 @@ import type {
   Tracing,
   VolumeTracing,
 } from "oxalis/store";
-import type { AnnotationTool, ContourMode, Vector3 } from "oxalis/constants";
+import type { AnnotationTool, ContourMode, Vector3, Vector4 } from "oxalis/constants";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import {
   ResolutionInfo,
@@ -32,6 +32,8 @@ import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_st
 import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { V3 } from "libs/mjs";
+import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
+import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -308,15 +310,8 @@ export function getNameOfRequestedOrVisibleSegmentationLayer(
   return layer != null ? layer.name : null;
 }
 
-export function getSegmentsForLayer(
-  state: OxalisState,
-  layerName: string | null | undefined,
-): SegmentMap | null | undefined {
-  const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
-
-  if (layer == null) {
-    return null;
-  }
+export function getSegmentsForLayer(state: OxalisState, layerName: string): SegmentMap {
+  const layer = getSegmentationLayerByName(state.dataset, layerName);
 
   if (layer.tracingId != null) {
     return getVolumeTracingById(state.tracing, layer.tracingId).segments;
@@ -497,4 +492,24 @@ export function getLabelActionFromPreviousSlice(
   return volumeTracing.lastLabelActions.find(
     (el) => Math.floor(adapt(el.centroid)[dim]) !== position[dim],
   );
+}
+
+// Output is in [0,1] for H, S, L and A
+export function getSegmentColorAsHSL(state: OxalisState, mappedId: number): Vector4 {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  if (!visibleSegmentationLayer) {
+    return [1, 1, 1, 1];
+  }
+
+  const visibleSegments = getVisibleSegments(state);
+  if (visibleSegments) {
+    const segment = visibleSegments.getNullable(mappedId);
+
+    if (segment?.color) {
+      const [hue, saturation, value] = jsRgb2hsl(segment.color);
+      return [hue, saturation, value, 1];
+    }
+  }
+
+  return jsConvertCellIdToHSLA(mappedId);
 }

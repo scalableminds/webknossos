@@ -5,6 +5,7 @@ import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 import type {
   AnnotationTool,
   BoundingBoxType,
@@ -516,7 +517,12 @@ function updateTracingPredicate(
   );
 }
 
-export function* diffSegmentLists(
+export const cachedDiffSegmentLists = memoizeOne(
+  (prevSegments: SegmentMap, newSegments: SegmentMap) =>
+    Array.from(uncachedDiffSegmentLists(prevSegments, newSegments)),
+);
+
+function* uncachedDiffSegmentLists(
   prevSegments: SegmentMap,
   newSegments: SegmentMap,
 ): Generator<UpdateAction, void, void> {
@@ -532,7 +538,7 @@ export function* diffSegmentLists(
 
   for (const segmentId of addedSegmentIds) {
     const segment = newSegments.get(segmentId);
-    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
+    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name, segment.color);
   }
 
   for (const segmentId of bothSegmentIds) {
@@ -544,6 +550,7 @@ export function* diffSegmentLists(
         segment.id,
         segment.somePosition,
         segment.name,
+        segment.color,
         segment.creationTime,
       );
     }
@@ -569,7 +576,12 @@ export function* diffVolumeTracing(
   }
 
   if (prevVolumeTracing.segments !== volumeTracing.segments) {
-    yield* diffSegmentLists(prevVolumeTracing.segments, volumeTracing.segments);
+    for (const action of cachedDiffSegmentLists(
+      prevVolumeTracing.segments,
+      volumeTracing.segments,
+    )) {
+      yield action;
+    }
   }
 
   if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
@@ -601,7 +613,12 @@ function* ensureSegmentExists(
   const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
   const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
 
-  if (cellId === 0 || cellId == null || segments == null || segments.getNullable(cellId) != null) {
+  if (
+    cellId === 0 ||
+    cellId == null ||
+    // If the segment was already registered with a position, don't do anything
+    segments.getNullable(cellId)?.somePosition != null
+  ) {
     return;
   }
 

@@ -125,9 +125,14 @@ class ErrorHandling {
     window.addEventListener("unhandledrejection", (event) => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
       const reasonAsString = event.reason instanceof Error ? event.reason.toString() : event.reason;
-      const wrappedError = event.reason instanceof Error ? event.reason : new Error(event.reason);
-      wrappedError.message =
-        UNHANDLED_REJECTION_PREFIX + JSON.stringify(reasonAsString).slice(0, 80);
+      let wrappedError = event.reason instanceof Error ? event.reason : new Error(event.reason);
+      wrappedError = {
+        ...wrappedError,
+        // The message property is read-only in newer browser versions which is why
+        // the object is copied shallowly.
+        message: UNHANDLED_REJECTION_PREFIX + JSON.stringify(reasonAsString).slice(0, 80),
+      };
+
       this.notify(wrappedError, {
         originalError: reasonAsString,
       });

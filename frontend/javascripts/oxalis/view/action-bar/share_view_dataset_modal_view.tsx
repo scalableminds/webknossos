@@ -5,7 +5,7 @@ import React from "react";
 import { makeComponentLazy } from "libs/react_helpers";
 import messages from "messages";
 import { OxalisState } from "oxalis/store";
-import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_modal_view";
+import { useDatasetSharingToken, getUrl, CopyableSharingLink } from "./share_modal_view";
 import { useZarrLinkMenu } from "./private_links_view";
 
 const sharingActiveNode = false;
@@ -19,7 +19,7 @@ function _ShareViewDatasetModalView(props: Props) {
   const { isVisible, onOk } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const sharingToken = useDatasetSharingToken(dataset);
-  const url = getUrl(sharingToken, !dataset.isPublic);
+  const longUrl = getUrl(sharingToken, !dataset.isPublic);
 
   const { baseUrl: zarrBaseUrl, copyLayerUrlMenu } = useZarrLinkMenu(null);
 
@@ -42,24 +42,8 @@ function _ShareViewDatasetModalView(props: Props) {
           Sharing Link
         </Col>
         <Col span={18}>
-          <Input.Group compact>
-            <Input
-              style={{
-                width: "85%",
-              }}
-              value={url}
-              readOnly
-            />
-            <Button
-              style={{
-                width: "15%",
-              }}
-              onClick={() => copyUrlToClipboard(url)}
-              icon={<CopyOutlined />}
-            >
-              Copy
-            </Button>
-          </Input.Group>
+          <CopyableSharingLink isVisible={isVisible} longUrl={longUrl} />
+
           <div
             style={{
               marginBottom: 12,

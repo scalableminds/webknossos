@@ -703,3 +703,9 @@ export type ZarrPrivateLink = {
   accessToken: string;
   expirationDateTime: number | null;
 };
+
+export type ShortLink = {
+  longLink: string;
+  key: string;
+  _id: string;
+};

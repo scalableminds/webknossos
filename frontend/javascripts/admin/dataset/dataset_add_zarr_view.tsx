@@ -36,6 +36,7 @@ function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
       continue;
     }
     layer.largestSegmentId = 1;
+    // todo: change once largest segment id is optional
     Toast.warning(`Please adapt the largestSegmentID for layer ${layer.name}.`);
   }
 }

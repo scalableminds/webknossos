@@ -148,7 +148,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                 tab={
                   <span>
                     <GoogleOutlined />
-                    Add Neuroglancer Dataset
+                    Add Remote Neuroglancer Dataset
                   </span>
                 }
                 key="3"
@@ -165,7 +165,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                 tab={
                   <span>
                     <DatabaseOutlined />
-                    Add BossDB Dataset
+                    Add Remote BossDB Dataset
                   </span>
                 }
                 key="4"

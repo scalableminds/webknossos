@@ -193,6 +193,28 @@ class TaskListView extends React.PureComponent<Props, State> {
     );
   }
 
+  renderPlaceholder() {
+    return (
+      <>
+        <p>
+          There are no tasks in the current search. Select search criteria above or create new tasks
+          by clicking on the <strong>Add Task</strong> button.
+        </p>
+        <p>
+          To learn more about the task system in webKnossos,{" "}
+          <a
+            href="https://docs.webknossos.org/webknossos/tasks.html"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            check out the documentation
+          </a>
+          .
+        </p>
+      </>
+    );
+  }
+
   render() {
     const marginRight = {
       marginRight: 20,
@@ -293,6 +315,9 @@ class TaskListView extends React.PureComponent<Props, State> {
               marginBottom: 30,
             }}
             expandedRowRender={(task) => <TaskAnnotationView task={task} />}
+            locale={{
+              emptyText: this.renderPlaceholder(),
+            }}
           >
             <Column
               title="ID"

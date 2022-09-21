@@ -1,5 +1,5 @@
 ## Skeleton Annotations
-A typical goal of skeleton annotations is the reconstruction of long-running structures in a dataset that span across many data slices as a graph of connected nodes.
+A typical goal of skeleton annotations is the reconstruction of long-running structures in a dataset that spans many data slices as a graph of connected nodes.
 A good example is the analysis of nerve cells by placing a node every few slices to reconstruct their path/circuitry through a dataset (see image below).
 
 Commonly, skeleton annotations contain the reconstruction of one or more structures, often with many thousand nodes.
@@ -30,7 +30,7 @@ Most skeleton annotation operations and keyboard shortcuts are tailored for the 
 #### Oblique Mode
 
 Oblique mode presents an arbitrarily-resliced view through the data.
-In contrast to Orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible.
+In contrast to the Orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible.
 
 ![Viewport in Oblique Mode showing an arbitrarily-resliced view through the data.](./images/tracing_ui_obliquemode.jpeg)
 
@@ -185,11 +185,11 @@ Example operations include (but are not limited to):
 
 ### Importing & Exporting NML Files
 webKnossos makes it easy to import or export skeleton annotations as [NML files](./data_formats.md#nml).
-There are two ways for downloading your annotations:
+There are several ways for downloading your annotations:
 
 1. There is a `Download` button in the overflow menu next to the prominent `Save` button in the toolbar at the top of the screen.
 
-![Download of skeeleton annotations via ´Download´button in the toolbar.](images/tracing_ui_download_tooolbar.jpeg)
+![Download of skeleton annotations via the ´Download´ button in the toolbar.](images/tracing_ui_download_tooolbar.jpeg)
 
 2. If you need more fine-grained control over which trees to download, use the `Download Selected Trees` option. From the `Skeleton` Tab, click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
 
@@ -208,7 +208,7 @@ If you are looking to import/export annotations through Python code, check out o
 ### Merging Skeleton Annotations
 There are two ways for merging annotations:
 
-1. While in the annotation UI, *drag and drop* an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with currently open annotation.
+1. While in the annotation UI, *drag and drop* an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with the currently open annotation.
 
 2. If you would like to merge your current annotation with another existing annotation, select the `Merge` operation from the overflow menu next to the `Save` button (see image). Either enter the ID of an existing explorative annotation or select a whole project and proceed to merge the selection with your currently open annotation. The resulting annotation can either be created as a new explorative annotation or the merge will happen in your current annotation.
 

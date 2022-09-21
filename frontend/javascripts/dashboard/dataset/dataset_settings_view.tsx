@@ -17,7 +17,7 @@ import _ from "lodash";
 import moment from "moment";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { withRouter, Link } from "react-router-dom";
 import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
 import type {
   APIDataSource,
@@ -762,7 +762,16 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const form = this.formRef.current;
 
     const { isUserAdmin } = this.props;
-    const titleString = this.props.isEditingMode ? "Update" : "Import";
+    const titleString = this.props.isEditingMode ? "Settings for" : "Import";
+    const datasetLinkOrName = this.props.isEditingMode ? (
+      <Link
+        to={`/datasets/${this.props.datasetId.owningOrganization}/${this.props.datasetId.name}`}
+      >
+        {this.props.datasetId.name}
+      </Link>
+    ) : (
+      this.props.datasetId.name
+    );
     const confirmString =
       this.props.isEditingMode ||
       (this.state.dataset != null && this.state.dataset.dataSource.status == null)
@@ -803,7 +812,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           bordered={false}
           title={
             <h3>
-              {titleString} Dataset: {this.props.datasetId.name}
+              {titleString} Dataset {datasetLinkOrName}
             </h3>
           }
         >

@@ -5,12 +5,8 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKW
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{
-  N5DataLayer,
-  N5SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 

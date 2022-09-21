@@ -1,29 +1,29 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
 import com.scalableminds.webknossos.datastore.datareaders.{
-  BoolCompressionOption,
-  CompressionOption,
+  BoolCompressionSetting,
+  CompressionSetting,
   Compressor,
   GzipCompressor,
   NullCompressor,
-  StringCompressionOption,
+  StringCompressionSetting,
   ZlibCompressor
 }
 
-object CompressorFactoryN5 {
+object N5CompressorFactory {
   val nullCompressor = new NullCompressor
 
-  def create(properties: Map[String, CompressionOption]): Compressor =
+  def create(properties: Map[String, CompressionSetting]): Compressor =
     properties("type") match {
-      case StringCompressionOption(id) => create(id, properties)
-      case _                           => throw new IllegalArgumentException("Compressor id must be string")
+      case StringCompressionSetting(id) => create(id, properties)
+      case _                            => throw new IllegalArgumentException("Compressor id must be string")
     }
 
-  def create(id: String, properties: Map[String, CompressionOption]): Compressor =
+  def create(id: String, properties: Map[String, CompressionSetting]): Compressor =
     id match {
       case "null" => nullCompressor
       case "zlib" => new ZlibCompressor(properties)
-      case "gzip" if properties.getOrElse("useZlib", BoolCompressionOption(false)) == BoolCompressionOption(true) =>
+      case "gzip" if properties.getOrElse("useZlib", BoolCompressionSetting(false)) == BoolCompressionSetting(true) =>
         new ZlibCompressor(properties)
       case "gzip" => new GzipCompressor(properties)
       case _      => throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.")

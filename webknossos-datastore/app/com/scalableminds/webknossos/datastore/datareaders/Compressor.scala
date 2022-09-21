@@ -7,16 +7,36 @@ import org.apache.commons.compress.compressors.gzip.{
   GzipParameters
 }
 import org.blosc.{BufferSizes, IBloscDll, JBlosc}
+import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 import java.io._
 import java.nio.ByteBuffer
 import java.util
 import java.util.zip.{Deflater, DeflaterOutputStream, Inflater, InflaterInputStream}
 
-sealed trait CompressionOption
-final case class StringCompressionOption(x: String) extends CompressionOption
-final case class IntCompressionOption(x: Int) extends CompressionOption
-final case class BoolCompressionOption(x: Boolean) extends CompressionOption
+sealed trait CompressionSetting
+final case class StringCompressionSetting(x: String) extends CompressionSetting
+final case class IntCompressionSetting(x: Int) extends CompressionSetting
+final case class BoolCompressionSetting(x: Boolean) extends CompressionSetting
+
+object CompressionSetting {
+  implicit object CompressionSettingFormat extends Format[CompressionSetting] {
+
+    override def reads(json: JsValue): JsResult[CompressionSetting] =
+      json
+        .validate[String]
+        .map(StringCompressionSetting)
+        .orElse(json.validate[Int].map(IntCompressionSetting))
+        .orElse(json.validate[Boolean].map(BoolCompressionSetting))
+
+    override def writes(compressionSetting: CompressionSetting): JsValue =
+      compressionSetting match {
+        case StringCompressionSetting(x) => Json.toJson(x)
+        case IntCompressionSetting(x)    => Json.toJson(x)
+        case BoolCompressionSetting(x)   => Json.toJson(x)
+      }
+  }
+}
 
 abstract class Compressor {
 
@@ -55,12 +75,12 @@ class NullCompressor extends Compressor {
   override def uncompress(is: InputStream, os: OutputStream): Unit = passThrough(is, os)
 }
 
-class ZlibCompressor(val properties: Map[String, CompressionOption]) extends Compressor {
+class ZlibCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
   val level: Int = properties.get("level") match {
-    case None                                       => 1 //default value
-    case Some(IntCompressionOption(levelInt))       => validateLevel(levelInt)
-    case Some(StringCompressionOption(levelString)) => validateLevel(levelString.toInt)
-    case _                                          => throw new IllegalArgumentException("Invalid compression level: " + level)
+    case None                                        => 1 //default value
+    case Some(IntCompressionSetting(levelInt))       => validateLevel(levelInt)
+    case Some(StringCompressionSetting(levelString)) => validateLevel(levelString.toInt)
+    case _                                           => throw new IllegalArgumentException("Invalid compression level: " + level)
   }
 
   override def toString: String = "compressor=" + getId + "/level=" + level
@@ -88,12 +108,12 @@ class ZlibCompressor(val properties: Map[String, CompressionOption]) extends Com
   }
 }
 
-class GzipCompressor(val properties: Map[String, CompressionOption]) extends Compressor {
+class GzipCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
   val level: Int = properties.get("level") match {
-    case None                                       => 1 //default value
-    case Some(IntCompressionOption(levelInt))       => validateLevel(levelInt)
-    case Some(StringCompressionOption(levelString)) => validateLevel(levelString.toInt)
-    case _                                          => throw new IllegalArgumentException("Invalid compression level: " + level)
+    case None                                        => 1 //default value
+    case Some(IntCompressionSetting(levelInt))       => validateLevel(levelInt)
+    case Some(StringCompressionSetting(levelString)) => validateLevel(levelString.toInt)
+    case _                                           => throw new IllegalArgumentException("Invalid compression level: " + level)
   }
 
   override def toString: String = "compressor=" + getId + "/level=" + level
@@ -140,11 +160,11 @@ object BloscCompressor {
   val supportedCnames: List[String] = List("zstd", "blosclz", defaultCname, "lz4hc", "zlib")
 }
 
-class BloscCompressor(val properties: Map[String, CompressionOption]) extends Compressor {
+class BloscCompressor(val properties: Map[String, CompressionSetting]) extends Compressor {
   val cname: String = properties.get(BloscCompressor.keyCname) match {
-    case None                                       => BloscCompressor.defaultCname
-    case Some(StringCompressionOption(cnameString)) => validateCname(cnameString)
-    case _                                          => throw new IllegalArgumentException("Blosc cname must be string")
+    case None                                        => BloscCompressor.defaultCname
+    case Some(StringCompressionSetting(cnameString)) => validateCname(cnameString)
+    case _                                           => throw new IllegalArgumentException("Blosc cname must be string")
   }
 
   private def validateCname(cname: String) = {
@@ -156,10 +176,10 @@ class BloscCompressor(val properties: Map[String, CompressionOption]) extends Co
   }
 
   val clevel: Int = properties.get(BloscCompressor.keyClevel) match {
-    case None                                        => BloscCompressor.defaultCLevel
-    case Some(StringCompressionOption(clevelString)) => validateClevel(clevelString.toInt)
-    case Some(IntCompressionOption(clevelInt))       => validateClevel(clevelInt)
-    case _                                           => throw new IllegalArgumentException("Blosc clevel must be int or string")
+    case None                                         => BloscCompressor.defaultCLevel
+    case Some(StringCompressionSetting(clevelString)) => validateClevel(clevelString.toInt)
+    case Some(IntCompressionSetting(clevelInt))       => validateClevel(clevelInt)
+    case _                                            => throw new IllegalArgumentException("Blosc clevel must be int or string")
   }
 
   private def validateClevel(clevel: Int): Int = {
@@ -169,10 +189,10 @@ class BloscCompressor(val properties: Map[String, CompressionOption]) extends Co
   }
 
   val shuffle: Int = properties.get(BloscCompressor.keyShuffle) match {
-    case None                                         => BloscCompressor.defaultShuffle
-    case Some(StringCompressionOption(shuffleString)) => validateShuffle(shuffleString.toInt)
-    case Some(IntCompressionOption(shuffleInt))       => validateShuffle(shuffleInt)
-    case _                                            => throw new IllegalArgumentException("Blosc keyShuffle must be int or string")
+    case None                                          => BloscCompressor.defaultShuffle
+    case Some(StringCompressionSetting(shuffleString)) => validateShuffle(shuffleString.toInt)
+    case Some(IntCompressionSetting(shuffleInt))       => validateShuffle(shuffleInt)
+    case _                                             => throw new IllegalArgumentException("Blosc keyShuffle must be int or string")
   }
 
   private def validateShuffle(shuffle: Int): Int = {
@@ -186,10 +206,10 @@ class BloscCompressor(val properties: Map[String, CompressionOption]) extends Co
   }
 
   val blocksize: Int = properties.get(BloscCompressor.keyBlocksize) match {
-    case None                                           => BloscCompressor.defaultBlocksize
-    case Some(StringCompressionOption(blockSizeString)) => blockSizeString.toInt
-    case Some(IntCompressionOption(blockSizeInt))       => blockSizeInt
-    case _                                              => throw new IllegalArgumentException("Blosc keyBlocksize must be int or string")
+    case None                                            => BloscCompressor.defaultBlocksize
+    case Some(StringCompressionSetting(blockSizeString)) => blockSizeString.toInt
+    case Some(IntCompressionSetting(blockSizeInt))       => blockSizeInt
+    case _                                               => throw new IllegalArgumentException("Blosc keyBlocksize must be int or string")
   }
 
   override def getId = "blosc"

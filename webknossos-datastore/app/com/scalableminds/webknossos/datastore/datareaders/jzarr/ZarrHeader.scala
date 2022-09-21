@@ -4,21 +4,18 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayDataType,
   ArrayOrder,
-  BoolCompressionOption,
-  CompressionOption,
+  CompressionSetting,
   Compressor,
   DatasetHeader,
   DimensionSeparator,
-  IntCompressionOption,
-  StringCompressionOption
 }
 
+import com.scalableminds.webknossos.datastore.helpers.JsonImplicits._
 import java.nio.ByteOrder
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
@@ -26,7 +23,7 @@ case class ZarrHeader(
     zarr_format: Int, // format version number
     shape: Array[Int], // shape of the entire array
     chunks: Array[Int], // shape of each chunk
-    compressor: Option[Map[String, CompressionOption]] = None, // specifies compressor to use, with parameters
+    compressor: Option[Map[String, CompressionSetting]] = None, // specifies compressor to use, with parameters
     filters: Option[List[Map[String, String]]] = None, // specifies filters to use, with parameters
     override val dimension_separator: DimensionSeparator = DimensionSeparator.DOT,
     dtype: String,
@@ -45,7 +42,7 @@ case class ZarrHeader(
     else ByteOrder.BIG_ENDIAN
 
   lazy val compressorImpl: Compressor =
-    compressor.map(CompressorFactoryZarr.create).getOrElse(CompressorFactoryZarr.nullCompressor)
+    compressor.map(ZarrCompressorFactory.create).getOrElse(ZarrCompressorFactory.nullCompressor)
 
   lazy val resolvedDataType: ArrayDataType =
     ArrayDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
@@ -82,63 +79,6 @@ object ZarrHeader {
                compressor = compressor,
                dtype = dtype,
                order = ArrayOrder.F)
-  }
-
-  implicit object NumberFormat extends Format[Number] {
-
-    override def reads(json: JsValue): JsResult[Number] =
-      json
-        .validate[Long]
-        .map(_.asInstanceOf[Number])
-        .orElse(json.validate[Float].map(_.asInstanceOf[Number]))
-        .orElse(json.validate[Double].map(_.asInstanceOf[Number]))
-
-    override def writes(number: Number): JsValue =
-      tryo(number.longValue())
-        .map(JsNumber(_))
-        .orElse(tryo(number.floatValue()).map(JsNumber(_)))
-        .getOrElse(JsNumber(number.doubleValue()))
-  }
-
-  implicit object StringOrIntFormat extends Format[Either[String, Int]] {
-
-    override def reads(json: JsValue): JsResult[Either[String, Int]] =
-      json.validate[String].map(Left(_)).orElse(json.validate[Int].map(Right(_)))
-
-    override def writes(stringOrInt: Either[String, Int]): JsValue =
-      stringOrInt match {
-        case Left(s)  => Json.toJson(s)
-        case Right(n) => Json.toJson(n)
-      }
-  }
-
-  implicit object StringOrNumberFormat extends Format[Either[String, Number]] {
-
-    override def reads(json: JsValue): JsResult[Either[String, Number]] =
-      json.validate[String].map(Left(_)).orElse(json.validate[Number].map(Right(_)))
-
-    override def writes(stringOrNumber: Either[String, Number]): JsValue =
-      stringOrNumber match {
-        case Left(s)  => Json.toJson(s)
-        case Right(n) => Json.toJson(n)
-      }
-  }
-
-  implicit object StringOrIntOrBooleanFormat extends Format[CompressionOption] {
-
-    override def reads(json: JsValue): JsResult[CompressionOption] =
-      json
-        .validate[String]
-        .map(StringCompressionOption)
-        .orElse(json.validate[Int].map(IntCompressionOption))
-        .orElse(json.validate[Boolean].map(BoolCompressionOption))
-
-    override def writes(stringOrIntOrBool: CompressionOption): JsValue =
-      stringOrIntOrBool match {
-        case StringCompressionOption(x) => Json.toJson(x)
-        case IntCompressionOption(x)    => Json.toJson(x)
-        case BoolCompressionOption(x)   => Json.toJson(x)
-      }
   }
 
   implicit object ZarrHeaderFormat extends Format[ZarrHeader] {

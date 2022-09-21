@@ -4,16 +4,13 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayOrder,
-  BoolCompressionOption,
-  CompressionOption,
+  CompressionSetting,
   Compressor,
   DatasetHeader,
   DimensionSeparator,
-  IntCompressionOption,
-  StringCompressionOption
 }
+import com.scalableminds.webknossos.datastore.helpers.JsonImplicits._
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
-import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
@@ -27,12 +24,12 @@ object N5BlockHeader {
 case class N5Header(
     dimensions: Array[Int], // shape of the entire array
     blockSize: Array[Int], // shape of each chunk
-    compression: Option[Map[String, CompressionOption]] = None, // specifies compressor to use, with parameters
+    compression: Option[Map[String, CompressionSetting]] = None, // specifies compressor to use, with parameters
     dataType: String,
-    dimension_separator: DimensionSeparator = DimensionSeparator.SLASH,
-    fill_value: Either[String, Number] = Right(0), // is always 0
-    order: ArrayOrder = ArrayOrder.F // is always this,
+    dimension_separator: DimensionSeparator = DimensionSeparator.SLASH
 ) extends DatasetHeader {
+  val fill_value: Either[String, Number] = Right(0) // is always 0
+  val order: ArrayOrder = ArrayOrder.F
 
   lazy val datasetShape: Array[Int] = dimensions
 
@@ -41,88 +38,20 @@ case class N5Header(
   override lazy val byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN
 
   lazy val compressorImpl: Compressor =
-    compression.map(CompressorFactoryN5.create).getOrElse(CompressorFactoryN5.nullCompressor)
+    compression.map(N5CompressorFactory.create).getOrElse(N5CompressorFactory.nullCompressor)
 
   lazy val resolvedDataType: ArrayDataType =
-    N5DataType.toZarrDataType(N5DataType.fromString(dataType).get)
+    N5DataType.toArrayDataType(N5DataType.fromString(dataType).get)
 }
 
 object N5Header {
   val FILENAME_DOT_ZARRAY = "attributes.json"
 
-  implicit object NumberFormat extends Format[Number] {
-
-    override def reads(json: JsValue): JsResult[Number] =
-      json
-        .validate[Long]
-        .map(_.asInstanceOf[Number])
-        .orElse(json.validate[Float].map(_.asInstanceOf[Number]))
-        .orElse(json.validate[Double].map(_.asInstanceOf[Number]))
-
-    override def writes(number: Number): JsValue =
-      tryo(number.longValue())
-        .map(JsNumber(_))
-        .orElse(tryo(number.floatValue()).map(JsNumber(_)))
-        .getOrElse(JsNumber(number.doubleValue()))
-  }
-  implicit object StringOrIntFormat extends Format[Either[String, Int]] {
-
-    override def reads(json: JsValue): JsResult[Either[String, Int]] =
-      json.validate[String].map(Left(_)).orElse(json.validate[Int].map(Right(_)))
-
-    override def writes(stringOrInt: Either[String, Int]): JsValue =
-      stringOrInt match {
-        case Left(s)  => Json.toJson(s)
-        case Right(n) => Json.toJson(n)
-      }
-  }
-
-  implicit object StringOrNumberFormat extends Format[Either[String, Number]] {
-
-    override def reads(json: JsValue): JsResult[Either[String, Number]] =
-      json.validate[String].map(Left(_)).orElse(json.validate[Number].map(Right(_)))
-
-    override def writes(stringOrNumber: Either[String, Number]): JsValue =
-      stringOrNumber match {
-        case Left(s)  => Json.toJson(s)
-        case Right(n) => Json.toJson(n)
-      }
-  }
-
-  implicit object StringOrIntOrBooleanFormat extends Format[CompressionOption] {
-
-    override def reads(json: JsValue): JsResult[CompressionOption] =
-      json
-        .validate[String]
-        .map(StringCompressionOption)
-        .orElse(json.validate[Int].map(IntCompressionOption))
-        .orElse(json.validate[Boolean].map(BoolCompressionOption))
-
-    override def writes(stringOrIntOrBool: CompressionOption): JsValue =
-      stringOrIntOrBool match {
-        case StringCompressionOption(x) => Json.toJson(x)
-        case IntCompressionOption(x)    => Json.toJson(x)
-        case BoolCompressionOption(x)   => Json.toJson(x)
-      }
-  }
-
-  implicit object ZarrHeaderFormat extends Format[N5Header] {
+  implicit object N5HeaderFormat extends Format[N5Header] {
     override def reads(json: JsValue): JsResult[N5Header] =
       Json.using[WithDefaultValues].reads[N5Header].reads(json)
 
-    override def writes(zarrheader: N5Header): JsValue =
-      Json.writes[N5Header].writes(zarrheader)
-//    override def writes(zarrHeader: N5Header): JsValue =
-//      Json.obj(
-//        "dtype" -> zarrHeader.dtype,
-//        "fill_value" -> 0,
-//        "zarr_format" -> zarrHeader.zarr_format,
-//        "order" -> zarrHeader.order,
-//        "chunks" -> zarrHeader.chunks,
-//        "compressor" -> zarrHeader.compressor,
-//        "filters" -> None,
-//        "shape" -> zarrHeader.shape,
-//        "dimension_seperator" -> zarrHeader.dimension_separator
-//      )
+    override def writes(n5Header: N5Header): JsValue =
+      Json.writes[N5Header].writes(n5Header)
   }
 }

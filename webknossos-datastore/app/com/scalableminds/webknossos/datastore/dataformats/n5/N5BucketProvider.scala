@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.datastore.dataformats.n5
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{N5Layer, N5Mag}
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, DatasetLocatorMag}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
@@ -32,7 +31,7 @@ class N5CubeHandle(n5Array: N5Array) extends DataCubeHandle with LazyLogging wit
 class N5BucketProvider(layer: N5Layer) extends BucketProvider with LazyLogging with RateLimitedErrorLogging {
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[N5CubeHandle] = {
-    val n5MagOpt: Option[N5Mag] =
+    val n5MagOpt: Option[DatasetLocatorMag] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
     n5MagOpt match {

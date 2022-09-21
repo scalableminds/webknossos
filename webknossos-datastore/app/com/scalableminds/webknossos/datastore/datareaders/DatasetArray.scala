@@ -120,3 +120,7 @@ class DatasetArray(relativePath: DatasetPath, store: FileSystemStore, header: Da
       ",")} chunks=${header.chunkSize.mkString(",")} dtype=${header.dataType} fillValue=${header.fillValueNumber}, ${header.compressorImpl}, byteOrder=${header.byteOrder}, store=${store.getClass.getSimpleName}}"
 
 }
+
+object DatasetArray {
+  val chunkSizeLimitBytes: Int = 64 * 1024 * 1024
+}

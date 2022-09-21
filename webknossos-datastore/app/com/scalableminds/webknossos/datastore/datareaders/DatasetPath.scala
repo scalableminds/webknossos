@@ -23,7 +23,7 @@ class DatasetPath(storeKeyRaw: String) {
       if (pathMutable.endsWith("/")) pathMutable = pathMutable.substring(0, path.length - 1)
       // don't allow path segments with just '.' or '..'
       for (segment <- pathMutable.split("/")) {
-        if (segment.trim == "." || segment.trim == "")
+        if (segment.trim == "." || segment.trim == "..")
           throw new IllegalArgumentException("path containing '.' or '..' segment not allowed")
       }
       pathMutable

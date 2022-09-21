@@ -15,8 +15,6 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 
 object ZarrArray extends LazyLogging {
-  private val chunkSizeLimitBytes = 64 * 1024 * 1024
-
   @throws[IOException]
   def open(path: Path, axisOrderOpt: Option[AxisOrder]): ZarrArray = {
     val store = new FileSystemStore(path)
@@ -34,9 +32,9 @@ object ZarrArray extends LazyLogging {
         case errors: JsError =>
           throw new Exception("Validating json as zarr header failed: " + JsError.toJson(errors).toString())
       }
-    if (header.bytesPerChunk > chunkSizeLimitBytes) {
+    if (header.bytesPerChunk > DatasetArray.chunkSizeLimitBytes) {
       throw new IllegalArgumentException(
-        f"Chunk size of this Zarr Array exceeds limit of $chunkSizeLimitBytes, got ${header.bytesPerChunk}")
+        f"Chunk size of this Zarr Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${header.bytesPerChunk}")
     }
     new ZarrArray(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)))
   }

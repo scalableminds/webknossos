@@ -8,7 +8,7 @@ object N5DataType extends ExtendedEnumeration {
   type N5DataType = Value
   val float64, float32, int64, uint64, int32, uint32, int16, uint16, int8, uint8 = Value
 
-  def toZarrDataType(dataType: N5DataType): ArrayDataType =
+  def toArrayDataType(dataType: N5DataType): ArrayDataType =
     dataType match {
       case `float64` => ArrayDataType.f8
       case `float32` => ArrayDataType.f4

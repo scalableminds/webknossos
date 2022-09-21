@@ -300,15 +300,24 @@ function SimpleLayerForm({
           />
         </FormItemWithInfo>
         <p>
-          <div>Additional information</div>
-          <div>Data Format: {layer.dataFormat}</div>
-          <div>Voxel type: {layer.elementClass}</div>
-          {"numChannels" in layer ? <div>Channel count: {layer.numChannels}</div> : null}
           <div>
-            Magnifications:{" "}
-            {getMags(layer)
-              .map((mag) => (typeof mag === "number" ? mag : mag.join("-")))
-              .join(", ")}
+            <b>Data Format</b>: {layer.dataFormat}
+          </div>
+          <div>
+            <b>Voxel type</b>: {layer.elementClass}
+          </div>
+          {"numChannels" in layer ? (
+            <div>
+              <b>Channel count</b>: {layer.numChannels}
+            </div>
+          ) : null}
+          <div>
+            <b>Magnifications</b>:{" "}
+            <ul>
+              {getMags(layer).map((mag) => (
+                <li key={mag.toString()}>{typeof mag === "number" ? mag : mag.join("-")}</li>
+              ))}
+            </ul>
           </div>
         </p>
       </Col>

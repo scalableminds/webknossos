@@ -1,4 +1,4 @@
-import { Form, Input, Button, Col, Radio, Row, Collapse, FormInstance } from "antd";
+import { Form, Input, Button, Col, Radio, Row, Collapse, FormInstance, Modal } from "antd";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
@@ -81,6 +81,7 @@ function mergeNewLayers(
 function DatasetAddZarrView(props: Props) {
   const { activeUser, onAdded } = props;
 
+  const [showAddLayerModal, setShowAddLayerModal] = useState(false);
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
   const datasourceConfigStr: string | null = Form.useWatch("dataSourceJson", form);
@@ -130,13 +131,30 @@ function DatasetAddZarrView(props: Props) {
     }
   }
 
+  const hideDatasetUI = maybeDataLayers == null || maybeDataLayers.length === 0;
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
       <CardContainer title="Add Remote Zarr Dataset">
-        <Form form={form} style={{ marginTop: 20 }} layout="vertical">
-          <AddZarrLayer form={form} setDatasourceConfigStr={setDatasourceConfigStr} />
-          <Hideable hidden={maybeDataLayers == null || maybeDataLayers.length == 0}>
+        <Form form={form} layout="vertical">
+          <Modal
+            title="Add Layer"
+            width={800}
+            visible={showAddLayerModal}
+            footer={null}
+            onCancel={() => setShowAddLayerModal(false)}
+          >
+            <AddZarrLayer
+              form={form}
+              setDatasourceConfigStr={setDatasourceConfigStr}
+              onSuccess={() => setShowAddLayerModal(false)}
+            />
+          </Modal>
+
+          {hideDatasetUI && (
+            <AddZarrLayer form={form} setDatasourceConfigStr={setDatasourceConfigStr} />
+          )}
+          <Hideable hidden={hideDatasetUI}>
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
             <DatasetSettingsDataTab
@@ -150,6 +168,13 @@ function DatasetAddZarrView(props: Props) {
               }}
             />
           </Hideable>
+          {!hideDatasetUI && (
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+              <Button type="link" onClick={() => setShowAddLayerModal(true)}>
+                Add Layer
+              </Button>
+            </div>
+          )}
           <Row gutter={8}>
             <Col span={6} />
             <Col span={6} />
@@ -186,9 +211,11 @@ function DatasetAddZarrView(props: Props) {
 function AddZarrLayer({
   form,
   setDatasourceConfigStr,
+  onSuccess,
 }: {
   form: FormInstance;
   setDatasourceConfigStr: (dataSourceJson: string) => void;
+  onSuccess?: () => void;
 }) {
   const datasourceConfigStr: string | null = Form.useWatch("dataSourceJson", form);
   const datasourceUrl: string | null = Form.useWatch("url", form);
@@ -248,6 +275,9 @@ function AddZarrLayer({
       );
     }
     setDatasourceConfigStr(jsonStringify(mergeNewLayers(loadedDatasource, dataSource)));
+    if (onSuccess) {
+      onSuccess();
+    }
   }
 
   return (
@@ -257,6 +287,7 @@ function AddZarrLayer({
       specification below using the Add button. Once you have approved of the resulting datasource
       you can import it.
       <FormItem
+        style={{ marginTop: 16 }}
         name="url"
         label="Dataset URL"
         hasFeedback

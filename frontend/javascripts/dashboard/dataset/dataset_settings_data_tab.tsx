@@ -23,7 +23,7 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "dashboard/dataset/helper_components";
-import { jsonStringify } from "libs/utils";
+import { jsonStringify, parseAsMaybe } from "libs/utils";
 import { DataLayer } from "types/schemas/datasource.types";
 
 const FormItem = Form.Item;
@@ -43,7 +43,9 @@ export const syncDataSourceFields = (
       dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
     });
   } else {
-    const dataSourceFromAdvancedTab = JSON.parse(form.getFieldValue("dataSourceJson"));
+    const dataSourceFromAdvancedTab = parseAsMaybe(form.getFieldValue("dataSourceJson")).getOrElse(
+      null,
+    );
     // Copy from advanced to simple: update form values
     form.setFieldsValue({
       dataSource: dataSourceFromAdvancedTab,

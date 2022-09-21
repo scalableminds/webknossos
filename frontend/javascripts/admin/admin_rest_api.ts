@@ -59,6 +59,9 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
+  VoxelyticsWorkflowInfo,
+  VoxelyticsWorkflowReport,
+  VoxelyticsChunkStatistics,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -2291,5 +2294,63 @@ export async function getEdgesForAgglomerateMinCut(
         data: segmentsInfo,
       },
     ),
+  );
+}
+
+// ### Voxelytics
+export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowInfo>> {
+  return Request.receiveJSON("/api/voxelytics/workflows");
+}
+
+export function getVoxelyticsWorkflow(
+  workflowHash: string,
+  runId: string | null,
+): Promise<VoxelyticsWorkflowReport> {
+  const params = new URLSearchParams();
+  if (runId != null) {
+    params.append("runId", runId);
+  }
+  return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}?${params}`);
+}
+
+export function getVoxelyticsLogs(
+  runId: string,
+  taskName: string | null,
+  minLevel: string,
+): Promise<Array<{}>> {
+  const params = new URLSearchParams({ runId, minLevel });
+  if (taskName != null) {
+    params.append("taskName", taskName);
+  }
+  return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
+}
+
+export function getVoxelyticsChunkStatistics(
+  workflowHash: string,
+  runId: string,
+  taskName: string,
+): Promise<Array<VoxelyticsChunkStatistics>> {
+  return Request.receiveJSON(
+    `/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${new URLSearchParams({
+      runId,
+      taskName,
+    })}`,
+  );
+}
+export function getVoxelyticsArtifactChecksums(
+  workflowHash: string,
+  runId: string,
+  taskName: string,
+  artifactName?: string,
+): Promise<Array<Record<string, string | number>>> {
+  const params = new URLSearchParams({
+    runId,
+    taskName,
+  });
+  if (artifactName != null) {
+    params.append("artifactName", artifactName);
+  }
+  return Request.receiveJSON(
+    `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?${params}`,
   );
 }

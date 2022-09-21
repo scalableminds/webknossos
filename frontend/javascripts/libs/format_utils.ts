@@ -173,3 +173,62 @@ export function formatDurationToMinutesAndSeconds(durationInMillisecons: number)
 export function formatHash(id: string): string {
   return id.slice(-6);
 }
+
+export function formatDateMedium(date: Date): string {
+  return moment(date).format("lll");
+}
+export function formatDistance(start: Date | number, end: Date | number): string {
+  return moment.duration(moment(start).diff(moment(end))).humanize(true);
+}
+export function formatDistanceStrict(start: Date | number, end: Date | number): string {
+  const duration = moment.duration(moment(start).diff(moment(end)));
+
+  const parts: Array<string> = [];
+  if (Math.floor(duration.asDays()) > 0) {
+    parts.push(`${Math.floor(duration.asDays())} days`);
+  }
+  if (duration.hours() > 0) {
+    parts.push(`${duration.hours()} hours`);
+  }
+  if (duration.minutes() > 0) {
+    parts.push(`${duration.minutes()} minutes`);
+  }
+  if (duration.seconds() > 0) {
+    parts.push(`${duration.seconds()} seconds`);
+  }
+  return parts.join(" ");
+}
+
+export function formatCPU(cpuShare: number) {
+  if (cpuShare == null || !Number.isFinite(cpuShare)) {
+    return "";
+  }
+  return `${(cpuShare * 100).toFixed(0)}%`;
+}
+
+export function formatBytes(nbytes: number) {
+  if (nbytes == null || !Number.isFinite(nbytes)) {
+    return "";
+  }
+  if (nbytes > 2 ** 50) {
+    // Pebibyte
+    return `${(nbytes / 2 ** 50).toPrecision(4)} PiB`;
+  }
+  if (nbytes > 2 ** 40) {
+    // Tebibyte
+    return `${(nbytes / 2 ** 40).toPrecision(4)} TiB`;
+  }
+  if (nbytes > 2 ** 30) {
+    // Gibibyte
+    return `${(nbytes / 2 ** 30).toPrecision(4)} GiB`;
+  }
+  if (nbytes > 2 ** 20) {
+    // Mebibyte
+    return `${(nbytes / 2 ** 20).toPrecision(4)} MiB`;
+  }
+  if (nbytes > 2 ** 10) {
+    // Kibibyte
+    return `${(nbytes / 2 ** 10).toPrecision(4)} KiB`;
+  }
+  return `${nbytes} B`;
+}

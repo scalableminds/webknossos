@@ -294,7 +294,9 @@ function SimpleLayerForm({
           ]}
         >
           <Input
-            disabled={isReadOnlyDataset}
+            // the name of a layer depends on the folder name in wkw. Therefore, don't allow
+            // editing the layer name for wkw.
+            disabled={isReadOnlyDataset || layer.dataFormat === "wkw"}
             style={{
               width: 300,
             }}

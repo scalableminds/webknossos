@@ -1,10 +1,11 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import React from "react";
+
 type Props = {
   redirectTo: () => Promise<string>;
   history: RouteComponentProps["history"];
-  pushToHistory: boolean;
+  pushToHistory?: boolean;
 };
 
 class AsyncRedirect extends React.PureComponent<Props> {
@@ -18,6 +19,12 @@ class AsyncRedirect extends React.PureComponent<Props> {
 
   async redirect() {
     const newPath = await this.props.redirectTo();
+
+    if (newPath.startsWith(location.origin)) {
+      // The link is absolute which react-router does not support
+      // apparently. See https://stackoverflow.com/questions/42914666/react-router-external-link
+      location.replace(newPath);
+    }
 
     if (this.props.pushToHistory) {
       this.props.history.push(newPath);

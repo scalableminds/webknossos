@@ -59,6 +59,7 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
+  ShortLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -120,7 +121,7 @@ function requestUserToken(): Promise<string> {
   return tokenRequestPromise;
 }
 
-export function getSharingToken(): string | null | undefined {
+export function getSharingTokenFromUrlParameters(): string | null | undefined {
   if (location != null) {
     const params = Utils.getUrlParamsObject();
 
@@ -134,7 +135,7 @@ export function getSharingToken(): string | null | undefined {
 
 let tokenPromise: Promise<string>;
 export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<any> {
-  const sharingToken = getSharingToken();
+  const sharingToken = getSharingTokenFromUrlParameters();
 
   if (sharingToken != null) {
     return fn(sharingToken);
@@ -1479,12 +1480,13 @@ export async function exploreRemoteDataset(
 }
 
 export async function storeRemoteDataset(
+  datastoreUrl: string,
   datasetName: string,
   organizationName: string,
   datasource: string,
 ): Promise<Response> {
   return doWithToken((token) =>
-    fetch(`/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
+    fetch(`${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: datasource,
@@ -2270,4 +2272,43 @@ export function getSynapseTypes(
       },
     ),
   );
+}
+
+type MinCutTargetEdge = {
+  position1: Vector3;
+  position2: Vector3;
+  segmentId1: number;
+  segmentId2: number;
+};
+export async function getEdgesForAgglomerateMinCut(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentsInfo: Object,
+): Promise<Array<MinCutTargetEdge>> {
+  return doWithToken((token) =>
+    Request.sendJSONReceiveJSON(
+      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      {
+        data: segmentsInfo,
+      },
+    ),
+  );
+}
+
+// ### Short links
+
+export const createShortLink = _.memoize(
+  (longLink: string): Promise<ShortLink> =>
+    Request.sendJSONReceiveJSON("/api/shortLinks", {
+      method: "POST",
+      // stringify is necessary because the back-end expects a JSON string
+      // (i.e., a string which contains quotes at the beginning and end).
+      // The Request module does not add additional string quotes
+      // if the data parameter is already a string.
+      data: JSON.stringify(longLink),
+    }),
+);
+
+export function getShortLink(key: string): Promise<ShortLink> {
+  return Request.receiveJSON(`/api/shortLinks/byKey/${key}`);
 }

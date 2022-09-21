@@ -225,7 +225,7 @@ export function deleteEdge(
   targetTree: Tree,
   targetNode: Node,
   timestamp: number,
-): Maybe<[TreeMap, number]> {
+): Maybe<[TreeMap, number | null]> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     if (sourceTree.treeId !== targetTree.treeId) {
       // The two selected nodes are in different trees
@@ -254,8 +254,11 @@ export function deleteEdge(
       timestamp,
     );
     // The treeId of the tree the active node belongs to could have changed
-    const newActiveTree = findTreeByNodeId(newTrees, sourceNode.id).get();
-    return Maybe.Just([newTrees, newActiveTree.treeId]);
+    const activeNodeId = skeletonTracing.activeNodeId;
+    const newActiveTreeId = activeNodeId
+      ? findTreeByNodeId(newTrees, activeNodeId).get().treeId
+      : null;
+    return Maybe.Just([newTrees, newActiveTreeId]);
   });
 }
 
@@ -618,6 +621,7 @@ export function addTreesAndGroups(
 export function deleteTree(
   skeletonTracing: SkeletonTracing,
   tree: Tree,
+  suppressActivatingNextNode: boolean = false,
 ): Maybe<[TreeMap, number | null | undefined, number | null | undefined, number]> {
   // Delete tree
   const newTrees = _.omit(skeletonTracing.trees, tree.treeId);
@@ -625,7 +629,7 @@ export function deleteTree(
   let newActiveTreeId = null;
   let newActiveNodeId = null;
 
-  if (_.size(newTrees) > 0) {
+  if (_.size(newTrees) > 0 && !suppressActivatingNextNode) {
     // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
     newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
     // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.

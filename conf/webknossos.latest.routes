@@ -238,6 +238,9 @@ POST          /jobs/:id/status                                                  
 GET           /publications                                                             controllers.PublicationController.listPublications()
 GET           /publications/:id                                                         controllers.PublicationController.read(id: String)
 
+# Shortlinks
+POST          /shortLinks                                                               controllers.ShortLinkController.create
+GET           /shortLinks/byKey/:key                                                    controllers.ShortLinkController.getByKey(key: String)
 
 # Voxelytics
 POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.storeWorkflow

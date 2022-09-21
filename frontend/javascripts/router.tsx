@@ -15,6 +15,7 @@ import {
   getAnnotationInformation,
   getOrganizationForDataset,
   createExplorational,
+  getShortLink,
 } from "admin/admin_rest_api";
 import AdaptViewportMetatag from "components/adapt_viewport_metatag";
 import AsyncRedirect from "components/redirect";
@@ -521,7 +522,6 @@ class ReactRouter extends React.Component<Props> {
               <Route
                 path="/datasets/:id/view"
                 render={({ match, location }: ContextRouter) => (
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ redirectTo: () => Promise<string>; }' is n... Remove this comment to see the full error message
                   <AsyncRedirect
                     redirectTo={async () => {
                       const datasetName = match.params.id || "";
@@ -621,6 +621,18 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
+              <Route
+                path="/links/:key"
+                render={({ match }: ContextRouter) => (
+                  <AsyncRedirect
+                    redirectTo={async () => {
+                      const key = match.params.key || "";
+                      const shortLink = await getShortLink(key);
+                      return shortLink.longLink;
+                    }}
+                  />
+                )}
+              />
               {!features().isDemoInstance && <Route path="/onboarding" component={Onboarding} />}
               <Route component={PageNotFoundView} />
             </Switch>

@@ -685,6 +685,7 @@ export type ServerEditableMapping = {
   createdTimestamp: number;
   version: number;
   mappingName: string;
+  baseMappingName: string;
   // The id of the volume tracing the editable mapping belongs to
   tracingId: string;
 };
@@ -702,6 +703,12 @@ export type ZarrPrivateLink = {
   annotation: string;
   accessToken: string;
   expirationDateTime: number | null;
+};
+
+export type ShortLink = {
+  longLink: string;
+  key: string;
+  _id: string;
 };
 
 export enum VoxelyticsRunState {

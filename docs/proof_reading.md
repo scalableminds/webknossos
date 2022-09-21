@@ -3,6 +3,7 @@
 webKnossos offers several ways for proofreading large-scale, volumetric segmentations and reconstruction projects.
 
 There are three proofreading workflows supported by webKnossos:
+
 1. The Proofreading tool to correct large segmentation based on an underlying super-voxel graph
 2. The Merger-Mode tool
 3. Skeleton annotations together with custom scripting
@@ -19,11 +20,13 @@ To use the proofreading tool you need to enable an [ID mapping for your segmenta
 4. Proceed to fix split and merge errors:
 
 To fix a split error:
+
 1. Left-click to select any node of the source segment's graph
 2. Right-click on the target segment to bring up the context menu. Select `Merge With Active Segment`
 3. webKnossos will merge both segments and reload the updated super-voxel graph and 3D meshes
 
 To fix a merge error:
+
 1. Left-click to select any node of the source segment's graph
 2. Right-click on the target segment to bring up the context menu. Select `Split from active segment (Min-Cut)`
 3. webKnossos will perform a min-cut operation to delete all super-voxel graph edges between the source and target segments, effectively splitting the two into individual segments.
@@ -61,4 +64,4 @@ In our workflows, we make heavy use of skeleton annotations for proofreading and
 - we encode additional metadata for any given segment in the skeleton tree names, groups, and comments, i.e. the biological cell type for a segment
 - we manually annotate classification mistakes or interesting features in the data and download/bring them back into our Python workflows for correction and further processing
 
-This system is very flexible, though requires a little bit of creativity and coding skills with the [webKnossos Python library](./tooling#webknossos-python-library).
+This system is very flexible, though requires a little bit of creativity and coding skills with the [webKnossos Python library](./tooling.md#webknossos-python-library).

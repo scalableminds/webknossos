@@ -62,6 +62,7 @@ import type {
   VoxelyticsWorkflowInfo,
   VoxelyticsWorkflowReport,
   VoxelyticsChunkStatistics,
+  ShortLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -2295,6 +2296,23 @@ export async function getEdgesForAgglomerateMinCut(
       },
     ),
   );
+}
+
+// ### Short links
+export const createShortLink = _.memoize(
+  (longLink: string): Promise<ShortLink> =>
+    Request.sendJSONReceiveJSON("/api/shortLinks", {
+      method: "POST",
+      // stringify is necessary because the back-end expects a JSON string
+      // (i.e., a string which contains quotes at the beginning and end).
+      // The Request module does not add additional string quotes
+      // if the data parameter is already a string.
+      data: JSON.stringify(longLink),
+    }),
+);
+
+export function getShortLink(key: string): Promise<ShortLink> {
+  return Request.receiveJSON(`/api/shortLinks/byKey/${key}`);
 }
 
 // ### Voxelytics

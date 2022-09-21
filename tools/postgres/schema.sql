@@ -19,8 +19,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(88);
-
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(89);
 COMMIT TRANSACTION;
 
 
@@ -427,6 +426,12 @@ CREATE TABLE webknossos.annotation_privateLinks(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.shortLinks(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  key CHAR(16) NOT NULL UNIQUE,
+  longLink Text NOT NULL
+);
+
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 
@@ -593,6 +598,7 @@ CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
 CREATE INDEX ON webknossos.invites(tokenValue);
 CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
+CREATE INDEX ON webknossos.shortLinks(key);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,

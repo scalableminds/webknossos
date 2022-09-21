@@ -10,6 +10,7 @@ import {
   Tooltip,
   FormInstance,
   Select,
+  Space,
 } from "antd";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
@@ -300,25 +301,65 @@ function SimpleLayerForm({
           />
         </FormItemWithInfo>
         <p>
-          <div>
-            <b>Data Format</b>: {layer.dataFormat}
-          </div>
-          <div>
-            <b>Voxel type</b>: {layer.elementClass}
-          </div>
-          {"numChannels" in layer ? (
-            <div>
-              <b>Channel count</b>: {layer.numChannels}
-            </div>
-          ) : null}
-          <div>
-            <b>Magnifications</b>:{" "}
-            <ul>
+          <Space size="large">
+            <FormItemWithInfo
+              label="Data Format"
+              style={{
+                marginBottom: 24,
+              }}
+              info="The data format of the layer."
+            >
+              <Select disabled value={layer.dataFormat} style={{ width: 120 }}>
+                <Select.Option value={layer.dataFormat}>{layer.dataFormat}</Select.Option>
+              </Select>
+            </FormItemWithInfo>
+            <FormItemWithInfo
+              label="Element Class"
+              style={{
+                marginBottom: 24,
+              }}
+              info="The element class (data type) of the layer."
+            >
+              <Select disabled value={layer.elementClass} style={{ width: 120 }}>
+                <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>
+              </Select>
+            </FormItemWithInfo>
+            {"numChannels" in layer ? (
+              <FormItemWithInfo
+                label="Channel Count"
+                style={{
+                  marginBottom: 24,
+                }}
+                info="The channel count of the layer."
+              >
+                <Select disabled value={layer.numChannels} style={{ width: 120 }}>
+                  <Select.Option value={layer.numChannels}>{layer.numChannels}</Select.Option>
+                </Select>
+              </FormItemWithInfo>
+            ) : null}
+          </Space>
+
+          <FormItemWithInfo
+            label="Magnifications"
+            style={{
+              marginBottom: 24,
+            }}
+            info="The magnifications of the layer."
+          >
+            <Select
+              mode="multiple"
+              disabled
+              allowClear
+              value={getMags(layer).map((mag) => mag.toString())}
+              style={{ width: 360 }}
+            >
               {getMags(layer).map((mag) => (
-                <li key={mag.toString()}>{typeof mag === "number" ? mag : mag.join("-")}</li>
+                <Select.Option key={mag.toString()} value={mag.toString()}>
+                  {typeof mag === "number" ? mag : mag.join("-")}
+                </Select.Option>
               ))}
-            </ul>
-          </div>
+            </Select>
+          </FormItemWithInfo>
         </p>
       </Col>
       <Col span={12}>

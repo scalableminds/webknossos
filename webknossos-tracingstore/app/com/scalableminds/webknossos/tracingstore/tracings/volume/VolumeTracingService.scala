@@ -171,6 +171,7 @@ class VolumeTracingService @Inject()(
         if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
       }
       // if none of the tracings contained any volume data. do not save buckets, use full resolution list
+      // TODO: Can this happen?
       if (resolutionSets.isEmpty)
         getRequiredMags(tracing).map(_.toSet)
       else {
@@ -216,8 +217,8 @@ class VolumeTracingService @Inject()(
         }
       }
       if (savedResolutions.isEmpty) {
-        // if none of the tracings contained any volume data, use the dataset’s full resolution list
-        getRequiredMags(tracing).map(_.toSet)
+        val resolutionSet = resolutionSetFromZipfile(initialData)
+        Fox.successful(resolutionSet)
       } else
         unzipResult.map(_ => savedResolutions.toSet)
     }

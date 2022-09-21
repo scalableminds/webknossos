@@ -104,8 +104,7 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "Target-mag width of the bounding box", required = true) width: Int,
       @ApiParam(value = "Target-mag height of the bounding box", required = true) height: Int,
       @ApiParam(value = "Target-mag depth of the bounding box", required = true) depth: Int,
-      @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: Option[String],
-      resolution: Option[Int],
+      @ApiParam(value = "Mag in three-component format (e.g. 1-1-1 or 16-16-8)", required = true) mag: String,
       @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean,
       @ApiParam(value = "If set, apply set mapping name") mappingName: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
@@ -115,10 +114,7 @@ class BinaryDataController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                   dataSetName,
                                                                                   dataLayerName) ~> NOT_FOUND
-        _ <- bool2Fox(!(resolution.isDefined && mag.isDefined)) ?~> "Can only interpret mag or zoomStep. Use only mag instead."
-        magFromZoomStep = resolution.map(dataLayer.magFromExponent(_, snapToClosest = true))
-        magParsedOpt <- Fox.runOptional(mag)(Vec3Int.fromMagLiteral(_).toFox)
-        magParsed <- magParsedOpt.orElse(magFromZoomStep).toFox ?~> "No mag supplied"
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox
         request = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,

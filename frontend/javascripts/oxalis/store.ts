@@ -274,6 +274,7 @@ export type DatasetLayerConfiguration = {
   readonly isDisabled: boolean;
   readonly isInverted: boolean;
   readonly isInEditMode: boolean;
+  readonly gammaCorrectionValue: number;
 };
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
 export type DatasetConfiguration = {

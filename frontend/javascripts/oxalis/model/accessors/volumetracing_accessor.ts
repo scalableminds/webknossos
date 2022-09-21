@@ -463,6 +463,16 @@ export function isMappingActivationAllowed(
   return mappingName === volumeTracing.mappingName;
 }
 
+export function getEditableMappingForVolumeTracingId(
+  state: OxalisState,
+  tracingId: string | null | undefined,
+) {
+  if (tracingId == null) {
+    return null;
+  }
+  return state.tracing.mappings.find((mapping) => mapping.tracingId === tracingId);
+}
+
 export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | undefined {
   return volumeTracing.lastLabelActions[0];
 }

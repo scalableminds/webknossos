@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
 import com.scalableminds.webknossos.datastore.datareaders.{
-  ArrayOrder,
   ChunkReader,
   DatasetHeader,
   FileSystemStore,

@@ -1,16 +1,16 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.{
   ArrayOrder,
   CompressionSetting,
   Compressor,
   DatasetHeader,
-  DimensionSeparator,
+  DimensionSeparator
 }
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits._
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
+import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 

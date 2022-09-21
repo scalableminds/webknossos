@@ -275,16 +275,7 @@ function DAGView({
         nodeBorderRadius={2}
       />
       <Background color="#aaa" gap={16} />
-      <div
-        style={{
-          flexDirection: "column",
-          display: "flex",
-          zIndex: 1000,
-          position: "absolute",
-          bottom: 25,
-          left: 0,
-        }}
-      >
+      <div className="controls">
         <Button
           icon={<PlusOutlined />}
           size="small"

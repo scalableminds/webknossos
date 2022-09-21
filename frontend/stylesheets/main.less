@@ -481,7 +481,28 @@ i.without-icon-margin,
       }
     }
   }
-  .react-flow__minimap {
-    background-color: @component-background;
+  .react-flow {
+    .react-flow__minimap {
+      background-color: @component-background;
+    }
+
+    .controls {
+      flex-direction: column;
+      display: flex;
+      z-index: 1000;
+      position: absolute;
+      bottom: 25px;
+      left: 0;
+
+      .ant-btn:not(:first-child) {
+        margin-top: -1px;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+      .ant-btn:not(:last-child) {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+    }
   }
 }

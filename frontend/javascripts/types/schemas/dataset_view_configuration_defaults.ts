@@ -19,7 +19,6 @@ const eliminateErrors = (
       delete instance[error.argument];
     } else {
       const wrongPropertyPath = error.property.split(".");
-      // assert();
       const invalidFieldName = wrongPropertyPath[1];
 
       if (defaults[invalidFieldName] === null) {
@@ -35,6 +34,7 @@ export const getSpecificDefaultsForLayers = (dataset: APIDataset, layer: APIData
   intensityRange: getDefaultIntensityRangeOfLayer(dataset, layer.name),
   alpha: layer.category === "color" ? 100 : 20,
 });
+
 export const enforceValidatedDatasetViewConfiguration = (
   datasetViewConfiguration: Record<string, any>,
   maybeUnimportedDataset: APIMaybeUnimportedDataset,

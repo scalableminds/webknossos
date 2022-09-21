@@ -30,6 +30,9 @@ import {
   NumberSliderSetting,
   LogSliderSetting,
   ColorSetting,
+  SETTING_LEFT_SPAN,
+  SETTING_MIDDLE_SPAN,
+  SETTING_VALUE_SPAN,
 } from "oxalis/view/components/setting_input_views";
 import { V3 } from "libs/mjs";
 import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
@@ -90,7 +93,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import { settings } from "messages";
+import { layerViewConfigurations, layerViewConfigurationTooltips, settings } from "messages";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
 import DownsampleVolumeModal from "./modals/downsample_volume_modal";
@@ -556,57 +559,72 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerConfiguration: DatasetLayerConfiguration,
     layerName: string,
   ) => (
-    <Row
-      className="margin-bottom"
-      style={{
-        marginTop: 6,
-      }}
-    >
-      <Col span={12}>
-        <label className="setting-label">Color</label>
-      </Col>
-      <Col span={10}>
-        <ColorSetting
-          value={Utils.rgbToHex(layerConfiguration.color)}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-          style={{
-            marginLeft: 6,
-          }}
-        />
-      </Col>
-      <Col span={2}>
-        <Tooltip title="Invert the color of this layer.">
-          <div
-            onClick={() =>
-              this.props.onChangeLayer(
-                layerName,
-                "isInverted",
-                layerConfiguration ? !layerConfiguration.isInverted : false,
-              )
-            }
+    <div>
+      <LogSliderSetting
+        label={
+          <Tooltip title={layerViewConfigurationTooltips.gammaCorrectionValue}>
+            {layerViewConfigurations.gammaCorrectionValue}
+          </Tooltip>
+        }
+        min={0.01}
+        max={10}
+        roundTo={3}
+        value={layerConfiguration.gammaCorrectionValue}
+        onChange={_.partial(this.props.onChangeLayer, layerName, "gammaCorrectionValue")}
+      />
+      <Row
+        className="margin-bottom"
+        style={{
+          marginTop: 6,
+        }}
+      >
+        <Col span={SETTING_LEFT_SPAN}>
+          <label className="setting-label">Color</label>
+        </Col>
+        <Col span={SETTING_MIDDLE_SPAN}>
+          <ColorSetting
+            value={Utils.rgbToHex(layerConfiguration.color)}
+            onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
             style={{
-              top: 4,
-              right: 0,
-              marginTop: 0,
-              display: "inline-flex",
+              marginLeft: 6,
             }}
-          >
-            <i
-              className={classnames("fas", "fa-adjust", {
-                "flip-horizontally": layerConfiguration.isInverted,
-              })}
+          />
+        </Col>
+        <Col span={SETTING_VALUE_SPAN}>
+          <Tooltip title="Invert the color of this layer.">
+            <div
+              onClick={() =>
+                this.props.onChangeLayer(
+                  layerName,
+                  "isInverted",
+                  layerConfiguration ? !layerConfiguration.isInverted : false,
+                )
+              }
               style={{
-                margin: 0,
-                transition: "transform 0.5s ease 0s",
-                color: layerConfiguration.isInverted
-                  ? "var(--ant-primary)"
-                  : "var(--ant-text-secondary)",
+                top: 4,
+                right: 0,
+                marginTop: 0,
+                marginLeft: 10,
+                display: "inline-flex",
               }}
-            />
-          </div>
-        </Tooltip>
-      </Col>
-    </Row>
+            >
+              <i
+                className={classnames("fas", "fa-adjust", {
+                  "flip-horizontally": layerConfiguration.isInverted,
+                })}
+                style={{
+                  margin: 0,
+                  transition: "transform 0.5s ease 0s",
+                  color: layerConfiguration.isInverted
+                    ? "var(--ant-primary)"
+                    : "var(--ant-text-secondary)",
+                }}
+              />
+            </div>
+          </Tooltip>
+        </Col>
+      </Row>
+    </div>
   );
 
   getSegmentationSpecificSettings = (layerName: string) => {

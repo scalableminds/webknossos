@@ -3,9 +3,13 @@ import { type DatasetLayerConfiguration, type DatasetConfiguration } from "oxali
 export function getDefaultLayerViewConfiguration(
   dynamicDefault: Partial<DatasetLayerConfiguration> = {},
 ): Partial<DatasetLayerConfiguration> {
+  // Note that these values will only be used as a default,
+  // if the property is marked as required in the corresponding JSON schema.
+
   const defaultLayerViewConfiguration: Partial<DatasetLayerConfiguration> = {
     color: [255, 255, 255],
     alpha: 100,
+    gammaCorrectionValue: 1,
     intensityRange: [0, 255],
     isDisabled: false,
     isInverted: false,
@@ -13,6 +17,9 @@ export function getDefaultLayerViewConfiguration(
   };
   return { ...defaultLayerViewConfiguration, ...dynamicDefault };
 }
+
+// Note that these values will only be used as a default,
+// if the property is marked as required in the corresponding JSON schema.
 export const layerViewConfiguration = {
   color: {
     type: "array",
@@ -26,6 +33,11 @@ export const layerViewConfiguration = {
     type: "number",
     minimum: 0,
     maximum: 100,
+  },
+  gammaCorrectionValue: {
+    type: "number",
+    minimum: 0,
+    maximum: 10,
   },
   intensityRange: {
     type: "array",
@@ -140,7 +152,15 @@ export default {
       type: "object",
       properties: layerViewConfiguration,
       additionalProperties: false,
-      required: ["color", "alpha", "intensityRange", "isDisabled", "isInverted", "isInEditMode"],
+      required: [
+        "color",
+        "alpha",
+        "intensityRange",
+        "gammaCorrectionValue",
+        "isDisabled",
+        "isInverted",
+        "isInEditMode",
+      ],
     },
     "types::LayerViewConfigurationObject": {
       type: "object",

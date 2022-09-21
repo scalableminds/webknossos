@@ -684,6 +684,7 @@ export type ServerEditableMapping = {
   createdTimestamp: number;
   version: number;
   mappingName: string;
+  baseMappingName: string;
   // The id of the volume tracing the editable mapping belongs to
   tracingId: string;
 };

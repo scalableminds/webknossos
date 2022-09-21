@@ -224,11 +224,14 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def updateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+  def updateActionLog(token: Option[String],
+                      tracingId: String,
+                      newestVersion: Option[Long] = None,
+                      oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
     log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          updateLog <- tracingService.updateActionLog(tracingId)
+          updateLog <- tracingService.updateActionLog(tracingId, newestVersion, oldestVersion)
         } yield Ok(updateLog)
       }
     }

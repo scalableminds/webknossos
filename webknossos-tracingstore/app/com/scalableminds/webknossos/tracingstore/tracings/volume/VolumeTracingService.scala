@@ -339,7 +339,9 @@ class VolumeTracingService @Inject()(
       userToken = userToken
     )
 
-  def updateActionLog(tracingId: String): Fox[JsValue] = {
+  def updateActionLog(tracingId: String,
+                      newestVersion: Option[Long] = None,
+                      oldestVersion: Option[Long] = None): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
@@ -347,8 +349,10 @@ class VolumeTracingService @Inject()(
       )
 
     for {
-      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJsonBytes[List[CompactVolumeUpdateAction]])
+      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(
+        tracingId,
+        newestVersion,
+        oldestVersion)(fromJsonBytes[List[CompactVolumeUpdateAction]])
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }

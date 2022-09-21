@@ -10,7 +10,7 @@ object ChunkReaderN5 {
     new PaddedChunkReader(header, store, ChunkReader.createTypedChunkReader(header))
 }
 
-// N5 allows for a 'varmode' which means that the number of elements in the chunk can deviate from the set chunk size.
+// N5 allows for a “varmode”, where that the number of elements in the chunk can deviate from the set chunk size.
 // This is used for end chunks, but apparently also for overlapping (see https://github.com/zarr-developers/zarr-specs/issues/44#issuecomment-360669270).
 // Here, we provide two implementations to handle this:
 // (1) PaddedChunkReader always fills the chunk to the bytes necessary

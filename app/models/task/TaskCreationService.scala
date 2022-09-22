@@ -560,4 +560,10 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       task <- taskFox
       js <- taskService.publicWrites(task)
     } yield js
+
+  def normalizeTaskTypeId(taskParameters: TaskParameters, organization: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[TaskParameters] =
+    for {
+      taskTypeIdString <- taskTypeService.idOrSummaryToId(taskParameters.taskTypeIdOrSummary, organization)
+    } yield taskParameters.copy(taskTypeIdOrSummary = taskTypeIdString)
 }

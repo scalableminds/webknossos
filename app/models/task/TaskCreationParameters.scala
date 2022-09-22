@@ -5,7 +5,7 @@ import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
 case class TaskParameters(
-    taskTypeId: String,
+    taskTypeIdOrSummary: String,
     neededExperience: Experience,
     openInstances: Int,
     projectName: String,

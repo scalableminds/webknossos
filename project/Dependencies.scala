@@ -54,10 +54,10 @@ object Dependencies {
 
 
   private val sql = Seq(
-    "com.typesafe.slick" %% "slick" % "3.2.3",
-    "com.typesafe.slick" %% "slick-hikaricp" % "3.2.3",
-    "com.typesafe.slick" %% "slick-codegen" % "3.2.3",
-    "org.postgresql" % "postgresql" % "42.2.20"
+    "com.typesafe.slick" %% "slick" % "3.3.3",
+    "com.typesafe.slick" %% "slick-hikaricp" % "3.3.3",
+    "com.typesafe.slick" %% "slick-codegen" % "3.3.3",
+    "org.postgresql" % "postgresql" % "42.3.6"
   )
 
   val utilDependencies: Seq[ModuleID] = Seq(

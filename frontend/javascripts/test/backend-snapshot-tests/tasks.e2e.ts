@@ -51,7 +51,7 @@ test.serial("updateTask()", async (t) => {
 
   const task = _.omitBy(
     Object.assign({}, taskBase, {
-      taskTypeId: taskBase.type.id,
+      taskTypeIdOrSummary: taskBase.type.id,
       boundingBox: taskBase.boundingBox ? taskBase.boundingBoxVec6 : null,
       scriptId: taskBase.script ? taskBase.script.id : null,
       openInstances: taskBase.status.open,

@@ -63,6 +63,28 @@ function removeSubsequentUpdateNodeActions(updateActionsBatches: Array<SaveQueue
   return _.without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
+function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQueueEntry>) {
+  const obsoleteUpdateActions = [];
+
+  // If two updateSegment update actions for the same segment id follow one another, the first one is obsolete
+  for (let i = 0; i < updateActionsBatches.length - 1; i++) {
+    const actions1 = updateActionsBatches[i].actions;
+    const actions2 = updateActionsBatches[i + 1].actions;
+
+    if (
+      actions1.length === 1 &&
+      actions1[0].name === "updateSegment" &&
+      actions2.length === 1 &&
+      actions2[0].name === "updateSegment" &&
+      actions1[0].value.id === actions2[0].value.id
+    ) {
+      obsoleteUpdateActions.push(updateActionsBatches[i]);
+    }
+  }
+
+  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+}
+
 export default function compactSaveQueue(
   updateActionsBatches: Array<SaveQueueEntry>,
 ): Array<SaveQueueEntry> {
@@ -70,9 +92,12 @@ export default function compactSaveQueue(
   const result = updateActionsBatches.filter(
     (updateActionsBatch) => updateActionsBatch.actions.length > 0,
   );
-  return removeSubsequentUpdateTreeActions(
-    removeSubsequentUpdateNodeActions(
-      removeAllButLastUpdateTdCameraAction(removeAllButLastUpdateTracingAction(result)),
+
+  return removeSubsequentUpdateSegmentActions(
+    removeSubsequentUpdateTreeActions(
+      removeSubsequentUpdateNodeActions(
+        removeAllButLastUpdateTdCameraAction(removeAllButLastUpdateTracingAction(result)),
+      ),
     ),
   );
 }

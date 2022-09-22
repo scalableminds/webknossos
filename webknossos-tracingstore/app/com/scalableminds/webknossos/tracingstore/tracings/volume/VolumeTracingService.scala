@@ -170,7 +170,7 @@ class VolumeTracingService @Inject()(
         val resolutionSet = resolutionSetFromZipfile(dataZip)
         if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
       }
-      // if none of the tracings contained any volume data. do not save buckets, use full resolution list
+      // if none of the tracings contained any volume data do not save buckets, use full resolution list
       if (resolutionSets.isEmpty)
         getRequiredMags(tracing).map(_.toSet)
       else {
@@ -216,8 +216,8 @@ class VolumeTracingService @Inject()(
         }
       }
       if (savedResolutions.isEmpty) {
-        // if none of the tracings contained any volume data, use the dataset’s full resolution list
-        getRequiredMags(tracing).map(_.toSet)
+        val resolutionSet = resolutionSetFromZipfile(initialData)
+        Fox.successful(resolutionSet)
       } else
         unzipResult.map(_ => savedResolutions.toSet)
     }
@@ -236,7 +236,8 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(tracingId: String, tracing: VolumeTracing, os: OutputStream): Future[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] =
-      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)))
+      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+                                         tracing.resolutions.map(mag => vec3IntFromProto(mag)))
 
     val before = System.currentTimeMillis()
     val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)

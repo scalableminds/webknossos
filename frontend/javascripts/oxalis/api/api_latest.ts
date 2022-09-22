@@ -41,6 +41,7 @@ import {
   getMappingsForDatasetLayer,
   requestTask,
   downsampleSegmentation,
+  sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import {
   findTreeByNodeId,
@@ -1145,10 +1146,6 @@ class DataApi {
       showLoadingIndicator?: boolean;
     } = {},
   ) {
-    if (!Model.isMappingSupported) {
-      throw new Error(messages["mapping.too_few_textures"]);
-    }
-
     const layer = this.model.getLayerByName(layerName);
 
     if (!layer.isSegmentation) {
@@ -1156,6 +1153,11 @@ class DataApi {
     }
 
     const { colors: mappingColors, hideUnmappedIds, showLoadingIndicator } = options;
+    if (mappingColors != null) {
+      // Consider removing custom color support if this event is rarely used
+      // (see `mappingColors` handling in mapping_saga.ts)
+      sendAnalyticsEvent("setMapping called with custom colors");
+    }
     const mappingProperties = {
       mapping: _.clone(mapping),
       // Object.keys is sorted for numerical keys according to the spec:

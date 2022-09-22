@@ -551,6 +551,7 @@ export type APIFeatureToggles = {
   readonly taskReopenAllowedInSeconds: number;
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
+  readonly voxelyticsEnabled: boolean;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
@@ -633,8 +634,9 @@ export type ServerSkeletonTracingTree = {
 type ServerSegment = {
   segmentId: number;
   name: string | null | undefined;
-  anchorPosition: Point3;
+  anchorPosition: Point3 | null | undefined;
   creationTime: number | null | undefined;
+  color: ColorObject | null;
 };
 export type ServerTracingBase = {
   id: string;
@@ -708,4 +710,167 @@ export type ShortLink = {
   longLink: string;
   key: string;
   _id: string;
+};
+
+export enum VoxelyticsRunState {
+  SKIPPED = "SKIPPED",
+  PENDING = "PENDING",
+  RUNNING = "RUNNING",
+  COMPLETE = "COMPLETE",
+  FAILED = "FAILED",
+  CANCELLED = "CANCELLED",
+  STALE = "STALE",
+}
+type DistributionConfig = {
+  strategy: string;
+  resources?: Record<string, string>;
+  processes?: number;
+};
+export type VoxelyticsTaskConfig = {
+  isMetaTask: undefined;
+  config: { name: string };
+  inputs: Record<string, string | Record<string, string>>;
+  description: string | null;
+  distribution: DistributionConfig | null;
+  output_paths: Record<string, string> | null;
+  task: string;
+};
+export type VoxelyticsTaskConfigWithName = VoxelyticsTaskConfig & { taskName: string };
+export type VoxelyticsTaskConfigWithHierarchy =
+  | VoxelyticsTaskConfigWithName
+  | {
+      isMetaTask: true;
+      key: string;
+      subtasks: Array<VoxelyticsTaskConfigWithHierarchy>;
+    };
+export type VoxelyticsArtifactConfig = {
+  fileSize: number;
+  inodeCount: number;
+  createdAt: Date;
+  path: string;
+  version: string;
+  metadata: {
+    attributes: any;
+    iframes: Record<string, string>;
+    links: Record<string, string>;
+  };
+};
+
+export type VoxelyticsRunInfo = (
+  | {
+      state: VoxelyticsRunState.RUNNING;
+      beginTime: Date;
+      endTime: null;
+    }
+  | {
+      state:
+        | VoxelyticsRunState.COMPLETE
+        | VoxelyticsRunState.FAILED
+        | VoxelyticsRunState.CANCELLED
+        | VoxelyticsRunState.STALE;
+      beginTime: Date;
+      endTime: Date;
+    }
+) & {
+  id: string;
+  name: string;
+  username: string;
+  hostname: string;
+  voxelyticsVersion: string;
+  tasks: Array<VoxelyticsTaskInfo>;
+};
+
+export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };
+export type VoxelyticsWorkflowDagNode = {
+  id: string;
+  label: string;
+  state: VoxelyticsRunState;
+  isMetaTask?: boolean;
+};
+export type VoxelyticsWorkflowDag = {
+  edges: Array<VoxelyticsWorkflowDagEdge>;
+  nodes: Array<VoxelyticsWorkflowDagNode>;
+};
+
+export type VoxelyticsTaskInfo = {
+  runId: string;
+  runName: string;
+  taskName: string;
+  currentExecutionId: string | null;
+  chunksTotal: number;
+  chunksFinished: number;
+} & (
+  | {
+      state: VoxelyticsRunState.PENDING | VoxelyticsRunState.SKIPPED;
+      beginTime: null;
+      endTime: null;
+    }
+  | {
+      state: VoxelyticsRunState.RUNNING;
+      beginTime: Date;
+      endTime: null;
+    }
+  | {
+      state:
+        | VoxelyticsRunState.COMPLETE
+        | VoxelyticsRunState.FAILED
+        | VoxelyticsRunState.CANCELLED
+        | VoxelyticsRunState.STALE;
+      beginTime: Date;
+      endTime: Date;
+    }
+);
+
+export type VoxelyticsWorkflowReport = {
+  config: {
+    config: {} | null;
+    git_hash: string | null;
+    global_parameters:
+      | {
+          env_vars: Record<string, string>;
+          distribution: DistributionConfig | null;
+          artifacts_path: string | null;
+          skip_checksums: boolean;
+        }
+      | {};
+    paths: Array<string>;
+    schema_version: number;
+    tasks: Record<string, VoxelyticsTaskConfig>;
+  };
+  dag: VoxelyticsWorkflowDag;
+  artifacts: Record<string, Record<string, VoxelyticsArtifactConfig>>;
+  run: VoxelyticsRunInfo;
+  workflow: {
+    name: string;
+    hash: string;
+    yamlContent: string;
+  };
+};
+
+export type VoxelyticsWorkflowInfo = {
+  name: string;
+  hash: string;
+  beginTime: Date;
+  endTime: Date | null;
+  state: VoxelyticsRunState;
+  runs: Array<VoxelyticsRunInfo>;
+};
+
+type Statistics = {
+  max: number | null;
+  median: number | null;
+  stddev: number | null;
+  sum?: number;
+};
+
+export type VoxelyticsChunkStatistics = {
+  executionId: string;
+  countTotal: number;
+  countFinished: number;
+  beginTime: Date | null;
+  endTime: Date | null;
+  memory: Statistics | null;
+  cpuUser: Statistics | null;
+  cpuSystem: Statistics | null;
+  duration: Statistics | null;
 };

@@ -27,6 +27,10 @@ trait SQLTypeImplicits {
   implicit object SetObjectId extends SetParameter[ObjectId] {
     def apply(v: ObjectId, pp: PositionedParameters): Unit = pp.setString(v.id)
   }
+
+  implicit object SetObjectIdOpt extends SetParameter[Option[ObjectId]] {
+    def apply(v: Option[ObjectId], pp: PositionedParameters): Unit = pp.setStringOption(v.map(_.id))
+  }
 }
 
 class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

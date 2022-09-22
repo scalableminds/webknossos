@@ -11,6 +11,7 @@ import net.liftweb.common.{Box, Failure, Full}
 trait WKWDataFormatHelper {
 
   val dataFileExtension: String = "wkw"
+  val headerFileName: String = s"header.$dataFileExtension"
 
   def wkwFilePath(
       cube: CubePosition,
@@ -61,6 +62,14 @@ trait WKWDataFormatHelper {
         }
       case _ =>
         None
+    }
+  }
+
+  def getMagFromWKWHeaderFilePath(path: String): Option[Vec3Int] = {
+    val headerRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$headerFileName".r
+    path match {
+      case headerRx(_, resolutionStr) =>
+        Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
     }
   }
 

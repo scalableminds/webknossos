@@ -1,12 +1,13 @@
 import com.google.inject.AbstractModule
 import controllers.InitialDataService
 import models.analytics.AnalyticsSessionService
-import models.job.{JobService, WorkerLivenessService}
 import models.annotation.AnnotationStore
 import models.binary.DataSetService
+import models.job.{JobService, WorkerLivenessService}
 import models.task.TaskService
-import models.user.{UserCache, _}
 import models.user.time.TimeSpanService
+import models.user._
+import models.voxelytics.ElasticsearchClient
 import oxalis.files.TempFileService
 import oxalis.mail.MailchimpTicker
 import oxalis.telemetry.SlackNotificationService
@@ -33,5 +34,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[SlackNotificationService]).asEagerSingleton()
     bind(classOf[AnalyticsSessionService]).asEagerSingleton()
     bind(classOf[WorkerLivenessService]).asEagerSingleton()
+    bind(classOf[ElasticsearchClient]).asEagerSingleton()
   }
 }

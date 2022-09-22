@@ -5,16 +5,16 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, Menu } from "antd";
-import { useDispatch } from "react-redux";
+import { List, Tooltip, Dropdown, Menu, MenuItemProps } from "antd";
+import { useDispatch, useSelector } from "react-redux";
 import Checkbox from "antd/lib/checkbox/Checkbox";
 import React from "react";
 
 import classnames from "classnames";
+import * as Utils from "libs/utils";
 import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import {
   triggerIsosurfaceDownloadAction,
   updateIsosurfaceVisibilityAction,
@@ -23,50 +23,61 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import type { ActiveMappingInfo, IsosurfaceInformation, Segment } from "oxalis/store";
+import type { ActiveMappingInfo, IsosurfaceInformation, OxalisState, Segment } from "oxalis/store";
 import Store from "oxalis/store";
+import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
+import Toast from "libs/toast";
+import { hslaToCSS } from "oxalis/shaders/utils.glsl";
+import { V4 } from "libs/mjs";
 
-const convertCellIdToCSS = (id: number, mappingColors: ActiveMappingInfo["mappingColors"]) => {
-  const [h, s, l, a] = jsConvertCellIdToHSLA(id, mappingColors);
-  return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
-};
+function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
+  const hslaCss = hslaToCSS(segmentColorHSLA);
 
-function getColoredDotIconForSegment(
-  segmentId: number,
-  mappingColors: ActiveMappingInfo["mappingColors"],
-) {
   return (
     <span
       className="circle"
       style={{
         paddingLeft: "10px",
-        backgroundColor: convertCellIdToCSS(segmentId, mappingColors),
+        backgroundColor: hslaCss,
       }}
     />
   );
 }
 
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof MenuItem' is not assignab... Remove this comment to see the full error message
-const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
+const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
+  MenuItemProps,
+  typeof Menu.Item
+>(Menu.Item);
 
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile: APIMeshFile | null | undefined,
   loadPrecomputedMesh: (arg0: number, arg1: Vector3, arg2: string) => void,
-  andCloseContextMenu: (_ignore: any) => void,
+  andCloseContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
 ) => {
   const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
   return (
     <MenuItemWithMappingActivationConfirmation
-      onClick={() =>
+      key="loadPrecomputedMesh"
+      onClick={() => {
+        if (!currentMeshFile) {
+          return;
+        }
+        if (!segment.somePosition) {
+          Toast.info(
+            <React.Fragment>
+              Cannot load a mesh for this segment, because its position is unknown.
+            </React.Fragment>,
+          );
+          andCloseContextMenu();
+          return;
+        }
         andCloseContextMenu(
-          // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | undefined' is not assig... Remove this comment to see the full error message
           loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
-        )
-      }
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; onClick: () => void; di... Remove this comment to see the full error message
+        );
+      }}
       disabled={!currentMeshFile}
       mappingName={mappingName}
       descriptor="mesh file"
@@ -91,12 +102,25 @@ const getComputeMeshAdHocMenuItem = (
   segment: Segment,
   loadAdHocMesh: (arg0: number, arg1: Vector3) => void,
   isSegmentationLayerVisible: boolean,
-  andCloseContextMenu: (_ignore: any) => void,
+  andCloseContextMenu: (_ignore?: any) => void,
 ) => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
   return (
     <Menu.Item
-      onClick={() => andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition))}
+      key="loadAdHocMesh"
+      onClick={() => {
+        if (!segment.somePosition) {
+          Toast.info(
+            <React.Fragment>
+              Cannot load a mesh for this segment, because its position is unknown.
+            </React.Fragment>,
+          );
+          andCloseContextMenu();
+          return;
+        }
+
+        andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition));
+      }}
       disabled={disabled}
     >
       <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>
@@ -108,7 +132,7 @@ const getMakeSegmentActiveMenuItem = (
   segment: Segment,
   setActiveCell: (arg0: number, somePosition?: Vector3) => void,
   activeCellId: number | null | undefined,
-  andCloseContextMenu: (_ignore: any) => void,
+  andCloseContextMenu: (_ignore?: any) => void,
 ) => {
   const disabled = segment.id === activeCellId;
   const title = disabled
@@ -116,6 +140,7 @@ const getMakeSegmentActiveMenuItem = (
     : "Make this the active segment ID.";
   return (
     <Menu.Item
+      key="setActiveCell"
       onClick={() => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition))}
       disabled={disabled}
     >
@@ -129,7 +154,7 @@ type Props = {
   mapId: (arg0: number) => number;
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
-  hoveredSegmentId: number | null | undefined;
+  isHoveredSegmentId: boolean;
   centeredSegmentId: number | null | undefined;
   selectedSegmentId: number | null | undefined;
   activeCellId: number | null | undefined;
@@ -296,7 +321,7 @@ function _SegmentListItem({
   mapId,
   isJSONMappingEnabled,
   mappingInfo,
-  hoveredSegmentId,
+  isHoveredSegmentId,
   centeredSegmentId,
   selectedSegmentId,
   activeCellId,
@@ -314,13 +339,22 @@ function _SegmentListItem({
   loadPrecomputedMesh,
   currentMeshFile,
 }: Props) {
+  const isEditingDisabled = !allowUpdate;
+
   const mappedId = mapId(segment.id);
+
+  const segmentColorHSLA = useSelector(
+    (state: OxalisState) => getSegmentColorAsHSL(state, mappedId),
+    (a: Vector4, b: Vector4) => V4.isEqual(a, b),
+  );
+
+  const segmentColorRGBA = Utils.hslaToRgba(segmentColorHSLA);
 
   if (mappingInfo.hideUnmappedIds && mappedId === 0) {
     return null;
   }
 
-  const andCloseContextMenu = (_ignore: any) => handleSegmentDropdownMenuVisibility(0, false);
+  const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(0, false);
 
   const createSegmentContextMenu = () => (
     <Menu>
@@ -339,6 +373,64 @@ function _SegmentListItem({
         andCloseContextMenu,
       )}
       {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
+      {/*
+       * Disable the change-color menu if the segment was mapped to another segment, because
+       * changing the color wouldn't do anything as long as the mapping is still active.
+       * This is because the id (A) is mapped to another one (B). So, the user would need
+       * to change the color of B to see the effect for A.
+       */}
+      <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled || segment.id !== mappedId}>
+        <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
+          Change Segment Color
+          <input
+            type="color"
+            value={Utils.rgbToHex(Utils.take3(segmentColorRGBA))}
+            disabled={isEditingDisabled}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: "100%",
+              opacity: 0,
+              cursor: isEditingDisabled ? "unset" : "pointer",
+            }}
+            onChange={(event) => {
+              if (isEditingDisabled || visibleSegmentationLayer == null) {
+                return;
+              }
+
+              let color = Utils.hexToRgb(event.target.value);
+              color = Utils.map3((component) => component / 255, color);
+              updateSegment(
+                segment.id,
+                {
+                  color: [color[0], color[1], color[2]],
+                },
+                visibleSegmentationLayer.name,
+              );
+            }}
+          />
+        </div>
+      </Menu.Item>
+
+      <Menu.Item
+        key="resetSegmentColor"
+        disabled={isEditingDisabled || segment.color == null}
+        onClick={() => {
+          if (isEditingDisabled || visibleSegmentationLayer == null) {
+            return;
+          }
+          updateSegment(
+            segment.id,
+            {
+              color: null,
+            },
+            visibleSegmentationLayer.name,
+          );
+        }}
+      >
+        Reset Segment Color
+      </Menu.Item>
     </Menu>
   );
 
@@ -366,7 +458,7 @@ function _SegmentListItem({
       }}
       className={classnames("segment-list-item", {
         "is-selected-cell": segment.id === selectedSegmentId,
-        "is-hovered-cell": segment.id === hoveredSegmentId,
+        "is-hovered-cell": isHoveredSegmentId,
       })}
       onMouseEnter={() => {
         setHoveredSegmentId(segment.id);
@@ -390,7 +482,7 @@ function _SegmentListItem({
         trigger={["contextMenu"]}
       >
         <Tooltip title={getSegmentTooltip(segment)}>
-          {getColoredDotIconForSegment(mappedId, mappingInfo.mappingColors)}
+          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
           <EditableTextLabel
             value={segment.name || `Segment ${segment.id}`}
             label="Segment Name"
@@ -447,7 +539,7 @@ function _SegmentListItem({
         <MeshInfoItem
           segment={segment}
           isSelectedInList={segment.id === selectedSegmentId}
-          isHovered={segment.id === hoveredSegmentId}
+          isHovered={isHoveredSegmentId}
           isosurface={isosurface}
           handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
           visibleSegmentationLayer={visibleSegmentationLayer}

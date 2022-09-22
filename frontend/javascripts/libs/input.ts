@@ -614,9 +614,7 @@ export class InputMouse {
     // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
     const boundingRect = document.getElementById(this.targetId).getBoundingClientRect();
     return _.extend({}, boundingRect, {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'scrollX' does not exist on type '(Window... Remove this comment to see the full error message
       left: boundingRect.left + window.scrollX,
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'scrollY' does not exist on type '(Window... Remove this comment to see the full error message
       top: boundingRect.top + window.scrollY,
     });
   }

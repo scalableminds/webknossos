@@ -33,6 +33,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a crash which could happen when using the "Automatically clip histogram" feature in certain scenarios. [#6433](https://github.com/scalableminds/webknossos/pull/6433)
 - Fixed loading agglomeate skeletons for agglomerate ids larger than 2^31. [#6472](https://github.com/scalableminds/webknossos/pull/6472)
 - Fixed bug which could lead to conflict-warnings even though there weren't any. [#6477](https://github.com/scalableminds/webknossos/pull/6477)
+- Fixed that one could not change the color of a segment or tree in Firefox. [#6488](https://github.com/scalableminds/webknossos/pull/6488)
 
 ### Removed
 

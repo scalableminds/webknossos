@@ -88,7 +88,6 @@ const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
   prevProps.sortBy !== nextProps.sortBy;
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
-  keepMenuOpenForColorPicking: boolean = false;
   state: State = {
     expandedGroupIds: {
       [MISSING_GROUP_ID]: true,
@@ -515,14 +514,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             autoDestroy
             placement="bottom"
             visible={this.state.activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-            onVisibleChange={(isVisible) => {
-              if (!isVisible && this.keepMenuOpenForColorPicking) {
-                // Ignore the default visibility change to false (i.e., on blur)
-                // if the menu should stay open due to this.keepMenuOpenForColorPicking
-                return;
-              }
-              this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
-            }}
+            onVisibleChange={(isVisible) =>
+              this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
+            }
             trigger={["contextMenu"]}
           >
             <span>

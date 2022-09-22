@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.jzarr
+package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 

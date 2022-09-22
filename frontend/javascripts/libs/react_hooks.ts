@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+
 // Adapted from: https://usehooks.com/usePrevious/
 export function usePrevious<T>(value: T): T | null | undefined {
   // The ref object is a generic container whose current property is mutable ...
@@ -84,4 +86,60 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
   }, []);
   // Empty array ensures that effect is only run on mount and unmount
   return keyPressed;
+}
+
+export function useSearchParams() {
+  const location = useLocation();
+  return Object.fromEntries(new URLSearchParams(location.search).entries());
+}
+
+export function useUpdateEvery(interval: number) {
+  const [, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setSeconds((seconds) => seconds + 1);
+    }, interval);
+    return () => window.clearInterval(intervalId);
+  }, [interval]);
+}
+
+export function usePolling(
+  callback: () => Promise<void>,
+  delay: number | null,
+  dependencies: React.DependencyList = [],
+) {
+  const savedCallback = useRef<() => Promise<void>>(callback);
+
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
+
+  useEffect(() => {
+    let killed = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let animationFrameId: number | null = null;
+
+    async function poll() {
+      if (killed) return;
+      await savedCallback.current();
+      if (killed) return;
+      if (delay != null) {
+        timeoutId = setTimeout(poll2, delay);
+      }
+    }
+
+    function poll2() {
+      if (killed) return;
+      animationFrameId = requestAnimationFrame(poll);
+    }
+
+    poll();
+
+    return () => {
+      killed = true;
+      if (animationFrameId != null) cancelAnimationFrame(animationFrameId);
+      if (timeoutId != null) clearTimeout(timeoutId);
+    };
+  }, [delay, ...dependencies]);
 }

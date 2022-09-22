@@ -175,7 +175,7 @@ class AnnotationService @Inject()(
                                                             List(annotationLayerParameters),
                                                             organizationName,
                                                             annotation.annotationLayers)
-      _ <- Fox.serialCombined(newAnnotationLayers)(l => annotationLayersDAO.insertOne(annotation._id, l))
+      _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
 
   private def createTracingsForExplorational(dataSet: DataSet,

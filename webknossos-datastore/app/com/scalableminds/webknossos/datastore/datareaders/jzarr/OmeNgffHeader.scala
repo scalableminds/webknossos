@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.jzarr;
+package com.scalableminds.webknossos.datastore.datareaders.jzarr;
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox

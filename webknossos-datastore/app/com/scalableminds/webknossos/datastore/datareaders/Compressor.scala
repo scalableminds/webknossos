@@ -45,10 +45,10 @@ abstract class Compressor {
   def toString: String
 
   @throws[IOException]
-  def compress(is: InputStream, os: OutputStream)
+  def compress(is: InputStream, os: OutputStream): Unit
 
   @throws[IOException]
-  def uncompress(is: InputStream, os: OutputStream)
+  def uncompress(is: InputStream, os: OutputStream): Unit
 
   @throws[IOException]
   def passThrough(is: InputStream, os: OutputStream): Unit = {

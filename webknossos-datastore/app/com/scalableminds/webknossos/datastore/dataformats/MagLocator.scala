@@ -9,10 +9,10 @@ import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
 
-case class DatasetLocatorMag(mag: Vec3Int,
-                             path: Option[String],
-                             credentials: Option[FileSystemCredentials],
-                             axisOrder: Option[AxisOrder]) {
+case class MagLocator(mag: Vec3Int,
+                      path: Option[String],
+                      credentials: Option[FileSystemCredentials],
+                      axisOrder: Option[AxisOrder]) {
 
   lazy val pathWithFallback: String = path.getOrElse(mag.toMagLiteral(allowScalar = true))
   private lazy val uri: URI = new URI(pathWithFallback)
@@ -25,6 +25,6 @@ case class DatasetLocatorMag(mag: Vec3Int,
 
 }
 
-object DatasetLocatorMag extends ResolutionFormatHelper {
-  implicit val jsonFormat: OFormat[DatasetLocatorMag] = Json.format[DatasetLocatorMag]
+object MagLocator extends ResolutionFormatHelper {
+  implicit val jsonFormat: OFormat[MagLocator] = Json.format[MagLocator]
 }

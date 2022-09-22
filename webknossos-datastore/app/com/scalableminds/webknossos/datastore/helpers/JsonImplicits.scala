@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.helpers
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Format, JsNumber, JsResult, JsValue, Json}
 
-object JsonImplicits {
+trait JsonImplicits {
 
   implicit object NumberFormat extends Format[Number] {
 

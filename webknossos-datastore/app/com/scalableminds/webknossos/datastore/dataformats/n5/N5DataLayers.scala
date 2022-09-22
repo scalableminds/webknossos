@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats.n5
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.DatasetLocatorMag
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import play.api.libs.json.{Json, OFormat}
@@ -14,7 +14,7 @@ trait N5Layer extends DataLayer {
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
-  def mags: List[DatasetLocatorMag]
+  def mags: List[MagLocator]
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
@@ -27,7 +27,7 @@ case class N5DataLayer(
     category: Category.Value,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
-    mags: List[DatasetLocatorMag],
+    mags: List[MagLocator],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     override val numChannels: Option[Int] = Some(1)
@@ -41,7 +41,7 @@ case class N5SegmentationLayer(
     name: String,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
-    mags: List[DatasetLocatorMag],
+    mags: List[MagLocator],
     largestSegmentId: Long,
     mappings: Option[Set[String]] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,

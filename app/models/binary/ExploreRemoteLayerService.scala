@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.dataformats.DatasetLocatorMag
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.jzarr._
@@ -26,7 +26,7 @@ object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
 
-case class MagWithAttributes(mag: DatasetLocatorMag,
+case class MagWithAttributes(mag: MagLocator,
                              remotePath: Path,
                              elementClass: ElementClass.Value,
                              boundingBox: BoundingBox)
@@ -148,7 +148,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)
       boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
-      zarrMag = DatasetLocatorMag(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
+      zarrMag = MagLocator(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
       layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
         ZarrSegmentationLayer(name, boundingBox, elementClass, List(zarrMag), largestSegmentId = 0L)
       } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag))
@@ -205,7 +205,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrayPath"
       boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
-      MagWithAttributes(DatasetLocatorMag(mag, Some(magPath.toString), credentials, Some(axisOrder)),
+      MagWithAttributes(MagLocator(mag, Some(magPath.toString), credentials, Some(axisOrder)),
                         magPath,
                         elementClass,
                         boundingBox)

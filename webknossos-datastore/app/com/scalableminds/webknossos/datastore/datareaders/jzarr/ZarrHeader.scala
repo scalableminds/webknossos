@@ -7,14 +7,14 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   CompressionSetting,
   Compressor,
   DatasetHeader,
-  DimensionSeparator,
+  DimensionSeparator
 }
 
-import com.scalableminds.webknossos.datastore.helpers.JsonImplicits._
 import java.nio.ByteOrder
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
+import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
@@ -50,7 +50,7 @@ case class ZarrHeader(
   lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
 }
 
-object ZarrHeader {
+object ZarrHeader extends JsonImplicits {
   val FILENAME_DOT_ZARRAY = ".zarray"
 
   /***

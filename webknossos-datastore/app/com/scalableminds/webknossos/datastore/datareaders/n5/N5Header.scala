@@ -1,16 +1,10 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.{
-  ArrayOrder,
-  CompressionSetting,
-  Compressor,
-  DatasetHeader,
-  DimensionSeparator
-}
-import com.scalableminds.webknossos.datastore.helpers.JsonImplicits._
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
+import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
+import com.scalableminds.webknossos.datastore.datareaders._
+import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
@@ -28,7 +22,7 @@ case class N5Header(
     dataType: String,
     dimension_separator: DimensionSeparator = DimensionSeparator.SLASH
 ) extends DatasetHeader {
-  val fill_value: Either[String, Number] = Right(0) // is always 0
+  val fill_value: Either[String, Number] = Right(0)
   val order: ArrayOrder = ArrayOrder.F
 
   lazy val datasetShape: Array[Int] = dimensions
@@ -44,7 +38,7 @@ case class N5Header(
     N5DataType.toArrayDataType(N5DataType.fromString(dataType).get)
 }
 
-object N5Header {
+object N5Header extends JsonImplicits {
   val FILENAME_DOT_ZARRAY = "attributes.json"
 
   implicit object N5HeaderFormat extends Format[N5Header] {

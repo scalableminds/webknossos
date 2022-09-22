@@ -3,7 +3,7 @@
 //   https://github.com/imbcmdth/mjs/blob/master/index.js
 // for all functions in M4x4, V2 and V3.
 import _ from "lodash";
-import type { Vector2, Vector3 } from "oxalis/constants";
+import type { Vector2, Vector3, Vector4 } from "oxalis/constants";
 import { chunk3 } from "oxalis/model/helpers/chunk";
 
 import mjs from "mjs";
@@ -188,6 +188,9 @@ const V2 = {
   equals(vec1: Vector2, vec2: Vector2): boolean {
     return vec1[0] === vec2[0] && vec1[1] === vec2[1];
   },
+  isEqual(a: Vector2, b: Vector2) {
+    return a[0] === b[0] && a[1] === b[1];
+  },
 };
 
 const _tmpVec: Vector3 = [0, 0, 0];
@@ -291,6 +294,15 @@ const V3 = {
     res[index] = Math.floor(res[index] / resolution[index]) * resolution[index];
     return res;
   },
+  isEqual(a: Vector3, b: Vector3) {
+    return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+  },
 };
 
-export { M4x4, V2, V3 };
+const V4 = {
+  isEqual(a: Vector4, b: Vector4) {
+    return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
+  },
+};
+
+export { M4x4, V2, V3, V4 };

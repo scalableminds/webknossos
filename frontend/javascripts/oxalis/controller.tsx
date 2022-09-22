@@ -218,7 +218,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   isWebGlSupported() {
     return (
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'WebGLRenderingContext' does not exist on... Remove this comment to see the full error message
       window.WebGLRenderingContext &&
       document.createElement("canvas").getContext("experimental-webgl")
     );

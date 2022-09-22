@@ -115,15 +115,13 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
 
   if (segment.somePosition) {
     somePosition = Utils.floor3(segment.somePosition);
-  } else {
-    if (oldSegment == null) {
-      // UPDATE_SEGMENT was called for a non-existing segment without providing
-      // a position. Ignore this action, as the a segment cannot be created without
-      // a position.
-      return state;
-    }
-
+  } else if (oldSegment != null) {
     somePosition = oldSegment.somePosition;
+  } else {
+    // UPDATE_SEGMENT was called for a non-existing segment without providing
+    // a position. This is necessary to define custom colors for segments
+    // which are listed in a JSON mapping. The action will store the segment
+    // without a position.
   }
 
   const newSegment = {
@@ -131,6 +129,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     // used by ...oldSegment
     creationTime: action.timestamp,
     name: null,
+    color: null,
     ...oldSegment,
     ...segment,
     somePosition,
@@ -165,7 +164,10 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
         {
           ...segment,
           id: segment.segmentId,
-          somePosition: Utils.point3ToVector3(segment.anchorPosition),
+          somePosition: segment.anchorPosition
+            ? Utils.point3ToVector3(segment.anchorPosition)
+            : undefined,
+          color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
         },
       ]),
     ),

@@ -201,12 +201,12 @@ class ErrorHandling {
     });
   }
 
-  assert = (
+  assert(
     bool: boolean,
     message: string,
     assertionContext?: Record<string, any>,
     dontThrowError: boolean = false,
-  ) => {
+  ): asserts bool is true {
     if (bool) {
       return;
     }
@@ -224,9 +224,13 @@ class ErrorHandling {
       console.error(error);
       this.airbrake.notify(error);
     }
-  };
+  }
 
-  assertExists(variable: any, message: string, assertionContext?: Record<string, any>) {
+  assertExists<T>(
+    variable: T | null,
+    message: string,
+    assertionContext?: Record<string, any>,
+  ): asserts variable is NonNullable<T> {
     if (variable != null) {
       return;
     }
@@ -264,4 +268,6 @@ class ErrorHandling {
   }
 }
 
-export default new ErrorHandling();
+const errorHandling: ErrorHandling = new ErrorHandling();
+
+export default errorHandling;

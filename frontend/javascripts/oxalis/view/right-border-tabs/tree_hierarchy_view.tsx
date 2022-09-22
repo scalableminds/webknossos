@@ -87,6 +87,7 @@ const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
   prevProps.sortBy !== nextProps.sortBy;
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
+  keepMenuOpenForColorPicking: boolean = false;
   state: State = {
     expandedGroupIds: {
       [MISSING_GROUP_ID]: true,
@@ -472,7 +473,31 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                   opacity: 0,
                   cursor: isEditingDisabled ? "unset" : "pointer",
                 }}
+                onClick={() => {
+                  // Firefox will open a new window for the color picker
+                  // which makes the menu lose focus. By default, the menu would
+                  // close. By closing the menu, the <input /> would get unmounted
+                  // and couldn't react to change events anymore. Therefore,
+                  // we enforce that the menu stays open via this variable:
+                  this.keepMenuOpenForColorPicking = true;
+                }}
+                onFocus={() => {
+                  // onFocus is called twice (at least, with Firefox):
+                  // (1) when initially clicking on the Menu.Item
+                  // (2) when the input color window is closed and the menu regains focus
+                  // The second event is the one we care about. After the <input /> regained
+                  // focus, we know that Firefox' color picker got closed. So, the menu
+                  // may be closed, too (will be on the next blur).
+                  this.keepMenuOpenForColorPicking = false;
+                }}
                 onChange={(event) => {
+                  // A change event was registered. For Firefox, this only happens once (when
+                  // confirming the color picker). For Chrome, this happens continously when
+                  // changing the color.
+                  // Since Chrome doesn't trigger onFocus, we use this event to mark the
+                  // menu so that it may be closed.
+                  this.keepMenuOpenForColorPicking = false;
+                  console.log("onChange");
                   if (isEditingDisabled) {
                     return;
                   }
@@ -535,9 +560,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             autoDestroy
             placement="bottom"
             visible={this.state.activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-            onVisibleChange={(isVisible) =>
-              this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
-            }
+            onVisibleChange={(isVisible) => {
+              if (!isVisible && this.keepMenuOpenForColorPicking) {
+                // Ignore the default visibility change to false (i.e., on blur)
+                // if the menu should stay open due to this.keepMenuOpenForColorPicking
+                return;
+              }
+              return this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
+            }}
             trigger={["contextMenu"]}
           >
             <span>

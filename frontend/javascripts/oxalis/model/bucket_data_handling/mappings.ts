@@ -9,31 +9,9 @@ import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import messages from "messages";
+
 export const MAPPING_TEXTURE_WIDTH = 4096;
-export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
 export const MAPPING_MESSAGE_KEY = "mappings";
-// Remove soon (e.g., October 2021)
-export function setupGlobalMappingsObject() {
-  return {
-    getAll(): string[] {
-      throw new Error(
-        "Using mappings.getAll() is deprecated. Please use the official front-end API function getMappingNames() instead.",
-      );
-    },
-
-    getActive(): string | null | undefined {
-      throw new Error(
-        "Using mappings.getActive() is deprecated. Please use the official front-end API function getActiveMapping() instead.",
-      );
-    },
-
-    activate(_mapping: string) {
-      throw new Error(
-        "Using mappings.activate() is deprecated. Please use the official front-end API function activateMapping() instead.",
-      );
-    },
-  };
-}
 
 class Mappings {
   layerName: string;
@@ -41,8 +19,6 @@ class Mappings {
   mappingTexture: UpdatableTexture;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'mappingLookupTexture' has no initializer... Remove this comment to see the full error message
   mappingLookupTexture: UpdatableTexture;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'mappingColorTexture' has no initializer ... Remove this comment to see the full error message
-  mappingColorTexture: UpdatableTexture;
 
   constructor(layerName: string) {
     this.layerName = layerName;
@@ -67,23 +43,7 @@ class Mappings {
       THREE.UnsignedByteType,
       renderer,
     );
-    // Up to 256 (16*16) custom colors can be specified for mappings
-    this.mappingColorTexture = createUpdatableTexture(
-      MAPPING_COLOR_TEXTURE_WIDTH,
-      1,
-      THREE.FloatType,
-      renderer,
-    );
-    // updateMappingColorTexture has to be called at least once to guarantee
-    // proper initialization of the texture with -1.
-    // There is a race condition otherwise leading to hard-to-debug errors.
-    listenToStoreProperty(
-      (state) =>
-        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName)
-          .mappingColors,
-      (mappingColors) => this.updateMappingColorTexture(mappingColors),
-      true,
-    );
+
     listenToStoreProperty(
       (state) =>
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName).mapping,
@@ -95,22 +55,6 @@ class Mappings {
         this.updateMappingTextures(mapping, mappingKeys);
       },
       true,
-    );
-  }
-
-  updateMappingColorTexture(mappingColors: Array<number> | null | undefined) {
-    mappingColors = mappingColors || [];
-    const maxNumberOfColors = MAPPING_COLOR_TEXTURE_WIDTH ** 2;
-    const float32Colors = new Float32Array(maxNumberOfColors);
-    // Initialize the array with -1
-    float32Colors.fill(-1);
-    float32Colors.set(mappingColors.slice(0, maxNumberOfColors));
-    this.mappingColorTexture.update(
-      float32Colors,
-      0,
-      0,
-      MAPPING_COLOR_TEXTURE_WIDTH,
-      MAPPING_COLOR_TEXTURE_WIDTH,
     );
   }
 
@@ -161,15 +105,11 @@ class Mappings {
       this.setupMappingTextures();
     }
 
-    if (
-      this.mappingTexture == null ||
-      this.mappingLookupTexture == null ||
-      this.mappingColorTexture == null
-    ) {
+    if (this.mappingTexture == null || this.mappingLookupTexture == null) {
       throw new Error("Mapping textures are null after initialization.");
     }
 
-    return [this.mappingTexture, this.mappingLookupTexture, this.mappingColorTexture];
+    return [this.mappingTexture, this.mappingLookupTexture];
   }
 }
 

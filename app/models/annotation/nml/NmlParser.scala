@@ -169,10 +169,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         case _                           => None
       }
       Segment(
-        getSingleAttribute(node, "id").toLong,
-        anchorPosition,
-        getSingleAttributeOpt(node, "name"),
-        getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt)
+        segmentId = getSingleAttribute(node, "id").toLong,
+        anchorPosition = anchorPosition,
+        name = getSingleAttributeOpt(node, "name"),
+        creationTime = getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt),
+        color = parseColorOpt(node)
       )
     })
 
@@ -195,7 +196,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           id <- idText.toIntOpt ?~ Messages("nml.boundingbox.id.invalid", idText)
           name = getSingleAttribute(node, "name")
           isVisible = getSingleAttribute(node, "isVisible").toBooleanOpt
-          color = parseColor(node)
+          color = parseColorOpt(node)
           boundingBox <- parseBoundingBox(node)
           nameOpt = if (name.isEmpty) None else Some(name)
         } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBox)
@@ -295,9 +296,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       ColorProto(colorRed, colorBlue, colorGreen, colorAlpha)
     }
 
-  private def parseColor(node: XMLNode) =
-    parseColorOpt(node)
-
   private def parseName(node: XMLNode) =
     getSingleAttribute(node, "name")
 
@@ -315,7 +313,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     val treeIdText = getSingleAttribute(tree, "id")
     for {
       id <- treeIdText.toIntOpt ?~ Messages("nml.tree.id.invalid", treeIdText)
-      color = parseColor(tree)
+      color = parseColorOpt(tree)
       name = parseName(tree)
       groupId = parseGroupId(tree)
       isVisible = parseVisibility(tree, color)

@@ -5,6 +5,7 @@ import sbt._
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "2.12.15"
 ThisBuild / scapegoatVersion := "1.4.10"
+val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-Xmax-classfile-name",
   "100",
@@ -18,7 +19,7 @@ ThisBuild / scalacOptions ++= Seq(
   s"-Wconf:src=target/.*:s",
   s"-Wconf:src=webknossos-datastore/target/.*:s",
   s"-Wconf:src=webknossos-tracingstore/target/.*:s"
-)
+) ++ failOnWarning
 ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
   "-Xlint:deprecation"

@@ -78,6 +78,7 @@ import {
   deleteConnectomeTreesAction,
 } from "oxalis/model/actions/connectome_actions";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
+import memoizeOne from "memoize-one";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -594,22 +595,11 @@ export function* diffTrees(
     }
   }
 }
-const diffTreeCache = {};
-export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<UpdateAction> {
-  // Try to use the cached version of the diff if available to increase performance
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'prevTrees' does not exist on type '{}'.
-  if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'prevTrees' does not exist on type '{}'.
-    diffTreeCache.prevTrees = prevTrees;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type '{}'.
-    diffTreeCache.trees = trees;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'diff' does not exist on type '{}'.
-    diffTreeCache.diff = Array.from(diffTrees(prevTrees, trees));
-  }
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'diff' does not exist on type '{}'.
-  return diffTreeCache.diff;
-}
+export const cachedDiffTrees = memoizeOne((prevTrees: TreeMap, trees: TreeMap) =>
+  Array.from(diffTrees(prevTrees, trees)),
+);
+
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
@@ -617,8 +607,9 @@ export function* diffSkeletonTracing(
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
-    yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+    for (const action of cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees)) {
+      yield action;
+    }
 
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
       yield updateTreeGroups(skeletonTracing.treeGroups);

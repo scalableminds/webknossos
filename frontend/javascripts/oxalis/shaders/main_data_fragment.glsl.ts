@@ -1,8 +1,5 @@
 import _ from "lodash";
-import {
-  MAPPING_TEXTURE_WIDTH,
-  MAPPING_COLOR_TEXTURE_WIDTH,
-} from "oxalis/model/bucket_data_handling/mappings";
+import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
 import type { Vector3 } from "oxalis/constants";
 import constants, { ViewModeValuesIndices, OrthoViewIndices } from "oxalis/constants";
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
@@ -14,7 +11,6 @@ type Params = {
   colorLayerNames: string[];
   segmentationLayerNames: string[];
   packingDegreeLookup: Record<string, number>;
-  isMappingSupported: boolean;
   dataTextureCountPerLayer: number;
   resolutions: Array<Vector3>;
   datasetScale: Vector3;
@@ -54,20 +50,27 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% }) %>
 
 <% if (hasSegmentation) { %>
+  // Custom color cuckoo table
+  uniform highp usampler2D custom_color_texture;
+  uniform highp uint seed0;
+  uniform highp uint seed1;
+  uniform highp uint seed2;
+  uniform highp uint CUCKOO_ENTRY_CAPACITY;
+  uniform highp uint CUCKOO_ELEMENTS_PER_ENTRY;
+  uniform highp uint CUCKOO_ELEMENTS_PER_TEXEL;
+  uniform highp uint CUCKOO_TWIDTH;
+
   uniform vec4 activeCellIdHigh;
   uniform vec4 activeCellIdLow;
   uniform bool isMouseInActiveViewport;
   uniform bool showBrush;
   uniform float segmentationPatternOpacity;
 
-  <% if (isMappingSupported) { %>
-    uniform bool isMappingEnabled;
-    uniform float mappingSize;
-    uniform bool hideUnmappedIds;
-    uniform sampler2D segmentation_mapping_texture;
-    uniform sampler2D segmentation_mapping_lookup_texture;
-    uniform sampler2D segmentation_mapping_color_texture;
-  <% } %>
+  uniform bool isMappingEnabled;
+  uniform float mappingSize;
+  uniform bool hideUnmappedIds;
+  uniform sampler2D segmentation_mapping_texture;
+  uniform sampler2D segmentation_mapping_lookup_texture;
 <% } %>
 
 uniform float sphericalCapRadius;
@@ -97,6 +100,7 @@ varying mat4 savedModelMatrix;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
+
 
 // For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
@@ -223,10 +227,9 @@ void main() {
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
     l_texture_width: formatNumberAsGLSLFloat(params.lookupTextureWidth),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
-    mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'vector3' implicitly has an 'any' type.
-    formatVector3AsVec3: (vector3) => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
+    formatVector3AsVec3: (vector3: Vector3) =>
+      `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
   });

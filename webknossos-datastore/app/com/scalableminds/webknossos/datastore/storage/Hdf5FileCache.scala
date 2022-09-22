@@ -1,13 +1,15 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import java.nio.file.Path
-
 import ch.systemsx.cisd.hdf5.{HDF5FactoryProvider, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
 
-case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable {
+import java.nio.file.Path
+
+case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable with AutoCloseable {
   override protected def onFinalize(): Unit = reader.close()
+
+  override def close(): Unit = this.finishAccess()
 }
 
 object CachedHdf5File {

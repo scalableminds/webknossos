@@ -1,21 +1,21 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.{Path, Paths}
-
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
 
+import java.nio.file.{Path, Paths}
+import javax.inject.Inject
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
+import scala.util.Using
 
 trait GenericJsonFormat[T] {}
 
@@ -84,14 +84,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
    Note that null is a valid value here for once. Meshfiles with no information about the
    meshFilePath will return Fox.empty, while meshfiles with one marked as empty, will return Fox.successful(null)
    */
+
   def mappingNameForMeshFile(meshFilePath: Path): Fox[String] =
-    for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.fromPath) } ?~> "mesh.file.open.failed"
-      mappingName <- tryo { _: Throwable =>
-        cachedMeshFile.finishAccess()
-      } { cachedMeshFile.reader.string().getAttr("/", "metadata/mapping_name") } ?~> "mesh.file.readEncoding.failed"
-      _ = cachedMeshFile.finishAccess()
-    } yield mappingName
+    safeExecute(meshFilePath) { cachedMeshFile =>
+      cachedMeshFile.reader.string().getAttr("/", "metadata/mapping_name")
+    } ?~> "mesh.file.readEncoding.failed"
 
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,
@@ -105,20 +102,14 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(meshesDir)
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
 
-    for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.fromPath) } ?~> "mesh.file.open.failed"
-      chunkPositionLiterals <- tryo { _: Throwable =>
-        cachedMeshFile.finishAccess()
-      } {
-        cachedMeshFile.reader
-          .`object`()
-          .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
-          .asScala
-          .toList
-      }.toFox
-      _ = cachedMeshFile.finishAccess()
-      positions <- Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
-    } yield positions
+    safeExecute(meshFilePath) { cachedMeshFile =>
+      val chunkPositionLiterals = cachedMeshFile.reader
+        .`object`()
+        .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
+        .asScala
+        .toList
+      Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
+    }.flatten ?~> "mesh.file.open.failed"
   }
 
   def readMeshChunk(organizationName: String,
@@ -131,18 +122,23 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .resolve(dataLayerName)
       .resolve(meshesDir)
       .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
-    for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.fromPath) } ?~> "mesh.file.open.failed"
-      encoding <- tryo { _: Throwable =>
-        cachedMeshFile.finishAccess()
-      } { cachedMeshFile.reader.string().getAttr("/", "metadata/encoding") } ?~> "mesh.file.readEncoding.failed"
-      key = s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}"
-      data <- tryo { _: Throwable =>
-        cachedMeshFile.finishAccess()
-      } { cachedMeshFile.reader.readAsByteArray(key) } ?~> "mesh.file.readData.failed"
-      _ = cachedMeshFile.finishAccess()
-    } yield (data, encoding)
+
+    safeExecute(meshFilePath) { cachedMeshFile =>
+      val encoding = cachedMeshFile.reader.string().getAttr("/", "metadata/encoding")
+      val key =
+        s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}"
+      val data = cachedMeshFile.reader.readAsByteArray(key)
+      (data, encoding)
+    } ?~> "mesh.file.readData.failed"
   }
+
+  private def safeExecute[T](filePath: Path)(block: CachedHdf5File => T): Fox[T] =
+    for {
+      _ <- bool2Fox(filePath.toFile.exists()) ?~> "mesh.file.open.failed"
+      result <- Using(meshFileCache.withCache(filePath)(CachedHdf5File.fromPath)) {
+        block
+      }.toFox
+    } yield result
 
   private def positionLiteral(position: Vec3Int) =
     s"${position.x}_${position.y}_${position.z}"

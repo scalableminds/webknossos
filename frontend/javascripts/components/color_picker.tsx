@@ -5,7 +5,7 @@ import { HexColorInput, HexColorPicker } from "react-colorful";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
 import type { Vector3 } from "oxalis/constants";
 
-export const DebouncedColorPicker = ({
+export const ThrottledColorPicker = ({
   color,
   onChange,
 }: {
@@ -61,7 +61,7 @@ export function ChangeColorMenuItemContent({
     onSetColor(newColor);
   };
   const content = isDisabled ? null : (
-    <DebouncedColorPicker color={color} onChange={onChangeColor} />
+    <ThrottledColorPicker color={color} onChange={onChangeColor} />
   );
   return (
     <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>

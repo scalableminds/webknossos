@@ -181,6 +181,7 @@ function SimpleDatasetForm({
                 name={["dataSource", "id", "name"]}
                 label="Name"
                 info="The name of the dataset"
+                validateFirst
                 rules={getDatasetNameRules(activeUser)}
               >
                 <Input

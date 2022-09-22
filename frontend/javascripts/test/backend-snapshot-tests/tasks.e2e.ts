@@ -94,7 +94,7 @@ const newTask = {
   projectName: "Test_Project4",
   scriptId: null,
   openInstances: 3,
-  taskTypeId: "570b9f4c2a7c0e4c008da6ee",
+  taskTypeIdOrSummary: "570b9f4c2a7c0e4c008da6ee",
 };
 test.serial("createTasks() and deleteTask()", async (t) => {
   // @ts-expect-error ts-migrate(2322) FIXME: Type '{ boundingBox: null; dataSet: string; editPo... Remove this comment to see the full error message

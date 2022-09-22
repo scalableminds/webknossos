@@ -24,7 +24,7 @@ export type NewTask = {
   readonly projectName: string;
   readonly scriptId: string | null | undefined;
   readonly openInstances: number;
-  readonly taskTypeId: string;
+  readonly taskTypeIdOrSummary: string;
   readonly csvFile?: File;
   readonly nmlFiles?: File;
   readonly baseAnnotation?:
@@ -69,7 +69,7 @@ function TaskCreateBulkView() {
     if (
       !_.isString(task.neededExperience.domain) ||
       !_.isString(task.dataSet) ||
-      !_.isString(task.taskTypeId) ||
+      !_.isString(task.taskTypeIdOrSummary) ||
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
       task.editRotation.some(Number.isNaN) ||
@@ -111,7 +111,7 @@ function TaskCreateBulkView() {
   function parseLine(line: string): NewTask {
     const words = splitToWords(line);
     const dataSet = words[0];
-    const taskTypeId = words[1];
+    const taskTypeIdOrSummary = words[1];
     const experienceDomain = words[2];
     const minExperience = parseInt(words[3]);
     const x = parseInt(words[4]);
@@ -150,7 +150,7 @@ function TaskCreateBulkView() {
           };
     return {
       dataSet,
-      taskTypeId,
+      taskTypeIdOrSummary,
       scriptId,
       openInstances,
       boundingBox,
@@ -257,7 +257,7 @@ function TaskCreateBulkView() {
             Specify each new task on a separate line as comma seperated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
+            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskType</a>, experienceDomain,
             minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
             depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>,
             baseAnnotationId]
@@ -299,7 +299,7 @@ function TaskCreateBulkView() {
             >
               <TextArea
                 className="input-monospace"
-                placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
+                placeholder="dataset, taskType, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
                 autoSize={{
                   minRows: 6,
                 }}

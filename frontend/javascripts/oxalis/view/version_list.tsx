@@ -1,5 +1,5 @@
 import { List } from "antd";
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import _ from "lodash";
 import moment from "moment";
 import type { APIUpdateActionBatch } from "types/api_flow_types";
@@ -25,15 +25,13 @@ import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
+
 type Props = {
   versionedObjectType: SaveQueueType;
   tracing: SkeletonTracing | VolumeTracing | EditableMapping;
   allowUpdate: boolean;
 };
-type State = {
-  isLoading: boolean;
-  versions: Array<APIUpdateActionBatch>;
-};
+
 // The string key is a date string
 // The value is an array of chunked APIUpdateActionBatches
 type GroupedAndChunkedVersions = Record<string, Array<Array<APIUpdateActionBatch>>>;
@@ -74,156 +72,149 @@ export async function previewVersion(versions?: Versions) {
   }
 }
 
-class VersionList extends React.Component<Props, State> {
-  state: State = {
-    isLoading: false,
-    versions: [],
+async function handleRestoreVersion(
+  props: Props,
+  versions: APIUpdateActionBatch[],
+  version: number,
+) {
+  const getNewestVersion = () => {
+    return _.max(versions.map((batch) => batch.version)) || 0;
   };
-
-  componentDidMount() {
-    Store.dispatch(setAnnotationAllowUpdateAction(false));
-    this.fetchData(this.props.tracing.tracingId);
-  }
-
-  async fetchData(tracingId: string) {
-    const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
-    this.setState({
-      isLoading: true,
+  if (props.allowUpdate) {
+    Store.dispatch(
+      setVersionNumberAction(
+        getNewestVersion(),
+        props.versionedObjectType,
+        props.tracing.tracingId,
+      ),
+    );
+    Store.dispatch(
+      pushSaveQueueTransaction(
+        [revertToVersion(version)],
+        props.versionedObjectType,
+        props.tracing.tracingId,
+      ),
+    );
+    await Model.ensureSavedState();
+    Store.dispatch(setVersionRestoreVisibilityAction(false));
+    Store.dispatch(setAnnotationAllowUpdateAction(true));
+  } else {
+    const { annotationType, annotationId, volumes } = Store.getState().tracing;
+    const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
+    downloadAnnotation(annotationId, annotationType, includesVolumeFallbackData, {
+      [props.versionedObjectType]: version,
     });
+  }
+}
+
+function handlePreviewVersion(props: Props, version: number) {
+  if (props.versionedObjectType === "skeleton") {
+    return previewVersion({
+      skeleton: version,
+    });
+  } else if (props.versionedObjectType === "volume") {
+    return previewVersion({
+      volumes: {
+        [props.tracing.tracingId]: version,
+      },
+    });
+  } else {
+    Toast.warning(
+      `Version preview and restoring for ${props.versionedObjectType}s is not supported yet.`,
+    );
+    return Promise.resolve();
+  }
+}
+
+// eslint-disable-next-line react/sort-comp
+const getGroupedAndChunkedVersions = _.memoize(
+  (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
+    // This function first groups the versions by day, where the key is the output of the moment calendar function.
+    // Then, the versions for each day are chunked into x-minute intervals,
+    // so that the actions of one chunk are all from within one x-minute interval.
+    const groupedVersions = _.groupBy(versions, (batch) =>
+      moment
+        .utc(_.max(batch.value.map((action) => action.value.actionTimestamp)))
+        .calendar(null, MOMENT_CALENDAR_FORMAT),
+    );
+
+    const getBatchTime = (batch: APIUpdateActionBatch): number =>
+      _.max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
+
+    return _.mapValues(groupedVersions, (versionsOfOneDay) =>
+      chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
+    );
+  },
+);
+
+function VersionList(props: Props) {
+  const [versions, setVersions] = useState<APIUpdateActionBatch[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const groupedAndChunkedVersions = getGroupedAndChunkedVersions(versions);
+
+  const batchesAndDateStrings = _.flattenDepth(Object.entries(groupedAndChunkedVersions), 2);
+
+  async function fetchData() {
+    const { tracingId } = props.tracing;
+    const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
+    setIsLoading(true);
 
     try {
       const updateActionLog = await getUpdateActionLog(
         tracingStoreUrl,
         tracingId,
-        this.props.versionedObjectType,
+        props.versionedObjectType,
       );
       // Insert version 0
       updateActionLog.push({
         version: 0,
-        value: [serverCreateTracing(this.props.tracing.createdTimestamp)],
+        value: [serverCreateTracing(props.tracing.createdTimestamp)],
       });
-      this.setState({
-        versions: updateActionLog,
-      });
+      setVersions(updateActionLog);
     } catch (error) {
       handleGenericError(error as Error);
     } finally {
-      this.setState({
-        isLoading: false,
-      });
+      setIsLoading(false);
     }
   }
 
-  getNewestVersion(): number {
-    return _.max(this.state.versions.map((batch) => batch.version)) || 0;
-  }
+  useEffect(() => {
+    Store.dispatch(setAnnotationAllowUpdateAction(false));
+    fetchData();
+  }, []);
 
-  handleRestoreVersion = async (version: number) => {
-    if (this.props.allowUpdate) {
-      Store.dispatch(
-        setVersionNumberAction(
-          this.getNewestVersion(),
-          this.props.versionedObjectType,
-          this.props.tracing.tracingId,
-        ),
-      );
-      Store.dispatch(
-        pushSaveQueueTransaction(
-          [revertToVersion(version)],
-          this.props.versionedObjectType,
-          this.props.tracing.tracingId,
-        ),
-      );
-      await Model.ensureSavedState();
-      Store.dispatch(setVersionRestoreVisibilityAction(false));
-      Store.dispatch(setAnnotationAllowUpdateAction(true));
-    } else {
-      const { annotationType, annotationId, volumes } = Store.getState().tracing;
-      const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
-      downloadAnnotation(annotationId, annotationType, includesVolumeFallbackData, {
-        [this.props.versionedObjectType]: version,
-      });
-    }
-  };
-
-  handlePreviewVersion = (version: number) => {
-    if (this.props.versionedObjectType === "skeleton") {
-      return previewVersion({
-        skeleton: version,
-      });
-    } else if (this.props.versionedObjectType === "volume") {
-      return previewVersion({
-        volumes: {
-          [this.props.tracing.tracingId]: version,
-        },
-      });
-    } else {
-      Toast.warning(
-        `Version preview and restoring for ${this.props.versionedObjectType}s is not supported yet.`,
-      );
-      return Promise.resolve();
-    }
-  };
-
-  // eslint-disable-next-line react/sort-comp
-  getGroupedAndChunkedVersions = _.memoize(
-    (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
-      // This function first groups the versions by day, where the key is the output of the moment calendar function.
-      // Then, the versions for each day are chunked into x-minute intervals,
-      // so that the actions of one chunk are all from within one x-minute interval.
-      const groupedVersions = _.groupBy(versions, (batch) =>
-        moment
-          .utc(_.max(batch.value.map((action) => action.value.actionTimestamp)))
-          .calendar(null, MOMENT_CALENDAR_FORMAT),
-      );
-
-      const getBatchTime = (batch: APIUpdateActionBatch): number =>
-        _.max(batch.value.map((action: ServerUpdateAction) => action.value.actionTimestamp)) || 0;
-
-      return _.mapValues(groupedVersions, (versionsOfOneDay) =>
-        chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
-      );
-    },
+  return (
+    <List
+      dataSource={batchesAndDateStrings}
+      loading={isLoading}
+      locale={VERSION_LIST_PLACEHOLDER}
+      renderItem={(batchesOrDateString) =>
+        _.isString(batchesOrDateString) ? (
+          <List.Item className="version-section">
+            <div
+              style={{
+                margin: "auto",
+              }}
+            >
+              {batchesOrDateString}
+            </div>
+          </List.Item>
+        ) : (
+          <VersionEntryGroup
+            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
+            batches={batchesOrDateString}
+            allowUpdate={props.allowUpdate}
+            newestVersion={versions[0].version}
+            activeVersion={props.tracing.version}
+            onRestoreVersion={(version) => handleRestoreVersion(props, versions, version)}
+            onPreviewVersion={(version) => handlePreviewVersion(props, version)}
+            // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'APIUpda... Remove this comment to see the full error message
+            key={batchesOrDateString[0].version}
+          />
+        )
+      }
+    ></List>
   );
-
-  render() {
-    const groupedAndChunkedVersions = this.getGroupedAndChunkedVersions(this.state.versions);
-
-    const batchesAndDateStrings = _.flattenDepth(Object.entries(groupedAndChunkedVersions), 2);
-
-    return (
-      <List
-        dataSource={batchesAndDateStrings}
-        loading={this.state.isLoading}
-        locale={VERSION_LIST_PLACEHOLDER}
-        renderItem={(batchesOrDateString) =>
-          _.isString(batchesOrDateString) ? (
-            <List.Item className="version-section">
-              <div
-                style={{
-                  margin: "auto",
-                }}
-              >
-                {batchesOrDateString}
-              </div>
-            </List.Item>
-          ) : (
-            <VersionEntryGroup
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-              batches={batchesOrDateString}
-              allowUpdate={this.props.allowUpdate}
-              newestVersion={this.state.versions[0].version}
-              activeVersion={this.props.tracing.version}
-              onRestoreVersion={this.handleRestoreVersion}
-              onPreviewVersion={this.handlePreviewVersion}
-              // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'APIUpda... Remove this comment to see the full error message
-              key={batchesOrDateString[0].version}
-            />
-          )
-        }
-      />
-    );
-  }
 }
 
 export default VersionList;

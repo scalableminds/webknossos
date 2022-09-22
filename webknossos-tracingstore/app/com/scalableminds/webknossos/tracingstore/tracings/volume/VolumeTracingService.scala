@@ -237,7 +237,7 @@ class VolumeTracingService @Inject()(
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] =
       new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
-                                         tracing.resolutions)
+                                         tracing.resolutions.map(mag => vec3IntFromProto(mag)))
 
     val before = System.currentTimeMillis()
     val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)

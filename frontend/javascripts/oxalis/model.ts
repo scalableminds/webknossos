@@ -28,7 +28,6 @@ import { initialize } from "./model_initialization";
 export class OxalisModel {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
-  isMappingSupported: boolean = true;
   maximumTextureCountForLayer: number = 0;
 
   async fetch(
@@ -47,15 +46,13 @@ export class OxalisModel {
 
       if (initializationInformation) {
         // Only executed on initial fetch
-        const { dataLayers, isMappingSupported, maximumTextureCountForLayer } =
-          initializationInformation;
+        const { dataLayers, maximumTextureCountForLayer } = initializationInformation;
 
         if (this.dataLayers != null) {
           _.values(this.dataLayers).forEach((layer) => layer.destroy());
         }
 
         this.dataLayers = dataLayers;
-        this.isMappingSupported = isMappingSupported;
         this.maximumTextureCountForLayer = maximumTextureCountForLayer;
       }
     } catch (error) {

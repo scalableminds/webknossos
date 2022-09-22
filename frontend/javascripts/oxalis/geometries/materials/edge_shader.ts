@@ -20,11 +20,9 @@ class EdgeShader {
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
     this.uniforms = {
       activeTreeId: {
-        type: "f",
         value: NaN,
       },
       treeColors: {
-        type: "t",
         value: treeColorTexture,
       },
     };

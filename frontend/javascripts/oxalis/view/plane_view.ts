@@ -113,9 +113,7 @@ class PlaneView {
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
     if (forceRender || this.needsRerender || window.needsRerender) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'needsRerender' does not exist on type '(... Remove this comment to see the full error message
       window.needsRerender = false;
       const { renderer, scene } = SceneController;
       this.trigger("render");

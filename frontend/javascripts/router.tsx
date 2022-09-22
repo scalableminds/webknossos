@@ -366,7 +366,6 @@ class ReactRouter extends React.Component<Props> {
                     onComplete={() =>
                       window.location.replace(`${window.location.origin}/dashboard/datasets`)
                     }
-                    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
                     onCancel={() => window.history.back()}
                   />
                 )}
@@ -381,9 +380,7 @@ class ReactRouter extends React.Component<Props> {
                       name: match.params.datasetName || "",
                       owningOrganization: match.params.organizationName || "",
                     }}
-                    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
                     onComplete={() => window.history.back()}
-                    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
                     onCancel={() => window.history.back()}
                   />
                 )}

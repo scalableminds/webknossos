@@ -1,28 +1,16 @@
-package com.scalableminds.webknossos.datastore.dataformats.zarr
+package com.scalableminds.webknossos.datastore.dataformats.n5
 
-import java.net.URI
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import play.api.libs.json.{Json, OFormat}
 
-case class FileSystemCredentials(user: String, password: Option[String])
+trait N5Layer extends DataLayer {
 
-object FileSystemCredentials {
-  implicit val jsonFormat: OFormat[FileSystemCredentials] = Json.format[FileSystemCredentials]
-}
+  val dataFormat: DataFormat.Value = DataFormat.n5
 
-case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Option[String]) {
-  lazy val remotePath: String = uri.getPath
-  lazy val credentials: Option[FileSystemCredentials] = user.map(u => FileSystemCredentials(u, password))
-}
-
-trait ZarrLayer extends DataLayer {
-
-  val dataFormat: DataFormat.Value = DataFormat.zarr
-
-  lazy val bucketProvider = new ZarrBucketProvider(this)
+  lazy val bucketProvider = new N5BucketProvider(this)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
@@ -34,7 +22,7 @@ trait ZarrLayer extends DataLayer {
 
 }
 
-case class ZarrDataLayer(
+case class N5DataLayer(
     name: String,
     category: Category.Value,
     boundingBox: BoundingBox,
@@ -43,13 +31,13 @@ case class ZarrDataLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     override val numChannels: Option[Int] = Some(1)
-) extends ZarrLayer
+) extends N5Layer
 
-object ZarrDataLayer {
-  implicit val jsonFormat: OFormat[ZarrDataLayer] = Json.format[ZarrDataLayer]
+object N5DataLayer {
+  implicit val jsonFormat: OFormat[N5DataLayer] = Json.format[N5DataLayer]
 }
 
-case class ZarrSegmentationLayer(
+case class N5SegmentationLayer(
     name: String,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
@@ -60,22 +48,8 @@ case class ZarrSegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     override val numChannels: Option[Int] = Some(1)
 ) extends SegmentationLayer
-    with ZarrLayer
+    with N5Layer
 
-object ZarrSegmentationLayer {
-  implicit val jsonFormat: OFormat[ZarrSegmentationLayer] = Json.format[ZarrSegmentationLayer]
-}
-
-object ZarrCoordinatesParser {
-  def parseDotCoordinates(
-      cxyz: String,
-  ): Option[(Int, Int, Int, Int)] = {
-    val singleRx = "\\s*([0-9]+).([0-9]+).([0-9]+).([0-9]+)\\s*".r
-
-    cxyz match {
-      case singleRx(c, x, y, z) =>
-        Some(Integer.parseInt(c), Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
-      case _ => None
-    }
-  }
+object N5SegmentationLayer {
+  implicit val jsonFormat: OFormat[N5SegmentationLayer] = Json.format[N5SegmentationLayer]
 }

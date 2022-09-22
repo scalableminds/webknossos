@@ -16,7 +16,7 @@ import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
-import { BoundingBoxObject } from "oxalis/store";
+import { BoundingBoxObject, OxalisState } from "oxalis/store";
 import {
   Hideable,
   FormItemWithInfo,
@@ -25,6 +25,8 @@ import {
 } from "dashboard/dataset/helper_components";
 import { jsonStringify, parseAsMaybe } from "libs/utils";
 import { DataLayer } from "types/schemas/datasource.types";
+import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
+import { useSelector } from "react-redux";
 
 const FormItem = Form.Item;
 
@@ -153,6 +155,7 @@ function SimpleDatasetForm({
   isReadOnlyDataset: boolean;
   dataSource: Record<string, any>;
 }) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   return (
     <div>
       <List
@@ -178,15 +181,7 @@ function SimpleDatasetForm({
                 name={["dataSource", "id", "name"]}
                 label="Name"
                 info="The name of the dataset"
-                rules={[
-                  {
-                    required: true,
-                    message: "Please provide a name for the dataset.",
-                  },
-                  {
-                    validator: syncValidator((value) => value.length > 3, "..."),
-                  },
-                ]}
+                rules={getDatasetNameRules(activeUser)}
               >
                 <Input
                   disabled={isReadOnlyDataset}
@@ -292,9 +287,7 @@ function SimpleLayerForm({
               required: true,
               message: "Please provide a valid layer name.",
             },
-            {
-              validator: syncValidator((value: string) => value.length > 3, "..."),
-            },
+            ...layerNameRules,
           ]}
         >
           <Input

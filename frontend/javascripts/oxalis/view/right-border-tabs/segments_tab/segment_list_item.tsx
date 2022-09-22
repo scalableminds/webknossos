@@ -29,6 +29,7 @@ import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_acces
 import Toast from "libs/toast";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
+import { ChangeColorMenuItemContent } from "components/color_picker";
 
 function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
@@ -380,37 +381,24 @@ function _SegmentListItem({
        * to change the color of B to see the effect for A.
        */}
       <Menu.Item key="changeSegmentColor" disabled={isEditingDisabled || segment.id !== mappedId}>
-        <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
-          Change Segment Color
-          <input
-            type="color"
-            value={Utils.rgbToHex(Utils.take3(segmentColorRGBA))}
-            disabled={isEditingDisabled}
-            style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              width: "100%",
-              opacity: 0,
-              cursor: isEditingDisabled ? "unset" : "pointer",
-            }}
-            onChange={(event) => {
-              if (isEditingDisabled || visibleSegmentationLayer == null) {
-                return;
-              }
-
-              let color = Utils.hexToRgb(event.target.value);
-              color = Utils.map3((component) => component / 255, color);
-              updateSegment(
-                segment.id,
-                {
-                  color: [color[0], color[1], color[2]],
-                },
-                visibleSegmentationLayer.name,
-              );
-            }}
-          />
-        </div>
+        <ChangeColorMenuItemContent
+          isDisabled={isEditingDisabled}
+          title="Change Segment Color"
+          onSetColor={(color) => {
+            if (visibleSegmentationLayer == null) {
+              return;
+            }
+            updateSegment(
+              segment.id,
+              {
+                color,
+              },
+              visibleSegmentationLayer.name,
+            );
+          }}
+          rgb={Utils.take3(segmentColorRGBA)}
+          hidePickerIcon
+        />
       </Menu.Item>
 
       <Menu.Item

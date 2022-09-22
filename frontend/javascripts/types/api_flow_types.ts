@@ -633,8 +633,9 @@ export type ServerSkeletonTracingTree = {
 type ServerSegment = {
   segmentId: number;
   name: string | null | undefined;
-  anchorPosition: Point3;
+  anchorPosition: Point3 | null | undefined;
   creationTime: number | null | undefined;
+  color: ColorObject | null;
 };
 export type ServerTracingBase = {
   id: string;
@@ -684,6 +685,7 @@ export type ServerEditableMapping = {
   createdTimestamp: number;
   version: number;
   mappingName: string;
+  baseMappingName: string;
   // The id of the volume tracing the editable mapping belongs to
   tracingId: string;
 };

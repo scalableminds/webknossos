@@ -14,7 +14,7 @@ case class NamedBoundingBox(id: Int,
                             boundingBox: BoundingBox)
     extends ProtoGeometryImplicits
     with SkeletonUpdateActionHelper {
-  def toProto: ProtoBoundingBox = ProtoBoundingBox(id, name, isVisible, convertColorOpt(color), boundingBox)
+  def toProto: ProtoBoundingBox = ProtoBoundingBox(id, name, isVisible, colorOptToProto(color), boundingBox)
 }
 
 object NamedBoundingBox { implicit val jsonFormat: OFormat[NamedBoundingBox] = Json.format[NamedBoundingBox] }

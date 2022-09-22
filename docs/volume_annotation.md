@@ -36,6 +36,20 @@ In the `Segmentation` tab on the right-hand side panel, you can see the segment 
 
 The active segment ID under the cursor can be found in the status bar at the bottom of the screen or through the context-sensitive menu on right-click.
 
+### Segments List
+
+The right-hand side panel offers a `Segments` tab that lists segments and allows to edit these.
+A segment is added to the list as soon as it was clicked in the data viewport.
+The following functionality is available for each segment:
+
+- jumping to the segment (via left-click; this uses the position at which the segment was initially registered)
+- naming the segment
+- loading meshes for the segments (ad-hoc and precomputed if available)
+- changing the color of the segment
+- activating the segment id (so that you can annotate with that id)
+
+![Segments Tab](images/segments_tab2.jpeg)
+
 ### Merging volume annotation with fallback data
 
 After finishing the annotation of a volume layer with a fallback layer, the combined state of these layers can be materialized into a new dataset. For this, go to the layer settings in the left border tab. On the top right of the volume layer is the following button:

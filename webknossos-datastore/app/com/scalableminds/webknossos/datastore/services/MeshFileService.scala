@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -11,6 +12,7 @@ import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
 
+import java.io.ByteArrayInputStream
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
 import scala.collection.JavaConverters._
@@ -55,6 +57,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   private val meshesDir = "meshes"
   private val meshFileExtension = "hdf5"
   private val defaultLevelOfDetail = 0
+  private def hashFn: Long => Long = identity
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
 
@@ -110,6 +113,107 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .toList
       Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
     }.flatten ?~> "mesh.file.open.failed"
+  }
+
+  def listMeshChunksForSegmentNewFormat(organizationName: String,
+                                        dataSetName: String,
+                                        dataLayerName: String,
+                                        listMeshChunksRequest: ListMeshChunksRequest): Fox[List[Vec3Int]] = {
+    val meshFilePath =
+      dataBaseDir
+        .resolve(organizationName)
+        .resolve(dataSetName)
+        .resolve(dataLayerName)
+        .resolve(meshesDir)
+        .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
+
+    safeExecute(meshFilePath) { cachedMeshFile =>
+//      val chunkPositionLiterals = cachedMeshFile.reader
+//        .`object`()
+//        .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
+//        .asScala
+//        .toList
+//      Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
+      val segmentId = listMeshChunksRequest.segmentId
+      val (neuroglancerStart, neuroglancerEnd) = getNeuroglancerOffsets(segmentId, cachedMeshFile)
+      val manifest = cachedMeshFile.reader
+        .uint8()
+        .readArrayBlockWithOffset("neuroglancer", (neuroglancerEnd - neuroglancerStart).toInt, neuroglancerStart)
+      val byteInput = new ByteArrayInputStream(manifest)
+      val dis = new LittleEndianDataInputStream(byteInput)
+      // todo use vec3int
+      val chunkShape = new Array[Float](3)
+      for (d <- 0 until 3) {
+        chunkShape(d) = dis.readFloat
+      }
+      // todo use vec3int
+      val gridOrigin = new Array[Float](3)
+      for (d <- 0 until 3) {
+        gridOrigin(d) = dis.readFloat
+      }
+      // TODO should uint
+      val numLods = dis.readInt()
+      val lodScales = new Array[Float](numLods)
+      for (d <- 0 until numLods) {
+        lodScales(d) = dis.readFloat()
+      }
+      // TODO use vec3int
+      val vertexOffsets = new Array[Array[Float]](numLods)
+      for (d <- 0 until numLods) {
+        for (x <- 0 until 3) {
+          vertexOffsets(d)(x) = dis.readFloat()
+        }
+      }
+      // TODO should be uint
+      val numFragmentsPerLod = new Array[Int](numLods)
+      for (lod <- 0 until numLods) {
+        numFragmentsPerLod(lod) = dis.readInt()
+      }
+      // TODO should be uint
+      val fragmentPositions = new Array[Array[Array[Int]]](numLods)
+      val fragmentPositionsVec3 = new Array[Array[Vec3Int]](numLods)
+      val fragmentOffsets = new Array[Array[Int]](numLods)
+      for (lod <- 0 until numLods) {
+        // TODO is that the right order??
+        for (row <- 0 until 3) {
+          for (col <- 0 until numFragmentsPerLod(lod)) {
+            fragmentPositions(lod)(row)(col) = dis.readInt()
+          }
+        }
+        // TODO make functional, this is a mess
+        for (col <- 0 until numFragmentsPerLod(lod)) {
+          fragmentPositionsVec3(lod)(col) =
+            Vec3Int(fragmentPositions(lod)(0)(col), fragmentPositions(lod)(1)(col), fragmentPositions(lod)(2)(col))
+        }
+
+        for (row <- 0 until numFragmentsPerLod(lod)) {
+          fragmentOffsets(lod)(row) = dis.readInt()
+        }
+      }
+      val DEFAULT_LOD = 1
+      fragmentPositionsVec3(DEFAULT_LOD).toList
+    }
+  }
+
+  private def getNeuroglancerOffsets(segmentId: Long, cachedMeshFile: CachedHdf5File): (Long, Long) = {
+    val nBuckets = cachedMeshFile.reader.uint64().getAttr("/", "metadata/n_buckets")
+    // TODO get hashfunction from metadata
+    val bucketIndex = hashFn(segmentId) % nBuckets
+    val cappedBucketIndex = bucketIndex.toInt
+    val bucketOffsets = cachedMeshFile.reader.uint64().readArrayBlockWithOffset("bucket_offsets", 2, bucketIndex)
+    val bucketStart = bucketOffsets(cappedBucketIndex)
+    val cappedBucketStart = bucketStart.toInt
+    val bucketEnd = bucketOffsets(cappedBucketIndex + 1)
+    val cappedBucketEnd = bucketEnd.toInt
+    // TODO is this access correct?
+    val buckets = cachedMeshFile.reader
+      .uint64()
+      .readMatrixBlockWithOffset("buckets", cappedBucketEnd - cappedBucketStart + 1, 3, bucketStart, 0)
+    // TODO does this work as intended?
+    val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
+    val neuroglancerStart = buckets(bucketLocalOffset)(1)
+    val neuroglancerEnd = buckets(bucketLocalOffset)(2)
+    (neuroglancerStart, neuroglancerEnd)
   }
 
   def readMeshChunk(organizationName: String,

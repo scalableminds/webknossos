@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Sharing links are shortened by default. Within the sharing modal, this shortening behavior can be disabled. [#6461](https://github.com/scalableminds/webknossos/pull/6461)
 - Removed optional "resolution" parameter from /datasets/:organizationName/:dataSetName/layers/:dataLayerName/data route. Use mag instead. [#6479](https://github.com/scalableminds/webknossos/pull/6479)
 - Changed how volumes containing no data are stored. Now the selection of magnifications is correctly exported and imported. [#6481](https://github.com/scalableminds/webknossos/pull/6481)
+- Creating tasks no longer requires the usage of the taskTypeId. The task type summary can be used instead. [#6486](https://github.com/scalableminds/webknossos/pull/6486)
 
 ### Fixed
 - Fixed sharing button for users who are currently visiting a dataset or annotation which was shared with them. [#6438](https://github.com/scalableminds/webknossos/pull/6438)

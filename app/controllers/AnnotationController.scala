@@ -370,8 +370,8 @@ class AnnotationController @Inject()(
         _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         name = (request.body \ "name").asOpt[String]
         description = (request.body \ "description").asOpt[String]
-        visibility = (request.body \ "visibility").asOpt[String]
-        _ <- if (visibility.contains("Private"))
+        visibility = (request.body \ "visibility").asOpt[AnnotationVisibility.Value]
+        _ <- if (visibility.contains(AnnotationVisibility.Private))
           annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
         else Fox.successful(())
         tags = (request.body \ "tags").asOpt[List[String]]

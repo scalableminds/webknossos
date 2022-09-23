@@ -257,7 +257,7 @@ function TaskCreateBulkView() {
             Specify each new task on a separate line as comma seperated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskType</a>, experienceDomain,
+            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskType (ID or summary)</a>, experienceDomain,
             minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
             depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>,
             baseAnnotationId]
@@ -299,7 +299,7 @@ function TaskCreateBulkView() {
             >
               <TextArea
                 className="input-monospace"
-                placeholder="dataset, taskType, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
+                placeholder="dataset, taskType (ID or summary), experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
                 autoSize={{
                   minRows: 6,
                 }}

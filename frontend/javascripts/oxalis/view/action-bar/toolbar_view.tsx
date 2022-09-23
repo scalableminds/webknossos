@@ -417,17 +417,13 @@ function CreateCellButton() {
     return hslaToCSS(getSegmentColorAsHSL(state, activeCellId));
   });
 
-  if (!activeCellId || !activeCellColor) {
-    return null;
-  }
-
   const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
   return (
     <Badge
       dot
       style={{
         boxShadow: "none",
-        background: activeCellColor,
+        background: activeCellColor || "transparent",
         zIndex: 1000,
       }}
     >

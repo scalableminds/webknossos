@@ -234,7 +234,10 @@ function VersionList(props: Props) {
   });
   const flattenedVersions = _.flatten(versions?.pages.map((page) => page.data) || []);
   const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
-  const batchesAndDateStrings = _.flattenDepth(Object.entries(groupedAndChunkedVersions), 2);
+  const batchesAndDateStrings = _.flattenDepth(
+    Object.entries(groupedAndChunkedVersions),
+    2,
+  ) as Array<string | APIUpdateActionBatch[]>;
 
   useEffect(() => {
     // Remove all previous existent queries so that the content of this view
@@ -289,7 +292,6 @@ function VersionList(props: Props) {
               </List.Item>
             ) : (
               <VersionEntryGroup
-                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
                 batches={batchesOrDateString}
                 allowUpdate={props.allowUpdate}
                 newestVersion={flattenedVersions[0].version}
@@ -298,7 +300,6 @@ function VersionList(props: Props) {
                   handleRestoreVersion(props, flattenedVersions, version)
                 }
                 onPreviewVersion={(version) => handlePreviewVersion(props, version)}
-                // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'APIUpda... Remove this comment to see the full error message
                 key={batchesOrDateString[0].version}
               />
             )

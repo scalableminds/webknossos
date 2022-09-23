@@ -190,6 +190,7 @@ export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.FILL_CELL,
   AnnotationToolEnum.PICK_CELL,
+  AnnotationToolEnum.RECTANGLE,
 ];
 export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,

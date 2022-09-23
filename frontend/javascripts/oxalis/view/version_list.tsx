@@ -27,7 +27,7 @@ import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 
-const ENTRIES_PER_PAGE = 50;
+const ENTRIES_PER_PAGE = 5;
 
 type Props = {
   versionedObjectType: SaveQueueType;

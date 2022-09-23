@@ -27,6 +27,7 @@ import { jsonStringify, parseAsMaybe } from "libs/utils";
 import { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
+import { DeleteOutlined } from "@ant-design/icons";
 
 const FormItem = Form.Item;
 
@@ -56,12 +57,14 @@ export const syncDataSourceFields = (
 };
 
 export default function DatasetSettingsDataTab({
+  isEditingMode,
   isReadOnlyDataset,
   form,
   activeDataSourceEditMode,
   onChange,
   additionalAlert,
 }: {
+  isEditingMode: boolean;
   isReadOnlyDataset: boolean;
   form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
@@ -118,8 +121,8 @@ export default function DatasetSettingsDataTab({
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
           <SimpleDatasetForm
+            isEditingMode={isEditingMode}
             isReadOnlyDataset={isReadOnlyDataset}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ isReadOnlyDataset: boolean; form: FormInst... Remove this comment to see the full error message
             form={form}
             dataSource={dataSource}
           />
@@ -149,13 +152,29 @@ export default function DatasetSettingsDataTab({
 }
 
 function SimpleDatasetForm({
+  isEditingMode,
   isReadOnlyDataset,
   dataSource,
+  form,
 }: {
+  isEditingMode: boolean;
   isReadOnlyDataset: boolean;
   dataSource: Record<string, any>;
+  form: FormInstance;
 }) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const onRemoveLayer = (layer: DataLayer) => {
+    const oldLayers = form.getFieldValue(["dataSource", "dataLayers"]);
+    const newLayers = oldLayers.filter(
+      (existingLayer: DataLayer) => existingLayer.name !== layer.name,
+    );
+    form.setFieldsValue({
+      dataSource: {
+        dataLayers: newLayers,
+      },
+    });
+    syncDataSourceFields(form, "advanced");
+  };
   return (
     <div>
       <List
@@ -182,7 +201,7 @@ function SimpleDatasetForm({
                 label="Name"
                 info="The name of the dataset"
                 validateFirst
-                rules={getDatasetNameRules(activeUser)}
+                rules={getDatasetNameRules(activeUser, isEditingMode)}
               >
                 <Input
                   disabled={isReadOnlyDataset}
@@ -239,7 +258,12 @@ function SimpleDatasetForm({
       >
         {dataSource?.dataLayers?.map((layer: DataLayer, idx: number) => (
           <List.Item key={`layer-${layer.name}`}>
-            <SimpleLayerForm isReadOnlyDataset={isReadOnlyDataset} layer={layer} index={idx} />
+            <SimpleLayerForm
+              isReadOnlyDataset={isReadOnlyDataset}
+              layer={layer}
+              index={idx}
+              onRemoveLayer={onRemoveLayer}
+            />
           </List.Item>
         ))}
       </List>
@@ -259,182 +283,194 @@ function SimpleLayerForm({
   isReadOnlyDataset,
   layer,
   index,
+  onRemoveLayer,
 }: {
   isReadOnlyDataset: boolean;
   layer: DataLayer;
   index: number;
+  onRemoveLayer: (layer: DataLayer) => void;
 }) {
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
   const isSegmentation = category === "segmentation";
   const bitDepth = getBitDepth(layer);
 
+  const mayLayerBeRemoved = !isReadOnlyDataset;
+
   return (
-    <Row
-      gutter={48}
+    <div
       style={{
         width: "100%",
       }}
     >
-      <Col span={10}>
-        <FormItemWithInfo
-          name={["dataSource", "dataLayers", index, "name"]}
-          label="Name"
-          style={{
-            marginBottom: 24,
-          }}
-          info="The name of the layer."
-          rules={[
-            {
-              required: true,
-              message: "Please provide a valid layer name.",
-            },
-            ...layerNameRules,
-          ]}
-        >
-          <Input
-            // the name of a layer depends on the folder name in wkw. Therefore, don't allow
-            // editing the layer name for wkw.
-            disabled={isReadOnlyDataset || layer.dataFormat === "wkw"}
-            style={{
-              width: 300,
-            }}
-          />
-        </FormItemWithInfo>
-
-        <Space size="large">
+      {mayLayerBeRemoved && (
+        <div style={{ float: "right" }}>
+          <Tooltip title="Remove Layer">
+            <DeleteOutlined onClick={() => onRemoveLayer(layer)} />
+          </Tooltip>
+        </div>
+      )}
+      <Row gutter={48}>
+        <Col span={10}>
           <FormItemWithInfo
-            label="Data Format"
+            name={["dataSource", "dataLayers", index, "name"]}
+            label="Name"
             style={{
               marginBottom: 24,
             }}
-            info="The data format of the layer."
-          >
-            <Select disabled value={layer.dataFormat} style={{ width: 120 }}>
-              <Select.Option value={layer.dataFormat}>{layer.dataFormat}</Select.Option>
-            </Select>
-          </FormItemWithInfo>
-          <FormItemWithInfo
-            label="Element Class"
-            style={{
-              marginBottom: 24,
-            }}
-            info="The element class (data type) of the layer."
-          >
-            <Select disabled value={layer.elementClass} style={{ width: 120 }}>
-              <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>
-            </Select>
-          </FormItemWithInfo>
-          {"numChannels" in layer ? (
-            <FormItemWithInfo
-              label="Channel Count"
-              style={{
-                marginBottom: 24,
-              }}
-              info="The channel count of the layer."
-            >
-              <Select disabled value={layer.numChannels} style={{ width: 120 }}>
-                <Select.Option value={layer.numChannels}>{layer.numChannels}</Select.Option>
-              </Select>
-            </FormItemWithInfo>
-          ) : null}
-        </Space>
-
-        <FormItemWithInfo
-          label="Magnifications"
-          style={{
-            marginBottom: 24,
-          }}
-          info="The magnifications of the layer."
-        >
-          <Select
-            mode="multiple"
-            disabled
-            allowClear
-            value={getMags(layer).map((mag) => mag.toString())}
-            style={{ width: 360 }}
-          >
-            {getMags(layer).map((mag) => (
-              <Select.Option key={mag.toString()} value={mag.toString()}>
-                {typeof mag === "number" ? mag : mag.join("-")}
-              </Select.Option>
-            ))}
-          </Select>
-        </FormItemWithInfo>
-      </Col>
-      <Col span={12}>
-        <FormItemWithInfo
-          name={["dataSource", "dataLayers", index, "boundingBox"]}
-          label="Bounding box"
-          style={{
-            marginBottom: 24,
-          }}
-          info="The bounding box defines the extent of the data in the format x, y, z, width, height, depth (in voxel coordinates)."
-          rules={[
-            {
-              required: true,
-              message: "Please define a valid bounding box.",
-            },
-            {
-              validator: syncValidator(
-                (value: BoundingBoxObject) =>
-                  value.width !== 0 && value.height !== 0 && value.depth !== 0,
-                "Width, height and depth must not be zero",
-              ),
-            },
-          ]}
-        >
-          <BoundingBoxInput
-            disabled={isReadOnlyDataset}
-            style={{
-              width: 300,
-            }}
-          />
-        </FormItemWithInfo>
-
-        <Form.Item
-          name={["dataSource", "dataLayers", index, "category"]}
-          label="Category"
-          rules={[{ required: true }]}
-        >
-          <Select
-            placeholder="Select the category of the layer"
-            style={{
-              width: 300,
-            }}
-          >
-            <Select.Option value="color">Color / grayscale</Select.Option>
-            <Select.Option value="segmentation">Segmentation</Select.Option>
-          </Select>
-        </Form.Item>
-
-        {/* The in-condition is only necessary to satisfy TypeScript */}
-        {isSegmentation && "largestSegmentId" in layer ? (
-          <FormItemWithInfo
-            name={["dataSource", "dataLayers", index, "largestSegmentId"]}
-            label="Largest segment ID"
-            info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
-            initialValue={`${layer.largestSegmentId}`}
+            info="The name of the layer."
             rules={[
               {
                 required: true,
-                message: "Please provide a largest segment ID for the segmentation layer",
+                message: "Please provide a valid layer name.",
+              },
+              ...layerNameRules,
+            ]}
+          >
+            <Input
+              // the name of a layer depends on the folder name in wkw. Therefore, don't allow
+              // editing the layer name for wkw.
+              disabled={isReadOnlyDataset || layer.dataFormat === "wkw"}
+              style={{
+                width: 300,
+              }}
+            />
+          </FormItemWithInfo>
+
+          <Space size="large">
+            <FormItemWithInfo
+              label="Data Format"
+              style={{
+                marginBottom: 24,
+              }}
+              info="The data format of the layer."
+            >
+              <Select disabled value={layer.dataFormat} style={{ width: 120 }}>
+                <Select.Option value={layer.dataFormat}>{layer.dataFormat}</Select.Option>
+              </Select>
+            </FormItemWithInfo>
+            <FormItemWithInfo
+              label="Element Class"
+              style={{
+                marginBottom: 24,
+              }}
+              info="The element class (data type) of the layer."
+            >
+              <Select disabled value={layer.elementClass} style={{ width: 120 }}>
+                <Select.Option value={layer.elementClass}>{layer.elementClass}</Select.Option>
+              </Select>
+            </FormItemWithInfo>
+            {"numChannels" in layer ? (
+              <FormItemWithInfo
+                label="Channel Count"
+                style={{
+                  marginBottom: 24,
+                }}
+                info="The channel count of the layer."
+              >
+                <Select disabled value={layer.numChannels} style={{ width: 120 }}>
+                  <Select.Option value={layer.numChannels}>{layer.numChannels}</Select.Option>
+                </Select>
+              </FormItemWithInfo>
+            ) : null}
+          </Space>
+
+          <FormItemWithInfo
+            label="Magnifications"
+            style={{
+              marginBottom: 24,
+            }}
+            info="The magnifications of the layer."
+          >
+            <Select
+              mode="multiple"
+              disabled
+              allowClear
+              value={getMags(layer).map((mag) => mag.toString())}
+              style={{ width: 360 }}
+            >
+              {getMags(layer).map((mag) => (
+                <Select.Option key={mag.toString()} value={mag.toString()}>
+                  {typeof mag === "number" ? mag : mag.join("-")}
+                </Select.Option>
+              ))}
+            </Select>
+          </FormItemWithInfo>
+        </Col>
+        <Col span={12}>
+          <FormItemWithInfo
+            name={["dataSource", "dataLayers", index, "boundingBox"]}
+            label="Bounding box"
+            style={{
+              marginBottom: 24,
+            }}
+            info="The bounding box defines the extent of the data in the format x, y, z, width, height, depth (in voxel coordinates)."
+            rules={[
+              {
+                required: true,
+                message: "Please define a valid bounding box.",
               },
               {
-                validator: (rule, value) =>
-                  value > 0 && value < 2 ** bitDepth
-                    ? Promise.resolve()
-                    : Promise.reject(
-                        new Error(
-                          `The largest segmentation ID must be larger than 0 and smaller than 2^${bitDepth}`,
-                        ),
-                      ),
+                validator: syncValidator(
+                  (value: BoundingBoxObject) =>
+                    value.width !== 0 && value.height !== 0 && value.depth !== 0,
+                  "Width, height and depth must not be zero",
+                ),
               },
             ]}
           >
-            <InputNumber disabled={isReadOnlyDataset} />
+            <BoundingBoxInput
+              disabled={isReadOnlyDataset}
+              style={{
+                width: 300,
+              }}
+            />
           </FormItemWithInfo>
-        ) : null}
-      </Col>
-    </Row>
+
+          <Form.Item
+            name={["dataSource", "dataLayers", index, "category"]}
+            label="Category"
+            rules={[{ required: true }]}
+          >
+            <Select
+              placeholder="Select the category of the layer"
+              style={{
+                width: 300,
+              }}
+            >
+              <Select.Option value="color">Color / grayscale</Select.Option>
+              <Select.Option value="segmentation">Segmentation</Select.Option>
+            </Select>
+          </Form.Item>
+
+          {/* The in-condition is only necessary to satisfy TypeScript */}
+          {isSegmentation && "largestSegmentId" in layer ? (
+            <FormItemWithInfo
+              name={["dataSource", "dataLayers", index, "largestSegmentId"]}
+              label="Largest segment ID"
+              info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
+              initialValue={`${layer.largestSegmentId}`}
+              rules={[
+                {
+                  required: true,
+                  message: "Please provide a largest segment ID for the segmentation layer",
+                },
+                {
+                  validator: (rule, value) =>
+                    value > 0 && value < 2 ** bitDepth
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(
+                            `The largest segmentation ID must be larger than 0 and smaller than 2^${bitDepth}`,
+                          ),
+                        ),
+                },
+              ]}
+            >
+              <InputNumber disabled={isReadOnlyDataset} />
+            </FormItemWithInfo>
+          ) : null}
+        </Col>
+      </Row>
+    </div>
   );
 }

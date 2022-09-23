@@ -842,6 +842,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                     {form && (
                       <DatasetSettingsDataTab
                         key="SimpleAdvancedDataForm"
+                        isEditingMode={this.props.isEditingMode}
                         isReadOnlyDataset={
                           this.state.dataset != null && this.state.dataset.dataStore.isConnector
                         }

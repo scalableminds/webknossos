@@ -50,7 +50,10 @@ export const layerNameRules = [
   },
 ];
 
-export const getDatasetNameRules = (activeUser: APIUser | null | undefined) => [
+export const getDatasetNameRules = (
+  activeUser: APIUser | null | undefined,
+  isEditing: boolean = false,
+) => [
   {
     required: true,
     message: messages["dataset.import.required.name"],
@@ -58,6 +61,9 @@ export const getDatasetNameRules = (activeUser: APIUser | null | undefined) => [
   ...layerNameRules,
   {
     validator: async (_rule: any, value: string) => {
+      if (isEditing) {
+        return Promise.resolve();
+      }
       if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
       const reasons = await isDatasetNameValid({
         name: value,

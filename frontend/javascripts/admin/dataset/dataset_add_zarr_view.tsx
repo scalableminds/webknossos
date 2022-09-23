@@ -1,4 +1,4 @@
-import { Form, Input, Button, Col, Radio, Row, Collapse, FormInstance, Modal } from "antd";
+import { Form, Input, Button, Col, Radio, Row, Collapse, FormInstance, Modal, Divider } from "antd";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
@@ -169,11 +169,14 @@ function DatasetAddZarrView(props: Props) {
             />
           </Hideable>
           {!hideDatasetUI && (
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-              <Button type="link" onClick={() => setShowAddLayerModal(true)}>
-                Add Layer
-              </Button>
-            </div>
+            <>
+              <Divider />
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+                <Button type="link" onClick={() => setShowAddLayerModal(true)}>
+                  Add Layer
+                </Button>
+              </div>
+            </>
           )}
           <Row gutter={8}>
             <Col span={6} />

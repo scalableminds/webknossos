@@ -80,9 +80,7 @@ async function handleRestoreVersion(
   versions: APIUpdateActionBatch[],
   version: number,
 ) {
-  const getNewestVersion = () => {
-    return _.max(versions.map((batch) => batch.version)) || 0;
-  };
+  const getNewestVersion = () => _.max(versions.map((batch) => batch.version)) || 0;
   if (props.allowUpdate) {
     Store.dispatch(
       setVersionNumberAction(
@@ -129,7 +127,6 @@ function handlePreviewVersion(props: Props, version: number) {
   }
 }
 
-// eslint-disable-next-line react/sort-comp
 const getGroupedAndChunkedVersions = _.memoize(
   (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
     // This function first groups the versions by day, where the key is the output of the moment calendar function.
@@ -159,7 +156,7 @@ async function getUpdateActionLogPage(
   // 0 is the "newest" page (i.e., the page in which the base version is)
   relativePageNumber: number,
 ) {
-  if (ENTRIES_PER_PAGE % 10 != 0) {
+  if (ENTRIES_PER_PAGE % 10 !== 0) {
     // Otherwise, the oldestVersion === 1 condition at the end of this
     // function would not work correctly.
     throw new Error("ENTRIES_PER_PAGE should be divisible by 10.");
@@ -306,7 +303,7 @@ function VersionList(props: Props) {
               />
             )
           }
-        ></List>
+        />
       )}
       {hasNextPage && (
         <div style={{ display: "flex", justifyContent: "center", margin: 12 }}>

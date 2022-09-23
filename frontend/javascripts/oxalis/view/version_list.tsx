@@ -1,4 +1,4 @@
-import { List } from "antd";
+import { Button, List } from "antd";
 import React, { useState, useEffect } from "react";
 import _ from "lodash";
 import moment from "moment";
@@ -25,6 +25,9 @@ import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+
+const ENTRIES_PER_PAGE = 50;
 
 type Props = {
   versionedObjectType: SaveQueueType;
@@ -147,73 +150,172 @@ const getGroupedAndChunkedVersions = _.memoize(
   },
 );
 
-function VersionList(props: Props) {
-  const [versions, setVersions] = useState<APIUpdateActionBatch[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const groupedAndChunkedVersions = getGroupedAndChunkedVersions(versions);
-
-  const batchesAndDateStrings = _.flattenDepth(Object.entries(groupedAndChunkedVersions), 2);
-
-  async function fetchData() {
-    const { tracingId } = props.tracing;
-    const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
-    setIsLoading(true);
-
-    try {
-      const updateActionLog = await getUpdateActionLog(
-        tracingStoreUrl,
-        tracingId,
-        props.versionedObjectType,
-      );
-      // Insert version 0
-      updateActionLog.push({
-        version: 0,
-        value: [serverCreateTracing(props.tracing.createdTimestamp)],
-      });
-      setVersions(updateActionLog);
-    } catch (error) {
-      handleGenericError(error as Error);
-    } finally {
-      setIsLoading(false);
-    }
+async function getUpdateActionLogPage(
+  props: Props,
+  tracingStoreUrl: string,
+  tracingId: string,
+  versionedObjectType: SaveQueueType,
+  baseVersion: number,
+  // 0 is the "newest" page (i.e., the page in which the base version is)
+  relativePageNumber: number,
+) {
+  if (ENTRIES_PER_PAGE % 10 != 0) {
+    // Otherwise, the oldestVersion === 1 condition at the end of this
+    // function would not work correctly.
+    throw new Error("ENTRIES_PER_PAGE should be divisible by 10.");
   }
 
+  // For example, the following parameters would be a valid variable set:
+  // baseVersion = 23
+  // relativePageNumber = 1
+  // absolutePageNumber = 10
+  // newestVersion = 22
+  // oldestVersion = 20
+  const absolutePageNumber = Math.floor(baseVersion / ENTRIES_PER_PAGE) - relativePageNumber;
+  if (absolutePageNumber < 0) {
+    throw new Error("Negative absolute page number received.");
+  }
+  const newestVersion = (1 + absolutePageNumber) * ENTRIES_PER_PAGE;
+  // The backend won't send the version 0 as that does not exist. The frontend however
+  // shows that as the initial version.
+  const oldestVersion = Math.max(absolutePageNumber * ENTRIES_PER_PAGE + 1, 1);
+
+  const updateActionLog = await getUpdateActionLog(
+    tracingStoreUrl,
+    tracingId,
+    versionedObjectType,
+    oldestVersion,
+    newestVersion,
+  );
+
+  // Insert version 0
+  if (oldestVersion === 1) {
+    updateActionLog.unshift({
+      version: 0,
+      value: [serverCreateTracing(props.tracing.createdTimestamp)],
+    });
+  }
+
+  const nextPage = oldestVersion > 1 ? relativePageNumber + 1 : undefined;
+
+  return { data: updateActionLog, nextPage };
+}
+
+function VersionList(props: Props) {
+  const queryClient = useQueryClient();
+  // Remember the version with which the version view was opened (
+  // the active version could change by the actions of the user).
+  // Based on this version, the page numbers are calculated.
+  const [baseVersion] = useState(props.tracing.version);
+
+  function fetchPaginatedVersions({ pageParam = 0 }) {
+    const { tracingId } = props.tracing;
+    const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
+
+    return getUpdateActionLogPage(
+      props,
+      tracingStoreUrl,
+      tracingId,
+      props.versionedObjectType,
+      baseVersion,
+      pageParam,
+    );
+  }
+
+  const queryKey = ["versions", props.tracing.tracingId];
+  const {
+    data: versions,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+  } = useInfiniteQuery(queryKey, fetchPaginatedVersions, {
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+  });
+  const flattenedVersions = _.flatten(versions?.pages.map((page) => page.data) || []);
+  const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
+  const batchesAndDateStrings = _.flattenDepth(Object.entries(groupedAndChunkedVersions), 2);
+
   useEffect(() => {
+    // Remove all previous existent queries so that the content of this view
+    // is loaded from scratch. This is important since the loaded page numbers
+    // are relative to the base version. If the version of the tracing changed,
+    // old pages are not valid anymore.
+    queryClient.removeQueries(queryKey);
     Store.dispatch(setAnnotationAllowUpdateAction(false));
-    fetchData();
   }, []);
 
+  useEffect(() => {
+    // The initially loaded page could be quite short (e.g., if
+    // ENTRIES_PER_PAGE is 100 and the current version is 105, the first
+    // page will only contain 5 items). In that case, also load the next
+    // page.
+    if (
+      flattenedVersions.length === 0 ||
+      flattenedVersions.length > ENTRIES_PER_PAGE ||
+      baseVersion < ENTRIES_PER_PAGE
+    ) {
+      // No need to pre-fetch the next page.
+      return;
+    }
+    if (hasNextPage || !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [flattenedVersions, hasNextPage, isFetchingNextPage]);
+
+  useEffect(() => {
+    if (error) {
+      handleGenericError(error as Error);
+    }
+  }, [error]);
+
   return (
-    <List
-      dataSource={batchesAndDateStrings}
-      loading={isLoading}
-      locale={VERSION_LIST_PLACEHOLDER}
-      renderItem={(batchesOrDateString) =>
-        _.isString(batchesOrDateString) ? (
-          <List.Item className="version-section">
-            <div
-              style={{
-                margin: "auto",
-              }}
-            >
-              {batchesOrDateString}
-            </div>
-          </List.Item>
-        ) : (
-          <VersionEntryGroup
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-            batches={batchesOrDateString}
-            allowUpdate={props.allowUpdate}
-            newestVersion={versions[0].version}
-            activeVersion={props.tracing.version}
-            onRestoreVersion={(version) => handleRestoreVersion(props, versions, version)}
-            onPreviewVersion={(version) => handlePreviewVersion(props, version)}
-            // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'APIUpda... Remove this comment to see the full error message
-            key={batchesOrDateString[0].version}
-          />
-        )
-      }
-    ></List>
+    <div>
+      {flattenedVersions && (
+        <List
+          dataSource={batchesAndDateStrings}
+          loading={isFetching}
+          locale={VERSION_LIST_PLACEHOLDER}
+          renderItem={(batchesOrDateString) =>
+            _.isString(batchesOrDateString) ? (
+              <List.Item className="version-section">
+                <div
+                  style={{
+                    margin: "auto",
+                  }}
+                >
+                  {batchesOrDateString}
+                </div>
+              </List.Item>
+            ) : (
+              <VersionEntryGroup
+                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
+                batches={batchesOrDateString}
+                allowUpdate={props.allowUpdate}
+                newestVersion={flattenedVersions[0].version}
+                activeVersion={props.tracing.version}
+                onRestoreVersion={(version) =>
+                  handleRestoreVersion(props, flattenedVersions, version)
+                }
+                onPreviewVersion={(version) => handlePreviewVersion(props, version)}
+                // @ts-expect-error ts-migrate(2339) FIXME: Property 'version' does not exist on type 'APIUpda... Remove this comment to see the full error message
+                key={batchesOrDateString[0].version}
+              />
+            )
+          }
+        ></List>
+      )}
+      {hasNextPage && (
+        <div style={{ display: "flex", justifyContent: "center", margin: 12 }}>
+          <Button onClick={() => fetchNextPage()} disabled={!hasNextPage || isFetchingNextPage}>
+            {isFetchingNextPage ? "Loading more..." : "Load More"}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -17,7 +17,6 @@ import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
@@ -38,7 +37,8 @@ import constants, {
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import window from "libs/window";
-import { setSceneController } from "./scene_controller_provider";
+import { setSceneController } from "oxalis/controller/scene_controller_provider";
+import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
 
 const CUBE_COLOR = 0x999999;
 
@@ -194,14 +194,20 @@ class SceneController {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
-  constructSceneMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
-    const [hue] = jsConvertCellIdToHSLA(cellId);
-    const color = new THREE.Color().setHSL(hue, 0.75, 0.05);
+  getColorObjectForSegment(cellId: number) {
+    const [hue, saturation, light] = getSegmentColorAsHSL(Store.getState(), cellId);
+    const color = new THREE.Color().setHSL(hue, 0.75 * saturation, light / 10);
+    return color;
+  }
+
+  constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
+    const color = this.getColorObjectForSegment(cellId);
     const meshMaterial = new THREE.MeshLambertMaterial({
       color,
     });
     meshMaterial.side = THREE.FrontSide;
     meshMaterial.transparent = true;
+
     const mesh = new THREE.Mesh(geometry, meshMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -237,7 +243,7 @@ class SceneController {
 
     const meshNumber = _.size(this.stlMeshes);
 
-    const mesh = this.constructSceneMesh(meshNumber, geometry, false);
+    const mesh = this.constructIsosurfaceMesh(meshNumber, geometry, false);
     this.meshesRootGroup.add(mesh);
     this.stlMeshes[id] = mesh;
     this.updateMeshPostion(id, position);
@@ -269,8 +275,6 @@ class SceneController {
     segmentationId: number,
     passive: boolean = false,
   ): void {
-    const mesh = this.constructSceneMesh(segmentationId, geometry, passive);
-
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       const newGroup = new THREE.Group();
       this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
@@ -280,6 +284,7 @@ class SceneController {
       // @ts-ignore
       newGroup.passive = passive;
     }
+    const mesh = this.constructIsosurfaceMesh(segmentationId, geometry, passive);
 
     this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
@@ -319,6 +324,17 @@ class SceneController {
     this.isosurfacesGroupsPerSegmentationId[id].visible = visibility;
   }
 
+  setIsosurfaceColor(id: number): void {
+    const color = this.getColorObjectForSegment(id);
+    const group = this.isosurfacesGroupsPerSegmentationId[id];
+    if (group) {
+      for (const child of group.children) {
+        // @ts-ignore
+        child.material.color = color;
+      }
+    }
+  }
+
   updateMeshPostion(id: string, position: Vector3): void {
     const [x, y, z] = position;
     const mesh = this.stlMeshes[id];
@@ -351,7 +367,6 @@ class SceneController {
       this.contour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
 
       this.rectangleContour = new RectangleGeometry();
-      window.rectangleContour = this.rectangleContour;
       this.rectangleContour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
     }
 

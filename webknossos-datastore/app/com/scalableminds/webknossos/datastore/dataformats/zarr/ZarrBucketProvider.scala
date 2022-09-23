@@ -1,18 +1,16 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
-import java.nio.file.{FileSystem, Path}
-
+import java.nio.file.Path
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
-import com.scalableminds.webknossos.datastore.jzarr.ZarrArray
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrArray
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.ExecutionContext
 
@@ -33,7 +31,7 @@ class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLoggi
 class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging with RateLimitedErrorLogging {
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCubeHandle] = {
-    val zarrMagOpt: Option[ZarrMag] =
+    val zarrMagOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
     zarrMagOpt match {
@@ -53,21 +51,4 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
     }
 
   }
-
-  private def remotePathFrom(remoteSource: RemoteSourceDescriptor): Option[Path] =
-    FileSystemsHolder.getOrCreate(remoteSource).map { fileSystem: FileSystem =>
-      fileSystem.getPath(remoteSource.remotePath)
-    }
-
-  private def localPathFrom(readInstruction: DataReadInstruction, relativeMagPath: String): Option[Path] = {
-    val magPath = readInstruction.baseDir
-      .resolve(readInstruction.dataSource.id.team)
-      .resolve(readInstruction.dataSource.id.name)
-      .resolve(readInstruction.dataLayer.name)
-      .resolve(relativeMagPath)
-    if (magPath.toFile.exists()) {
-      Some(magPath)
-    } else None
-  }
-
 }

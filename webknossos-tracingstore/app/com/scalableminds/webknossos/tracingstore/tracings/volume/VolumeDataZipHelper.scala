@@ -39,8 +39,8 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
     val resolutionSet = new mutable.HashSet[Vec3Int]()
     ZipIO.withUnziped(zipFile) {
       case (fileName, _) =>
-        parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-          resolutionSet.add(bucketPosition.mag)
+        getMagFromWKWHeaderFilePath(fileName.toString).map { mag: Vec3Int =>
+          resolutionSet.add(mag)
         }
     }
     resolutionSet.toSet

@@ -8,15 +8,11 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesParser, ZarrMag, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesParser, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.{OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.jzarr.{
-  ArrayOrder,
-  AxisOrder,
-  OmeNgffGroupHeader,
-  OmeNgffHeader,
-  ZarrHeader
-}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -181,23 +177,28 @@ class VolumeTracingController @Inject()(
                 boundingBox: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+        val userToken = urlOrHeaderToken(token, request)
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, userToken) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            _ <- bool2Fox(!tracing.getMappingIsEditable) ?~> "Duplicate is not yet implemented for editable mapping annotations"
             dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
             resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            (newId, newTracing) <- tracingService.duplicate(tracingId,
-                                                            tracing,
-                                                            fromTask.getOrElse(false),
-                                                            dataSetBoundingBox,
-                                                            resolutionRestrictions,
-                                                            editPositionParsed,
-                                                            editRotationParsed,
-                                                            boundingBoxParsed)
+            newEditableMappingId <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
+              editableMappingService.duplicate(tracing.mappingName, tracing, userToken))
+            (newId, newTracing) <- tracingService.duplicate(
+              tracingId,
+              tracing,
+              fromTask.getOrElse(false),
+              dataSetBoundingBox,
+              resolutionRestrictions,
+              editPositionParsed,
+              editRotationParsed,
+              boundingBoxParsed,
+              newEditableMappingId
+            )
             _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
           } yield Ok(Json.toJson(newId))
         }
@@ -383,7 +384,7 @@ class VolumeTracingController @Inject()(
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
-            mags = tracing.resolutions.toList.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
+            mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz))),
             mappings = None,
             numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
           )

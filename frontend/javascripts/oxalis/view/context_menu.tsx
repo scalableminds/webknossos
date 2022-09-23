@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input } from "antd";
+import { Dropdown, Empty, Menu, notification, Tooltip, Popover, Input, MenuItemProps } from "antd";
 import { connect, useDispatch, useSelector } from "react-redux";
 import React, { useEffect } from "react";
 import type {
@@ -39,7 +39,6 @@ import {
 import {
   deleteEdgeAction,
   mergeTreesAction,
-  minCutAgglomerateAction,
   deleteNodeAction,
   setActiveNodeAction,
   createTreeAction,
@@ -84,6 +83,11 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Store from "oxalis/store";
+import {
+  minCutAgglomerateAction,
+  minCutAgglomerateWithPositionAction,
+  proofreadMerge,
+} from "oxalis/model/actions/proofread_actions";
 const { SubMenu } = Menu;
 
 /* eslint-disable react/no-unused-prop-types */
@@ -145,8 +149,11 @@ type NoNodeContextMenuProps = Props & {
   activeTool: AnnotationTool;
   infoRows: Array<React.ReactNode>;
 };
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'typeof MenuItem' is not assignab... Remove this comment to see the full error message
-const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
+
+const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation<
+  MenuItemProps,
+  typeof Menu.Item
+>(Menu.Item);
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
@@ -670,6 +677,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const dispatch = useDispatch();
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   const isConnectomeMappingEnabled = useSelector(hasConnectomeFile);
+
   useEffect(() => {
     (async () => {
       await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
@@ -705,6 +713,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     dispatch(loadAdHocMeshAction(segmentId, globalPosition));
   };
 
+  const activeNodeId = skeletonTracing?.activeNodeId;
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const skeletonActions =
@@ -736,6 +745,39 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
               </Tooltip>
             )}
           </Menu.Item>,
+          isAgglomerateMappingEnabled.value ? (
+            <Menu.Item
+              key="merge-agglomerate-skeleton"
+              disabled={activeNodeId == null}
+              onClick={() => Store.dispatch(proofreadMerge(globalPosition))}
+            >
+              {activeNodeId != null ? (
+                <span>Merge with active segment</span>
+              ) : (
+                <Tooltip title={"Cannot merge because there's no active node id."}>
+                  <span>Merge with active segment</span>
+                </Tooltip>
+              )}
+            </Menu.Item>
+          ) : null,
+          isAgglomerateMappingEnabled.value ? (
+            <Menu.Item
+              key="min-cut-agglomerate-at-position"
+              disabled={activeNodeId == null}
+              onClick={() =>
+                activeNodeId &&
+                Store.dispatch(minCutAgglomerateWithPositionAction(activeNodeId, globalPosition))
+              }
+            >
+              {activeNodeId != null ? (
+                <span>Split from active segment (Min-Cut)</span>
+              ) : (
+                <Tooltip title={"Cannot split because there's no active node id."}>
+                  <span>Split from active segment (Min-Cut)</span>
+                </Tooltip>
+              )}
+            </Menu.Item>
+          ) : null,
         ]
       : [];
   const segmentationLayerName =
@@ -746,7 +788,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
       currentConnectomeFile != null ? currentConnectomeFile.mappingName : undefined;
     const loadSynapsesItem = (
       <MenuItemWithMappingActivationConfirmation
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string | Element; className: str... Remove this comment to see the full error message
         className="node-context-menu-item"
         key="load-synapses"
         disabled={!isConnectomeMappingEnabled.value}
@@ -774,7 +815,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
     <MenuItemWithMappingActivationConfirmation
       key="load-precomputed-mesh"
       onClick={loadPrecomputedMesh}
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; key: string; onClick: ()... Remove this comment to see the full error message
       disabled={!currentMeshFile}
       mappingName={meshFileMappingName}
       descriptor="mesh file"
@@ -828,7 +868,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   let allActions: Array<JSX.Element | null> = [];
 
   if (isSkeletonToolActive) {
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
   } else if (isBoundingBoxToolActive) {
     allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
@@ -922,6 +961,21 @@ function ContextMenuContainer(props: Props) {
   );
 }
 
+function InfoMenuItem(propsWithEventKey: MenuItemProps) {
+  /*
+   * This component can be used within an antd Menu, even though
+   * the docs dictate to always use a <Menu.Item /> or <Menu.Divider />.
+   * However, we want non-clickable info rows with a special styling here.
+   * Note that we must not pass along all props here, since antd will pass
+   * an eventKey prop to this component. Delegating this to <div /> will
+   * produce a "React does not recognize the `eventKey` prop on a DOM element"
+   * warning.
+   */
+
+  const { children } = propsWithEventKey;
+  return <div className="node-context-menu-item">{children}</div>;
+}
+
 function ContextMenuInner(propsWithInputRef: PropsWithRef) {
   const { inputRef, ...props } = propsWithInputRef;
   const {
@@ -937,7 +991,7 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
 
   if (contextMenuPosition != null && maybeViewport != null) {
     const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
-    const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
+    const activeNodeId = skeletonTracing?.activeNodeId;
 
     let nodeContextMenuTree: Tree | null = null;
     let nodeContextMenuNode: MutableNode | null = null;
@@ -974,47 +1028,47 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
 
     if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
       infoRows.push(
-        <div key="nodeInfo" className="node-context-menu-item">
+        <InfoMenuItem key="nodeInfo">
           {/* @ts-expect-error ts-migrate(2339) FIXME: Property 'treeId' does not exist on type 'never'.*/}
           Node with Id {maybeClickedNodeId} in Tree {nodeContextMenuTree.treeId}
-        </div>,
+        </InfoMenuItem>,
       );
     }
 
     if (nodeContextMenuNode != null) {
       infoRows.push(
-        <div key="positionInfo" className="node-context-menu-item">
+        <InfoMenuItem key="positionInfo">
           Position: {nodePositionAsString}
           {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
-        </div>,
+        </InfoMenuItem>,
       );
     } else if (globalPosition != null) {
       const positionAsString = positionToString(globalPosition);
       infoRows.push(
-        <div key="positionInfo" className="node-context-menu-item">
+        <InfoMenuItem key="positionInfo">
           Position: {positionAsString}
           {copyIconWithTooltip(positionAsString, "Copy position")}
-        </div>,
+        </InfoMenuItem>,
       );
     }
 
     if (distanceToSelection != null) {
       infoRows.push(
-        <div key="distanceInfo" className="node-context-menu-item">
+        <InfoMenuItem key="distanceInfo">
           <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
           {maybeClickedNodeId != null ? "Node" : "Position"}
           {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-        </div>,
+        </InfoMenuItem>,
       );
     }
 
     if (segmentIdAtPosition > 0) {
       infoRows.push(
-        <div key="copy-cell" className="node-context-menu-item">
+        <InfoMenuItem key="copy-cell">
           <div className="cell-context-icon" />
           Segment ID: {`${segmentIdAtPosition}`}{" "}
           {copyIconWithTooltip(segmentIdAtPosition, "Copy Segment ID")}
-        </div>,
+        </InfoMenuItem>,
       );
     }
 

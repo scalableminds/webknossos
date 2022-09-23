@@ -22,13 +22,20 @@ import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import Store from "oxalis/store";
+import Store, { SegmentMap } from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import UpdatableTexture from "libs/UpdatableTexture";
 import type { ViewMode, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import window from "libs/window";
+import DiffableMap from "libs/diffable_map";
+import { CuckooTable } from "./cuckoo_table";
+import { listenToStoreProperty } from "../helpers/listener_helpers";
+import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
+import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
+
+const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 
 const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
 const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
@@ -99,21 +106,15 @@ function consumeBucketsFromArrayBuffer(
 }
 
 export default class LayerRenderingManager {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastSphericalCapRadius' has no initializ... Remove this comment to see the full error message
-  lastSphericalCapRadius: number;
+  lastSphericalCapRadius: number | undefined;
   // Indicates whether the current position is closer to the previous or next bucket for each dimension
   // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastAreas' has no initializer and is not... Remove this comment to see the full error message
-  lastAreas: OrthoViewMap<Area>;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastZoomedMatrix' has no initializer and is ... Remove this comment to see the full error message
-  lastZoomedMatrix: Matrix4x4;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastViewMode' has no initializer and is ... Remove this comment to see the full error message
-  lastViewMode: ViewMode;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lastIsVisible' has no initializer and is... Remove this comment to see the full error message
-  lastIsVisible: boolean;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'textureBucketManager' has no initializer... Remove this comment to see the full error message
-  textureBucketManager: TextureBucketManager;
+  lastAreas: OrthoViewMap<Area> | undefined;
+  lastZoomedMatrix: Matrix4x4 | undefined;
+  lastViewMode: ViewMode | undefined;
+  lastIsVisible: boolean | undefined;
+  textureBucketManager!: TextureBucketManager;
   textureWidth: number;
   cube: DataCube;
   pullQueue: PullQueue;
@@ -123,6 +124,9 @@ export default class LayerRenderingManager {
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
+
+  cuckooTable: CuckooTable | undefined;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(
     name: string,
@@ -156,6 +160,10 @@ export default class LayerRenderingManager {
     );
     this.textureBucketManager.setupDataTextures(bytes);
     shaderEditor.addBucketManagers(this.textureBucketManager);
+
+    if (this.cube.isSegmentation) {
+      this.listenToCustomSegmentColors();
+    }
   }
 
   getDataTextures(): Array<THREE.DataTexture | UpdatableTexture> {
@@ -303,5 +311,56 @@ export default class LayerRenderingManager {
 
     this.cachedAnchorPoint = anchorPoint;
     return true;
+  }
+
+  destroy() {
+    this.storePropertyUnsubscribers.forEach((fn) => fn());
+  }
+
+  /* Methods related to custom segment colors: */
+
+  getCustomColorCuckooTable() {
+    if (this.cuckooTable != null) {
+      return this.cuckooTable;
+    }
+    if (!this.cube.isSegmentation) {
+      throw new Error(
+        "getCustomColorCuckooTable should not be called for non-segmentation layers.",
+      );
+    }
+    this.cuckooTable = new CuckooTable(CUSTOM_COLORS_TEXTURE_WIDTH);
+    return this.cuckooTable;
+  }
+
+  listenToCustomSegmentColors() {
+    let prevSegments: SegmentMap = new DiffableMap();
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getSegmentsForLayer(storeState, this.name),
+        (newSegments) => {
+          const cuckoo = this.getCustomColorCuckooTable();
+          for (const updateAction of cachedDiffSegmentLists(prevSegments, newSegments)) {
+            if (
+              updateAction.name === "updateSegment" ||
+              updateAction.name === "createSegment" ||
+              updateAction.name === "deleteSegment"
+            ) {
+              const { id } = updateAction.value;
+              const color = "color" in updateAction.value ? updateAction.value.color : null;
+              if (color != null) {
+                cuckoo.set(
+                  id,
+                  map3((el) => el * 255, color),
+                );
+              } else {
+                cuckoo.unset(id);
+              }
+            }
+          }
+
+          prevSegments = newSegments;
+        },
+      ),
+    );
   }
 }

@@ -74,7 +74,7 @@ class VolumeTracingService @Inject()(
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  val binaryDataService = new BinaryDataService(Paths.get(""), 100, null)
+  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None)
 
   isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
@@ -170,7 +170,7 @@ class VolumeTracingService @Inject()(
         val resolutionSet = resolutionSetFromZipfile(dataZip)
         if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
       }
-      // if none of the tracings contained any volume data. do not save buckets, use full resolution list
+      // if none of the tracings contained any volume data do not save buckets, use full resolution list
       if (resolutionSets.isEmpty)
         getRequiredMags(tracing).map(_.toSet)
       else {
@@ -216,8 +216,8 @@ class VolumeTracingService @Inject()(
         }
       }
       if (savedResolutions.isEmpty) {
-        // if none of the tracings contained any volume data, use the dataset’s full resolution list
-        getRequiredMags(tracing).map(_.toSet)
+        val resolutionSet = resolutionSetFromZipfile(initialData)
+        Fox.successful(resolutionSet)
       } else
         unzipResult.map(_ => savedResolutions.toSet)
     }
@@ -236,7 +236,8 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(tracingId: String, tracing: VolumeTracing, os: OutputStream): Future[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] =
-      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)))
+      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+                                         tracing.resolutions.map(mag => vec3IntFromProto(mag)))
 
     val before = System.currentTimeMillis()
     val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
@@ -273,7 +274,8 @@ class VolumeTracingService @Inject()(
                 resolutionRestrictions: ResolutionRestrictions,
                 editPosition: Option[Vec3Int],
                 editRotation: Option[Vec3Double],
-                boundingBox: Option[BoundingBox]): Fox[(String, VolumeTracing)] = {
+                boundingBox: Option[BoundingBox],
+                mappingName: Option[String]): Fox[(String, VolumeTracing)] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
     val tracingWithResolutionRestrictions = restrictMagList(tracingWithBB, resolutionRestrictions)
     val newTracing = tracingWithResolutionRestrictions.copy(
@@ -281,6 +283,7 @@ class VolumeTracingService @Inject()(
       editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithResolutionRestrictions.editPosition),
       editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithResolutionRestrictions.editRotation),
       boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
+      mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
       version = 0
     )
     for {
@@ -389,8 +392,8 @@ class VolumeTracingService @Inject()(
         request.segmentId,
         request.subsamplingStrides,
         request.scale,
-        request.mapping,
-        request.mappingType
+        None,
+        None
       )
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result

@@ -80,6 +80,10 @@ class BoundingBox {
     });
   }
 
+  getCenter(): Vector3 {
+    return V3.floor(V3.add(this.min, V3.scale(this.getSize(), 0.5)));
+  }
+
   getSize(): Vector3 {
     const size = V3.sub(this.max, this.min);
     return size;

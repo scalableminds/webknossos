@@ -16,6 +16,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       val createSegmentAction = CreateSegmentVolumeAction(
         id = 1000,
         anchorPosition = Some(Vec3Int(5,5,5)),
+        color = None,
         name = Some("aSegment"),
         creationTime = Some(Dummies.timestampLong)
       )
@@ -47,6 +48,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         id = 5,
         anchorPosition = Some(Vec3Int(8,8,8)),
         name = Some("aRenamedSegment"),
+        color = None,
         creationTime = Some(Dummies.timestampLong)
       )
       val result = applyUpdateAction(updateSegmentAction)

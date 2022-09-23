@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import java.nio.file.Paths
 import java.util
 import java.util.UUID
-
 import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.geometry.Vec3Int
@@ -29,8 +28,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   VersionedKeyValuePair
 }
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.util.Helpers.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
 import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
@@ -103,7 +102,7 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), 100, null)
+  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None)
   isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
@@ -123,6 +122,7 @@ class EditableMappingService @Inject()(
         "mappingName" -> editableMappingId,
         "version" -> version,
         "tracingId" -> tracingId,
+        "baseMappingName" -> editableMapping.baseMappingName,
         "createdTimestamp" -> editableMapping.createdTimestamp
       )
 
@@ -146,6 +146,15 @@ class EditableMappingService @Inject()(
                                                                               version = Some(0L),
                                                                               emptyFallback = Some(-1L))
     } yield versionOrMinusOne >= 0
+
+  def duplicate(editableMappingIdOpt: Option[String], tracing: VolumeTracing, userToken: Option[String]): Fox[String] =
+    for {
+      editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
+      remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(tracing)
+      editableMapping <- get(editableMappingId, remoteFallbackLayer, userToken)
+      newId = generateId
+      _ <- tracingDataStore.editableMappings.put(newId, 0L, toProtoBytes(editableMapping.toProto))
+    } yield newId
 
   def updateActionLog(editableMappingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[EditableMappingUpdateAction])): JsObject =
@@ -497,7 +506,7 @@ class EditableMappingService @Inject()(
 
       trees = Seq(
         Tree(
-          treeId = agglomerateId.toInt,
+          treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
           createdTimestamp = System.currentTimeMillis(),
           nodes = nodes,
           edges = skeletonEdges,

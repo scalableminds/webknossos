@@ -28,17 +28,13 @@ import {
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store, { SkeletonTracing } from "oxalis/store";
+import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
 import { proofreadAtPosition } from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
-import {
-  getNodeAndTree,
-  getSkeletonTracing,
-} from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
 
 export type ActionDescriptor = {
@@ -648,6 +644,9 @@ export class RectangleTool {
         currentPos = startPos;
         isDragging = true;
 
+        Store.dispatch({
+          type: "CONFIRM_MAGIC_WAND",
+        });
         rectangleContour.unattachTexture();
       },
       leftMouseUp: () => {
@@ -655,7 +654,6 @@ export class RectangleTool {
         // identity equality
         if (startPos === currentPos) {
           // clear rectangle because user didn't drag
-          rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
           return;
         }
         Store.dispatch({
@@ -732,25 +730,18 @@ export class ProofreadTool {
     isTouch: boolean,
   ) {
     const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
-
-    let globalPosition;
-    if (plane === OrthoViews.TDView) {
-      // In the 3D viewport the click position cannot be uniquely determined, because the position on the
-      // third axis is ambiguous. However, if the user clicked on a node, we can determine the position
-      // by looking up the position of the selected node.
-      if (didSelectNode) {
-        getSkeletonTracing(Store.getState().tracing).map((skeletonTracing: SkeletonTracing) =>
-          getNodeAndTree(skeletonTracing).map(([_activeTree, activeNode]) => {
-            globalPosition = activeNode.position;
-          }),
-        );
-      }
-    } else {
-      globalPosition = calculateGlobalPos(Store.getState(), pos);
+    if (didSelectNode) {
+      // Don't do anything else
+      return;
     }
 
-    if (globalPosition == null) return;
+    if (plane === OrthoViews.TDView) {
+      // The click position cannot be mapped to a 3D coordinate in the
+      // 3D viewport (unless a node was clicked which is already handled above).
+      return;
+    }
 
+    const globalPosition = calculateGlobalPos(Store.getState(), pos);
     Store.dispatch(proofreadAtPosition(globalPosition));
   }
 

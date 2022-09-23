@@ -1,6 +1,6 @@
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
-import { ContourModeEnum, Vector2, Vector3, Vector4 } from "oxalis/constants";
+import { ContourModeEnum, TypedArray, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery, race, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -9,7 +9,10 @@ import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  finishAnnotationStrokeAction,
+  registerLabelPointAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import api from "oxalis/api/internal_api";
@@ -35,6 +38,8 @@ function* performMagicWand(action: Action): Saga<void> {
   if (action.type !== "MAGIC_WAND_FOR_RECT") {
     throw new Error("Satisfy typescript.");
   }
+
+  console.log("starting saga performMagicWand");
 
   // const session = yield ort.InferenceSession.create("/public/ml-models/FFN.onnx");
   // console.log(session);
@@ -94,24 +99,12 @@ function* performMagicWand(action: Action): Saga<void> {
 
   const output = ndarray(new Uint8Array(inputNd.size), inputNd.shape);
 
-  const labeledResolution = [1, 1, 1];
+  const labeledResolution = [1, 1, 1] as Vector3;
   const labeledZoomStep = 0;
   const activeViewport = "PLANE_XY";
   const firstDim = 0;
   const secondDim = 1;
   const thirdDim = 2;
-  // const interpolationLayer = yield* call(
-  //   createVolumeLayer,
-  //   volumeTracing,
-  //   activeViewport,
-  //   labeledResolution,
-  //   boundingBoxMag1.min[thirdDim],
-  // );
-  // const voxelBuffer2D = interpolationLayer.createVoxelBuffer2D(
-  //   V2.floor(interpolationLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
-  //   size[firstDim],
-  //   size[secondDim],
-  // );
 
   console.time("floodfill");
   floodFill({
@@ -148,53 +141,77 @@ function* performMagicWand(action: Action): Saga<void> {
   // // morphology.dilate(output, 1);
   console.timeEnd("floodfill");
 
-  // for (let u = 0; u < inputNd.shape[0]; u++) {
-  //   for (let v = 0; v < inputNd.shape[1]; v++) {
-  //     if (output.get(u, v, 0) > 0) {
-  //       voxelBuffer2D.setValue(u, v, 1);
-  //     }
-  //   }
-  // }
-
   const outputRGBA = maskToRGBA(inputNd, output);
   const { rectangleContour } = action;
   rectangleContour.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
 
-  // const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+  let newestOutput = output;
 
   while (true) {
-    const { newMagicWandAction, finetuneAction, cancelMagicWandAction } = yield* race({
-      newMagicWandAction: take("MAGIC_WAND_FOR_RECT"),
+    const { finetuneAction, cancelMagicWandAction, escape, enter, confirm } = yield* race({
       finetuneAction: take("FINE_TUNE_MAGIC_WAND"),
       cancelMagicWandAction: take("CANCEL_MAGIC_WAND"),
+      escape: take("ESCAPE"),
+      enter: take("ENTER"),
+      confirm: take("CONFIRM_MAGIC_WAND"),
     });
 
-    if (newMagicWandAction || cancelMagicWandAction) {
+    const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+    if (confirm || enter || cancelMagicWandAction || escape) {
+      console.log("terminate saga...");
       rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
 
+      if (escape || cancelMagicWandAction) {
+        console.log("...without brushing");
+        return;
+      }
+
+      console.log("...with brushing");
+      const interpolationLayer = yield* call(
+        createVolumeLayer,
+        volumeTracing,
+        activeViewport,
+        labeledResolution,
+        boundingBoxMag1.min[thirdDim],
+      );
+      const voxelBuffer2D = interpolationLayer.createVoxelBuffer2D(
+        V2.floor(interpolationLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
+        size[firstDim],
+        size[secondDim],
+      );
+
+      for (let u = 0; u < inputNd.shape[0]; u++) {
+        for (let v = 0; v < inputNd.shape[1]; v++) {
+          if (output.get(u, v, 0) > 0) {
+            voxelBuffer2D.setValue(u, v, 1);
+          }
+        }
+      }
+
+      yield* call(
+        labelWithVoxelBuffer2D,
+        voxelBuffer2D,
+        ContourModeEnum.DRAW,
+        overwriteMode,
+        labeledZoomStep,
+        activeViewport,
+      );
+      yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+      yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
       return;
     } else if (finetuneAction) {
-      const newOutput = copyNdArray(Uint8Array, floodfillCopy);
+      console.log("fine tune");
+      newestOutput = copyNdArray(Uint8Array, floodfillCopy);
 
-      morphology.close(newOutput, finetuneAction.closeValue);
-      morphology.erode(newOutput, finetuneAction.erodeValue);
-      morphology.dilate(newOutput, finetuneAction.dilateValue);
+      morphology.close(newestOutput, finetuneAction.closeValue);
+      morphology.erode(newestOutput, finetuneAction.erodeValue);
+      morphology.dilate(newestOutput, finetuneAction.dilateValue);
 
-      const outputRGBA = maskToRGBA(inputNd, newOutput);
+      const outputRGBA = maskToRGBA(inputNd, newestOutput);
       const { rectangleContour } = action;
       rectangleContour.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
     }
   }
-
-  // yield* call(
-  //   labelWithVoxelBuffer2D,
-  //   voxelBuffer2D,
-  //   ContourModeEnum.DRAW,
-  //   overwriteMode,
-  //   labeledZoomStep,
-  //   activeViewport,
-  // );
-  // yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 }
 
 function maskToRGBA(inputNd: ndarray.NdArray<TypedArray>, output: ndarray.NdArray) {
@@ -228,7 +245,7 @@ export default function* listenToMinCut(): Saga<void> {
       try {
         yield* call(performMagicWand, action);
       } catch (ex) {
-        Toast.error(ex);
+        Toast.error(ex as Error);
         console.error(ex);
       }
     },

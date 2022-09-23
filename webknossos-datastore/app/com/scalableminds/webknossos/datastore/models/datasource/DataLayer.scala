@@ -5,12 +5,13 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKW
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, zarr, tracing = Value
+  val wkw, zarr, n5, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {
@@ -111,13 +112,6 @@ trait DataLayerLike {
 
   def resolutions: List[Vec3Int]
 
-  def magFromExponent(resolutionExponent: Int, snapToClosest: Boolean = false): Vec3Int = {
-    val resPower = Math.pow(2, resolutionExponent).toInt
-    val matchOpt = resolutions.find(resolution => resolution.maxDim == resPower)
-    if (snapToClosest) matchOpt.getOrElse(resolutions.minBy(resolution => math.abs(resPower - resolution.maxDim)))
-    else matchOpt.getOrElse(Vec3Int(resPower, resPower, resPower))
-  }
-
   def elementClass: ElementClass.Value
 
   // This is the default from the DataSource JSON.
@@ -189,6 +183,8 @@ object DataLayer {
           case (DataFormat.wkw, _)                      => json.validate[WKWDataLayer]
           case (DataFormat.zarr, Category.segmentation) => json.validate[ZarrSegmentationLayer]
           case (DataFormat.zarr, _)                     => json.validate[ZarrDataLayer]
+          case (DataFormat.n5, Category.segmentation)   => json.validate[N5SegmentationLayer]
+          case (DataFormat.n5, _)                       => json.validate[N5DataLayer]
           case _                                        => json.validate[WKWDataLayer]
         }
       } yield {
@@ -201,6 +197,8 @@ object DataLayer {
         case l: WKWSegmentationLayer  => WKWSegmentationLayer.jsonFormat.writes(l)
         case l: ZarrDataLayer         => ZarrDataLayer.jsonFormat.writes(l)
         case l: ZarrSegmentationLayer => ZarrSegmentationLayer.jsonFormat.writes(l)
+        case l: N5DataLayer           => N5DataLayer.jsonFormat.writes(l)
+        case l: N5SegmentationLayer   => N5SegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat

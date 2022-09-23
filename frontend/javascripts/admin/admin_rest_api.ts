@@ -59,6 +59,10 @@ import type {
   ServerEditableMapping,
   APICompoundType,
   ZarrPrivateLink,
+  VoxelyticsWorkflowInfo,
+  VoxelyticsWorkflowReport,
+  VoxelyticsChunkStatistics,
+  ShortLink,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -1479,12 +1483,13 @@ export async function exploreRemoteDataset(
 }
 
 export async function storeRemoteDataset(
+  datastoreUrl: string,
   datasetName: string,
   organizationName: string,
   datasource: string,
 ): Promise<Response> {
   return doWithToken((token) =>
-    fetch(`/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
+    fetch(`${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?token=${token}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: datasource,
@@ -2290,5 +2295,80 @@ export async function getEdgesForAgglomerateMinCut(
         data: segmentsInfo,
       },
     ),
+  );
+}
+
+// ### Short links
+export const createShortLink = _.memoize(
+  (longLink: string): Promise<ShortLink> =>
+    Request.sendJSONReceiveJSON("/api/shortLinks", {
+      method: "POST",
+      // stringify is necessary because the back-end expects a JSON string
+      // (i.e., a string which contains quotes at the beginning and end).
+      // The Request module does not add additional string quotes
+      // if the data parameter is already a string.
+      data: JSON.stringify(longLink),
+    }),
+);
+
+export function getShortLink(key: string): Promise<ShortLink> {
+  return Request.receiveJSON(`/api/shortLinks/byKey/${key}`);
+}
+
+// ### Voxelytics
+export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowInfo>> {
+  return Request.receiveJSON("/api/voxelytics/workflows");
+}
+
+export function getVoxelyticsWorkflow(
+  workflowHash: string,
+  runId: string | null,
+): Promise<VoxelyticsWorkflowReport> {
+  const params = new URLSearchParams();
+  if (runId != null) {
+    params.append("runId", runId);
+  }
+  return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}?${params}`);
+}
+
+export function getVoxelyticsLogs(
+  runId: string,
+  taskName: string | null,
+  minLevel: string,
+): Promise<Array<{}>> {
+  const params = new URLSearchParams({ runId, minLevel });
+  if (taskName != null) {
+    params.append("taskName", taskName);
+  }
+  return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
+}
+
+export function getVoxelyticsChunkStatistics(
+  workflowHash: string,
+  runId: string,
+  taskName: string,
+): Promise<Array<VoxelyticsChunkStatistics>> {
+  return Request.receiveJSON(
+    `/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${new URLSearchParams({
+      runId,
+      taskName,
+    })}`,
+  );
+}
+export function getVoxelyticsArtifactChecksums(
+  workflowHash: string,
+  runId: string,
+  taskName: string,
+  artifactName?: string,
+): Promise<Array<Record<string, string | number>>> {
+  const params = new URLSearchParams({
+    runId,
+    taskName,
+  });
+  if (artifactName != null) {
+    params.append("artifactName", artifactName);
+  }
+  return Request.receiveJSON(
+    `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?${params}`,
   );
 }

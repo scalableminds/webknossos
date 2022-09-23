@@ -200,6 +200,7 @@ export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEn
 export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.RECTANGLE,
 ];
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;

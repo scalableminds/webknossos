@@ -44,8 +44,8 @@ export const layerNameRules = [
   },
   {
     validator: syncValidator(
-      (value: string) => !value.startsWith(".") && !value.endsWith("."),
-      "The name must not start or end with a dot.",
+      (value: string) => !value.startsWith("."),
+      "The name must not start with a dot.",
     ),
   },
 ];

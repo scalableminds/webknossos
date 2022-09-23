@@ -217,8 +217,10 @@ export class ResolutionInfo {
     });
 
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, (entry) => entry[1]));
+    if (bestIndexWithDistance == null) {
+      throw new Error("Couldn't find any resolution.");
+    }
 
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     return bestIndexWithDistance[0];
   }
 
@@ -713,6 +715,7 @@ export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegme
   );
   return visibleSegmentationLayers;
 }
+
 export function getSegmentationLayerWithMappingSupport(
   state: OxalisState,
 ): APISegmentationLayer | null | undefined {
@@ -732,6 +735,7 @@ export function getSegmentationLayerWithMappingSupport(
 
   return null;
 }
+
 export function getFirstSegmentationLayer(
   dataset: APIMaybeUnimportedDataset,
 ): APISegmentationLayer | null | undefined {

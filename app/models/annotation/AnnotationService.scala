@@ -189,7 +189,7 @@ class AnnotationService @Inject()(
                                                             List(annotationLayerParameters),
                                                             organizationName,
                                                             annotation.annotationLayers)
-      _ <- Fox.serialCombined(newAnnotationLayers)(l => annotationLayersDAO.insertOne(annotation._id, l))
+      _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
 
   private def createTracingsForExplorational(dataSet: DataSet,
@@ -864,7 +864,7 @@ class AnnotationService @Inject()(
       )
   }
 
-  def writesAsAnnotationSource(annotation: Annotation): Fox[JsValue] = {
+  def writesAsAnnotationSource(annotation: Annotation, accessViaPrivateLink: Boolean): Fox[JsValue] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
@@ -877,7 +877,8 @@ class AnnotationService @Inject()(
         dataSetName = dataSet.name,
         organizationName = organization.name,
         dataStoreUrl = dataStore.publicUrl,
-        tracingStoreUrl = tracingStore.publicUrl
+        tracingStoreUrl = tracingStore.publicUrl,
+        accessViaPrivateLink = accessViaPrivateLink,
       )
     } yield Json.toJson(annotationSource)
   }

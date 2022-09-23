@@ -28,7 +28,6 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
       color_layer_2: 4.0,
     },
     segmentationLayerNames: [],
-    isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
     datasetScale: [1, 1, 1],
@@ -55,7 +54,6 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
       segmentationLayer: 1.0,
     },
     segmentationLayerNames: ["segmentationLayer"],
-    isMappingSupported: false,
     dataTextureCountPerLayer: 3,
     resolutions,
     datasetScale: [1, 1, 1],
@@ -75,13 +73,13 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
       segmentationLayer: 1.0,
     },
     segmentationLayerNames: ["segmentationLayer"],
-    isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
     lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
+
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
 });
@@ -94,7 +92,6 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
       color_layer_2: 4.0,
     },
     segmentationLayerNames: [],
-    isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
     datasetScale: [1, 1, 1],
@@ -114,7 +111,6 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
       segmentationLayer: 1.0,
     },
     segmentationLayerNames: ["segmentationLayer"],
-    isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
     datasetScale: [1, 1, 1],
@@ -133,7 +129,6 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any
       color_layer_2: 4.0,
     },
     segmentationLayerNames: [],
-    isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
     datasetScale: [1, 1, 1],

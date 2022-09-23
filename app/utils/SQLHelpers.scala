@@ -27,6 +27,10 @@ trait SQLTypeImplicits {
   implicit object SetObjectId extends SetParameter[ObjectId] {
     def apply(v: ObjectId, pp: PositionedParameters): Unit = pp.setString(v.id)
   }
+
+  implicit object SetObjectIdOpt extends SetParameter[Option[ObjectId]] {
+    def apply(v: Option[ObjectId], pp: PositionedParameters): Unit = pp.setStringOption(v.map(_.id))
+  }
 }
 
 class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -99,6 +103,33 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       }
     }
   }
+
+  def escapeLiteral(aString: String): String = {
+    // Ported from PostgreSQL 9.2.4 source code in src/interfaces/libpq/fe-exec.c
+    var hasBackslash = false
+    val escaped = new StringBuffer("'")
+
+    aString.foreach { c =>
+      if (c == '\'') {
+        escaped.append(c).append(c)
+      } else if (c == '\\') {
+        escaped.append(c).append(c)
+        hasBackslash = true
+      } else {
+        escaped.append(c)
+      }
+    }
+    escaped.append('\'')
+
+    if (hasBackslash) {
+      "E" + escaped.toString
+    } else {
+      escaped.toString
+    }
+  }
+
+  def writeEscapedTuple(seq: List[String]): String =
+    "(" + seq.map(escapeLiteral).mkString(", ") + ")"
 
   def sanitize(aString: String): String = aString.replaceAll("'", "")
 
@@ -226,7 +257,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
   def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: String): Fox[C] =
     for {
       firstRow <- rowSeq.headOption.toFox // No error chain here, as this should stay Fox.Empty
-      parsed <- parse(firstRow) ?~> s"Parsing failed for row in ${collectionName} queried by $queryLabel"
+      parsed <- parse(firstRow) ?~> s"Parsing failed for row in $collectionName queried by $queryLabel"
     } yield parsed
 
   def parseAll(rowSeq: Seq[X#TableElementType]): Fox[List[C]] =

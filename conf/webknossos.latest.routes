@@ -135,6 +135,8 @@ GET           /annotations/:typ/:id/download                                    
 
 GET           /annotations/:typ/:id/loggedTime                                          controllers.AnnotationController.loggedTime(typ: String, id: String)
 
+GET           /annotations/source/:accessTokenOrId                                      controllers.AnnotationPrivateLinkController.annotationSource(accessTokenOrId: String, userToken: Option[String])
+
 GET           /annotations/shared                                                       controllers.AnnotationController.sharedAnnotations()
 GET           /annotations/readable                                                     controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /annotations/:typ/:id/sharedTeams                                         controllers.AnnotationController.getSharedTeams(typ: String, id: String)
@@ -144,7 +146,6 @@ PATCH         /annotations/:typ/:id/othersMayEdit                               
 # Annotation Private Links
 GET           /zarrPrivateLinks                                                         controllers.AnnotationPrivateLinkController.list
 GET           /zarrPrivateLinks/byAnnotation/:annotationId                              controllers.AnnotationPrivateLinkController.listByAnnotation(annotationId: String)
-GET           /zarrPrivateLinks/byAccessToken/:accessToken                              controllers.AnnotationPrivateLinkController.lookupPrivateLink(accessToken: String)
 POST          /zarrPrivateLinks                                                         controllers.AnnotationPrivateLinkController.create
 PUT           /zarrPrivateLinks/:id                                                     controllers.AnnotationPrivateLinkController.update(id: String)
 DELETE        /zarrPrivateLinks/:id                                                     controllers.AnnotationPrivateLinkController.delete(id: String)
@@ -236,3 +237,17 @@ POST          /jobs/:id/status                                                  
 # Publications
 GET           /publications                                                             controllers.PublicationController.listPublications()
 GET           /publications/:id                                                         controllers.PublicationController.read(id: String)
+
+# Shortlinks
+POST          /shortLinks                                                               controllers.ShortLinkController.create
+GET           /shortLinks/byKey/:key                                                    controllers.ShortLinkController.getByKey(key: String)
+
+# Voxelytics
+POST          /voxelytics/workflows                                                     controllers.VoxelyticsController.storeWorkflow
+GET           /voxelytics/workflows                                                     controllers.VoxelyticsController.listWorkflows(workflowHash: Option[String])
+GET           /voxelytics/workflows/:workflowHash                                       controllers.VoxelyticsController.getWorkflow(workflowHash: String, runId: Option[String])
+POST          /voxelytics/workflows/:workflowHash/events                                controllers.VoxelyticsController.storeWorkflowEvents(workflowHash: String, runName: String)
+GET           /voxelytics/workflows/:workflowHash/chunkStatistics                       controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: String, taskName: String)
+GET           /voxelytics/workflows/:workflowHash/artifactChecksums                     controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: String, taskName: String, artifactName: Option[String])
+POST          /voxelytics/logs                                                          controllers.VoxelyticsController.appendLogs
+GET           /voxelytics/logs                                                          controllers.VoxelyticsController.getLogs(runId: String, taskName: Option[String], minLevel: Option[String])

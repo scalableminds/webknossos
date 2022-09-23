@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "noEmit": true,
-    "module": "es2020",
+    "module": "ES2022",
     "noImplicitAny": true,
     "removeComments": true,
     "sourceMap": true,

@@ -3,9 +3,9 @@ import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { OrthoView, Vector3, Vector4 } from "oxalis/constants";
+import type { OrthoView, Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
-import type { OxalisState, Mapping, MappingType } from "oxalis/store";
+import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -21,8 +21,11 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-import { hasEditableMapping } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getEditableMappingForVolumeTracingId,
+  hasEditableMapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
+
 const { Option, OptGroup } = Select;
 
 type OwnProps = {
@@ -38,6 +41,7 @@ type StateProps = {
   hideUnmappedIds: boolean | null | undefined;
   mappingType: MappingType;
   mappingColors: Array<number> | null | undefined;
+  editableMapping: EditableMapping | null | undefined;
   setMappingEnabled: (arg0: string, arg1: boolean) => void;
   setHideUnmappedIds: (arg0: string, arg1: boolean) => void;
   setAvailableMappingsForLayer: (arg0: string, arg1: Array<string>, arg2: Array<string>) => void;
@@ -63,16 +67,6 @@ type State = {
   isRefreshingMappingList: boolean;
   didRefreshMappingList: boolean;
 };
-
-const convertHSLAToCSSString = ([h, s, l, a]: Vector4) =>
-  `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
-
-export const convertCellIdToCSS = (
-  id: number,
-  customColors: Array<number> | null | undefined,
-  alpha?: number,
-) =>
-  id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
 const needle = "##";
 
@@ -182,7 +176,10 @@ class MappingSettingsView extends React.Component<Props, State> {
     const selectValueProp =
       this.props.mappingName != null
         ? {
-            value: this.props.mappingName,
+            value:
+              this.props.editableMapping != null
+                ? `${this.props.editableMapping.baseMappingName} (${this.props.mappingName})`
+                : this.props.mappingName,
           }
         : {};
 
@@ -280,6 +277,9 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     state.temporaryConfiguration.activeMappingByLayer,
     ownProps.layerName,
   );
+  const segmentationLayer = getSegmentationLayerByName(state.dataset, ownProps.layerName);
+  const editableMapping = getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId);
+
   return {
     dataset: state.dataset,
     position: getPosition(state.flycam),
@@ -290,9 +290,10 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     mappingType: activeMappingInfo.mappingType,
     mappingColors: activeMappingInfo.mappingColors,
     activeViewport: state.viewModeData.plane.activeViewport,
-    segmentationLayer: getSegmentationLayerByName(state.dataset, ownProps.layerName),
+    segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
     allowUpdate: state.tracing.restrictions.allowUpdate,
+    editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
   };
 }

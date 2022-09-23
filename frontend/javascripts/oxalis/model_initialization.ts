@@ -38,7 +38,7 @@ import {
   getAnnotationInformation,
   getEmptySandboxAnnotationInformation,
   getDataset,
-  getSharingToken,
+  getSharingTokenFromUrlParameters,
   getUserConfiguration,
   getDatasetViewConfiguration,
   getEditableMapping,
@@ -76,7 +76,6 @@ import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
-import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import type {
@@ -92,7 +91,6 @@ import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
 import constants, { ControlModeEnum, AnnotationToolEnum, Vector3 } from "oxalis/constants";
 import messages from "messages";
-import window from "libs/window";
 import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
@@ -109,7 +107,6 @@ export async function initialize(
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
-      isMappingSupported: boolean;
       maximumTextureCountForLayer: number;
     }
   | null
@@ -148,7 +145,7 @@ export async function initialize(
     annotation = await getEmptySandboxAnnotationInformation(
       datasetId,
       initialCommandType.tracingType,
-      getSharingToken(),
+      getSharingTokenFromUrlParameters(),
     );
   } else {
     const { name, owningOrganization } = initialCommandType;
@@ -169,7 +166,7 @@ export async function initialize(
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
     serverVolumeTracingIds,
-    getSharingToken(),
+    getSharingTokenFromUrlParameters(),
   );
   const annotationSpecificDatasetSettings = applyAnnotationSpecificViewConfiguration(
     annotation,
@@ -230,7 +227,7 @@ async function fetchParallel(
   versions?: Versions,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
-    getDataset(datasetId, getSharingToken()),
+    getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     annotation ? getTracingsForAnnotation(annotation, versions) : [],
   ]);
@@ -257,10 +254,6 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
     hasSegmentation(dataset),
     requiredBucketCapacity,
   );
-
-  if (!setupDetails.isMappingSupported) {
-    console.warn(messages["mapping.too_few_textures"]);
-  }
 
   maybeWarnAboutUnsupportedLayers(layers);
   return setupDetails;
@@ -434,7 +427,6 @@ function initializeSettings(
 
 function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   dataLayers: DataLayerCollection;
-  isMappingSupported: boolean;
   maximumTextureCountForLayer: number;
   smallestCommonBucketCapacity: number;
   maximumLayerCountToRender: number;
@@ -445,7 +437,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     (gpuFactor != null ? gpuFactor : constants.DEFAULT_GPU_MEMORY_FACTOR);
   const {
     textureInformationPerLayer,
-    isMappingSupported,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,
     maximumTextureCountForLayer,
@@ -473,11 +464,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     );
   }
 
-  if (hasSegmentation(dataset) != null && isMappingSupported) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'mappings' does not exist on type '(Windo... Remove this comment to see the full error message
-    window.mappings = setupGlobalMappingsObject();
-  }
-
   if (getDataLayers(dataset).length === 0) {
     Toast.error(messages["dataset.no_data"]);
     throw HANDLED_ERROR;
@@ -485,7 +471,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
 
   return {
     dataLayers,
-    isMappingSupported,
     maximumTextureCountForLayer,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,

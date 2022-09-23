@@ -17,12 +17,15 @@ type DataLayerWKWPartial = {
     cubeLength: number;
   }>;
 };
-type DataLayerKnossosPartial = {
-  dataFormat: "knossos";
-  sections: Array<{
-    name: string;
-    resolutions: Array<number>;
-    boundingBox: BoundingBox;
+
+type AxisKey = "x" | "y" | "z" | "c";
+type DataLayerZarrPartial = {
+  dataFormat: "zarr";
+  boundingBox: BoundingBox;
+  mags: Array<{
+    mag: Vector3;
+    path: string;
+    axisOrder: Record<AxisKey, number>;
   }>;
 };
 export type DataLayer = {
@@ -50,7 +53,7 @@ export type DataLayer = {
       mappings: Array<string>;
     }
 ) &
-  (DataLayerWKWPartial | DataLayerKnossosPartial);
+  (DataLayerWKWPartial | DataLayerZarrPartial);
 export type DatasourceConfiguration = {
   id: {
     name: string;

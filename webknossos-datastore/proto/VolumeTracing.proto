@@ -9,6 +9,7 @@ message Segment {
 	  optional Vec3IntProto anchorPosition = 2;
 	  optional string name = 3;
 	  optional int64 creationTime = 4;
+    optional ColorProto color = 5;
 }
 
 message VolumeTracing {

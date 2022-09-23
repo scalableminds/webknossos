@@ -1,10 +1,9 @@
 package com.scalableminds.util.mvc
 
-import java.io.FileInputStream
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Full, _}
+import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
 import play.api.http.Status._
 import play.api.http.{HttpEntity, Status, Writeable}
@@ -15,6 +14,7 @@ import play.api.mvc._
 import play.twirl.api._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
+import java.io.FileInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
 trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHelpers {
@@ -109,7 +109,7 @@ class JsonResult(status: Int)
 
   val isSuccess: Boolean = List(OK) contains status
 
-  def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]): Result =
+  def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
     Result(header = ResponseHeader(status),
            body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
 
@@ -119,7 +119,7 @@ class JsonResult(status: Int)
     else
       jsonError
 
-  def apply(json: JsObject): Result =
+  def apply(json: JsValue): Result =
     createResult(json)
 
   def apply(json: JsObject, messages: Seq[(String, String)]): Result =

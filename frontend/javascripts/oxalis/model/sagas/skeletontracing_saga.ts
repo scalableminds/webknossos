@@ -78,8 +78,12 @@ import {
   deleteConnectomeTreesAction,
 } from "oxalis/model/actions/connectome_actions";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
+import memoizeOne from "memoize-one";
 
 function* centerActiveNode(action: Action): Saga<void> {
+  if ("suppressCentering" in action && action.suppressCentering) {
+    return;
+  }
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
     const centerNewNode = yield* select(
       (state: OxalisState) => state.userConfiguration.centerNewNode,
@@ -331,7 +335,7 @@ function handleAgglomerateLoadingError(
 
 export function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
-): Saga<string | null> {
+): Saga<[string, number] | null> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
@@ -349,7 +353,7 @@ export function* loadAgglomerateSkeletonWithId(
     console.warn(
       `Skeleton for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${treeName}".`,
     );
-    return treeName;
+    return [treeName, maybeTree.treeId];
   }
 
   const progressCallback = createProgressCallback({
@@ -362,6 +366,7 @@ export function* loadAgglomerateSkeletonWithId(
     `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
   );
 
+  let usedTreeIds: number[] | null = null;
   try {
     const parsedTracing = yield* call(
       getAgglomerateSkeletonTracing,
@@ -373,8 +378,17 @@ export function* loadAgglomerateSkeletonWithId(
       addTreesAndGroupsAction(
         createMutableTreeMapFromTreeArray(parsedTracing.trees),
         parsedTracing.treeGroups,
+        (newTreeIds) => {
+          usedTreeIds = newTreeIds;
+        },
       ),
     );
+    // @ts-ignore TS infers usedTreeIds to be never, but it should be number[] if its not null
+    if (usedTreeIds == null || usedTreeIds.length !== 1) {
+      throw new Error(
+        "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
+      );
+    }
   } catch (e) {
     // Hide the progress notification and handle the error
     hideFn();
@@ -384,7 +398,7 @@ export function* loadAgglomerateSkeletonWithId(
   }
 
   yield* call(progressCallback, true, "Skeleton generation done.");
-  return treeName;
+  return [treeName, usedTreeIds[0]];
 }
 
 function* loadConnectomeAgglomerateSkeletonWithId(
@@ -581,22 +595,11 @@ export function* diffTrees(
     }
   }
 }
-const diffTreeCache = {};
-export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<UpdateAction> {
-  // Try to use the cached version of the diff if available to increase performance
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'prevTrees' does not exist on type '{}'.
-  if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'prevTrees' does not exist on type '{}'.
-    diffTreeCache.prevTrees = prevTrees;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'trees' does not exist on type '{}'.
-    diffTreeCache.trees = trees;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'diff' does not exist on type '{}'.
-    diffTreeCache.diff = Array.from(diffTrees(prevTrees, trees));
-  }
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'diff' does not exist on type '{}'.
-  return diffTreeCache.diff;
-}
+export const cachedDiffTrees = memoizeOne((prevTrees: TreeMap, trees: TreeMap) =>
+  Array.from(diffTrees(prevTrees, trees)),
+);
+
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
@@ -604,8 +607,9 @@ export function* diffSkeletonTracing(
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    // @ts-expect-error ts-migrate(2766) FIXME: Cannot delegate iteration to value because the 'ne... Remove this comment to see the full error message
-    yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+    for (const action of cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees)) {
+      yield action;
+    }
 
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
       yield updateTreeGroups(skeletonTracing.treeGroups);

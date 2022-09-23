@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { Vector3, Vector4 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
 export const hsvToRgb: ShaderModule = {
   requirements: [],
@@ -26,9 +27,17 @@ export const hsvToRgb: ShaderModule = {
     }
   `,
 };
+
+// From: https://stackoverflow.com/a/54024653
+// input: h in [0,360] and s,v in [0,1] - output: r,g,b in [0,1]
+export function jsHsv2rgb(h: number, s: number, v: number): Vector3 {
+  const f = (n: number, k = (n + h / 60) % 6) => v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+  return [f(5), f(3), f(1)];
+}
+
 // From: https://stackoverflow.com/a/54070620/896760
 // Input: r,g,b in [0,1], out: h in [0,360) and s,v in [0,1]
-export function jsRgb2hsv(rgb: [number, number, number]): [number, number, number] {
+export function jsRgb2hsv(rgb: Vector3): Vector3 {
   const [r, g, b] = rgb;
   const v = Math.max(r, g, b);
   const n = v - Math.min(r, g, b);
@@ -37,6 +46,48 @@ export function jsRgb2hsv(rgb: [number, number, number]): [number, number, numbe
   // @ts-expect-error ts-migrate(2365) FIXME: Operator '+' cannot be applied to types 'number | ... Remove this comment to see the full error message
   return [60 * (h < 0 ? h + 6 : h), v && n / v, v];
 }
+
+/**
+ * Adapted from https://stackoverflow.com/a/9493060.
+ *
+ * Converts an RGB color value to HSL. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes r, g, and b are contained in the set [0, 1] and
+ * returns h, s, and l in the set [0, 1].
+ */
+export function jsRgb2hsl(rgb: Vector3): Vector3 {
+  const [r, g, b] = rgb;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h;
+  let s;
+  const l = (max + min) / 2;
+
+  if (max === min) {
+    // achromatic
+    h = 0;
+    s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+      default:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+
+  return [h, s, l];
+}
+
 export const colormapJet: ShaderModule = {
   requirements: [],
   code: `
@@ -51,7 +102,7 @@ export const colormapJet: ShaderModule = {
 };
 // Input in [0,1]
 // Output in [0,1] for r, g and b
-export function jsColormapJet(x: number): [number, number, number] {
+export function jsColormapJet(x: number): Vector3 {
   const r = _.clamp(x < 0.89 ? (x - 0.35) / 0.31 : 1.0 - ((x - 0.89) / 0.11) * 0.5, 0, 1);
 
   const g = _.clamp(x < 0.64 ? (x - 0.125) * 4.0 : 1.0 - (x - 0.64) / 0.27, 0, 1);
@@ -60,6 +111,10 @@ export function jsColormapJet(x: number): [number, number, number] {
 
   return [r, g, b];
 }
+export const hslaToCSS = (hsla: Vector4) => {
+  const [h, s, l, a] = hsla;
+  return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
+};
 export const aaStep: ShaderModule = {
   requirements: [],
   code: `

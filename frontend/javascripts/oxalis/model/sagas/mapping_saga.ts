@@ -4,6 +4,7 @@ import { all, call, takeEvery, takeLatest, take, put, fork, actionChannel } from
 import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
+  OptionalMappingProperties,
   SetMappingAction,
   SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
@@ -23,6 +24,8 @@ import api from "oxalis/api/internal_api";
 import { MappingStatusEnum } from "oxalis/constants";
 import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
+import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
+import { updateSegmentAction } from "../actions/volumetracing_actions";
 type APIMappings = Record<string, APIMapping>;
 
 const isAgglomerate = (mapping: ActiveMappingInfo) => {
@@ -92,7 +95,20 @@ function* maybeFetchMapping(
   );
   if (!isEditableMappingActivationAllowed) return;
 
-  if (mappingName == null || existingMapping != null) return;
+  if (mappingName == null) {
+    return;
+  }
+  if (existingMapping != null) {
+    // A fully fledged mapping object was already passed
+    // (e.g., via the front-end API).
+    // Only the custom colors have to be configured, if they
+    // were passed.
+    if (action.mappingColors) {
+      const classes = convertMappingObjectToClasses(existingMapping);
+      yield* call(setCustomColors, action, classes, layerName);
+    }
+    return;
+  }
 
   if (showLoadingIndicator) {
     message.loading({
@@ -109,11 +125,9 @@ function* maybeFetchMapping(
     "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
       ? layerInfo.fallbackLayer
       : layerInfo.name,
-  ];
+  ] as const;
   const [jsonMappings, serverHdf5Mappings] = yield* all([
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getMappingsForDatasetLayer, ...params),
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     call(getAgglomeratesForDatasetLayer, ...params),
   ]);
   // Make sure the available mappings are persisted in the store if they are not already
@@ -171,16 +185,18 @@ function* maybeFetchMapping(
     yield* put(setMappingAction(layerName, null, mappingType));
     return;
   }
-  const { hideUnmappedIds, colors: mappingColors } = fetchedMappings[mappingName];
+  const fetchedMapping = fetchedMappings[mappingName];
+  const { hideUnmappedIds, colors: mappingColors } = fetchedMapping;
+
   // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
   // class will get the first color, and so on
-  const assignNewIds = mappingColors != null && mappingColors.length > 0;
+  const usesCustomColors = mappingColors != null && mappingColors.length > 0;
   const [mappingObject, mappingKeys] = yield* call(
     buildMappingObject,
     layerName,
     mappingName,
     fetchedMappings,
-    assignNewIds,
+    usesCustomColors, // assign new ids when using custom colors
   );
   const mappingProperties = {
     mapping: mappingObject,
@@ -188,6 +204,10 @@ function* maybeFetchMapping(
     mappingColors,
     hideUnmappedIds,
   };
+
+  if (usesCustomColors) {
+    yield* call(setCustomColors, mappingProperties, fetchedMapping.classes || [], layerName);
+  }
 
   if (layerInfo.elementClass === "uint64") {
     yield* call(
@@ -198,6 +218,42 @@ function* maybeFetchMapping(
   }
 
   yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
+}
+
+function convertMappingObjectToClasses(existingMapping: Mapping) {
+  const classesByRepresentative: Record<number, number[]> = {};
+  for (const unmappedStr of Object.keys(existingMapping)) {
+    const unmapped = Number(unmappedStr);
+    const mapped = existingMapping[unmapped];
+    classesByRepresentative[mapped] = classesByRepresentative[mapped] || [];
+    classesByRepresentative[mapped].push(unmapped);
+  }
+  const classes = Object.values(classesByRepresentative);
+  return classes;
+}
+
+function* setCustomColors(
+  mappingProperties: OptionalMappingProperties,
+  classes: number[][],
+  layerName: string,
+) {
+  if (mappingProperties.mapping == null || mappingProperties.mappingColors == null) {
+    return;
+  }
+  let classIdx = 0;
+  for (const aClass of classes) {
+    const firstIdEntry = aClass[0];
+    if (firstIdEntry == null) {
+      continue;
+    }
+    const representativeId = mappingProperties.mapping[firstIdEntry];
+
+    const hueValue = mappingProperties.mappingColors[classIdx];
+    const color = jsHsv2rgb(360 * hueValue, 1, 1);
+    yield* put(updateSegmentAction(representativeId, { color }, layerName));
+
+    classIdx++;
+  }
 }
 
 function* fetchMappings(
@@ -255,8 +311,7 @@ function* buildMappingObject(
   const mappingKeys = [];
   const largestSegmentID = yield* call(getLargestSegmentId, layerName);
   const maxId = largestSegmentID + 1;
-  // Initialize to the next multiple of 256 that is larger than maxId
-  let newMappedId = Math.ceil(maxId / 256) * 256;
+  let newMappedId = maxId;
 
   for (const currentMappingName of getMappingChain(mappingName, fetchedMappings)) {
     const mapping = fetchedMappings[currentMappingName];
@@ -265,19 +320,20 @@ function* buildMappingObject(
       "Mappings must have been fetched at this point. Ensure that the mapping JSON contains a classes property.",
     );
 
-    if (mapping.classes) {
-      for (const mappingClass of mapping.classes) {
-        const minId = assignNewIds ? newMappedId : _.min(mappingClass);
-        // @ts-expect-error ts-migrate(2538) FIXME: Type 'undefined' cannot be used as an index type.
-        const mappedId = mappingObject[minId] || minId;
-
-        for (const id of mappingClass) {
-          mappingObject[id] = mappedId;
-          mappingKeys.push(id);
-        }
-
-        newMappedId++;
+    for (const mappingClass of mapping.classes) {
+      const minId = assignNewIds ? newMappedId : _.min(mappingClass);
+      if (minId == null) {
+        // The class is empty and can be ignored
+        continue;
       }
+      const mappedId = mappingObject[minId] || minId;
+
+      for (const id of mappingClass) {
+        mappingObject[id] = mappedId;
+        mappingKeys.push(id);
+      }
+
+      newMappedId++;
     }
   }
 

@@ -55,7 +55,7 @@ object MeshChunkDataRequestV1 {
 case class MeshFileInfo(
     meshFileName: String,
     mappingName: Option[String],
-    formatVersion: Int
+    formatVersion: Long
 )
 
 object MeshFileInfo {
@@ -216,6 +216,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       val globalPosition = segmentInfo.gridOrigin + segmentInfo
         .fragmentPositions(lod)(currentFragment)
         .toVec3Float * segmentInfo.chunkShape * segmentInfo.lodScales(lod) * lodScaleMultiplier
+      // todo this is still the wrong way around
       val transformedPosition = globalPosition.matmul(transform)
 
       transformedPosition.map(

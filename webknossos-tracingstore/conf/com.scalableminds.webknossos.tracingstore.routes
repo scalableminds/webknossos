@@ -56,7 +56,7 @@ POST        /skeleton/mergedFromIds                             @com.scalablemin
 GET         /skeleton/:tracingId                                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.get(token: Option[String], tracingId: String, version: Option[Long])
 GET         /skeleton/:tracingId/newestVersion                  @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.newestVersion(token: Option[String], tracingId: String)
 GET         /skeleton/:tracingId/updateActionStatistics         @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionStatistics(token: Option[String], tracingId: String)
-GET         /skeleton/:tracingId/updateActionLog                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionLog(token: Option[String], tracingId: String)
+GET         /skeleton/:tracingId/updateActionLog                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionLog(token: Option[String], tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
 POST        /skeleton/getMultiple                               @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple(token: Option[String])
 
 POST        /skeleton/:tracingId/update                         @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.update(token: Option[String], tracingId: String)

@@ -221,6 +221,16 @@ function VersionList(props: Props) {
   }
 
   const queryKey = ["versions", props.tracing.tracingId];
+
+  useEffect(() => {
+    // Remove all previous existent queries so that the content of this view
+    // is loaded from scratch. This is important since the loaded page numbers
+    // are relative to the base version. If the version of the tracing changed,
+    // old pages are not valid anymore.
+    queryClient.removeQueries(queryKey);
+    Store.dispatch(setAnnotationAllowUpdateAction(false));
+  }, []);
+
   const {
     data: versions,
     error,
@@ -241,15 +251,6 @@ function VersionList(props: Props) {
   ) as Array<string | APIUpdateActionBatch[]>;
 
   useEffect(() => {
-    // Remove all previous existent queries so that the content of this view
-    // is loaded from scratch. This is important since the loaded page numbers
-    // are relative to the base version. If the version of the tracing changed,
-    // old pages are not valid anymore.
-    queryClient.removeQueries(queryKey);
-    Store.dispatch(setAnnotationAllowUpdateAction(false));
-  }, []);
-
-  useEffect(() => {
     // The initially loaded page could be quite short (e.g., if
     // ENTRIES_PER_PAGE is 100 and the current version is 105, the first
     // page will only contain 5 items). In that case, also load the next
@@ -262,7 +263,7 @@ function VersionList(props: Props) {
       // No need to pre-fetch the next page.
       return;
     }
-    if (hasNextPage || !isFetchingNextPage) {
+    if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [flattenedVersions, hasNextPage, isFetchingNextPage]);

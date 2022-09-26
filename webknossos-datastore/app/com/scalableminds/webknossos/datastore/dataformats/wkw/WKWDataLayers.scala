@@ -46,7 +46,7 @@ case class WKWSegmentationLayer(
     wkwResolutions: List[WKWResolution],
     elementClass: ElementClass.Value,
     mappings: Option[Set[String]],
-    largestSegmentId: Long,
+    largestSegmentId: Option[Long] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends SegmentationLayer

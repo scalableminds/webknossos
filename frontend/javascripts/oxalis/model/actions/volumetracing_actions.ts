@@ -31,7 +31,7 @@ type SetMousePositionAction = ReturnType<typeof setMousePositionAction>;
 type HideBrushAction = ReturnType<typeof hideBrushAction>;
 type SetContourTracingModeAction = ReturnType<typeof setContourTracingModeAction>;
 export type ImportVolumeTracingAction = ReturnType<typeof importVolumeTracingAction>;
-export type SetMaxCellAction = ReturnType<typeof setMaxCellAction>;
+export type SetLargestSegmentIdAction = ReturnType<typeof setLargestSegmentIdAction>;
 export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
@@ -57,7 +57,7 @@ export type VolumeTracingAction =
   | UpdateSegmentAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
-  | SetMaxCellAction
+  | SetLargestSegmentIdAction
   | SetMappingIsEditableAction
   | InitializeEditableMappingAction;
 
@@ -87,9 +87,15 @@ export const initializeEditableMappingAction = (mapping: ServerEditableMapping) 
     mapping,
   } as const);
 
-export const createCellAction = () =>
+/*
+ * The largestSegmentId parameter is required to enforce that the dispatcher of the action
+ * has dealt with the case where the maximum segment id is not set. In that case,
+ * the create cell action should not be exposed via the UI.
+ */
+export const createCellAction = (largestSegmentId: number) =>
   ({
     type: "CREATE_CELL",
+    largestSegmentId,
   } as const);
 
 export const startEditingAction = (position: Vector3, planeId: OrthoView) =>
@@ -220,9 +226,9 @@ export const importVolumeTracingAction = () =>
     type: "IMPORT_VOLUMETRACING",
   } as const);
 
-export const setMaxCellAction = (cellId: number) =>
+export const setLargestSegmentIdAction = (cellId: number) =>
   ({
-    type: "SET_MAX_CELL",
+    type: "SET_LARGEST_SEGMENT_ID",
     cellId,
   } as const);
 

@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Sharing links are shortened by default. Within the sharing modal, this shortening behavior can be disabled. [#6461](https://github.com/scalableminds/webknossos/pull/6461)
 - Removed optional "resolution" parameter from /datasets/:organizationName/:dataSetName/layers/:dataLayerName/data route. Use mag instead. [#6479](https://github.com/scalableminds/webknossos/pull/6479)
 - Changed how volumes containing no data are stored. Now the selection of magnifications is correctly exported and imported. [#6481](https://github.com/scalableminds/webknossos/pull/6481)
+- The largestSegmentId is no longer a required property for segmentation layers. It is still recommended to set the property, since the generation of new segment IDs is blocked during volume annotation. However, annotating with manually set IDs is still possible. This change simplifies the import of datasets into webKnossos. [#6414](https://github.com/scalableminds/webknossos/pull/6414)
 
 ### Fixed
 - Fixed sharing button for users who are currently visiting a dataset or annotation which was shared with them. [#6438](https://github.com/scalableminds/webknossos/pull/6438)

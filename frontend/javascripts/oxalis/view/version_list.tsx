@@ -162,20 +162,20 @@ async function getUpdateActionLogPage(
     throw new Error("ENTRIES_PER_PAGE should be divisible by 10.");
   }
 
-  // For example, the following parameters would be a valid variable set:
+  // For example, the following parameters would be a valid variable set
+  // (assuming ENTRIES_PER_PAGE = 2):
   // baseVersion = 23
   // relativePageNumber = 1
-  // absolutePageNumber = 10
+  // absolutePageNumber = ⌊11.5⌋ - 1 = 10
   // newestVersion = 22
   // oldestVersion = 21
+  // Thus, versions 21 and 22 will be fetched for the second newest page
   const absolutePageNumber = Math.floor(baseVersion / ENTRIES_PER_PAGE) - relativePageNumber;
   if (absolutePageNumber < 0) {
     throw new Error("Negative absolute page number received.");
   }
   const newestVersion = (1 + absolutePageNumber) * ENTRIES_PER_PAGE;
-  // The backend won't send the version 0 as that does not exist. The frontend however
-  // shows that as the initial version.
-  const oldestVersion = Math.max(absolutePageNumber * ENTRIES_PER_PAGE + 1, 1);
+  const oldestVersion = absolutePageNumber * ENTRIES_PER_PAGE + 1;
 
   const updateActionLog = await getUpdateActionLog(
     tracingStoreUrl,
@@ -185,7 +185,8 @@ async function getUpdateActionLogPage(
     newestVersion,
   );
 
-  // Insert version 0
+  // The backend won't send the version 0 as that does not exist. The frontend however
+  // shows that as the initial version. Thus, insert version 0.
   if (oldestVersion === 1) {
     updateActionLog.push({
       version: 0,

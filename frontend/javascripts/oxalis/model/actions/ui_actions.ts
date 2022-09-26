@@ -72,9 +72,10 @@ export const setToolAction = (tool: AnnotationTool) =>
     type: "SET_TOOL",
     tool,
   } as const);
-export const cycleToolAction = () =>
+export const cycleToolAction = (backwards: boolean = false) =>
   ({
     type: "CYCLE_TOOL",
+    backwards,
   } as const);
 export const setThemeAction = (value: Theme) =>
   ({

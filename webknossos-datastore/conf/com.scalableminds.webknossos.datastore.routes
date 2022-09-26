@@ -56,8 +56,11 @@ POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/agg
 
 # Mesh files
 GET           /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listMeshFiles(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
-POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes/chunks                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listMeshChunksForSegment(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
-POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes/chunks/data                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.readMeshChunk(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
+POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes/chunks                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listMeshChunksForSegmentV0(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
+POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes/chunks/data                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.readMeshChunkV0(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
+POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/v1/meshes/chunks                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listMeshChunksForSegmentV1(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
+POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/v1/meshes/chunks/data                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.readMeshChunkV1(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
+
 
 # Connectome files
 GET           /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listConnectomeFiles(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)

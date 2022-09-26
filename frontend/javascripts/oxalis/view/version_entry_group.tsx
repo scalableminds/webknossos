@@ -53,7 +53,7 @@ function GroupHeader({
 }
 export default class VersionEntryGroup extends React.Component<Props, State> {
   state: State = {
-    expanded: false, // todo: revert after testing
+    expanded: false,
   };
 
   toggleExpand = () => {

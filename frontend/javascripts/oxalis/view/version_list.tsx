@@ -27,7 +27,7 @@ import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 
-const ENTRIES_PER_PAGE = 5;
+const ENTRIES_PER_PAGE = 500;
 
 type Props = {
   versionedObjectType: SaveQueueType;
@@ -167,7 +167,7 @@ async function getUpdateActionLogPage(
   // relativePageNumber = 1
   // absolutePageNumber = 10
   // newestVersion = 22
-  // oldestVersion = 20
+  // oldestVersion = 21
   const absolutePageNumber = Math.floor(baseVersion / ENTRIES_PER_PAGE) - relativePageNumber;
   if (absolutePageNumber < 0) {
     throw new Error("Negative absolute page number received.");
@@ -187,7 +187,7 @@ async function getUpdateActionLogPage(
 
   // Insert version 0
   if (oldestVersion === 1) {
-    updateActionLog.unshift({
+    updateActionLog.push({
       version: 0,
       value: [serverCreateTracing(props.tracing.createdTimestamp)],
     });

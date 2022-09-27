@@ -28,6 +28,7 @@ import { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
+import { APIDataLayer } from "types/api_flow_types";
 
 const FormItem = Form.Item;
 
@@ -204,7 +205,8 @@ function SimpleDatasetForm({
                 rules={getDatasetNameRules(activeUser, isEditingMode)}
               >
                 <Input
-                  disabled={isReadOnlyDataset}
+                  // Renaming an existing DS is not supported right now
+                  disabled={isReadOnlyDataset || isEditingMode}
                   style={{
                     width: 400,
                   }}
@@ -263,6 +265,7 @@ function SimpleDatasetForm({
               layer={layer}
               index={idx}
               onRemoveLayer={onRemoveLayer}
+              form={form}
             />
           </List.Item>
         ))}
@@ -284,17 +287,28 @@ function SimpleLayerForm({
   layer,
   index,
   onRemoveLayer,
+  form,
 }: {
   isReadOnlyDataset: boolean;
   layer: DataLayer;
   index: number;
   onRemoveLayer: (layer: DataLayer) => void;
+  form: FormInstance;
 }) {
+  const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
   const isSegmentation = category === "segmentation";
   const bitDepth = getBitDepth(layer);
 
   const mayLayerBeRemoved = !isReadOnlyDataset;
+
+  React.useEffect(() => {
+    // Always validate all fields so that in the case of duplicate layer
+    // names all relevant fields are properly validated.
+    // This is a workaround, since shouldUpdate=true on a
+    // FormItemWithInfo doesn't work for some reason.
+    form.validateFields();
+  }, [dataLayers]);
 
   return (
     <div
@@ -324,6 +338,14 @@ function SimpleLayerForm({
                 message: "Please provide a valid layer name.",
               },
               ...layerNameRules,
+              {
+                validator: syncValidator(
+                  (value: string) =>
+                    dataLayers.filter((someLayer: APIDataLayer) => someLayer.name === value)
+                      .length <= 1,
+                  "Layer names must be unique.",
+                ),
+              },
             ]}
           >
             <Input

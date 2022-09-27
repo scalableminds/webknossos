@@ -92,6 +92,8 @@ function DatasetAddZarrView(props: Props) {
   };
 
   async function handleStoreDataset() {
+    await form.validateFields();
+
     const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
     const datastoreToUse = uploadableDatastores[0];
     if (!datastoreToUse) {
@@ -176,33 +178,41 @@ function DatasetAddZarrView(props: Props) {
               </div>
             </>
           )}
-          <Row gutter={8}>
-            <Col span={6} />
-            <Col span={6} />
-            <Col span={6}>
-              <FormItem>
-                <Button
-                  size="large"
-                  type="default"
-                  style={{ width: "100%" }}
-                  onClick={() => setDatasourceConfigStr("")}
-                >
-                  Reset
-                </Button>
-              </FormItem>
-            </Col>
-            <Col span={6}>
-              <Button
-                size="large"
-                type="primary"
-                style={{ width: "100%" }}
-                onClick={handleStoreDataset}
-                disabled={!datasourceConfigStr}
-              >
-                Import
-              </Button>
-            </Col>
-          </Row>
+          {!hideDatasetUI && (
+            <Row gutter={8}>
+              <Col span={12} />
+              <Col span={6}>
+                <FormItem>
+                  <Button
+                    size="large"
+                    type="default"
+                    style={{ width: "100%" }}
+                    onClick={() => setDatasourceConfigStr("")}
+                  >
+                    Reset
+                  </Button>
+                </FormItem>
+              </Col>
+              <Col span={6}>
+                <Form.Item shouldUpdate>
+                  {() => (
+                    <Button
+                      size="large"
+                      type="primary"
+                      style={{ width: "100%" }}
+                      onClick={handleStoreDataset}
+                      disabled={
+                        !datasourceConfigStr ||
+                        !!form.getFieldsError().filter(({ errors }) => errors.length).length
+                      }
+                    >
+                      Import
+                    </Button>
+                  )}
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
         </Form>
       </CardContainer>
     </div>

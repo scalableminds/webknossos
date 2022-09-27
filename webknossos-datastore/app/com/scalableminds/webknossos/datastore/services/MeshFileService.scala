@@ -18,6 +18,7 @@ import java.nio.ByteBuffer
 import java.nio.file.{Files, Path, Paths}
 import javax.inject.Inject
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.util.Using
 
@@ -68,8 +69,8 @@ case class NeuroglancerSegmentInfo(chunkShape: Vec3Float,
                                    lodScales: Array[Float],
                                    vertexOffsets: Array[Vec3Float],
                                    numFragmentsPerLod: Array[Int],
-                                   fragmentPositions: Array[Array[Vec3Int]],
-                                   fragmentOffsets: Array[Array[Int]])
+                                   fragmentPositions: List[List[Vec3Int]],
+                                   fragmentOffsets: List[List[Int]])
 
 case class MeshFragment(position: Vec3Float, byteOffset: Int, byteSize: Int)
 
@@ -129,7 +130,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       mappingVersionForMeshFile(meshFilePath)
     }
 
-    val mappingNameFoxes = (meshFileNames, meshFileVersions).zipped.map { (fileName, fileVersion)  =>
+    val mappingNameFoxes = (meshFileNames, meshFileVersions).zipped.map { (fileName, fileVersion) =>
       val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$meshFileExtension")
       mappingNameForMeshFile(meshFilePath, fileVersion)
     }
@@ -146,7 +147,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
    Note that null is a valid value here for once. Meshfiles with no information about the
    meshFilePath will return Fox.empty, while meshfiles with one marked as empty, will return Fox.successful(null)
    */
-  def mappingNameForMeshFile(meshFilePath: Path, meshFileVersion: Long): Fox[String] = {
+  def mappingNameForMeshFile(meshFilePath: Path, meshFileVersion: Long): Fox[String] =
     if (meshFileVersion == 0) {
       safeExecute(meshFilePath) { cachedMeshFile =>
         cachedMeshFile.reader.string().getAttr("/", "metadata/mapping_name")
@@ -156,7 +157,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         cachedMeshFile.reader.string().getAttr("/", "mapping_name")
       } ?~> "mesh.file.readEncoding.failed"
     }
-  }
 
   def mappingVersionForMeshFile(meshFilePath: Path): Long =
     safeExecuteBox(meshFilePath) { cachedMeshFile =>
@@ -205,7 +205,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       val encoding = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
       val lodScaleMultiplier = cachedMeshFile.reader.float64().getAttr("/", "lod_scale_multiplier")
       println(s"encoding: $encoding")
-      val transform = cachedMeshFile.reader.float64().readMatrixBlockWithOffset("/transform", 3, 4, 0, 0)
+      val transform = cachedMeshFile.reader.float64().getMatrixAttr("/", "transform")
       println(s"transform: ${transform.mkString("Array(", ", ", ")")}")
 
       val (neuroglancerStart, neuroglancerEnd) = getNeuroglancerOffsets(segmentId, cachedMeshFile)
@@ -213,7 +213,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
       val manifest = cachedMeshFile.reader
         .uint8()
-        .readArrayBlockWithOffset("/neuroglancer", (neuroglancerEnd - neuroglancerStart + 1).toInt, neuroglancerStart)
+        .readArrayBlockWithOffset("/neuroglancer", (neuroglancerEnd - neuroglancerStart).toInt, neuroglancerStart)
+      println(s"""manifest: ${manifest.mkString("Array(", ", ", ")")}""")
       val segmentInfo = parseNeuroglancerManifest(manifest)
       val meshfile = getFragmentsFromSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
       meshfile
@@ -229,16 +230,19 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
     val fragmentByteOffsets = segmentInfo.fragmentOffsets.map(_.scanLeft(0)(_ + _)) // This builds a cumulative sum
 
+    println(s"totalMeshSize: $totalMeshSize")
+    println(s"meshByteStartOffset: $meshByteStartOffset")
+    println(s"fragmentByteOffsets: ${fragmentByteOffsets.mkString("Array(", ", ", ")")}")
     def computeGlobalPositionAndOffset(lod: Int, currentFragment: Int): MeshFragment = {
       val globalPosition = segmentInfo.gridOrigin + segmentInfo
         .fragmentPositions(lod)(currentFragment)
         .toVec3Float * segmentInfo.chunkShape * segmentInfo.lodScales(lod) * lodScaleMultiplier
 
-          MeshFragment(
-            position = globalPosition, // This position is in Voxel Space
-            byteOffset = meshByteStartOffset.toInt + fragmentByteOffsets(lod)(currentFragment),
-            byteSize = segmentInfo.fragmentOffsets(lod)(currentFragment),
-        )
+      MeshFragment(
+        position = globalPosition, // This position is in Voxel Space
+        byteOffset = meshByteStartOffset.toInt + fragmentByteOffsets(lod)(currentFragment),
+        byteSize = segmentInfo.fragmentOffsets(lod)(currentFragment),
+      )
     }
 
     val lods = for (lod <- 0 until segmentInfo.numLods) yield lod
@@ -256,8 +260,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                       chunkShape = segmentInfo.chunkShape,
                       fragments = fragments(lod)))
       .toList
-    Some(
-      MeshSegmentInfo(chunkShape = segmentInfo.chunkShape, gridOrigin = segmentInfo.gridOrigin, lods = meshfileLods))
+    Some(MeshSegmentInfo(chunkShape = segmentInfo.chunkShape, gridOrigin = segmentInfo.gridOrigin, lods = meshfileLods))
   }
   private def parseNeuroglancerManifest(manifest: Array[Byte]): NeuroglancerSegmentInfo = {
     // All Ints here should be UInt32 per spec.
@@ -272,6 +275,10 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
     val numLods = dis.readInt
 
+    println(s"chunkShape: $chunkShape")
+    println(s"gridOrigin: $gridOrigin")
+    println(s"numLods: $numLods")
+
     val lodScales = new Array[Float](numLods)
     for (d <- 0 until numLods) {
       lodScales(d) = dis.readFloat
@@ -282,26 +289,35 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       vertexOffsets(d) = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
     }
 
+    println(s"lodScales: ${lodScales.mkString("Array(", ", ", ")")}")
+    println(s"vertexOffsets: ${lodScales.mkString("Array(", ", ", ")")}")
+
     val numFragmentsPerLod = new Array[Int](numLods)
     for (lod <- 0 until numLods) {
       numFragmentsPerLod(lod) = dis.readInt()
     }
 
-    val fragmentPositions = new Array[Array[Array[Int]]](numLods)
-    val fragmentPositionsVec3 = new Array[Array[Vec3Int]](numLods)
-    val fragmentSizes = new Array[Array[Int]](numLods)
+    println(s"numFragmentsPerLod: ${numFragmentsPerLod.mkString("Array(", ", ", ")")}")
+    // TODO what if there are no fragments?
+    val fragmentPositionsList = new ListBuffer[List[Vec3Int]]
+    val fragmentSizes = new ListBuffer[List[Int]]
     for (lod <- 0 until numLods) {
-      for (row <- 0 until 3) {
-        for (col <- 0 until numFragmentsPerLod(lod)) {
-          fragmentPositions(lod)(row)(col) = dis.readInt
+      val currentFragmentPositions = (ListBuffer[Int](), ListBuffer[Int](), ListBuffer[Int]())
+      for (row <- 0 until 3; _ <- 0 until numFragmentsPerLod(lod)) {
+        row match {
+          case 0 => currentFragmentPositions._1.append(dis.readInt)
+          case 1 => currentFragmentPositions._2.append(dis.readInt)
+          case 2 => currentFragmentPositions._3.append(dis.readInt)
         }
       }
 
-      fragmentPositionsVec3(lod) = fragmentPositions(lod).transpose.map(xs => Vec3Int(xs(0), xs(1), xs(2)))
+      fragmentPositionsList.append(currentFragmentPositions.zipped.map(Vec3Int(_, _, _)).toList)
 
-      for (fragmentNum <- 0 until numFragmentsPerLod(lod)) {
-        fragmentSizes(lod)(fragmentNum) = dis.readInt
+      val currentFragmentSizes = ListBuffer[Int]()
+      for (_ <- 0 until numFragmentsPerLod(lod)) {
+        currentFragmentSizes.append(dis.readInt)
       }
+      fragmentSizes.append(currentFragmentSizes.toList)
     }
 
     NeuroglancerSegmentInfo(chunkShape,
@@ -310,8 +326,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                             lodScales,
                             vertexOffsets,
                             numFragmentsPerLod,
-                            fragmentPositionsVec3,
-                            fragmentSizes)
+                            fragmentPositionsList.toList,
+                            fragmentSizes.toList)
   }
 
   private def getNeuroglancerOffsets(segmentId: Long, cachedMeshFile: CachedHdf5File): (Long, Long) = {
@@ -324,17 +340,28 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val bucketIndex = getHashFunction(hashName)(segmentId) % nBuckets
     val cappedBucketIndex = bucketIndex.toInt
     val bucketOffsets = cachedMeshFile.reader.uint64().readArrayBlockWithOffset("bucket_offsets", 2, bucketIndex)
-    val bucketStart = bucketOffsets(cappedBucketIndex)
+    println(s"bucketOffsets: ${bucketOffsets.mkString("Array(", ", ", ")")}")
+    println(s"cappedBucketIndex: $cappedBucketIndex")
+    val bucketStart = bucketOffsets(0)
     val cappedBucketStart = bucketStart.toInt
-    val bucketEnd = bucketOffsets(cappedBucketIndex + 1)
+    val bucketEnd = bucketOffsets(1)
     val cappedBucketEnd = bucketEnd.toInt
+
+    println(s"bucketStart: ${cappedBucketStart}, bucketEnd: ${cappedBucketEnd}")
     val buckets = cachedMeshFile.reader
       .uint64()
       .readMatrixBlockWithOffset("buckets", cappedBucketEnd - cappedBucketStart + 1, 3, bucketStart, 0)
 
+    println(s"buckets: ${buckets.mkString("Array(", ", ", ")")}")
+    println(s"buckets0: ${buckets(0).mkString("Array(", ", ", ")")}")
+    println(s"buckets1: ${buckets(1).mkString("Array(", ", ", ")")}")
+    println(s"buckets2: ${buckets(2).mkString("Array(", ", ", ")")}")
+    // TODO what if you don't find segment
     val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
     val neuroglancerStart = buckets(bucketLocalOffset)(1)
     val neuroglancerEnd = buckets(bucketLocalOffset)(2)
+
+    println(s"neuroglancerStart: $neuroglancerStart, neurglancerEnd: $neuroglancerEnd")
     (neuroglancerStart, neuroglancerEnd)
   }
 

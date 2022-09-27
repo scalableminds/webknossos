@@ -403,7 +403,7 @@ Expects:
   def dummyDracoFile(): Action[AnyContent] = Action.async { implicit request =>
       for {
         draco <- meshFileService.readDummyDraco()
-      } yield Ok(Json.toJson(draco))
+      } yield Ok(draco)
   }
 
   @ApiOperation(hidden = true, value = "")

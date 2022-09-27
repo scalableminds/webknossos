@@ -60,7 +60,7 @@ POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/mes
 POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes/chunks/data                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.readMeshChunkV0(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
 POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/v1/meshes/chunks                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listMeshChunksForSegmentV1(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
 POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/v1/meshes/chunks/data                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.readMeshChunkV1(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
-
+GET           /datasets/dummyDraco                                                                                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.dummyDracoFile()
 
 # Connectome files
 GET           /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listConnectomeFiles(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)

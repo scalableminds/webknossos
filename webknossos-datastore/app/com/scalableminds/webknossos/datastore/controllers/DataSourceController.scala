@@ -400,6 +400,12 @@ Expects:
     }
   }
 
+  def dummyDracoFile(): Action[AnyContent] = Action.async { implicit request =>
+      for {
+        draco <- meshFileService.readDummyDraco()
+      } yield Ok(Json.toJson(draco))
+  }
+
   @ApiOperation(hidden = true, value = "")
   def listMeshFiles(token: Option[String],
                     organizationName: String,

@@ -15,7 +15,7 @@ webKnossos supports both loading data from a local hard disk or streaming it fro
 The easiest way to get started with working on your datasets is through the webKnossos web interface. You can directly upload your dataset through the browser.
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
-2. Provide some metadata information:
+2. Provide some metadata information:  
   - a *name* 
   - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
   - *scale* of each voxel (in nanometers)
@@ -49,7 +49,7 @@ webKnossos can load several Zarr sources and assemble them into a webKnossos dat
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Remote Zarr Dataset*
-3. For each layer, provide some metadata information:
+3. For each layer, provide some metadata information:  
   - a URL or domain/collection identifier to locate the dataset on the remote service
   - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add Layer* button
@@ -73,7 +73,7 @@ To import these datasets:
 
 1. From the *Datasets* tab in the user dashboard, click the *Add Dataset* button.
 2. Select the *Add Neuroglancer Dataset* or *Add BossDB Dataset* tab
-3. Provide some metadata information:
+3. Provide some metadata information:  
   - a *dataset name* 
   - a URL or domain/collection identifier to locate the dataset on the remote service
   - authentication credentials for accessing the resources on the remote service (optional)

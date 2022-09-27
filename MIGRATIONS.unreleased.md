@@ -13,3 +13,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ### Postgres Evolutions:
 - [088-shortlinks.sql](conf/evolutions/088-shortlinks.sql)
 - [089-voxelytics.sql](conf/evolutions/089-voxelytics.sql)
+- [090-cleanup.sql](conf/evolutions/090-cleanup.sql)

@@ -39,6 +39,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed loading agglomeate skeletons for agglomerate ids larger than 2^31. [#6472](https://github.com/scalableminds/webknossos/pull/6472)
 - Fixed bug which could lead to conflict-warnings even though there weren't any. [#6477](https://github.com/scalableminds/webknossos/pull/6477)
 - Fixed that one could not change the color of a segment or tree in Firefox. [#6488](https://github.com/scalableminds/webknossos/pull/6488)
+- Fixed validation of layer selection when trying to start globalization of floodfills. [#6497](https://github.com/scalableminds/webknossos/pull/6497)
 - Fixed filtering for public datasets in dataset table. [#6496](https://github.com/scalableminds/webknossos/pull/6496)
 
 ### Removed

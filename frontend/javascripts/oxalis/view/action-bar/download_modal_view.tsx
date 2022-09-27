@@ -424,7 +424,7 @@ with wk.webknossos_context(
                 <Col span={15}>
                   <LayerSelection
                     layers={layers}
-                    setSelectedLayerName={setSelectedLayerName}
+                    onChange={setSelectedLayerName}
                     tracing={tracing}
                     style={{ width: 330 }}
                   />

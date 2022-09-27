@@ -49,8 +49,7 @@ export type DataLayer = {
     }
   | {
       category: "segmentation";
-      // Add minimum=1
-      largestSegmentId: number;
+      largestSegmentId: number | null;
       mappings: Array<string>;
     }
 ) &

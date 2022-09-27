@@ -20,12 +20,15 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added workflow reporting and logging features for Voxelytics into webKnossos. If activated, the workflows can be accessed from the `Administration` > `Voxelytics` menu item. [#6416](https://github.com/scalableminds/webknossos/pull/6416) [#6460](https://github.com/scalableminds/webknossos/pull/6460)
 - The color of a segments can now be changed in the segments tab. Rightclick a segment in the list and select "Change Color" to open a color picker. [#6372](https://github.com/scalableminds/webknossos/pull/6372)
 - Added possibility to read N5 datasets. [#6466](https://github.com/scalableminds/webknossos/pull/6466)
+- Added "shift + w" shortcut to cycle backwards through annotation tools. [#6493](https://github.com/scalableminds/webknossos/pull/6493)
 
 ### Changed
 - Selecting a node with the proofreading tool won't have any side effects anymore. Previous versions could load additional agglomerate skeletons in certain scenarios which could be confusing. [#6477](https://github.com/scalableminds/webknossos/pull/6477)
 - Sharing links are shortened by default. Within the sharing modal, this shortening behavior can be disabled. [#6461](https://github.com/scalableminds/webknossos/pull/6461)
 - Removed optional "resolution" parameter from /datasets/:organizationName/:dataSetName/layers/:dataLayerName/data route. Use mag instead. [#6479](https://github.com/scalableminds/webknossos/pull/6479)
 - Changed how volumes containing no data are stored. Now the selection of magnifications is correctly exported and imported. [#6481](https://github.com/scalableminds/webknossos/pull/6481)
+- The "Restore Older Version" list is now paginated which improves performance for in case many versions exist. [#6483](https://github.com/scalableminds/webknossos/pull/6483)
+- The largestSegmentId is no longer a required property for segmentation layers. It is still recommended to set the property, since the generation of new segment IDs is blocked during volume annotation. However, annotating with manually set IDs is still possible. This change simplifies the import of datasets into webKnossos. [#6414](https://github.com/scalableminds/webknossos/pull/6414)
 
 ### Fixed
 - Fixed sharing button for users who are currently visiting a dataset or annotation which was shared with them. [#6438](https://github.com/scalableminds/webknossos/pull/6438)
@@ -36,6 +39,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed loading agglomeate skeletons for agglomerate ids larger than 2^31. [#6472](https://github.com/scalableminds/webknossos/pull/6472)
 - Fixed bug which could lead to conflict-warnings even though there weren't any. [#6477](https://github.com/scalableminds/webknossos/pull/6477)
 - Fixed that one could not change the color of a segment or tree in Firefox. [#6488](https://github.com/scalableminds/webknossos/pull/6488)
+- Fixed validation of layer selection when trying to start globalization of floodfills. [#6497](https://github.com/scalableminds/webknossos/pull/6497)
+- Fixed filtering for public datasets in dataset table. [#6496](https://github.com/scalableminds/webknossos/pull/6496)
 
 ### Removed
 

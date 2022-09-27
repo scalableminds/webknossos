@@ -18,6 +18,7 @@ import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_boundin
 import * as Utils from "libs/utils";
 import features from "features";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
+import { APISegmentationLayer, APIUser } from "types/api_flow_types";
 
 // NOTE: The regexp and getBBoxNameForPartialFloodfill need to stay in sync.
 // That way, bboxes created by the floodfill can be detected as such and
@@ -100,11 +101,11 @@ export default function BoundingBoxTab() {
     setPosition(center);
   }
 
-  const showGlobalizeFloodfillsButton =
-    features().jobsEnabled &&
-    activeUser != null &&
-    activeSegmentationTracingLayer != null &&
-    userBoundingBoxes.some((bbox) => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null);
+  const globalizeFloodfillsButtonDisabledReason = getInfoForGlobalizeFloodfill(
+    userBoundingBoxes,
+    activeSegmentationTracingLayer,
+    activeUser,
+  );
 
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
@@ -125,27 +126,27 @@ export default function BoundingBoxTab() {
         minWidth: 300,
       }}
     >
-      {showGlobalizeFloodfillsButton ? (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Tooltip title="For this annotation some floodfill operations have not run to completion, because they covered a too large volume. webKnossos can finish these operations via a long-running job.">
-            <Button
-              size="small"
-              style={{
-                marginBottom: 8,
-              }}
-              onClick={() => setIsGlobalizeFloodfillsModalVisible(true)}
-            >
-              <i className="fas fa-fill-drip" />
-              Globalize Flood-Fills
-            </Button>
-          </Tooltip>
-        </div>
-      ) : null}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
+      >
+        <Tooltip title={globalizeFloodfillsButtonDisabledReason.title}>
+          <Button
+            size="small"
+            style={{
+              marginBottom: 8,
+            }}
+            disabled={globalizeFloodfillsButtonDisabledReason.disabled}
+            onClick={() => setIsGlobalizeFloodfillsModalVisible(true)}
+          >
+            <i className="fas fa-fill-drip" />
+            Globalize Flood-Fills
+          </Button>
+        </Tooltip>
+      </div>
+
       {/* In view mode, it's okay to render an empty list, since there will be
           an explanation below, anyway.
       */}
@@ -203,4 +204,39 @@ export default function BoundingBoxTab() {
       ) : null}
     </div>
   );
+}
+
+function getInfoForGlobalizeFloodfill(
+  userBoundingBoxes: UserBoundingBox[],
+  activeSegmentationTracingLayer: APISegmentationLayer | null | undefined,
+  activeUser: APIUser | null | undefined,
+) {
+  if (!userBoundingBoxes.some((bbox) => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null)) {
+    return { disabled: true, title: "No partial floodfills to globalize." };
+  }
+  if (activeSegmentationTracingLayer == null) {
+    return {
+      disabled: true,
+      title:
+        "Partial floodfills can only be globalized when a segmentation annotation layer exists.",
+    };
+  }
+  if (activeUser == null) {
+    return {
+      disabled: true,
+      title: "Partial floodfills can only be globalized as a registered user.",
+    };
+  }
+  if (!features().jobsEnabled) {
+    return {
+      disabled: true,
+      title: "Partial floodfills can only be globalized when a webknossos-worker was set up.",
+    };
+  }
+
+  return {
+    disabled: false,
+    title:
+      "For this annotation some floodfill operations have not run to completion, because they covered a too large volume. webKnossos can finish these operations via a long-running job.",
+  };
 }

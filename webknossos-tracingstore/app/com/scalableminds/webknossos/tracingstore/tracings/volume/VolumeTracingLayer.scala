@@ -80,7 +80,7 @@ case class VolumeTracingLayer(
 
   override val boundingBox: BoundingBox = tracing.boundingBox
   override val elementClass: ElementClass.Value = tracing.elementClass
-  override val largestSegmentId: Long = tracing.largestSegmentId
+  override val largestSegmentId: Option[Long] = tracing.largestSegmentId
   override val defaultViewConfiguration: Option[LayerViewConfiguration] = None
   override val adminViewConfiguration: Option[LayerViewConfiguration] = None
   override val mappings: Option[Set[String]] = None

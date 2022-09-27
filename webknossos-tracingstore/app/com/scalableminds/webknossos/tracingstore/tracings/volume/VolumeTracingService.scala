@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io._
 import java.nio.file.Paths
 import java.util.zip.Deflater
-
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -94,7 +93,7 @@ class VolumeTracingService @Inject()(
             action match {
               case a: UpdateBucketVolumeAction =>
                 if (tracing.getMappingIsEditable) {
-                  Fox.failure("Cannot mutate buckets in annotation with editable mapping.")
+                  Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
                 } else updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
@@ -340,7 +339,9 @@ class VolumeTracingService @Inject()(
       userToken = userToken
     )
 
-  def updateActionLog(tracingId: String): Fox[JsValue] = {
+  def updateActionLog(tracingId: String,
+                      newestVersion: Option[Long] = None,
+                      oldestVersion: Option[Long] = None): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
@@ -348,8 +349,10 @@ class VolumeTracingService @Inject()(
       )
 
     for {
-      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJsonBytes[List[CompactVolumeUpdateAction]])
+      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(
+        tracingId,
+        newestVersion,
+        oldestVersion)(fromJsonBytes[List[CompactVolumeUpdateAction]])
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
@@ -421,7 +424,7 @@ class VolumeTracingService @Inject()(
       )
 
   private def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
-    val largestSegmentId = Math.max(tracingA.largestSegmentId, tracingB.largestSegmentId)
+    val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                      tracingB.userBoundingBox,
@@ -439,6 +442,14 @@ class VolumeTracingService @Inject()(
       userBoundingBoxes = userBoundingBoxes
     )
   }
+
+  private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
+    (aOpt, bOpt) match {
+      case (Some(a), Some(b)) => Some(Math.max(a, b))
+      case (Some(a), None)    => Some(a)
+      case (None, Some(b))    => Some(b)
+      case (None, None)       => None
+    }
 
   private def bucketStreamFromSelector(selector: TracingSelector,
                                        tracing: VolumeTracing): Iterator[(BucketPosition, Array[Byte])] = {
@@ -516,8 +527,9 @@ class VolumeTracingService @Inject()(
         Fox.failure("annotation.volume.resolutionsDoNotMatch")
       else {
         val volumeLayer = volumeTracingLayer(tracingId, tracing)
-        val mergedVolume = new MergedVolume(tracing.elementClass, tracing.largestSegmentId)
         for {
+          largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
+          mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
           _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox
@@ -531,7 +543,7 @@ class VolumeTracingService @Inject()(
             tracing.version + 1,
             System.currentTimeMillis(),
             None,
-            List(ImportVolumeData(mergedVolume.largestSegmentId.toPositiveLong)),
+            List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
             None,

@@ -201,20 +201,15 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
     safeExecute(meshFilePath) { cachedMeshFile =>
       val segmentId = listMeshChunksRequest.segmentId
-      println(s"Reading $segmentId")
       val encoding = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
       val lodScaleMultiplier = cachedMeshFile.reader.float64().getAttr("/", "lod_scale_multiplier")
-      println(s"encoding: $encoding")
       val transform = cachedMeshFile.reader.float64().getMatrixAttr("/", "transform")
-      println(s"transform: ${transform.mkString("Array(", ", ", ")")}")
 
       val (neuroglancerStart, neuroglancerEnd) = getNeuroglancerOffsets(segmentId, cachedMeshFile)
-      println(s"from $neuroglancerStart to $neuroglancerEnd")
 
       val manifest = cachedMeshFile.reader
         .uint8()
         .readArrayBlockWithOffset("/neuroglancer", (neuroglancerEnd - neuroglancerStart).toInt, neuroglancerStart)
-      println(s"""manifest: ${manifest.mkString("Array(", ", ", ")")}""")
       val segmentInfo = parseNeuroglancerManifest(manifest)
       val meshfile = getFragmentsFromSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
       meshfile
@@ -230,9 +225,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
     val fragmentByteOffsets = segmentInfo.fragmentOffsets.map(_.scanLeft(0)(_ + _)) // This builds a cumulative sum
 
-    println(s"totalMeshSize: $totalMeshSize")
-    println(s"meshByteStartOffset: $meshByteStartOffset")
-    println(s"fragmentByteOffsets: ${fragmentByteOffsets.mkString("Array(", ", ", ")")}")
     def computeGlobalPositionAndOffset(lod: Int, currentFragment: Int): MeshFragment = {
       val globalPosition = segmentInfo.gridOrigin + segmentInfo
         .fragmentPositions(lod)(currentFragment)
@@ -275,10 +267,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
     val numLods = dis.readInt
 
-    println(s"chunkShape: $chunkShape")
-    println(s"gridOrigin: $gridOrigin")
-    println(s"numLods: $numLods")
-
     val lodScales = new Array[Float](numLods)
     for (d <- 0 until numLods) {
       lodScales(d) = dis.readFloat
@@ -289,15 +277,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       vertexOffsets(d) = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
     }
 
-    println(s"lodScales: ${lodScales.mkString("Array(", ", ", ")")}")
-    println(s"vertexOffsets: ${lodScales.mkString("Array(", ", ", ")")}")
-
     val numFragmentsPerLod = new Array[Int](numLods)
     for (lod <- 0 until numLods) {
       numFragmentsPerLod(lod) = dis.readInt()
     }
 
-    println(s"numFragmentsPerLod: ${numFragmentsPerLod.mkString("Array(", ", ", ")")}")
     // TODO what if there are no fragments?
     val fragmentPositionsList = new ListBuffer[List[Vec3Int]]
     val fragmentSizes = new ListBuffer[List[Int]]
@@ -334,34 +318,21 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val nBuckets = cachedMeshFile.reader.uint64().getAttr("/", "n_buckets")
     val hashName = cachedMeshFile.reader.string().getAttr("/", "hash_function")
 
-    println(s"nBuckets: $nBuckets")
-    println(s"hashName: $hashName")
-
     val bucketIndex = getHashFunction(hashName)(segmentId) % nBuckets
     val cappedBucketIndex = bucketIndex.toInt
     val bucketOffsets = cachedMeshFile.reader.uint64().readArrayBlockWithOffset("bucket_offsets", 2, bucketIndex)
-    println(s"bucketOffsets: ${bucketOffsets.mkString("Array(", ", ", ")")}")
-    println(s"cappedBucketIndex: $cappedBucketIndex")
     val bucketStart = bucketOffsets(0)
-    val cappedBucketStart = bucketStart.toInt
     val bucketEnd = bucketOffsets(1)
-    val cappedBucketEnd = bucketEnd.toInt
 
-    println(s"bucketStart: ${cappedBucketStart}, bucketEnd: ${cappedBucketEnd}")
     val buckets = cachedMeshFile.reader
       .uint64()
-      .readMatrixBlockWithOffset("buckets", cappedBucketEnd - cappedBucketStart + 1, 3, bucketStart, 0)
+      .readMatrixBlockWithOffset("buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
 
-    println(s"buckets: ${buckets.mkString("Array(", ", ", ")")}")
-    println(s"buckets0: ${buckets(0).mkString("Array(", ", ", ")")}")
-    println(s"buckets1: ${buckets(1).mkString("Array(", ", ", ")")}")
-    println(s"buckets2: ${buckets(2).mkString("Array(", ", ", ")")}")
     // TODO what if you don't find segment
     val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
     val neuroglancerStart = buckets(bucketLocalOffset)(1)
     val neuroglancerEnd = buckets(bucketLocalOffset)(2)
 
-    println(s"neuroglancerStart: $neuroglancerStart, neurglancerEnd: $neuroglancerEnd")
     (neuroglancerStart, neuroglancerEnd)
   }
 

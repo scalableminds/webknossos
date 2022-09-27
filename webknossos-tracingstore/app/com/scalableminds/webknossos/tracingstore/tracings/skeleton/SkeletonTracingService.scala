@@ -199,15 +199,17 @@ class SkeletonTracingService @Inject()(
                       newTracing: SkeletonTracing,
                       toCache: Boolean): Fox[Unit] = Fox.successful(())
 
-  def updateActionLog(tracingId: String): Fox[JsValue] = {
+  def updateActionLog(tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
         "value" -> Json.toJson(tuple._2)
       )
     for {
-      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJsonBytes[List[SkeletonUpdateAction]])
+      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(
+        tracingId,
+        newestVersion,
+        oldestVersion)(fromJsonBytes[List[SkeletonUpdateAction]])
       updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }

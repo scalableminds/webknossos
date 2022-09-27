@@ -2,7 +2,7 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
-import type { APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import type {
   Vector3,
@@ -411,21 +411,35 @@ export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
     z,
   };
 }
+
 export function isUserTeamManager(user: APIUser): boolean {
   return _.findIndex(user.teams, (team) => team.isTeamManager) >= 0;
 }
+
 export function isUserAdmin(user: APIUser): boolean {
   return user.isAdmin;
 }
+
 export function isUserAdminOrTeamManager(user: APIUser): boolean {
   return user.isAdmin || isUserTeamManager(user);
 }
+
 export function isUserDatasetManager(user: APIUser): boolean {
   return user.isDatasetManager;
 }
+
 export function isUserAdminOrDatasetManager(user: APIUser | null | undefined): boolean {
   return user != null && (isUserAdmin(user) || isUserDatasetManager(user));
 }
+
+export function mayUserEditDataset(user: APIUser | null | undefined, dataset: APIDataset): boolean {
+  return (
+    isUserAdminOrDatasetManager(user) &&
+    user != null &&
+    user.organization === dataset.owningOrganization
+  );
+}
+
 export function getUrlParamsObject(): UrlParams {
   return getUrlParamsObjectFromString(location.search);
 }

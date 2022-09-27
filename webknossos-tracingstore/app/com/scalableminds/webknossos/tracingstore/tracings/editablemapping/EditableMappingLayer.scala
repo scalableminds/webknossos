@@ -50,7 +50,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
 case class EditableMappingLayer(name: String,
                                 boundingBox: BoundingBox,
                                 resolutions: List[Vec3Int],
-                                largestSegmentId: Long,
+                                largestSegmentId: Option[Long],
                                 elementClass: ElementClass.Value,
                                 token: Option[String],
                                 tracing: VolumeTracing,

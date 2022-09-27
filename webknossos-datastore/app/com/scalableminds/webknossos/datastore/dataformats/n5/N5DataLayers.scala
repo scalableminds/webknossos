@@ -42,7 +42,7 @@ case class N5SegmentationLayer(
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
     mags: List[MagLocator],
-    largestSegmentId: Long,
+    largestSegmentId: Option[Long],
     mappings: Option[Set[String]] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,

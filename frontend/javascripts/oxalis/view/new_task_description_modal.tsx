@@ -12,8 +12,7 @@ type State = {
   visible: boolean;
 };
 export default class NewTaskDescriptionModal extends React.Component<Props, State> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'timeoutId' has no initializer and is not... Remove this comment to see the full error message
-  timeoutId: ReturnType<typeof setTimeout>;
+  timeoutId: ReturnType<typeof setTimeout> | undefined;
   state: State = {
     mayClose: false,
     visible: true,
@@ -29,7 +28,9 @@ export default class NewTaskDescriptionModal extends React.Component<Props, Stat
   }
 
   componentWillUnmount() {
-    clearTimeout(this.timeoutId);
+    if (this.timeoutId != null) {
+      clearTimeout(this.timeoutId);
+    }
   }
 
   allowClose() {

@@ -60,6 +60,8 @@ import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handl
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -129,7 +131,19 @@ class SkeletonKeybindings {
 class VolumeKeybindings {
   static getKeyboardControls() {
     return {
-      c: () => Store.dispatch(createCellAction()),
+      c: () => {
+        const volumeLayer = getActiveSegmentationTracing(Store.getState());
+
+        if (volumeLayer == null || volumeLayer.tracingId == null) {
+          return;
+        }
+
+        if (volumeLayer.largestSegmentId != null) {
+          Store.dispatch(createCellAction(volumeLayer.largestSegmentId));
+        } else {
+          showToastWarningForLargestSegmentIdMissing(volumeLayer);
+        }
+      },
       v: () => {
         Store.dispatch(interpolateSegmentationLayerAction());
       },

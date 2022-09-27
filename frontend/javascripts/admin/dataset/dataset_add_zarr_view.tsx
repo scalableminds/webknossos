@@ -71,10 +71,6 @@ function mergeNewLayers(
   return {
     ...loadedDatasource,
     dataLayers: uniqueLayers,
-    id: {
-      ...loadedDatasource.id,
-      name: `${loadedDatasource.id.name}_and_${datasourceToMerge.id.name}`,
-    },
   };
 }
 

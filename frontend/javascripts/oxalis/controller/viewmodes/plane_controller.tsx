@@ -89,6 +89,10 @@ const cycleTools = () => {
   Store.dispatch(cycleToolAction());
 };
 
+const cycleToolsBackwards = () => {
+  Store.dispatch(cycleToolAction(true));
+};
+
 type StateProps = {
   tracing: Tracing;
   activeTool: AnnotationTool;
@@ -438,6 +442,7 @@ class PlaneController extends React.PureComponent<Props> {
       },
       q: downloadScreenshot,
       w: cycleTools,
+      "shift + w": cycleToolsBackwards,
     };
     // TODO: Find a nicer way to express this, while satisfying flow
     const emptyDefaultHandler = {

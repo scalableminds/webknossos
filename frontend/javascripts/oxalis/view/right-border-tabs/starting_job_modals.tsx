@@ -81,19 +81,21 @@ export function LayerSelection({
   tracing,
   fixedLayerName,
   layerType,
-  setSelectedLayerName,
+  onChange,
   style,
+  value,
 }: {
   layers: APIDataLayer[];
   tracing: HybridTracing;
   fixedLayerName?: string;
   layerType?: string;
-  setSelectedLayerName?: React.Dispatch<React.SetStateAction<string | null>>;
   style?: React.CSSProperties;
+  // onChange and value should not be renamed, because these are the
+  // default property names for controlled antd FormItems.
+  onChange?: React.Dispatch<React.SetStateAction<string | null>>;
+  value?: string | null;
 }): JSX.Element {
-  const onSelect = setSelectedLayerName
-    ? (layerName: string) => setSelectedLayerName(layerName)
-    : undefined;
+  const onSelect = onChange ? (layerName: string) => onChange(layerName) : undefined;
   const maybeLayerType = layerType || "";
   const maybeSpace = layerType != null ? " " : "";
   return (
@@ -108,6 +110,7 @@ export function LayerSelection({
       disabled={fixedLayerName != null}
       onSelect={onSelect}
       style={style}
+      value={value}
     >
       {layers.map((layer) => {
         const readableName = getReadableNameOfVolumeLayer(layer, tracing) || layer.name;
@@ -135,7 +138,7 @@ function LayerSelectionFormItem({
       rules={[
         {
           required: true,
-          message: `Please select the ${layerType} that should be used for this job.`,
+          message: `Please select the ${layerType} layer that should be used for this job.`,
         },
       ]}
       hidden={layers.length === 1 && fixedLayerName == null}

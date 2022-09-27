@@ -11,5 +11,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - To use the Voxelytics reporting features in webKnossos, the config field `features.voxelyticsEnabled` needs to be set to true. When also using the logging features, an Elasticsearch instance needs to be running and configured in the config field `voxelytics.elasticsearch.uri`.
 
 ### Postgres Evolutions:
+- [089-cleanup.sql](conf/evolutions/089-cleanup.sql)
 - [088-shortlinks.sql](conf/evolutions/088-shortlinks.sql)
 - [089-voxelytics.sql](conf/evolutions/089-voxelytics.sql)

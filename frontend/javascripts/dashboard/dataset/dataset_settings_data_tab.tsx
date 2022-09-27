@@ -17,7 +17,6 @@ import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
 import { BoundingBoxObject, OxalisState } from "oxalis/store";
-import { Vector3 } from "oxalis/constants";
 import {
   Hideable,
   FormItemWithInfo,
@@ -465,10 +464,6 @@ function SimpleLayerForm({
               }
               rules={[
                 {
-                  required: true,
-                  message: "Please provide a largest segment ID for the segmentation layer",
-                },
-                {
                   validator: (rule, value) =>
                     value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
                       ? Promise.resolve()
@@ -477,6 +472,17 @@ function SimpleLayerForm({
                             `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
                           ),
                         ),
+                },
+                {
+                  warningOnly: true,
+                  validator: (rule, value) =>
+                    value == null || value === ""
+                      ? Promise.reject(
+                          new Error(
+                            "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
+                          ),
+                        )
+                      : Promise.resolve(),
                 },
               ]}
             >

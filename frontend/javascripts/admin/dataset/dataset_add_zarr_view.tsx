@@ -36,9 +36,9 @@ function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
     if (layer.category === "color" || layer.largestSegmentId != null) {
       continue;
     }
+    // Make sure the property exists. Otherwise, the field would not be
+    // rendered in the form.
     layer.largestSegmentId = null;
-    // toast still necessary?
-    Toast.warning(`It is recommended to set a largestSegmentID for layer ${layer.name}.`);
   }
 }
 
@@ -92,6 +92,7 @@ function DatasetAddZarrView(props: Props) {
     // Since this function sets the JSON string, we have to update the
     // data which is rendered by the "simple" page.
     syncDataSourceFields(form, "simple");
+    form.validateFields();
   };
 
   async function handleStoreDataset() {

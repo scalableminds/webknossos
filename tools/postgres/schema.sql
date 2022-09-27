@@ -27,7 +27,7 @@ CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'Tracin
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TYPE webknossos.ANNOTATION_VISIBILITY AS ENUM ('Private', 'Internal', 'Public');
 CREATE TABLE webknossos.annotations(
-  _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _dataSet CHAR(24) NOT NULL,
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
@@ -74,7 +74,7 @@ CREATE TABLE webknossos.annotation_contributors(
 );
 
 CREATE TABLE webknossos.meshes(
-  _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _annotation CHAR(24) NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   position webknossos.VECTOR3 NOT NULL,
@@ -84,7 +84,7 @@ CREATE TABLE webknossos.meshes(
 );
 
 CREATE TABLE webknossos.publications(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   publicationDate TIMESTAMPTZ,
   imageUrl VARCHAR(2048),
   title VARCHAR(2048),
@@ -94,8 +94,8 @@ CREATE TABLE webknossos.publications(
 );
 
 CREATE TABLE webknossos.dataSets(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _dataStore CHAR(256) NOT NULL,
+  _id CHAR(24) PRIMARY KEY,
+  _dataStore VARCHAR(256) NOT NULL,
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
   _uploader CHAR(24),
@@ -180,7 +180,7 @@ CREATE TABLE webknossos.tracingStores(
 );
 
 CREATE TABLE webknossos.projects(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _organization CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
   _owner CHAR(24) NOT NULL,
@@ -194,7 +194,7 @@ CREATE TABLE webknossos.projects(
 );
 
 CREATE TABLE webknossos.scripts(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _owner CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   gist VARCHAR(1024) NOT NULL,
@@ -206,7 +206,7 @@ CREATE TABLE webknossos.scripts(
 CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
 CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _organization CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
   summary VARCHAR(256) NOT NULL,
@@ -228,7 +228,7 @@ CREATE TABLE webknossos.taskTypes(
 );
 
 CREATE TABLE webknossos.tasks(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _project CHAR(24) NOT NULL,
   _script CHAR(24),
   _taskType CHAR(24) NOT NULL,
@@ -253,7 +253,7 @@ CREATE TABLE webknossos.experienceDomains(
 );
 
 CREATE TABLE webknossos.teams(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _organization CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -263,7 +263,7 @@ CREATE TABLE webknossos.teams(
 );
 
 CREATE TABLE webknossos.timespans(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _user CHAR(24) NOT NULL,
   _annotation CHAR(24),
   time BIGINT NOT NULL,
@@ -275,7 +275,7 @@ CREATE TABLE webknossos.timespans(
 
 CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Premium', 'Pilot', 'Custom');
 CREATE TABLE webknossos.organizations(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   name VARCHAR(256) NOT NULL UNIQUE,
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
@@ -290,7 +290,7 @@ CREATE TABLE webknossos.organizations(
 
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt');
 CREATE TABLE webknossos.users(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _multiUser CHAR(24) NOT NULL,
   _organization CHAR(24) NOT NULL,
   firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
@@ -342,7 +342,7 @@ CREATE TABLE webknossos.user_dataSetLayerConfigurations(
 
 CREATE TYPE webknossos.THEME AS ENUM ('light', 'dark', 'auto');
 CREATE TABLE webknossos.multiUsers(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
@@ -359,7 +359,7 @@ CREATE TABLE webknossos.multiUsers(
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TABLE webknossos.tokens(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   value Text NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
   loginInfo_providerKey VARCHAR(512) NOT NULL,
@@ -378,8 +378,8 @@ INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01
 
 
 CREATE TABLE webknossos.workers(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _dataStore CHAR(256) NOT NULL,
+  _id CHAR(24) PRIMARY KEY,
+  _dataStore VARCHAR(256) NOT NULL,
   key VARCHAR(1024) NOT NULL UNIQUE,
   maxParallelJobs INT NOT NULL DEFAULT 1,
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
@@ -391,9 +391,9 @@ CREATE TABLE webknossos.workers(
 CREATE TYPE webknossos.JOB_STATE AS ENUM ('PENDING', 'STARTED', 'SUCCESS', 'FAILURE', 'CANCELLED');
 
 CREATE TABLE webknossos.jobs(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _owner CHAR(24) NOT NULL,
-  _dataStore CHAR(256) NOT NULL,
+  _dataStore VARCHAR(256) NOT NULL,
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
   state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING', -- always updated by the worker
@@ -409,7 +409,7 @@ CREATE TABLE webknossos.jobs(
 
 
 CREATE TABLE webknossos.invites(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   tokenValue Text NOT NULL,
   _organization CHAR(24) NOT NULL,
   autoActivate BOOLEAN NOT NULL,
@@ -419,7 +419,7 @@ CREATE TABLE webknossos.invites(
 );
 
 CREATE TABLE webknossos.annotation_privateLinks(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   _annotation CHAR(24) NOT NULL,
   accessToken Text NOT NULL UNIQUE,
   expirationDateTime TIMESTAMPTZ,
@@ -427,7 +427,7 @@ CREATE TABLE webknossos.annotation_privateLinks(
 );
 
 CREATE TABLE webknossos.shortLinks(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY,
   key CHAR(16) NOT NULL UNIQUE,
   longLink Text NOT NULL
 );
@@ -662,6 +662,8 @@ ALTER TABLE webknossos.jobs
   ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE,
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE,
   ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE;
+ALTER TABLE webknossos.workers
+  ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
 ALTER TABLE webknossos.annotation_privateLinks
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
 

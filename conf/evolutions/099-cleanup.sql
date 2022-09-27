@@ -5,7 +5,7 @@ BEGIN transaction;
 DROP VIEW webknossos.jobs_;
 ALTER TABLE webknossos.jobs DROP CONSTRAINT dataStore_ref;
 ALTER TABLE webknossos.jobs RENAME COLUMN _dataStore to _dataStoreOLD;
-ALTER TABLE webknossos.jobs ADD COLUMN _dataStore VARCHAR(256);
+ALTER TABLE webknossos.jobs ADD COLUMN _dataStore VARCHAR(256) NOT NULL;
 UPDATE webknossos.jobs SET _dataStore = TRIM(_dataStoreOLD);
 ALTER TABLE webknossos.jobs DROP COLUMN _dataStoreOLD;
 ALTER TABLE webknossos.jobs ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
@@ -14,7 +14,7 @@ CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDelete
 DROP VIEW webknossos.dataSets_;
 ALTER TABLE webknossos.dataSets DROP CONSTRAINT dataStore_ref;
 ALTER TABLE webknossos.dataSets RENAME COLUMN _dataStore to _dataStoreOLD;
-ALTER TABLE webknossos.dataSets ADD COLUMN _dataStore VARCHAR(256);
+ALTER TABLE webknossos.dataSets ADD COLUMN _dataStore VARCHAR(256) NOT NULL;
 UPDATE webknossos.dataSets SET _dataStore = TRIM(_dataStoreOLD);
 ALTER TABLE webknossos.dataSets DROP COLUMN _dataStoreOLD;
 ALTER TABLE webknossos.dataSets ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
@@ -22,7 +22,7 @@ CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT 
 
 DROP VIEW webknossos.workers_;
 ALTER TABLE webknossos.workers RENAME COLUMN _dataStore to _dataStoreOLD;
-ALTER TABLE webknossos.workers ADD COLUMN _dataStore VARCHAR(256);
+ALTER TABLE webknossos.workers ADD COLUMN _dataStore VARCHAR(256) NOT NULL;
 UPDATE webknossos.workers SET _dataStore = TRIM(_dataStoreOLD);
 ALTER TABLE webknossos.workers DROP COLUMN _dataStoreOLD;
 ALTER TABLE webknossos.workers ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
@@ -49,8 +49,6 @@ ALTER TABLE webknossos.jobs ALTER COLUMN _id DROP DEFAULT;
 ALTER TABLE webknossos.invites ALTER COLUMN _id DROP DEFAULT;
 ALTER TABLE webknossos.annotation_privateLinks ALTER COLUMN _id DROP DEFAULT;
 ALTER TABLE webknossos.shortLinks ALTER COLUMN _id DROP DEFAULT;
-
--- TODO: rename accessToken to key for private links, rename task type summary to name
 
 COMMIT;
 

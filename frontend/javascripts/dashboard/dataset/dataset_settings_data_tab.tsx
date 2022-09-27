@@ -17,6 +17,7 @@ import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
 import { BoundingBoxObject, OxalisState } from "oxalis/store";
+import { Vector3 } from "oxalis/constants";
 import {
   Hideable,
   FormItemWithInfo,
@@ -226,7 +227,7 @@ function SimpleDatasetForm({
                     validator: syncValidator(
                       // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'el' implicitly has an 'any' type.
                       (value) => value && value.every((el) => el > 0),
-                      "Each component of the scale must be larger than 0",
+                      "Each component of the scale must be greater than 0",
                     ),
                   },
                 ]}
@@ -416,6 +417,17 @@ function SimpleLayerForm({
                   "Width, height and depth must not be zero",
                 ),
               },
+              {
+                warningOnly: true,
+                validator: (rule, value) =>
+                  value == null || value === ""
+                    ? Promise.reject(
+                        new Error(
+                          "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
+                        ),
+                      )
+                    : Promise.resolve(),
+              },
             ]}
           >
             <BoundingBoxInput
@@ -448,7 +460,9 @@ function SimpleLayerForm({
               name={["dataSource", "dataLayers", index, "largestSegmentId"]}
               label="Largest segment ID"
               info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
-              initialValue={`${layer.largestSegmentId}`}
+              initialValue={
+                layer.largestSegmentId != null ? `${layer.largestSegmentId}` : undefined
+              }
               rules={[
                 {
                   required: true,
@@ -456,17 +470,26 @@ function SimpleLayerForm({
                 },
                 {
                   validator: (rule, value) =>
-                    value > 0 && value < 2 ** bitDepth
+                    value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
                       ? Promise.resolve()
                       : Promise.reject(
                           new Error(
-                            `The largest segmentation ID must be larger than 0 and smaller than 2^${bitDepth}`,
+                            `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
                           ),
                         ),
                 },
               ]}
             >
-              <InputNumber disabled={isReadOnlyDataset} />
+              <InputNumber
+                disabled={isReadOnlyDataset}
+                // @ts-ignore returning undefined does work without problems
+                parser={(value: string | undefined) => {
+                  if (value == null || value === "") {
+                    return undefined;
+                  }
+                  return parseInt(value, 10);
+                }}
+              />
             </FormItemWithInfo>
           ) : null}
         </Col>

@@ -48,7 +48,7 @@ case class UpdateTracingVolumeAction(
     activeSegmentId: Long,
     editPosition: Vec3Int,
     editRotation: Vec3Double,
-    largestSegmentId: Long,
+    largestSegmentId: Option[Long],
     zoomLevel: Double,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[String] = None,
@@ -163,7 +163,7 @@ object RemoveFallbackLayer {
   implicit val jsonFormat: OFormat[RemoveFallbackLayer] = Json.format[RemoveFallbackLayer]
 }
 
-case class ImportVolumeData(largestSegmentId: Long,
+case class ImportVolumeData(largestSegmentId: Option[Long],
                             actionTimestamp: Option[Long] = None,
                             actionAuthorId: Option[String] = None,
                             info: Option[String] = None)
@@ -179,7 +179,7 @@ case class ImportVolumeData(largestSegmentId: Long,
                               Json.obj("largestSegmentId" -> largestSegmentId))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withLargestSegmentId(largestSegmentId)
+    tracing.copy(largestSegmentId = largestSegmentId)
 }
 
 object ImportVolumeData {

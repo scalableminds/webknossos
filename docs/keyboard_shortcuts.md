@@ -100,7 +100,8 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Segment                                     |
 | Alt + Mouse Move                  | Move                                                        |
 | C                                 | Create New Segment                                             |
-| W                                 | Toggle Modes (Move / Skeleton / Trace / Brush / ...)        |
+| W                                 | Cycle Through Tools (Move / Skeleton / Trace / Brush / ...)    |
+| SHIFT + W                         | Cycle Backwards Through Tools (Move / Proofread / Bounding Box / Pick Cell / ...) |
 | SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                             |
 | V                                 | Interpolate current segment between last labeled and current slice |
 

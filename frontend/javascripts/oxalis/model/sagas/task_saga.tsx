@@ -31,8 +31,7 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
   // Users can acquire new tasks directly in the tracing view. Occasionally,
   // they start working on a new TaskType and need to be instructed.
   const title = `Attention, new Task Type: ${taskType.summary}`;
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'text' implicitly has type 'any' in some ... Remove this comment to see the full error message
-  let text;
+  let text: string;
 
   if (taskType.description) {
     text = `${messages["task.new_description"]}:\n${taskType.description}`;
@@ -41,7 +40,6 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
   }
 
   yield* call(renderIndependently, (destroy) => (
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'text' implicitly has an 'any' type.
     <NewTaskDescriptionModal title={title} description={text} destroy={destroy} />
   ));
 }

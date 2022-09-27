@@ -33,12 +33,12 @@ type Props = OwnProps & StateProps;
 
 function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
   for (const layer of datasource.dataLayers) {
-    if (layer.category === "color" || layer.largestSegmentId == null) {
+    if (layer.category === "color" || layer.largestSegmentId != null) {
       continue;
     }
-    layer.largestSegmentId = 1;
-    // todo: change once largest segment id is optional
-    Toast.warning(`Please adapt the largestSegmentID for layer ${layer.name}.`);
+    layer.largestSegmentId = null;
+    // toast still necessary?
+    Toast.warning(`It is recommended to set a largestSegmentID for layer ${layer.name}.`);
   }
 }
 

@@ -177,6 +177,16 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
+
+    if (isDrawing && activeCellId === 0) {
+      yield* call(
+        [Toast, Toast.warning],
+        "The current segment ID is 0. Please change the active segment ID via the status bar, by creating a new segment from the toolbar or by selecting an existing one via context menu.",
+        { timeout: 10000 },
+      );
+      continue;
+    }
+
     yield* put(
       updateSegmentAction(
         activeCellId,
@@ -512,7 +522,7 @@ function updateTracingPredicate(
 ): boolean {
   return (
     prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
-    prevVolumeTracing.maxCellId !== volumeTracing.maxCellId ||
+    prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId ||
     prevFlycam !== flycam
   );
 }

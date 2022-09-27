@@ -28,6 +28,7 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
+import ButtonComponent from "./components/button_component";
 const VersionRestoreWarning = (
   <Alert
     message="Read-only version restore mode active!"
@@ -159,6 +160,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
+
+          <ButtonComponent onClick={() => Store.dispatch({ type: "ADD_DUMMY_DRACO" })}>
+            ADD_DUMMY_DRACO
+          </ButtonComponent>
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}

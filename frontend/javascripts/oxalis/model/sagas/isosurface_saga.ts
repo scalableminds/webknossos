@@ -4,6 +4,8 @@ import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataLayer } from "types/api_flow_types";
+import "libs/DRACOLoader.js";
+
 import {
   ResolutionInfo,
   getResolutionInfo,
@@ -42,6 +44,7 @@ import {
   sendAnalyticsEvent,
   getMeshfileChunksForSegment,
   getMeshfileChunkData,
+  getDummyDraco,
 } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
@@ -60,6 +63,8 @@ import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { UpdateSegmentAction } from "../actions/volumetracing_actions";
+import * as THREE from "three";
+
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
 const MESH_CHUNK_THROTTLE_DELAY = 500;
@@ -602,6 +607,40 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(finishedLoadingIsosurfaceAction(layerName, id));
 }
 
+function* addDummyDraco() {
+  const buffer = yield* call(getDummyDraco);
+  console.log("buffer", buffer);
+
+  const loader = new THREE.DRACOLoader();
+  console.log("THREE.DRACOLoader", loader);
+
+  loader.setDecoderPath(
+    "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/js/libs/draco/",
+  );
+  loader.setDecoderConfig({ type: "js" });
+
+  const sceneController = yield* call(getSceneController);
+
+  // const url = "/data/datasets/dummyDraco";
+  const url = "/assets/draco_file.bin";
+  // const url = "http://localhost:9000/assets/bunny.drc";
+  // loader.load(url, (geometry) => {
+  loader.decodeDracoFile(buffer, (geometry) => {
+    // geometry.computeVertexNormals();
+
+    // todo: use correct id
+    sceneController.addIsosurfaceFromGeometry(geometry, 2347819234);
+
+    // Release decoder resources.
+    loader.dispose();
+  });
+
+  // const decoderModule = yield* call(() => draco3d.createDecoderModule({}));
+  // let decoder = new decoderModule.Decoder();
+  // console.log("decoder");
+  // const geometry = yield* call(parseStlBuffer, stlData);
+}
+
 /*
  *
  * Ad Hoc and Precomputed Meshes
@@ -689,4 +728,5 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery(["UPDATE_SEGMENT"], handleIsosurfaceColorChange);
+  yield* takeEvery(["ADD_DUMMY_DRACO"], addDummyDraco);
 }

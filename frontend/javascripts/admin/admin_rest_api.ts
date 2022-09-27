@@ -2165,6 +2165,23 @@ export function getMeshfileChunkData(
   });
 }
 
+export function getDummyDraco(): Promise<ArrayBuffer> {
+  return doWithToken(async (token) => {
+    const data = await Request.receiveArraybuffer(`/assets/draco_file.bin`, {
+      // const data = await Request.receiveArraybuffer(`/data/datasets/dummyDraco?token=${token}`, {
+      useWebworkerForArrayBuffer: false,
+    });
+
+    console.log("works", data, new Uint8Array(data));
+
+    const data2 = await Request.receiveArraybuffer(`/data/datasets/dummyDraco?token=${token}`, {
+      useWebworkerForArrayBuffer: false,
+    });
+    console.log("doesnt work", data2, new Uint8Array(data2));
+    return data2;
+  });
+}
+
 // ### Connectomes
 export function getConnectomeFilesForDatasetLayer(
   dataStoreUrl: string,

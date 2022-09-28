@@ -155,13 +155,27 @@ class AnnotationService @Inject()(
         elementClassToProto(
           fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
         fallbackLayer.map(_.name),
-        fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId),
+        combineLargestSegmentIdsByPrecedence(fromNml = None, fromFallbackLayer = fallbackLayer.map(_.largestSegmentId)),
         0,
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(organizationName),
         resolutions = resolutionsRestricted.map(vec3IntToProto)
       )
   }
+
+  def combineLargestSegmentIdsByPrecedence(fromNml: Option[Long],
+                                           fromFallbackLayer: Option[Option[Long]]): Option[Long] =
+    if (fromNml.nonEmpty)
+      // This was called for an NML upload. The NML had an explicit largestSegmentId. Use that.
+      fromNml
+    else if (fromFallbackLayer.nonEmpty)
+      // There is a fallback layer. Use its largestSegmentId, even if it is None.
+      // Some tracing functionality will be disabled until a segment id is set by the user.
+      fromFallbackLayer.flatten
+    else {
+      // There is no fallback layer. Start at default segment id for fresh volume layers
+      VolumeTracingDefaults.largestSegmentId
+    }
 
   def addAnnotationLayer(annotation: Annotation,
                          organizationName: String,
@@ -175,7 +189,7 @@ class AnnotationService @Inject()(
                                                             List(annotationLayerParameters),
                                                             organizationName,
                                                             annotation.annotationLayers)
-      _ <- Fox.serialCombined(newAnnotationLayers)(l => annotationLayersDAO.insertOne(annotation._id, l))
+      _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
 
   private def createTracingsForExplorational(dataSet: DataSet,
@@ -493,7 +507,7 @@ class AnnotationService @Inject()(
           case _                        => None
         }.headOption
       } else None
-      _ <- bool2Fox(fallbackLayer.forall(_.largestSegmentId >= 0L)) ?~> "annotation.volume.negativeLargestSegmentId"
+      _ <- bool2Fox(fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))) ?~> "annotation.volume.invalidLargestSegmentId"
 
       volumeTracing <- createVolumeTracing(
         dataSource,

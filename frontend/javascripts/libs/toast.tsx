@@ -45,7 +45,8 @@ const Toast = {
     details: string | React.ReactNode | null,
   ) {
     if (!details) {
-      return title;
+      // This also handles empty title strings
+      return title || "Unknown Error";
     }
 
     return (

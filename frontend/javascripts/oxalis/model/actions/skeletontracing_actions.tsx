@@ -195,11 +195,16 @@ export const deleteEdgeAction = (
     timestamp,
   } as const);
 
-export const setActiveNodeAction = (nodeId: number, suppressAnimation: boolean = false) =>
+export const setActiveNodeAction = (
+  nodeId: number,
+  suppressAnimation: boolean = false,
+  suppressCentering: boolean = false,
+) =>
   ({
     type: "SET_ACTIVE_NODE",
     nodeId,
     suppressAnimation,
+    suppressCentering,
   } as const);
 
 export const centerActiveNodeAction = (suppressAnimation: boolean = false) =>
@@ -262,17 +267,26 @@ export const createTreeAction = (timestamp: number = Date.now()) =>
 export const addTreesAndGroupsAction = (
   trees: MutableTreeMap,
   treeGroups: Array<TreeGroup> | null | undefined,
+  treeIdsCallback: ((ids: number[]) => void) | undefined = undefined,
 ) =>
   ({
     type: "ADD_TREES_AND_GROUPS",
     trees,
     treeGroups: treeGroups || [],
+    treeIdsCallback,
   } as const);
 
-export const deleteTreeAction = (treeId?: number) =>
+export const deleteTreeAction = (treeId?: number, suppressActivatingNextNode: boolean = false) =>
+  // If suppressActivatingNextNode is true, the tree will be deleted without activating
+  // another node (nor tree). Use this in cases where you want to avoid changing
+  // the active position (due to the auto-centering). One could also suppress the auto-centering
+  // behavior, but the semantics of changing the active node might also be confusing to the user
+  // (e.g., when proofreading). So, it might be clearer to not have an active node in the first
+  // place.
   ({
     type: "DELETE_TREE",
     treeId,
+    suppressActivatingNextNode,
   } as const);
 
 export const resetSkeletonTracingAction = () =>
@@ -488,7 +502,6 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
       Store.dispatch(deleteTreeAction(treeId));
     } else {
       renderIndependently((destroy) => (
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         <RemoveTreeModal onOk={() => Store.dispatch(deleteTreeAction(treeId))} destroy={destroy} />
       ));
     }

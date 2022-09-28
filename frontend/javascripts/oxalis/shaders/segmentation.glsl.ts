@@ -14,6 +14,46 @@ import { getRgbaAtIndex } from "./texture_access.glsl";
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex, getElementOfPermutation, aaStep, colormapJet],
   code: `
+    highp uint hashCombine(highp uint state, highp uint value) {
+      // The used constants are written in decimal, because
+      // the parser tests don't support unsigned int hex notation
+      // (yet).
+      // See this issue: https://github.com/ShaderFrog/glsl-parser/issues/1
+      // 3432918353u == 0xcc9e2d51u
+      //  461845907u == 0x1b873593u
+      // 3864292196u == 0xe6546b64u
+
+      value *= 3432918353u;
+      value = (value << 15u) | (value >> 17u);
+      value *= 461845907u;
+      state ^= value;
+      state = (state << 13u) | (state >> 19u);
+      state = (state * 5u) + 3864292196u;
+      return state;
+    }
+
+    uint vec4ToUint(vec4 idLow) {
+      uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
+      return integerValue;
+    }
+
+    vec3 attemptCustomColorLookUp(uint integerValue, uint seed) {
+      highp uint h0 = hashCombine(seed, integerValue) % CUCKOO_ENTRY_CAPACITY;
+      h0 = uint(h0 * CUCKOO_ELEMENTS_PER_ENTRY / CUCKOO_ELEMENTS_PER_TEXEL);
+      highp uint x = h0 % CUCKOO_TWIDTH;
+      highp uint y = h0 / CUCKOO_TWIDTH;
+
+      uvec4 customEntry = texelFetch(custom_color_texture, ivec2(x, y), 0);
+      uvec3 customColor = customEntry.gba;
+
+      if (customEntry.r != uint(integerValue)) {
+         return vec3(-1);
+      }
+
+      return vec3(customEntry.gba) / 255.;
+    }
+
+
     vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
       /*
       This function maps from a segment id to a color with a pattern.
@@ -34,31 +74,32 @@ export const convertCellIdToRGB: ShaderModule = {
       // Since collisions of ids are bound to happen, using all 64 bits is not
       // necessary, which is why we simply combine the 32-bit tuple into one 32-bit value.
       vec4 id = idHigh + idLow;
-      float lastEightBits = id.r;
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
       float colorCount = 19.;
       float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, 2.);
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
-      float colorValue = rgb2hsv(colormapJet(colorValueDecimal)).x;
-      // For historical reference: the old color generation was: colorValue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
+      float colorHue = rgb2hsv(colormapJet(colorValueDecimal)).x;
+      float colorSaturation = 1.;
+      float colorValue = 1.;
+      // For historical reference: the old color generation was:
+      // float lastEightBits = id.r;
+      // float colorHue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
 
-      <% if (isMappingSupported) { %>
-        // If the first element of the mapping colors texture is still the initialized
-        // colorValue of -1, no mapping colors have been specified
-        bool hasCustomMappingColors = getRgbaAtIndex(
-          segmentation_mapping_color_texture,
-          <%= mappingColorTextureWidth %>,
-          0.0
-        ).r != -1.0;
-        if (isMappingEnabled && hasCustomMappingColors) {
-          colorValue = getRgbaAtIndex(
-            segmentation_mapping_color_texture,
-            <%= mappingColorTextureWidth %>,
-            lastEightBits
-          ).r;
-        }
-      <% } %>
+      uint integerValue = vec4ToUint(idLow);
+      vec3 customColor = attemptCustomColorLookUp(integerValue, seed0);
+      if (customColor.r == -1.) {
+        customColor = attemptCustomColorLookUp(integerValue, seed1);
+      }
+      if (customColor.r == -1.) {
+        customColor = attemptCustomColorLookUp(integerValue, seed2);
+      }
+      if (customColor.r != -1.) {
+        vec3 customHSV = rgb2hsv(customColor);
+        colorHue = customHSV.x;
+        colorSaturation = customHSV.y;
+        colorValue = customHSV.z;
+      }
 
       // The following code scales the world coordinates so that the coordinate frequency is in a "pleasant" range.
       // Also, when zooming out, coordinates change faster which make the pattern more turbulent. Dividing by the
@@ -114,9 +155,9 @@ export const convertCellIdToRGB: ShaderModule = {
       float aaStripeValue = 1.0 - max(aaStripeValueA, useGrid * aaStripeValueB);
 
       vec4 HSV = vec4(
-        colorValue,
-        1.0 - 0.5 * ((1. - aaStripeValue) * segmentationPatternOpacity / 100.0),
-        1.0 - 0.5 * (aaStripeValue * segmentationPatternOpacity / 100.0),
+        colorHue,
+        colorSaturation - 0.5 * ((1. - aaStripeValue) * segmentationPatternOpacity / 100.0),
+        colorValue - 0.5 * (aaStripeValue * segmentationPatternOpacity / 100.0),
         1.0
       );
 
@@ -208,27 +249,25 @@ export const getSegmentationId: ShaderModule = {
         volume_color[1] = vec4(volume_color[1].r, volume_color[1].g, 0.0, 0.0);
       <% } %>
 
-      <% if (isMappingSupported) { %>
-        if (isMappingEnabled) {
-          // Note that currently only the lower 32 bits of the segmentation
-          // are used for applying the JSON mapping.
+      if (isMappingEnabled) {
+        // Note that currently only the lower 32 bits of the segmentation
+        // are used for applying the JSON mapping.
 
-          float index = binarySearchIndex(
-            segmentation_mapping_lookup_texture,
-            mappingSize,
-            volume_color[1]
+        float index = binarySearchIndex(
+          segmentation_mapping_lookup_texture,
+          mappingSize,
+          volume_color[1]
+        );
+        if (index != -1.0) {
+          volume_color[1] = getRgbaAtIndex(
+            segmentation_mapping_texture,
+            <%= mappingTextureWidth %>,
+            index
           );
-          if (index != -1.0) {
-            volume_color[1] = getRgbaAtIndex(
-              segmentation_mapping_texture,
-              <%= mappingTextureWidth %>,
-              index
-            );
-          } else if (hideUnmappedIds) {
-            volume_color[1] = vec4(0.0);
-          }
+        } else if (hideUnmappedIds) {
+          volume_color[1] = vec4(0.0);
         }
-      <% } %>
+      }
 
       volume_color[0] *= 255.0;
       volume_color[1] *= 255.0;

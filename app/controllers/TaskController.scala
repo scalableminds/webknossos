@@ -62,8 +62,11 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   def create: Action[List[TaskParameters]] = sil.SecuredAction.async(validateJson[List[TaskParameters]]) {
     implicit request =>
       for {
-        _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
-        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
+        taskParameters <- Fox.serialCombined(request.body) { tp =>
+          taskCreationService.normalizeTaskTypeId(tp, request.identity._organization)
+        }
+        _ <- taskCreationService.assertBatchLimit(request.body.length, taskParameters.map(_.taskTypeIdOrSummary))
+        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(taskParameters,
                                                                                 request.identity._organization)
         skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
           taskParameters)

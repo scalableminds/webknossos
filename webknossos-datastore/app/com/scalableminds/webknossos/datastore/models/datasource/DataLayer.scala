@@ -5,12 +5,13 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKW
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, zarr, tracing = Value
+  val wkw, zarr, n5, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {
@@ -63,8 +64,11 @@ object ElementClass extends ExtendedEnumeration {
   }
 
   def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =
-    largestSegmentId >= 0L && segmentationElementClasses.contains(elementClass) && largestSegmentId <= maxSegmentIdValue(
-      elementClass)
+    largestSegmentIdIsInRange(Some(largestSegmentId), elementClass)
+
+  def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
+    segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall(largestSegmentId =>
+      largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass))
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")
@@ -111,13 +115,6 @@ trait DataLayerLike {
 
   def resolutions: List[Vec3Int]
 
-  def magFromExponent(resolutionExponent: Int, snapToClosest: Boolean = false): Vec3Int = {
-    val resPower = Math.pow(2, resolutionExponent).toInt
-    val matchOpt = resolutions.find(resolution => resolution.maxDim == resPower)
-    if (snapToClosest) matchOpt.getOrElse(resolutions.minBy(resolution => math.abs(resPower - resolution.maxDim)))
-    else matchOpt.getOrElse(Vec3Int(resPower, resPower, resPower))
-  }
-
   def elementClass: ElementClass.Value
 
   // This is the default from the DataSource JSON.
@@ -143,7 +140,7 @@ object DataLayerLike {
 
 trait SegmentationLayerLike extends DataLayerLike {
 
-  def largestSegmentId: Long
+  def largestSegmentId: Option[Long]
 
   def mappings: Option[Set[String]]
 
@@ -189,6 +186,8 @@ object DataLayer {
           case (DataFormat.wkw, _)                      => json.validate[WKWDataLayer]
           case (DataFormat.zarr, Category.segmentation) => json.validate[ZarrSegmentationLayer]
           case (DataFormat.zarr, _)                     => json.validate[ZarrDataLayer]
+          case (DataFormat.n5, Category.segmentation)   => json.validate[N5SegmentationLayer]
+          case (DataFormat.n5, _)                       => json.validate[N5DataLayer]
           case _                                        => json.validate[WKWDataLayer]
         }
       } yield {
@@ -201,6 +200,8 @@ object DataLayer {
         case l: WKWSegmentationLayer  => WKWSegmentationLayer.jsonFormat.writes(l)
         case l: ZarrDataLayer         => ZarrDataLayer.jsonFormat.writes(l)
         case l: ZarrSegmentationLayer => ZarrSegmentationLayer.jsonFormat.writes(l)
+        case l: N5DataLayer           => N5DataLayer.jsonFormat.writes(l)
+        case l: N5SegmentationLayer   => N5SegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat
@@ -251,7 +252,7 @@ case class AbstractSegmentationLayer(
     boundingBox: BoundingBox,
     resolutions: List[Vec3Int],
     elementClass: ElementClass.Value,
-    largestSegmentId: Long,
+    largestSegmentId: Option[Long] = None,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
@@ -285,4 +286,5 @@ trait ResolutionFormatHelper {
     override def writes(resolution: Vec3Int): JsValue =
       Vec3Int.Vec3IntWrites.writes(resolution)
   }
+
 }

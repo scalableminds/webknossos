@@ -1,22 +1,21 @@
 package models.annotation.nml
 
-import java.io.InputStream
-
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
 import play.api.i18n.{Messages, MessagesProvider}
 
+import java.io.InputStream
 import scala.collection.{immutable, mutable}
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
@@ -82,7 +81,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 editRotation,
                 ElementClass.uint32,
                 v.fallbackLayerName,
-                0,
+                v.largestSegmentId,
                 0,
                 zoomLevel,
                 None,
@@ -154,7 +153,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           getSingleAttribute(node, "location"),
           getSingleAttributeOpt(node, "fallbackLayer"),
           getSingleAttributeOpt(node, "name"),
-          parseVolumeSegmentMetadata(node \ "segments" \ "segment")
+          parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
+          getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt)
         )
       }
     )
@@ -169,10 +169,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         case _                           => None
       }
       Segment(
-        getSingleAttribute(node, "id").toLong,
-        anchorPosition,
-        getSingleAttributeOpt(node, "name"),
-        getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt)
+        segmentId = getSingleAttribute(node, "id").toLong,
+        anchorPosition = anchorPosition,
+        name = getSingleAttributeOpt(node, "name"),
+        creationTime = getSingleAttributeOpt(node, "created").flatMap(_.toLongOpt),
+        color = parseColorOpt(node)
       )
     })
 
@@ -195,7 +196,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           id <- idText.toIntOpt ?~ Messages("nml.boundingbox.id.invalid", idText)
           name = getSingleAttribute(node, "name")
           isVisible = getSingleAttribute(node, "isVisible").toBooleanOpt
-          color = parseColor(node)
+          color = parseColorOpt(node)
           boundingBox <- parseBoundingBox(node)
           nameOpt = if (name.isEmpty) None else Some(name)
         } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBox)
@@ -295,9 +296,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       ColorProto(colorRed, colorBlue, colorGreen, colorAlpha)
     }
 
-  private def parseColor(node: XMLNode) =
-    parseColorOpt(node)
-
   private def parseName(node: XMLNode) =
     getSingleAttribute(node, "name")
 
@@ -315,7 +313,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     val treeIdText = getSingleAttribute(tree, "id")
     for {
       id <- treeIdText.toIntOpt ?~ Messages("nml.tree.id.invalid", treeIdText)
-      color = parseColor(tree)
+      color = parseColorOpt(tree)
       name = parseName(tree)
       groupId = parseGroupId(tree)
       isVisible = parseVisibility(tree, color)

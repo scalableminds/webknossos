@@ -5,8 +5,10 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
-import com.scalableminds.webknossos.datastore.jzarr._
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
+import com.scalableminds.webknossos.datastore.datareaders.jzarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
@@ -24,7 +26,10 @@ object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
 
-case class MagWithAttributes(mag: ZarrMag, remotePath: Path, elementClass: ElementClass.Value, boundingBox: BoundingBox)
+case class MagWithAttributes(mag: MagLocator,
+                             remotePath: Path,
+                             elementClass: ElementClass.Value,
+                             boundingBox: BoundingBox)
 
 class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLogging {
 
@@ -143,9 +148,9 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)
       boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
-      zarrMag = ZarrMag(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
+      zarrMag = MagLocator(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
       layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        ZarrSegmentationLayer(name, boundingBox, elementClass, List(zarrMag), largestSegmentId = 0L)
+        ZarrSegmentationLayer(name, boundingBox, elementClass, List(zarrMag), largestSegmentId = None)
       } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag))
     } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
 
@@ -182,7 +187,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       name = multiscale.name.getOrElse(nameFromPath)
       voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
       layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        ZarrSegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = 0L)
+        ZarrSegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = None)
       } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
     } yield (layer, voxelSizeNanometers)
 
@@ -200,7 +205,7 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrayPath"
       boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
-      MagWithAttributes(ZarrMag(mag, Some(magPath.toString), credentials, Some(axisOrder)),
+      MagWithAttributes(MagLocator(mag, Some(magPath.toString), credentials, Some(axisOrder)),
                         magPath,
                         elementClass,
                         boundingBox)

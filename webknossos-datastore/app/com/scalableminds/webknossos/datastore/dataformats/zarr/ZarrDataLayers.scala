@@ -1,12 +1,10 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
 import java.net.URI
-
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.jzarr.AxisOrder
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import play.api.libs.json.{Json, OFormat}
 
 case class FileSystemCredentials(user: String, password: Option[String])
@@ -20,26 +18,6 @@ case class RemoteSourceDescriptor(uri: URI, user: Option[String], password: Opti
   lazy val credentials: Option[FileSystemCredentials] = user.map(u => FileSystemCredentials(u, password))
 }
 
-case class ZarrMag(mag: Vec3Int,
-                   path: Option[String],
-                   credentials: Option[FileSystemCredentials],
-                   axisOrder: Option[AxisOrder]) {
-
-  lazy val pathWithFallback: String = path.getOrElse(mag.toMagLiteral(allowScalar = true))
-  private lazy val uri: URI = new URI(pathWithFallback)
-  private lazy val isRemote: Boolean = FileSystemsHolder.isSupportedRemoteScheme(uri.getScheme)
-  lazy val remoteSource: Option[RemoteSourceDescriptor] =
-    if (isRemote)
-      Some(RemoteSourceDescriptor(uri, credentials.map(_.user), credentials.flatMap(_.password)))
-    else
-      None
-
-}
-
-object ZarrMag extends ResolutionFormatHelper {
-  implicit val jsonFormat: OFormat[ZarrMag] = Json.format[ZarrMag]
-}
-
 trait ZarrLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.zarr
@@ -48,7 +26,7 @@ trait ZarrLayer extends DataLayer {
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
-  def mags: List[ZarrMag]
+  def mags: List[MagLocator]
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
@@ -61,7 +39,7 @@ case class ZarrDataLayer(
     category: Category.Value,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
-    mags: List[ZarrMag],
+    mags: List[MagLocator],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     override val numChannels: Option[Int] = Some(1)
@@ -75,8 +53,8 @@ case class ZarrSegmentationLayer(
     name: String,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
-    mags: List[ZarrMag],
-    largestSegmentId: Long,
+    mags: List[MagLocator],
+    largestSegmentId: Option[Long] = None,
     mappings: Option[Set[String]] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,

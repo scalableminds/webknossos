@@ -190,7 +190,7 @@ function ensureTypeToString(synapseTypesAndNames: {
   const { synapseTypes, typeToString } = synapseTypesAndNames;
 
   if (typeToString.length === 0) {
-    Toast.error(`Couldn't read synapseTypes mapping. Please add a json file containing the synapseTypes next to the connectome file.
+    Toast.error(`Couldn't read synapseTypes mapping. Please add a json file (name should be equal to connectome file name) containing the synapseTypes next to the connectome file.
 The format should be: \`{
   "synapse_type_names": [ "type1", "type2", ... ]
 }\``);
@@ -796,7 +796,7 @@ class ConnectomeView extends React.Component<Props, State> {
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description={
             <span>
-              No connectome file available for this dataset.{" "}
+              No connectome file available for this segmentation layer.{" "}
               <a href="https://docs.webknossos.org/webknossos/connectome_viewer.html">
                 Read more about this feature in the documentation.
               </a>

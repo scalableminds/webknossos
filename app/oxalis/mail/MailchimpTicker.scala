@@ -59,10 +59,10 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
         } yield
           if (!alreadyTagged) {
             if (lastActivity < now - (14 days).toMillis) {
-              logger.info(s"Tagging user ${multiUser._id} as ${MailchimpTag.WasInactiveInWeeksTwoAndThree}...")
+              logger.info(s"Tagging multiuser ${multiUser._id} as ${MailchimpTag.WasInactiveInWeeksTwoAndThree}...")
               mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasInactiveInWeeksTwoAndThree)
             } else {
-              logger.info(s"Tagging user ${multiUser._id} as ${MailchimpTag.WasActiveInWeeksTwoOrThree}...")
+              logger.info(s"Tagging multiuser ${multiUser._id} as ${MailchimpTag.WasActiveInWeeksTwoOrThree}...")
               mailchimpClient.tagMultiUser(multiUser, MailchimpTag.WasActiveInWeeksTwoOrThree)
             }
           }

@@ -109,7 +109,7 @@ type UpdateVolumeTracingUpdateAction = {
     activeSegmentId: number;
     editPosition: Vector3;
     editRotation: Vector3;
-    largestSegmentId: number;
+    largestSegmentId: number | null;
     zoomLevel: number;
   };
 };
@@ -119,6 +119,7 @@ export type CreateSegmentUpdateAction = {
     id: number;
     anchorPosition: Vector3 | null | undefined;
     name: string | null | undefined;
+    color: Vector3 | null;
     creationTime: number | null | undefined;
   };
 };
@@ -128,6 +129,7 @@ export type UpdateSegmentUpdateAction = {
     id: number;
     anchorPosition: Vector3 | null | undefined;
     name: string | null | undefined;
+    color: Vector3 | null;
     creationTime: number | null | undefined;
   };
 };
@@ -419,7 +421,7 @@ export function updateVolumeTracing(
       activeSegmentId: tracing.activeCellId,
       editPosition: position,
       editRotation: rotation,
-      largestSegmentId: tracing.maxCellId,
+      largestSegmentId: tracing.largestSegmentId,
       zoomLevel,
     },
   };
@@ -438,6 +440,7 @@ export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
+  color: Vector3 | null,
   creationTime: number | null | undefined = Date.now(),
 ): CreateSegmentUpdateAction {
   return {
@@ -446,6 +449,7 @@ export function createSegmentVolumeAction(
       id,
       anchorPosition,
       name,
+      color,
       creationTime,
     },
   };
@@ -454,6 +458,7 @@ export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   name: string | null | undefined,
+  color: Vector3 | null,
   creationTime: number | null | undefined = Date.now(),
 ): UpdateSegmentUpdateAction {
   return {
@@ -463,6 +468,7 @@ export function updateSegmentVolumeAction(
       anchorPosition,
       name,
       creationTime,
+      color,
     },
   };
 }

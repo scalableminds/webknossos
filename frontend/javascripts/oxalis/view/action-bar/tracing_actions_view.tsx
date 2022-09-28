@@ -1,6 +1,6 @@
 import { Button, Dropdown, Menu, Modal, Tooltip } from "antd";
 import {
-  BarsOutlined,
+  HistoryOutlined,
   CheckCircleOutlined,
   CheckOutlined,
   CodeSandboxOutlined,
@@ -656,7 +656,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     if (controlMode !== ControlModeEnum.SANDBOX) {
       elements.push(
         <Menu.Item key="restore-button" onClick={this.handleRestore}>
-          <BarsOutlined />
+          <HistoryOutlined />
           Restore Older Version
         </Menu.Item>,
       );

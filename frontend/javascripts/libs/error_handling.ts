@@ -125,9 +125,14 @@ class ErrorHandling {
     window.addEventListener("unhandledrejection", (event) => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
       const reasonAsString = event.reason instanceof Error ? event.reason.toString() : event.reason;
-      const wrappedError = event.reason instanceof Error ? event.reason : new Error(event.reason);
-      wrappedError.message =
-        UNHANDLED_REJECTION_PREFIX + JSON.stringify(reasonAsString).slice(0, 80);
+      let wrappedError = event.reason instanceof Error ? event.reason : new Error(event.reason);
+      wrappedError = {
+        ...wrappedError,
+        // The message property is read-only in newer browser versions which is why
+        // the object is copied shallowly.
+        message: UNHANDLED_REJECTION_PREFIX + JSON.stringify(reasonAsString).slice(0, 80),
+      };
+
       this.notify(wrappedError, {
         originalError: reasonAsString,
       });
@@ -196,12 +201,12 @@ class ErrorHandling {
     });
   }
 
-  assert = (
+  assert(
     bool: boolean,
     message: string,
     assertionContext?: Record<string, any>,
     dontThrowError: boolean = false,
-  ) => {
+  ): asserts bool is true {
     if (bool) {
       return;
     }
@@ -219,9 +224,13 @@ class ErrorHandling {
       console.error(error);
       this.airbrake.notify(error);
     }
-  };
+  }
 
-  assertExists(variable: any, message: string, assertionContext?: Record<string, any>) {
+  assertExists<T>(
+    variable: T | null,
+    message: string,
+    assertionContext?: Record<string, any>,
+  ): asserts variable is NonNullable<T> {
     if (variable != null) {
       return;
     }
@@ -259,4 +268,6 @@ class ErrorHandling {
   }
 }
 
-export default new ErrorHandling();
+const errorHandling: ErrorHandling = new ErrorHandling();
+
+export default errorHandling;

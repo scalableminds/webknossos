@@ -404,7 +404,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield adaptedResult
   }
 
-  def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
+  /*def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       logVersioned(request)
       val oldRequest = request.request
@@ -418,7 +418,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         result <- annotationController.editAnnotation(typ, id)(newRequest)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
-  }
+  }*/
 
   private def replaceCreateExplorationalParameters(
       request: SecuredRequest[WkEnv, LegacyCreateExplorationalParameters]) = {

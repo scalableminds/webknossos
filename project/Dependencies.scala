@@ -2,7 +2,7 @@ import play.sbt.PlayImport._
 import sbt._
 
 object Dependencies {
-  private val akkaVersion = "2.6.14"
+  private val akkaVersion = "2.6.19"
   private val akkaHttpVersion = "10.2.6"
   private val log4jVersion = "2.17.0"
   private val webknossosWrapVersion = "1.1.15"
@@ -32,8 +32,8 @@ object Dependencies {
   private val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.7"
   private val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
   private val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test"
-  private val silhouette = "com.mohiva" %% "play-silhouette" % "6.0.0"
-  private val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.7" % "test"
+  private val silhouette = "io.github.honeycomb-cheesecake" %% "play-silhouette" % "7.0.7"
+  private val silhouetteTestkit = "io.github.honeycomb-cheesecake" %% "play-silhouette-testkit" % "7.0.7" % "test"
   private val trireme = "io.apigee.trireme" % "trireme-core" % "0.9.3"
   private val triremeNode = "io.apigee.trireme" % "trireme-node12src" % "0.9.3"
   private val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion

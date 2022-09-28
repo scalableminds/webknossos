@@ -88,7 +88,7 @@ PATCH    /v2/projects/:name/resume                                            co
 GET      /v1/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV1(typ: String, id: String)
 PATCH    /v1/annotations/:typ/:id/finish                                      controllers.LegacyApiController.annotationFinishV1(typ: String, id: String)
 POST     /v1/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMergeV1(typ: String, id: String, mergedTyp: String, mergedId: String)
-PATCH    /v1/annotations/:typ/:id/edit                                        controllers.LegacyApiController.annotationEditV1(typ: String, id: String)
+# PATCH    /v1/annotations/:typ/:id/edit                                        controllers.LegacyApiController.annotationEditV1(typ: String, id: String)
 POST     /v1/annotations/:typ/:id/duplicate                                   controllers.LegacyApiController.annotationDuplicateV1(typ: String, id: String)
 PATCH    /v1/annotations/:typ/:id/reopen                                      controllers.LegacyApiController.annotationReopenV1(typ: String, id: String)
 PUT      /v1/annotations/:typ/:id/reset                                       controllers.LegacyApiController.annotationResetV1(typ: String, id: String)

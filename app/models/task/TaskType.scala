@@ -64,6 +64,15 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
         } yield taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid
       }
       .map(_.exists(_ == true))
+
+  def idOrSummaryToId(taskTypeIdOrSummary: String, organizationId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[String] =
+    (for {
+      taskType <- taskTypeDAO.findOneBySummaryAndOrganization(taskTypeIdOrSummary, organizationId)
+    } yield taskType._id.toString).orElse(for {
+      taskTypeId <- ObjectId.fromString(taskTypeIdOrSummary)
+      _ <- taskTypeDAO.findOne(taskTypeId)
+    } yield taskTypeId.toString)
 }
 
 class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

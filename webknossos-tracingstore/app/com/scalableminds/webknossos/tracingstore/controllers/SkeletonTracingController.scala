@@ -74,11 +74,14 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
       }
     }
 
-  def updateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+  def updateActionLog(token: Option[String],
+                      tracingId: String,
+                      newestVersion: Option[Long],
+                      oldestVersion: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
     log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          updateLog <- tracingService.updateActionLog(tracingId)
+          updateLog <- tracingService.updateActionLog(tracingId, newestVersion, oldestVersion)
         } yield {
           Ok(updateLog)
         }

@@ -81,18 +81,16 @@ export class NullBucket {
     return Promise.resolve();
   }
 }
+
+export type TypedArrayConstructor =
+  | Uint8ArrayConstructor
+  | Uint16ArrayConstructor
+  | Uint32ArrayConstructor
+  | Float32ArrayConstructor
+  | BigUint64ArrayConstructor;
 export const getConstructorForElementClass = (
   type: ElementClass,
-): [
-  (
-    | Uint8ArrayConstructor
-    | Uint16ArrayConstructor
-    | Uint32ArrayConstructor
-    | Float32ArrayConstructor
-    | BigUint64ArrayConstructor
-  ),
-  number,
-] => {
+): [TypedArrayConstructor, number] => {
   switch (type) {
     case "int8":
     case "uint8":

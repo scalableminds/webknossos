@@ -45,9 +45,9 @@ class VersionView extends React.Component<Props, State> {
     Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
   };
 
-  onChangeTab = (activeKey: TracingType) => {
+  onChangeTab = (activeKey: string) => {
     this.setState({
-      activeTracingType: activeKey,
+      activeTracingType: activeKey as TracingType,
     });
   };
 
@@ -108,8 +108,11 @@ class VersionView extends React.Component<Props, State> {
             paddingLeft: 2,
           }}
         >
-          {/* @ts-expect-error ts-migrate(2322) FIXME: Type '(activeKey: TracingType) => void' is not ass... Remove this comment to see the full error message */}
-          <Tabs onChange={this.onChangeTab} activeKey={this.state.activeTracingType}>
+          <Tabs
+            onChange={this.onChangeTab}
+            activeKey={this.state.activeTracingType}
+            tabBarStyle={{ marginLeft: 6 }}
+          >
             {this.props.tracing.skeleton != null ? (
               <TabPane tab="Skeleton" key="skeleton">
                 <VersionList

@@ -621,6 +621,7 @@ export function addTreesAndGroups(
 export function deleteTree(
   skeletonTracing: SkeletonTracing,
   tree: Tree,
+  suppressActivatingNextNode: boolean = false,
 ): Maybe<[TreeMap, number | null | undefined, number | null | undefined, number]> {
   // Delete tree
   const newTrees = _.omit(skeletonTracing.trees, tree.treeId);
@@ -628,7 +629,7 @@ export function deleteTree(
   let newActiveTreeId = null;
   let newActiveNodeId = null;
 
-  if (_.size(newTrees) > 0) {
+  if (_.size(newTrees) > 0 && !suppressActivatingNextNode) {
     // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
     newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
     // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.

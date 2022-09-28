@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io._
 import java.nio.file.Paths
 import java.util.zip.Deflater
-
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -94,7 +93,7 @@ class VolumeTracingService @Inject()(
             action match {
               case a: UpdateBucketVolumeAction =>
                 if (tracing.getMappingIsEditable) {
-                  Fox.failure("Cannot mutate buckets in annotation with editable mapping.")
+                  Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
                 } else updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
@@ -170,7 +169,7 @@ class VolumeTracingService @Inject()(
         val resolutionSet = resolutionSetFromZipfile(dataZip)
         if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
       }
-      // if none of the tracings contained any volume data. do not save buckets, use full resolution list
+      // if none of the tracings contained any volume data do not save buckets, use full resolution list
       if (resolutionSets.isEmpty)
         getRequiredMags(tracing).map(_.toSet)
       else {
@@ -216,8 +215,8 @@ class VolumeTracingService @Inject()(
         }
       }
       if (savedResolutions.isEmpty) {
-        // if none of the tracings contained any volume data, use the dataset’s full resolution list
-        getRequiredMags(tracing).map(_.toSet)
+        val resolutionSet = resolutionSetFromZipfile(initialData)
+        Fox.successful(resolutionSet)
       } else
         unzipResult.map(_ => savedResolutions.toSet)
     }
@@ -236,7 +235,8 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(tracingId: String, tracing: VolumeTracing, os: OutputStream): Future[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] =
-      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)))
+      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)),
+                                         tracing.resolutions.map(mag => vec3IntFromProto(mag)))
 
     val before = System.currentTimeMillis()
     val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
@@ -339,7 +339,9 @@ class VolumeTracingService @Inject()(
       userToken = userToken
     )
 
-  def updateActionLog(tracingId: String): Fox[JsValue] = {
+  def updateActionLog(tracingId: String,
+                      newestVersion: Option[Long] = None,
+                      oldestVersion: Option[Long] = None): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
@@ -347,8 +349,10 @@ class VolumeTracingService @Inject()(
       )
 
     for {
-      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJsonBytes[List[CompactVolumeUpdateAction]])
+      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(
+        tracingId,
+        newestVersion,
+        oldestVersion)(fromJsonBytes[List[CompactVolumeUpdateAction]])
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
@@ -420,7 +424,7 @@ class VolumeTracingService @Inject()(
       )
 
   private def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
-    val largestSegmentId = Math.max(tracingA.largestSegmentId, tracingB.largestSegmentId)
+    val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                      tracingB.userBoundingBox,
@@ -438,6 +442,14 @@ class VolumeTracingService @Inject()(
       userBoundingBoxes = userBoundingBoxes
     )
   }
+
+  private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
+    (aOpt, bOpt) match {
+      case (Some(a), Some(b)) => Some(Math.max(a, b))
+      case (Some(a), None)    => Some(a)
+      case (None, Some(b))    => Some(b)
+      case (None, None)       => None
+    }
 
   private def bucketStreamFromSelector(selector: TracingSelector,
                                        tracing: VolumeTracing): Iterator[(BucketPosition, Array[Byte])] = {
@@ -515,8 +527,9 @@ class VolumeTracingService @Inject()(
         Fox.failure("annotation.volume.resolutionsDoNotMatch")
       else {
         val volumeLayer = volumeTracingLayer(tracingId, tracing)
-        val mergedVolume = new MergedVolume(tracing.elementClass, tracing.largestSegmentId)
         for {
+          largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
+          mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
           _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox
@@ -530,7 +543,7 @@ class VolumeTracingService @Inject()(
             tracing.version + 1,
             System.currentTimeMillis(),
             None,
-            List(ImportVolumeData(mergedVolume.largestSegmentId.toPositiveLong)),
+            List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
             None,

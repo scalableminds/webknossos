@@ -17,7 +17,7 @@ GET         /volume/:tracingId/allData                          @com.scalablemin
 GET         /volume/:tracingId/allDataBlocking                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataBlocking(token: Option[String], tracingId: String, version: Option[Long])
 POST        /volume/:tracingId/data                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/duplicate                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(token: Option[String], tracingId: String, fromTask: Option[Boolean], minResolution: Option[Int], maxResolution: Option[Int], downsample: Option[Boolean], editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
-GET         /volume/:tracingId/updateActionLog                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateActionLog(token: Option[String], tracingId: String)
+GET         /volume/:tracingId/updateActionLog                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateActionLog(token: Option[String], tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
 POST        /volume/:tracingId/isosurface                       @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.requestIsosurface(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/importVolumeData                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.importVolumeData(token: Option[String], tracingId: String)
 GET         /volume/:tracingId/findData                         @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.findData(token: Option[String], tracingId: String)
@@ -56,7 +56,7 @@ POST        /skeleton/mergedFromIds                             @com.scalablemin
 GET         /skeleton/:tracingId                                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.get(token: Option[String], tracingId: String, version: Option[Long])
 GET         /skeleton/:tracingId/newestVersion                  @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.newestVersion(token: Option[String], tracingId: String)
 GET         /skeleton/:tracingId/updateActionStatistics         @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionStatistics(token: Option[String], tracingId: String)
-GET         /skeleton/:tracingId/updateActionLog                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionLog(token: Option[String], tracingId: String)
+GET         /skeleton/:tracingId/updateActionLog                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionLog(token: Option[String], tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
 POST        /skeleton/getMultiple                               @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple(token: Option[String])
 
 POST        /skeleton/:tracingId/update                         @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.update(token: Option[String], tracingId: String)

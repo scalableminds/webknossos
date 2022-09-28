@@ -22,7 +22,7 @@ import {
   resetContourReducer,
   hideBrushReducer,
   setContourTracingModeReducer,
-  setMaxCellReducer,
+  setLargestSegmentIdReducer,
   updateVolumeTracing,
   setMappingNameReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
@@ -115,15 +115,13 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
 
   if (segment.somePosition) {
     somePosition = Utils.floor3(segment.somePosition);
-  } else {
-    if (oldSegment == null) {
-      // UPDATE_SEGMENT was called for a non-existing segment without providing
-      // a position. Ignore this action, as the a segment cannot be created without
-      // a position.
-      return state;
-    }
-
+  } else if (oldSegment != null) {
     somePosition = oldSegment.somePosition;
+  } else {
+    // UPDATE_SEGMENT was called for a non-existing segment without providing
+    // a position. This is necessary to define custom colors for segments
+    // which are listed in a JSON mapping. The action will store the segment
+    // without a position.
   }
 
   const newSegment = {
@@ -131,6 +129,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     // used by ...oldSegment
     creationTime: action.timestamp,
     name: null,
+    color: null,
     ...oldSegment,
     ...segment,
     somePosition,
@@ -154,7 +153,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
 export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {
   // As the frontend doesn't know all cells, we have to keep track of the highest id
   // and cannot compute it
-  const maxCellId = tracing.largestSegmentId;
+  const largestSegmentId = tracing.largestSegmentId;
   const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
   const volumeTracing = {
     createdTimestamp: tracing.createdTimestamp,
@@ -165,15 +164,18 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
         {
           ...segment,
           id: segment.segmentId,
-          somePosition: Utils.point3ToVector3(segment.anchorPosition),
+          somePosition: segment.anchorPosition
+            ? Utils.point3ToVector3(segment.anchorPosition)
+            : undefined,
+          color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
         },
       ]),
     ),
-    activeCellId: 0,
+    activeCellId: tracing.activeSegmentId ?? 0,
     lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,
     contourList: [],
-    maxCellId,
+    largestSegmentId,
     tracingId: tracing.id,
     version: tracing.version,
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
@@ -203,7 +205,14 @@ function VolumeTracingReducer(
           },
         },
       });
-      return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
+
+      if (volumeTracing.largestSegmentId != null && volumeTracing.activeCellId === 0) {
+        // If a largest segment id is known, but the active cell is 0, we can automatically
+        // create a new segment ID for the user.
+        return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId);
+      }
+
+      return newState;
     }
 
     case "INITIALIZE_EDITABLE_MAPPING": {
@@ -255,7 +264,7 @@ function VolumeTracingReducer(
     }
 
     case "CREATE_CELL": {
-      return createCellReducer(state, volumeTracing);
+      return createCellReducer(state, volumeTracing, action.largestSegmentId);
     }
 
     case "UPDATE_DIRECTION": {
@@ -278,14 +287,23 @@ function VolumeTracingReducer(
       return setContourTracingModeReducer(state, volumeTracing, action.mode);
     }
 
-    case "SET_MAX_CELL": {
-      return setMaxCellReducer(state, volumeTracing, action.cellId);
+    case "SET_LARGEST_SEGMENT_ID": {
+      return setLargestSegmentIdReducer(state, volumeTracing, action.cellId);
     }
 
     case "FINISH_ANNOTATION_STROKE": {
-      // Possibly update the maxCellId after volume annotation
-      const { activeCellId, maxCellId } = volumeTracing;
-      return setMaxCellReducer(state, volumeTracing, Math.max(activeCellId, maxCellId));
+      // Possibly update the largestSegmentId after volume annotation
+      const { activeCellId, largestSegmentId } = volumeTracing;
+      if (largestSegmentId == null) {
+        // If no largest segment id was known, we should not assume that
+        // the used segment id is the highest one.
+        return state;
+      }
+      return setLargestSegmentIdReducer(
+        state,
+        volumeTracing,
+        Math.max(activeCellId, largestSegmentId),
+      );
     }
 
     case "SET_MAPPING": {

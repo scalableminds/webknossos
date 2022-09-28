@@ -37,7 +37,6 @@ class NodeShader {
     const state = Store.getState();
     this.uniforms = {
       planeZoomFactor: {
-        type: "f",
         // The flycam zoom is typically decomposed into an x- and y-factor
         // which respects the aspect ratio. However, this value is merely used
         // for selecting an appropriate node size (gl_PointSize). The resulting points
@@ -45,47 +44,36 @@ class NodeShader {
         value: getZoomValue(state.flycam),
       },
       datasetScale: {
-        type: "f",
         value: getBaseVoxel(state.dataset.dataSource.scale),
       },
       overrideParticleSize: {
-        type: "f",
         value: state.userConfiguration.particleSize,
       },
       viewportScale: {
-        type: "f",
         value: 1,
       },
       overrideNodeRadius: {
-        type: "i",
         value: true,
       },
       activeTreeId: {
-        type: "f",
         value: NaN,
       },
       activeNodeId: {
-        type: "f",
         value: NaN,
       },
       treeColors: {
-        type: "t",
         value: treeColorTexture,
       },
       isPicking: {
-        type: "i",
         value: 0,
       },
       isTouch: {
-        type: "i",
         value: 0,
       },
       highlightCommentedNodes: {
-        type: "f",
         value: state.userConfiguration.highlightCommentedNodes,
       },
       viewMode: {
-        type: "f",
         value: 0,
       },
     };

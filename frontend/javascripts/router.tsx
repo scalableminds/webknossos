@@ -1,9 +1,9 @@
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import type { ContextRouter } from "react-router-dom";
-import { Redirect, Route, Router, Switch, useLocation } from "react-router-dom";
+import { Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
-import React, { useEffect } from "react";
+import React, { lazy, Suspense } from "react";
 import { createBrowserHistory } from "history";
 import _ from "lodash";
 import AcceptInviteView from "admin/auth/accept_invite_view";
@@ -15,6 +15,7 @@ import {
   getAnnotationInformation,
   getOrganizationForDataset,
   createExplorational,
+  getShortLink,
 } from "admin/admin_rest_api";
 import AdaptViewportMetatag from "components/adapt_viewport_metatag";
 import AsyncRedirect from "components/redirect";
@@ -52,10 +53,25 @@ import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
 import * as Utils from "libs/utils";
 import features from "features";
-import window, { location as windowLocation } from "libs/window";
+import window from "libs/window";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { coalesce } from "libs/utils";
 const { Content } = Layout;
+
+function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {
+  const InternalComponent = lazy(loader);
+  return function AsyncComponent() {
+    return (
+      <Suspense fallback={<div style={{ textAlign: "center" }}>Loading...</div>}>
+        <InternalComponent />
+      </Suspense>
+    );
+  };
+}
+
+const AsyncWorkflowView = loadable(() => import("admin/voxelytics/workflow_view"));
+const AsyncWorkflowListView = loadable(() => import("admin/voxelytics/workflow_list_view"));
+
 type StateProps = {
   activeUser: APIUser | null | undefined;
   hasOrganizations: boolean;
@@ -98,16 +114,6 @@ function PageNotFoundView() {
       />
     </div>
   );
-}
-
-function RedirectToWorkflowViewer() {
-  const location = useLocation();
-
-  useEffect(() => {
-    windowLocation.assign(`https://workflows.voxelytics.com${location.pathname}${location.search}`);
-  }, []);
-
-  return null;
 }
 
 class ReactRouter extends React.Component<Props> {
@@ -365,7 +371,6 @@ class ReactRouter extends React.Component<Props> {
                     onComplete={() =>
                       window.location.replace(`${window.location.origin}/dashboard/datasets`)
                     }
-                    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
                     onCancel={() => window.history.back()}
                   />
                 )}
@@ -380,9 +385,7 @@ class ReactRouter extends React.Component<Props> {
                       name: match.params.datasetName || "",
                       owningOrganization: match.params.organizationName || "",
                     }}
-                    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
                     onComplete={() => window.history.back()}
-                    // @ts-expect-error ts-migrate(2339) FIXME: Property 'history' does not exist on type '(Window... Remove this comment to see the full error message
                     onCancel={() => window.history.back()}
                   />
                 )}
@@ -516,7 +519,6 @@ class ReactRouter extends React.Component<Props> {
               <Route
                 path="/datasets/:id/view"
                 render={({ match, location }: ContextRouter) => (
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ redirectTo: () => Promise<string>; }' is n... Remove this comment to see the full error message
                   <AsyncRedirect
                     redirectTo={async () => {
                       const datasetName = match.params.id || "";
@@ -603,9 +605,31 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
               <Redirect from="/publication/:id" to="/publications/:id" />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/workflows"
+                component={AsyncWorkflowListView}
+                exact
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/workflows/:workflowName"
+                component={AsyncWorkflowView}
+              />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
-              <Route path="/workflows" component={RedirectToWorkflowViewer} />
+              <Route
+                path="/links/:key"
+                render={({ match }: ContextRouter) => (
+                  <AsyncRedirect
+                    redirectTo={async () => {
+                      const key = match.params.key || "";
+                      const shortLink = await getShortLink(key);
+                      return shortLink.longLink;
+                    }}
+                  />
+                )}
+              />
               {!features().isDemoInstance && <Route path="/onboarding" component={Onboarding} />}
               <Route component={PageNotFoundView} />
             </Switch>

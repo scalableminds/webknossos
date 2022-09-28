@@ -24,7 +24,7 @@ case class CreateTreeSkeletonAction(id: Int,
     val newTree = Tree(id,
                        Nil,
                        Nil,
-                       convertColorOpt(color),
+                       colorOptToProto(color),
                        branchPoints.map(convertBranchPoint),
                        comments.map(convertComment),
                        name,
@@ -71,7 +71,7 @@ case class UpdateTreeSkeletonAction(id: Int,
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(tree: Tree) =
       tree.copy(
-        color = if (color.isDefined) convertColorOpt(color) else tree.color,
+        color = colorOptToProto(color).orElse(tree.color),
         treeId = updatedId.getOrElse(tree.treeId),
         branchPoints = branchPoints.map(convertBranchPoint),
         comments = comments.map(convertComment),

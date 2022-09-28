@@ -8,15 +8,11 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesParser, ZarrMag, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesParser, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.jzarr.{OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.jzarr.{
-  ArrayOrder,
-  AxisOrder,
-  OmeNgffGroupHeader,
-  OmeNgffHeader,
-  ZarrHeader
-}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -224,11 +220,14 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def updateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+  def updateActionLog(token: Option[String],
+                      tracingId: String,
+                      newestVersion: Option[Long] = None,
+                      oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
     log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          updateLog <- tracingService.updateActionLog(tracingId)
+          updateLog <- tracingService.updateActionLog(tracingId, newestVersion, oldestVersion)
         } yield Ok(updateLog)
       }
     }
@@ -388,7 +387,7 @@ class VolumeTracingController @Inject()(
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
-            mags = tracing.resolutions.toList.map(x => ZarrMag(x, None, None, Some(AxisOrder.cxyz))),
+            mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz))),
             mappings = None,
             numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
           )

@@ -36,8 +36,12 @@ import * as Utils from "libs/utils";
 import window, { document, location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
+
 const { SubMenu } = Menu;
 const { Header } = Layout;
+
+const HELP_MENU_KEY = "helpMenu";
+
 type OwnProps = {
   isAuthenticated: boolean;
 };
@@ -357,7 +361,9 @@ function HelpSubMenu({
       {version !== "" ? (
         <Menu.Item disabled key="version">
           Version: {version}
-          {polledVersion !== version ? ` (Server already has ${polledVersion}!)` : null}
+          {polledVersion != null && polledVersion !== version
+            ? ` (Server is currently at ${polledVersion}!)`
+            : null}
         </Menu.Item>
       ) : null}
     </SubMenu>
@@ -585,10 +591,12 @@ function AnonymousAvatar() {
   );
 }
 
-async function getAndTrackVersion() {
+async function getAndTrackVersion(dontTrack: boolean = false) {
   const buildInfo = await getBuildInfo();
   const { version } = buildInfo.webknossos;
-  trackVersion(version);
+  if (dontTrack) {
+    trackVersion(version);
+  }
   return version;
 }
 
@@ -604,10 +612,17 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   };
 
   const version = useFetch(getAndTrackVersion, null, []);
-  const [polledVersion, setPolledVersion] = useState<string>("");
-  useInterval(async () => {
-    setPolledVersion(await getAndTrackVersion());
-  }, 2000);
+  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
+  const [polledVersion, setPolledVersion] = useState<string | null>(null);
+  useInterval(
+    async () => {
+      if (isHelpMenuOpen) {
+        setPolledVersion(await getAndTrackVersion(true));
+      }
+    },
+    2000,
+    isHelpMenuOpen,
+  );
   const navbarStyle: Record<string, any> = {
     padding: 0,
     overflowX: "auto",
@@ -668,7 +683,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
 
   menuItems.push(
     <HelpSubMenu
-      key="helpMenu"
+      key={HELP_MENU_KEY}
       version={version}
       polledVersion={polledVersion}
       isAdminOrTeamManager={isAdminOrTeamManager}
@@ -689,6 +704,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}
+        onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
           lineHeight: "48px",
         }}

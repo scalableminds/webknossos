@@ -6,6 +6,7 @@ import messages from "messages";
 import { CheckboxChangeEvent } from "antd/lib/checkbox";
 type Props = {
   onOk: (...args: Array<any>) => any;
+  destroy?: (...args: Array<any>) => any;
 };
 type State = {
   shouldNotWarnAgain: boolean;
@@ -27,14 +28,15 @@ export default class TreeRemovalModal extends React.Component<Props, State> {
     this.setState({
       visible: false,
     });
+    if (this.props.destroy) this.props.destroy();
   };
 
   handleOk = () => {
     Store.dispatch(
       updateUserSettingAction("hideTreeRemovalWarning", this.state.shouldNotWarnAgain),
     );
-    this.hide();
     this.props.onOk();
+    this.hide();
   };
 
   render() {

@@ -921,12 +921,22 @@ export function getUpdateActionLog(
   tracingStoreUrl: string,
   tracingId: string,
   versionedObjectType: SaveQueueType,
+  oldestVersion?: number,
+  newestVersion?: number,
 ): Promise<Array<APIUpdateActionBatch>> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?token=${token}`,
-    ),
-  );
+  return doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    if (oldestVersion != null) {
+      params.append("oldestVersion", oldestVersion.toString());
+    }
+    if (newestVersion != null) {
+      params.append("newestVersion", newestVersion.toString());
+    }
+    return Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?${params}`,
+    );
+  });
 }
 
 export function getNewestVersionForTracing(

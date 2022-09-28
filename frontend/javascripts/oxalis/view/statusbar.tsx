@@ -346,6 +346,7 @@ function Infos() {
           <NumberInputPopoverSetting
             value={activeCellId}
             label={maybeLabelWithSegmentationWarning(isUint64SegmentationVisible, "Active Segment")}
+            min={0}
             detailedLabel={maybeLabelWithSegmentationWarning(
               isUint64SegmentationVisible,
               "Change Active Segment ID",

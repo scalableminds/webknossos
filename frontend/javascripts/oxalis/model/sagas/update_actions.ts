@@ -109,7 +109,7 @@ type UpdateVolumeTracingUpdateAction = {
     activeSegmentId: number;
     editPosition: Vector3;
     editRotation: Vector3;
-    largestSegmentId: number;
+    largestSegmentId: number | null;
     zoomLevel: number;
   };
 };
@@ -421,7 +421,7 @@ export function updateVolumeTracing(
       activeSegmentId: tracing.activeCellId,
       editPosition: position,
       editRotation: rotation,
-      largestSegmentId: tracing.maxCellId,
+      largestSegmentId: tracing.largestSegmentId,
       zoomLevel,
     },
   };

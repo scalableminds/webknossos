@@ -188,15 +188,10 @@ function* maybeFetchMapping(
   const fetchedMapping = fetchedMappings[mappingName];
   const { hideUnmappedIds, colors: mappingColors } = fetchedMapping;
 
-  // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
-  // class will get the first color, and so on
-  const usesCustomColors = mappingColors != null && mappingColors.length > 0;
   const [mappingObject, mappingKeys] = yield* call(
     buildMappingObject,
-    layerName,
     mappingName,
     fetchedMappings,
-    usesCustomColors, // assign new ids when using custom colors
   );
   const mappingProperties = {
     mapping: mappingObject,
@@ -205,6 +200,7 @@ function* maybeFetchMapping(
     hideUnmappedIds,
   };
 
+  const usesCustomColors = mappingColors != null && mappingColors.length > 0;
   if (usesCustomColors) {
     yield* call(setCustomColors, mappingProperties, fetchedMapping.classes || [], layerName);
   }
@@ -282,30 +278,14 @@ function* fetchMappings(
   }
 }
 
-function* getLargestSegmentId(layerName: string): Saga<number> {
-  const dataset = yield* select((state) => state.dataset);
-  const segmentationLayer = getLayerByName(dataset, layerName);
-
-  if (segmentationLayer.category !== "segmentation") {
-    throw new Error("Mappings only exist for segmentation layers.");
-  }
-
-  return segmentationLayer.largestSegmentId;
-}
-
-function* buildMappingObject(
-  layerName: string,
+function buildMappingObject(
   mappingName: string,
   fetchedMappings: APIMappings,
-  assignNewIds: boolean,
-): Saga<[Mapping, Array<number>]> {
+): [Mapping, Array<number>] {
   const mappingObject: Mapping = {};
   // Performance optimization: Object.keys(...) is slow for large objects
   // keeping track of the keys in a separate array is ~5x faster
   const mappingKeys = [];
-  const largestSegmentID = yield* call(getLargestSegmentId, layerName);
-  const maxId = largestSegmentID + 1;
-  let newMappedId = maxId;
 
   for (const currentMappingName of getMappingChain(mappingName, fetchedMappings)) {
     const mapping = fetchedMappings[currentMappingName];
@@ -315,7 +295,7 @@ function* buildMappingObject(
     );
 
     for (const mappingClass of mapping.classes) {
-      const minId = assignNewIds ? newMappedId : _.min(mappingClass);
+      const minId = _.min(mappingClass);
       if (minId == null) {
         // The class is empty and can be ignored
         continue;
@@ -326,8 +306,6 @@ function* buildMappingObject(
         mappingObject[id] = mappedId;
         mappingKeys.push(id);
       }
-
-      newMappedId++;
     }
   }
 

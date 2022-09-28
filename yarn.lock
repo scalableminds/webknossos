@@ -3538,10 +3538,10 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-beautiful-react-hooks@^0.30.5:
-  version "0.30.6"
-  resolved "https://registry.yarnpkg.com/beautiful-react-hooks/-/beautiful-react-hooks-0.30.6.tgz#05b059d5b05ee4252cb97c42ad9231d9ea7733bc"
-  integrity sha512-Da1tFxYHPLl0gyBGgdNG2d4fb3iIz3XKttObvoYwZgxiLyc81DYGfwMt6yW+7xuafKRN8PyX8NUmq1ucl0zKOg==
+beautiful-react-hooks@^3.11.1:
+  version "3.11.1"
+  resolved "https://registry.yarnpkg.com/beautiful-react-hooks/-/beautiful-react-hooks-3.11.1.tgz#2bcbf726a77993b3f454ff48867a4cced3d213fd"
+  integrity sha512-uXeli3YYvo15+5xFvRm/rpBtVQ1SrelVTDKPZAlBWhaY8FXQegjKpWC1TjUL5noBMtWjDtx/rPaoCNlRtqJO0g==
   dependencies:
     lodash.debounce "^4.0.8"
     lodash.throttle "^4.1.1"
@@ -9092,7 +9092,7 @@ lodash.curry@^4.1.1:
 lodash.debounce@^4.0.8:
   version "4.0.8"
   resolved "https://registry.yarnpkg.com/lodash.debounce/-/lodash.debounce-4.0.8.tgz#82d79bff30a67c4005ffd5e2515300ad9ca4d7af"
-  integrity sha1-gteb/zCmfEAF/9XiUVMArZyk168=
+  integrity sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==
 
 lodash.escape@^4.0.1:
   version "4.0.1"
@@ -11224,10 +11224,10 @@ proto-loader6@^0.4.0:
     loader-utils "^0.2.16"
     protobufjs "^6.3.1"
 
-protobufjs@^6.3.1, protobufjs@^6.8.6:
-  version "6.10.2"
-  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.10.2.tgz#b9cb6bd8ec8f87514592ba3fdfd28e93f33a469b"
-  integrity sha512-27yj+04uF6ya9l+qfpH187aqEzfCF4+Uit0I9ZBQVqK09hk/SQzKa2MUqUpXaVa7LOFRg1TSSr3lVxGOk6c0SQ==
+protobufjs@^6.10.3, protobufjs@^6.3.1:
+  version "6.10.3"
+  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.10.3.tgz#11ed1dd02acbfcb330becf1611461d4b407f9eef"
+  integrity sha512-yvAslS0hNdBhlSKckI4R1l7wunVilX66uvrjzE4MimiAt7/qw1nLpMhZrn/ObuUTM/c3Xnfl01LYMdcSJe6dwg==
   dependencies:
     "@protobufjs/aspromise" "^1.1.2"
     "@protobufjs/base64" "^1.1.2"
@@ -11981,6 +11981,11 @@ react-base16-styling@^0.9.1:
     color "^3.2.1"
     csstype "^3.0.10"
     lodash.curry "^4.1.1"
+
+react-colorful@^5.6.1:
+  version "5.6.1"
+  resolved "https://registry.yarnpkg.com/react-colorful/-/react-colorful-5.6.1.tgz#7dc2aed2d7c72fac89694e834d179e32f3da563b"
+  integrity sha512-1exovf0uGTGyq5mXQT0zgQ80uvj2PCwvF8zY1RN9/vbJVSjSo3fsB/4L3ObbF7u70NduSiK4xu4Y6q1MHoUGEw==
 
 react-debounce-render@^8.0.1:
   version "8.0.2"

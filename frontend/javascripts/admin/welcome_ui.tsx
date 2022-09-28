@@ -121,13 +121,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                   description="Send invites to your colleagues and ask them to join your organization."
                   icon={<MailOutlined className="action-icon" />}
                   onClick={() => {
-                    renderIndependently((destroy) => (
-                      <InviteUsersModal
-                        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-                        organizationName={activeUser.organization}
-                        destroy={destroy}
-                      />
-                    ));
+                    renderIndependently((destroy) => <InviteUsersModal destroy={destroy} />);
                   }}
                 />
               ) : null}

@@ -6,10 +6,6 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/22.09.0...HEAD)
-
-- To use the Voxelytics reporting features in webKnossos, the config field `features.voxelyticsEnabled` needs to be set to true. When also using the logging features, an Elasticsearch instance needs to be running and configured in the config field `voxelytics.elasticsearch.uri`.
+[Commits](https://github.com/scalableminds/webknossos/compare/22.10.0...HEAD)
 
 ### Postgres Evolutions:
-- [088-shortlinks.sql](conf/evolutions/088-shortlinks.sql)
-- [089-voxelytics.sql](conf/evolutions/089-voxelytics.sql)

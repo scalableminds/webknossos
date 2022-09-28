@@ -197,8 +197,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(meshesDir)
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
 
-    println(s"Reading $meshFilePath")
-
     safeExecute(meshFilePath) { cachedMeshFile =>
       val segmentId = listMeshChunksRequest.segmentId
       val encoding = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
@@ -319,7 +317,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val hashName = cachedMeshFile.reader.string().getAttr("/", "hash_function")
 
     val bucketIndex = getHashFunction(hashName)(segmentId) % nBuckets
-    val cappedBucketIndex = bucketIndex.toInt
     val bucketOffsets = cachedMeshFile.reader.uint64().readArrayBlockWithOffset("bucket_offsets", 2, bucketIndex)
     val bucketStart = bucketOffsets(0)
     val bucketEnd = bucketOffsets(1)
@@ -391,7 +388,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   private def safeExecuteBox[T](filePath: Path)(block: CachedHdf5File => T): Box[T] =
     for {
       _ <- if (filePath.toFile.exists()) {
-        new Full
+        Full(true)
       } else {
         Empty ~> "mesh.file.open.failed"
       }

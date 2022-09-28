@@ -401,9 +401,9 @@ Expects:
   }
 
   def dummyDracoFile(): Action[AnyContent] = Action.async { implicit request =>
-      for {
-        draco <- meshFileService.readDummyDraco()
-      } yield Ok(draco)
+    for {
+      draco <- meshFileService.readDummyDraco()
+    } yield Ok(draco)
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -430,9 +430,9 @@ Expects:
                                         urlOrHeaderToken(token, request)) {
         for {
           positions <- meshFileService.listMeshChunksForSegmentV0(organizationName,
-                                                                dataSetName,
-                                                                dataLayerName,
-                                                                request.body) ?~> Messages(
+                                                                  dataSetName,
+                                                                  dataLayerName,
+                                                                  request.body) ?~> Messages(
             "mesh.file.listChunks.failed",
             request.body.segmentId.toString,
             request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
@@ -447,12 +447,12 @@ Expects:
                                  dataLayerName: String): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-        urlOrHeaderToken(token, request)) {
+                                        urlOrHeaderToken(token, request)) {
         for {
           positions <- meshFileService.listMeshChunksForSegmentV1(organizationName,
-            dataSetName,
-            dataLayerName,
-            request.body) ?~> Messages(
+                                                                  dataSetName,
+                                                                  dataLayerName,
+                                                                  request.body) ?~> Messages(
             "mesh.file.listChunks.failed",
             request.body.segmentId.toString,
             request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
@@ -469,7 +469,10 @@ Expects:
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          (data, encoding) <- meshFileService.readMeshChunkV0(organizationName, dataSetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- meshFileService.readMeshChunkV0(organizationName,
+                                                              dataSetName,
+                                                              dataLayerName,
+                                                              request.body) ?~> "mesh.file.loadChunk.failed"
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")
@@ -485,9 +488,12 @@ Expects:
                       dataLayerName: String): Action[MeshChunkDataRequestV1] =
     Action.async(validateJson[MeshChunkDataRequestV1]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-        urlOrHeaderToken(token, request)) {
+                                        urlOrHeaderToken(token, request)) {
         for {
-          (data, encoding) <- meshFileService.readMeshChunkV1(organizationName, dataSetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- meshFileService.readMeshChunkV1(organizationName,
+                                                              dataSetName,
+                                                              dataLayerName,
+                                                              request.body) ?~> "mesh.file.loadChunk.failed"
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")

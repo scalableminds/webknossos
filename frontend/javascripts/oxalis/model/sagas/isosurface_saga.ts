@@ -39,13 +39,7 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { actionChannel, takeEvery, call, take, race, put } from "typed-redux-saga";
 import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
-import {
-  computeIsosurface,
-  sendAnalyticsEvent,
-  getDummyDraco,
-  meshV0,
-  meshV3,
-} from "admin/admin_rest_api";
+import { computeIsosurface, sendAnalyticsEvent, meshV0, meshV3 } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
@@ -656,34 +650,11 @@ function getDracoLoader() {
     "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/js/libs/draco/",
   );
   _dracoLoader.setDecoderConfig({ type: "js" });
+
+  // todo: never dispose?
+  // loader.dispose();
+
   return _dracoLoader;
-}
-
-function* addDummyDraco() {
-  const buffer = yield* call(getDummyDraco);
-  console.log("buffer", buffer);
-
-  const loader = getDracoLoader();
-  const sceneController = yield* call(getSceneController);
-
-  // const url = "/data/datasets/dummyDraco";
-  const url = "/assets/draco_file.bin";
-  // const url = "http://localhost:9000/assets/bunny.drc";
-  // loader.load(url, (geometry) => {
-  loader.decodeDracoFile(buffer, (geometry) => {
-    // geometry.computeVertexNormals();
-
-    // todo: use correct id
-    sceneController.addIsosurfaceFromGeometry(geometry, 2347819234);
-
-    // Release decoder resources.
-    loader.dispose();
-  });
-
-  // const decoderModule = yield* call(() => draco3d.createDecoderModule({}));
-  // let decoder = new decoderModule.Decoder();
-  // console.log("decoder");
-  // const geometry = yield* call(parseStlBuffer, stlData);
 }
 
 /*
@@ -773,5 +744,4 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery(["UPDATE_SEGMENT"], handleIsosurfaceColorChange);
-  yield* takeEvery(["ADD_DUMMY_DRACO"], addDummyDraco);
 }

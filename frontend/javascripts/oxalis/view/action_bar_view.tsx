@@ -160,10 +160,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
-
-          <ButtonComponent onClick={() => Store.dispatch({ type: "ADD_DUMMY_DRACO" })}>
-            ADD_DUMMY_DRACO
-          </ButtonComponent>
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}

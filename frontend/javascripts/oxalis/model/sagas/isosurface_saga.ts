@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataLayer } from "types/api_flow_types";
-import "libs/DRACOLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
 import {
   ResolutionInfo,
@@ -599,7 +599,7 @@ function* loadPrecomputedMeshForSegmentId(
           );
           const loader = getDracoLoader();
 
-          const geometry = yield* call(loader.decodeDracoFile.bind(loader), dracoData);
+          const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
           yield* call(
             { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
             geometry,
@@ -644,12 +644,24 @@ function getDracoLoader() {
   if (_dracoLoader) {
     return _dracoLoader;
   }
-  _dracoLoader = new THREE.DRACOLoader();
+  _dracoLoader = new DRACOLoader();
 
   _dracoLoader.setDecoderPath(
     "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/js/libs/draco/",
   );
   _dracoLoader.setDecoderConfig({ type: "js" });
+
+  _dracoLoader.decodeDracoFileAsync = (buffer, ...args) =>
+    new Promise((resolve, reject) =>
+      _dracoLoader.decodeDracoFile(
+        buffer,
+        (x) => {
+          debugger;
+          resolve(x);
+        },
+        ...args,
+      ),
+    );
 
   // todo: never dispose?
   // loader.dispose();

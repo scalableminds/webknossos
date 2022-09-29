@@ -16,7 +16,7 @@ import play.api.libs.json.{Json, OFormat}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Path, Paths}
 import javax.inject.Inject
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer

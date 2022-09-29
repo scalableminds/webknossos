@@ -41,8 +41,8 @@ case class MeshChunkDataRequestV0(
 
 case class MeshChunkDataRequestV3(
     meshFile: String,
-    fragmentStartOffset: Long,
-    fragmentSize: Int
+    byteOffset: Long,
+    byteSize: Int
 )
 
 object MeshChunkDataRequestV0 {
@@ -367,8 +367,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         cachedMeshFile.reader
           .uint8()
           .readArrayBlockWithOffset("neuroglancer",
-                                    meshChunkDataRequest.fragmentSize,
-                                    meshChunkDataRequest.fragmentStartOffset)
+                                    meshChunkDataRequest.byteSize,
+                                    meshChunkDataRequest.byteOffset)
       (data, meshFormat)
     } ?~> "mesh.file.readData.failed"
   }

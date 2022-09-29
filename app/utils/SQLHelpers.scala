@@ -131,7 +131,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def writeEscapedTuple(seq: List[String]): String =
     "(" + seq.map(escapeLiteral).mkString(", ") + ")"
 
-  def sanitize(aString: String): String = aString.replaceAll("'", "")
+  def sanitize(aString: String): String = escapeLiteral(aString)
 
   // escape ' by doubling it, escape " with backslash, drop commas
   def sanitizeInArrayTuple(aString: String): String =

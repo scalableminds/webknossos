@@ -35,6 +35,8 @@ class ZarrStreamingController @Inject()(
 )(implicit ec: ExecutionContext)
     extends Controller {
 
+  override def defaultErrorCode: Int = NOT_FOUND
+
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
 
   override def allowRemoteOrigin: Boolean = true

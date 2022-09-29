@@ -441,21 +441,23 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def listMeshChunksForSegmentV1(token: Option[String],
-                                 organizationName: String,
-                                 dataSetName: String,
-                                 dataLayerName: String): Action[ListMeshChunksRequest] =
+  def listMeshChunksForSegmentForVersion(token: Option[String],
+                                         organizationName: String,
+                                         dataSetName: String,
+                                         dataLayerName: String,
+                                         formatVersion: Int): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          positions <- meshFileService.listMeshChunksForSegmentV1(organizationName,
-                                                                  dataSetName,
-                                                                  dataLayerName,
-                                                                  request.body) ?~> Messages(
-            "mesh.file.listChunks.failed",
-            request.body.segmentId.toString,
-            request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
+          positions <- formatVersion match {
+            case 3 =>
+              meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
+                "mesh.file.listChunks.failed",
+                request.body.segmentId.toString,
+                request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
+            case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
+          }
         } yield Ok(Json.toJson(positions))
       }
     }
@@ -482,18 +484,20 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def readMeshChunkV1(token: Option[String],
-                      organizationName: String,
-                      dataSetName: String,
-                      dataLayerName: String): Action[MeshChunkDataRequestV1] =
-    Action.async(validateJson[MeshChunkDataRequestV1]) { implicit request =>
+  def readMeshChunkForVersion(token: Option[String],
+                              organizationName: String,
+                              dataSetName: String,
+                              dataLayerName: String,
+                              formatVersion: Int): Action[MeshChunkDataRequestV3] =
+    Action.async(validateJson[MeshChunkDataRequestV3]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          (data, encoding) <- meshFileService.readMeshChunkV1(organizationName,
-                                                              dataSetName,
-                                                              dataLayerName,
-                                                              request.body) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- formatVersion match {
+            case 3 =>
+              meshFileService.readMeshChunkV3(organizationName, dataSetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+            case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
+          }
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")

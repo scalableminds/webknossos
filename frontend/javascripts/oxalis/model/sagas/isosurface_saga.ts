@@ -649,7 +649,7 @@ function getDracoLoader() {
   _dracoLoader.setDecoderPath(
     "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/js/libs/draco/",
   );
-  _dracoLoader.setDecoderConfig({ type: "js" });
+  _dracoLoader.setDecoderConfig({ type: "wasm" });
 
   _dracoLoader.decodeDracoFileAsync = (buffer, ...args) =>
     new Promise((resolve, reject) =>

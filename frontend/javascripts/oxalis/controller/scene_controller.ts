@@ -200,8 +200,9 @@ class SceneController {
 
   constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
     const color = this.getColorObjectForSegment(cellId);
-    const meshMaterial = new THREE.MeshLambertMaterial({
+    const meshMaterial = new THREE.MeshStandardMaterial({
       color,
+      // flatShading: true,
     });
     meshMaterial.side = THREE.FrontSide;
     meshMaterial.transparent = true;

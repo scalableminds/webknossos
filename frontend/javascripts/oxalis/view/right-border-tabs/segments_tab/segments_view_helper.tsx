@@ -89,7 +89,7 @@ export function withMappingActivationConfirmation<P, C extends ComponentType<P>>
       mappingName === undefined ||
       layerName == null ||
       mappingName === enabledMappingName ||
-      mappingName == ""
+      mappingName === ""
     ) {
       // @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<MappingActivationConfirmationProps<P>, ... Remove this comment to see the full error message
       return <WrappedComponent {...rest} onClick={originalOnClick} />;

@@ -4,7 +4,6 @@ import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataLayer } from "types/api_flow_types";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
 import {
   ResolutionInfo,
@@ -53,11 +52,11 @@ import window from "libs/window";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
+import { getDracoLoader } from "libs/draco";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { UpdateSegmentAction } from "../actions/volumetracing_actions";
-import * as THREE from "three";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -637,36 +636,6 @@ function* loadPrecomputedMeshForSegmentId(
   }
 
   yield* put(finishedLoadingIsosurfaceAction(layerName, id));
-}
-
-let _dracoLoader;
-function getDracoLoader() {
-  if (_dracoLoader) {
-    return _dracoLoader;
-  }
-  _dracoLoader = new DRACOLoader();
-
-  _dracoLoader.setDecoderPath(
-    "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/js/libs/draco/",
-  );
-  _dracoLoader.setDecoderConfig({ type: "wasm" });
-
-  _dracoLoader.decodeDracoFileAsync = (buffer, ...args) =>
-    new Promise((resolve, reject) =>
-      _dracoLoader.decodeDracoFile(
-        buffer,
-        (x) => {
-          debugger;
-          resolve(x);
-        },
-        ...args,
-      ),
-    );
-
-  // todo: never dispose?
-  // loader.dispose();
-
-  return _dracoLoader;
 }
 
 /*

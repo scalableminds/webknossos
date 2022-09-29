@@ -24,8 +24,8 @@ object Dependencies {
   private val liftUtil = "net.liftweb" %% "lift-util" % "3.0.2"
   private val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion % Provided
   private val log4jCore = "org.apache.logging.log4j" % "log4j-api" % log4jVersion % Provided
-  private val playFramework = "com.typesafe.play" %% "play" % "2.8.8"
-  private val playJson = "com.typesafe.play" %% "play-json" % "2.8.1"
+  private val playFramework = "com.typesafe.play" %% "play" % "2.8.16"
+  private val playJson = "com.typesafe.play" %% "play-json" % "2.8.2"
   private val playIteratees = "com.typesafe.play" %% "play-iteratees" % "2.6.1"
   private val playIterateesStreams = "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1"
   private val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.12.7"

@@ -1,7 +1,7 @@
 import { saveAs } from "file-saver";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
-import { point3ToVector3, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataLayer } from "types/api_flow_types";
 import "libs/DRACOLoader.js";
@@ -585,7 +585,7 @@ function* loadPrecomputedMeshForSegmentId(
 
   // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
   const sortedAvailableChunks = _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshFragment) =>
-    V3.length(V3.sub(seedPosition, "position" in chunk ? point3ToVector3(chunk.position) : chunk)),
+    V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
   ) as Array<Vector3> | Array<meshV3.MeshFragment>;
 
   const tasks = sortedAvailableChunks.map(
@@ -611,7 +611,7 @@ function* loadPrecomputedMeshForSegmentId(
             geometry,
             id,
             false,
-            point3ToVector3(chunk.position),
+            chunk.position,
             true,
           );
         } else {

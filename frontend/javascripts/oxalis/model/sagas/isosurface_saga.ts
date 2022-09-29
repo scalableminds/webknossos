@@ -557,7 +557,7 @@ function* loadPrecomputedMeshForSegmentId(
         meshFileName,
         id,
       );
-      availableChunks = _.first(segmentInfo.chunks.lods)?.fragments || [];
+      availableChunks = _.first(segmentInfo.chunks.lods)?.chunks || [];
     } else {
       availableChunks = yield* call(
         meshV0.getMeshfileChunksForSegment,
@@ -577,9 +577,9 @@ function* loadPrecomputedMeshForSegmentId(
   }
 
   // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
-  const sortedAvailableChunks = _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshFragment) =>
+  const sortedAvailableChunks = _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshChunk) =>
     V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
-  ) as Array<Vector3> | Array<meshV3.MeshFragment>;
+  ) as Array<Vector3> | Array<meshV3.MeshChunk>;
 
   const tasks = sortedAvailableChunks.map(
     (chunk) =>

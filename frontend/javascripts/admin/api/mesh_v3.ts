@@ -3,13 +3,13 @@ import { Vector3 } from "oxalis/constants";
 import { APIDatasetId } from "types/api_flow_types";
 import { doWithToken } from "./token";
 
-export type MeshFragment = { position: Vector3; byteOffset: number; byteSize: number };
+export type MeshChunk = { position: Vector3; byteOffset: number; byteSize: number };
 
 type MeshLodInfo = {
   scale: number;
   vertexOffset: Vector3;
   chunkShape: Vector3;
-  fragments: Array<MeshFragment>;
+  chunks: Array<MeshChunk>;
 };
 
 type MeshSegmentInfo = {

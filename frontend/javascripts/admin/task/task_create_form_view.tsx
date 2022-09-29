@@ -15,6 +15,7 @@ import {
   Input,
   Spin,
   RadioChangeEvent,
+  Tooltip,
 } from "antd";
 import { FormInstance } from "antd/lib/form";
 import Toast from "libs/toast";
@@ -256,10 +257,12 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
 export function CreateAndReloadButtons({
   text,
   link,
+  tooltip,
   onReload,
 }: {
   text: string;
   link: string;
+  tooltip?: string;
   onReload?: () => Promise<void>;
 }) {
   return (
@@ -267,11 +270,13 @@ export function CreateAndReloadButtons({
       <Row style={{ marginTop: 30 }} align="middle" wrap={false}>
         {onReload == null ? null : (
           <Col flex="40px">
-            <AsyncButton
-              style={{ marginRight: 8, marginTop: -5 }}
-              icon={<ReloadOutlined />}
-              onClick={onReload}
-            />
+            <Tooltip title={tooltip}>
+              <AsyncButton
+                style={{ marginRight: 8, marginTop: -5 }}
+                icon={<ReloadOutlined />}
+                onClick={onReload}
+              />
+            </Tooltip>
           </Col>
         )}
         <Col flex="auto">
@@ -554,6 +559,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
             <CreateAndReloadButtons
               text="Upload Dataset"
               link="/dataset/upload"
+              tooltip="Reload to show new Datasets"
               onReload={async () =>
                 this.setState({
                   datasets: await getActiveDatasetsOfMyOrganization(),
@@ -645,6 +651,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <CreateAndReloadButtons
                   text="Create new Task Type"
                   link="/taskTypes/create"
+                  tooltip="Reload to show new Task Types"
                   onReload={async () =>
                     this.setState({
                       taskTypes: await getTaskTypes(),
@@ -741,6 +748,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <CreateAndReloadButtons
                   text="Create new Project"
                   link="/projects/create"
+                  tooltip="Reload to show new Projects"
                   onReload={async () =>
                     this.setState({
                       projects: await getProjects(),
@@ -771,6 +779,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <CreateAndReloadButtons
                   text="Create new Script"
                   link="/scripts/create"
+                  tooltip="Reload to show new Scripts"
                   onReload={async () =>
                     this.setState({
                       scripts: await getScripts(),

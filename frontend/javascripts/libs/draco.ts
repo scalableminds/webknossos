@@ -22,7 +22,7 @@ export function getDracoLoader(): CustomDRACOLoader {
   _dracoLoader = new CustomDRACOLoader();
 
   _dracoLoader.setDecoderPath(
-    "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/js/libs/draco/",
+    "https://raw.githubusercontent.com/mrdoob/three.js/r145/examples/js/libs/draco/",
   );
   _dracoLoader.setDecoderConfig({ type: "wasm" });
   // The loader could theoretically be disposed like this:

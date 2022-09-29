@@ -260,18 +260,20 @@ export function CreateAndReloadButtons({
 }: {
   text: string;
   link: string;
-  onReload: () => Promise<void>;
+  onReload?: () => Promise<void>;
 }) {
   return (
-    <Col span={5}>
+    <Col span={onReload == null ? 4 : 5}>
       <Row style={{ marginTop: 30 }} align="middle" wrap={false}>
-        <Col flex="40px">
-          <AsyncButton
-            style={{ marginRight: 8, marginTop: -5 }}
-            icon={<ReloadOutlined />}
-            onClick={onReload}
-          />
-        </Col>
+        {onReload == null ? null : (
+          <Col flex="40px">
+            <AsyncButton
+              style={{ marginRight: 8, marginTop: -5 }}
+              icon={<ReloadOutlined />}
+              onClick={onReload}
+            />
+          </Col>
+        )}
         <Col flex="auto">
           <Button block href={link} target="_blank" rel="noreferrer">
             <span
@@ -652,7 +654,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               </Row>
 
               <Row gutter={8}>
-                <Col span={12}>
+                <Col span={10}>
                   <FormItem
                     name={["neededExperience", "domain"]}
                     label="Experience Domain"
@@ -672,7 +674,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     />
                   </FormItem>
                 </Col>
-                <Col span={12}>
+                <Col span={10}>
                   <FormItem
                     name={["neededExperience", "value"]}
                     label="Experience Value"
@@ -689,6 +691,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     <InputNumber style={fullWidth} disabled={isEditingMode} />
                   </FormItem>
                 </Col>
+                <CreateAndReloadButtons text="Assign Experience" link="/users" />
               </Row>
 
               <FormItem

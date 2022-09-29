@@ -29,7 +29,6 @@ class DataSourceController @Inject()(
     remoteWebKnossosClient: DSRemoteWebKnossosClient,
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
-    meshFileService: MeshFileService,
     connectomeFileService: ConnectomeFileService,
     uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
@@ -399,112 +398,6 @@ Expects:
       } yield Ok(Json.toJson(agglomerateIds))
     }
   }
-
-  def dummyDracoFile(): Action[AnyContent] = Action.async { implicit request =>
-    for {
-      draco <- meshFileService.readDummyDraco()
-    } yield Ok(draco)
-  }
-
-  @ApiOperation(hidden = true, value = "")
-  def listMeshFiles(token: Option[String],
-                    organizationName: String,
-                    dataSetName: String,
-                    dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        urlOrHeaderToken(token, request)) {
-        for {
-          meshFiles <- meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)
-        } yield Ok(Json.toJson(meshFiles))
-      }
-    }
-
-  @ApiOperation(hidden = true, value = "")
-  def listMeshChunksForSegmentV0(token: Option[String],
-                                 organizationName: String,
-                                 dataSetName: String,
-                                 dataLayerName: String): Action[ListMeshChunksRequest] =
-    Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        urlOrHeaderToken(token, request)) {
-        for {
-          positions <- meshFileService.listMeshChunksForSegmentV0(organizationName,
-                                                                  dataSetName,
-                                                                  dataLayerName,
-                                                                  request.body) ?~> Messages(
-            "mesh.file.listChunks.failed",
-            request.body.segmentId.toString,
-            request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
-        } yield Ok(Json.toJson(positions))
-      }
-    }
-
-  @ApiOperation(hidden = true, value = "")
-  def listMeshChunksForSegmentForVersion(token: Option[String],
-                                         organizationName: String,
-                                         dataSetName: String,
-                                         dataLayerName: String,
-                                         formatVersion: Int): Action[ListMeshChunksRequest] =
-    Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        urlOrHeaderToken(token, request)) {
-        for {
-          positions <- formatVersion match {
-            case 3 =>
-              meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
-                "mesh.file.listChunks.failed",
-                request.body.segmentId.toString,
-                request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
-            case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
-          }
-        } yield Ok(Json.toJson(positions))
-      }
-    }
-
-  @ApiOperation(hidden = true, value = "")
-  def readMeshChunkV0(token: Option[String],
-                      organizationName: String,
-                      dataSetName: String,
-                      dataLayerName: String): Action[MeshChunkDataRequestV0] =
-    Action.async(validateJson[MeshChunkDataRequestV0]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        urlOrHeaderToken(token, request)) {
-        for {
-          (data, encoding) <- meshFileService.readMeshChunkV0(organizationName,
-                                                              dataSetName,
-                                                              dataLayerName,
-                                                              request.body) ?~> "mesh.file.loadChunk.failed"
-        } yield {
-          if (encoding.contains("gzip")) {
-            Ok(data).withHeaders("Content-Encoding" -> "gzip")
-          } else Ok(data)
-        }
-      }
-    }
-
-  @ApiOperation(hidden = true, value = "")
-  def readMeshChunkForVersion(token: Option[String],
-                              organizationName: String,
-                              dataSetName: String,
-                              dataLayerName: String,
-                              formatVersion: Int): Action[MeshChunkDataRequestV3] =
-    Action.async(validateJson[MeshChunkDataRequestV3]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        urlOrHeaderToken(token, request)) {
-        for {
-          (data, encoding) <- formatVersion match {
-            case 3 =>
-              meshFileService.readMeshChunkV3(organizationName, dataSetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
-            case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
-          }
-        } yield {
-          if (encoding.contains("gzip")) {
-            Ok(data).withHeaders("Content-Encoding" -> "gzip")
-          } else Ok(data)
-        }
-      }
-    }
 
   @ApiOperation(hidden = true, value = "")
   def update(token: Option[String], organizationName: String, dataSetName: String): Action[DataSource] =

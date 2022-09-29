@@ -111,11 +111,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
 
-  def readDummyDraco(): Fox[Array[Byte]] = {
-    val path = dataBaseDir.resolve("draco_file.bin")
-    tryo(Files.readAllBytes(path)).toOption.toFox
-  }
-
   def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Fox[Set[MeshFileInfo]] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
     val meshFileNames = PathUtils

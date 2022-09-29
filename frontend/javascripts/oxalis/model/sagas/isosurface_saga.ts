@@ -546,7 +546,9 @@ function* loadPrecomputedMeshForSegmentId(
   const dataset = yield* select((state) => state.dataset);
 
   let availableChunks = null;
-  const version = 3;
+
+  // todo: dont hardcode
+  const version = meshFileName.includes("4-4") ? 0 : 3;
   try {
     if (version === 3) {
       const segmentInfo = yield* call(
@@ -599,6 +601,8 @@ function* loadPrecomputedMeshForSegmentId(
           const loader = getDracoLoader();
 
           const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+          geometry.computeVertexNormals();
+
           yield* call(
             { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
             geometry,

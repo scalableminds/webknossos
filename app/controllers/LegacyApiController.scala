@@ -405,7 +405,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   }
 
   def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request: SecuredRequest[WkEnv, JsValue] =>
+    implicit request =>
       logVersioned(request)
       val oldRequest = request
       val newRequest =

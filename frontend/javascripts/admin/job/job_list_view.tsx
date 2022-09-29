@@ -160,6 +160,20 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else if (
+      job.type === "find_largest_segment_id" &&
+      job.organizationName &&
+      job.datasetName &&
+      job.layerName
+    ) {
+      return (
+        <span>
+          Largest segment id detection for layer {job.layerName} of{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
+    } else if (
       job.type === "infer_nuclei" &&
       job.organizationName &&
       job.datasetName &&
@@ -251,6 +265,8 @@ class JobListView extends React.PureComponent<Props, State> {
           )}
         </span>
       );
+    } else if (job.type === "find_largest_segment_id") {
+      return <span>{job.result && job.result}</span>;
     } else if (
       job.type === "infer_nuclei" ||
       job.type === "infer_neurons" ||

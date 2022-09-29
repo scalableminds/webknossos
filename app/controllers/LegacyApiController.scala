@@ -404,21 +404,20 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield adaptedResult
   }
 
-  /*def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
+  def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
+    implicit request: SecuredRequest[WkEnv, JsValue] =>
       logVersioned(request)
-      val oldRequest = request.request
+      val oldRequest = request
       val newRequest =
         if (request.body.as[JsObject].keys.contains("isPublic"))
-          request.copy(
-            request = oldRequest.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject]))))
+          request.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject])))
         else request
 
       for {
         result <- annotationController.editAnnotation(typ, id)(newRequest)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
-  }*/
+  }
 
   private def replaceCreateExplorationalParameters(
       request: SecuredRequest[WkEnv, LegacyCreateExplorationalParameters]) = {

@@ -62,10 +62,80 @@ class MeshController @Inject()(
         for {
           positions <- formatVersion match {
             case 3 =>
+<<<<<<< HEAD
               meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
                 "mesh.file.listChunks.failed",
                 request.body.segmentId.toString,
                 request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
+||||||| parent of 734c590d9... add route for mapped segment
+              mappingName match {
+                case Some(mapping) =>
+                  for {
+                    agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+                    agglomerateIds: List[Long] <- agglomerateService
+                      .agglomerateIdsForSegmentIds(
+                        AgglomerateFileKey(
+                          organizationName,
+                          dataSetName,
+                          dataLayerName,
+                          mapping
+                        ),
+                        List(request.body.segmentId)
+                      )
+                      .toFox
+
+                    unmappedChunks <- Fox.serialCombined(agglomerateIds)(segmentId =>
+                      meshFileService.listMeshChunksForSegmentV3(organizationName,
+                                                                 dataSetName,
+                                                                 dataLayerName,
+                                                                 ListMeshChunksRequest(request.body.meshFile,
+                                                                                       segmentId)) ?~> Messages(
+                        "mesh.file.listChunks.failed",
+                        request.body.segmentId.toString,
+                        request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST)
+
+                  } yield unmappedChunks
+                case None =>
+                  meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
+                    "mesh.file.listChunks.failed",
+                    request.body.segmentId.toString,
+                    request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
+              }
+=======
+              mappingName match {
+                case Some(mapping) =>
+                  for {
+                    agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+                    agglomerateIds: List[Long] <- agglomerateService
+                      .agglomerateIdsForSegmentIds(
+                        AgglomerateFileKey(
+                          organizationName,
+                          dataSetName,
+                          dataLayerName,
+                          mapping
+                        ),
+                        List(request.body.segmentId)
+                      )
+                      .toFox
+
+                    unmappedChunks <- Fox.serialCombined(agglomerateIds)(segmentId =>
+                      meshFileService.listMeshChunksForSegmentV3(organizationName,
+                                                                 dataSetName,
+                                                                 dataLayerName,
+                                                                 ListMeshChunksRequest(request.body.meshFile,
+                                                                                       segmentId)) ?~> Messages(
+                        "mesh.file.listChunks.failed",
+                        request.body.segmentId.toString,
+                        request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST)
+                    chunkInfo = unmappedChunks.reduce(_.merge(_))
+                  } yield chunkInfo
+                case None =>
+                  meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
+                    "mesh.file.listChunks.failed",
+                    request.body.segmentId.toString,
+                    request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
+              }
+>>>>>>> 734c590d9... add route for mapped segment
             case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
           }
         } yield Ok(Json.toJson(positions))

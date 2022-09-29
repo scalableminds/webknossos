@@ -51,7 +51,7 @@ object Dependencies {
   private val awsS3 = "com.amazonaws" % "aws-java-sdk-s3" % "1.12.288"
   private val tika = "org.apache.tika" % "tika-core" % "1.5"
   private val jackson = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.7"
-
+  private val commonsCompress = "org.apache.commons" % "commons-compress" % "1.21"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
@@ -100,7 +100,8 @@ object Dependencies {
     awsS3,
     tika,
     jblosc,
-    scalajHttp
+    scalajHttp,
+    commonsCompress
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(

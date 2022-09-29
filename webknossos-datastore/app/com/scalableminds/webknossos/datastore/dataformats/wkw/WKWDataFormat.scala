@@ -32,7 +32,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
           val mappings = exploreMappings(baseDir)
           val largestSegmentId = previous match {
             case Some(l: SegmentationLayer) => l.largestSegmentId
-            case _                          => SegmentationLayer.defaultLargestSegmentId
+            case _                          => None
           }
           WKWSegmentationLayer(
             name,

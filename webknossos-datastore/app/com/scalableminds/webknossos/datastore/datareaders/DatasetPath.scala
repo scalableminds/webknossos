@@ -1,10 +1,10 @@
-package com.scalableminds.webknossos.datastore.jzarr
+package com.scalableminds.webknossos.datastore.datareaders
 
-class ZarrPath(storeKeyRaw: String) {
+class DatasetPath(storeKeyRaw: String) {
   lazy val storeKey: String = normalizeStoragePath(storeKeyRaw)
 
-  def resolve(name: String): ZarrPath =
-    new ZarrPath(storeKey + "/" + normalizeStoragePath(name))
+  def resolve(name: String): DatasetPath =
+    new DatasetPath(storeKey + "/" + normalizeStoragePath(name))
 
   def normalizeStoragePath(path: String): String =
     if (path.isEmpty)

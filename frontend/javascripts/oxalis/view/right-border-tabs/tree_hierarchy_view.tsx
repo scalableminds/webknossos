@@ -3,14 +3,14 @@ import { Checkbox, Dropdown, Menu, Modal, notification } from "antd";
 import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
-import * as React from "react";
+import React from "react";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import { SortableTreeWithoutDndContext as SortableTree } from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
-import * as Utils from "libs/utils";
+
 import type { TreeNode } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import {
   MISSING_GROUP_ID,
@@ -43,6 +43,7 @@ import {
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
+import { ChangeColorMenuItemContent } from "components/color_picker";
 const CHECKBOX_STYLE = {};
 const CHECKBOX_PLACEHOLDER_STYLE = {
   width: 16,
@@ -452,36 +453,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const createMenu = () => (
         <Menu>
           <Menu.Item key="changeTreeColor" disabled={isEditingDisabled}>
-            <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
-              <i
-                className="fas fa-eye-dropper fa-sm"
-                style={{
-                  cursor: "pointer",
-                }}
-              />{" "}
-              Change Tree Color
-              <input
-                type="color"
-                value={Utils.rgbToHex(Utils.map3((value) => value * 255, tree.color))}
-                disabled={isEditingDisabled}
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  width: "100%",
-                  opacity: 0,
-                  cursor: isEditingDisabled ? "unset" : "pointer",
-                }}
-                onChange={(event) => {
-                  if (isEditingDisabled) {
-                    return;
-                  }
-                  let color = Utils.hexToRgb(event.target.value);
-                  color = Utils.map3((component) => component / 255, color);
-                  this.props.onSetTreeColor(tree.treeId, color);
-                }}
-              />
-            </div>
+            <ChangeColorMenuItemContent
+              title="Change Tree Color"
+              isDisabled={isEditingDisabled}
+              onSetColor={(color) => {
+                this.props.onSetTreeColor(tree.treeId, color);
+              }}
+              rgb={tree.color}
+            />
           </Menu.Item>
           <Menu.Item
             key="shuffleTreeColor"

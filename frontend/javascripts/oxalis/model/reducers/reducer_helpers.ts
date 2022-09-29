@@ -144,6 +144,26 @@ export function getNextTool(state: OxalisState): AnnotationTool | null {
 
   return null;
 }
+export function getPreviousTool(state: OxalisState): AnnotationTool | null {
+  const disabledToolInfo = getDisabledInfoForTools(state);
+  const tools = Object.keys(AnnotationToolEnum) as AnnotationTool[];
+  const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
+
+  // Search backwards for the next tool which is not disabled.
+  for (
+    let newToolIndex = currentToolIndex - 1;
+    newToolIndex > currentToolIndex - tools.length;
+    newToolIndex--
+  ) {
+    const newTool = tools[(tools.length + newToolIndex) % tools.length];
+
+    if (!disabledToolInfo[newTool].isDisabled) {
+      return newTool;
+    }
+  }
+
+  return null;
+}
 export function setToolReducer(state: OxalisState, tool: AnnotationTool) {
   if (tool === state.uiInformation.activeTool) {
     return state;

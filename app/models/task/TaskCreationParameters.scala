@@ -5,7 +5,9 @@ import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
 case class TaskParameters(
-    taskTypeId: String,
+    taskTypeIdOrSummary: String,
+    // The taskTypeIdOrSummary parameter may be an id or a summary. At the beginning of TaskController>create
+    // this is normalized so only the task id is stored in this field.
     neededExperience: Experience,
     openInstances: Int,
     projectName: String,

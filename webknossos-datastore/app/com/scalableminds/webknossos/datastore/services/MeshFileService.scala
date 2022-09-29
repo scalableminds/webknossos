@@ -68,17 +68,17 @@ case class NeuroglancerSegmentInfo(chunkShape: Vec3Float,
                                    numLods: Int,
                                    lodScales: Array[Float],
                                    vertexOffsets: Array[Vec3Float],
-                                   numFragmentsPerLod: Array[Int],
-                                   fragmentPositions: List[List[Vec3Int]],
-                                   fragmentOffsets: List[List[Int]])
+                                   numChunksPerLod: Array[Int],
+                                   chunkPositions: List[List[Vec3Int]],
+                                   chunkByteOffsets: List[List[Int]])
 
 // TODO position als Vec3Int
-case class MeshFragment(position: Vec3Float, byteOffset: Int, byteSize: Int)
+case class MeshChunk(position: Vec3Float, byteOffset: Int, byteSize: Int)
 
-object MeshFragment {
-  implicit val jsonFormat: OFormat[MeshFragment] = Json.format[MeshFragment]
+object MeshChunk {
+  implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
 }
-case class MeshLodInfo(scale: Int, vertexOffset: Vec3Float, chunkShape: Vec3Float, fragments: List[MeshFragment])
+case class MeshLodInfo(scale: Int, vertexOffset: Vec3Float, chunkShape: Vec3Float, chunks: List[MeshChunk])
 
 object MeshLodInfo {
   implicit val jsonFormat: OFormat[MeshLodInfo] = Json.format[MeshLodInfo]
@@ -210,36 +210,36 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .uint8()
         .readArrayBlockWithOffset("/neuroglancer", (neuroglancerEnd - neuroglancerStart).toInt, neuroglancerStart)
       val segmentInfo = parseNeuroglancerManifest(manifest)
-      val meshfile = getFragmentsFromSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
+      val meshfile = getChunksFromSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
       WebknossosSegmentInfo(transform = transform, meshFormat = encoding, chunks = meshfile)
     }
   }
 
-  private def getFragmentsFromSegmentInfo(segmentInfo: NeuroglancerSegmentInfo,
-                                          lodScaleMultiplier: Double,
-                                          neuroglancerOffsetStart: Long): MeshSegmentInfo = {
-    val totalMeshSize = segmentInfo.fragmentOffsets.map(_.sum).sum
+  private def getChunksFromSegmentInfo(segmentInfo: NeuroglancerSegmentInfo,
+                                       lodScaleMultiplier: Double,
+                                       neuroglancerOffsetStart: Long): MeshSegmentInfo = {
+    val totalMeshSize = segmentInfo.chunkByteOffsets.map(_.sum).sum
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
-    val fragmentByteOffsets = segmentInfo.fragmentOffsets.map(_.scanLeft(0)(_ + _)) // This builds a cumulative sum
+    val chunkByteOffsets = segmentInfo.chunkByteOffsets.map(_.scanLeft(0)(_ + _)) // This builds a cumulative sum
 
-    def computeGlobalPositionAndOffset(lod: Int, currentFragment: Int): MeshFragment = {
+    def computeGlobalPositionAndOffset(lod: Int, currentChunk: Int): MeshChunk = {
       val globalPosition = segmentInfo.gridOrigin + segmentInfo
-        .fragmentPositions(lod)(currentFragment)
+        .chunkPositions(lod)(currentChunk)
         .toVec3Float * segmentInfo.chunkShape * segmentInfo.lodScales(lod) * lodScaleMultiplier
 
-      MeshFragment(
+      MeshChunk(
         position = globalPosition, // This position is in Voxel Space
-        byteOffset = meshByteStartOffset.toInt + fragmentByteOffsets(lod)(currentFragment),
-        byteSize = segmentInfo.fragmentOffsets(lod)(currentFragment),
+        byteOffset = meshByteStartOffset.toInt + chunkByteOffsets(lod)(currentChunk),
+        byteSize = segmentInfo.chunkByteOffsets(lod)(currentChunk),
       )
     }
 
     val lods = for (lod <- 0 until segmentInfo.numLods) yield lod
 
-    def fragmentNums(lod: Int): IndexedSeq[(Int, Int)] =
-      for (currentFragment <- 0 until segmentInfo.numFragmentsPerLod(lod))
-        yield (lod, currentFragment)
-    val fragments = lods.map(lod => fragmentNums(lod).map(x => computeGlobalPositionAndOffset(x._1, x._2)).toList)
+    def chunkNums(lod: Int): IndexedSeq[(Int, Int)] =
+      for (currentChunk <- 0 until segmentInfo.numChunksPerLod(lod))
+        yield (lod, currentChunk)
+    val chunks = lods.map(lod => chunkNums(lod).map(x => computeGlobalPositionAndOffset(x._1, x._2)).toList)
 
     val meshfileLods = lods
       .map(
@@ -247,7 +247,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
           MeshLodInfo(scale = segmentInfo.lodScales(lod).toInt,
                       vertexOffset = segmentInfo.vertexOffsets(lod),
                       chunkShape = segmentInfo.chunkShape,
-                      fragments = fragments(lod)))
+                      chunks = chunks(lod)))
       .toList
     MeshSegmentInfo(chunkShape = segmentInfo.chunkShape, gridOrigin = segmentInfo.gridOrigin, lods = meshfileLods)
   }
@@ -273,30 +273,30 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       vertexOffsets(d) = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
     }
 
-    val numFragmentsPerLod = new Array[Int](numLods)
+    val numChunksPerLod = new Array[Int](numLods)
     for (lod <- 0 until numLods) {
-      numFragmentsPerLod(lod) = dis.readInt()
+      numChunksPerLod(lod) = dis.readInt()
     }
 
-    val fragmentPositionsList = new ListBuffer[List[Vec3Int]]
-    val fragmentSizes = new ListBuffer[List[Int]]
+    val chunkPositionsList = new ListBuffer[List[Vec3Int]]
+    val chunkSizes = new ListBuffer[List[Int]]
     for (lod <- 0 until numLods) {
-      val currentFragmentPositions = (ListBuffer[Int](), ListBuffer[Int](), ListBuffer[Int]())
-      for (row <- 0 until 3; _ <- 0 until numFragmentsPerLod(lod)) {
+      val currentChunkPositions = (ListBuffer[Int](), ListBuffer[Int](), ListBuffer[Int]())
+      for (row <- 0 until 3; _ <- 0 until numChunksPerLod(lod)) {
         row match {
-          case 0 => currentFragmentPositions._1.append(dis.readInt)
-          case 1 => currentFragmentPositions._2.append(dis.readInt)
-          case 2 => currentFragmentPositions._3.append(dis.readInt)
+          case 0 => currentChunkPositions._1.append(dis.readInt)
+          case 1 => currentChunkPositions._2.append(dis.readInt)
+          case 2 => currentChunkPositions._3.append(dis.readInt)
         }
       }
 
-      fragmentPositionsList.append(currentFragmentPositions.zipped.map(Vec3Int(_, _, _)).toList)
+      chunkPositionsList.append(currentChunkPositions.zipped.map(Vec3Int(_, _, _)).toList)
 
-      val currentFragmentSizes = ListBuffer[Int]()
-      for (_ <- 0 until numFragmentsPerLod(lod)) {
-        currentFragmentSizes.append(dis.readInt)
+      val currentChunkSizes = ListBuffer[Int]()
+      for (_ <- 0 until numChunksPerLod(lod)) {
+        currentChunkSizes.append(dis.readInt)
       }
-      fragmentSizes.append(currentFragmentSizes.toList)
+      chunkSizes.append(currentChunkSizes.toList)
     }
 
     NeuroglancerSegmentInfo(chunkShape,
@@ -304,9 +304,9 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                             numLods,
                             lodScales,
                             vertexOffsets,
-                            numFragmentsPerLod,
-                            fragmentPositionsList.toList,
-                            fragmentSizes.toList)
+                            numChunksPerLod,
+                            chunkPositionsList.toList,
+                            chunkSizes.toList)
   }
 
   private def getNeuroglancerOffsets(segmentId: Long, cachedMeshFile: CachedHdf5File): (Long, Long) = {
@@ -366,9 +366,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       val data =
         cachedMeshFile.reader
           .uint8()
-          .readArrayBlockWithOffset("neuroglancer",
-                                    meshChunkDataRequest.byteSize,
-                                    meshChunkDataRequest.byteOffset)
+          .readArrayBlockWithOffset("neuroglancer", meshChunkDataRequest.byteSize, meshChunkDataRequest.byteOffset)
       (data, meshFormat)
     } ?~> "mesh.file.readData.failed"
   }

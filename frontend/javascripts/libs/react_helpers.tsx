@@ -5,6 +5,7 @@ import type { OxalisState } from "oxalis/store";
 export function useInterval(
   callback: (...args: Array<any>) => any,
   delay: number | null | undefined,
+  ...additionalDependencies: Array<any>
 ) {
   const savedCallback = useRef();
   // Remember the latest callback.
@@ -25,7 +26,7 @@ export function useInterval(
     }
 
     return undefined;
-  }, [delay]);
+  }, [delay, ...additionalDependencies]);
 }
 export function useFetch<T>(
   fetchFn: () => Promise<T>,

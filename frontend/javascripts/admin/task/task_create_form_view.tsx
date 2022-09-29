@@ -254,46 +254,36 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
     width: 600,
   });
 }
-export function CreateAndReloadButtons({
-  text,
-  link,
+export function CreateResourceButton({ text, link }: { text: string; link: string }) {
+  return (
+    <Col span={4} style={{ marginTop: 11 }}>
+      <Button block href={link} target="_blank" rel="noreferrer">
+        <span
+          style={{
+            display: "block",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {text}
+        </span>
+      </Button>
+    </Col>
+  );
+}
+export function ReloadResourceButton({
   tooltip,
   onReload,
 }: {
-  text: string;
-  link: string;
-  tooltip?: string;
-  onReload?: () => Promise<void>;
+  tooltip: string;
+  onReload: () => Promise<void>;
 }) {
   return (
-    <Col span={onReload == null ? 4 : 5}>
-      <Row style={{ marginTop: 30 }} align="middle" wrap={false}>
-        {onReload == null ? null : (
-          <Col flex="40px">
-            <Tooltip title={tooltip}>
-              <AsyncButton
-                style={{ marginRight: 8, marginTop: -5 }}
-                icon={<ReloadOutlined />}
-                onClick={onReload}
-              />
-            </Tooltip>
-          </Col>
-        )}
-        <Col flex="auto">
-          <Button block href={link} target="_blank" rel="noreferrer">
-            <span
-              style={{
-                display: "block",
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {text}
-            </span>
-          </Button>
-        </Col>
-      </Row>
+    <Col flex="40px">
+      <Tooltip title={tooltip}>
+        <AsyncButton style={{ marginTop: 7 }} icon={<ReloadOutlined />} onClick={onReload} />
+      </Tooltip>
     </Col>
   );
 }
@@ -523,8 +513,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
             </FormItem>
           ) : null}
 
-          <Row gutter={8}>
-            <Col span={19}>
+          <Row gutter={8} align="middle" wrap={false}>
+            <Col flex="auto">
               <FormItem
                 name="dataSet"
                 label="Dataset"
@@ -556,9 +546,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 />
               </FormItem>
             </Col>
-            <CreateAndReloadButtons
-              text="Upload Dataset"
-              link="/dataset/upload"
+            <ReloadResourceButton
               tooltip="Reload to show new Datasets"
               onReload={async () =>
                 this.setState({
@@ -566,6 +554,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 })
               }
             />
+            <CreateResourceButton text="Upload Dataset" link="/dataset/upload" />
           </Row>
 
           <FormItem
@@ -620,8 +609,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 editRotation: [0, 0, 0],
               }}
             >
-              <Row gutter={8} wrap={false}>
-                <Col span={19}>
+              <Row gutter={8} align="middle" wrap={false}>
+                <Col flex="auto">
                   <FormItem
                     name="taskTypeIdOrSummary"
                     label="Task Type"
@@ -648,9 +637,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     />
                   </FormItem>
                 </Col>
-                <CreateAndReloadButtons
-                  text="Create new Task Type"
-                  link="/taskTypes/create"
+                <ReloadResourceButton
                   tooltip="Reload to show new Task Types"
                   onReload={async () =>
                     this.setState({
@@ -658,9 +645,10 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     })
                   }
                 />
+                <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
               </Row>
 
-              <Row gutter={8}>
+              <Row gutter={8} align="middle" wrap={false}>
                 <Col span={10}>
                   <FormItem
                     name={["neededExperience", "domain"]}
@@ -681,7 +669,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     />
                   </FormItem>
                 </Col>
-                <Col span={10}>
+                <Col flex="auto">
                   <FormItem
                     name={["neededExperience", "value"]}
                     label="Experience Value"
@@ -698,7 +686,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     <InputNumber style={fullWidth} disabled={isEditingMode} />
                   </FormItem>
                 </Col>
-                <CreateAndReloadButtons text="Assign Experience" link="/users" />
+                <CreateResourceButton text="Assign Experience" link="/users" />
               </Row>
 
               <FormItem
@@ -717,8 +705,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <InputNumber style={fullWidth} min={0} />
               </FormItem>
 
-              <Row gutter={8}>
-                <Col span={19}>
+              <Row gutter={8} align="middle" wrap={false}>
+                <Col flex="auto">
                   <FormItem
                     name="projectName"
                     label="Project"
@@ -745,9 +733,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     />
                   </FormItem>
                 </Col>
-                <CreateAndReloadButtons
-                  text="Create new Project"
-                  link="/projects/create"
+                <ReloadResourceButton
                   tooltip="Reload to show new Projects"
                   onReload={async () =>
                     this.setState({
@@ -755,10 +741,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     })
                   }
                 />
+                <CreateResourceButton text="Create new Project" link="/projects/create" />
               </Row>
 
-              <Row gutter={8}>
-                <Col span={19}>
+              <Row gutter={8} align="middle" wrap={false}>
+                <Col flex="auto">
                   <FormItem name="scriptId" label="Script" hasFeedback>
                     <Select
                       showSearch
@@ -776,9 +763,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     />
                   </FormItem>
                 </Col>
-                <CreateAndReloadButtons
-                  text="Create new Script"
-                  link="/scripts/create"
+                <ReloadResourceButton
                   tooltip="Reload to show new Scripts"
                   onReload={async () =>
                     this.setState({
@@ -786,6 +771,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     })
                   }
                 />
+                <CreateResourceButton text="Create new Script" link="/scripts/create" />
               </Row>
 
               <FormItem

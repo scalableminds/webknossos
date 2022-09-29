@@ -5,10 +5,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-
 import io.swagger.annotations.{Api, ApiOperation}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,6 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 @Api(tags = Array("datastore"))
 class MeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
+    binaryDataServiceHolder: BinaryDataServiceHolder,
     meshFileService: MeshFileService,
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
@@ -62,17 +63,47 @@ class MeshController @Inject()(
                                          organizationName: String,
                                          dataSetName: String,
                                          dataLayerName: String,
-                                         formatVersion: Int): Action[ListMeshChunksRequest] =
+                                         formatVersion: Int,
+                                         mappingName: Option[String]): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
           positions <- formatVersion match {
             case 3 =>
-              meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
-                "mesh.file.listChunks.failed",
-                request.body.segmentId.toString,
-                request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
+              mappingName match {
+                case Some(mapping) =>
+                  for {
+                    agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+                    agglomerateIds: List[Long] <- agglomerateService
+                      .agglomerateIdsForSegmentIds(
+                        AgglomerateFileKey(
+                          organizationName,
+                          dataSetName,
+                          dataLayerName,
+                          mapping
+                        ),
+                        List(request.body.segmentId)
+                      )
+                      .toFox
+
+                    unmappedChunks <- Fox.serialCombined(agglomerateIds)(segmentId =>
+                      meshFileService.listMeshChunksForSegmentV3(organizationName,
+                                                                 dataSetName,
+                                                                 dataLayerName,
+                                                                 ListMeshChunksRequest(request.body.meshFile,
+                                                                                       segmentId)) ?~> Messages(
+                        "mesh.file.listChunks.failed",
+                        request.body.segmentId.toString,
+                        request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST)
+
+                  } yield unmappedChunks
+                case None =>
+                  meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
+                    "mesh.file.listChunks.failed",
+                    request.body.segmentId.toString,
+                    request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
+              }
             case _ => Fox.failure("Wrong format version") ~> BAD_REQUEST
           }
         } yield Ok(Json.toJson(positions))

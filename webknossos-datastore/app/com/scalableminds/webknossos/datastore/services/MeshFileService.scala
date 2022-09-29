@@ -72,7 +72,6 @@ case class NeuroglancerSegmentInfo(chunkShape: Vec3Float,
                                    chunkPositions: List[List[Vec3Int]],
                                    chunkByteOffsets: List[List[Int]])
 
-// TODO position als Vec3Int
 case class MeshChunk(position: Vec3Float, byteOffset: Int, byteSize: Int)
 
 object MeshChunk {

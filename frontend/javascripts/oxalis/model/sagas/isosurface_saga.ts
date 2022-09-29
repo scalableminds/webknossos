@@ -1,7 +1,7 @@
 import { saveAs } from "file-saver";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
-import { sleep } from "libs/utils";
+import { point3ToVector3, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataLayer } from "types/api_flow_types";
 import "libs/DRACOLoader.js";
@@ -42,9 +42,9 @@ import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/segments_t
 import {
   computeIsosurface,
   sendAnalyticsEvent,
-  getMeshfileChunksForSegment,
-  getMeshfileChunkData,
   getDummyDraco,
+  meshV0,
+  meshV3,
 } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
@@ -551,17 +551,30 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
-  let availableChunks = null;
 
+  let availableChunks = null;
+  const version = 3;
   try {
-    availableChunks = yield* call(
-      getMeshfileChunksForSegment,
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-      meshFileName,
-      id,
-    );
+    if (version === 3) {
+      const segmentInfo = yield* call(
+        meshV3.getMeshfileChunksForSegment,
+        dataset.dataStore.url,
+        dataset,
+        getBaseSegmentationName(segmentationLayer),
+        meshFileName,
+        id,
+      );
+      availableChunks = _.first(segmentInfo.chunks.lods)?.fragments || [];
+    } else {
+      availableChunks = yield* call(
+        meshV0.getMeshfileChunksForSegment,
+        dataset.dataStore.url,
+        dataset,
+        getBaseSegmentationName(segmentationLayer),
+        meshFileName,
+        id,
+      );
+    }
   } catch (exception) {
     console.warn("Mesh chunk couldn't be loaded due to", exception);
     Toast.warning(messages["tracing.mesh_listing_failed"]);
@@ -571,29 +584,54 @@ function* loadPrecomputedMeshForSegmentId(
   }
 
   // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
-  const sortedAvailableChunks = _.sortBy(availableChunks, (chunkPosition) =>
-    V3.length(V3.sub(seedPosition, chunkPosition)),
-  );
+  const sortedAvailableChunks = _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshFragment) =>
+    V3.length(V3.sub(seedPosition, "position" in chunk ? point3ToVector3(chunk.position) : chunk)),
+  ) as Array<Vector3> | Array<meshV3.MeshFragment>;
 
   const tasks = sortedAvailableChunks.map(
-    (chunkPosition) =>
+    (chunk) =>
       function* loadChunk() {
-        const stlData = yield* call(
-          getMeshfileChunkData,
-          dataset.dataStore.url,
-          dataset,
-          getBaseSegmentationName(segmentationLayer),
-          meshFileName,
-          id,
-          chunkPosition,
-        );
-        const geometry = yield* call(parseStlBuffer, stlData);
         const sceneController = yield* call(getSceneController);
-        yield* call(
-          { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
-          geometry,
-          id,
-        );
+
+        if ("position" in chunk) {
+          const dracoData = yield* call(
+            meshV3.getMeshfileChunkData,
+            dataset.dataStore.url,
+            dataset,
+            getBaseSegmentationName(segmentationLayer),
+            meshFileName,
+            chunk.byteOffset,
+            chunk.byteSize,
+          );
+          const loader = getDracoLoader();
+
+          const geometry = yield* call(loader.decodeDracoFile.bind(loader), dracoData);
+          yield* call(
+            { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
+            geometry,
+            id,
+            false,
+            point3ToVector3(chunk.position),
+            true,
+          );
+        } else {
+          const stlData = yield* call(
+            meshV0.getMeshfileChunkData,
+            dataset.dataStore.url,
+            dataset,
+            getBaseSegmentationName(segmentationLayer),
+            meshFileName,
+            id,
+            chunk,
+          );
+          const geometry = yield* call(parseStlBuffer, stlData);
+          yield* call(
+            { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
+            geometry,
+            id,
+            false,
+          );
+        }
       },
   );
 
@@ -607,18 +645,25 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(finishedLoadingIsosurfaceAction(layerName, id));
 }
 
+let _dracoLoader;
+function getDracoLoader() {
+  if (_dracoLoader) {
+    return _dracoLoader;
+  }
+  _dracoLoader = new THREE.DRACOLoader();
+
+  _dracoLoader.setDecoderPath(
+    "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/js/libs/draco/",
+  );
+  _dracoLoader.setDecoderConfig({ type: "js" });
+  return _dracoLoader;
+}
+
 function* addDummyDraco() {
   const buffer = yield* call(getDummyDraco);
   console.log("buffer", buffer);
 
-  const loader = new THREE.DRACOLoader();
-  console.log("THREE.DRACOLoader", loader);
-
-  loader.setDecoderPath(
-    "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/js/libs/draco/",
-  );
-  loader.setDecoderConfig({ type: "js" });
-
+  const loader = getDracoLoader();
   const sceneController = yield* call(getSceneController);
 
   // const url = "/data/datasets/dummyDraco";

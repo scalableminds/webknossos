@@ -65,7 +65,11 @@ import * as THREE from "three";
         attributeTypes: attributeTypes || this.defaultAttributeTypes,
         useUniqueIDs: !!attributeIDs,
       };
-      return this.decodeGeometry(buffer, taskConfig).then(callback);
+      const promise = this.decodeGeometry(buffer, taskConfig);
+      if (callback == null) {
+        return promise;
+      }
+      return promise.then(callback);
     }
 
     decodeGeometry(buffer, taskConfig) {

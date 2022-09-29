@@ -84,7 +84,13 @@ export function withMappingActivationConfirmation<P, C extends ComponentType<P>>
 
     // If the mapping name is undefined, no mapping is specified. In that case never show the activation modal.
     // In contrast, if the mapping name is null, this indicates that all mappings should be specifically disabled.
-    if (mappingName === undefined || layerName == null || mappingName === enabledMappingName) {
+    // todo: remove last condition
+    if (
+      mappingName === undefined ||
+      layerName == null ||
+      mappingName === enabledMappingName ||
+      mappingName == ""
+    ) {
       // @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<MappingActivationConfirmationProps<P>, ... Remove this comment to see the full error message
       return <WrappedComponent {...rest} onClick={originalOnClick} />;
     }

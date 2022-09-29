@@ -87,7 +87,20 @@ case class MeshSegmentInfo(chunkShape: Vec3Float, gridOrigin: Vec3Float, lods: L
 object MeshSegmentInfo {
   implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
 }
-case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo)
+case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo) {
+  def merge(that: WebknossosSegmentInfo): WebknossosSegmentInfo =
+    // assume that transform, meshFormat, chunkShape, gridOrigin, scale and vertexOffset are the same
+    WebknossosSegmentInfo(
+      transform,
+      meshFormat,
+      chunks = MeshSegmentInfo(
+        chunks.chunkShape,
+        chunks.gridOrigin,
+        lods = (chunks.lods, that.chunks.lods).zipped.map((lod1, lod2) =>
+          MeshLodInfo(lod1.scale, lod1.vertexOffset, lod1.chunkShape, lod1.chunks ::: lod2.chunks))
+      )
+    )
+}
 
 object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]

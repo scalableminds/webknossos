@@ -19,7 +19,7 @@ import {
 import { FormInstance } from "antd/lib/form";
 import Toast from "libs/toast";
 import React from "react";
-import { InboxOutlined, WarningOutlined } from "@ant-design/icons";
+import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import _ from "lodash";
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
@@ -46,6 +46,7 @@ import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
 import { saveAs } from "file-saver";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
+import { AsyncButton } from "components/async_clickables";
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 const fullWidth = {
@@ -252,7 +253,43 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
     width: 600,
   });
 }
-
+export function CreateAndReloadButtons({
+  text,
+  link,
+  onReload,
+}: {
+  text: string;
+  link: string;
+  onReload: () => Promise<void>;
+}) {
+  return (
+    <Col span={5}>
+      <Row style={{ marginTop: 30 }} align="middle" wrap={false}>
+        <Col flex="40px">
+          <AsyncButton
+            style={{ marginRight: 8, marginTop: -5 }}
+            icon={<ReloadOutlined />}
+            onClick={onReload}
+          />
+        </Col>
+        <Col flex="auto">
+          <Button block href={link} target="_blank" rel="noreferrer">
+            <span
+              style={{
+                display: "block",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {text}
+            </span>
+          </Button>
+        </Col>
+      </Row>
+    </Col>
+  );
+}
 class TaskCreateFormView extends React.PureComponent<Props, State> {
   formRef = React.createRef<FormInstance>();
   state: State = {
@@ -479,35 +516,49 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
             </FormItem>
           ) : null}
 
-          <FormItem
-            name="dataSet"
-            label="Dataset"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Select
-              showSearch
-              placeholder={
-                this.state.specificationType === SpecificationEnum.BaseAnnotation
-                  ? "The dataset is inferred from the base annotation."
-                  : "Select a Dataset"
+          <Row gutter={8}>
+            <Col span={19}>
+              <FormItem
+                name="dataSet"
+                label="Dataset"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <Select
+                  showSearch
+                  placeholder={
+                    this.state.specificationType === SpecificationEnum.BaseAnnotation
+                      ? "The dataset is inferred from the base annotation."
+                      : "Select a Dataset"
+                  }
+                  optionFilterProp="label"
+                  style={fullWidth}
+                  disabled={
+                    isEditingMode ||
+                    this.state.specificationType === SpecificationEnum.BaseAnnotation
+                  }
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                  options={this.state.datasets.map((dataset: APIDataset) => ({
+                    label: dataset.name,
+                    value: dataset.name,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+            <CreateAndReloadButtons
+              text="Upload Dataset"
+              link="/dataset/upload"
+              onReload={async () =>
+                this.setState({
+                  datasets: await getActiveDatasetsOfMyOrganization(),
+                })
               }
-              optionFilterProp="label"
-              style={fullWidth}
-              disabled={
-                isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
-              }
-              notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-              options={this.state.datasets.map((dataset: APIDataset) => ({
-                label: dataset.name,
-                value: dataset.name,
-              }))}
             />
-          </FormItem>
+          </Row>
 
           <FormItem
             name="editPosition"
@@ -561,29 +612,44 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 editRotation: [0, 0, 0],
               }}
             >
-              <FormItem
-                name="taskTypeIdOrSummary"
-                label="TaskType"
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
-              >
-                <Select
-                  showSearch
-                  placeholder="Select a TaskType"
-                  optionFilterProp="label"
-                  style={fullWidth}
-                  disabled={isEditingMode}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.taskTypes.map((taskType: APITaskType) => ({
-                    value: taskType.id,
-                    label: taskType.summary,
-                  }))}
+              <Row gutter={8} wrap={false}>
+                <Col span={19}>
+                  <FormItem
+                    name="taskTypeIdOrSummary"
+                    label="Task Type"
+                    hasFeedback
+                    rules={[
+                      {
+                        required: true,
+                      },
+                    ]}
+                  >
+                    <Select
+                      showSearch
+                      placeholder="Select a Task Type"
+                      optionFilterProp="label"
+                      style={fullWidth}
+                      disabled={isEditingMode}
+                      notFoundContent={
+                        this.state.isFetchingData ? <Spin size="small" /> : "No Data"
+                      }
+                      options={this.state.taskTypes.map((taskType: APITaskType) => ({
+                        value: taskType.id,
+                        label: taskType.summary,
+                      }))}
+                    />
+                  </FormItem>
+                </Col>
+                <CreateAndReloadButtons
+                  text="Create new Task Type"
+                  link="/taskTypes/create"
+                  onReload={async () =>
+                    this.setState({
+                      taskTypes: await getTaskTypes(),
+                    })
+                  }
                 />
-              </FormItem>
+              </Row>
 
               <Row gutter={8}>
                 <Col span={12}>
@@ -641,44 +707,74 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <InputNumber style={fullWidth} min={0} />
               </FormItem>
 
-              <FormItem
-                name="projectName"
-                label="Project"
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
-              >
-                <Select
-                  showSearch
-                  placeholder="Select a Project"
-                  optionFilterProp="label"
-                  style={fullWidth}
-                  disabled={isEditingMode}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.projects.map((project: APIProject) => ({
-                    value: project.name,
-                    label: project.name,
-                  }))}
+              <Row gutter={8}>
+                <Col span={19}>
+                  <FormItem
+                    name="projectName"
+                    label="Project"
+                    hasFeedback
+                    rules={[
+                      {
+                        required: true,
+                      },
+                    ]}
+                  >
+                    <Select
+                      showSearch
+                      placeholder="Select a Project"
+                      optionFilterProp="label"
+                      style={fullWidth}
+                      disabled={isEditingMode}
+                      notFoundContent={
+                        this.state.isFetchingData ? <Spin size="small" /> : "No Data"
+                      }
+                      options={this.state.projects.map((project: APIProject) => ({
+                        value: project.name,
+                        label: project.name,
+                      }))}
+                    />
+                  </FormItem>
+                </Col>
+                <CreateAndReloadButtons
+                  text="Create new Project"
+                  link="/projects/create"
+                  onReload={async () =>
+                    this.setState({
+                      projects: await getProjects(),
+                    })
+                  }
                 />
-              </FormItem>
+              </Row>
 
-              <FormItem name="scriptId" label="Script" hasFeedback>
-                <Select
-                  showSearch
-                  placeholder="Select a Script"
-                  optionFilterProp="label"
-                  style={fullWidth}
-                  disabled={isEditingMode}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.scripts.map((script: APIScript) => ({
-                    value: script.id,
-                    label: script.name,
-                  }))}
+              <Row gutter={8}>
+                <Col span={19}>
+                  <FormItem name="scriptId" label="Script" hasFeedback>
+                    <Select
+                      showSearch
+                      placeholder="Select a Script"
+                      optionFilterProp="label"
+                      style={fullWidth}
+                      disabled={isEditingMode}
+                      notFoundContent={
+                        this.state.isFetchingData ? <Spin size="small" /> : "No Data"
+                      }
+                      options={this.state.scripts.map((script: APIScript) => ({
+                        value: script.id,
+                        label: script.name,
+                      }))}
+                    />
+                  </FormItem>
+                </Col>
+                <CreateAndReloadButtons
+                  text="Create new Script"
+                  link="/scripts/create"
+                  onReload={async () =>
+                    this.setState({
+                      scripts: await getScripts(),
+                    })
+                  }
                 />
-              </FormItem>
+              </Row>
 
               <FormItem
                 name="boundingBox"

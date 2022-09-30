@@ -4,6 +4,7 @@ import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataLayer } from "types/api_flow_types";
+import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import {
   ResolutionInfo,
@@ -589,6 +590,7 @@ function* loadPrecomputedMeshForSegmentId(
         const sceneController = yield* call(getSceneController);
 
         if ("position" in chunk) {
+          // V3
           const dracoData = yield* call(
             meshV3.getMeshfileChunkData,
             dataset.dataStore.url,
@@ -601,6 +603,7 @@ function* loadPrecomputedMeshForSegmentId(
           const loader = getDracoLoader();
 
           const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+          // Compute vertex normals to achieve smooth shading
           geometry.computeVertexNormals();
 
           yield* call(
@@ -612,6 +615,7 @@ function* loadPrecomputedMeshForSegmentId(
             true,
           );
         } else {
+          // V0
           const stlData = yield* call(
             meshV0.getMeshfileChunkData,
             dataset.dataStore.url,
@@ -621,7 +625,16 @@ function* loadPrecomputedMeshForSegmentId(
             id,
             chunk,
           );
-          const geometry = yield* call(parseStlBuffer, stlData);
+          let geometry = yield* call(parseStlBuffer, stlData);
+
+          // Delete existing vertex normals (since these are not interpolated
+          // across faces).
+          geometry.deleteAttribute("normal");
+          // Ensure that vertices of adjacent faces are shared.
+          geometry = mergeVertices(geometry);
+          // Recompute normals to achieve smooth shading
+          geometry.computeVertexNormals();
+
           yield* call(
             { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
             geometry,

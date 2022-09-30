@@ -78,6 +78,7 @@ const defaultState: OxalisState = {
     fillMode: FillModeEnum._2D,
     interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
+    useSmoothMeshes: true,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

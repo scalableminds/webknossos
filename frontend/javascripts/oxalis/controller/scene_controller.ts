@@ -39,6 +39,7 @@ import constants, {
 import window from "libs/window";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
+import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const CUBE_COLOR = 0x999999;
 
@@ -200,9 +201,8 @@ class SceneController {
 
   constructIsosurfaceMesh(cellId: number, geometry: THREE.BufferGeometry, passive: boolean) {
     const color = this.getColorObjectForSegment(cellId);
-    const meshMaterial = new THREE.MeshStandardMaterial({
+    const meshMaterial = new THREE.MeshLambertMaterial({
       color,
-      // flatShading: true,
     });
     meshMaterial.side = THREE.FrontSide;
     meshMaterial.transparent = true;
@@ -259,10 +259,8 @@ class SceneController {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
-    // @ts-ignore
-    if (window.__isosurfaceMergeVertices) {
-      // @ts-ignore mergeVertices
-      bufferGeometry = THREE.BufferGeometryUtils.mergeVertices(bufferGeometry);
+    if (Store.getState().userConfiguration.useSmoothMeshes) {
+      bufferGeometry = mergeVertices(bufferGeometry);
     }
 
     bufferGeometry.computeVertexNormals();

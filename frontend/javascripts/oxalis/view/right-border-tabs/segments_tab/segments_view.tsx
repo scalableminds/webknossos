@@ -31,7 +31,10 @@ import {
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
-import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import {
+  updateTemporarySettingAction,
+  updateUserSettingAction,
+} from "oxalis/model/actions/settings_actions";
 import {
   updateSegmentAction,
   setActiveCellAction,
@@ -51,6 +54,7 @@ import type {
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import features from "features";
+import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset
@@ -83,6 +87,7 @@ type StateProps = {
   preferredQualityForMeshPrecomputation: number;
   preferredQualityForMeshAdHocComputation: number;
   resolutionInfoOfVisibleSegmentationLayer: ResolutionInfo;
+  useSmoothMeshes: boolean;
 };
 
 const mapStateToProps = (state: OxalisState): StateProps => {
@@ -124,6 +129,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     preferredQualityForMeshAdHocComputation:
       state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
     resolutionInfoOfVisibleSegmentationLayer: getResolutionInfoOfVisibleSegmentationLayer(state),
+    useSmoothMeshes: state.userConfiguration.useSmoothMeshes,
   };
 };
 
@@ -425,9 +431,18 @@ class SegmentsView extends React.Component<Props, State> {
     const {
       preferredQualityForMeshAdHocComputation,
       resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+      useSmoothMeshes,
     } = this.props;
     return (
       <div>
+        <SwitchSetting
+          label={"Use Smooth Meshes"}
+          value={useSmoothMeshes}
+          onChange={(value) => {
+            Store.dispatch(updateUserSettingAction("useSmoothMeshes", value));
+          }}
+          labelSpan={18}
+        />
         <Tooltip title="The higher the quality, the more computational resources are required">
           <div>Quality for Ad-Hoc Mesh Computation:</div>
         </Tooltip>

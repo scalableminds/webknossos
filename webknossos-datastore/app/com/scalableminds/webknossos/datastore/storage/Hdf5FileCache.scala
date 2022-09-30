@@ -5,7 +5,7 @@ import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, try2Fox}
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
-import net.liftweb.common.{Box, Full, Empty}
+import net.liftweb.common.{Box, Failure, Full}
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
@@ -50,24 +50,19 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
 }
 
 object CachedHdf5Utils {
-  def safeExecute[T](filePath: Path, meshFileCache: Hdf5FileCache)(block: CachedHdf5File => T)(
-      implicit ec: ExecutionContext): Fox[T] =
-    for {
-      _ <- bool2Fox(filePath.toFile.exists()) ?~> "mesh.file.open.failed"
-      result <- Using(meshFileCache.withCache(filePath)(CachedHdf5File.fromPath)) {
-        block
-      }.toFox
-    } yield result
-
-  def safeExecuteBox[T](filePath: Path, meshFileCache: Hdf5FileCache)(block: CachedHdf5File => T): Box[T] =
+  def executeWithCachedHdf5[T](filePath: Path, meshFileCache: Hdf5FileCache)(block: CachedHdf5File => T): Box[T] =
     for {
       _ <- if (filePath.toFile.exists()) {
         Full(true)
       } else {
-        Empty ~> "mesh.file.open.failed"
+        Failure("mesh.file.open.failed")
       }
-      result <- Using(meshFileCache.withCache(filePath)(CachedHdf5File.fromPath)) {
+      result = Using(meshFileCache.withCache(filePath)(CachedHdf5File.fromPath)) {
         block
-      }.toOption
-    } yield result
+      }
+      boxedResult <- result match {
+        case scala.util.Success(result) => Full(result)
+        case scala.util.Failure(e)      => Failure(e.toString)
+      }
+    } yield boxedResult
 }

@@ -548,10 +548,20 @@ function* loadPrecomputedMeshForSegmentId(
 
   let availableChunks = null;
 
-  // todo: dont hardcode
-  const version = meshFileName.includes("4-4") ? 0 : 3;
+  const meshFile = yield* select((state) =>
+    (state.localSegmentationData[layerName].availableMeshFiles || []).find(
+      (file) => file.meshFileName === meshFileName,
+    ),
+  );
+  if (!meshFile) {
+    throw new Error("Could not find requested mesh file.");
+  }
+
+  const version = meshFile.formatVersion;
   try {
-    if (version === 3) {
+    // todo: should actually check against 3, but some new mesh files
+    // still have version 2 ?
+    if (version >= 2) {
       const segmentInfo = yield* call(
         meshV3.getMeshfileChunksForSegment,
         dataset.dataStore.url,

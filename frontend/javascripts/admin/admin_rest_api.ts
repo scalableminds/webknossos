@@ -2071,16 +2071,24 @@ export function getEditableAgglomerateSkeleton(
   );
 }
 
-export function getMeshfilesForDatasetLayer(
+export async function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
 ): Promise<Array<APIMeshFile>> {
-  return doWithToken((token) =>
+  const meshFiles: Array<APIMeshFile> = await doWithToken((token) =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes?token=${token}`,
     ),
   );
+
+  for (const file of meshFiles) {
+    if (file.mappingName === "") {
+      file.mappingName = undefined;
+    }
+  }
+
+  return meshFiles;
 }
 
 // ### Connectomes

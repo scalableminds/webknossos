@@ -1841,8 +1841,7 @@ class DataApi {
 
     const { mappingName, meshFileName } = currentMeshFile;
 
-    // todo: remove second condition
-    if (mappingName != null && mappingName !== "") {
+    if (mappingName != null) {
       const activeMapping = this.getActiveMapping(effectiveLayerName);
 
       if (mappingName !== activeMapping) {

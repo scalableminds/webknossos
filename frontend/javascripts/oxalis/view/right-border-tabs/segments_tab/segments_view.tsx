@@ -31,10 +31,7 @@ import {
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
-import {
-  updateTemporarySettingAction,
-  updateUserSettingAction,
-} from "oxalis/model/actions/settings_actions";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   updateSegmentAction,
   setActiveCellAction,
@@ -54,7 +51,6 @@ import type {
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import features from "features";
-import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 
 const { Option } = Select;
 // Interval in ms to check for running mesh file computation jobs for this dataset

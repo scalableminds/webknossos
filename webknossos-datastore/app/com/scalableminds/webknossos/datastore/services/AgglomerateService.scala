@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio._
 import java.nio.file.{Files, Paths}
-
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -13,9 +12,10 @@ import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTra
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
-import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
@@ -209,6 +209,29 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     tryo {
       val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
       reader.`object`().getNumberOfElements("/agglomerate_to_segments_offsets") - 1L
+    }
+  }
+
+  def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[List[Long]] = {
+    val hdfFile =
+      dataBaseDir
+        .resolve(agglomerateFileKey.organizationName)
+        .resolve(agglomerateFileKey.dataSetName)
+        .resolve(agglomerateFileKey.layerName)
+        .resolve(agglomerateDir)
+        .resolve(s"${agglomerateFileKey.mappingName}.$agglomerateFileExtension")
+        .toFile
+
+    tryo {
+      val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+      val positionsRange: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+
+      val segmentCount = positionsRange(1) - positionsRange(0)
+      val segmentIds: Array[Long] = if (segmentCount == 0) Array.empty[Long] else {
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", segmentCount.toInt, positionsRange(0))
+      }
+      segmentIds.toList
     }
   }
 

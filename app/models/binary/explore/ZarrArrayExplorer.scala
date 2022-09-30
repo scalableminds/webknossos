@@ -29,10 +29,10 @@ class ZarrArrayExplorer extends RemoteLayerExplorer {
       elementClass <- zarrHeader.elementClass ?~> "failed to read element class from zarr header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(zarrHeader.rank)
       boundingBox <- zarrHeader.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
-      zarrMag = MagLocator(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
+      magLocator = MagLocator(Vec3Int.ones, Some(remotePath.toString), credentials, Some(guessedAxisOrder))
       layer: ZarrLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        ZarrSegmentationLayer(name, boundingBox, elementClass, List(zarrMag), largestSegmentId = None)
-      } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(zarrMag))
+        ZarrSegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
+      } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
     } yield List((layer, Vec3Double(1.0, 1.0, 1.0)))
 
 }

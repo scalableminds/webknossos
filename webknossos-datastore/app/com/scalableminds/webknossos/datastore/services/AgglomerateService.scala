@@ -224,6 +224,29 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     }
   }
 
+  def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[List[Long]] = {
+    val hdfFile =
+      dataBaseDir
+        .resolve(agglomerateFileKey.organizationName)
+        .resolve(agglomerateFileKey.dataSetName)
+        .resolve(agglomerateFileKey.layerName)
+        .resolve(agglomerateDir)
+        .resolve(s"${agglomerateFileKey.mappingName}.$agglomerateFileExtension")
+        .toFile
+
+    tryo {
+      val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+      val positionsRange: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+
+      val segmentCount = positionsRange(1) - positionsRange(0)
+      val segmentIds: Array[Long] = if (segmentCount == 0) Array.empty[Long] else {
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", segmentCount.toInt, positionsRange(0))
+      }
+      segmentIds.toList
+    }
+  }
+
   def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: List[Long]): Box[List[Long]] = {
     val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
 

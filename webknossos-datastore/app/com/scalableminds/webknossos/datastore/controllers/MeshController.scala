@@ -59,9 +59,11 @@ class MeshController @Inject()(
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
+        val mappingNameDemo: Option[String] = Some("agglomerate_view_70")
         for {
           positions <- formatVersion match {
             case 3 =>
+<<<<<<< HEAD
 <<<<<<< HEAD
               meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
                 "mesh.file.listChunks.failed",
@@ -103,22 +105,27 @@ class MeshController @Inject()(
               }
 =======
               mappingName match {
+||||||| parent of 880b31d23... add new function
+              mappingName match {
+=======
+              mappingNameDemo match {
+>>>>>>> 880b31d23... add new function
                 case Some(mapping) =>
                   for {
                     agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-                    agglomerateIds: List[Long] <- agglomerateService
-                      .agglomerateIdsForSegmentIds(
+                    segmentIds: List[Long] <- agglomerateService
+                      .segmentIdsForAgglomerateId(
                         AgglomerateFileKey(
                           organizationName,
                           dataSetName,
                           dataLayerName,
                           mapping
                         ),
-                        List(request.body.segmentId)
-                      )
-                      .toFox
+                        request.body.segmentId
+                      ).toFox
 
-                    unmappedChunks <- Fox.serialCombined(agglomerateIds)(segmentId =>
+
+                    unmappedChunks <- Fox.serialCombined(segmentIds)(segmentId =>
                       meshFileService.listMeshChunksForSegmentV3(organizationName,
                                                                  dataSetName,
                                                                  dataLayerName,

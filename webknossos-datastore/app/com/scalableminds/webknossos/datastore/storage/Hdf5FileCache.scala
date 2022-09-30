@@ -64,7 +64,7 @@ object CachedHdf5Utils {
       _ <- if (filePath.toFile.exists()) {
         Full(true)
       } else {
-        Empty ~> "mesh.file.open.failed"
+        Failure("mesh.file.open.failed")
       }
       result <- Using(meshFileCache.withCache(filePath)(CachedHdf5File.fromPath)) {
         block

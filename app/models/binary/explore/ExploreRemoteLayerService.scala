@@ -91,7 +91,11 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       remoteSource <- tryo(RemoteSourceDescriptor(new URI(normalizeUri(layerUri)), user, password)).toFox ?~> s"Received invalid URI: $layerUri"
       fileSystem <- FileSystemsHolder.getOrCreate(remoteSource).toFox ?~> "Failed to set up remote file system"
       remotePath <- tryo(fileSystem.getPath(remoteSource.remotePath)) ?~> "Failed to get remote path"
-      layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(remotePath, remoteSource.credentials, reportMutable)
+      layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
+        remotePath,
+        remoteSource.credentials,
+        reportMutable,
+        List(new ZarrArrayExplorer, new NgffExplorer, new N5ArrayExplorer))
     } yield layersWithVoxelSizes
 
   private def normalizeUri(uri: String): String =
@@ -101,12 +105,11 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       uri.dropRight(OmeNgffGroupHeader.FILENAME_DOT_ZGROUP.length)
     else uri
 
-  private def exploreRemoteLayersForRemotePath(remotePath: Path,
-                                               credentials: Option[FileSystemCredentials],
-                                               reportMutable: ListBuffer[String],
-                                               explorers: List[RemoteLayerExplorer] =
-                                                 List(new ZarrArrayExplorer, new NgffExplorer))(
-      implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
+  private def exploreRemoteLayersForRemotePath(
+      remotePath: Path,
+      credentials: Option[FileSystemCredentials],
+      reportMutable: ListBuffer[String],
+      explorers: List[RemoteLayerExplorer])(implicit ec: ExecutionContext): Fox[List[(DataLayer, Vec3Double)]] =
     explorers match {
       case Nil => Fox.empty
       case currentExplorer :: remainingExplorers =>

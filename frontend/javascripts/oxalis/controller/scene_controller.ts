@@ -39,7 +39,7 @@ import constants, {
 import window from "libs/window";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
-import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { mergeVertices } from "libs/BufferGeometryUtils";
 
 const CUBE_COLOR = 0x999999;
 

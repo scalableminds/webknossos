@@ -1,5 +1,5 @@
 import { BufferGeometry } from "three";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import { DRACOLoader } from "libs/DRACOLoader.js";
 
 let _dracoLoader: CustomDRACOLoader | null;
 
@@ -19,6 +19,7 @@ export function getDracoLoader(): CustomDRACOLoader {
   if (_dracoLoader) {
     return _dracoLoader;
   }
+  // @ts-ignore
   _dracoLoader = new CustomDRACOLoader();
 
   _dracoLoader.setDecoderPath(

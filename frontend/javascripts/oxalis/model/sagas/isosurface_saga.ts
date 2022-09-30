@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataLayer } from "types/api_flow_types";
-import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { mergeVertices } from "libs/BufferGeometryUtils";
 
 import {
   ResolutionInfo,

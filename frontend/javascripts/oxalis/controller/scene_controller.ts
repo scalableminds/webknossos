@@ -259,11 +259,9 @@ class SceneController {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
-    if (Store.getState().userConfiguration.useSmoothMeshes) {
-      bufferGeometry = mergeVertices(bufferGeometry);
-    }
-
+    bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
+
     this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId, passive);
   }
 

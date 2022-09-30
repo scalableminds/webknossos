@@ -87,7 +87,6 @@ type StateProps = {
   preferredQualityForMeshPrecomputation: number;
   preferredQualityForMeshAdHocComputation: number;
   resolutionInfoOfVisibleSegmentationLayer: ResolutionInfo;
-  useSmoothMeshes: boolean;
 };
 
 const mapStateToProps = (state: OxalisState): StateProps => {
@@ -129,7 +128,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     preferredQualityForMeshAdHocComputation:
       state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
     resolutionInfoOfVisibleSegmentationLayer: getResolutionInfoOfVisibleSegmentationLayer(state),
-    useSmoothMeshes: state.userConfiguration.useSmoothMeshes,
   };
 };
 
@@ -431,18 +429,9 @@ class SegmentsView extends React.Component<Props, State> {
     const {
       preferredQualityForMeshAdHocComputation,
       resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
-      useSmoothMeshes,
     } = this.props;
     return (
       <div>
-        <SwitchSetting
-          label={"Use Smooth Meshes"}
-          value={useSmoothMeshes}
-          onChange={(value) => {
-            Store.dispatch(updateUserSettingAction("useSmoothMeshes", value));
-          }}
-          labelSpan={18}
-        />
         <Tooltip title="The higher the quality, the more computational resources are required">
           <div>Quality for Ad-Hoc Mesh Computation:</div>
         </Tooltip>

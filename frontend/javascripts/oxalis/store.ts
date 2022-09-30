@@ -325,7 +325,6 @@ export type UserConfiguration = {
   readonly fillMode: FillMode;
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
-  readonly useSmoothMeshes: boolean;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

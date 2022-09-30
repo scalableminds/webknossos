@@ -8,11 +8,8 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
-import io.swagger.annotations.{Api, ApiOperation}
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
-@Api(tags = Array("datastore"))
 class MeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
@@ -22,7 +19,6 @@ class MeshController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  @ApiOperation(hidden = true, value = "")
   def listMeshFiles(token: Option[String],
                     organizationName: String,
                     dataSetName: String,
@@ -36,7 +32,6 @@ class MeshController @Inject()(
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def listMeshChunksForSegmentV0(token: Option[String],
                                  organizationName: String,
                                  dataSetName: String,
@@ -56,7 +51,6 @@ class MeshController @Inject()(
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def listMeshChunksForSegmentForVersion(token: Option[String],
                                          organizationName: String,
                                          dataSetName: String,
@@ -78,7 +72,6 @@ class MeshController @Inject()(
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def readMeshChunkV0(token: Option[String],
                       organizationName: String,
                       dataSetName: String,
@@ -99,7 +92,6 @@ class MeshController @Inject()(
       }
     }
 
-  @ApiOperation(hidden = true, value = "")
   def readMeshChunkForVersion(token: Option[String],
                               organizationName: String,
                               dataSetName: String,

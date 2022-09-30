@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.CachedHdf5Utils.{safeExecute, safeExecuteBox}
+import com.scalableminds.webknossos.datastore.storage.CachedHdf5Utils.executeWithCachedHdf5
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
@@ -71,6 +71,66 @@ case class NeuroglancerSegmentInfo(chunkShape: Vec3Float,
                                    numChunksPerLod: Array[Int],
                                    chunkPositions: List[List[Vec3Int]],
                                    chunkByteOffsets: List[List[Int]])
+
+object NeuroglancerSegmentInfo {
+  def fromBytes(manifest: Array[Byte]): NeuroglancerSegmentInfo = {
+    // All Ints here should be UInt32 per spec. We assume that the sign bit is not necessary (the encoded values are at most 2^31).
+    // But they all are used to index into Arrays and JVM doesn't allow for Long Array Indexes,
+    // we can't convert them.
+    val byteInput = new ByteArrayInputStream(manifest)
+    val dis = new LittleEndianDataInputStream(byteInput)
+
+    val chunkShape = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
+    val gridOrigin = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
+
+    val numLods = dis.readInt
+
+    val lodScales = new Array[Float](numLods)
+    for (d <- 0 until numLods) {
+      lodScales(d) = dis.readFloat
+    }
+
+    val vertexOffsets = new Array[Vec3Float](numLods)
+    for (d <- 0 until numLods) {
+      vertexOffsets(d) = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
+    }
+
+    val numChunksPerLod = new Array[Int](numLods)
+    for (lod <- 0 until numLods) {
+      numChunksPerLod(lod) = dis.readInt()
+    }
+
+    val chunkPositionsList = new ListBuffer[List[Vec3Int]]
+    val chunkSizes = new ListBuffer[List[Int]]
+    for (lod <- 0 until numLods) {
+      val currentChunkPositions = (ListBuffer[Int](), ListBuffer[Int](), ListBuffer[Int]())
+      for (row <- 0 until 3; _ <- 0 until numChunksPerLod(lod)) {
+        row match {
+          case 0 => currentChunkPositions._1.append(dis.readInt)
+          case 1 => currentChunkPositions._2.append(dis.readInt)
+          case 2 => currentChunkPositions._3.append(dis.readInt)
+        }
+      }
+
+      chunkPositionsList.append(currentChunkPositions.zipped.map(Vec3Int(_, _, _)).toList)
+
+      val currentChunkSizes = ListBuffer[Int]()
+      for (_ <- 0 until numChunksPerLod(lod)) {
+        currentChunkSizes.append(dis.readInt)
+      }
+      chunkSizes.append(currentChunkSizes.toList)
+    }
+
+    NeuroglancerSegmentInfo(chunkShape,
+                            gridOrigin,
+                            numLods,
+                            lodScales,
+                            vertexOffsets,
+                            numChunksPerLod,
+                            chunkPositionsList.toList,
+                            chunkSizes.toList)
+  }
+}
 
 case class MeshChunk(position: Vec3Float, byteOffset: Int, byteSize: Int)
 
@@ -142,15 +202,15 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
    Note that null is a valid value here for once. Meshfiles with no information about the
    meshFilePath will return Fox.empty, while meshfiles with one marked as empty, will return Fox.successful(null)
    */
-  def mappingNameForMeshFile(meshFilePath: Path, meshFileVersion: Long): Fox[String] =
+  def mappingNameForMeshFile(meshFilePath: Path, meshFileVersion: Long): Fox[String] = {
     val attributeName = if (meshFileVersion == 0) "metadata/mapping_name" else "mapping_name"
-    safeExecute(meshFilePath, meshFileCache) { cachedMeshFile =>
+    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       cachedMeshFile.reader.string().getAttr("/", attributeName)
     } ?~> "mesh.file.readEncoding.failed"
-    }
+  }
 
   def mappingVersionForMeshFile(meshFilePath: Path): Long =
-    safeExecuteBox(meshFilePath, meshFileCache) { cachedMeshFile =>
+    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       cachedMeshFile.reader.int64().getAttr("/", "version")
     }.toOption.getOrElse(0)
 
@@ -166,7 +226,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(meshesDir)
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
 
-    safeExecute(meshFilePath, meshFileCache) { cachedMeshFile =>
+    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       val chunkPositionLiterals = cachedMeshFile.reader
         .`object`()
         .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
@@ -188,7 +248,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(meshesDir)
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
 
-    safeExecute(meshFilePath, meshFileCache) { cachedMeshFile =>
+    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       val segmentId = listMeshChunksRequest.segmentId
       val encoding = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
       val lodScaleMultiplier = cachedMeshFile.reader.float64().getAttr("/", "lod_scale_multiplier")
@@ -199,9 +259,9 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       val manifest = cachedMeshFile.reader
         .uint8()
         .readArrayBlockWithOffset("/neuroglancer", (neuroglancerEnd - neuroglancerStart).toInt, neuroglancerStart)
-      val segmentInfo = parseNeuroglancerManifest(manifest)
-      val meshfile = getChunksFromSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
-      WebknossosSegmentInfo(transform = transform, meshFormat = encoding, chunks = meshfile)
+      val segmentInfo = NeuroglancerSegmentInfo.fromBytes(manifest)
+      val processedSegmentInfo = getChunksFromSegmentInfo(segmentInfo, lodScaleMultiplier, neuroglancerStart)
+      WebknossosSegmentInfo(transform = transform, meshFormat = encoding, chunks = processedSegmentInfo)
     }
   }
 
@@ -241,63 +301,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .toList
     MeshSegmentInfo(chunkShape = segmentInfo.chunkShape, gridOrigin = segmentInfo.gridOrigin, lods = meshfileLods)
   }
-  private def parseNeuroglancerManifest(manifest: Array[Byte]): NeuroglancerSegmentInfo = {
-    // All Ints here should be UInt32 per spec. We assume that the sign bit is not necessary (the encoded values are at most 2^31).
-    // But they all are used to index into Arrays and JVM doesn't allow for Long Array Indexes,
-    // we can't convert them.
-    val byteInput = new ByteArrayInputStream(manifest)
-    val dis = new LittleEndianDataInputStream(byteInput)
-
-    val chunkShape = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
-    val gridOrigin = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
-
-    val numLods = dis.readInt
-
-    val lodScales = new Array[Float](numLods)
-    for (d <- 0 until numLods) {
-      lodScales(d) = dis.readFloat
-    }
-
-    val vertexOffsets = new Array[Vec3Float](numLods)
-    for (d <- 0 until numLods) {
-      vertexOffsets(d) = Vec3Float(x = dis.readFloat, y = dis.readFloat, z = dis.readFloat)
-    }
-
-    val numChunksPerLod = new Array[Int](numLods)
-    for (lod <- 0 until numLods) {
-      numChunksPerLod(lod) = dis.readInt()
-    }
-
-    val chunkPositionsList = new ListBuffer[List[Vec3Int]]
-    val chunkSizes = new ListBuffer[List[Int]]
-    for (lod <- 0 until numLods) {
-      val currentChunkPositions = (ListBuffer[Int](), ListBuffer[Int](), ListBuffer[Int]())
-      for (row <- 0 until 3; _ <- 0 until numChunksPerLod(lod)) {
-        row match {
-          case 0 => currentChunkPositions._1.append(dis.readInt)
-          case 1 => currentChunkPositions._2.append(dis.readInt)
-          case 2 => currentChunkPositions._3.append(dis.readInt)
-        }
-      }
-
-      chunkPositionsList.append(currentChunkPositions.zipped.map(Vec3Int(_, _, _)).toList)
-
-      val currentChunkSizes = ListBuffer[Int]()
-      for (_ <- 0 until numChunksPerLod(lod)) {
-        currentChunkSizes.append(dis.readInt)
-      }
-      chunkSizes.append(currentChunkSizes.toList)
-    }
-
-    NeuroglancerSegmentInfo(chunkShape,
-                            gridOrigin,
-                            numLods,
-                            lodScales,
-                            vertexOffsets,
-                            numChunksPerLod,
-                            chunkPositionsList.toList,
-                            chunkSizes.toList)
-  }
 
   private def getNeuroglancerOffsets(segmentId: Long, cachedMeshFile: CachedHdf5File): (Long, Long) = {
     val nBuckets = cachedMeshFile.reader.uint64().getAttr("/", "n_buckets")
@@ -330,7 +333,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .resolve(meshesDir)
       .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
 
-    safeExecute(meshFilePath, meshFileCache) { cachedMeshFile =>
+    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       val encoding = cachedMeshFile.reader.string().getAttr("/", "metadata/encoding")
       val key =
         s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}"
@@ -351,7 +354,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .resolve(meshesDir)
       .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
 
-    safeExecute(meshFilePath, meshFileCache) { cachedMeshFile =>
+    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
       val meshFormat = cachedMeshFile.reader.string().getAttr("/", "mesh_format")
       val data =
         cachedMeshFile.reader

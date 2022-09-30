@@ -58,16 +58,17 @@ class MeshController @Inject()(
                                          dataSetName: String,
                                          dataLayerName: String,
                                          formatVersion: Int,
-                                         mappingName: Option[String]): Action[ListMeshChunksRequest] =
+                                         mappingName: Option[String],
+                                         useMeshFromMappedIds: Boolean = true): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
-        val mappingNameDemo: Option[String] = Some("agglomerate_view_70")
+        val mappingNameDemo: Option[String] = Some(mappingName.getOrElse("agglomerate_view_70"))
         for {
           positions <- formatVersion match {
             case 3 =>
               mappingNameDemo match {
-                case Some(mapping) =>
+                case Some(mapping) if useMeshFromMappedIds =>
                   for {
                     agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
                     segmentIds: List[Long] <- agglomerateService
@@ -79,19 +80,18 @@ class MeshController @Inject()(
                           mapping
                         ),
                         request.body.segmentId
-                      ).toFox
+                      )
+                      .toFox
 
-
-                    unmappedChunks <- Fox.serialCombined(segmentIds)(segmentId =>
-                      meshFileService.listMeshChunksForSegmentV3(organizationName,
-                                                                 dataSetName,
-                                                                 dataLayerName,
-                                                                 ListMeshChunksRequest(request.body.meshFile,
-                                                                                       segmentId)) ?~> Messages(
-                        "mesh.file.listChunks.failed",
-                        request.body.segmentId.toString,
-                        request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST)
-                    chunkInfo = unmappedChunks.reduce(_.merge(_))
+                    unmappedChunks = segmentIds.map(
+                      segmentId =>
+                        meshFileService
+                          .listMeshChunksForSegmentV3(organizationName,
+                                                      dataSetName,
+                                                      dataLayerName,
+                                                      ListMeshChunksRequest(request.body.meshFile, segmentId))
+                          .toOption)
+                    chunkInfo = unmappedChunks.flatten.reduce(_.merge(_))
                   } yield chunkInfo
                 case None =>
                   meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(

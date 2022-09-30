@@ -228,9 +228,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
 
       val segmentCount = positionsRange(1) - positionsRange(0)
-      val segmentIds: Array[Long] = if (segmentCount == 0) Array.empty[Long] else {
-        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", segmentCount.toInt, positionsRange(0))
-      }
+      val segmentIds: Array[Long] =
+        if (segmentCount == 0) Array.empty[Long]
+        else {
+          reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", segmentCount.toInt, positionsRange(0))
+        }
       segmentIds.toList
     }
   }

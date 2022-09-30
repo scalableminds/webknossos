@@ -252,7 +252,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   def listMeshChunksForSegmentV3(organizationName: String,
                                  dataSetName: String,
                                  dataLayerName: String,
-                                 listMeshChunksRequest: ListMeshChunksRequest): Fox[WebknossosSegmentInfo] = {
+                                 listMeshChunksRequest: ListMeshChunksRequest): Box[WebknossosSegmentInfo] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
@@ -324,11 +324,14 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val bucketStart = bucketOffsets(0)
     val bucketEnd = bucketOffsets(1)
 
+    if (bucketEnd - bucketStart == 0) throw new Exception(s"No entry for segment $segmentId")
+
     val buckets = cachedMeshFile.reader
       .uint64()
       .readMatrixBlockWithOffset("buckets", (bucketEnd - bucketStart + 1).toInt, 3, bucketStart, 0)
 
     val bucketLocalOffset = buckets.map(_(0)).indexOf(segmentId)
+    if (bucketLocalOffset < 0) throw new Exception(s"SegmentId $segmentId not in bucket list")
     val neuroglancerStart = buckets(bucketLocalOffset)(1)
     val neuroglancerEnd = buckets(bucketLocalOffset)(2)
 

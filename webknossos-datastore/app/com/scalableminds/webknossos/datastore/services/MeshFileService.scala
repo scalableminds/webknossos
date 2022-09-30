@@ -156,14 +156,10 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
    meshFilePath will return Fox.empty, while meshfiles with one marked as empty, will return Fox.successful(null)
    */
   def mappingNameForMeshFile(meshFilePath: Path, meshFileVersion: Long): Fox[String] =
-    if (meshFileVersion == 0) {
-      safeExecute(meshFilePath, meshFileCache) { cachedMeshFile =>
-        cachedMeshFile.reader.string().getAttr("/", "metadata/mapping_name")
-      } ?~> "mesh.file.readEncoding.failed"
-    } else {
-      safeExecute(meshFilePath, meshFileCache) { cachedMeshFile =>
-        cachedMeshFile.reader.string().getAttr("/", "mapping_name")
-      } ?~> "mesh.file.readEncoding.failed"
+    val attributeName = if (meshFileVersion == 0) "metadata/mapping_name" else "mapping_name"
+    safeExecute(meshFilePath, meshFileCache) { cachedMeshFile =>
+      cachedMeshFile.reader.string().getAttr("/", attributeName)
+    } ?~> "mesh.file.readEncoding.failed"
     }
 
   def mappingVersionForMeshFile(meshFilePath: Path): Long =

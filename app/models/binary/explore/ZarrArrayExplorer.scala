@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{
   ZarrSegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.ZarrHeader
+import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 
 import scala.concurrent.ExecutionContext.Implicits.global

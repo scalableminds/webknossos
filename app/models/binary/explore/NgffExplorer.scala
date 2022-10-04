@@ -1,6 +1,6 @@
 package models.binary.explore
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{
@@ -10,8 +10,8 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{
   ZarrSegmentationLayer
 }
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.jzarr._
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
+import com.scalableminds.webknossos.datastore.datareaders.zarr._
+import com.scalableminds.webknossos.datastore.models.datasource.Category
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -23,12 +23,12 @@ class NgffExplorer extends RemoteLayerExplorer {
   override def explore(remotePath: Path,
                        credentials: Option[FileSystemCredentials]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
-      zattrsPath <- Fox.successful(remotePath.resolve(OmeNgffHeader.FILENAME_DOT_ZATTRS))
-      ngffHeader <- parseJsonFromPath[OmeNgffHeader](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
+      zattrsPath <- Fox.successful(remotePath.resolve(NgffMetadata.FILENAME_DOT_ZATTRS))
+      ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
       layers <- Fox.serialCombined(ngffHeader.multiscales)(layerFromNgffMultiscale(_, remotePath, credentials))
     } yield layers
 
-  private def layerFromNgffMultiscale(multiscale: OmeNgffOneHeader,
+  private def layerFromNgffMultiscale(multiscale: NgffMultiscalesItem,
                                       remotePath: Path,
                                       credentials: Option[FileSystemCredentials]): Fox[(ZarrLayer, Vec3Double)] =
     for {
@@ -50,7 +50,7 @@ class NgffExplorer extends RemoteLayerExplorer {
       } else ZarrDataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
     } yield (layer, voxelSizeNanometers)
 
-  private def zarrMagFromNgffDataset(ngffDataset: OmeNgffDataset,
+  private def zarrMagFromNgffDataset(ngffDataset: NgffDataset,
                                      layerPath: Path,
                                      voxelSizeInAxisUnits: Vec3Double,
                                      axisOrder: AxisOrder,
@@ -68,19 +68,8 @@ class NgffExplorer extends RemoteLayerExplorer {
                         elementClass,
                         boundingBox)
 
-  private def elementClassFromMags(magsWithAttributes: List[MagWithAttributes]): Fox[ElementClass.Value] = {
-    val elementClasses = magsWithAttributes.map(_.elementClass)
-    for {
-      head <- elementClasses.headOption.toFox
-      _ <- bool2Fox(elementClasses.forall(_ == head)) ?~> s"Element class must be the same for all mags of a layer. got $elementClasses"
-    } yield head
-  }
-
-  private def boundingBoxFromMags(magsWithAttributes: List[MagWithAttributes]): BoundingBox =
-    BoundingBox.union(magsWithAttributes.map(_.boundingBox))
-
-  private def extractAxisOrder(axes: List[OmeNgffAxis]): Fox[AxisOrder] = {
-    def axisMatches(axis: OmeNgffAxis, name: String) = axis.name.toLowerCase == name && axis.`type` == "space"
+  private def extractAxisOrder(axes: List[NgffAxis]): Fox[AxisOrder] = {
+    def axisMatches(axis: NgffAxis, name: String) = axis.name.toLowerCase == name && axis.`type` == "space"
 
     val x = axes.indexWhere(axisMatches(_, "x"))
     val y = axes.indexWhere(axisMatches(_, "y"))
@@ -92,14 +81,14 @@ class NgffExplorer extends RemoteLayerExplorer {
     } yield AxisOrder(x, y, z, cOpt)
   }
 
-  private def extractAxisUnitFactors(axes: List[OmeNgffAxis], axisOrder: AxisOrder): Fox[Vec3Double] =
+  private def extractAxisUnitFactors(axes: List[NgffAxis], axisOrder: AxisOrder): Fox[Vec3Double] =
     for {
       xUnitFactor <- axes(axisOrder.x).spaceUnitToNmFactor
       yUnitFactor <- axes(axisOrder.y).spaceUnitToNmFactor
       zUnitFactor <- axes(axisOrder.z).spaceUnitToNmFactor
     } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor)
 
-  private def magFromTransforms(coordinateTransforms: List[OmeNgffCoordinateTransformation],
+  private def magFromTransforms(coordinateTransforms: List[NgffCoordinateTransformation],
                                 voxelSizeInAxisUnits: Vec3Double,
                                 axisOrder: AxisOrder): Fox[Vec3Int] = {
     def isPowerOfTwo(x: Int): Boolean =
@@ -119,7 +108,7 @@ class NgffExplorer extends RemoteLayerExplorer {
    * Note: allCoordinateTransforms is nested: the inner list has all transforms of one ngff “dataset” (mag in our terminology),
    *   the outer list gathers these for all such “datasets” (mags) of one “multiscale object” (layer)
    */
-  private def extractVoxelSizeInAxisUnits(allCoordinateTransforms: List[List[OmeNgffCoordinateTransformation]],
+  private def extractVoxelSizeInAxisUnits(allCoordinateTransforms: List[List[NgffCoordinateTransformation]],
                                           axisOrder: AxisOrder): Fox[Vec3Double] = {
     val scales = allCoordinateTransforms.map(t => extractAndCombineScaleTransforms(t, axisOrder))
     val smallestScaleIsUniform = scales.minBy(_.x) == scales.minBy(_.y) && scales.minBy(_.y) == scales.minBy(_.z)
@@ -129,7 +118,7 @@ class NgffExplorer extends RemoteLayerExplorer {
     } yield voxelSizeInAxisUnits
   }
 
-  private def extractAndCombineScaleTransforms(coordinateTransforms: List[OmeNgffCoordinateTransformation],
+  private def extractAndCombineScaleTransforms(coordinateTransforms: List[NgffCoordinateTransformation],
                                                axisOrder: AxisOrder): Vec3Double = {
     val filtered = coordinateTransforms.filter(_.`type` == "scale")
     val xFactors = filtered.map(_.scale(axisOrder.x))

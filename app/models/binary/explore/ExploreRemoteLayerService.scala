@@ -1,11 +1,10 @@
 package models.binary.explore
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
+import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
-import com.scalableminds.webknossos.datastore.datareaders.jzarr._
+import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
 import com.typesafe.scalalogging.LazyLogging
@@ -23,11 +22,6 @@ case class ExploreRemoteDatasetParameters(remoteUri: String, user: Option[String
 object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
 }
-
-case class MagWithAttributes(mag: MagLocator,
-                             remotePath: Path,
-                             elementClass: ElementClass.Value,
-                             boundingBox: BoundingBox)
 
 class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLogging {
 
@@ -95,14 +89,14 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
         remotePath,
         remoteSource.credentials,
         reportMutable,
-        List(new ZarrArrayExplorer, new NgffExplorer, new N5ArrayExplorer))
+        List(new ZarrArrayExplorer, new NgffExplorer, new N5ArrayExplorer, new N5MultiscalesExplorer))
     } yield layersWithVoxelSizes
 
   private def normalizeUri(uri: String): String =
     if (uri.endsWith(ZarrHeader.FILENAME_DOT_ZARRAY)) uri.dropRight(ZarrHeader.FILENAME_DOT_ZARRAY.length)
-    else if (uri.endsWith(OmeNgffHeader.FILENAME_DOT_ZATTRS)) uri.dropRight(OmeNgffHeader.FILENAME_DOT_ZATTRS.length)
-    else if (uri.endsWith(OmeNgffGroupHeader.FILENAME_DOT_ZGROUP))
-      uri.dropRight(OmeNgffGroupHeader.FILENAME_DOT_ZGROUP.length)
+    else if (uri.endsWith(NgffMetadata.FILENAME_DOT_ZATTRS)) uri.dropRight(NgffMetadata.FILENAME_DOT_ZATTRS.length)
+    else if (uri.endsWith(NgffGroupHeader.FILENAME_DOT_ZGROUP))
+      uri.dropRight(NgffGroupHeader.FILENAME_DOT_ZGROUP.length)
     else uri
 
   private def exploreRemoteLayersForRemotePath(

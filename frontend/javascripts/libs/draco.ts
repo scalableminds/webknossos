@@ -1,5 +1,5 @@
 import { BufferGeometry } from "three";
-import { DRACOLoader } from "libs/DRACOLoader.js";
+import { DRACOLoader } from "libs/DRACOLoader";
 
 let _dracoLoader: CustomDRACOLoader | null;
 

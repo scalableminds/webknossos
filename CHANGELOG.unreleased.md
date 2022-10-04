@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/22.10.0...HEAD)
 
 ### Added
+- Tasks can now be assigned to individual users directly. [#6528](https://github.com/scalableminds/webknossos/pull/6528)
 
 ### Changed
 - Creating tasks in bulk now also supports referencing task types by their summary instead of id. [#6486](https://github.com/scalableminds/webknossos/pull/6486)

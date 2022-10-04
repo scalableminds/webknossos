@@ -56,7 +56,10 @@ import Toast from "libs/toast";
 import { getDracoLoader } from "libs/draco";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
-import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import {
+  getBaseSegmentationName,
+  maybeFetchMeshFiles,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { UpdateSegmentAction } from "../actions/volumetracing_actions";
 
 const MAX_RETRY_COUNT = 5;
@@ -548,13 +551,18 @@ function* loadPrecomputedMeshForSegmentId(
 
   let availableChunks = null;
 
-  const meshFile = yield* select((state) =>
-    (state.localSegmentationData[layerName].availableMeshFiles || []).find(
-      (file) => file.meshFileName === meshFileName,
-    ),
+  const availableMeshFiles = yield* call(
+    maybeFetchMeshFiles,
+    segmentationLayer,
+    dataset,
+    false,
+    false,
   );
+
+  const meshFile = availableMeshFiles.find((file) => file.meshFileName === meshFileName);
   if (!meshFile) {
-    throw new Error("Could not find requested mesh file.");
+    Toast.error("Could not load mesh, since the requested mesh file was not found.");
+    return;
   }
 
   const version = meshFile.formatVersion;

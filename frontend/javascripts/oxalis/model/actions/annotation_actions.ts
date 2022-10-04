@@ -1,6 +1,8 @@
 import type {
   APIAnnotation,
   APIAnnotationVisibility,
+  APIDataLayer,
+  APIDataset,
   APIMeshFile,
   EditableLayerProperties,
   LocalMeshMetaData,
@@ -14,6 +16,9 @@ import type {
   UserBoundingBoxWithoutIdMaybe,
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
+import _ from "lodash";
+import { Dispatch } from "redux";
+import Deferred from "libs/deferred";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
@@ -35,6 +40,7 @@ export type UpdateIsosurfaceVisibilityAction = ReturnType<typeof updateIsosurfac
 export type AddMeshMetadataAction = ReturnType<typeof addMeshMetaDataAction>;
 export type DeleteMeshAction = ReturnType<typeof deleteMeshAction>;
 export type CreateMeshFromBufferAction = ReturnType<typeof createMeshFromBufferAction>;
+export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
 export type TriggerIsosurfaceDownloadAction = ReturnType<typeof triggerIsosurfaceDownloadAction>;
 export type RefreshIsosurfacesAction = ReturnType<typeof refreshIsosurfacesAction>;
 export type RefreshIsosurfaceAction = ReturnType<typeof refreshIsosurfaceAction>;
@@ -67,6 +73,7 @@ export type AnnotationActionTypes =
   | AddMeshMetadataAction
   | DeleteMeshAction
   | CreateMeshFromBufferAction
+  | MaybeFetchMeshFilesAction
   | UpdateLocalMeshMetaDataAction
   | UpdateIsosurfaceVisibilityAction
   | TriggerIsosurfaceDownloadAction
@@ -228,6 +235,22 @@ export const createMeshFromBufferAction = (name: string, buffer: ArrayBuffer) =>
     name,
   } as const);
 
+export const maybeFetchMeshFilesAction = (
+  segmentationLayer: APIDataLayer | null | undefined,
+  dataset: APIDataset,
+  mustRequest: boolean,
+  autoActivate: boolean = true,
+  callback: (meshes: Array<APIMeshFile>) => void = _.noop,
+) =>
+  ({
+    type: "MAYBE_FETCH_MESH_FILES",
+    segmentationLayer,
+    dataset,
+    mustRequest,
+    autoActivate,
+    callback,
+  } as const);
+
 export const triggerIsosurfaceDownloadAction = (cellName: string, cellId: number) =>
   ({
     type: "TRIGGER_ISOSURFACE_DOWNLOAD",
@@ -327,3 +350,22 @@ export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>
     type: "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION",
     othersMayEdit,
   } as const);
+
+export const dispatchMaybeFetchMeshFilesAsync = async (
+  dispatch: Dispatch<any>,
+  segmentationLayer: APIDataLayer | null | undefined,
+  dataset: APIDataset,
+  mustRequest: boolean,
+  autoActivate: boolean = true,
+): Promise<Array<APIMeshFile>> => {
+  const readyDeferred = new Deferred<APIMeshFile[], unknown>();
+  const action = maybeFetchMeshFilesAction(
+    segmentationLayer,
+    dataset,
+    mustRequest,
+    autoActivate,
+    (meshes) => readyDeferred.resolve(meshes),
+  );
+  dispatch(action);
+  return await readyDeferred.promise();
+};

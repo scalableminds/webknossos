@@ -12,7 +12,10 @@ import {
   loadAdHocMeshAction,
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
-import { updateCurrentMeshFileAction } from "oxalis/model/actions/annotation_actions";
+import {
+  maybeFetchMeshFilesAction,
+  updateCurrentMeshFileAction,
+} from "oxalis/model/actions/annotation_actions";
 import {
   getActiveSegmentationTracing,
   getVisibleSegments,
@@ -25,10 +28,7 @@ import {
   getMappingInfo,
   ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  maybeFetchMeshFiles,
-  getBaseSegmentationName,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
@@ -211,7 +211,9 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   componentDidMount() {
-    maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, false);
+    Store.dispatch(
+      maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
+    );
 
     if (features().jobsEnabled) {
       this.pollJobData();
@@ -220,7 +222,9 @@ class SegmentsView extends React.Component<Props, State> {
 
   componentDidUpdate(prevProps: Props) {
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
-      maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, false);
+      Store.dispatch(
+        maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
+      );
     }
   }
 
@@ -251,7 +255,13 @@ class SegmentsView extends React.Component<Props, State> {
           });
           // maybeFetchMeshFiles will fetch the new mesh file and also activate it if no other mesh file
           // currently exists.
-          maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
+          Store.dispatch(
+            maybeFetchMeshFilesAction(
+              this.props.visibleSegmentationLayer,
+              this.props.dataset,
+              true,
+            ),
+          );
           break;
         }
 
@@ -558,7 +568,13 @@ class SegmentsView extends React.Component<Props, State> {
         <ReloadOutlined
           key="refresh"
           onClick={() =>
-            maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true)
+            Store.dispatch(
+              maybeFetchMeshFilesAction(
+                this.props.visibleSegmentationLayer,
+                this.props.dataset,
+                true,
+              ),
+            )
           }
           style={{
             marginLeft: 8,

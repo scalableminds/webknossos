@@ -20,42 +20,6 @@ export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
   // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
   return segmentationLayer.fallbackLayer || segmentationLayer.name;
 }
-export async function maybeFetchMeshFiles(
-  segmentationLayer: APIDataLayer | null | undefined,
-  dataset: APIDataset,
-  mustRequest: boolean,
-  autoActivate: boolean = true,
-): Promise<Array<APIMeshFile>> {
-  if (!segmentationLayer) {
-    return [];
-  }
-
-  const layerName = segmentationLayer.name;
-  const files = Store.getState().localSegmentationData[layerName].availableMeshFiles;
-
-  // Only send new get request, if it hasn't happened before (files in store are null)
-  // else return the stored files (might be empty array). Or if we force a reload.
-  if (!files || mustRequest) {
-    const availableMeshFiles = await getMeshfilesForDatasetLayer(
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-    );
-    Store.dispatch(updateMeshFileListAction(layerName, availableMeshFiles));
-
-    if (
-      !Store.getState().localSegmentationData[layerName].currentMeshFile &&
-      availableMeshFiles.length > 0 &&
-      autoActivate
-    ) {
-      Store.dispatch(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].meshFileName));
-    }
-
-    return availableMeshFiles;
-  }
-
-  return files;
-}
 
 type MappingActivationConfirmationProps<R> = R & {
   mappingName: string | null | undefined;

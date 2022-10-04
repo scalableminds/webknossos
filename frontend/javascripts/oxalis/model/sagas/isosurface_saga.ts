@@ -6,6 +6,7 @@ import ErrorHandling from "libs/error_handling";
 import type { APIDataLayer } from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 
+import Store from "oxalis/store";
 import {
   ResolutionInfo,
   getResolutionInfo,
@@ -21,12 +22,16 @@ import type {
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
-import type {
+import {
   ImportIsosurfaceFromStlAction,
   UpdateIsosurfaceVisibilityAction,
   RemoveIsosurfaceAction,
   RefreshIsosurfaceAction,
   TriggerIsosurfaceDownloadAction,
+  MaybeFetchMeshFilesAction,
+  updateMeshFileListAction,
+  updateCurrentMeshFileAction,
+  dispatchMaybeFetchMeshFilesAsync,
 } from "oxalis/model/actions/annotation_actions";
 import {
   removeIsosurfaceAction,
@@ -39,7 +44,13 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { actionChannel, takeEvery, call, take, race, put } from "typed-redux-saga";
 import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
-import { computeIsosurface, sendAnalyticsEvent, meshV0, meshV3 } from "admin/admin_rest_api";
+import {
+  computeIsosurface,
+  sendAnalyticsEvent,
+  meshV0,
+  meshV3,
+  getMeshfilesForDatasetLayer,
+} from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
@@ -56,10 +67,7 @@ import Toast from "libs/toast";
 import { getDracoLoader } from "libs/draco";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
-import {
-  getBaseSegmentationName,
-  maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { UpdateSegmentAction } from "../actions/volumetracing_actions";
 
 const MAX_RETRY_COUNT = 5;
@@ -508,6 +516,43 @@ function* _refreshIsosurfaceWithMap(
  * Precomputed Meshes
  *
  */
+
+function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
+  const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
+
+  if (!segmentationLayer) {
+    callback([]);
+    return;
+  }
+
+  const layerName = segmentationLayer.name;
+  const files = yield* select((state) => state.localSegmentationData[layerName].availableMeshFiles);
+
+  // Only send new get request, if it hasn't happened before (files in store are null)
+  // else return the stored files (might be empty array). Or if we force a reload.
+  if (!files || mustRequest) {
+    const availableMeshFiles = yield* call(
+      getMeshfilesForDatasetLayer,
+      dataset.dataStore.url,
+      dataset,
+      getBaseSegmentationName(segmentationLayer),
+    );
+    yield* put(updateMeshFileListAction(layerName, availableMeshFiles));
+
+    const currentMeshFile = yield* select(
+      (state) => state.localSegmentationData[layerName].currentMeshFile,
+    );
+    if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
+      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].meshFileName));
+    }
+
+    callback(availableMeshFiles);
+    return;
+  }
+
+  callback(files);
+}
+
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   const { cellId, seedPosition, meshFileName, layerName } = action;
   const layer = yield* select((state) =>
@@ -552,7 +597,8 @@ function* loadPrecomputedMeshForSegmentId(
   let availableChunks = null;
 
   const availableMeshFiles = yield* call(
-    maybeFetchMeshFiles,
+    dispatchMaybeFetchMeshFilesAsync,
+    Store.dispatch,
     segmentationLayer,
     dataset,
     false,
@@ -750,6 +796,7 @@ export default function* isosurfaceSaga(): Saga<void> {
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   yield* take("SCENE_CONTROLLER_READY");
   yield* take("WK_READY");
+  yield* takeEvery("MAYBE_FETCH_MESH_FILES", maybeFetchMeshFiles);
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocIsosurfaceFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
   yield* takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);

@@ -1,14 +1,9 @@
 import type { ComponentType } from "react";
 import React from "react";
 import { Modal } from "antd";
-import { getMeshfilesForDatasetLayer } from "admin/admin_rest_api";
-import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
+import type { APIDataLayer } from "types/api_flow_types";
 import type { ActiveMappingInfo } from "oxalis/store";
 import Store from "oxalis/store";
-import {
-  updateMeshFileListAction,
-  updateCurrentMeshFileAction,
-} from "oxalis/model/actions/annotation_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { waitForCondition } from "libs/utils";

@@ -3,8 +3,9 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type { APIDataLayer } from "types/api_flow_types";
+import type { APIDataLayer, APIMeshFile } from "types/api_flow_types";
 import { mergeVertices } from "libs/BufferGeometryUtils";
+import Deferred from "libs/deferred";
 
 import Store from "oxalis/store";
 import {
@@ -32,8 +33,6 @@ import {
   updateMeshFileListAction,
   updateCurrentMeshFileAction,
   dispatchMaybeFetchMeshFilesAsync,
-} from "oxalis/model/actions/annotation_actions";
-import {
   removeIsosurfaceAction,
   addAdHocIsosurfaceAction,
   addPrecomputedIsosurfaceAction,
@@ -517,6 +516,9 @@ function* _refreshIsosurfaceWithMap(
  *
  */
 
+// Avoid redundant fetches of mesh files for the same layer by
+// storing Deferreds per layer lazily.
+const fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
 function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
 
@@ -526,6 +528,30 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   }
 
   const layerName = segmentationLayer.name;
+
+  function* maybeActivateMeshFile(availableMeshFiles: APIMeshFile[]) {
+    const currentMeshFile = yield* select(
+      (state) => state.localSegmentationData[layerName].currentMeshFile,
+    );
+    if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
+      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].meshFileName));
+    }
+  }
+
+  // If a deferred already exists, the one can be awaited (regardless of
+  // whether it's finished or not) and its content used to call the callback.
+  // If mustRequest was set to true, a new deferred will be created which
+  // replaces the old one (old references to the first Deferred will still
+  // work and will be resolved by the corresponding saga execution).
+  if (fetchDeferredsPerLayer[layerName] && !mustRequest) {
+    const meshes = yield* call(() => fetchDeferredsPerLayer[layerName].promise());
+    yield* maybeActivateMeshFile(meshes);
+    callback(meshes);
+    return;
+  }
+  const deferred = new Deferred<Array<APIMeshFile>, unknown>();
+  fetchDeferredsPerLayer[layerName] = deferred;
+
   const files = yield* select((state) => state.localSegmentationData[layerName].availableMeshFiles);
 
   // Only send new get request, if it hasn't happened before (files in store are null)
@@ -538,13 +564,9 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
       getBaseSegmentationName(segmentationLayer),
     );
     yield* put(updateMeshFileListAction(layerName, availableMeshFiles));
+    deferred.resolve(availableMeshFiles);
 
-    const currentMeshFile = yield* select(
-      (state) => state.localSegmentationData[layerName].currentMeshFile,
-    );
-    if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
-      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].meshFileName));
-    }
+    yield* maybeActivateMeshFile(availableMeshFiles);
 
     callback(availableMeshFiles);
     return;

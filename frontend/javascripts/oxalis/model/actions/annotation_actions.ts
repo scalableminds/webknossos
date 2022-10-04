@@ -367,5 +367,5 @@ export const dispatchMaybeFetchMeshFilesAsync = async (
     (meshes) => readyDeferred.resolve(meshes),
   );
   dispatch(action);
-  return await readyDeferred.promise();
+  return readyDeferred.promise();
 };

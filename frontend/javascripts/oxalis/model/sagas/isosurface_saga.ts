@@ -290,16 +290,7 @@ function* loadIsosurfaceWithNeighbors(
   const { mappingName, mappingType } = isosurfaceExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position);
   let positionsToRequest = [clippedPosition];
-  const hasIsosurface = yield* select(
-    (state) =>
-      state.localSegmentationData[layer.name].isosurfaces != null &&
-      state.localSegmentationData[layer.name].isosurfaces[segmentId] != null,
-  );
-
-  if (!hasIsosurface) {
-    yield* put(addAdHocIsosurfaceAction(layer.name, segmentId, position, mappingName, mappingType));
-  }
-
+  yield* put(addAdHocIsosurfaceAction(layer.name, segmentId, position, mappingName, mappingType));
   yield* put(startedLoadingIsosurfaceAction(layer.name, segmentId));
 
   while (positionsToRequest.length > 0) {

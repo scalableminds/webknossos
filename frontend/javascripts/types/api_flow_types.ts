@@ -694,8 +694,8 @@ export type APIMeshFile = {
   meshFileName: string;
   mappingName?: string | null | undefined;
   // 0   - is the first mesh file version
-  // 1-2 - skipped for consistency with VX artifact versioning
-  // 3   - (some artifacts might have used 2, too) is the newer version with draco encoding.
+  // 1-2 - skipped/not used for consistency with VX artifact versioning
+  // 3   - is the newer version with draco encoding.
   formatVersion: number;
 };
 export type APIConnectomeFile = {

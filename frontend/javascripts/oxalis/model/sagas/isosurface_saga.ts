@@ -629,9 +629,7 @@ function* loadPrecomputedMeshForSegmentId(
 
   const version = meshFile.formatVersion;
   try {
-    // todo: should actually check against 3, but some new mesh files
-    // still have version 2 ?
-    if (version >= 2) {
+    if (version >= 3) {
       const segmentInfo = yield* call(
         meshV3.getMeshfileChunksForSegment,
         dataset.dataStore.url,
@@ -641,6 +639,11 @@ function* loadPrecomputedMeshForSegmentId(
         id,
       );
       availableChunks = _.first(segmentInfo.chunks.lods)?.chunks || [];
+    } else if (version > 0) {
+      Toast.error(
+        `Mesh file with invalid version found (version=${version}). Recompute the mesh file.`,
+      );
+      return;
     } else {
       availableChunks = yield* call(
         meshV0.getMeshfileChunksForSegment,

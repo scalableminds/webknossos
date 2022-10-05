@@ -211,7 +211,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   def mappingVersionForMeshFile(meshFilePath: Path): Long =
     executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-      cachedMeshFile.reader.int64().getAttr("/", "version")
+      cachedMeshFile.reader.int64().getAttr("/", "artifact_schema_version")
     }.toOption.getOrElse(0)
 
   def listMeshChunksForSegmentV0(organizationName: String,

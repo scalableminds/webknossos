@@ -20,7 +20,7 @@ trait DataConverter extends FoxImplicits {
 
   def convertData(data: Array[Byte],
                   elementClass: ElementClass.Value): Array[_ >: Byte with Short with Int with Long with Float] = {
-    val res = elementClass match {
+    elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
       case ElementClass.uint16 | ElementClass.int16 =>
@@ -37,7 +37,6 @@ trait DataConverter extends FoxImplicits {
           data,
           DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat))
     }
-    res
   }
 
   private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],

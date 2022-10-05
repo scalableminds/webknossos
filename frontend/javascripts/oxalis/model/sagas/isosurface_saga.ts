@@ -538,41 +538,35 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
     }
   }
 
-  // If a deferred already exists, the one can be awaited (regardless of
-  // whether it's finished or not) and its content used to call the callback.
-  // If mustRequest was set to true, a new deferred will be created which
-  // replaces the old one (old references to the first Deferred will still
-  // work and will be resolved by the corresponding saga execution).
+  // If a deferred already exists (and mustRequest is not true), the deferred
+  // can be awaited (regardless of whether it's finished or not) and its
+  // content used to call the callback.
   if (fetchDeferredsPerLayer[layerName] && !mustRequest) {
     const availableMeshFiles = yield* call(() => fetchDeferredsPerLayer[layerName].promise());
     yield* maybeActivateMeshFile(availableMeshFiles);
     callback(availableMeshFiles);
     return;
   }
+  // A request has to be made (either because none was made before or because
+  // it is enforced by mustRequest).
+  // If mustRequest is true and an old deferred exists, a new deferred will be created which
+  // replaces the old one (old references to the first Deferred will still
+  // work and will be resolved by the corresponding saga execution).
   const deferred = new Deferred<Array<APIMeshFile>, unknown>();
   fetchDeferredsPerLayer[layerName] = deferred;
 
-  const files = yield* select((state) => state.localSegmentationData[layerName].availableMeshFiles);
+  const availableMeshFiles = yield* call(
+    getMeshfilesForDatasetLayer,
+    dataset.dataStore.url,
+    dataset,
+    getBaseSegmentationName(segmentationLayer),
+  );
+  yield* put(updateMeshFileListAction(layerName, availableMeshFiles));
+  deferred.resolve(availableMeshFiles);
 
-  // Only send new get request, if it hasn't happened before (files in store are null)
-  // else return the stored files (might be empty array). Or if we force a reload.
-  if (!files || mustRequest) {
-    const availableMeshFiles = yield* call(
-      getMeshfilesForDatasetLayer,
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-    );
-    yield* put(updateMeshFileListAction(layerName, availableMeshFiles));
-    deferred.resolve(availableMeshFiles);
+  yield* maybeActivateMeshFile(availableMeshFiles);
 
-    yield* maybeActivateMeshFile(availableMeshFiles);
-
-    callback(availableMeshFiles);
-    return;
-  }
-
-  callback(files);
+  callback(availableMeshFiles);
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {

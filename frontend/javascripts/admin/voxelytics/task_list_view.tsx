@@ -108,7 +108,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<SyncOutlined spin />} color="processing">
             running
           </Tag>
-          started {moment(taskInfo.beginTime).fromNow()} ago
+          started {moment(taskInfo.beginTime).fromNow()}
         </Tooltip>
       );
     case VoxelyticsRunState.STALE:
@@ -125,7 +125,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CloseCircleOutlined />} color="error">
             timed out
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago, after{" "}
+          {moment(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -143,7 +143,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<ExclamationCircleOutlined />} color="error">
             cancelled
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago, after{" "}
+          {moment(taskInfo.endTime).fromNow()}, after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -161,7 +161,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CloseCircleOutlined />} color="error">
             failed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago after{" "}
+          {moment(taskInfo.endTime).fromNow()} after{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
@@ -179,7 +179,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
           <Tag icon={<CheckCircleOutlined />} color="success">
             completed
           </Tag>{" "}
-          {moment(taskInfo.endTime).fromNow()} ago in{" "}
+          {moment(taskInfo.endTime).fromNow()} in{" "}
           {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );

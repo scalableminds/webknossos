@@ -310,18 +310,18 @@ class SceneController {
     // so that the light moves along the cam.
 
     const AMBIENT_INTENSITY = 30;
-    const DIRECTIONAL_INTENSITRY = 5;
+    const DIRECTIONAL_INTENSITY = 5;
     const POINT_INTENSITY = 5;
 
     const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
 
-    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITRY);
+    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
     directionalLight.position.x = 1;
     directionalLight.position.y = 1;
     directionalLight.position.z = 1;
     directionalLight.position.normalize();
 
-    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITRY);
+    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
     directionalLight2.position.x = -1;
     directionalLight2.position.y = -1;
     directionalLight2.position.z = -1;

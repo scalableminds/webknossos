@@ -2,45 +2,46 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import spire.math._
+import spire.math.{ULong, _}
 
 import java.nio._
 import scala.reflect.ClassTag
 
 trait DataConverter extends FoxImplicits {
 
+  def putByte(buf: ByteBuffer, lon: Long): ByteBuffer = buf put lon.toByte
+  def putShort(buf: ByteBuffer, lon: Long): ByteBuffer = buf putShort lon.toShort
+  def putInt(buf: ByteBuffer, lon: Long): ByteBuffer = buf putInt lon.toInt
+  def putLong(buf: ByteBuffer, lon: Long): ByteBuffer = buf putLong lon
+
+  def uByteToLong(uByte: Byte): Long = uByte & 0xffL
+  def uShortToLong(uShort: Short): Long = uShort & 0xffffL
+  def uIntToLong(uInt: Int): Long = uInt & 0xffffffffL
+
   def convertData(data: Array[Byte],
-                  elementClass: ElementClass.Value,
-                  filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong with Float] =
-    elementClass match {
-      case ElementClass.uint8 =>
+                  elementClass: ElementClass.Value): Array[_ >: Byte with Short with Int with Long with Float] = {
+    val before = System.currentTimeMillis()
+    val res = elementClass match {
+      case ElementClass.uint8 | ElementClass.int8 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-          .map(UByte(_))
-          .filter(!filterZeroes || _ != UByte(0))
-      case ElementClass.uint16 =>
+      case ElementClass.uint16 | ElementClass.int16 =>
         convertDataImpl[Short, ShortBuffer](data,
                                             DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
-          .map(UShort(_))
-          .filter(!filterZeroes || _ != UShort(0))
       case ElementClass.uint24 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-          .map(UByte(_))
-          .filter(!filterZeroes || _ != UByte(0))
-      case ElementClass.uint32 =>
+      case ElementClass.uint32 | ElementClass.int32 =>
         convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
-          .map(UInt(_))
-          .filter(!filterZeroes || _ != UInt(0))
-      case ElementClass.uint64 =>
+      case ElementClass.uint64 | ElementClass.int64 =>
         convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
-          .map(ULong(_))
-          .filter(!filterZeroes || _ != ULong(0))
       case ElementClass.float =>
-        convertDataImpl[Float, FloatBuffer](data,
-                                            DataTypeFunctors[Float, FloatBuffer](
-                                              _.asFloatBuffer(),
-                                              _.get(_),
-                                              _.toFloat)).filter(!_.isNaN).filter(!filterZeroes || _ != 0f)
+        convertDataImpl[Float, FloatBuffer](
+          data,
+          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat))
     }
+    val after = System.currentTimeMillis()
+    println(s"convert data took ${after - before} ms")
+    res
+  }
 
   private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
                                                         dataTypeFunctor: DataTypeFunctors[T, B]): Array[T] = {
@@ -49,5 +50,30 @@ trait DataConverter extends FoxImplicits {
     val dstArray = Array.ofDim[T](srcBuffer.remaining())
     dataTypeFunctor.copyDataFn(srcBuffer, dstArray)
     dstArray
+  }
+
+  def toUnsigned(data: Array[_ >: Byte with Short with Int with Long with Float])
+    : Array[_ >: UByte with UShort with UInt with ULong with Float] =
+    data match {
+      case d: Array[Byte]  => d.map(UByte(_))
+      case d: Array[Short] => d.map(UShort(_))
+      case d: Array[Int]   => d.map(UInt(_))
+      case d: Array[Long]  => d.map(ULong(_))
+      case d: Array[Float] => d
+    }
+
+  def filterZeroes(data: Array[_ >: Byte with Short with Int with Long with Float])
+    : Array[_ >: Byte with Short with Int with Long with Float] = {
+    val zeroByte = 0.toByte
+    val zeroShort = 0.toShort
+    val zeroInt = 0
+    val zeroLong = 0L
+    data match {
+      case d: Array[Byte]  => d.filter(_ != zeroByte)
+      case d: Array[Short] => d.filter(_ != zeroShort)
+      case d: Array[Int]   => d.filter(_ != zeroInt)
+      case d: Array[Long]  => d.filter(_ != zeroLong)
+      case d: Array[Float] => d.filter(!_.isNaN).filter(_ != 0f)
+    }
   }
 }

@@ -2,13 +2,14 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits, Math}
+import com.scalableminds.util.tools.Math
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition}
 import net.liftweb.common.Full
 import play.api.libs.json.{Json, OFormat}
-import spire.math._
+import spire.math.{UByte, UInt, ULong, UShort}
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
@@ -137,14 +138,15 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     } yield positionAndResolutionOpt
 
   def meanAndStdDev(dataSource: DataSource, dataLayer: DataLayer): Fox[(Double, Double)] = {
+    Fox.successful(5.0, 5.0)
 
     def convertNonZeroDataToDouble(data: Array[Byte], elementClass: ElementClass.Value): Array[Double] =
-      convertData(data, elementClass, filterZeroes = true) match {
-        case d: Array[UByte]  => d.map(_.toDouble)
-        case d: Array[UShort] => d.map(_.toDouble)
-        case d: Array[UInt]   => d.map(_.toDouble)
-        case d: Array[ULong]  => d.map(_.toDouble)
-        case d: Array[Float]  => d.map(_.toDouble)
+      filterZeroes(convertData(data, elementClass)) match {
+        case d: Array[Byte]  => d.map(uByteToLong).map(_.toDouble)
+        case d: Array[Short] => d.map(uShortToLong).map(_.toDouble)
+        case d: Array[Int]   => d.map(uIntToLong).map(_.toDouble)
+        case d: Array[Long]  => d.map(_.toDouble)
+        case d: Array[Float] => d.map(_.toDouble)
       }
 
     def meanAndStdDevForPositions(positions: List[Vec3Int], resolution: Vec3Int): Fox[(Double, Double)] =
@@ -199,7 +201,9 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       }
       if (isUint24) {
         val listOfCounts = counts.grouped(256).toList
-        listOfCounts.map(counts => { counts(0) = 0; Histogram(counts, counts.sum.toInt, extrema._1, extrema._2) })
+        listOfCounts.map(counts => {
+          counts(0) = 0; Histogram(counts, counts.sum.toInt, extrema._1, extrema._2)
+        })
       } else
         List(Histogram(counts, data.length, extrema._1, extrema._2))
     }
@@ -208,7 +212,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "dataSet.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
-        convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = !isUint24)
+        convertedData = toUnsigned(filterZeroes(convertData(dataConcatenated, dataLayer.elementClass)))
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
 
     if (dataLayer.resolutions.nonEmpty)

@@ -119,7 +119,11 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                   DataServiceRequestSettings(halfByte = false, request.mapping, None),
                   request.subsamplingStrides
                 )
-                agglomerateService.applyAgglomerate(dataRequest)(data)
+                val before = System.currentTimeMillis()
+                val res = agglomerateService.applyAgglomerate(dataRequest)(data)
+                val after = System.currentTimeMillis()
+                println(f"Apply agglomerate took ${after - before} ms.")
+                res
               }.getOrElse(data)
             case _ =>
               data

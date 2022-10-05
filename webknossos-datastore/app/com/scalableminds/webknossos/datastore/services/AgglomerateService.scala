@@ -1,8 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio._
-import java.nio.file.{Files, Paths}
-
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -10,14 +7,17 @@ import com.scalableminds.webknossos.datastore.EditableMapping.{AgglomerateEdge, 
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
-import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
-import spire.math.{UByte, UInt, ULong, UShort}
+
+import java.nio._
+import java.nio.file.{Files, Paths}
+import javax.inject.Inject
 
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
   private val agglomerateDir = "agglomerates"
@@ -41,14 +41,10 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   }
 
   def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Array[Byte] = {
-    def byteFunc(buf: ByteBuffer, lon: Long) = buf put lon.toByte
-    def shortFunc(buf: ByteBuffer, lon: Long) = buf putShort lon.toShort
-    def intFunc(buf: ByteBuffer, lon: Long) = buf putInt lon.toInt
-    def longFunc(buf: ByteBuffer, lon: Long) = buf putLong lon
 
     val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
 
-    def convertToAgglomerate(input: Array[ULong],
+    def convertToAgglomerate(input: Array[Long],
                              numBytes: Int,
                              bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
 
@@ -68,12 +64,13 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         .array
     }
 
+    val numBytes = ElementClass.bytesPerElement(request.dataLayer.elementClass)
     convertData(data, request.dataLayer.elementClass) match {
-      case data: Array[UByte]  => convertToAgglomerate(data.map(e => ULong(e.toLong)), 1, byteFunc)
-      case data: Array[UShort] => convertToAgglomerate(data.map(e => ULong(e.toLong)), 2, shortFunc)
-      case data: Array[UInt]   => convertToAgglomerate(data.map(e => ULong(e.toLong)), 4, intFunc)
-      case data: Array[ULong]  => convertToAgglomerate(data, 8, longFunc)
-      case _                   => data
+      case data: Array[Byte]  => convertToAgglomerate(data.map(e => uByteToLong(e)), numBytes, putByte)
+      case data: Array[Short] => convertToAgglomerate(data.map(e => uShortToLong(e)), numBytes, putShort)
+      case data: Array[Int]   => convertToAgglomerate(data.map(e => uIntToLong(e)), numBytes, putInt)
+      case data: Array[Long]  => convertToAgglomerate(data, numBytes, putLong)
+      case _                  => data
     }
   }
 
@@ -109,7 +106,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
     val defaultCache: Either[AgglomerateIdCache, BoundingBoxCache] =
       if (Files.exists(cumsumPath)) {
-        Right(CumsumParser.parse(cumsumPath.toFile, ULong(config.Datastore.Cache.AgglomerateFile.cumsumMaxReaderRange)))
+        Right(CumsumParser.parse(cumsumPath.toFile, config.Datastore.Cache.AgglomerateFile.cumsumMaxReaderRange))
       } else {
         Left(agglomerateIdCache)
       }
@@ -216,8 +213,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
 
     tryo {
-      val agglomerateIds = segmentIds.map { segmentId =>
-        cachedAgglomerateFile.agglomerateIdCache.withCache(ULong(segmentId),
+      val agglomerateIds = segmentIds.map { segmentId: Long =>
+        cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
                                                            cachedAgglomerateFile.reader,
                                                            cachedAgglomerateFile.dataset)(readHDF)
       }

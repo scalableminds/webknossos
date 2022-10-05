@@ -40,6 +40,7 @@
     "eslint-comments/no-unused-disable": "error",
     "flowtype/no-types-missing-file-annotation": "off",
     "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
+    "import/prefer-default-export": ["warn"],
     "import/no-cycle": "off",
     "import/no-extraneous-dependencies": [
       "error",

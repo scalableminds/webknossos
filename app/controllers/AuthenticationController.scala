@@ -1,8 +1,8 @@
 package controllers
 
 import java.net.URLEncoder
-
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.HttpHeader
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.services.AuthenticatorResult
@@ -11,6 +11,7 @@ import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.annotation.AnnotationState.Cancelled
@@ -29,7 +30,9 @@ import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Request}
+import play.libs.openid.{OpenIdClient, UserInfo}
+import play.mvc.Http
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,6 +57,7 @@ class AuthenticationController @Inject()(
     conf: WkConf,
     annotationDAO: AnnotationDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    openIdClient: OIDCClient,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -402,7 +406,7 @@ class AuthenticationController @Inject()(
     request.identity match {
       case Some(user) =>
         // logged in
-        // Check if the request we recieved was signed using our private sso-key
+        // Check if the request we received was signed using our private sso-key
         if (shaHex(ssoKey, sso) == sig) {
           val payload = new String(Base64.decodeBase64(sso))
           val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
@@ -427,6 +431,38 @@ class AuthenticationController @Inject()(
         }
       case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
     }
+  }
+
+  private lazy val oidcClientId = conf.WebKnossos.OIDC.clientId
+  private lazy val oidcClientSecret = conf.WebKnossos.OIDC.clientSecret
+  private lazy val oidcProviderUrl = conf.WebKnossos.OIDC.providerURL
+
+  lazy val oidcConfig: OpenIdConnectConfig = OpenIdConnectConfig(oidcProviderUrl, oidcClientId)
+  lazy val absoluteOidcCallbackURL = "http://localhost:9000/api/auth/oidc/callback"
+
+  case class OpenConnectId(iss: String, sub: String, preferred_username: String) {
+    def username = preferred_username
+  }
+
+  object OpenConnectId {
+    implicit val format = Json.format[OpenConnectId]
+  }
+
+  // (Login and signup, use default organization)
+  def loginViaOIDC(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    openIdClient.redirectURL(oidcConfig, absoluteOidcCallbackURL).map(url => Redirect(url))
+  }
+
+  def openIdCallback() = Action.async { implicit request =>
+    for {
+      code <- openIdClient.getToken(oidcConfig,
+                                    absoluteOidcCallbackURL,
+                                    request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
+                                    oidcClientSecret)
+      oidc = code.validate[OpenConnectId](OpenConnectId.format).get
+      loginInfo = LoginInfo("openid", oidc.username)
+      token <- combinedAuthenticatorService.findOrCreateToken(loginInfo)
+    } yield Ok(Json.obj("token" -> token.id))
   }
 
   private def shaHex(key: String, valueToDigest: String): String =

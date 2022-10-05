@@ -52,6 +52,7 @@ object Dependencies {
   private val tika = "org.apache.tika" % "tika-core" % "1.5"
   private val jackson = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.7"
   private val commonsCompress = "org.apache.commons" % "commons-compress" % "1.21"
+  private val jwt = "com.github.jwt-scala" %% "jwt-play-json" % "9.1.1"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.3.3",
@@ -119,7 +120,8 @@ object Dependencies {
     trireme,
     triremeNode,
     xmlWriter,
-    woodstoxXml
+    woodstoxXml,
+    jwt
   ) ++ sql
 
 }

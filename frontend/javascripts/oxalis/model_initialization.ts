@@ -29,6 +29,7 @@ import {
   isSegmentationLayer,
   getSegmentationLayers,
   getSegmentationLayerByNameOrFallbackName,
+  getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
@@ -45,6 +46,7 @@ import {
   getAnnotationCompoundInformation,
 } from "admin/admin_rest_api";
 import {
+  dispatchMaybeFetchMeshFilesAsync,
   initializeAnnotationAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
@@ -660,13 +662,13 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
   }
 }
 
-function applyLayerState(stateByLayer: UrlStateByLayer) {
+async function applyLayerState(stateByLayer: UrlStateByLayer) {
   for (const layerName of Object.keys(stateByLayer)) {
     const layerState = stateByLayer[layerName];
     let effectiveLayerName;
 
+    const { dataset } = Store.getState();
     try {
-      const { dataset } = Store.getState();
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
       effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
     } catch (e) {
@@ -715,6 +717,9 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
       const { meshFileName: currentMeshFileName, meshes } = layerState.meshInfo;
 
       if (currentMeshFileName != null) {
+        // ensure mesh files are loaded, so that the given mesh file name can be activated
+        const segmentationLayer = getSegmentationLayerByName(dataset, effectiveLayerName);
+        await dispatchMaybeFetchMeshFilesAsync(Store.dispatch, segmentationLayer, dataset, false);
         Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, currentMeshFileName));
       }
 

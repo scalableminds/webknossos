@@ -639,11 +639,6 @@ function* loadPrecomputedMeshForSegmentId(
         id,
       );
       availableChunks = _.first(segmentInfo.chunks.lods)?.chunks || [];
-    } else if (version > 0) {
-      Toast.error(
-        `Mesh file with invalid version found (version=${version}). Recompute the mesh file.`,
-      );
-      return;
     } else {
       availableChunks = yield* call(
         meshV0.getMeshfileChunksForSegment,

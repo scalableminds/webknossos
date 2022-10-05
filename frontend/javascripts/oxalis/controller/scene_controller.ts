@@ -306,69 +306,36 @@ class SceneController {
   }
 
   addLights(): void {
-    // At the moment, we only attach an AmbientLight for the isosurfaces group.
-    // The PlaneView attaches a directional light directly to the TD camera,
+    // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
-    // const ambientLightForIsosurfaces = new THREE.AmbientLight(0x404040, 15); // soft white light
-    // this.isosurfacesRootGroup.add(ambientLightForIsosurfaces);
 
-    // const ambientLightForMeshes = new THREE.AmbientLight(0x404040, 5); // soft white light
-    // this.meshesRootGroup.add(ambientLightForMeshes);
+    const AMBIENT_INTENSITY = 30;
+    const DIRECTIONAL_INTENSITRY = 5;
+    const POINT_INTENSITY = 5;
 
-    let unsubscribe = () => {};
-    const testLights = (a: number, b: number, c: number, d: number) => {
-      unsubscribe();
-      const ambientLight = new THREE.AmbientLight(2105376, a);
+    const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
 
-      const directionalLight = new THREE.DirectionalLight(16777215, b);
-      directionalLight.position.x = 1;
-      directionalLight.position.y = 1;
-      directionalLight.position.z = 1;
-      directionalLight.position.normalize();
+    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITRY);
+    directionalLight.position.x = 1;
+    directionalLight.position.y = 1;
+    directionalLight.position.z = 1;
+    directionalLight.position.normalize();
 
-      // const max = 10000000000;
+    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITRY);
+    directionalLight2.position.x = -1;
+    directionalLight2.position.y = -1;
+    directionalLight2.position.z = -1;
+    directionalLight2.position.normalize();
 
-      const directionalLight2 = new THREE.DirectionalLight(16777215, c);
-      directionalLight2.position.x = -1;
-      directionalLight2.position.y = -1;
-      directionalLight2.position.z = -1;
-      directionalLight2.position.normalize();
+    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
+    pointLight.position.x = 0;
+    pointLight.position.y = -25;
+    pointLight.position.z = 10;
 
-      const pointLight = new THREE.PointLight(16777215, d);
-      pointLight.position.x = 0;
-      pointLight.position.y = -25;
-      pointLight.position.z = 10;
-
-      this.isosurfacesRootGroup.add(ambientLight);
-      this.isosurfacesRootGroup.add(directionalLight);
-      this.isosurfacesRootGroup.add(directionalLight2);
-      this.isosurfacesRootGroup.add(pointLight);
-
-      unsubscribe = () => {
-        this.isosurfacesRootGroup.remove(ambientLight);
-        this.isosurfacesRootGroup.remove(directionalLight);
-        this.isosurfacesRootGroup.remove(directionalLight2);
-        this.isosurfacesRootGroup.remove(pointLight);
-      };
-    };
-
-    testLights(30, 5, 5, 5);
-    // @ts-ignore
-    window.testLights = testLights;
-    // directionalLight.position.x = 2 * max;
-    // directionalLight.position.y = 0;
-    // directionalLight.position.z = 2 * max;
-    // pointLight.position.x = max / 2;
-    // pointLight.position.y = max / 2;
-    // pointLight.position.z = 2 * max;
-
-    // const light1 = new THREE.DirectionalLight(0xefefff, 12);
-    // light1.position.set(1, 1, 1).normalize();
-    // this.isosurfacesRootGroup.add(light1);
-
-    // const light2 = new THREE.DirectionalLight(0xffefef, 8);
-    // light2.position.set(-1, -1, -1).normalize();
-    // this.isosurfacesRootGroup.add(light2);
+    this.isosurfacesRootGroup.add(ambientLight);
+    this.isosurfacesRootGroup.add(directionalLight);
+    this.isosurfacesRootGroup.add(directionalLight2);
+    this.isosurfacesRootGroup.add(pointLight);
   }
 
   removeSTL(id: string): void {

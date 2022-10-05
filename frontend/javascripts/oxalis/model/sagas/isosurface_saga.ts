@@ -544,9 +544,9 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   // replaces the old one (old references to the first Deferred will still
   // work and will be resolved by the corresponding saga execution).
   if (fetchDeferredsPerLayer[layerName] && !mustRequest) {
-    const meshes = yield* call(() => fetchDeferredsPerLayer[layerName].promise());
-    yield* maybeActivateMeshFile(meshes);
-    callback(meshes);
+    const availableMeshFiles = yield* call(() => fetchDeferredsPerLayer[layerName].promise());
+    yield* maybeActivateMeshFile(availableMeshFiles);
+    callback(availableMeshFiles);
     return;
   }
   const deferred = new Deferred<Array<APIMeshFile>, unknown>();

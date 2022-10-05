@@ -20,7 +20,6 @@ trait DataConverter extends FoxImplicits {
 
   def convertData(data: Array[Byte],
                   elementClass: ElementClass.Value): Array[_ >: Byte with Short with Int with Long with Float] = {
-    val before = System.currentTimeMillis()
     val res = elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
@@ -38,8 +37,6 @@ trait DataConverter extends FoxImplicits {
           data,
           DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat))
     }
-    val after = System.currentTimeMillis()
-    println(s"convert data took ${after - before} ms")
     res
   }
 
@@ -62,18 +59,48 @@ trait DataConverter extends FoxImplicits {
       case d: Array[Float] => d
     }
 
-  def filterZeroes(data: Array[_ >: Byte with Short with Int with Long with Float])
-    : Array[_ >: Byte with Short with Int with Long with Float] = {
-    val zeroByte = 0.toByte
-    val zeroShort = 0.toShort
-    val zeroInt = 0
-    val zeroLong = 0L
-    data match {
-      case d: Array[Byte]  => d.filter(_ != zeroByte)
-      case d: Array[Short] => d.filter(_ != zeroShort)
-      case d: Array[Int]   => d.filter(_ != zeroInt)
-      case d: Array[Long]  => d.filter(_ != zeroLong)
-      case d: Array[Float] => d.filter(!_.isNaN).filter(_ != 0f)
+  def filterZeroes(data: Array[_ >: Byte with Short with Int with Long with Float],
+                   skip: Boolean = false): Array[_ >: Byte with Short with Int with Long with Float] =
+    if (skip) data
+    else {
+      val zeroByte = 0.toByte
+      val zeroShort = 0.toShort
+      val zeroInt = 0
+      val zeroLong = 0L
+      data match {
+        case d: Array[Byte]  => d.filter(_ != zeroByte)
+        case d: Array[Short] => d.filter(_ != zeroShort)
+        case d: Array[Int]   => d.filter(_ != zeroInt)
+        case d: Array[Long]  => d.filter(_ != zeroLong)
+        case d: Array[Float] => d.filter(!_.isNaN).filter(_ != 0f)
+      }
     }
+
+  def toBytesSpire(typed: Array[_ >: UByte with UShort with UInt with ULong with Float],
+                   elementClass: ElementClass.Value): Array[Byte] = {
+    val numBytes = ElementClass.bytesPerElement(elementClass)
+    val byteBuffer = ByteBuffer.allocate(numBytes * typed.length).order(ByteOrder.LITTLE_ENDIAN)
+    typed match {
+      case data: Array[UByte]  => data.foreach(el => byteBuffer.put(el.signed))
+      case data: Array[UShort] => data.foreach(el => byteBuffer.putChar(el.signed))
+      case data: Array[UInt]   => data.foreach(el => byteBuffer.putInt(el.signed))
+      case data: Array[ULong]  => data.foreach(el => byteBuffer.putLong(el.signed))
+      case data: Array[Float]  => data.foreach(el => byteBuffer.putFloat(el))
+    }
+    byteBuffer.array()
+  }
+
+  def toBytes(typed: Array[_ >: Byte with Short with Int with Long with Float],
+              elementClass: ElementClass.Value): Array[Byte] = {
+    val numBytes = ElementClass.bytesPerElement(elementClass)
+    val byteBuffer = ByteBuffer.allocate(numBytes * typed.length).order(ByteOrder.LITTLE_ENDIAN)
+    typed match {
+      case data: Array[Byte]  => data.foreach(el => byteBuffer.put(el))
+      case data: Array[Short] => data.foreach(el => byteBuffer.putShort(el))
+      case data: Array[Int]   => data.foreach(el => byteBuffer.putInt(el))
+      case data: Array[Long]  => data.foreach(el => byteBuffer.putLong(el))
+      case data: Array[Float] => data.foreach(el => byteBuffer.putFloat(el))
+    }
+    byteBuffer.array()
   }
 }

@@ -212,7 +212,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "dataSet.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
-        convertedData = toUnsigned(filterZeroes(convertData(dataConcatenated, dataLayer.elementClass)))
+        convertedData = toUnsigned(filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24))
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
 
     if (dataLayer.resolutions.nonEmpty)

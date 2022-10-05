@@ -45,7 +45,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
 
     def convertToAgglomerate(input: Array[Long],
-                             numBytes: Int,
+                             bytesPerElement: Int,
                              bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
 
       val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(initHDFReader)
@@ -60,17 +60,26 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       cachedAgglomerateFile.finishAccess()
 
       agglomerateIds
-        .foldLeft(ByteBuffer.allocate(numBytes * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc)
+        .foldLeft(ByteBuffer.allocate(bytesPerElement * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc)
         .array
     }
 
-    val numBytes = ElementClass.bytesPerElement(request.dataLayer.elementClass)
+    val bytesPerElement = ElementClass.bytesPerElement(request.dataLayer.elementClass)
     convertData(data, request.dataLayer.elementClass) match {
-      case data: Array[Byte]  => convertToAgglomerate(data.map(e => uByteToLong(e)), numBytes, putByte)
-      case data: Array[Short] => convertToAgglomerate(data.map(e => uShortToLong(e)), numBytes, putShort)
-      case data: Array[Int]   => convertToAgglomerate(data.map(e => uIntToLong(e)), numBytes, putInt)
-      case data: Array[Long]  => convertToAgglomerate(data, numBytes, putLong)
-      case _                  => data
+      case data: Array[Byte] =>
+        val longBuffer = LongBuffer.allocate(data.length)
+        data.foreach(e => longBuffer.put(uByteToLong(e)))
+        convertToAgglomerate(longBuffer.array, bytesPerElement, putByte)
+      case data: Array[Short] =>
+        val longBuffer = LongBuffer.allocate(data.length)
+        data.foreach(e => longBuffer.put(uShortToLong(e)))
+        convertToAgglomerate(longBuffer.array, bytesPerElement, putShort)
+      case data: Array[Int] =>
+        val longBuffer = LongBuffer.allocate(data.length)
+        data.foreach(e => longBuffer.put(uIntToLong(e)))
+        convertToAgglomerate(longBuffer.array, bytesPerElement, putInt)
+      case data: Array[Long] => convertToAgglomerate(data, bytesPerElement, putLong)
+      case _                 => data
     }
   }
 

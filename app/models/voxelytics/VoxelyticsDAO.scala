@@ -347,7 +347,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                 hostname: String,
                 voxelyticsVersion: String,
                 workflow_hash: String,
-                workflow_yamlContent: String,
+                workflow_yamlContent: Option[String],
                 workflow_config: JsValue): Fox[ObjectId] =
     for {
       _ <- run(

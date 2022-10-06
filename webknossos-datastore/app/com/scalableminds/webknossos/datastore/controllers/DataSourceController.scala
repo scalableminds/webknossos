@@ -29,7 +29,6 @@ class DataSourceController @Inject()(
     remoteWebKnossosClient: DSRemoteWebKnossosClient,
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
-    meshFileService: MeshFileService,
     connectomeFileService: ConnectomeFileService,
     uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
@@ -399,58 +398,6 @@ Expects:
       } yield Ok(Json.toJson(agglomerateIds))
     }
   }
-
-  @ApiOperation(hidden = true, value = "")
-  def listMeshFiles(token: Option[String],
-                    organizationName: String,
-                    dataSetName: String,
-                    dataLayerName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        urlOrHeaderToken(token, request)) {
-        for {
-          meshFiles <- meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)
-        } yield Ok(Json.toJson(meshFiles))
-      }
-    }
-
-  @ApiOperation(hidden = true, value = "")
-  def listMeshChunksForSegment(token: Option[String],
-                               organizationName: String,
-                               dataSetName: String,
-                               dataLayerName: String): Action[ListMeshChunksRequest] =
-    Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        urlOrHeaderToken(token, request)) {
-        for {
-          positions <- meshFileService.listMeshChunksForSegment(organizationName,
-                                                                dataSetName,
-                                                                dataLayerName,
-                                                                request.body) ?~> Messages(
-            "mesh.file.listChunks.failed",
-            request.body.segmentId.toString,
-            request.body.meshFile) ?~> Messages("mesh.file.load.failed", request.body.segmentId.toString) ~> BAD_REQUEST
-        } yield Ok(Json.toJson(positions))
-      }
-    }
-
-  @ApiOperation(hidden = true, value = "")
-  def readMeshChunk(token: Option[String],
-                    organizationName: String,
-                    dataSetName: String,
-                    dataLayerName: String): Action[MeshChunkDataRequest] =
-    Action.async(validateJson[MeshChunkDataRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-                                        urlOrHeaderToken(token, request)) {
-        for {
-          (data, encoding) <- meshFileService.readMeshChunk(organizationName, dataSetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
-        } yield {
-          if (encoding.contains("gzip")) {
-            Ok(data).withHeaders("Content-Encoding" -> "gzip")
-          } else Ok(data)
-        }
-      }
-    }
 
   @ApiOperation(hidden = true, value = "")
   def update(token: Option[String], organizationName: String, dataSetName: String): Action[DataSource] =

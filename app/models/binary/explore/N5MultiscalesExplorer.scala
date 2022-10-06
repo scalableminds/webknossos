@@ -58,16 +58,19 @@ class N5MultiscalesExplorer extends RemoteLayerExplorer with FoxImplicits {
     } yield AxisOrder(x, y, z, cOpt)
   }
 
-  private def extractAxisUnitFactors(units: List[String], axisOrder: AxisOrder): Fox[Vec3Double] =
-    for {
-      xUnitFactor <- spaceUnitToNmFactor(units(axisOrder.x))
-      yUnitFactor <- spaceUnitToNmFactor(units(axisOrder.y))
-      zUnitFactor <- spaceUnitToNmFactor(units(axisOrder.z))
-    } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor)
+  private def extractAxisUnitFactors(unitsOpt: Option[List[String]], axisOrder: AxisOrder): Fox[Vec3Double] =
+    unitsOpt match {
+      case Some(units) =>
+        for {
+          xUnitFactor <- spaceUnitToNmFactor(units(axisOrder.x))
+          yUnitFactor <- spaceUnitToNmFactor(units(axisOrder.y))
+          zUnitFactor <- spaceUnitToNmFactor(units(axisOrder.z))
+        } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor)
+      case None => Fox.successful(Vec3Double(1e3, 1e3, 1e3)) // assume default micrometers
+    }
 
   private def spaceUnitToNmFactor(unit: String): Fox[Double] =
     unit.toLowerCase match {
-      case ""          => Fox.successful(1.0)
       case "ym"        => Fox.successful(1e-15)
       case "zm"        => Fox.successful(1e-12)
       case "am"        => Fox.successful(1e-9)
@@ -75,10 +78,12 @@ class N5MultiscalesExplorer extends RemoteLayerExplorer with FoxImplicits {
       case "pm"        => Fox.successful(1e-3)
       case "nm"        => Fox.successful(1.0)
       case "µm"        => Fox.successful(1e3)
+      case "um"        => Fox.successful(1e3)
       case "mm"        => Fox.successful(1e6)
       case "cm"        => Fox.successful(1e7)
       case "dm"        => Fox.successful(1e8)
       case "m"         => Fox.successful(1e9)
+      case ""          => Fox.successful(1e3) // default is micrometers
       case unknownUnit => Fox.failure(s"Unknown space axis unit: $unknownUnit")
     }
 

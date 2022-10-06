@@ -4,6 +4,7 @@ import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr._
+import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.FileSystemsHolder
@@ -35,9 +36,8 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
       voxelSize <- commonVoxelSize(layersWithVoxelSizes.map(_._2)) ?~> "Could not extract common voxel size from layers"
       layers = makeLayerNamesUnique(layersWithVoxelSizes.map(_._1))
-      dataSetName <- dataSetName(urisWithCredentials.map(_.remoteUri))
       dataSource = GenericDataSource[DataLayer](
-        DataSourceId(dataSetName, ""),
+        DataSourceId("", ""), // Frontend will prompt user for a good name
         layers,
         voxelSize
       )
@@ -66,10 +66,6 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     }
   }
 
-  private def dataSetName(uris: List[String])(implicit ec: ExecutionContext): Fox[String] =
-    if (uris.length == 1) uris.headOption.map(normalizeUri(_).split("/").last).toFox
-    else Fox.successful("explored_remote_dataset")
-
   private def commonVoxelSize(voxelSizes: List[Vec3Double])(implicit ec: ExecutionContext): Fox[Vec3Double] =
     for {
       head <- voxelSizes.headOption.toFox
@@ -93,7 +89,8 @@ class ExploreRemoteLayerService @Inject()() extends FoxImplicits with LazyLoggin
     } yield layersWithVoxelSizes
 
   private def normalizeUri(uri: String): String =
-    if (uri.endsWith(ZarrHeader.FILENAME_DOT_ZARRAY)) uri.dropRight(ZarrHeader.FILENAME_DOT_ZARRAY.length)
+    if (uri.endsWith(N5Header.FILENAME_ATTRIBUTES_JSON)) uri.dropRight(N5Header.FILENAME_ATTRIBUTES_JSON.length)
+    else if (uri.endsWith(ZarrHeader.FILENAME_DOT_ZARRAY)) uri.dropRight(ZarrHeader.FILENAME_DOT_ZARRAY.length)
     else if (uri.endsWith(NgffMetadata.FILENAME_DOT_ZATTRS)) uri.dropRight(NgffMetadata.FILENAME_DOT_ZATTRS.length)
     else if (uri.endsWith(NgffGroupHeader.FILENAME_DOT_ZGROUP))
       uri.dropRight(NgffGroupHeader.FILENAME_DOT_ZGROUP.length)

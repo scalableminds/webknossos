@@ -8,7 +8,7 @@ case class N5MultiscalesItem(datasets: List[N5MultiscalesDataset])
 
 case class N5MultiscalesDataset(path: String, transform: N5Transform)
 
-case class N5Transform(axes: List[String], scale: List[Double], units: List[String])
+case class N5Transform(axes: List[String], scale: List[Double], units: Option[List[String]])
 
 object N5Metadata {
   implicit val jsonFormat: OFormat[N5Metadata] = Json.format[N5Metadata]

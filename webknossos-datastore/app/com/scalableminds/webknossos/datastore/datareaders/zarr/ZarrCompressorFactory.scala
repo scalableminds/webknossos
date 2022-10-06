@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.datareaders.jzarr
+package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,

@@ -84,7 +84,7 @@ function DatasetAddZarrView(props: Props) {
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
-  const datasourceConfigStr: string | null = Form.useWatch("dataSourceJson", form);
+  const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
 
   const setDatasourceConfigStr = (dataSourceJson: string) => {
@@ -211,7 +211,7 @@ function DatasetAddZarrView(props: Props) {
                         style={{ width: "100%" }}
                         onClick={handleStoreDataset}
                         disabled={
-                          !datasourceConfigStr ||
+                          isDatasourceConfigStrFalsy ||
                           !!form.getFieldsError().filter(({ errors }) => errors.length).length
                         }
                       >
@@ -240,7 +240,7 @@ function AddZarrLayer({
   onSuccess?: () => void;
   dataSourceEditMode: "simple" | "advanced";
 }) {
-  const datasourceConfigStr: string | null = Form.useWatch("dataSourceJson", form);
+  const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
   const datasourceUrl: string | null = Form.useWatch("url", form);
   const [exploreLog, setExploreLog] = useState<string>("");
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
@@ -389,7 +389,7 @@ function AddZarrLayer({
           <Col span={6}>
             <AsyncButton
               size="large"
-              type={datasourceConfigStr ? "default" : "primary"}
+              type={isDatasourceConfigStrFalsy ? "primary" : "default"}
               style={{ width: "100%" }}
               onClick={handleExplore}
             >

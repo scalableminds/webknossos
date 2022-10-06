@@ -11,6 +11,7 @@ import {
   FormInstance,
   Select,
   Space,
+  Button,
 } from "antd";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
@@ -321,7 +322,7 @@ function SimpleLayerForm({
       {mayLayerBeRemoved && (
         <div style={{ float: "right" }}>
           <Tooltip title="Remove Layer">
-            <DeleteOutlined onClick={() => onRemoveLayer(layer)} />
+            <Button shape="circle" icon={<DeleteOutlined />} onClick={() => onRemoveLayer(layer)} />
           </Tooltip>
         </div>
       )}

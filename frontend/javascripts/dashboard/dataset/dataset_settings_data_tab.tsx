@@ -302,7 +302,7 @@ function SimpleLayerForm({
   const isSegmentation = category === "segmentation";
   const bitDepth = getBitDepth(layer);
 
-  const mayLayerBeRemoved = !isReadOnlyDataset;
+  const mayLayerBeRemoved = !isReadOnlyDataset && dataLayers?.length > 1;
 
   React.useEffect(() => {
     // Always validate all fields so that in the case of duplicate layer

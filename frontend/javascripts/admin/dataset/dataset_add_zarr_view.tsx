@@ -44,9 +44,12 @@ function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
 }
 
 function mergeNewLayers(
-  existingDatasource: DatasourceConfiguration,
+  existingDatasource: DatasourceConfiguration | null,
   newDatasource: DatasourceConfiguration,
 ): DatasourceConfiguration {
+  if (existingDatasource == null) {
+    return newDatasource;
+  }
   const allLayers = newDatasource.dataLayers.concat(existingDatasource.dataLayers);
   const groupedLayers = _.groupBy(allLayers, (layer: DataLayer) => layer.name) as unknown as Record<
     string,
@@ -293,7 +296,7 @@ function AddZarrLayer({
       );
       return;
     }
-    if (!_.isEqual(existingDatasource.scale, newDataSource.scale)) {
+    if (existingDatasource != null && !_.isEqual(existingDatasource.scale, newDataSource.scale)) {
       Toast.warning(
         `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(
           newDataSource.scale,

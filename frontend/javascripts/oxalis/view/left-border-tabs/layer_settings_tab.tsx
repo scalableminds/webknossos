@@ -72,6 +72,7 @@ import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
   dispatchClipHistogramAsync,
+  reloadHistogramAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
@@ -117,6 +118,7 @@ type DatasetSettingsProps = {
   onSetPosition: (arg0: Vector3) => void;
   onZoomToResolution: (arg0: Vector3) => number;
   onChangeUser: (key: keyof UserConfiguration, value: any) => void;
+  reloadHistogram: (layerName: string) => void;
   tracing: Tracing;
   task: Task | null | undefined;
   onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void;
@@ -748,6 +750,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
+    this.props.reloadHistogram(layerName);
     await api.data.reloadBuckets(layerName);
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
@@ -1101,6 +1104,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onEditAnnotationLayer(tracingId: string, layerProperties: EditableLayerProperties) {
     dispatch(editAnnotationLayerAction(tracingId, layerProperties));
+  },
+
+  reloadHistogram(layerName: string) {
+    dispatch(reloadHistogramAction(layerName));
   },
 });
 

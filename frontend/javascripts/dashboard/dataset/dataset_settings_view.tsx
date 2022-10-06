@@ -248,6 +248,17 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       const didParsingTheSavedDataSourceJSONSucceed =
         savedDataSourceOnServer != null && savedDataSourceOnServer.status == null;
 
+      // Ensure that zarr layers (which aren't inferred by the back-end) are still
+      // included in the inferred data source
+      if (savedDataSourceOnServer != null && inferredDataSource != null) {
+        const layerDict = _.keyBy(inferredDataSource.dataLayers, "name");
+        for (const layer of savedDataSourceOnServer.dataLayers) {
+          if (layer.dataFormat === "zarr" && layerDict[layer.name] == null) {
+            inferredDataSource.dataLayers.push(layer);
+          }
+        }
+      }
+
       if (didParsingTheSavedDataSourceJSONSucceed) {
         dataSource = savedDataSourceOnServer;
 

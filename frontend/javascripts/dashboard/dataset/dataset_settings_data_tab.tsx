@@ -72,13 +72,15 @@ export default function DatasetSettingsDataTab({
   onChange: (arg0: "simple" | "advanced") => void;
   additionalAlert?: React.ReactNode | null | undefined;
 }) {
+  // Using the return value of useWatch for the `dataSource` var
+  // yields outdated values. Therefore, the hook only exists for listening.
+  Form.useWatch("dataSource", form);
+  // Then, the newest value can be retrieved with getFieldValue
+  const dataSource = form.getFieldValue("dataSource");
   const dataSourceJson = Form.useWatch("dataSourceJson", form);
-  const dataSource =
-    dataSourceJson && isValidJSON(dataSourceJson)
-      ? JSON.parse(form.getFieldValue("dataSourceJson"))
-      : null;
 
-  const isJSONInvalid = dataSource == null;
+  const isJSONValid = isValidJSON(dataSourceJson);
+
   return (
     <div>
       <div
@@ -88,16 +90,16 @@ export default function DatasetSettingsDataTab({
       >
         <Tooltip
           title={
-            isJSONInvalid
-              ? "Please ensure that the supplied config JSON is valid."
-              : "Switch between simple and advanced mode"
+            isJSONValid
+              ? "Switch between simple and advanced mode"
+              : "Please ensure that the supplied config JSON is valid."
           }
         >
           <Switch
             checkedChildren="Advanced"
             unCheckedChildren="Simple"
             checked={activeDataSourceEditMode === "advanced"}
-            disabled={isReadOnlyDataset || isJSONInvalid}
+            disabled={isReadOnlyDataset || !isJSONValid}
             style={{
               marginBottom: 6,
             }}

@@ -132,7 +132,7 @@ object NeuroglancerSegmentInfo {
   }
 }
 
-case class MeshChunk(position: Vec3Float, byteOffset: Int, byteSize: Int)
+case class MeshChunk(position: Vec3Float, byteOffset: Long, byteSize: Int)
 
 object MeshChunk {
   implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
@@ -279,7 +279,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
       MeshChunk(
         position = globalPosition, // This position is in Voxel Space
-        byteOffset = meshByteStartOffset.toInt + chunkByteOffsets(lod)(currentChunk),
+        byteOffset = meshByteStartOffset + chunkByteOffsets(lod)(currentChunk),
         byteSize = segmentInfo.chunkByteOffsets(lod)(currentChunk),
       )
     }

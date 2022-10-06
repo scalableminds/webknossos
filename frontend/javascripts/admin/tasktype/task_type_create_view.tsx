@@ -10,6 +10,7 @@ import {
   Tooltip,
   Spin,
 } from "antd";
+import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import type { RouteComponentProps } from "react-router-dom";
@@ -225,6 +226,12 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 },
                 {
                   min: 3,
+                },
+                {
+                  validator: syncValidator(
+                    (value) => !value.includes(","),
+                    "The summary must not contain commas.",
+                  ),
                 },
               ]}
             >

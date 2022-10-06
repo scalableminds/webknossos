@@ -5,6 +5,7 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders._
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 
@@ -36,10 +37,12 @@ case class N5Header(
 
   lazy val resolvedDataType: ArrayDataType =
     N5DataType.toArrayDataType(N5DataType.fromString(dataType).get)
+
+  lazy val elementClass: Option[ElementClass.Value] = ElementClass.fromArrayDataType(resolvedDataType)
 }
 
 object N5Header extends JsonImplicits {
-  val FILENAME_DOT_ZARRAY = "attributes.json"
+  val FILENAME_ATTRIBUTES_JSON = "attributes.json"
 
   implicit object N5HeaderFormat extends Format[N5Header] {
     override def reads(json: JsValue): JsResult[N5Header] =

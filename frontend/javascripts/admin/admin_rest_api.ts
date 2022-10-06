@@ -91,8 +91,13 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { SaveQueueType } from "oxalis/model/actions/save_actions";
 import { DatasourceConfiguration } from "types/schemas/datasource.types";
+import { doWithToken } from "./api/token";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
+
+export * from "./api/token";
+export * as meshV3 from "./api/mesh_v3";
+export * as meshV0 from "./api/mesh_v0";
 
 type NewTeam = {
   readonly name: string;
@@ -107,58 +112,6 @@ function assertResponseLimit(collection: unknown[]) {
 }
 
 // ### Do with userToken
-let tokenRequestPromise: Promise<string> | null;
-
-function requestUserToken(): Promise<string> {
-  if (tokenRequestPromise) {
-    return tokenRequestPromise;
-  }
-
-  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate", {
-    method: "POST",
-  }).then((tokenObj) => {
-    tokenRequestPromise = null;
-    return tokenObj.token as string;
-  });
-
-  return tokenRequestPromise;
-}
-
-export function getSharingTokenFromUrlParameters(): string | null | undefined {
-  if (location != null) {
-    const params = Utils.getUrlParamsObject();
-
-    if (params != null && params.token != null) {
-      return params.token;
-    }
-  }
-
-  return null;
-}
-
-let tokenPromise: Promise<string>;
-export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<any> {
-  const sharingToken = getSharingTokenFromUrlParameters();
-
-  if (sharingToken != null) {
-    return fn(sharingToken);
-  }
-
-  if (!tokenPromise) tokenPromise = requestUserToken();
-  return tokenPromise.then(fn).catch((error) => {
-    if (error.status === 403) {
-      console.warn("Token expired. Requesting new token...");
-      tokenPromise = requestUserToken();
-
-      // If three new tokens did not fix the 403, abort, otherwise we'll get into an endless loop here
-      if (tries < 3) {
-        return doWithToken(fn, tries + 1);
-      }
-    }
-
-    throw error;
-  });
-}
 
 export function sendAnalyticsEvent(eventType: string, eventProperties: {} = {}): void {
   // Note that the Promise from sendJSONReceiveJSON is not awaited or returned here,
@@ -2118,61 +2071,24 @@ export function getEditableAgglomerateSkeleton(
   );
 }
 
-export function getMeshfilesForDatasetLayer(
+export async function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
 ): Promise<Array<APIMeshFile>> {
-  return doWithToken((token) =>
+  const meshFiles: Array<APIMeshFile> = await doWithToken((token) =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes?token=${token}`,
     ),
   );
-}
 
-export function getMeshfileChunksForSegment(
-  dataStoreUrl: string,
-  datasetId: APIDatasetId,
-  layerName: string,
-  meshFile: string,
-  segmentId: number,
-): Promise<Array<Vector3>> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/chunks?token=${token}`,
-      {
-        data: {
-          meshFile,
-          segmentId,
-        },
-        showErrorToast: false,
-      },
-    ),
-  );
-}
+  for (const file of meshFiles) {
+    if (file.mappingName === "") {
+      file.mappingName = undefined;
+    }
+  }
 
-export function getMeshfileChunkData(
-  dataStoreUrl: string,
-  datasetId: APIDatasetId,
-  layerName: string,
-  meshFile: string,
-  segmentId: number,
-  position: Vector3,
-): Promise<ArrayBuffer> {
-  return doWithToken(async (token) => {
-    const data = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/chunks/data?token=${token}`,
-      {
-        data: {
-          meshFile,
-          segmentId,
-          position,
-        },
-        useWebworkerForArrayBuffer: false,
-      },
-    );
-    return data;
-  });
+  return meshFiles;
 }
 
 // ### Connectomes

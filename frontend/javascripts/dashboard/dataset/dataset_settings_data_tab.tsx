@@ -221,7 +221,6 @@ function SimpleDatasetForm({
                 name={["dataSource", "scale"]}
                 label="Voxel Size"
                 info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
-                initialValue={dataSource != null ? dataSource.scale : [0, 0, 0]}
                 rules={[
                   {
                     required: true,

@@ -15,6 +15,7 @@ import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import { formatScale } from "libs/format_utils";
 import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 import DatasetSettingsDataTab, {
+  // Sync simple with advanced and get newest datasourceJson
   syncDataSourceFields,
 } from "dashboard/dataset/dataset_settings_data_tab";
 import { Hideable } from "dashboard/dataset/helper_components";
@@ -43,10 +44,10 @@ function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
 }
 
 function mergeNewLayers(
-  loadedDatasource: DatasourceConfiguration,
-  datasourceToMerge: DatasourceConfiguration,
+  existingDatasource: DatasourceConfiguration,
+  newDatasource: DatasourceConfiguration,
 ): DatasourceConfiguration {
-  const allLayers = datasourceToMerge.dataLayers.concat(loadedDatasource.dataLayers);
+  const allLayers = newDatasource.dataLayers.concat(existingDatasource.dataLayers);
   const groupedLayers = _.groupBy(allLayers, (layer: DataLayer) => layer.name) as unknown as Record<
     string,
     DataLayer[]
@@ -69,7 +70,7 @@ function mergeNewLayers(
     }
   }
   return {
-    ...loadedDatasource,
+    ...existingDatasource,
     dataLayers: uniqueLayers,
   };
 }
@@ -92,7 +93,10 @@ function DatasetAddZarrView(props: Props) {
   };
 
   async function handleStoreDataset() {
+    // Sync simple with advanced and get newest datasourceJson
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
     await form.validateFields();
+    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
 
     const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
     const datastoreToUse = uploadableDatastores[0];
@@ -147,11 +151,16 @@ function DatasetAddZarrView(props: Props) {
               form={form}
               setDatasourceConfigStr={setDatasourceConfigStr}
               onSuccess={() => setShowAddLayerModal(false)}
+              dataSourceEditMode={dataSourceEditMode}
             />
           </Modal>
 
           {hideDatasetUI && (
-            <AddZarrLayer form={form} setDatasourceConfigStr={setDatasourceConfigStr} />
+            <AddZarrLayer
+              form={form}
+              setDatasourceConfigStr={setDatasourceConfigStr}
+              dataSourceEditMode={dataSourceEditMode}
+            />
           )}
           <Hideable hidden={hideDatasetUI}>
             {/* Only the component's visibility is changed, so that the form is always rendered.
@@ -221,10 +230,12 @@ function AddZarrLayer({
   form,
   setDatasourceConfigStr,
   onSuccess,
+  dataSourceEditMode,
 }: {
   form: FormInstance;
   setDatasourceConfigStr: (dataSourceJson: string) => void;
   onSuccess?: () => void;
+  dataSourceEditMode: "simple" | "advanced";
 }) {
   const datasourceConfigStr: string | null = Form.useWatch("dataSourceJson", form);
   const datasourceUrl: string | null = Form.useWatch("url", form);
@@ -251,7 +262,12 @@ function AddZarrLayer({
       Toast.error("Please provide a valid URL for exploration.");
       return;
     }
-    const { dataSource, report } =
+
+    // Sync simple with advanced and get newest datasourceJson
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
+    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
+
+    const { dataSource: newDataSource, report } =
       !usernameOrAccessKey || !passwordOrSecretKey
         ? await exploreRemoteDataset([datasourceUrl])
         : await exploreRemoteDataset([datasourceUrl], {
@@ -259,31 +275,33 @@ function AddZarrLayer({
             pass: passwordOrSecretKey,
           });
     setExploreLog(report);
-    if (!dataSource) {
+    if (!newDataSource) {
       Toast.error("Exploring this remote dataset did not return a datasource.");
       return;
     }
-    ensureLargestSegmentIdsInPlace(dataSource);
+    ensureLargestSegmentIdsInPlace(newDataSource);
     if (!datasourceConfigStr) {
-      setDatasourceConfigStr(jsonStringify(dataSource));
+      setDatasourceConfigStr(jsonStringify(newDataSource));
       return;
     }
-    let loadedDatasource;
+    let existingDatasource;
     try {
-      loadedDatasource = JSON.parse(datasourceConfigStr);
+      existingDatasource = JSON.parse(datasourceConfigStr);
     } catch (e) {
       Toast.error(
         "The current datasource config contains invalid JSON. Cannot add the new Zarr data.",
       );
       return;
     }
-    if (!_.isEqual(loadedDatasource.scale, dataSource.scale)) {
+    if (!_.isEqual(existingDatasource.scale, newDataSource.scale)) {
       Toast.warning(
-        `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(dataSource.scale)}`,
+        `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(
+          newDataSource.scale,
+        )}`,
         { timeout: 10000 },
       );
     }
-    setDatasourceConfigStr(jsonStringify(mergeNewLayers(loadedDatasource, dataSource)));
+    setDatasourceConfigStr(jsonStringify(mergeNewLayers(existingDatasource, newDataSource)));
     if (onSuccess) {
       onSuccess();
     }

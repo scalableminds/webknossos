@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrSegmentationLayer
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.{OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -30,10 +30,10 @@ class DSRemoteTracingstoreClient @Inject()(
       .addQueryStringOptional("tracingName", tracingName)
       .getWithJsonResponse[ZarrSegmentationLayer]
 
-  def getOmeNgffHeader(tracingId: String, tracingStoreUri: String, token: Option[String]): Fox[OmeNgffHeader] =
+  def getOmeNgffHeader(tracingId: String, tracingStoreUri: String, token: Option[String]): Fox[NgffMetadata] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zattrs")
       .addQueryStringOptional("token", token)
-      .getWithJsonResponse[OmeNgffHeader]
+      .getWithJsonResponse[NgffMetadata]
 
   def getRawZarrCube(tracingId: String,
                      mag: String,

@@ -2,7 +2,6 @@ package controllers
 
 import java.net.URLEncoder
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.HttpHeader
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.services.AuthenticatorResult
@@ -30,9 +29,7 @@ import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Request}
-import play.libs.openid.{OpenIdClient, UserInfo}
-import play.mvc.Http
+import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -440,29 +437,71 @@ class AuthenticationController @Inject()(
   lazy val oidcConfig: OpenIdConnectConfig = OpenIdConnectConfig(oidcProviderUrl, oidcClientId)
   lazy val absoluteOidcCallbackURL = "http://localhost:9000/api/auth/oidc/callback"
 
-  case class OpenConnectId(iss: String, sub: String, preferred_username: String) {
-    def username = preferred_username
+  case class OpenConnectId(iss: String, sub: String, preferred_username: String, given_name: String, family_name: String, email: String) {
+    def username: String = preferred_username
   }
 
   object OpenConnectId {
     implicit val format = Json.format[OpenConnectId]
   }
 
-  // (Login and signup, use default organization)
   def loginViaOIDC(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     openIdClient.redirectURL(oidcConfig, absoluteOidcCallbackURL).map(url => Redirect(url))
   }
 
+  // Is called after user was successfully authenticated
+  def loginOrSignupViaOidc(oidc: OpenConnectId): Request[AnyContent] => Future[Future[Result]] = { implicit request: Request[AnyContent] =>
+      userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).toFox.futureBox.flatMap {
+        case Full(user) =>
+          val loginInfo = LoginInfo("credentials", user._id.toString)
+          userService.retrieve(loginInfo).map {
+            case Some(user) if !user.isDeactivated =>
+              for {
+                authenticator: CombinedAuthenticator <- combinedAuthenticatorService.create(loginInfo)
+                value: Cookie <- combinedAuthenticatorService.init(authenticator)
+                result: AuthenticatorResult <- combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
+                _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+                _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+              } yield result
+            case None =>
+              Future.successful(BadRequest(Messages("error.noUser")))
+            case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
+          }
+        case Empty =>
+          for {
+            organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None,None)(GlobalAccessContext).toFutureWithEmptyToFailure
+            user: User <- userService.insert(organization._id,
+              oidc.email,
+              oidc.given_name,
+              oidc.family_name,
+              isActive = true,
+              userService.getOIDCPasswordInfo).toFutureWithEmptyToFailure
+            multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).toFutureWithEmptyToFailure
+            _ = analyticsService.track(SignupEvent(user, hadInvite = false))
+            // brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox ???
+          } yield {
+            if (conf.Features.isDemoInstance) {
+              mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
+            } //else {
+            //  Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
+            //}
+            //Mailer ! Send(
+            //  defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization, autoActivate))
+            Future.successful(Ok)
+          }
+      }
+  }
+
   def openIdCallback() = Action.async { implicit request =>
     for {
-      code <- openIdClient.getToken(oidcConfig,
+        code <- openIdClient.getToken(oidcConfig,
                                     absoluteOidcCallbackURL,
                                     request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
                                     oidcClientSecret)
-      oidc = code.validate[OpenConnectId](OpenConnectId.format).get
-      loginInfo = LoginInfo("openid", oidc.username)
-      token <- combinedAuthenticatorService.findOrCreateToken(loginInfo)
-    } yield Ok(Json.obj("token" -> token.id))
+        oidc = code.validate[OpenConnectId](OpenConnectId.format).get
+        user_result_f <- loginOrSignupViaOidc(oidc)(request)
+        user_result <- user_result_f
+    } yield user_result
   }
 
   private def shaHex(key: String, valueToDigest: String): String =

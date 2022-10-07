@@ -631,7 +631,7 @@ export class BoundingBoxTool {
   }
 }
 
-export class RectangleTool {
+export class WatershedTool {
   static getPlaneMouseControls(
     planeId: OrthoView,
     planeView: PlaneView,
@@ -763,7 +763,7 @@ const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
   [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
-  [AnnotationToolEnum.WATERSHED]: RectangleTool,
+  [AnnotationToolEnum.WATERSHED]: WatershedTool,
   [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,

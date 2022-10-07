@@ -27,10 +27,6 @@ module.exports = function (env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
-    new CopyPlugin({
-      // Use copy plugin to copy *.wasm to output folder.
-      patterns: [{ from: 'node_modules/onnxruntime-web/dist/*.wasm', to: '[name][ext]' }]
-    }),
   ];
 
   if (env.production) {

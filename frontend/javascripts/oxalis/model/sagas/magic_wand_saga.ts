@@ -23,8 +23,6 @@ import floodFill from "n-dimensional-flood-fill";
 import Toast from "libs/toast";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 
-// const ort = require("onnxruntime-web");
-
 const EXPECTED_INPUT_SHAPE: Vector4 = [1, 4, 58, 58];
 const OUTPUT_SHAPE: Vector4 = [1, 1, 26, 26];
 const OUTPUT_SIZE = OUTPUT_SHAPE.reduce((agg, val) => agg * val, 1);
@@ -41,10 +39,6 @@ function* performMagicWand(action: Action): Saga<void> {
 
   console.log("starting saga performMagicWand");
 
-  // const session = yield ort.InferenceSession.create("/public/ml-models/FFN.onnx");
-  // console.log(session);
-  // const results = yield* session.run(input);
-
   const { startPosition, endPosition } = action;
   const boundingBoxObj = {
     min: V3.floor(V3.min(startPosition, endPosition)),
@@ -52,7 +46,6 @@ function* performMagicWand(action: Action): Saga<void> {
   };
 
   const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
-  // const paddedboundingBoxMag1 = unpaddedBoundingBoxMag1.paddedWithMargins([16, 16, 0]);
 
   const volumeTracingLayer = yield* select((store) => getActiveSegmentationTracingLayer(store));
   const volumeTracing = yield* select(enforceActiveVolumeTracing);

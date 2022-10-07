@@ -155,13 +155,16 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
         {
           type: "group",
           label: "Select layer to copy URL",
-          children: dataLayers.map((layer) => ({
-            label:
+          children: dataLayers.map((layer) => {
+            const readableLayerName =
               "tracingId" in layer && layer.tracingId != null
                 ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
-                : layer.name,
-            key: layer.name,
-          })),
+                : layer.name;
+            return {
+              label: readableLayerName,
+              key: readableLayerName,
+            };
+          }),
         },
       ]}
     />

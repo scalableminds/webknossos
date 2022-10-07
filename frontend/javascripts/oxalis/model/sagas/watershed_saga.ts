@@ -35,8 +35,9 @@ import floodFill from "n-dimensional-flood-fill";
 import Toast from "libs/toast";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { EnterAction, EscapeAction } from "../actions/ui_actions";
-import { VolumeTracing } from "oxalis/store";
+import { OxalisState, VolumeTracing } from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
+import { getColorLayers } from "../accessors/dataset_accessor";
 
 function takeLatest2(vec4: Vector4): Vector2 {
   return [vec4[2], vec4[3]];
@@ -67,9 +68,15 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
 
   console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
+  const colorLayers = yield* select((state: OxalisState) => getColorLayers(state.dataset));
+  if (colorLayers.length === 0) {
+    Toast.warning("No color layer available to use for watershed feature");
+    return;
+  }
+
   const inputData = yield* call(
     [api.data, api.data.getDataForBoundingBox],
-    "color",
+    colorLayers[0].name,
     boundingBoxMag1,
     resolutionIndex,
   );

@@ -183,12 +183,15 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
         size="small"
         style={{
           width: "90%",
+          background: "transparent",
+          color: "var(--ant-text-secondary)",
         }}
         readOnly
+        disabled
       />
 
       <Dropdown overlay={copyLayerUrlMenu}>
-        <Button size="small" icon={<CopyOutlined />} />
+        <Button size="small" icon={<CopyOutlined />} style={{ background: "transparent" }} />
       </Dropdown>
     </Input.Group>
   );
@@ -333,6 +336,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
       title: "Base URL",
       key: "name",
       render: (_, linkItem) => <UrlInput linkItem={linkItem} />,
+      width: "60%",
     },
     {
       title: "Expiration Date",

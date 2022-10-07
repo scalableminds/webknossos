@@ -190,13 +190,13 @@ export function formatDurationStrict(duration: Duration): string {
     parts.push(`${Math.floor(duration.asDays())} days`);
   }
   if (duration.hours() > 0) {
-    parts.push(`${duration.hours()} hours`);
+    parts.push(`${duration.hours()}h`);
   }
   if (duration.minutes() > 0) {
-    parts.push(`${duration.minutes()} minutes`);
+    parts.push(`${duration.minutes()}m`);
   }
   if (duration.seconds() > 0) {
-    parts.push(`${duration.seconds()} seconds`);
+    parts.push(`${duration.seconds()}s`);
   }
   return parts.join(" ");
 }

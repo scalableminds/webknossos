@@ -5,8 +5,6 @@ module.exports = function (env = {}) {
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const TerserPlugin = require("terser-webpack-plugin");
 
-  const CopyPlugin = require("copy-webpack-plugin");
-
   const srcPath = path.resolve(__dirname, "frontend/javascripts/");
   const nodePath = "node_modules";
   const protoPath = path.join(__dirname, "webknossos-datastore/proto/");

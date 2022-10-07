@@ -559,7 +559,11 @@ function aggregateTaskInfos(
       state = VoxelyticsRunState.SKIPPED;
     } else if (taskInfos.every((t) => t.state === VoxelyticsRunState.PENDING)) {
       state = VoxelyticsRunState.PENDING;
-    } else if (taskInfos.every((t) => t.state === VoxelyticsRunState.COMPLETE)) {
+    } else if (
+      taskInfos.every(
+        (t) => t.state === VoxelyticsRunState.COMPLETE || t.state === VoxelyticsRunState.SKIPPED,
+      )
+    ) {
       state = VoxelyticsRunState.COMPLETE;
       [beginTime, endTime] = aggregateTimes(taskInfos);
     } else if (taskInfos.some((t) => t.state === VoxelyticsRunState.RUNNING)) {

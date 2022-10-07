@@ -31,7 +31,7 @@ case class WorkflowDescriptionArtifact(path: String,
 
 case class WorkflowDescriptionRun(name: String, user: String, hostname: String, voxelyticsVersion: String)
 
-case class WorkflowDescriptionWorkflow(name: String, hash: String, yamlContent: String)
+case class WorkflowDescriptionWorkflow(name: String, hash: String, yamlContent: Option[String])
 
 case class WorkflowDescription(config: WorkflowDescriptionConfig,
                                artifacts: Map[String, Map[String, WorkflowDescriptionArtifact]],

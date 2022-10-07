@@ -579,7 +579,7 @@ export function getDatasetExtentAsString(
 
   if (inVoxel) {
     const extentInVoxel = getDatasetExtentInVoxel(dataset);
-    return `${formatExtentWithLength(extentInVoxel, (x) => `${x}`)} voxel³`;
+    return `${formatExtentWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
   }
 
   const extent = getDatasetExtentInLength(dataset);

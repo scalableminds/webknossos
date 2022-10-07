@@ -28,6 +28,7 @@ import {
 } from "oxalis/view/right-border-tabs/starting_job_modals";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { NumberSliderSetting } from "../components/setting_input_views";
+import { mayUserEditDataset } from "libs/utils";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -329,9 +330,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { activeUser } = this.props;
 
     const getEditSettingsIcon = () =>
-      activeUser != null &&
-      activeUser.organization === owningOrganization &&
-      (activeUser.isAdmin || activeUser.isDatasetManager) ? (
+      mayUserEditDataset(activeUser, this.props.dataset) ? (
         <Tooltip title="Edit dataset settings">
           <Button
             type="text"

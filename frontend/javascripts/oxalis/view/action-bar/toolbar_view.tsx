@@ -3,6 +3,7 @@ import { ClearOutlined, DownOutlined, ExportOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
 
+import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -118,7 +119,17 @@ const handleSetTool = (event: RadioChangeEvent) => {
 };
 
 const handleCreateCell = () => {
-  Store.dispatch(createCellAction());
+  const volumeLayer = getActiveSegmentationTracing(Store.getState());
+
+  if (volumeLayer == null || volumeLayer.tracingId == null) {
+    return;
+  }
+
+  if (volumeLayer.largestSegmentId != null) {
+    Store.dispatch(createCellAction(volumeLayer.largestSegmentId));
+  } else {
+    showToastWarningForLargestSegmentIdMissing(volumeLayer);
+  }
 };
 
 const handleAddNewUserBoundingBox = () => {
@@ -406,17 +417,13 @@ function CreateCellButton() {
     return hslaToCSS(getSegmentColorAsHSL(state, activeCellId));
   });
 
-  if (!activeCellId || !activeCellColor) {
-    return null;
-  }
-
   const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
   return (
     <Badge
       dot
       style={{
         boxShadow: "none",
-        background: activeCellColor,
+        background: activeCellColor || "transparent",
         zIndex: 1000,
       }}
     >

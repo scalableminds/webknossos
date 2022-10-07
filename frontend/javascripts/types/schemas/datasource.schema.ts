@@ -167,7 +167,7 @@ export default {
                   const: "segmentation",
                 },
                 largestSegmentId: {
-                  type: "number",
+                  type: ["number", "null"],
                   minimum: 1,
                 },
                 mappings: {
@@ -177,7 +177,7 @@ export default {
                   },
                 },
               },
-              required: ["category", "largestSegmentId"],
+              required: ["category"],
             },
           ],
         },

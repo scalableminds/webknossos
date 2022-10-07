@@ -32,6 +32,10 @@ const { Column } = Table;
 const typeHint: APIMaybeUnimportedDataset[] = [];
 const useLruRank = true;
 
+// antd does not support Symbols as filter values
+// which is why this is converted to a string.
+const PUBLIC_SYMBOL = Symbol("@public").toString();
+
 type Props = {
   datasets: Array<APIMaybeUnimportedDataset>;
   searchQuery: string;
@@ -214,7 +218,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     // antd table filter entries for access permissions / teams
     const accessPermissionFilters = _.uniqBy(
       [
-        { text: "public", value: "public" },
+        { text: "public", value: PUBLIC_SYMBOL },
         ...sortedDataSource.flatMap((dataset) =>
           dataset.allowedTeams.map((team) => ({ text: team.name, value: team.name })),
         ),
@@ -332,7 +336,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="allowedTeams"
           key="allowedTeams"
           filters={accessPermissionFilters}
-          onFilter={(value, dataset) => dataset.allowedTeams.some((team) => team.name === value)}
+          onFilter={(value, dataset) => {
+            if (value === PUBLIC_SYMBOL) {
+              return dataset.isPublic;
+            }
+            return dataset.allowedTeams.some((team) => team.name === value);
+          }}
           render={(teams: APITeam[], dataset: APIMaybeUnimportedDataset) => {
             const permittedTeams = [...teams];
             if (dataset.isPublic) {

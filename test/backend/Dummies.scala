@@ -86,7 +86,7 @@ object Dummies {
     Vec3DoubleProto(1.0, 1.0, 1.0),
     ElementClass.uint16,
     None,
-    5,
+    Some(5L),
     0,
     1.0,
     segments = Seq(Segment(5, Some(Vec3IntProto(7,7,7))))

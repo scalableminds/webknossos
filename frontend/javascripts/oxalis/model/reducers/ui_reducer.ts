@@ -1,7 +1,11 @@
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
 import { updateKey } from "oxalis/model/helpers/deep_update";
-import { setToolReducer, getNextTool } from "oxalis/model/reducers/reducer_helpers";
+import {
+  setToolReducer,
+  getNextTool,
+  getPreviousTool,
+} from "oxalis/model/reducers/reducer_helpers";
 import { hideBrushReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 
 function UiReducer(state: OxalisState, action: Action): OxalisState {
@@ -62,7 +66,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
         return state;
       }
 
-      const nextTool = getNextTool(state);
+      const nextTool = action.backwards ? getPreviousTool(state) : getNextTool(state);
 
       if (nextTool == null) {
         // Don't change the current tool if another tool could not be selected.

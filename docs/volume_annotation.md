@@ -22,7 +22,7 @@ Erasing is possible with the dedicated erase tools or with *CTRL + Shift + Left 
 If you have enabled *Classic Controls* in the settings sidebar, erasing is also possible with *Right Mouse Drag* within the brush and trace tool (otherwise, right-clicking is mapped to open a context menu).
 
 The following interactions and modifiers are available when working with the volume annotation tools:
-- `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID.
+- `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID. Read the explanation for the largest segment id [here](datasets.md#configuring-datasets) to understand how new IDs are generated.
 - `Change Brush Size`: Changes the size of the brushing tool. 
 - `Overwrite Everything`: When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
 - `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush/trace tool to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.

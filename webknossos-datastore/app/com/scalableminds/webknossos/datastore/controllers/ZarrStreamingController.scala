@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKW
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser.parseDotCoordinates
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.{OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -35,6 +35,8 @@ class ZarrStreamingController @Inject()(
 )(implicit ec: ExecutionContext)
     extends Controller {
 
+  override def defaultErrorCode: Int = NOT_FOUND
+
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
 
   override def allowRemoteOrigin: Boolean = true
@@ -56,7 +58,7 @@ class ZarrStreamingController @Inject()(
                                                                                   dataSetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        omeNgffHeader = OmeNgffHeader.fromNameScaleAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
+        omeNgffHeader = NgffMetadata.fromNameScaleAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
@@ -79,9 +81,9 @@ class ZarrStreamingController @Inject()(
                 annotationSource.organizationName,
                 annotationSource.dataSetName,
                 dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
-              dataSourceOmeNgffHeader = OmeNgffHeader.fromNameScaleAndMags(dataLayerName,
-                                                                           dataSource.scale,
-                                                                           dataLayer.resolutions)
+              dataSourceOmeNgffHeader = NgffMetadata.fromNameScaleAndMags(dataLayerName,
+                                                                          dataSource.scale,
+                                                                          dataLayer.resolutions)
             } yield dataSourceOmeNgffHeader
         }
       } yield Ok(Json.toJson(omeNgffHeader))
@@ -454,7 +456,7 @@ class ZarrStreamingController @Inject()(
       organizationName: String,
       dataSetName: String,
   ): Fox[Result] =
-    Future(Ok(Json.toJson(OmeNgffGroupHeader(zarr_format = 2))))
+    Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
 
   def zGroupPrivateLink(token: Option[String], accessToken: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>

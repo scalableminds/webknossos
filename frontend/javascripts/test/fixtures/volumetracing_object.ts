@@ -13,7 +13,7 @@ const volumeTracing = {
   type: "volume",
   activeCellId: 0,
   activeTool: AnnotationToolEnum.MOVE,
-  maxCellId: 0,
+  largestSegmentId: 0,
   contourList: [],
   lastLabelActions: [],
   tracingId: "tracingId",

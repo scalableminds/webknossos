@@ -28,6 +28,7 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
+
 const VersionRestoreWarning = (
   <Alert
     message="Read-only version restore mode active!"

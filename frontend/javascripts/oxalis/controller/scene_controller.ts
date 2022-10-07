@@ -39,6 +39,7 @@ import constants, {
 import window from "libs/window";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import { getSegmentColorAsHSL } from "oxalis/model/accessors/volumetracing_accessor";
+import { mergeVertices } from "libs/BufferGeometryUtils";
 
 const CUBE_COLOR = 0x999999;
 
@@ -218,7 +219,7 @@ class SceneController {
     tweenAnimation
       .to(
         {
-          opacity: passive ? 0.4 : 0.9,
+          opacity: passive ? 0.4 : 1,
         },
         500,
       )
@@ -260,13 +261,9 @@ class SceneController {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
-    // @ts-ignore
-    if (window.__isosurfaceMergeVertices) {
-      // @ts-ignore mergeVertices
-      bufferGeometry = THREE.BufferGeometryUtils.mergeVertices(bufferGeometry);
-    }
-
+    bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
+
     this.addIsosurfaceFromGeometry(bufferGeometry, segmentationId, passive);
   }
 
@@ -274,6 +271,8 @@ class SceneController {
     geometry: THREE.BufferGeometry,
     segmentationId: number,
     passive: boolean = false,
+    offset: Vector3 | null = null,
+    useDatasetScale: boolean = false,
   ): void {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       const newGroup = new THREE.Group();
@@ -283,8 +282,16 @@ class SceneController {
       newGroup.cellId = segmentationId;
       // @ts-ignore
       newGroup.passive = passive;
+      if (useDatasetScale) {
+        newGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
+      }
     }
     const mesh = this.constructIsosurfaceMesh(segmentationId, geometry, passive);
+    if (offset) {
+      mesh.translateX(offset[0]);
+      mesh.translateY(offset[1]);
+      mesh.translateZ(offset[2]);
+    }
 
     this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
@@ -301,15 +308,35 @@ class SceneController {
   }
 
   addLights(): void {
-    // At the moment, we only attach an AmbientLight for the isosurfaces group.
-    // The PlaneView attaches a directional light directly to the TD camera,
+    // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
-    const ambientLightForIsosurfaces = new THREE.AmbientLight(0x404040, 15); // soft white light
+    const AMBIENT_INTENSITY = 30;
+    const DIRECTIONAL_INTENSITY = 5;
+    const POINT_INTENSITY = 5;
 
-    this.rootGroup.add(ambientLightForIsosurfaces);
-    const ambientLightForMeshes = new THREE.AmbientLight(0x404040, 15); // soft white light
+    const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
 
-    this.rootGroup.add(ambientLightForMeshes);
+    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
+    directionalLight.position.x = 1;
+    directionalLight.position.y = 1;
+    directionalLight.position.z = 1;
+    directionalLight.position.normalize();
+
+    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
+    directionalLight2.position.x = -1;
+    directionalLight2.position.y = -1;
+    directionalLight2.position.z = -1;
+    directionalLight2.position.normalize();
+
+    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
+    pointLight.position.x = 0;
+    pointLight.position.y = -25;
+    pointLight.position.z = 10;
+
+    this.isosurfacesRootGroup.add(ambientLight);
+    this.isosurfacesRootGroup.add(directionalLight);
+    this.isosurfacesRootGroup.add(directionalLight2);
+    this.isosurfacesRootGroup.add(pointLight);
   }
 
   removeSTL(id: string): void {

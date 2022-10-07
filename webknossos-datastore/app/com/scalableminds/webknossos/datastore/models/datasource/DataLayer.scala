@@ -7,6 +7,8 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 
@@ -64,8 +66,11 @@ object ElementClass extends ExtendedEnumeration {
   }
 
   def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =
-    largestSegmentId >= 0L && segmentationElementClasses.contains(elementClass) && largestSegmentId <= maxSegmentIdValue(
-      elementClass)
+    largestSegmentIdIsInRange(Some(largestSegmentId), elementClass)
+
+  def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
+    segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall(largestSegmentId =>
+      largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass))
 
   def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
     case ElementClass.uint8  => (1, "|u1")
@@ -93,6 +98,20 @@ object ElementClass extends ExtendedEnumeration {
     case "i4" => Some(ElementClass.int32)
     case "i8" => Some(ElementClass.int64)
     case _    => None
+  }
+
+  def fromArrayDataType(arrayDataType: ArrayDataType): Option[ElementClass.Value] = arrayDataType match {
+    case ArrayDataType.u1 => Some(ElementClass.uint8)
+    case ArrayDataType.u2 => Some(ElementClass.uint16)
+    case ArrayDataType.u4 => Some(ElementClass.uint32)
+    case ArrayDataType.u8 => Some(ElementClass.uint64)
+    case ArrayDataType.f4 => Some(ElementClass.float)
+    case ArrayDataType.f8 => Some(ElementClass.double)
+    case ArrayDataType.i1 => Some(ElementClass.int8)
+    case ArrayDataType.i2 => Some(ElementClass.int16)
+    case ArrayDataType.i4 => Some(ElementClass.int32)
+    case ArrayDataType.i8 => Some(ElementClass.int64)
+    case _                => None
   }
 }
 
@@ -137,7 +156,7 @@ object DataLayerLike {
 
 trait SegmentationLayerLike extends DataLayerLike {
 
-  def largestSegmentId: Long
+  def largestSegmentId: Option[Long]
 
   def mappings: Option[Set[String]]
 
@@ -249,7 +268,7 @@ case class AbstractSegmentationLayer(
     boundingBox: BoundingBox,
     resolutions: List[Vec3Int],
     elementClass: ElementClass.Value,
-    largestSegmentId: Long,
+    largestSegmentId: Option[Long] = None,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
@@ -283,4 +302,5 @@ trait ResolutionFormatHelper {
     override def writes(resolution: Vec3Int): JsValue =
       Vec3Int.Vec3IntWrites.writes(resolution)
   }
+
 }

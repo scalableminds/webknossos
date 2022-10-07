@@ -37,7 +37,12 @@ import {
   VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
-import { formatDateMedium, formatDistance, formatDistanceStrict, formatDurationStrict } from "libs/format_utils";
+import {
+  formatDateMedium,
+  formatDistance,
+  formatDistanceStrict,
+  formatDurationStrict,
+} from "libs/format_utils";
 import DAGView from "./dag_view";
 import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
@@ -455,9 +460,10 @@ export default function TaskListView({
 
   const totalRuntime = report.run.tasks
     .filter((t) => "endTime" in t && "beginTime" in t)
-    .reduce((sum, t) => {
-      return sum.add(moment.duration(moment(t.endTime).diff(moment(t.beginTime))));
-    }, moment.duration(0));
+    .reduce(
+      (sum, t) => sum.add(moment.duration(moment(t.endTime).diff(moment(t.beginTime)))),
+      moment.duration(0),
+    );
 
   const {
     workflow: { name: readableWorkflowName },
@@ -474,7 +480,7 @@ export default function TaskListView({
       <Col xs={10} style={{ display: "flex", flexDirection: "column" }}>
         <h3 style={{ marginBottom: 0 }}>{readableWorkflowName} </h3>
         <h4 style={{ color: "#51686e" }}>
-            {formatDateMedium(new Date(runBeginTimeString))}{" "}
+          {formatDateMedium(new Date(runBeginTimeString))}{" "}
           <Tooltip title={formatDurationStrict(totalRuntime)}>
             <FieldTimeOutlined style={{ marginLeft: 20 }} />
             {totalRuntime.humanize()}

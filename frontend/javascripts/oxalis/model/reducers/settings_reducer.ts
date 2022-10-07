@@ -93,6 +93,9 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_USER_SETTING": {
       const { propertyName } = action;
       let { value } = action;
+      // @ts-ignore not compatible with the new watershed property
+      // since it is nested. todo: should we add support for that?
+      // or remove the properties again? or flatten them?
       const settingSpec = userSettings[propertyName];
 
       if (settingSpec != null && settingSpec.type === "number") {

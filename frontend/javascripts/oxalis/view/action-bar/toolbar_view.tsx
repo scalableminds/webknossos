@@ -830,11 +830,11 @@ export default function ToolbarView() {
           />
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
-          title="Rectangle Tool - ..."
-          disabledTitle={disabledInfosForTools[AnnotationToolEnum.RECTANGLE].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.RECTANGLE].isDisabled}
+          title="Watershed Tool - ..."
+          disabledTitle={disabledInfosForTools[AnnotationToolEnum.WATERSHED].explanation}
+          disabled={disabledInfosForTools[AnnotationToolEnum.WATERSHED].isDisabled}
           style={narrowButtonStyle}
-          value={AnnotationToolEnum.RECTANGLE}
+          value={AnnotationToolEnum.WATERSHED}
         >
           <i
             className="fas fa-vector-square"

@@ -351,7 +351,7 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
         [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
         [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
-        [AnnotationToolEnum.RECTANGLE]: rectangleControls[controlKey],
+        [AnnotationToolEnum.WATERSHED]: rectangleControls[controlKey],
         [AnnotationToolEnum.PROOFREAD]: proofreadControls[controlKey],
       });
     }

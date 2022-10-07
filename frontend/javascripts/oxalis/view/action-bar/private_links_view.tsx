@@ -301,7 +301,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
         trigger="click"
       >
         <EditOutlined style={{ marginLeft: 4 }} />
-        {maybeWarning ? maybeWarning : <HumanizedDuration expirationMoment={expirationMoment} />}
+        {maybeWarning || <HumanizedDuration expirationMoment={expirationMoment} />}
       </Popover>
     </span>
   );

@@ -20,6 +20,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   LeftOutlined,
+  FieldTimeOutlined,
 } from "@ant-design/icons";
 import MiniSearch from "minisearch";
 import ColorHash from "color-hash";
@@ -36,7 +37,7 @@ import {
   VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
-import { formatDateMedium, formatDistance, formatDistanceStrict } from "libs/format_utils";
+import { formatDateMedium, formatDistance, formatDistanceStrict, formatDurationStrict } from "libs/format_utils";
 import DAGView from "./dag_view";
 import TaskView from "./task_view";
 import { formatLog } from "./log_tab";
@@ -452,6 +453,12 @@ export default function TaskListView({
     );
   };
 
+  const totalRuntime = report.run.tasks
+    .filter((t) => "endTime" in t && "beginTime" in t)
+    .reduce((sum, t) => {
+      return sum.add(moment.duration(moment(t.endTime).diff(moment(t.beginTime))));
+    }, moment.duration(0));
+
   const {
     workflow: { name: readableWorkflowName },
     run: { beginTime: runBeginTimeString },
@@ -465,13 +472,14 @@ export default function TaskListView({
       }}
     >
       <Col xs={10} style={{ display: "flex", flexDirection: "column" }}>
-        <h3>
-          {readableWorkflowName}{" "}
-          <span style={{ color: "#51686e" }}>
-            {" "}
-            {formatDateMedium(new Date(runBeginTimeString))}
-          </span>
-        </h3>
+        <h3 style={{ marginBottom: 0 }}>{readableWorkflowName} </h3>
+        <h4 style={{ color: "#51686e" }}>
+            {formatDateMedium(new Date(runBeginTimeString))}{" "}
+          <Tooltip title={formatDurationStrict(totalRuntime)}>
+            <FieldTimeOutlined style={{ marginLeft: 20 }} />
+            {totalRuntime.humanize()}
+          </Tooltip>
+        </h4>
         <div style={{ flex: 1, position: "relative" }}>
           <DAGView
             key={filteredTasks.map((t) => t.taskName).join("_")}

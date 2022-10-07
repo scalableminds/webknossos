@@ -1,5 +1,5 @@
 import { Radio, Tooltip, Badge, Space, Popover, RadioChangeEvent, Dropdown, Menu } from "antd";
-import { ClearOutlined, DownOutlined, ExportOutlined } from "@ant-design/icons";
+import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
 
@@ -56,6 +56,7 @@ import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpola
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { hasAgglomerateMapping } from "oxalis/controller/combinations/segmentation_handlers";
+import { WatershedControls } from "./watershed_settings";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -942,6 +943,19 @@ function ToolSpecificSettings({
         isShiftPressed={isShiftPressed}
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
+
+      {adaptedActiveTool === "WATERSHED" && (
+        <Popover trigger="click" placement="bottom" content={<WatershedControls />}>
+          <ButtonComponent
+            title="Configure Watershed"
+            tooltipPlacement="right"
+            className="narrow"
+            style={{ marginLeft: 12, marginRight: 12 }}
+          >
+            <SettingOutlined />
+          </ButtonComponent>
+        </Popover>
+      )}
 
       {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
         <VolumeInterpolationButton />

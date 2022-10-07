@@ -43,6 +43,7 @@ function takeLatest2(vec4: Vector4): Vector2 {
 }
 
 function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
+  const watershedConfig = yield* select((state) => state.userConfiguration.watershed);
   console.log("starting saga performWatershed");
 
   const { startPosition, endPosition } = action;
@@ -134,9 +135,9 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
 
   const floodfillCopy = copyNdArray(Uint8Array, output);
 
-  morphology.close(output, 6);
-  morphology.erode(output, 3);
-  morphology.dilate(output, 6);
+  morphology.close(output, watershedConfig.closeValue);
+  morphology.erode(output, watershedConfig.erodeValue);
+  morphology.dilate(output, watershedConfig.dilateValue);
   // // morphology.dilate(output, 1);
   console.timeEnd("floodfill");
 
@@ -147,7 +148,8 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   let newestOutput = output;
 
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
-  if (!action.show_preview_first) {
+
+  if (!watershedConfig.showPreview) {
     return yield* finalizeWatershed(
       rectangleGeometry,
       volumeTracing,

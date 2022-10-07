@@ -262,14 +262,12 @@ export const computeWatershedForRectAction = (
   startPosition: Vector3,
   endPosition: Vector3,
   rectangleGeometry: RectangleGeometry,
-  showPreviewFirst: boolean = false,
 ) =>
   ({
     type: "COMPUTE_WATERSHED_FOR_RECT",
     startPosition,
     endPosition,
     rectangleGeometry,
-    showPreviewFirst,
   } as const);
 
 export const fineTuneWatershedAction = (

@@ -325,6 +325,12 @@ export type UserConfiguration = {
   readonly fillMode: FillMode;
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
+  readonly watershed: {
+    showPreview: boolean;
+    closeValue: number;
+    erodeValue: number;
+    dilateValue: number;
+  };
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

@@ -459,9 +459,16 @@ export default function TaskListView({
   };
 
   const totalRuntime = report.run.tasks
-    .filter((t) => "endTime" in t && "beginTime" in t)
     .reduce(
-      (sum, t) => sum.add(moment.duration(moment(t.endTime).diff(moment(t.beginTime)))),
+      (sum, t) => {
+        if (t.state === VoxelyticsRunState.RUNNING) {
+          return sum.add(moment.duration(moment().diff(moment(t.beginTime))));
+        } else if (t.beginTime != null && t.endTime != null) {
+          return sum.add(moment.duration(moment(t.endTime).diff(moment(t.beginTime))));
+        } else {
+          return sum;
+        }
+      },
       moment.duration(0),
     );
 

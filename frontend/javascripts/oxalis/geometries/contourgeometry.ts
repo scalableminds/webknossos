@@ -3,53 +3,48 @@ import type { Vector3 } from "oxalis/constants";
 import ResizableBuffer from "libs/resizable_buffer";
 import app from "app";
 import { V3 } from "libs/mjs";
-import ndarray, { NdArray } from "ndarray";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
 
 class ContourGeometry {
   color: THREE.Color;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'edge' has no initializer and is not defi... Remove this comment to see the full error message
-  edge: THREE.Line;
+  line: THREE.Line;
 
   constructor() {
     this.color = CONTOUR_COLOR_NORMAL;
-    this.createMeshes();
-  }
 
-  createMeshes() {
     const edgeGeometry = new THREE.BufferGeometry();
     const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
     positionAttribute.setUsage(THREE.DynamicDrawUsage);
     edgeGeometry.setAttribute("position", positionAttribute);
-    this.plane = new THREE.Line(
+    this.line = new THREE.Line(
       edgeGeometry,
       new THREE.LineBasicMaterial({
         linewidth: 2,
       }),
     );
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
-    this.plane.vertexBuffer = new ResizableBuffer(3, Float32Array);
+    this.line.vertexBuffer = new ResizableBuffer(3, Float32Array);
     this.reset();
   }
 
   reset() {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'color' does not exist on type 'Material ... Remove this comment to see the full error message
-    this.plane.material.color = this.color;
+    this.line.material.color = this.color;
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
-    this.plane.vertexBuffer.clear();
-    this.finalizeMesh(this.plane);
+    this.line.vertexBuffer.clear();
+    this.finalizeMesh(this.line);
   }
 
   getMeshes() {
-    return [this.plane];
+    return [this.line];
   }
 
   addEdgePoint(pos: Vector3) {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'vertexBuffer' does not exist on type 'Li... Remove this comment to see the full error message
-    this.plane.vertexBuffer.push(pos);
-    this.finalizeMesh(this.plane);
+    this.line.vertexBuffer.push(pos);
+    this.finalizeMesh(this.line);
     app.vent.trigger("rerender");
   }
 
@@ -73,17 +68,12 @@ class ContourGeometry {
 
 export class RectangleGeometry {
   color: THREE.Color;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'edge' has no initializer and is not defi... Remove this comment to see the full error message
   plane: THREE.Mesh;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'edge' has no initializer and is not defi... Remove this comment to see the full error message
-  centerMarker: THREE.Mesh;
+  centerMarker: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
 
   constructor() {
     this.color = CONTOUR_COLOR_NORMAL;
-    this.createMeshes();
-  }
 
-  createMeshes() {
     const geometry = new THREE.PlaneGeometry(1, 1);
     const material = new THREE.MeshLambertMaterial({
       // color: 0xffff00,
@@ -130,12 +120,18 @@ export class RectangleGeometry {
     texture.wrapT = THREE.RepeatWrapping;
     texture.needsUpdate = true;
 
-    this.plane.material.alphaMap = texture;
-    this.plane.material.needsUpdate = true;
+    // Even though this.plane should have exactly this type, the unpacking is still necessary
+    // for TS to understand that material is not an array.
+    const plane = this.plane as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
+    plane.material.alphaMap = texture;
+    plane.material.needsUpdate = true;
   }
 
   unattachTexture() {
-    this.plane.material.alphaMap = null;
+    // Even though this.plane should have exactly this type, the unpacking is still necessary
+    // for TS to understand that material is not an array.
+    const plane = this.plane as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
+    plane.material.alphaMap = null;
   }
 }
 

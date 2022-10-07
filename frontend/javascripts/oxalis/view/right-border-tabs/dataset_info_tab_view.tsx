@@ -29,6 +29,10 @@ import {
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { NumberSliderSetting } from "../components/setting_input_views";
 import { mayUserEditDataset } from "libs/utils";
+import {
+  cancelWatershedAction,
+  fineTuneWatershedAction,
+} from "oxalis/model/actions/volumetracing_actions";
 
 const enum StartableJobsEnum {
   NUCLEI_INFERRAL = "nuclei inferral",
@@ -647,16 +651,16 @@ function MagicWandControls() {
 
   const onChangeCloseValue = (closeValue: number) => {
     setCloseValue(closeValue);
-    Store.dispatch({ type: "FINE_TUNE_MAGIC_WAND", closeValue, erodeValue, dilateValue });
+    Store.dispatch(fineTuneWatershedAction(closeValue, erodeValue, dilateValue));
   };
   const onChangeDilateValue = (dilateValue: number) => {
     setDilateValue(dilateValue);
-    Store.dispatch({ type: "FINE_TUNE_MAGIC_WAND", closeValue, erodeValue, dilateValue });
+    Store.dispatch(fineTuneWatershedAction(closeValue, erodeValue, dilateValue));
   };
   const [erodeValue, setErodeValue] = useState(5);
   const onChangeErodeValue = (erodeValue: number) => {
     setErodeValue(erodeValue);
-    Store.dispatch({ type: "FINE_TUNE_MAGIC_WAND", closeValue, erodeValue, dilateValue });
+    Store.dispatch(fineTuneWatershedAction(closeValue, erodeValue, dilateValue));
   };
 
   return (
@@ -687,7 +691,7 @@ function MagicWandControls() {
       />
       <Button
         onClick={() => {
-          Store.dispatch({ type: "CANCEL_MAGIC_WAND" });
+          Store.dispatch(cancelWatershedAction());
         }}
       >
         Ok

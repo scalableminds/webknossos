@@ -15,7 +15,11 @@ import {
   handleAgglomerateSkeletonAtClick,
   handleClickSegment,
 } from "oxalis/controller/combinations/segmentation_handlers";
-import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  computeWatershedForRectAction,
+  confirmWatershedAction,
+  hideBrushAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
@@ -644,9 +648,7 @@ export class RectangleTool {
         currentPos = startPos;
         isDragging = true;
 
-        Store.dispatch({
-          type: "CONFIRM_MAGIC_WAND",
-        });
+        Store.dispatch(confirmWatershedAction());
         rectangleContour.unattachTexture();
       },
       leftMouseUp: () => {
@@ -656,12 +658,9 @@ export class RectangleTool {
           // clear rectangle because user didn't drag
           return;
         }
-        Store.dispatch({
-          type: "MAGIC_WAND_FOR_RECT",
-          startPosition: startPos,
-          endPosition: currentPos,
-          rectangleContour,
-        });
+        if (startPos != null && currentPos != null) {
+          Store.dispatch(computeWatershedForRectAction(startPos, currentPos, rectangleContour));
+        }
 
         // rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
       },

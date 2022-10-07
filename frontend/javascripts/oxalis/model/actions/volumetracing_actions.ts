@@ -5,6 +5,7 @@ import type { Segment, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
+import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 type CreateCellAction = ReturnType<typeof createCellAction>;
@@ -36,6 +37,11 @@ export type SetSegmentsAction = ReturnType<typeof setSegmentsAction>;
 export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
 
+export type ComputeWatershedForRectAction = ReturnType<typeof computeWatershedForRectAction>;
+export type FineTuneWatershedAction = ReturnType<typeof fineTuneWatershedAction>;
+export type CancelWatershedAction = ReturnType<typeof cancelWatershedAction>;
+export type ConfirmWatershedAction = ReturnType<typeof confirmWatershedAction>;
+
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
@@ -59,7 +65,11 @@ export type VolumeTracingAction =
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
   | SetMappingIsEditableAction
-  | InitializeEditableMappingAction;
+  | InitializeEditableMappingAction
+  | ComputeWatershedForRectAction
+  | FineTuneWatershedAction
+  | CancelWatershedAction
+  | ConfirmWatershedAction;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
@@ -242,7 +252,25 @@ export const dispatchFloodfillAsync = async (
   dispatch(action);
   await readyDeferred.promise();
 };
+
 export const setMappingIsEditableAction = () =>
   ({
     type: "SET_MAPPING_IS_EDITABLE",
   } as const);
+
+export const computeWatershedForRectAction = (
+  startPosition: Vector3,
+  endPosition: Vector3,
+  rectangleContour: RectangleGeometry,
+) =>
+  ({ type: "COMPUTE_WATERSHED_FOR_RECT", startPosition, endPosition, rectangleContour } as const);
+
+export const fineTuneWatershedAction = (
+  closeValue: number,
+  erodeValue: number,
+  dilateValue: number,
+) => ({ type: "FINE_TUNE_WATERSHED", closeValue, erodeValue, dilateValue } as const);
+
+export const cancelWatershedAction = () => ({ type: "CANCEL_WATERSHED" } as const);
+
+export const confirmWatershedAction = () => ({ type: "CONFIRM_WATERSHED" } as const);

@@ -32,7 +32,7 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { cycleToolAction } from "oxalis/model/actions/ui_actions";
+import { cycleToolAction, enterAction, escapeAction } from "oxalis/model/actions/ui_actions";
 import {
   MoveTool,
   SkeletonTool,
@@ -388,14 +388,8 @@ class PlaneController extends React.PureComponent<Props> {
         "shift + d": createDelayAwareMoveHandler(-5),
         "shift + space": createDelayAwareMoveHandler(-1),
         "ctrl + space": createDelayAwareMoveHandler(-1),
-        enter: () =>
-          Store.dispatch({
-            type: "ENTER",
-          }),
-        esc: () =>
-          Store.dispatch({
-            type: "ESCAPE",
-          }),
+        enter: () => Store.dispatch(enterAction()),
+        esc: () => Store.dispatch(escapeAction()),
         space: createDelayAwareMoveHandler(1),
         f: createDelayAwareMoveHandler(1),
         d: createDelayAwareMoveHandler(-1),

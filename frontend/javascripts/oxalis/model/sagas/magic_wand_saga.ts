@@ -10,6 +10,10 @@ import {
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
+  CancelWatershedAction,
+  ComputeWatershedForRectAction,
+  ConfirmWatershedAction,
+  FineTuneWatershedAction,
   finishAnnotationStrokeAction,
   registerLabelPointAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -22,22 +26,14 @@ import morphology from "ball-morphology";
 import floodFill from "n-dimensional-flood-fill";
 import Toast from "libs/toast";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
-
-const EXPECTED_INPUT_SHAPE: Vector4 = [1, 4, 58, 58];
-const OUTPUT_SHAPE: Vector4 = [1, 1, 26, 26];
-const OUTPUT_SIZE = OUTPUT_SHAPE.reduce((agg, val) => agg * val, 1);
+import { EnterAction, EscapeAction } from "../actions/ui_actions";
 
 function takeLatest2(vec4: Vector4): Vector2 {
   return [vec4[2], vec4[3]];
 }
 
-function* performMagicWand(action: Action): Saga<void> {
-  // @ts-ignore
-  if (action.type !== "MAGIC_WAND_FOR_RECT") {
-    throw new Error("Satisfy typescript.");
-  }
-
-  console.log("starting saga performMagicWand");
+function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
+  console.log("starting saga performWatershed");
 
   const { startPosition, endPosition } = action;
   const boundingBoxObj = {
@@ -141,20 +137,26 @@ function* performMagicWand(action: Action): Saga<void> {
   let newestOutput = output;
 
   while (true) {
-    const { finetuneAction, cancelMagicWandAction, escape, enter, confirm } = yield* race({
-      finetuneAction: take("FINE_TUNE_MAGIC_WAND"),
-      cancelMagicWandAction: take("CANCEL_MAGIC_WAND"),
+    const { finetuneAction, cancelWatershedAction, escape, enter, confirm } = (yield* race({
+      finetuneAction: take("FINE_TUNE_WATERSHED"),
+      cancelWatershedAction: take("CANCEL_WATERSHED"),
       escape: take("ESCAPE"),
       enter: take("ENTER"),
-      confirm: take("CONFIRM_MAGIC_WAND"),
-    });
+      confirm: take("CONFIRM_WATERSHED"),
+    })) as {
+      finetuneAction: FineTuneWatershedAction;
+      cancelWatershedAction: CancelWatershedAction;
+      escape: EscapeAction;
+      enter: EnterAction;
+      confirm: ConfirmWatershedAction;
+    };
 
     const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
-    if (confirm || enter || cancelMagicWandAction || escape) {
+    if (confirm || enter || cancelWatershedAction || escape) {
       console.log("terminate saga...");
       rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
 
-      if (escape || cancelMagicWandAction) {
+      if (escape || cancelWatershedAction) {
         console.log("...without brushing");
         return;
       }
@@ -193,8 +195,8 @@ function* performMagicWand(action: Action): Saga<void> {
       yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
       return;
     } else if (finetuneAction) {
-      console.log("fine tune");
-      newestOutput = copyNdArray(Uint8Array, floodfillCopy);
+      console.log("finetuneAction", finetuneAction);
+      newestOutput = copyNdArray(Uint8Array, floodfillCopy) as ndarray.NdArray<Uint8Array>;
 
       morphology.close(newestOutput, finetuneAction.closeValue);
       morphology.erode(newestOutput, finetuneAction.erodeValue);
@@ -233,15 +235,15 @@ function maskToRGBA(inputNd: ndarray.NdArray<TypedArray>, output: ndarray.NdArra
 export default function* listenToMinCut(): Saga<void> {
   // yield* takeEveryUnlessBusy(
   yield* takeEvery(
-    "MAGIC_WAND_FOR_RECT",
-    function* guard(action) {
+    "COMPUTE_WATERSHED_FOR_RECT",
+    function* guard(action: ComputeWatershedForRectAction) {
       try {
-        yield* call(performMagicWand, action);
+        yield* call(performWatershed, action);
       } catch (ex) {
         Toast.error(ex as Error);
         console.error(ex);
       }
     },
-    // "Magic wand is being computed.",
+    // "Watershed is being computed.",
   );
 }

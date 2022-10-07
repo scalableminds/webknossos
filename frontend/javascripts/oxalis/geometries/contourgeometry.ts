@@ -1,8 +1,10 @@
 import * as THREE from "three";
-import type { Vector3 } from "oxalis/constants";
+import { OrthoViews, Vector3 } from "oxalis/constants";
 import ResizableBuffer from "libs/resizable_buffer";
 import app from "app";
 import { V3 } from "libs/mjs";
+import Store from "oxalis/store";
+import Dimensions from "oxalis/model/dimensions";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
@@ -66,6 +68,12 @@ class ContourGeometry {
   }
 }
 
+const rotations = {
+  [OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
+  [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
+  [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),
+};
+
 export class RectangleGeometry {
   color: THREE.Color;
   plane: THREE.Mesh;
@@ -100,13 +108,29 @@ export class RectangleGeometry {
     this.plane.material.color = this.color;
   }
 
+  rotateToViewport() {
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    const rotation = rotations[activeViewport];
+    if (!rotation) {
+      return;
+    }
+
+    this.plane.setRotationFromEuler(rotation);
+    this.centerMarker.setRotationFromEuler(rotation);
+  }
+
   setCoordinates(startPosition: Vector3, endPosition: Vector3) {
-    const position = V3.scale(V3.add(startPosition, endPosition), 0.5);
-    const extent = V3.abs(V3.sub(endPosition, startPosition));
-    this.plane.position.set(...position);
-    this.plane.scale.set(extent[0], extent[1], 1);
+    const centerPosition = V3.scale(V3.add(startPosition, endPosition), 0.5);
+    const extentXYZ = V3.abs(V3.sub(endPosition, startPosition));
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    const extentUVW = Dimensions.transDim(extentXYZ, activeViewport);
+    const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
+    extentUVW[2] = 2;
+
+    this.plane.position.set(...centerPosition);
+    this.plane.scale.set(...extentUVW);
     this.plane.geometry.computeBoundingSphere();
-    this.centerMarker.position.set(...position);
+    this.centerMarker.position.set(...centerPosition);
     app.vent.trigger("rerender");
   }
 

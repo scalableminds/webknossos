@@ -38,19 +38,27 @@ import { EnterAction, EscapeAction } from "../actions/ui_actions";
 import { OxalisState, VolumeTracing } from "oxalis/store";
 import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
 import { getColorLayers } from "../accessors/dataset_accessor";
+import Dimensions from "../dimensions";
+import { take2 } from "libs/utils";
 
 function takeLatest2(vec4: Vector4): Vector2 {
   return [vec4[2], vec4[3]];
 }
 
 function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
+  const activeViewport = yield* select(
+    (state: OxalisState) => state.viewModeData.plane.activeViewport,
+  );
+  const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const watershedConfig = yield* select((state) => state.userConfiguration.watershed);
   console.log("starting saga performWatershed");
 
   const { startPosition, endPosition } = action;
   const boundingBoxObj = {
     min: V3.floor(V3.min(startPosition, endPosition)),
-    max: V3.floor(V3.add(V3.max(startPosition, endPosition), [0, 0, 1])),
+    max: V3.floor(
+      V3.add(V3.max(startPosition, endPosition), Dimensions.transDim([0, 0, 1], activeViewport)),
+    ),
   };
 
   const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
@@ -82,44 +90,40 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   );
   const size = boundingBoxMag1.getSize();
   const stride = [1, size[0], size[0] * size[1]];
-  const inputNd = ndarray(inputData, size, stride);
+  const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
-  const center2D = [Math.floor(inputNd.shape[0] / 2), Math.floor(inputNd.shape[1] / 2)];
-  const rectCenterBrushExtent = [
-    Math.floor(inputNd.shape[0] / 10),
-    Math.floor(inputNd.shape[1] / 10),
-  ];
+  const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
+  const rectCenterBrushExtentUV = V3.floor(V3.scale(inputNdUvw.shape as Vector3, 1 / 10));
 
   for (
-    let u = center2D[0] - rectCenterBrushExtent[0];
-    u < center2D[0] + rectCenterBrushExtent[0];
+    let u = centerUV[0] - rectCenterBrushExtentUV[0];
+    u < centerUV[0] + rectCenterBrushExtentUV[0];
     u++
   ) {
     for (
-      let v = center2D[1] - rectCenterBrushExtent[1];
-      v < center2D[1] + rectCenterBrushExtent[1];
+      let v = centerUV[1] - rectCenterBrushExtentUV[1];
+      v < centerUV[1] + rectCenterBrushExtentUV[1];
       v++
     ) {
-      inputNd.set(u, v, 0, 255);
+      inputNdUvw.set(u, v, 0, 255);
     }
   }
 
-  const output = ndarray(new Uint8Array(inputNd.size), inputNd.shape);
+  const output = ndarray(new Uint8Array(inputNdUvw.size), inputNdUvw.shape);
 
   const labeledResolution = [1, 1, 1] as Vector3;
   const labeledZoomStep = 0;
-  const activeViewport: OrthoView = "PLANE_XY";
-  const firstDim = 0;
-  const secondDim = 1;
-  const thirdDim = 2;
 
   console.time("floodfill");
   floodFill({
-    getter: (x: number, y: number) => {
-      if (x < 0 || y < 0 || x > inputNd.shape[0] || 1 > inputNd.shape[1]) {
+    getter: (x: number, y: number, z: number) => {
+      if (z != undefined) {
+        throw new Error("Third dimension should not be used in floodfill. Is seed 2d?");
+      }
+      if (x < 0 || y < 0 || x > inputNdUvw.shape[0] || 1 > inputNdUvw.shape[1]) {
         return null;
       }
-      return inputNd.get(x, y, 0);
+      return inputNdUvw.get(x, y, 0);
     },
     equals: (a: number, b: number) => {
       if (a == null || b == null) {
@@ -127,15 +131,15 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
       }
       return a > 128; // || Math.abs(a - b) / b < 0.1;
     },
-    seed: center2D,
+    seed: centerUV,
     onFlood: (x: number, y: number) => {
       output.set(x, y, 0, 1);
     },
   });
 
-  const seedIntensity = inputNd.get(
-    Math.floor(inputNd.shape[0] / 2),
-    Math.floor(inputNd.shape[1] / 2),
+  const seedIntensity = inputNdUvw.get(
+    Math.floor(inputNdUvw.shape[0] / 2),
+    Math.floor(inputNdUvw.shape[1] / 2),
     0,
   );
   console.log({ seedIntensity });
@@ -148,13 +152,13 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   // // morphology.dilate(output, 1);
   console.timeEnd("floodfill");
 
-  const outputRGBA = maskToRGBA(inputNd, output);
+  const outputRGBA = maskToRGBA(inputNdUvw, output);
   const { rectangleGeometry } = action;
-  rectangleGeometry.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
+  rectangleGeometry.attachData(outputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
 
-  let newestOutput = output;
-
-  const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+  const overwriteMode = yield* select(
+    (state: OxalisState) => state.userConfiguration.overwriteMode,
+  );
 
   if (!watershedConfig.showPreview) {
     return yield* finalizeWatershed(
@@ -167,12 +171,13 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
       size,
       firstDim,
       secondDim,
-      inputNd,
+      inputNdUvw,
       output,
       overwriteMode,
       labeledZoomStep,
     );
   }
+  let newestOutput = output;
 
   while (true) {
     const { finetuneAction, cancelWatershedAction, escape, enter, confirm } = (yield* race({
@@ -208,7 +213,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
         size,
         firstDim,
         secondDim,
-        inputNd,
+        inputNdUvw,
         output,
         overwriteMode,
         labeledZoomStep,
@@ -221,9 +226,9 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
       morphology.erode(newestOutput, finetuneAction.erodeValue);
       morphology.dilate(newestOutput, finetuneAction.dilateValue);
 
-      const outputRGBA = maskToRGBA(inputNd, newestOutput);
+      const outputRGBA = maskToRGBA(inputNdUvw, newestOutput);
       const { rectangleGeometry } = action;
-      rectangleGeometry.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
+      rectangleGeometry.attachData(outputRGBA, inputNdUvw.shape[0], inputNdUvw.shape[1]);
     }
   }
 }
@@ -238,7 +243,7 @@ function* finalizeWatershed(
   size: Vector3,
   firstDim: number,
   secondDim: number,
-  inputNd: ndarray.NdArray<TypedArray>,
+  inputNdUvw: ndarray.NdArray<TypedArray>,
   output: ndarray.NdArray<Uint8Array>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
@@ -258,8 +263,8 @@ function* finalizeWatershed(
     size[secondDim],
   );
 
-  for (let u = 0; u < inputNd.shape[0]; u++) {
-    for (let v = 0; v < inputNd.shape[1]; v++) {
+  for (let u = 0; u < inputNdUvw.shape[0]; u++) {
+    for (let v = 0; v < inputNdUvw.shape[1]; v++) {
       if (output.get(u, v, 0) > 0) {
         voxelBuffer2D.setValue(u, v, 1);
       }
@@ -279,12 +284,12 @@ function* finalizeWatershed(
   return;
 }
 
-function maskToRGBA(inputNd: ndarray.NdArray<TypedArray>, output: ndarray.NdArray) {
+function maskToRGBA(inputNdUvw: ndarray.NdArray<TypedArray>, output: ndarray.NdArray) {
   const channelCount = 4;
-  const outputRGBA = new Uint8Array(inputNd.size * channelCount);
+  const outputRGBA = new Uint8Array(inputNdUvw.size * channelCount);
   let idx = 0;
-  for (let v = 0; v < inputNd.shape[1]; v++) {
-    for (let u = 0; u < inputNd.shape[0]; u++) {
+  for (let v = 0; v < inputNdUvw.shape[1]; v++) {
+    for (let u = 0; u < inputNdUvw.shape[0]; u++) {
       if (output.get(u, v, 0) > 0) {
         outputRGBA[idx] = 255;
         outputRGBA[idx + 1] = 255;

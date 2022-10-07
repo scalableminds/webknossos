@@ -644,6 +644,7 @@ export class WatershedTool {
     const { rectangleGeometry } = SceneController;
     return {
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        rectangleGeometry.rotateToViewport();
         startPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
         currentPos = startPos;
         isDragging = true;

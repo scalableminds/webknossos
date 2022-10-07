@@ -1061,6 +1061,19 @@ export async function startConvertToWkwJob(
   );
 }
 
+export async function startFindLargestSegmentIdJob(
+  datasetName: string,
+  organizationName: string,
+  layerName: string,
+): Promise<Array<APIJob>> {
+  return Request.receiveJSON(
+    `/api/jobs/run/findLargestSegmentId/${organizationName}/${datasetName}?layerName=${layerName}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
 export async function startExportTiffJob(
   datasetName: string,
   organizationName: string,

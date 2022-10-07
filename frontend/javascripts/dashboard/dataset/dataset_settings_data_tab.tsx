@@ -9,6 +9,7 @@ import {
   Switch,
   Tooltip,
   FormInstance,
+  Button,
 } from "antd";
 import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
@@ -23,6 +24,7 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "./helper_components";
+import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 
 const FormItem = Form.Item;
 
@@ -256,46 +258,58 @@ function SimpleLayerForm({
         </FormItemWithInfo>
 
         {isSegmentation ? (
-          <FormItemWithInfo
-            name={["dataSource", "dataLayers", index, "largestSegmentId"]}
-            label="Largest segment ID"
-            info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
-            initialValue={layer.largestSegmentId != null ? `${layer.largestSegmentId}` : undefined}
-            rules={[
-              {
-                validator: (rule, value) =>
-                  value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
-                    ? Promise.resolve()
-                    : Promise.reject(
-                        new Error(
-                          `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
+          <div>
+            <FormItemWithInfo
+              name={["dataSource", "dataLayers", index, "largestSegmentId"]}
+              label="Largest segment ID"
+              info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
+              initialValue={
+                layer.largestSegmentId != null ? `${layer.largestSegmentId}` : undefined
+              }
+              rules={[
+                {
+                  validator: (rule, value) =>
+                    value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(
+                            `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
+                          ),
                         ),
-                      ),
-              },
-              {
-                warningOnly: true,
-                validator: (rule, value) =>
-                  value == null || value === ""
-                    ? Promise.reject(
-                        new Error(
-                          "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
-                        ),
-                      )
-                    : Promise.resolve(),
-              },
-            ]}
-          >
-            <InputNumber
-              disabled={isReadOnlyDataset}
-              // @ts-ignore returning undefined does work without problems
-              parser={(value: string | undefined) => {
-                if (value == null || value === "") {
-                  return undefined;
-                }
-                return parseInt(value, 10);
-              }}
-            />
-          </FormItemWithInfo>
+                },
+                {
+                  warningOnly: true,
+                  validator: (rule, value) =>
+                    value == null || value === ""
+                      ? Promise.reject(
+                          new Error(
+                            "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
+                          ),
+                        )
+                      : Promise.resolve(),
+                },
+              ]}
+            >
+              <InputNumber
+                disabled={isReadOnlyDataset}
+                // @ts-ignore returning undefined does work without problems
+                parser={(value: string | undefined) => {
+                  if (value == null || value === "") {
+                    return undefined;
+                  }
+                  return parseInt(value, 10);
+                }}
+              />
+            </FormItemWithInfo>
+            {/* todo: only expose if dataset is not being imported. dont hardcode */}
+            <Button
+              onClick={() =>
+                startFindLargestSegmentIdJob("l4_sample", "sample_organization", layer.name)
+              }
+            >
+              Detect
+            </Button>
+          </div>
         ) : null}
       </Col>
     </Row>

@@ -837,7 +837,7 @@ export default function ToolbarView() {
           value={AnnotationToolEnum.WATERSHED}
         >
           <i
-            className="fas fa-vector-square"
+            className="fas fa-tint"
             style={{
               opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
               transform: "scaleX(-1)",

@@ -58,8 +58,8 @@ class SceneController {
   taskBoundingBox: Cube | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
   contour: ContourGeometry;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rectangleContour' has no initializer and is not d... Remove this comment to see the full error message
-  rectangleContour: RectangleGeometry;
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rectangleGeometry' has no initializer and is not d... Remove this comment to see the full error message
+  rectangleGeometry: RectangleGeometry;
   // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
   planes: OrthoViewWithoutTDMap<Plane>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
@@ -393,8 +393,8 @@ class SceneController {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
 
-      this.rectangleContour = new RectangleGeometry();
-      this.rectangleContour.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+      this.rectangleGeometry = new RectangleGeometry();
+      this.rectangleGeometry.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
     }
 
     if (state.tracing.skeleton != null) {

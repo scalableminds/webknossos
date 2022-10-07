@@ -1,6 +1,14 @@
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
-import { ContourModeEnum, TypedArray, Vector2, Vector3, Vector4 } from "oxalis/constants";
+import {
+  ContourModeEnum,
+  OrthoView,
+  OverwriteMode,
+  TypedArray,
+  Vector2,
+  Vector3,
+  Vector4,
+} from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery, race, take } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -27,6 +35,8 @@ import floodFill from "n-dimensional-flood-fill";
 import Toast from "libs/toast";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { EnterAction, EscapeAction } from "../actions/ui_actions";
+import { VolumeTracing } from "oxalis/store";
+import { RectangleGeometry } from "oxalis/geometries/contourgeometry";
 
 function takeLatest2(vec4: Vector4): Vector2 {
   return [vec4[2], vec4[3]];
@@ -90,7 +100,7 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
 
   const labeledResolution = [1, 1, 1] as Vector3;
   const labeledZoomStep = 0;
-  const activeViewport = "PLANE_XY";
+  const activeViewport: OrthoView = "PLANE_XY";
   const firstDim = 0;
   const secondDim = 1;
   const thirdDim = 2;
@@ -131,10 +141,29 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
   console.timeEnd("floodfill");
 
   const outputRGBA = maskToRGBA(inputNd, output);
-  const { rectangleContour } = action;
-  rectangleContour.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
+  const { rectangleGeometry } = action;
+  rectangleGeometry.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
 
   let newestOutput = output;
+
+  const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+  if (!action.show_preview_first) {
+    return yield* finalizeWatershed(
+      rectangleGeometry,
+      volumeTracing,
+      activeViewport,
+      labeledResolution,
+      boundingBoxMag1,
+      thirdDim,
+      size,
+      firstDim,
+      secondDim,
+      inputNd,
+      output,
+      overwriteMode,
+      labeledZoomStep,
+    );
+  }
 
   while (true) {
     const { finetuneAction, cancelWatershedAction, escape, enter, confirm } = (yield* race({
@@ -151,49 +180,30 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
       confirm: ConfirmWatershedAction;
     };
 
-    const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
     if (confirm || enter || cancelWatershedAction || escape) {
       console.log("terminate saga...");
-      rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
 
       if (escape || cancelWatershedAction) {
+        rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
         console.log("...without brushing");
         return;
       }
 
-      console.log("...with brushing");
-      const interpolationLayer = yield* call(
-        createVolumeLayer,
+      return yield* finalizeWatershed(
+        rectangleGeometry,
         volumeTracing,
         activeViewport,
         labeledResolution,
-        boundingBoxMag1.min[thirdDim],
-      );
-      const voxelBuffer2D = interpolationLayer.createVoxelBuffer2D(
-        V2.floor(interpolationLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
-        size[firstDim],
-        size[secondDim],
-      );
-
-      for (let u = 0; u < inputNd.shape[0]; u++) {
-        for (let v = 0; v < inputNd.shape[1]; v++) {
-          if (output.get(u, v, 0) > 0) {
-            voxelBuffer2D.setValue(u, v, 1);
-          }
-        }
-      }
-
-      yield* call(
-        labelWithVoxelBuffer2D,
-        voxelBuffer2D,
-        ContourModeEnum.DRAW,
+        boundingBoxMag1,
+        thirdDim,
+        size,
+        firstDim,
+        secondDim,
+        inputNd,
+        output,
         overwriteMode,
         labeledZoomStep,
-        activeViewport,
       );
-      yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
-      yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
-      return;
     } else if (finetuneAction) {
       console.log("finetuneAction", finetuneAction);
       newestOutput = copyNdArray(Uint8Array, floodfillCopy) as ndarray.NdArray<Uint8Array>;
@@ -203,10 +213,61 @@ function* performWatershed(action: ComputeWatershedForRectAction): Saga<void> {
       morphology.dilate(newestOutput, finetuneAction.dilateValue);
 
       const outputRGBA = maskToRGBA(inputNd, newestOutput);
-      const { rectangleContour } = action;
-      rectangleContour.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
+      const { rectangleGeometry } = action;
+      rectangleGeometry.attachData(outputRGBA, inputNd.shape[0], inputNd.shape[1]);
     }
   }
+}
+
+function* finalizeWatershed(
+  rectangleGeometry: RectangleGeometry,
+  volumeTracing: VolumeTracing,
+  activeViewport: OrthoView,
+  labeledResolution: Vector3,
+  boundingBoxMag1: BoundingBox,
+  thirdDim: number,
+  size: Vector3,
+  firstDim: number,
+  secondDim: number,
+  inputNd: ndarray.NdArray<TypedArray>,
+  output: ndarray.NdArray<Uint8Array>,
+  overwriteMode: OverwriteMode,
+  labeledZoomStep: number,
+) {
+  rectangleGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+  console.log("...with brushing");
+  const interpolationLayer = yield* call(
+    createVolumeLayer,
+    volumeTracing,
+    activeViewport,
+    labeledResolution,
+    boundingBoxMag1.min[thirdDim],
+  );
+  const voxelBuffer2D = interpolationLayer.createVoxelBuffer2D(
+    V2.floor(interpolationLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
+    size[firstDim],
+    size[secondDim],
+  );
+
+  for (let u = 0; u < inputNd.shape[0]; u++) {
+    for (let v = 0; v < inputNd.shape[1]; v++) {
+      if (output.get(u, v, 0) > 0) {
+        voxelBuffer2D.setValue(u, v, 1);
+      }
+    }
+  }
+
+  yield* call(
+    labelWithVoxelBuffer2D,
+    voxelBuffer2D,
+    ContourModeEnum.DRAW,
+    overwriteMode,
+    labeledZoomStep,
+    activeViewport,
+  );
+  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
+  return;
 }
 
 function maskToRGBA(inputNd: ndarray.NdArray<TypedArray>, output: ndarray.NdArray) {

@@ -261,9 +261,16 @@ export const setMappingIsEditableAction = () =>
 export const computeWatershedForRectAction = (
   startPosition: Vector3,
   endPosition: Vector3,
-  rectangleContour: RectangleGeometry,
+  rectangleGeometry: RectangleGeometry,
+  showPreviewFirst: boolean = false,
 ) =>
-  ({ type: "COMPUTE_WATERSHED_FOR_RECT", startPosition, endPosition, rectangleContour } as const);
+  ({
+    type: "COMPUTE_WATERSHED_FOR_RECT",
+    startPosition,
+    endPosition,
+    rectangleGeometry,
+    showPreviewFirst,
+  } as const);
 
 export const fineTuneWatershedAction = (
   closeValue: number,

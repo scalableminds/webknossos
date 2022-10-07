@@ -641,7 +641,7 @@ export class WatershedTool {
     let currentPos: Vector3 | null = null;
     let isDragging = false;
     const SceneController = getSceneController();
-    const { rectangleContour } = SceneController;
+    const { rectangleGeometry } = SceneController;
     return {
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         startPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
@@ -649,7 +649,7 @@ export class WatershedTool {
         isDragging = true;
 
         Store.dispatch(confirmWatershedAction());
-        rectangleContour.unattachTexture();
+        rectangleGeometry.unattachTexture();
       },
       leftMouseUp: () => {
         isDragging = false;
@@ -659,10 +659,8 @@ export class WatershedTool {
           return;
         }
         if (startPos != null && currentPos != null) {
-          Store.dispatch(computeWatershedForRectAction(startPos, currentPos, rectangleContour));
+          Store.dispatch(computeWatershedForRectAction(startPos, currentPos, rectangleGeometry));
         }
-
-        // rectangleContour.setCoordinates([0, 0, 0], [0, 0, 0]);
       },
       leftDownMove: (
         delta: Point2,
@@ -674,7 +672,7 @@ export class WatershedTool {
           return;
         }
         currentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
-        rectangleContour.setCoordinates(startPos, currentPos);
+        rectangleGeometry.setCoordinates(startPos, currentPos);
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(

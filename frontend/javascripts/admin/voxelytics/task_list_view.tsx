@@ -458,19 +458,15 @@ export default function TaskListView({
     );
   };
 
-  const totalRuntime = report.run.tasks
-    .reduce(
-      (sum, t) => {
-        if (t.state === VoxelyticsRunState.RUNNING) {
-          return sum.add(moment.duration(moment().diff(moment(t.beginTime))));
-        } else if (t.beginTime != null && t.endTime != null) {
-          return sum.add(moment.duration(moment(t.endTime).diff(moment(t.beginTime))));
-        } else {
-          return sum;
-        }
-      },
-      moment.duration(0),
-    );
+  const totalRuntime = report.run.tasks.reduce((sum, t) => {
+    if (t.state === VoxelyticsRunState.RUNNING) {
+      return sum.add(moment.duration(moment().diff(moment(t.beginTime))));
+    } else if (t.beginTime != null && t.endTime != null) {
+      return sum.add(moment.duration(moment(t.endTime).diff(moment(t.beginTime))));
+    } else {
+      return sum;
+    }
+  }, moment.duration(0));
 
   const {
     workflow: { name: readableWorkflowName },

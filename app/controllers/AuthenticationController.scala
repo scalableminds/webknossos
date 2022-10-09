@@ -449,24 +449,28 @@ class AuthenticationController @Inject()(
     openIdClient.redirectURL(oidcConfig, absoluteOidcCallbackURL).map(url => Redirect(url))
   }
 
+  def loginUser(user: User, loginInfo: LoginInfo)(implicit request: Request[AnyContent]): Future[Future[Result]] = {
+    userService.retrieve(loginInfo).map {
+      case Some(user) if !user.isDeactivated =>
+        for {
+          authenticator: CombinedAuthenticator <- combinedAuthenticatorService.create(loginInfo)
+          value: Cookie <- combinedAuthenticatorService.init(authenticator)
+          result: AuthenticatorResult <- combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
+          _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+          _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+        } yield result
+      case None =>
+        Future.successful(BadRequest(Messages("error.noUser")))
+      case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
+    }
+  }
+
   // Is called after user was successfully authenticated
   def loginOrSignupViaOidc(oidc: OpenConnectId): Request[AnyContent] => Future[Future[Result]] = { implicit request: Request[AnyContent] =>
       userService.userFromMultiUserEmail(oidc.email)(GlobalAccessContext).toFox.futureBox.flatMap {
         case Full(user) =>
           val loginInfo = LoginInfo("credentials", user._id.toString)
-          userService.retrieve(loginInfo).map {
-            case Some(user) if !user.isDeactivated =>
-              for {
-                authenticator: CombinedAuthenticator <- combinedAuthenticatorService.create(loginInfo)
-                value: Cookie <- combinedAuthenticatorService.init(authenticator)
-                result: AuthenticatorResult <- combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
-                _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
-                _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
-              } yield result
-            case None =>
-              Future.successful(BadRequest(Messages("error.noUser")))
-            case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
-          }
+          loginUser(user, loginInfo)
         case Empty =>
           for {
             organization: Organization <- organizationService.findOneByInviteByNameOrDefault(None,None)(GlobalAccessContext).toFutureWithEmptyToFailure
@@ -478,21 +482,26 @@ class AuthenticationController @Inject()(
               userService.getOIDCPasswordInfo).toFutureWithEmptyToFailure
             multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).toFutureWithEmptyToFailure
             _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-            // brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox ???
+           //  brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox // Is this necessary?
           } yield {
             if (conf.Features.isDemoInstance) {
               mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
-            } //else {
-            //  Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
-            //}
-            //Mailer ! Send(
-            //  defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization, autoActivate))
-            Future.successful(Ok)
+            } else {
+              Mailer ! Send(defaultMails.newUserMail(user.name, oidc.email, None, enableAutoVerify = true))
+            }
+            Mailer ! Send(
+              defaultMails.registerAdminNotifyerMail(user.name, oidc.email, None , organization, autoActivate = true))
+            // After registering, also login
+            val loginInfo = LoginInfo("credentials", user._id.toString)
+            for {
+              loginFuture <- loginUser(user, loginInfo)
+              loginResult <- loginFuture
+            } yield loginResult
           }
       }
   }
 
-  def openIdCallback() = Action.async { implicit request =>
+  def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
         code <- openIdClient.getToken(oidcConfig,
                                     absoluteOidcCallbackURL,

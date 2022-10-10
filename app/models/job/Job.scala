@@ -1,6 +1,5 @@
 package models.job
 
-import java.sql.Timestamp
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
@@ -8,13 +7,12 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.binary.{DataSetDAO, DataStoreDAO}
 import models.job.JobState.JobState
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO}
+import oxalis.security.WkSilhouetteEnvironment
 import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
@@ -23,9 +21,10 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
+import java.sql.Timestamp
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.duration._
+import scala.concurrent.duration.{FiniteDuration, _}
 
 case class Job(
     _id: ObjectId,
@@ -268,6 +267,7 @@ class JobService @Inject()(wkConf: WkConf,
                            organizationDAO: OrganizationDAO,
                            dataSetDAO: DataSetDAO,
                            analyticsService: AnalyticsService,
+                           wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                            slackNotificationService: SlackNotificationService,
                            val lifecycle: ApplicationLifecycle,
                            val system: ActorSystem)(implicit ec: ExecutionContext)
@@ -341,7 +341,7 @@ class JobService @Inject()(wkConf: WkConf,
       Json.obj(
         "id" -> job._id.id,
         "command" -> job.command,
-        "commandArgs" -> (job.commandArgs - "webknossos_token" - "user_auth_token"),
+        "commandArgs" -> (job.commandArgs - "webknossos_token"),
         "state" -> job.state,
         "manualState" -> job.manualState,
         "latestRunId" -> job.latestRunId,
@@ -353,12 +353,16 @@ class JobService @Inject()(wkConf: WkConf,
       )
     }
 
-  def parameterWrites(job: Job): JsObject =
-    Json.obj(
-      "job_id" -> job._id.id,
-      "command" -> job.command,
-      "job_kwargs" -> job.commandArgs
-    )
+  def parameterWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    for {
+      owner <- userDAO.findOne(job._owner)
+      userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(owner.loginInfo)
+    } yield {
+      Json.obj("job_id" -> job._id.id,
+               "command" -> job.command,
+               "job_kwargs" -> job.commandArgs,
+               "user_auth_token" -> userAuthToken.id)
+    }
 
   def submitJob(command: String, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {

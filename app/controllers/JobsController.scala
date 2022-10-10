@@ -1,13 +1,10 @@
 package controllers
 
-import java.util.Date
-
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import javax.inject.Inject
 import models.binary.DataSetDAO
-import models.job.{JobDAO, JobService, JobState, WorkerDAO, WorkerService}
+import models.job._
 import models.organization.OrganizationDAO
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import oxalis.telemetry.SlackNotificationService
@@ -16,6 +13,8 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import utils.{ObjectId, WkConf}
 
+import java.util.Date
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class JobsController @Inject()(jobDAO: JobDAO,
@@ -89,8 +88,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
-            "scale" -> scale,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken
+            "scale" -> scale
           )
 
           job <- jobService.submitJob(command, commandArgs, request.identity, dataStoreName) ?~> "job.couldNotRunCubing"
@@ -146,7 +144,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataset_name" -> dataSetName,
             "layer_name" -> layerName,
             "new_dataset_name" -> newDatasetName,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)
@@ -174,7 +171,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataset_name" -> dataSetName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNeuronInferral"
@@ -199,8 +195,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "organization.notFound",
             organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.globalizeFloodfill.notAllowed.organization" ~> FORBIDDEN
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
@@ -209,8 +203,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "fallback_layer_name" -> fallbackLayerName,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
-            "user_auth_token" -> userAuthToken.id,
             "annotation_id" -> annotationId,
             "annotation_type" -> annotationType,
             "new_dataset_name" -> newDatasetName,
@@ -239,8 +231,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
           command = "export_tiff"
           exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
@@ -249,7 +239,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "bbox" -> bbox,
             "export_file_name" -> exportFileName,
             "layer_name" -> layerName,
-            "user_auth_token" -> userAuthToken.id,
             "annotation_layer_name" -> annotationLayerName,
             "annotation_id" -> annotationId,
             "annotation_type" -> annotationType,
@@ -281,15 +270,11 @@ class JobsController @Inject()(jobDAO: JobDAO,
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
           command = "materialize_volume_annotation"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "fallback_layer_name" -> fallbackLayerName,
-            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
-            "user_auth_token" -> userAuthToken.id,
             "annotation_id" -> annotationId,
             "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "annotation_type" -> annotationType,

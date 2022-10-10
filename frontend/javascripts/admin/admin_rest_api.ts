@@ -1623,6 +1623,7 @@ export async function getHistogramForLayer(
   return doWithToken((token) =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/histogram?token=${token}`,
+      { showErrorToast: false },
     ),
   );
 }

@@ -289,20 +289,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange, min, max, isInEditMode } = layer;
     const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
-    let histograms = [];
-
-    if (this.props.histogramData && this.props.histogramData[layerName]) {
-      histograms = this.props.histogramData[layerName];
-    } else {
-      histograms = [
-        {
-          numberOfElements: 0,
-          elementCounts: [],
-          min: defaultIntensityRange[0],
-          max: defaultIntensityRange[1],
-        },
-      ];
-    }
+    const histograms = this.props.histogramData?.[layerName];
 
     return (
       <Histogram
@@ -314,6 +301,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         isInEditMode={isInEditMode}
         layerName={layerName}
         defaultMinMax={defaultIntensityRange}
+        reloadHistogram={() => this.reloadHistogram(layerName)}
       />
     );
   };
@@ -754,6 +742,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     await api.data.reloadBuckets(layerName);
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
+  };
+
+  reloadHistogram = async (layerName: string): Promise<void> => {
+    await clearCache(this.props.dataset, layerName);
+    this.props.reloadHistogram(layerName);
   };
 
   getVolumeMagsToDownsample = (volumeTracing: VolumeTracing | null | undefined): Array<Vector3> => {

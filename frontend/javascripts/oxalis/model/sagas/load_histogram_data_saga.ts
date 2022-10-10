@@ -24,6 +24,8 @@ export default function* loadHistogramDataSaga(): Saga<void> {
 
 function* reloadHistogramForLayer(action: ReloadHistogramAction): Saga<void> {
   const { layerName } = action;
+  // Set histogram to undefined to indicate that it is being reloaded
+  yield* put(setHistogramDataForLayerAction(layerName, undefined));
   yield* call(loadHistogramForLayer, layerName);
 }
 
@@ -36,12 +38,12 @@ function* loadHistogramForLayer(layerName: string): Saga<void> {
     histogram = yield* call(getHistogramForLayer, dataset.dataStore.url, dataset, layerName);
 
     if (!Array.isArray(histogram) || histogram.length === 0) {
-      yield* put(setHistogramDataForLayerAction(layerName, undefined));
+      yield* put(setHistogramDataForLayerAction(layerName, null));
       return;
     }
   } catch (e) {
     console.warn(`Error: Could not fetch the histogram data for layer ${layerName}.`, e);
-    yield* put(setHistogramDataForLayerAction(layerName, undefined));
+    yield* put(setHistogramDataForLayerAction(layerName, null));
     return;
   }
 

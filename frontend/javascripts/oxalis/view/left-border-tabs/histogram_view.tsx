@@ -1,5 +1,5 @@
 import type { Dispatch } from "redux";
-import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
+import { Alert, Button, Slider, Row, Col, InputNumber, Spin, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
@@ -9,7 +9,7 @@ import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 type OwnProps = {
-  data: APIHistogramData;
+  data: APIHistogramData | null | undefined;
   layerName: string;
   intensityRangeMin: number;
   intensityRangeMax: number;
@@ -17,6 +17,7 @@ type OwnProps = {
   max?: number;
   isInEditMode: boolean;
   defaultMinMax: Vector2;
+  reloadHistogram: () => void;
 };
 type HistogramProps = OwnProps & {
   onChangeLayer: (
@@ -41,12 +42,19 @@ export function isHistogramSupported(elementClass: ElementClass): boolean {
 }
 
 function getMinAndMax(props: HistogramProps) {
-  const { min, max, data } = props;
+  const { min, max, data, defaultMinMax } = props;
 
   if (min != null && max != null) {
     return {
       min,
       max,
+    };
+  }
+
+  if (data == null) {
+    return {
+      min: defaultMinMax[0],
+      max: defaultMinMax[1],
     };
   }
 
@@ -75,22 +83,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     };
   }
 
-  componentDidMount() {
-    if (this.canvasRef == null) {
-      return;
-    }
-
-    const ctx = this.canvasRef.getContext("2d");
-    if (ctx == null) {
-      return;
-    }
-    ctx.translate(0, canvasHeight);
-    ctx.scale(1, -1);
-    ctx.lineWidth = 1;
-    ctx.lineJoin = "round";
-    this.updateCanvas();
-  }
-
   componentDidUpdate(prevProps: HistogramProps) {
     if (
       prevProps.min !== this.props.min ||
@@ -107,6 +99,24 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     this.updateCanvas();
   }
 
+  onCanvasRefChange = (ref: HTMLCanvasElement | null | undefined) => {
+    this.canvasRef = ref;
+
+    if (this.canvasRef == null) {
+      return;
+    }
+
+    const ctx = this.canvasRef.getContext("2d");
+    if (ctx == null) {
+      return;
+    }
+    ctx.translate(0, canvasHeight);
+    ctx.scale(1, -1);
+    ctx.lineWidth = 1;
+    ctx.lineJoin = "round";
+    this.updateCanvas();
+  };
+
   updateCanvas() {
     if (this.canvasRef == null) {
       return;
@@ -119,6 +129,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     const { min, max } = getMinAndMax(this.props);
     const { data } = this.props;
+
+    if (data == null) return;
+
     // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other.
     const maxValue = Math.max(
       ...data.map(({ elementCounts, min: histogramMin, max: histogramMax }) => {
@@ -135,7 +148,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     );
 
     for (const [i, histogram] of data.entries()) {
-      const color = this.props.data.length > 1 ? uint24Colors[i] : uint24Colors[2];
+      const color = data.length > 1 ? uint24Colors[i] : uint24Colors[2];
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       this.drawHistogram(ctx, histogram, maxValue, color, min, max);
     }
@@ -215,8 +228,27 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   );
 
   render() {
-    const { intensityRangeMin, intensityRangeMax, isInEditMode, defaultMinMax, layerName } =
+    const { intensityRangeMin, intensityRangeMax, isInEditMode, defaultMinMax, layerName, data } =
       this.props;
+
+    if (data === null) {
+      return (
+        <Alert
+          type="warning"
+          style={{ margin: 10 }}
+          message={
+            <>
+              Histogram couldn&apos;t be fetched.{" "}
+              <Button onClick={this.props.reloadHistogram} size="small">
+                Retry
+              </Button>
+            </>
+          }
+          showIcon
+        />
+      );
+    }
+
     const { currentMin, currentMax } = this.state;
     const { min: minRange, max: maxRange } = getMinAndMax(this.props);
 
@@ -227,14 +259,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       width: "100%",
     };
     return (
-      <React.Fragment>
-        <canvas
-          ref={(ref) => {
-            this.canvasRef = ref;
-          }}
-          width={canvasWidth}
-          height={canvasHeight}
-        />
+      <Spin spinning={data === undefined}>
+        <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />
         <Slider
           range
           value={[intensityRangeMin, intensityRangeMax]}
@@ -323,7 +349,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
             </Col>
           </Row>
         ) : null}
-      </React.Fragment>
+      </Spin>
     );
   }
 }

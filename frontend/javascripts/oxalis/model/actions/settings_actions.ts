@@ -5,7 +5,6 @@ import type {
   DatasetLayerConfiguration,
   TemporaryConfiguration,
   Mapping,
-  HistogramDataForAllLayers,
   MappingType,
 } from "oxalis/store";
 import Deferred from "libs/deferred";
@@ -109,7 +108,7 @@ export const setViewModeAction = (viewMode: ViewMode) =>
 
 export const setHistogramDataForLayerAction = (
   layerName: string,
-  histogramData: APIHistogramData | undefined,
+  histogramData: APIHistogramData | null | undefined,
 ) =>
   ({
     type: "SET_HISTOGRAM_DATA_FOR_LAYER",

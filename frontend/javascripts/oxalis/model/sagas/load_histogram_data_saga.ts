@@ -1,9 +1,7 @@
-import type { HistogramDataForAllLayers, DatasetLayerConfiguration } from "oxalis/store";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { call, take, takeEvery, put } from "typed-redux-saga";
 import {
-  setHistogramDataAction,
   setHistogramDataForLayerAction,
   updateLayerSettingAction,
   type ReloadHistogramAction,
@@ -11,50 +9,40 @@ import {
 import { getHistogramForLayer } from "admin/admin_rest_api";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
-import type { APIHistogramData } from "types/api_flow_types";
 
 export default function* loadHistogramDataSaga(): Saga<void> {
   yield* take("WK_READY");
   yield* takeEvery("RELOAD_HISTOGRAM", reloadHistogramForLayer);
-  const dataLayers: Array<DataLayer> = yield* call([Model, Model.getColorLayers]) as any;
-  const layerConfigurations = yield* select((state) => state.datasetConfiguration.layers);
 
-  const histograms: HistogramDataForAllLayers = {};
+  const dataLayers: Array<DataLayer> = yield* call([Model, Model.getColorLayers]);
   for (const dataLayer of dataLayers) {
     const layerName = dataLayer.name;
     // We send the histogram data requests sequentially so there is less blockage of bucket data requests.
-    const histogram = yield* call(loadHistogramForLayer, layerName, layerConfigurations[layerName]);
-    if (histogram != null) histograms[layerName] = histogram;
+    yield* call(loadHistogramForLayer, layerName);
   }
-
-  yield* put(setHistogramDataAction(histograms));
 }
 
 function* reloadHistogramForLayer(action: ReloadHistogramAction): Saga<void> {
   const { layerName } = action;
-  const layerConfigurations = yield* select((state) => state.datasetConfiguration.layers);
-
-  const histogram = yield* call(loadHistogramForLayer, layerName, layerConfigurations[layerName]);
-  // Also update histogram data if it is undefined since apparently it can no longer be generated
-  yield* put(setHistogramDataForLayerAction(layerName, histogram));
+  yield* call(loadHistogramForLayer, layerName);
 }
 
-function* loadHistogramForLayer(
-  layerName: string,
-  currentLayerConfig: DatasetLayerConfiguration,
-): Saga<APIHistogramData | undefined> {
+function* loadHistogramForLayer(layerName: string): Saga<void> {
   const dataset = yield* select((state) => state.dataset);
+  const currentLayerConfig = yield* select((state) => state.datasetConfiguration.layers[layerName]);
 
   let histogram;
   try {
     histogram = yield* call(getHistogramForLayer, dataset.dataStore.url, dataset, layerName);
 
     if (!Array.isArray(histogram) || histogram.length === 0) {
-      return undefined;
+      yield* put(setHistogramDataForLayerAction(layerName, undefined));
+      return;
     }
   } catch (e) {
     console.warn(`Error: Could not fetch the histogram data for layer ${layerName}.`, e);
-    return undefined;
+    yield* put(setHistogramDataForLayerAction(layerName, undefined));
+    return;
   }
 
   // Adjust the intensityRange of the layer to be within the range of the actual (sampled) data.
@@ -95,5 +83,5 @@ function* loadHistogramForLayer(
     yield* put(updateLayerSettingAction(layerName, "max", maximumInHistogramData));
   }
 
-  return histogram;
+  yield* put(setHistogramDataForLayerAction(layerName, histogram));
 }

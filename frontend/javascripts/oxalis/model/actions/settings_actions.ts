@@ -18,7 +18,6 @@ export type ToggleTemporarySettingAction = ReturnType<typeof toggleTemporarySett
 type UpdateLayerSettingAction = ReturnType<typeof updateLayerSettingAction>;
 export type InitializeSettingsAction = ReturnType<typeof initializeSettingsAction>;
 type SetViewModeAction = ReturnType<typeof setViewModeAction>;
-type SetHistogramDataAction = ReturnType<typeof setHistogramDataAction>;
 type SetHistogramDataForLayerAction = ReturnType<typeof setHistogramDataForLayerAction>;
 export type ReloadHistogramAction = ReturnType<typeof reloadHistogramAction>;
 export type ClipHistogramAction = ReturnType<typeof clipHistogramAction>;
@@ -44,7 +43,6 @@ export type SettingAction =
   | SetMappingAction
   | SetMappingNameAction
   | SetHideUnmappedIdsAction
-  | SetHistogramDataAction
   | SetHistogramDataForLayerAction
   | ReloadHistogramAction
   | InitializeGpuSetupAction;
@@ -107,12 +105,6 @@ export const setViewModeAction = (viewMode: ViewMode) =>
   ({
     type: "SET_VIEW_MODE",
     viewMode,
-  } as const);
-
-export const setHistogramDataAction = (histogramData: HistogramDataForAllLayers) =>
-  ({
-    type: "SET_HISTOGRAM_DATA",
-    histogramData,
   } as const);
 
 export const setHistogramDataForLayerAction = (

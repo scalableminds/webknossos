@@ -182,12 +182,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       }
     }
 
-    case "SET_HISTOGRAM_DATA": {
-      return updateTemporaryConfig(state, {
-        histogramData: action.histogramData,
-      });
-    }
-
     case "SET_HISTOGRAM_DATA_FOR_LAYER": {
       return updateKey2(state, "temporaryConfiguration", "histogramData", {
         [action.layerName]: action.histogramData,

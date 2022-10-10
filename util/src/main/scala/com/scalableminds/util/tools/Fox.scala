@@ -8,6 +8,7 @@ import scala.reflect.ClassTag
 import scala.util.{Success, Try}
 
 trait FoxImplicits {
+
   implicit def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
 

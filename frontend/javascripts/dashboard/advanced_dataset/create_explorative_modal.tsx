@@ -133,7 +133,7 @@ export function RestrictResolutionSlider({
       >
         <div
           style={{
-            width: "5em",
+            marginRight: 20,
           }}
         >
           {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
@@ -152,7 +152,7 @@ export function RestrictResolutionSlider({
         />
         <div
           style={{
-            width: "6.5em",
+            marginLeft: 20,
             textAlign: "right",
           }}
         >

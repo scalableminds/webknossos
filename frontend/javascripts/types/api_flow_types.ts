@@ -694,6 +694,10 @@ export type ServerEditableMapping = {
 export type APIMeshFile = {
   meshFileName: string;
   mappingName?: string | null | undefined;
+  // 0   - is the first mesh file version
+  // 1-2 - the format should behave as v0 (refer to voxelytics for actual differences)
+  // 3   - is the newer version with draco encoding.
+  formatVersion: number;
 };
 export type APIConnectomeFile = {
   connectomeFileName: string;

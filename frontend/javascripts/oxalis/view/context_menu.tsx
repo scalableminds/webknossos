@@ -35,6 +35,7 @@ import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
   changeUserBoundingBoxAction,
+  maybeFetchMeshFilesAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   deleteEdgeAction,
@@ -66,10 +67,7 @@ import {
   loadSynapsesOfAgglomerateAtPosition,
 } from "oxalis/controller/combinations/segmentation_handlers";
 import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
-import {
-  maybeFetchMeshFiles,
-  withMappingActivationConfirmation,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   performMinCutAction,
@@ -679,9 +677,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps): JSX.Element {
   const isConnectomeMappingEnabled = useSelector(hasConnectomeFile);
 
   useEffect(() => {
-    (async () => {
-      await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
-    })();
+    dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
   }, [visibleSegmentationLayer, dataset]);
 
   const loadPrecomputedMesh = async () => {

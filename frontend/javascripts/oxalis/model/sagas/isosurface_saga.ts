@@ -3,7 +3,11 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type { APIDataLayer } from "types/api_flow_types";
+import type { APIDataLayer, APIMeshFile } from "types/api_flow_types";
+import { mergeVertices } from "libs/BufferGeometryUtils";
+import Deferred from "libs/deferred";
+
+import Store from "oxalis/store";
 import {
   ResolutionInfo,
   getResolutionInfo,
@@ -19,14 +23,16 @@ import type {
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
-import type {
+import {
   ImportIsosurfaceFromStlAction,
   UpdateIsosurfaceVisibilityAction,
   RemoveIsosurfaceAction,
   RefreshIsosurfaceAction,
   TriggerIsosurfaceDownloadAction,
-} from "oxalis/model/actions/annotation_actions";
-import {
+  MaybeFetchMeshFilesAction,
+  updateMeshFileListAction,
+  updateCurrentMeshFileAction,
+  dispatchMaybeFetchMeshFilesAsync,
   removeIsosurfaceAction,
   addAdHocIsosurfaceAction,
   addPrecomputedIsosurfaceAction,
@@ -40,8 +46,9 @@ import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/segments_t
 import {
   computeIsosurface,
   sendAnalyticsEvent,
-  getMeshfileChunksForSegment,
-  getMeshfileChunkData,
+  meshV0,
+  meshV3,
+  getMeshfilesForDatasetLayer,
 } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
@@ -56,10 +63,12 @@ import window from "libs/window";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
+import { getDracoLoader } from "libs/draco";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { UpdateSegmentAction } from "../actions/volumetracing_actions";
+
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
 const MESH_CHUNK_THROTTLE_DELAY = 500;
@@ -281,16 +290,7 @@ function* loadIsosurfaceWithNeighbors(
   const { mappingName, mappingType } = isosurfaceExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position);
   let positionsToRequest = [clippedPosition];
-  const hasIsosurface = yield* select(
-    (state) =>
-      state.localSegmentationData[layer.name].isosurfaces != null &&
-      state.localSegmentationData[layer.name].isosurfaces[segmentId] != null,
-  );
-
-  if (!hasIsosurface) {
-    yield* put(addAdHocIsosurfaceAction(layer.name, segmentId, position, mappingName, mappingType));
-  }
-
+  yield* put(addAdHocIsosurfaceAction(layer.name, segmentId, position, mappingName, mappingType));
   yield* put(startedLoadingIsosurfaceAction(layer.name, segmentId));
 
   while (positionsToRequest.length > 0) {
@@ -506,6 +506,60 @@ function* _refreshIsosurfaceWithMap(
  * Precomputed Meshes
  *
  */
+
+// Avoid redundant fetches of mesh files for the same layer by
+// storing Deferreds per layer lazily.
+const fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
+function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
+  const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
+
+  if (!segmentationLayer) {
+    callback([]);
+    return;
+  }
+
+  const layerName = segmentationLayer.name;
+
+  function* maybeActivateMeshFile(availableMeshFiles: APIMeshFile[]) {
+    const currentMeshFile = yield* select(
+      (state) => state.localSegmentationData[layerName].currentMeshFile,
+    );
+    if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
+      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].meshFileName));
+    }
+  }
+
+  // If a deferred already exists (and mustRequest is not true), the deferred
+  // can be awaited (regardless of whether it's finished or not) and its
+  // content used to call the callback.
+  if (fetchDeferredsPerLayer[layerName] && !mustRequest) {
+    const availableMeshFiles = yield* call(() => fetchDeferredsPerLayer[layerName].promise());
+    yield* maybeActivateMeshFile(availableMeshFiles);
+    callback(availableMeshFiles);
+    return;
+  }
+  // A request has to be made (either because none was made before or because
+  // it is enforced by mustRequest).
+  // If mustRequest is true and an old deferred exists, a new deferred will be created which
+  // replaces the old one (old references to the first Deferred will still
+  // work and will be resolved by the corresponding saga execution).
+  const deferred = new Deferred<Array<APIMeshFile>, unknown>();
+  fetchDeferredsPerLayer[layerName] = deferred;
+
+  const availableMeshFiles = yield* call(
+    getMeshfilesForDatasetLayer,
+    dataset.dataStore.url,
+    dataset,
+    getBaseSegmentationName(segmentationLayer),
+  );
+  yield* put(updateMeshFileListAction(layerName, availableMeshFiles));
+  deferred.resolve(availableMeshFiles);
+
+  yield* maybeActivateMeshFile(availableMeshFiles);
+
+  callback(availableMeshFiles);
+}
+
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   const { cellId, seedPosition, meshFileName, layerName } = action;
   const layer = yield* select((state) =>
@@ -546,17 +600,46 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
+
   let availableChunks = null;
 
+  const availableMeshFiles = yield* call(
+    dispatchMaybeFetchMeshFilesAsync,
+    Store.dispatch,
+    segmentationLayer,
+    dataset,
+    false,
+    false,
+  );
+
+  const meshFile = availableMeshFiles.find((file) => file.meshFileName === meshFileName);
+  if (!meshFile) {
+    Toast.error("Could not load mesh, since the requested mesh file was not found.");
+    return;
+  }
+
+  const version = meshFile.formatVersion;
   try {
-    availableChunks = yield* call(
-      getMeshfileChunksForSegment,
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-      meshFileName,
-      id,
-    );
+    if (version >= 3) {
+      const segmentInfo = yield* call(
+        meshV3.getMeshfileChunksForSegment,
+        dataset.dataStore.url,
+        dataset,
+        getBaseSegmentationName(segmentationLayer),
+        meshFileName,
+        id,
+      );
+      availableChunks = _.first(segmentInfo.chunks.lods)?.chunks || [];
+    } else {
+      availableChunks = yield* call(
+        meshV0.getMeshfileChunksForSegment,
+        dataset.dataStore.url,
+        dataset,
+        getBaseSegmentationName(segmentationLayer),
+        meshFileName,
+        id,
+      );
+    }
   } catch (exception) {
     console.warn("Mesh chunk couldn't be loaded due to", exception);
     Toast.warning(messages["tracing.mesh_listing_failed"]);
@@ -566,29 +649,68 @@ function* loadPrecomputedMeshForSegmentId(
   }
 
   // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
-  const sortedAvailableChunks = _.sortBy(availableChunks, (chunkPosition) =>
-    V3.length(V3.sub(seedPosition, chunkPosition)),
-  );
+  const sortedAvailableChunks = _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshChunk) =>
+    V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
+  ) as Array<Vector3> | Array<meshV3.MeshChunk>;
 
   const tasks = sortedAvailableChunks.map(
-    (chunkPosition) =>
+    (chunk) =>
       function* loadChunk() {
-        const stlData = yield* call(
-          getMeshfileChunkData,
-          dataset.dataStore.url,
-          dataset,
-          getBaseSegmentationName(segmentationLayer),
-          meshFileName,
-          id,
-          chunkPosition,
-        );
-        const geometry = yield* call(parseStlBuffer, stlData);
         const sceneController = yield* call(getSceneController);
-        yield* call(
-          { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
-          geometry,
-          id,
-        );
+
+        if ("position" in chunk) {
+          // V3
+          const dracoData = yield* call(
+            meshV3.getMeshfileChunkData,
+            dataset.dataStore.url,
+            dataset,
+            getBaseSegmentationName(segmentationLayer),
+            meshFileName,
+            chunk.byteOffset,
+            chunk.byteSize,
+          );
+          const loader = getDracoLoader();
+
+          const geometry = yield* call(loader.decodeDracoFileAsync, dracoData);
+          // Compute vertex normals to achieve smooth shading
+          geometry.computeVertexNormals();
+
+          yield* call(
+            { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
+            geometry,
+            id,
+            false,
+            chunk.position,
+            true,
+          );
+        } else {
+          // V0
+          const stlData = yield* call(
+            meshV0.getMeshfileChunkData,
+            dataset.dataStore.url,
+            dataset,
+            getBaseSegmentationName(segmentationLayer),
+            meshFileName,
+            id,
+            chunk,
+          );
+          let geometry = yield* call(parseStlBuffer, stlData);
+
+          // Delete existing vertex normals (since these are not interpolated
+          // across faces).
+          geometry.deleteAttribute("normal");
+          // Ensure that vertices of adjacent faces are shared.
+          geometry = mergeVertices(geometry);
+          // Recompute normals to achieve smooth shading
+          geometry.computeVertexNormals();
+
+          yield* call(
+            { context: sceneController, fn: sceneController.addIsosurfaceFromGeometry },
+            geometry,
+            id,
+            false,
+          );
+        }
       },
   );
 
@@ -677,8 +799,11 @@ export default function* isosurfaceSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
   const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
+  const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
+
   yield* take("SCENE_CONTROLLER_READY");
   yield* take("WK_READY");
+  yield* takeEvery(maybeFetchMeshFilesActionChannel, maybeFetchMeshFiles);
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocIsosurfaceFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
   yield* takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);

@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.storage
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
 import com.typesafe.scalalogging.LazyLogging
-import spire.math.ULong
 import java.io._
 import java.util
 
@@ -16,7 +15,7 @@ object CumsumParser extends LazyLogging {
   // the jsonReader can only go through the file in forward direction, but we need max_ids first
   // if the json contains cumsum first, it is skipped at first and parseImpl will call itself again to read it second
   def parseImpl(f: File,
-                maxReaderRange: ULong,
+                maxReaderRange: Long,
                 initialBoundingBoxList: List[(Long, Long, Long, Long, Long, Long)],
                 start: Long): BoundingBoxCache = {
     val r = new FileReader(f)
@@ -68,7 +67,7 @@ object CumsumParser extends LazyLogging {
     }
   }
 
-  def parse(f: File, maxReaderRange: ULong): BoundingBoxCache =
+  def parse(f: File, maxReaderRange: Long): BoundingBoxCache =
     parseImpl(f, maxReaderRange, List(), System.currentTimeMillis())
 
   private def parseBoundingBoxes(reader: JsonReader): List[(Long, Long, Long, Long, Long, Long)] = {
@@ -100,7 +99,7 @@ object CumsumParser extends LazyLogging {
         case head :: tail if reader.hasNext =>
           addToFinder(head)
           val newEnd = reader.nextLong()
-          val currValues = BoundingBoxValues((ULong(prevEnd + 1), ULong(newEnd)), (head._4, head._5, head._6))
+          val currValues = BoundingBoxValues((prevEnd + 1, newEnd), (head._4, head._5, head._6))
           hashMap put ((head._1, head._2, head._3), currValues)
           iter(tail, hashMap, newEnd)
         case _ => ()

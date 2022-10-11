@@ -7,6 +7,8 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 
@@ -96,6 +98,20 @@ object ElementClass extends ExtendedEnumeration {
     case "i4" => Some(ElementClass.int32)
     case "i8" => Some(ElementClass.int64)
     case _    => None
+  }
+
+  def fromArrayDataType(arrayDataType: ArrayDataType): Option[ElementClass.Value] = arrayDataType match {
+    case ArrayDataType.u1 => Some(ElementClass.uint8)
+    case ArrayDataType.u2 => Some(ElementClass.uint16)
+    case ArrayDataType.u4 => Some(ElementClass.uint32)
+    case ArrayDataType.u8 => Some(ElementClass.uint64)
+    case ArrayDataType.f4 => Some(ElementClass.float)
+    case ArrayDataType.f8 => Some(ElementClass.double)
+    case ArrayDataType.i1 => Some(ElementClass.int8)
+    case ArrayDataType.i2 => Some(ElementClass.int16)
+    case ArrayDataType.i4 => Some(ElementClass.int32)
+    case ArrayDataType.i8 => Some(ElementClass.int64)
+    case _                => None
   }
 }
 

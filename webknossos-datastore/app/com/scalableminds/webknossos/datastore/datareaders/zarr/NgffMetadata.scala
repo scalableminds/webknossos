@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.datareaders.jzarr;
+package com.scalableminds.webknossos.datastore.datareaders.zarr;
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
@@ -6,25 +6,25 @@ import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 
-case class OmeNgffCoordinateTransformation(`type`: String = "scale", scale: List[Double])
+case class NgffCoordinateTransformation(`type`: String = "scale", scale: List[Double])
 
-object OmeNgffCoordinateTransformation {
-  implicit val jsonFormat: OFormat[OmeNgffCoordinateTransformation] = Json.format[OmeNgffCoordinateTransformation]
+object NgffCoordinateTransformation {
+  implicit val jsonFormat: OFormat[NgffCoordinateTransformation] = Json.format[NgffCoordinateTransformation]
 }
 
-case class OmeNgffDataset(path: String, coordinateTransformations: List[OmeNgffCoordinateTransformation])
+case class NgffDataset(path: String, coordinateTransformations: List[NgffCoordinateTransformation])
 
-object OmeNgffDataset {
-  implicit val jsonFormat: OFormat[OmeNgffDataset] = Json.format[OmeNgffDataset]
+object NgffDataset {
+  implicit val jsonFormat: OFormat[NgffDataset] = Json.format[NgffDataset]
 }
 
-case class OmeNgffGroupHeader(zarr_format: Int)
-object OmeNgffGroupHeader {
-  implicit val jsonFormat: OFormat[OmeNgffGroupHeader] = Json.format[OmeNgffGroupHeader]
+case class NgffGroupHeader(zarr_format: Int)
+object NgffGroupHeader {
+  implicit val jsonFormat: OFormat[NgffGroupHeader] = Json.format[NgffGroupHeader]
   val FILENAME_DOT_ZGROUP = ".zgroup"
 }
 
-case class OmeNgffAxis(name: String, `type`: String, unit: Option[String] = None) {
+case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
 
   def spaceUnitToNmFactor(implicit ec: ExecutionContext): Fox[Double] =
     if (`type` != "space")
@@ -64,40 +64,39 @@ case class OmeNgffAxis(name: String, `type`: String, unit: Option[String] = None
 
 }
 
-object OmeNgffAxis {
-  implicit val jsonFormat: OFormat[OmeNgffAxis] = Json.format[OmeNgffAxis]
+object NgffAxis {
+  implicit val jsonFormat: OFormat[NgffAxis] = Json.format[NgffAxis]
 }
 
-case class OmeNgffOneHeader(
+case class NgffMultiscalesItem(
     version: String = "0.4", // format version number
     name: Option[String],
-    axes: List[OmeNgffAxis] = List(
-      OmeNgffAxis(name = "c", `type` = "channel"),
-      OmeNgffAxis(name = "x", `type` = "space", unit = Some("nanometer")),
-      OmeNgffAxis(name = "y", `type` = "space", unit = Some("nanometer")),
-      OmeNgffAxis(name = "z", `type` = "space", unit = Some("nanometer")),
+    axes: List[NgffAxis] = List(
+      NgffAxis(name = "c", `type` = "channel"),
+      NgffAxis(name = "x", `type` = "space", unit = Some("nanometer")),
+      NgffAxis(name = "y", `type` = "space", unit = Some("nanometer")),
+      NgffAxis(name = "z", `type` = "space", unit = Some("nanometer")),
     ),
-    datasets: List[OmeNgffDataset]
+    datasets: List[NgffDataset]
 )
 
-object OmeNgffOneHeader {
-  implicit val jsonFormat: OFormat[OmeNgffOneHeader] = Json.format[OmeNgffOneHeader]
+object NgffMultiscalesItem {
+  implicit val jsonFormat: OFormat[NgffMultiscalesItem] = Json.format[NgffMultiscalesItem]
 }
 
-case class OmeNgffHeader(multiscales: List[OmeNgffOneHeader])
+case class NgffMetadata(multiscales: List[NgffMultiscalesItem])
 
-object OmeNgffHeader {
-  def fromNameScaleAndMags(dataLayerName: String, dataSourceScale: Vec3Double, mags: List[Vec3Int]): OmeNgffHeader = {
+object NgffMetadata {
+  def fromNameScaleAndMags(dataLayerName: String, dataSourceScale: Vec3Double, mags: List[Vec3Int]): NgffMetadata = {
     val datasets = mags.map(
       mag =>
-        OmeNgffDataset(
+        NgffDataset(
           path = mag.toMagLiteral(allowScalar = true),
-          List(
-            OmeNgffCoordinateTransformation(scale = List[Double](1.0) ++ (dataSourceScale * Vec3Double(mag)).toList))))
-    OmeNgffHeader(multiscales = List(OmeNgffOneHeader(name = Some(dataLayerName), datasets = datasets)))
+          List(NgffCoordinateTransformation(scale = List[Double](1.0) ++ (dataSourceScale * Vec3Double(mag)).toList))))
+    NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets)))
   }
 
-  implicit val jsonFormat: OFormat[OmeNgffHeader] = Json.format[OmeNgffHeader]
+  implicit val jsonFormat: OFormat[NgffMetadata] = Json.format[NgffMetadata]
 
   val FILENAME_DOT_ZATTRS = ".zattrs"
 }

@@ -40,8 +40,7 @@ class DSRemoteTracingstoreClient @Inject()(
                      cxyz: String,
                      tracingStoreUri: String,
                      token: Option[String]): Fox[Array[Byte]] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz")
-      .silent
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz").silent
       .addQueryStringOptional("token", token)
       .getWithBytesResponse
 

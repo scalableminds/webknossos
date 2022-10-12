@@ -195,7 +195,7 @@ class AnnotationService @Inject()(
   private def createTracingsForExplorational(dataSet: DataSet,
                                              dataSource: DataSource,
                                              allAnnotationLayerParameters: List[AnnotationLayerParameters],
-                                             organizationName: String,
+                                             datasetOrganizationName: String,
                                              existingAnnotationLayers: List[AnnotationLayer] = List())(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] = {
 
@@ -224,7 +224,7 @@ class AnnotationService @Inject()(
             val skeleton = SkeletonTracingDefaults.createInstance.copy(
               dataSetName = dataSet.name,
               editPosition = dataSource.center,
-              organizationName = Some(organizationName),
+              organizationName = Some(datasetOrganizationName),
             )
             val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
               skeleton.copy(
@@ -240,7 +240,7 @@ class AnnotationService @Inject()(
               fallbackLayer <- Fox.runOptional(annotationLayerParameters.fallbackLayerName)(getFallbackLayer)
               volumeTracing <- createVolumeTracing(
                 dataSource,
-                organizationName,
+                datasetOrganizationName,
                 fallbackLayer,
                 resolutionRestrictions =
                   annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty)
@@ -330,12 +330,12 @@ class AnnotationService @Inject()(
     for {
       dataSet <- dataSetDAO.findOne(_dataSet) ?~> "dataSet.noAccessById"
       dataSource <- dataSetService.dataSourceFor(dataSet)
-      organization <- organizationDAO.findOne(user._organization)
+      datasetOrganization <- organizationDAO.findOne(dataSet._organization)
       usableDataSource <- dataSource.toUsable ?~> Messages("dataSet.notImported", dataSource.id.name)
       annotationLayers <- createTracingsForExplorational(dataSet,
                                                          usableDataSource,
                                                          annotationLayerParameters,
-                                                         organization.name)
+                                                         datasetOrganization.name)
       teamId <- selectSuitableTeam(user, dataSet) ?~> "annotation.create.forbidden"
       annotation = Annotation(ObjectId.generate, _dataSet, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)

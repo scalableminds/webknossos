@@ -61,6 +61,7 @@ class MeshController @Inject()(
                                         urlOrHeaderToken(token, request)) {
         for {
           positions <- formatVersion match {
+
             case 3 =>
               meshFileService.listMeshChunksForSegmentV3(organizationName, dataSetName, dataLayerName, request.body) ?~> Messages(
                 "mesh.file.listChunks.failed",

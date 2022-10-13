@@ -19,7 +19,12 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
-import type { APIProjectWithAssignments, APIProject, APIUser } from "types/api_flow_types";
+import type {
+  APIProjectWithAssignments,
+  APIProject,
+  APIUser,
+  APIUserBase,
+} from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
@@ -300,7 +305,6 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 dataIndex="teamName"
                 key="teamName"
                 sorter={Utils.localeCompareBy(typeHint, (project) => project.team)}
-                width={300}
               />
               <Column
                 title="Priority"
@@ -316,15 +320,17 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 dataIndex="owner"
                 key="owner"
                 sorter={Utils.localeCompareBy(typeHint, (project) => project.owner.lastName)}
-                render={(owner) =>
-                  owner.email ? `${owner.lastName}, ${owner.firstName} (${owner.email})` : "-"
-                }
+                render={(owner: APIUserBase) => (
+                  <>
+                    <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
+                    <div>{owner.email ? `(${owner.email})` : "-"}</div>
+                  </>
+                )}
               />
               <Column
                 title="Open Assignments"
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
-                width={200}
                 sorter={Utils.compareBy(typeHint, (project) => project.numberOfOpenAssignments)}
               />
               <Column
@@ -333,7 +339,6 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 }
                 dataIndex="tracingTime"
                 key="tracingTime"
-                width={200}
                 sorter={Utils.compareBy(typeHint, (project) => project.tracingTime)}
                 render={(tracingTimeMs) =>
                   Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
@@ -345,7 +350,6 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 title="Time Limit"
                 dataIndex="expectedTime"
                 key="expectedTime"
-                width={200}
                 sorter={Utils.compareBy(typeHint, (project) => project.expectedTime)}
                 render={(expectedTime) => `${expectedTime}m`}
               />

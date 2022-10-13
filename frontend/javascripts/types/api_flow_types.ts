@@ -287,6 +287,7 @@ type APIProjectTypeBase = {
   readonly paused: boolean;
   readonly expectedTime: number; // Also known as "time limit"
   readonly isBlacklistedFromReport: boolean;
+  readonly created: number;
 };
 export type APIProject = APIProjectTypeBase & {
   readonly id: string;

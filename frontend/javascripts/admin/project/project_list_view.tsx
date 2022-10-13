@@ -44,6 +44,7 @@ import Persistence from "libs/persistence";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import FormattedDate from "components/formatted_date";
 const { Column } = Table;
 const { Search } = Input;
 type OwnProps = {
@@ -301,33 +302,6 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 width={250}
               />
               <Column
-                title="Team"
-                dataIndex="teamName"
-                key="teamName"
-                sorter={Utils.localeCompareBy(typeHint, (project) => project.team)}
-              />
-              <Column
-                title="Priority"
-                dataIndex="priority"
-                key="priority"
-                sorter={Utils.compareBy(typeHint, (project) => project.priority)}
-                render={(priority, project: APIProjectWithAssignments) =>
-                  `${priority} ${project.paused ? "(paused)" : ""}`
-                }
-              />
-              <Column
-                title="Owner"
-                dataIndex="owner"
-                key="owner"
-                sorter={Utils.localeCompareBy(typeHint, (project) => project.owner.lastName)}
-                render={(owner: APIUserBase) => (
-                  <>
-                    <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
-                    <div>{owner.email ? `(${owner.email})` : "-"}</div>
-                  </>
-                )}
-              />
-              <Column
                 title="Open Assignments"
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
@@ -344,6 +318,41 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                   Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
                     maximumFractionDigits: 1,
                   })
+                }
+              />
+              <Column
+                title="Team"
+                dataIndex="teamName"
+                key="teamName"
+                sorter={Utils.localeCompareBy(typeHint, (project) => project.team)}
+              />
+              <Column
+                title="Owner"
+                dataIndex="owner"
+                key="owner"
+                sorter={Utils.localeCompareBy(typeHint, (project) => project.owner.lastName)}
+                render={(owner: APIUserBase) => (
+                  <>
+                    <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
+                    <div>{owner.email ? `(${owner.email})` : "-"}</div>
+                  </>
+                )}
+              />
+              <Column
+                title="Creation Date"
+                dataIndex="created"
+                key="created"
+                sorter={Utils.compareBy(typeHint, (project) => project.created)}
+                render={(created) => <FormattedDate timestamp={created} />}
+                defaultSortOrder="descend"
+              />
+              <Column
+                title="Priority"
+                dataIndex="priority"
+                key="priority"
+                sorter={Utils.compareBy(typeHint, (project) => project.priority)}
+                render={(priority, project: APIProjectWithAssignments) =>
+                  `${priority} ${project.paused ? "(paused)" : ""}`
                 }
               />
               <Column

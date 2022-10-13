@@ -228,18 +228,14 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
   renderPlaceholder() {
     return this.state.isLoading ? null : (
       <React.Fragment>
-        {"There are no projects. You can "}
-        <Link to="/projects/create">add a project</Link>
-        {" which can be used to track the progress of tasks."}
+        {"There are no projects yet or no projects matching your filters. "}
+        <Link to="/projects/create">Add a new project</Link>
+        {" to distribute and track the progress of annotation tasks or adjust your filters."}
       </React.Fragment>
     );
   }
 
   render() {
-    const marginRight = {
-      marginRight: 20,
-    };
-
     const greaterThanZeroFilters = [
       {
         text: "0",
@@ -264,7 +260,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
           <div className="pull-right">
             {this.props.taskTypeId ? null : (
               <Link to="/projects/create">
-                <Button icon={<PlusOutlined />} style={marginRight} type="primary">
+                <Button icon={<PlusOutlined />} style={{ marginRight: 20 }} type="primary">
                   Add Project
                 </Button>
               </Link>
@@ -330,7 +326,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
               />
               <Column
                 title={
-                  <Tooltip title="Total time spent annotating for this project">Time [h]</Tooltip>
+                  <Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>
                 }
                 dataIndex="tracingTime"
                 key="tracingTime"
@@ -353,10 +349,10 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 dataIndex="teamName"
                 key="teamName"
                 sorter={Utils.localeCompareBy(typeHint, (project) => project.team)}
-                filters={filteredProjects.map((project) => ({
+                filters={_.uniqBy(filteredProjects.map((project) => ({
                   text: project.teamName,
                   value: project.team,
-                }))}
+                })), "text")}
                 onFilter={(value, project: APIProjectWithAssignments) => value === project.team}
                 filterMultiple
               />
@@ -371,10 +367,10 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                     <div>{owner.email ? `(${owner.email})` : "-"}</div>
                   </>
                 )}
-                filters={filteredProjects.map((project) => ({
+                filters={_.uniqBy(filteredProjects.map((project) => ({
                   text: `${project.owner.firstName} ${project.owner.lastName}`,
                   value: project.owner.id,
-                }))}
+                })), "text")}
                 onFilter={(value, project: APIProjectWithAssignments) => value === project.owner.id}
                 filterMultiple
               />
@@ -394,6 +390,11 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 render={(priority, project: APIProjectWithAssignments) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
+                filters={[{
+                  text: "Paused",
+                  value: "paused",
+                }]}
+                onFilter={(_value, project: APIProjectWithAssignments) => project.paused}
               />
               <Column
                 title="Time Limit"

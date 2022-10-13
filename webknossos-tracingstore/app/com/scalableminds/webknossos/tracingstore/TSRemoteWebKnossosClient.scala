@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
+import com.scalableminds.util.cache.AlfuFoxCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, DataSourceLike}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -15,6 +16,8 @@ import play.api.cache.SyncCacheApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.libs.ws.WSResponse
+
+import scala.concurrent.ExecutionContext
 
 case class TracingUpdatesReport(tracingId: String,
                                 timestamps: List[Long],
@@ -38,6 +41,8 @@ class TSRemoteWebKnossosClient @Inject()(
 
   private val webKnossosUrl: String = config.Tracingstore.WebKnossos.uri
 
+  private lazy val dataSourceIdByTracingIdCache: AlfuFoxCache[String, DataSourceId] = AlfuFoxCache()
+
   def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> tracingStoreKey)
@@ -49,7 +54,6 @@ class TSRemoteWebKnossosClient @Inject()(
       .addQueryStringOptional("token", userToken)
       .post()
 
-  // TODO implement on wk-side, caching
   def getDataSourceForTracing(tracingId: String): Fox[DataSourceLike] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSource")
       .addQueryString("tracingId" -> tracingId)
@@ -62,12 +66,15 @@ class TSRemoteWebKnossosClient @Inject()(
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[String]
 
-  // TODO implement on wk-side, caching
-  def getDataSourceIdForTracing(tracingId: String): Fox[DataSourceId] =
-    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSourceId")
-      .addQueryString("tracingId" -> tracingId)
-      .addQueryString("key" -> tracingStoreKey)
-      .getWithJsonResponse[DataSourceId]
+  def getDataSourceIdForTracing(tracingId: String)(implicit ec: ExecutionContext): Fox[DataSourceId] =
+    dataSourceIdByTracingIdCache.getOrLoad(
+      tracingId,
+      tracingId =>
+        rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSourceId")
+          .addQueryString("tracingId" -> tracingId)
+          .addQueryString("key" -> tracingStoreKey)
+          .getWithJsonResponse[DataSourceId]
+    )
 
   override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/validateUserAccess")

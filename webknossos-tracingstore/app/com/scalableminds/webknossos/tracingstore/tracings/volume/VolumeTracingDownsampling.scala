@@ -54,7 +54,7 @@ trait VolumeTracingDownsampling
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(tracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
       sourceMag = getSourceMag(tracing)
-      magsToCreate <- getMagsToCreate(tracing)
+      magsToCreate <- getMagsToCreate(tracing, tracingId)
       elementClass = elementClassFromProto(tracing.elementClass)
       bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]() {
         override def default(key: BucketPosition): Array[Byte] = Array[Byte](0)
@@ -200,16 +200,16 @@ trait VolumeTracingDownsampling
   private def getSourceMag(tracing: VolumeTracing): Vec3Int =
     tracing.resolutions.minBy(_.maxDim)
 
-  private def getMagsToCreate(tracing: VolumeTracing): Fox[List[Vec3Int]] =
+  private def getMagsToCreate(tracing: VolumeTracing, tracingId: String): Fox[List[Vec3Int]] =
     for {
-      requiredMags <- getRequiredMags(tracing)
+      requiredMags <- getRequiredMags(tracing, tracingId)
       sourceMag = getSourceMag(tracing)
       magsToCreate = requiredMags.filter(_.maxDim > sourceMag.maxDim)
     } yield magsToCreate
 
-  protected def getRequiredMags(tracing: VolumeTracing): Fox[List[Vec3Int]] =
+  protected def getRequiredMags(tracing: VolumeTracing, tracingId: String): Fox[List[Vec3Int]] =
     for {
-      dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSource(tracing.organizationName, tracing.dataSetName)
+      dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSourceForTracing(tracingId)
       magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)
     } yield magsForTracing.sortBy(_.maxDim)
 

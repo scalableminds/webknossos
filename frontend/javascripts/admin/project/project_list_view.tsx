@@ -239,7 +239,25 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     const marginRight = {
       marginRight: 20,
     };
+
+    const greaterThanZeroFilters = [
+      {
+        text: "0",
+        value: "0",
+      },
+      {
+        text: ">0",
+        value: ">0",
+      },
+    ];
+
     const typeHint: Array<APIProjectWithAssignments> = [];
+    const filteredProjects = Utils.filterWithSearchQueryAND(
+      this.state.projects,
+      ["name", "team", "priority", "owner", "numberOfOpenAssignments", "tracingTime"],
+      this.state.searchQuery,
+    );
+
     return (
       <div className="container TestProjectListView">
         <div>
@@ -273,11 +291,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
           />
           <Spin spinning={this.state.isLoading} size="large">
             <Table
-              dataSource={Utils.filterWithSearchQueryAND(
-                this.state.projects,
-                ["name", "team", "priority", "owner", "numberOfOpenAssignments", "tracingTime"],
-                this.state.searchQuery,
-              )}
+              dataSource={filteredProjects}
               rowKey="id"
               pagination={{
                 defaultPageSize: 50,
@@ -306,6 +320,13 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
                 sorter={Utils.compareBy(typeHint, (project) => project.numberOfOpenAssignments)}
+                filters={greaterThanZeroFilters}
+                onFilter={(value, project: APIProjectWithAssignments) => {
+                  if (value == "0") {
+                    return project.tracingTime == 0;
+                  }
+                  return project.tracingTime > 0;
+                }}
               />
               <Column
                 title={
@@ -319,12 +340,25 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                     maximumFractionDigits: 1,
                   })
                 }
+                filters={greaterThanZeroFilters}
+                onFilter={(value, project: APIProjectWithAssignments) => {
+                  if (value == "0") {
+                    return project.tracingTime == 0;
+                  }
+                  return project.tracingTime > 0;
+                }}
               />
               <Column
                 title="Team"
                 dataIndex="teamName"
                 key="teamName"
                 sorter={Utils.localeCompareBy(typeHint, (project) => project.team)}
+                filters={filteredProjects.map((project) => ({
+                  text: project.teamName,
+                  value: project.team,
+                }))}
+                onFilter={(value, project: APIProjectWithAssignments) => value == project.team}
+                filterMultiple
               />
               <Column
                 title="Owner"
@@ -337,6 +371,12 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                     <div>{owner.email ? `(${owner.email})` : "-"}</div>
                   </>
                 )}
+                filters={filteredProjects.map((project) => ({
+                  text: `${project.owner.firstName} ${project.owner.lastName}`,
+                  value: project.owner.id,
+                }))}
+                onFilter={(value, project: APIProjectWithAssignments) => value == project.owner.id}
+                filterMultiple
               />
               <Column
                 title="Creation Date"

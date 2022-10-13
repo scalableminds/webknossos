@@ -322,8 +322,8 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 sorter={Utils.compareBy(typeHint, (project) => project.numberOfOpenAssignments)}
                 filters={greaterThanZeroFilters}
                 onFilter={(value, project: APIProjectWithAssignments) => {
-                  if (value == "0") {
-                    return project.tracingTime == 0;
+                  if (value === "0") {
+                    return project.tracingTime === 0;
                   }
                   return project.tracingTime > 0;
                 }}
@@ -342,8 +342,8 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 }
                 filters={greaterThanZeroFilters}
                 onFilter={(value, project: APIProjectWithAssignments) => {
-                  if (value == "0") {
-                    return project.tracingTime == 0;
+                  if (value === "0") {
+                    return project.tracingTime === 0;
                   }
                   return project.tracingTime > 0;
                 }}
@@ -357,7 +357,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                   text: project.teamName,
                   value: project.team,
                 }))}
-                onFilter={(value, project: APIProjectWithAssignments) => value == project.team}
+                onFilter={(value, project: APIProjectWithAssignments) => value === project.team}
                 filterMultiple
               />
               <Column
@@ -375,7 +375,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                   text: `${project.owner.firstName} ${project.owner.lastName}`,
                   value: project.owner.id,
                 }))}
-                onFilter={(value, project: APIProjectWithAssignments) => value == project.owner.id}
+                onFilter={(value, project: APIProjectWithAssignments) => value === project.owner.id}
                 filterMultiple
               />
               <Column

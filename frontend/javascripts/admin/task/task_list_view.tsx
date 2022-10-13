@@ -422,41 +422,46 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={170}
               fixed="right"
               render={(__, task: APITask) => (
-                <span>
+                <>
                   {task.status.finished > 0 ? (
-                    <a
-                      href={`/annotations/CompoundTask/${task.id}`}
-                      title="View all Finished Annotations"
-                    >
-                      <EyeOutlined />
-                      View
+                    <div>
+                      <a
+                        href={`/annotations/CompoundTask/${task.id}`}
+                        title="View all Finished Annotations"
+                      >
+                        <EyeOutlined />
+                        View
+                      </a>
+                    </div>
+                  ) : null}
+                  <div>
+                    <a href={`/tasks/${task.id}/edit`} title="Edit Task">
+                      <EditOutlined />
+                      Edit
                     </a>
-                  ) : null}
-                  <br />
-                  <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                    <EditOutlined />
-                    Edit
-                  </a>
-                  <br />
+                  </div>
                   {task.status.finished > 0 ? (
-                    <AsyncLink
-                      href="#"
-                      onClick={() => {
-                        const includesVolumeData = task.type.tracingType !== "skeleton";
-                        return downloadAnnotation(task.id, "CompoundTask", includesVolumeData);
-                      }}
-                      title="Download all Finished Annotations"
-                      icon={<DownloadOutlined />}
-                    >
-                      Download
-                    </AsyncLink>
+                    <div>
+                      <AsyncLink
+                        href="#"
+                        onClick={() => {
+                          const includesVolumeData = task.type.tracingType !== "skeleton";
+                          return downloadAnnotation(task.id, "CompoundTask", includesVolumeData);
+                        }}
+                        title="Download all Finished Annotations"
+                        icon={<DownloadOutlined />}
+                      >
+                        Download
+                      </AsyncLink>
+                    </div>
                   ) : null}
-                  <br />
-                  <LinkButton onClick={_.partial(this.deleteTask, task)}>
-                    <DeleteOutlined />
-                    Delete
-                  </LinkButton>
-                </span>
+                  <div>
+                    <LinkButton onClick={_.partial(this.deleteTask, task)}>
+                      <DeleteOutlined />
+                      Delete
+                    </LinkButton>
+                  </div>
+                </>
               )}
             />
           </FixedExpandableTable>

@@ -287,15 +287,16 @@ type APIProjectTypeBase = {
   readonly paused: boolean;
   readonly expectedTime: number; // Also known as "time limit"
   readonly isBlacklistedFromReport: boolean;
-  readonly created: number;
 };
 export type APIProject = APIProjectTypeBase & {
   readonly id: string;
   readonly owner: APIUserBase;
+  readonly created: number;
 };
 export type APIProjectUpdater = APIProjectTypeBase & {
   readonly id: string;
   readonly owner: string;
+  readonly created: number;
 };
 export type APIProjectCreator = APIProjectTypeBase & {
   readonly owner: string;

@@ -349,10 +349,13 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 dataIndex="teamName"
                 key="teamName"
                 sorter={Utils.localeCompareBy(typeHint, (project) => project.team)}
-                filters={_.uniqBy(filteredProjects.map((project) => ({
-                  text: project.teamName,
-                  value: project.team,
-                })), "text")}
+                filters={_.uniqBy(
+                  filteredProjects.map((project) => ({
+                    text: project.teamName,
+                    value: project.team,
+                  })),
+                  "text",
+                )}
                 onFilter={(value, project: APIProjectWithAssignments) => value === project.team}
                 filterMultiple
               />
@@ -367,10 +370,13 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                     <div>{owner.email ? `(${owner.email})` : "-"}</div>
                   </>
                 )}
-                filters={_.uniqBy(filteredProjects.map((project) => ({
-                  text: `${project.owner.firstName} ${project.owner.lastName}`,
-                  value: project.owner.id,
-                })), "text")}
+                filters={_.uniqBy(
+                  filteredProjects.map((project) => ({
+                    text: `${project.owner.firstName} ${project.owner.lastName}`,
+                    value: project.owner.id,
+                  })),
+                  "text",
+                )}
                 onFilter={(value, project: APIProjectWithAssignments) => value === project.owner.id}
                 filterMultiple
               />
@@ -390,10 +396,12 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 render={(priority, project: APIProjectWithAssignments) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
-                filters={[{
-                  text: "Paused",
-                  value: "paused",
-                }]}
+                filters={[
+                  {
+                    text: "Paused",
+                    value: "paused",
+                  },
+                ]}
                 onFilter={(_value, project: APIProjectWithAssignments) => project.paused}
               />
               <Column

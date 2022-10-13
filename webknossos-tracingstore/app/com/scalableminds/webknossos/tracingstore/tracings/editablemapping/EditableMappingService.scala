@@ -432,11 +432,12 @@ class EditableMappingService @Inject()(
     } yield ()
 
   def volumeData(tracing: VolumeTracing,
+                 tracingId: String,
                  dataRequests: DataRequestCollection,
                  userToken: Option[String]): Fox[(Array[Byte], List[Int])] =
     for {
       editableMappingId <- tracing.mappingName.toFox
-      dataLayer = editableMappingLayer(editableMappingId, tracing, userToken)
+      dataLayer = editableMappingLayer(editableMappingId, tracing, tracingId, userToken)
       requests = dataRequests.map(r =>
         DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
@@ -557,6 +558,7 @@ class EditableMappingService @Inject()(
 
   private def editableMappingLayer(mappingName: String,
                                    tracing: VolumeTracing,
+                                   tracingId: String,
                                    userToken: Option[String]): EditableMappingLayer =
     EditableMappingLayer(
       mappingName,
@@ -566,15 +568,17 @@ class EditableMappingService @Inject()(
       elementClass = tracing.elementClass,
       userToken,
       tracing = tracing,
+      tracingId = tracingId,
       editableMappingService = this
     )
 
   def createIsosurface(tracing: VolumeTracing,
+                       tracingId: String,
                        request: WebKnossosIsosurfaceRequest,
                        userToken: Option[String]): Fox[(Array[Float], List[Int])] =
     for {
       mappingName <- tracing.mappingName.toFox
-      segmentationLayer = editableMappingLayer(mappingName, tracing, userToken)
+      segmentationLayer = editableMappingLayer(mappingName, tracing, tracingId, userToken)
       isosurfaceRequest = IsosurfaceRequest(
         dataSource = None,
         dataLayer = segmentationLayer,

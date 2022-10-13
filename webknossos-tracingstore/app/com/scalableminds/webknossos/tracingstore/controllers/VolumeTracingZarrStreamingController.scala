@@ -202,7 +202,7 @@ class VolumeTracingZarrStreamingController @Inject()(
               version = None
             )
             (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
-              editableMappingService.volumeData(tracing, List(wkRequest), urlOrHeaderToken(token, request))
+              editableMappingService.volumeData(tracing, tracingId, List(wkRequest), urlOrHeaderToken(token, request))
             else tracingService.data(tracingId, tracing, List(wkRequest))
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
                                                             tracingId,

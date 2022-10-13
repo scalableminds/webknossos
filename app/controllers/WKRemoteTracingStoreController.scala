@@ -75,7 +75,7 @@ class WKRemoteTracingStoreController @Inject()(
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> "No annotation for this tracing id"
+          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
           dataSet <- dataSetDAO.findOne(annotation._dataSet)
           dataSource <- dataSetService.dataSourceFor(dataSet)
         } yield Ok(Json.toJson(dataSource))
@@ -87,7 +87,7 @@ class WKRemoteTracingStoreController @Inject()(
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> "No annotation for this tracing id"
+          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
           dataSet <- dataSetDAO.findOne(annotation._dataSet)
           organization <- organizationDAO.findOne(dataSet._organization)
         } yield Ok(Json.toJson(DataSourceId(dataSet.name, organization.name)))

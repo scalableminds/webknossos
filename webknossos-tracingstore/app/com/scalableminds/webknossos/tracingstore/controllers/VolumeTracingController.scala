@@ -147,7 +147,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
             (data, indices) <- if (tracing.mappingIsEditable.getOrElse(false))
-              editableMappingService.volumeData(tracing, request.body, urlOrHeaderToken(token, request))
+              editableMappingService.volumeData(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
             else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
@@ -193,7 +193,7 @@ class VolumeTracingController @Inject()(
               boundingBoxParsed,
               newEditableMappingId
             )
-            _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
+            _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, tracingId, newTracing))
           } yield Ok(Json.toJson(newId))
         }
       }
@@ -236,7 +236,7 @@ class VolumeTracingController @Inject()(
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
-            editableMappingService.createIsosurface(tracing, request.body, urlOrHeaderToken(token, request))
+            editableMappingService.createIsosurface(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
           else tracingService.createIsosurface(tracingId, request.body, urlOrHeaderToken(token, request))
         } yield {
           // We need four bytes for each float

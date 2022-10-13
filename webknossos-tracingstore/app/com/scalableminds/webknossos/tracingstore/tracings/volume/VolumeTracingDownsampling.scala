@@ -47,14 +47,16 @@ trait VolumeTracingDownsampling
                  version: Long,
                  toCache: Boolean = false): Fox[Unit]
 
-  def downsampleWithLayer(tracingId: String, tracing: VolumeTracing, dataLayer: VolumeTracingLayer)(
-      implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
+  def downsampleWithLayer(tracingId: String,
+                          oldTracingId: String,
+                          tracing: VolumeTracing,
+                          dataLayer: VolumeTracingLayer)(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
     val bucketVolume = 32 * 32 * 32
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(tracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
       sourceMag = getSourceMag(tracing)
-      magsToCreate <- getMagsToCreate(tracing, tracingId)
+      magsToCreate <- getMagsToCreate(tracing, oldTracingId)
       elementClass = elementClassFromProto(tracing.elementClass)
       bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]() {
         override def default(key: BucketPosition): Array[Byte] = Array[Byte](0)
@@ -200,16 +202,16 @@ trait VolumeTracingDownsampling
   private def getSourceMag(tracing: VolumeTracing): Vec3Int =
     tracing.resolutions.minBy(_.maxDim)
 
-  private def getMagsToCreate(tracing: VolumeTracing, tracingId: String): Fox[List[Vec3Int]] =
+  private def getMagsToCreate(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
     for {
-      requiredMags <- getRequiredMags(tracing, tracingId)
+      requiredMags <- getRequiredMags(tracing, oldTracingId)
       sourceMag = getSourceMag(tracing)
       magsToCreate = requiredMags.filter(_.maxDim > sourceMag.maxDim)
     } yield magsToCreate
 
-  protected def getRequiredMags(tracing: VolumeTracing, tracingId: String): Fox[List[Vec3Int]] =
+  protected def getRequiredMags(tracing: VolumeTracing, oldTracingId: String): Fox[List[Vec3Int]] =
     for {
-      dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSourceForTracing(tracingId)
+      dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSourceForTracing(oldTracingId)
       magsForTracing = VolumeTracingDownsampling.magsForVolumeTracingByLayerName(dataSource, tracing.fallbackLayer)
     } yield magsForTracing.sortBy(_.maxDim)
 

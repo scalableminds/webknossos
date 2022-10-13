@@ -371,9 +371,12 @@ class VolumeTracingService @Inject()(
                  toCache)
     } yield id
 
-  def downsample(tracingId: String, tracing: VolumeTracing): Fox[Unit] =
+  def downsample(tracingId: String, oldTracingId: String, tracing: VolumeTracing): Fox[Unit] =
     for {
-      resultingResolutions <- downsampleWithLayer(tracingId, tracing, volumeTracingLayer(tracingId, tracing))
+      resultingResolutions <- downsampleWithLayer(tracingId,
+                                                  oldTracingId,
+                                                  tracing,
+                                                  volumeTracingLayer(tracingId, tracing))
       _ <- updateResolutionList(tracingId, tracing, resultingResolutions.toSet)
     } yield ()
 

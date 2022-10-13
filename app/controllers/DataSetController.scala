@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Data
 import io.swagger.annotations._
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.binary._
+import models.binary.explore.{ExploreRemoteDatasetParameters, ExploreRemoteLayerService}
 import models.organization.OrganizationDAO
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}

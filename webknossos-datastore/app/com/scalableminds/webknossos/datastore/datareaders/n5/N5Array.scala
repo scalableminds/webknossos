@@ -20,10 +20,11 @@ object N5Array extends LazyLogging {
   def open(path: Path, axisOrderOpt: Option[AxisOrder]): N5Array = {
     val store = new FileSystemStore(path)
     val rootPath = new DatasetPath("")
-    val headerPath = rootPath.resolve(N5Header.FILENAME_DOT_ZARRAY)
+    val headerPath = rootPath.resolve(N5Header.FILENAME_ATTRIBUTES_JSON)
     val headerBytes = store.readBytes(headerPath.storeKey)
     if (headerBytes.isEmpty)
-      throw new IOException("'" + N5Header.FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
+      throw new IOException(
+        "'" + N5Header.FILENAME_ATTRIBUTES_JSON + "' expected but is not readable or missing in store.")
     val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
     val header: N5Header =
       Json.parse(headerString).validate[N5Header] match {

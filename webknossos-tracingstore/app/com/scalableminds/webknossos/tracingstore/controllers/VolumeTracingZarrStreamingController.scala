@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesParser, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.datareaders.jzarr.{OmeNgffGroupHeader, OmeNgffHeader, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
@@ -134,7 +134,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   def zGroup(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-      Future(Ok(Json.toJson(OmeNgffGroupHeader(zarr_format = 2))))
+      Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
     }
   }
 
@@ -154,9 +154,9 @@ class VolumeTracingZarrStreamingController @Inject()(
         existingMags = tracing.resolutions.map(vec3IntFromProto)
         dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName) ~> NOT_FOUND
 
-        omeNgffHeader = OmeNgffHeader.fromNameScaleAndMags(tracingId,
-                                                           dataSourceScale = dataSource.scale,
-                                                           mags = existingMags.toList)
+        omeNgffHeader = NgffMetadata.fromNameScaleAndMags(tracingId,
+                                                          dataSourceScale = dataSource.scale,
+                                                          mags = existingMags.toList)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }

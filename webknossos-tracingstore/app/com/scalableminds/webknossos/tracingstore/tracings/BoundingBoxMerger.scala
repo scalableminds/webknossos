@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.scalableminds.webknossos.datastore.geometry.{NamedBoundingBox => ProtoNamedBoundingBox}
-import com.scalableminds.webknossos.datastore.geometry.{BoundingBox => ProtoBoundingBox}
+import com.scalableminds.webknossos.datastore.geometry.{NamedBoundingBoxProto => ProtoNamedBoundingBox}
+import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto => ProtoBoundingBox}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 
 trait BoundingBoxMerger extends ProtoGeometryImplicits {
@@ -13,7 +13,7 @@ trait BoundingBoxMerger extends ProtoGeometryImplicits {
       boundinBoxB <- boundingBoxBOpt
     } yield {
       com.scalableminds.util.geometry.BoundingBox
-        .combine(List[com.scalableminds.util.geometry.BoundingBox](boundinBoxA, boundinBoxB))
+        .union(List[com.scalableminds.util.geometry.BoundingBox](boundinBoxA, boundinBoxB))
     }
 
   protected def combineUserBoundingBoxes(singleBoundingBoxAOpt: Option[ProtoBoundingBox],

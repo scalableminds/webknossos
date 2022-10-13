@@ -99,6 +99,8 @@ services:
       - CIRCLE_TAG=${CIRCLE_TAG}
       - CIRCLE_BUILD_NUM=${CIRCLE_BUILD_NUM}
       - NODE_OPTIONS=--max_old_space_size=2048
+      # This will be picked up by ava so that the tests fail if a snapshot doesn't exist during CI, see https://github.com/avajs/ava/issues/1585
+      - CI
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
       - ".:/home/${USER_NAME:-sbt-user}/webknossos"
@@ -183,7 +185,8 @@ services:
         "testOnly e2e.* --
           -Dtracingstore.fossildb.address=fossildb
           -Dtracingstore.redis.address=redis
-          -Ddatastore.redis.address=redis"
+          -Ddatastore.redis.address=redis
+          -Ddatastore.watchFileSystem.enabled=false"
     volumes:
       - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
@@ -263,7 +266,7 @@ services:
     command:
       - fossildb
       - -c
-      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates
+      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates,editableMappings,editableMappingUpdates
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
 
   fossildb-persisted:

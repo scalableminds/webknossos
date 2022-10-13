@@ -1,13 +1,13 @@
 # Tooling
-
-We provide a number of free, open-source libraries and tools alongside webKnossos to aid with data analysis. 
+We provide several free, open-source libraries and tools alongside webKnossos to aid with data analysis. 
  
-## webKnossos Python API
+## webKnossos Python Library
 - [webknossos-libs](https://github.com/scalableminds/webknossos-libs)
 - [Read The Docs](https://docs.webknossos.org/webknossos-py/index.html)
 - Our official Python library for working with webKnossos datasets, skeleton and volume annotations and for downloading/uploading data from your webKnossos instance through the REST API.
-- Read & write *.wkw files (raw image data and volume segmentations)
+- Read & write webKnossos datasets and *.wkw files (raw image data and volume segmentations)
 - Read & write *.nml files (skeleton annotations)
+- Download, modify and upload datasets to webKnossos
 
 
 ## webKnossos Cuber
@@ -21,7 +21,7 @@ We provide a number of free, open-source libraries and tools alongside webKnosso
 ## webKnossos Connect
 - [https://github.com/scalableminds/webknossos-connect](https://github.com/scalableminds/webknossos-connect)
 - A webKnossos compatible data connector written in Python
-- webKnossos-connect serves as an adapter between the webKnossos data store interface and other alternative data storage servers (e.g BossDB) or static files hosted on Cloud Storage (e.g. Neuroglancer Precomputed)
+- webKnossos-connect serves as an adapter between the webKnossos data store interface and other alternative data storage servers (e.g., BossDB) or static files hosted on Cloud Storage (e.g. Neuroglancer Precomputed)
 
 
 ## webKnossos Wrap Data Format (wkw)
@@ -33,4 +33,5 @@ We provide a number of free, open-source libraries and tools alongside webKnosso
 
 ## MATLAB NML Functions
 - [https://github.com/mhlabCodingTeam/SegEM/tree/master/auxiliaryMethods](https://github.com/mhlabCodingTeam/SegEM/tree/master/auxiliaryMethods)
-- MATLAB utilities and function for working with NML skeletons provided as part of the SegEM publication
+- MATLAB utilities and functions for working with NML skeletons provided as part of the SegEM publication
+- Developed by [Connectomics Department at Max-Planck-Institute for Brain Research](https://brain.mpg.de/helmstaedter)

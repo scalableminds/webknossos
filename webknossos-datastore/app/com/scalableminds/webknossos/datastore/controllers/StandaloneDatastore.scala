@@ -1,18 +1,19 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import javax.inject.Inject
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, InjectedController}
+import play.api.mvc.{Action, AnyContent}
 
-class StandaloneDatastore @Inject()() extends InjectedController with RemoteOriginHelpers {
+import javax.inject.Inject
+
+class StandaloneDatastore @Inject()() extends Controller {
 
   def buildInfo: Action[AnyContent] = Action {
-    AllowRemoteOrigin {
+    addRemoteOriginHeaders(
       Ok(
         Json.obj(
           "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
         ))
-    }
+    )
   }
 }

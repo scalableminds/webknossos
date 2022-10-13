@@ -25,7 +25,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
   private val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and
-      (__ \ 'owner).read[String](ObjectId.stringObjectIdReads("owner")))(Script.fromForm _)
+      (__ \ 'owner).read[ObjectId])(Script.fromForm _)
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
@@ -41,7 +41,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
 
   def get(scriptId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      scriptIdValidated <- ObjectId.parse(scriptId)
+      scriptIdValidated <- ObjectId.fromString(scriptId)
       script <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
       js <- scriptService.publicWrites(script) ?~> "script.write.failed"
     } yield {
@@ -61,7 +61,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
   def update(scriptId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { scriptFromForm =>
       for {
-        scriptIdValidated <- ObjectId.parse(scriptId)
+        scriptIdValidated <- ObjectId.fromString(scriptId)
         oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
         _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner" ~> FORBIDDEN
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
@@ -75,7 +75,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
 
   def delete(scriptId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      scriptIdValidated <- ObjectId.parse(scriptId)
+      scriptIdValidated <- ObjectId.fromString(scriptId)
       oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
       _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner" ~> FORBIDDEN
       _ <- scriptDAO.deleteOne(scriptIdValidated) ?~> "script.removalFailed"

@@ -4,12 +4,16 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
+import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, tracing = Value
+  val wkw, zarr, n5, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {
@@ -26,6 +30,8 @@ object Category extends ExtendedEnumeration {
 
 object ElementClass extends ExtendedEnumeration {
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
+
+  def segmentationElementClasses: Set[Value] = Set(uint8, uint16, uint32, uint64)
 
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
@@ -56,7 +62,56 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.uint8  => 1L << 8L
     case ElementClass.uint16 => 1L << 16L
     case ElementClass.uint32 => 1L << 32L
-    case ElementClass.uint64 => (1L << 63L) - 1
+    case ElementClass.uint64 => (1L << 53L) - 1 // Front-end can only handle segment-ids up to (2^53)-1
+  }
+
+  def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =
+    largestSegmentIdIsInRange(Some(largestSegmentId), elementClass)
+
+  def largestSegmentIdIsInRange(largestSegmentIdOpt: Option[Long], elementClass: ElementClass.Value): Boolean =
+    segmentationElementClasses.contains(elementClass) && largestSegmentIdOpt.forall(largestSegmentId =>
+      largestSegmentId >= 0L && largestSegmentId <= maxSegmentIdValue(elementClass))
+
+  def toChannelAndZarrString(elementClass: ElementClass.Value): (Int, String) = elementClass match {
+    case ElementClass.uint8  => (1, "|u1")
+    case ElementClass.uint16 => (1, "<u2")
+    case ElementClass.uint24 => (3, "|u1")
+    case ElementClass.uint32 => (1, "<u4")
+    case ElementClass.uint64 => (1, "<u8")
+    case ElementClass.float  => (1, "<f4")
+    case ElementClass.double => (1, "<f8")
+    case ElementClass.int8   => (1, "|i1")
+    case ElementClass.int16  => (1, "<i2")
+    case ElementClass.int32  => (1, "<i4")
+    case ElementClass.int64  => (1, "<i8")
+  }
+
+  def guessFromZarrString(zarrDtype: String): Option[ElementClass.Value] = zarrDtype.drop(1) match {
+    case "u1" => Some(ElementClass.uint8)
+    case "u2" => Some(ElementClass.uint16)
+    case "u4" => Some(ElementClass.uint32)
+    case "u8" => Some(ElementClass.uint64)
+    case "f4" => Some(ElementClass.float)
+    case "f8" => Some(ElementClass.double)
+    case "i1" => Some(ElementClass.int8)
+    case "i2" => Some(ElementClass.int16)
+    case "i4" => Some(ElementClass.int32)
+    case "i8" => Some(ElementClass.int64)
+    case _    => None
+  }
+
+  def fromArrayDataType(arrayDataType: ArrayDataType): Option[ElementClass.Value] = arrayDataType match {
+    case ArrayDataType.u1 => Some(ElementClass.uint8)
+    case ArrayDataType.u2 => Some(ElementClass.uint16)
+    case ArrayDataType.u4 => Some(ElementClass.uint32)
+    case ArrayDataType.u8 => Some(ElementClass.uint64)
+    case ArrayDataType.f4 => Some(ElementClass.float)
+    case ArrayDataType.f8 => Some(ElementClass.double)
+    case ArrayDataType.i1 => Some(ElementClass.int8)
+    case ArrayDataType.i2 => Some(ElementClass.int16)
+    case ArrayDataType.i4 => Some(ElementClass.int32)
+    case ArrayDataType.i8 => Some(ElementClass.int64)
+    case _                => None
   }
 }
 
@@ -74,14 +129,7 @@ trait DataLayerLike {
 
   def boundingBox: BoundingBox
 
-  def resolutions: List[Point3D]
-
-  def lookUpResolution(resolutionExponent: Int, snapToClosest: Boolean = false): Point3D = {
-    val resPower = Math.pow(2, resolutionExponent).toInt
-    val matchOpt = resolutions.find(resolution => resolution.maxDim == resPower)
-    if (snapToClosest) matchOpt.getOrElse(resolutions.minBy(resolution => math.abs(resPower - resolution.maxDim)))
-    else matchOpt.getOrElse(Point3D(resPower, resPower, resPower))
-  }
+  def resolutions: List[Vec3Int]
 
   def elementClass: ElementClass.Value
 
@@ -108,7 +156,7 @@ object DataLayerLike {
 
 trait SegmentationLayerLike extends DataLayerLike {
 
-  def largestSegmentId: Long
+  def largestSegmentId: Option[Long]
 
   def mappings: Option[Set[String]]
 
@@ -124,14 +172,14 @@ trait DataLayer extends DataLayerLike {
   /**
     * Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a single file.
     */
-  def lengthOfUnderlyingCubes(resolution: Point3D): Int
+  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
   def bucketProvider: BucketProvider
 
-  def containsResolution(resolution: Point3D): Boolean = resolutions.contains(resolution)
+  def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 
   def doesContainBucket(bucket: BucketPosition): Boolean =
-    boundingBox.intersects(bucket.toHighestResBoundingBox)
+    boundingBox.intersects(bucket.toMag1BoundingBox)
 
   lazy val bytesPerElement: Int =
     ElementClass.bytesPerElement(elementClass)
@@ -150,9 +198,13 @@ object DataLayer {
         dataFormat <- json.validate((JsPath \ "dataFormat").read[DataFormat.Value])
         category <- json.validate((JsPath \ "category").read[Category.Value])
         layer <- (dataFormat, category) match {
-          case (DataFormat.wkw, Category.segmentation) => json.validate[WKWSegmentationLayer]
-          case (DataFormat.wkw, _)                     => json.validate[WKWDataLayer]
-          case _                                       => json.validate[WKWDataLayer]
+          case (DataFormat.wkw, Category.segmentation)  => json.validate[WKWSegmentationLayer]
+          case (DataFormat.wkw, _)                      => json.validate[WKWDataLayer]
+          case (DataFormat.zarr, Category.segmentation) => json.validate[ZarrSegmentationLayer]
+          case (DataFormat.zarr, _)                     => json.validate[ZarrDataLayer]
+          case (DataFormat.n5, Category.segmentation)   => json.validate[N5SegmentationLayer]
+          case (DataFormat.n5, _)                       => json.validate[N5DataLayer]
+          case _                                        => json.validate[WKWDataLayer]
         }
       } yield {
         layer
@@ -160,8 +212,12 @@ object DataLayer {
 
     override def writes(layer: DataLayer): JsValue =
       (layer match {
-        case l: WKWDataLayer         => WKWDataLayer.jsonFormat.writes(l)
-        case l: WKWSegmentationLayer => WKWSegmentationLayer.jsonFormat.writes(l)
+        case l: WKWDataLayer          => WKWDataLayer.jsonFormat.writes(l)
+        case l: WKWSegmentationLayer  => WKWSegmentationLayer.jsonFormat.writes(l)
+        case l: ZarrDataLayer         => ZarrDataLayer.jsonFormat.writes(l)
+        case l: ZarrSegmentationLayer => ZarrSegmentationLayer.jsonFormat.writes(l)
+        case l: N5DataLayer           => N5DataLayer.jsonFormat.writes(l)
+        case l: N5SegmentationLayer   => N5SegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat
@@ -184,7 +240,7 @@ case class AbstractDataLayer(
     name: String,
     category: Category.Value,
     boundingBox: BoundingBox,
-    resolutions: List[Point3D],
+    resolutions: List[Vec3Int],
     elementClass: ElementClass.Value,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
@@ -210,9 +266,9 @@ case class AbstractSegmentationLayer(
     name: String,
     category: Category.Value,
     boundingBox: BoundingBox,
-    resolutions: List[Point3D],
+    resolutions: List[Vec3Int],
     elementClass: ElementClass.Value,
-    largestSegmentId: Long,
+    largestSegmentId: Option[Long] = None,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
@@ -238,14 +294,13 @@ object AbstractSegmentationLayer {
 
 trait ResolutionFormatHelper {
 
-  implicit object resolutionFormat extends Format[Either[Int, Point3D]] {
+  implicit object resolutionFormat extends Format[Vec3Int] {
 
-    override def reads(json: JsValue): JsResult[Either[Int, Point3D]] =
-      json.validate[Int].map[Either[Int, Point3D]](Left(_)).orElse(json.validate[Point3D].map(Right(_)))
+    override def reads(json: JsValue): JsResult[Vec3Int] =
+      json.validate[Int].map(result => Vec3Int(result, result, result)).orElse(Vec3Int.Vec3IntReads.reads(json))
 
-    override def writes(resolution: Either[Int, Point3D]): JsValue = resolution match {
-      case Left(r)  => JsNumber(r)
-      case Right(r) => Point3D.Point3DWrites.writes(r)
-    }
+    override def writes(resolution: Vec3Int): JsValue =
+      Vec3Int.Vec3IntWrites.writes(resolution)
   }
+
 }

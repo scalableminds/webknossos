@@ -3,8 +3,9 @@ import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.12.12"
-ThisBuild / scapegoatVersion := "1.3.8"
+ThisBuild / scalaVersion := "2.12.15"
+ThisBuild / scapegoatVersion := "1.4.10"
+val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-Xmax-classfile-name",
   "100",
@@ -14,16 +15,17 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:implicitConversions",
   "-language:postfixOps",
   "-Xlint:unused",
- s"-P:silencer:sourceRoots=${baseDirectory.value.getCanonicalPath}",
-  "-P:silencer:pathFilters=(.*target/.*/routes/.*/(ReverseRoutes\\.scala|Routes\\.scala|routes\\.java|JavaScriptReverseRoutes.scala)|.*target/.*\\.template\\.scala)"
+  "-Xlint:deprecation",
+  s"-Wconf:src=target/.*:s",
+  s"-Wconf:src=webknossos-datastore/target/.*:s",
+  s"-Wconf:src=webknossos-tracingstore/target/.*:s"
+) ++ failOnWarning
+ThisBuild / javacOptions ++= Seq(
+  "-Xlint:unchecked",
+  "-Xlint:deprecation"
 )
 
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
-
-ThisBuild / libraryDependencies ++= Seq(
-  compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.0" cross CrossVersion.full),
-  "com.github.ghik" % "silencer-lib" % "1.7.0" % Provided cross CrossVersion.full
-)
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
@@ -32,12 +34,12 @@ scapegoatIgnoredFiles := Seq(".*/Tables.scala",
                              ".*/ReverseRoutes.scala",
                              ".*/JavaScriptReverseRoutes.scala",
                              ".*/.*mail.*template\\.scala")
-scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter")
+scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
 
 lazy val commonSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
-  sources in (Compile, doc) := Seq.empty,
-  publishArtifact in (Compile, packageDoc) := false
+  Compile / doc / sources := Seq.empty,
+  Compile / packageDoc / publishArtifact := false
 )
 
 lazy val protocolBufferSettings = Seq(
@@ -72,7 +74,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     routesGenerator := InjectedRoutesGenerator,
     protocolBufferSettings,
-    unmanagedJars in Compile ++= {
+    Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
       val subs = (libs ** "*") filter { _.isDirectory }
       val targets = ((subs / "target") ** "*") filter { f =>
@@ -119,9 +121,9 @@ lazy val webknossos = (project in file("."))
     BuildInfoSettings.webknossosBuildInfoSettings,
     routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= Dependencies.webknossosDependencies,
-    sourceDirectory in Assets := file("none"),
+    Assets / sourceDirectory := file("none"),
     updateOptions := updateOptions.value.withLatestSnapshots(true),
-    unmanagedJars in Compile ++= {
+    Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
       val subs = (libs ** "*") filter { _.isDirectory }
       val targets = ((subs / "target") ** "*") filter { f =>

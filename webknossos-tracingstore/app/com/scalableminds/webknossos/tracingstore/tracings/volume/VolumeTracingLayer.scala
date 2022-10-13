@@ -1,14 +1,15 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, _}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   TemporaryTracingStore,
@@ -66,19 +67,27 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends Ab
 
 case class VolumeTracingLayer(
     name: String,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    largestSegmentId: Long,
+    volumeTracingService: VolumeTracingService,
     isTemporaryTracing: Boolean = false,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    volumeResolutions: List[Point3D] = List.empty
+    includeFallbackDataIfAvailable: Boolean = false,
+    tracing: VolumeTracing,
+    userToken: Option[String],
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,
   implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing])
-    extends SegmentationLayer {
+    extends SegmentationLayer
+    with ProtoGeometryImplicits {
 
-  def lengthOfUnderlyingCubes(resolution: Point3D): Int = DataLayer.bucketLength
+  override val boundingBox: BoundingBox = tracing.boundingBox
+  override val elementClass: ElementClass.Value = tracing.elementClass
+  override val largestSegmentId: Option[Long] = tracing.largestSegmentId
+  override val defaultViewConfiguration: Option[LayerViewConfiguration] = None
+  override val adminViewConfiguration: Option[LayerViewConfiguration] = None
+  override val mappings: Option[Set[String]] = None
+
+  lazy val volumeResolutions: List[Vec3Int] = tracing.resolutions.map(vec3IntFromProto).toList
+
+  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
@@ -88,12 +97,11 @@ case class VolumeTracingLayer(
     else
       new VolumeTracingBucketProvider(this)
 
-  val bucketProvider: BucketProvider = volumeBucketProvider
+  override val bucketProvider: BucketProvider = volumeBucketProvider
 
-  val mappings: Option[Set[String]] = None
+  override val resolutions: List[Vec3Int] =
+    if (volumeResolutions.nonEmpty) volumeResolutions else List(Vec3Int(1, 1, 1))
 
-  val resolutions: List[Point3D] = if (volumeResolutions.nonEmpty) volumeResolutions else List(Point3D(1, 1, 1))
-
-  override def containsResolution(resolution: Point3D) =
+  override def containsResolution(resolution: Vec3Int) =
     true // allow requesting buckets of all resolutions. database takes care of missing.
 }

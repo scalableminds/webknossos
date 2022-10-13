@@ -129,4 +129,24 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       idList <- run(sql"select _id from #$existingCollectionName where email = $email and #$accessQuery".as[String])
     } yield idList.isEmpty
 
+  def hasAtLeastOneActiveUser(multiUserId: ObjectId): Fox[Boolean] =
+    for {
+      idList <- run(sql"""select u._id
+             from webknossos.multiUsers_ m
+             join webknossos.users_ u on u._multiUser = m._id
+             where m._id = $multiUserId
+             and not u.isDeactivated""".as[String])
+    } yield idList.nonEmpty
+
+  def lastActivity(multiUserId: ObjectId): Fox[Long] =
+    for {
+      lastActivityList <- run(sql"""select max(u.lastActivity)
+             from webknossos.multiUsers_ m
+             join webknossos.users_ u on u._multiUser = m._id
+             where m._id = $multiUserId
+             and not u.isDeactivated
+             group by m._id
+             """.as[java.sql.Timestamp])
+      head <- lastActivityList.headOption.toFox
+    } yield head.getTime
 }

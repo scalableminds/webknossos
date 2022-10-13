@@ -2,16 +2,16 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import java.nio.file.{Path, Paths}
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
 import com.scalableminds.webknossos.wrap.VoxelType
 import net.liftweb.common.{Box, Failure, Full}
-import com.scalableminds.util.tools.ExtendedTypes._
 
 trait WKWDataFormatHelper {
 
   val dataFileExtension: String = "wkw"
+  val headerFileName: String = s"header.$dataFileExtension"
 
   def wkwFilePath(
       cube: CubePosition,
@@ -24,12 +24,12 @@ trait WKWDataFormatHelper {
       .resolve(dataSourceId.map(_.team).getOrElse(""))
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
-      .resolve(formatResolution(cube.resolution, resolutionAsTriple))
+      .resolve(formatResolution(cube.mag, resolutionAsTriple))
       .resolve(s"z${cube.z}")
       .resolve(s"y${cube.y}")
       .resolve(s"x${cube.x}.$dataFileExtension")
 
-  private def formatResolution(resolution: Point3D, resolutionAsTripleOpt: Option[Boolean] = None): String =
+  private def formatResolution(resolution: Vec3Int, resolutionAsTripleOpt: Option[Boolean] = None): String =
     resolutionAsTripleOpt.map { resolutionAsTriple =>
       if (resolutionAsTriple) s"${resolution.x}-${resolution.y}-${resolution.z}"
       else resolution.maxDim.toString
@@ -38,7 +38,7 @@ trait WKWDataFormatHelper {
     }
 
   def wkwHeaderFilePath(
-      resolution: Point3D,
+      resolution: Vec3Int,
       dataSourceId: Option[DataSourceId] = None,
       dataLayerName: Option[String] = None,
       baseDir: Path = Paths.get("")
@@ -54,31 +54,24 @@ trait WKWDataFormatHelper {
     val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
     path match {
       case CubeRx(_, resolutionStr, z, y, x) =>
-        val resolutionOpt = parseResolution(resolutionStr)
-        resolutionOpt match {
-          case Some(resolution) =>
-            Some(
-              BucketPosition(x.toInt * resolution.x * DataLayer.bucketLength,
-                             y.toInt * resolution.y * DataLayer.bucketLength,
-                             z.toInt * resolution.z * DataLayer.bucketLength,
-                             resolution))
-          case _ => None
+        Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true).map { mag =>
+          BucketPosition(x.toInt * mag.x * DataLayer.bucketLength,
+                         y.toInt * mag.y * DataLayer.bucketLength,
+                         z.toInt * mag.z * DataLayer.bucketLength,
+                         mag)
         }
       case _ =>
         None
     }
   }
 
-  protected def parseResolution(resolutionStr: String): Option[Point3D] =
-    resolutionStr.toIntOpt match {
-      case Some(resolutionInt) => Some(Point3D(resolutionInt, resolutionInt, resolutionInt))
-      case None =>
-        val pattern = """(\d+)-(\d+)-(\d+)""".r
-        resolutionStr match {
-          case pattern(x, y, z) => Some(Point3D(x.toInt, y.toInt, z.toInt))
-          case _                => None
-        }
+  def getMagFromWKWHeaderFilePath(path: String): Option[Vec3Int] = {
+    val headerRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$headerFileName".r
+    path match {
+      case headerRx(_, resolutionStr) =>
+        Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
     }
+  }
 
   def voxelTypeToElementClass(voxelType: VoxelType.Value, voxelSize: Int): Box[ElementClass.Value] =
     (voxelType, voxelSize) match {

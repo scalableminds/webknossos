@@ -6,10 +6,12 @@ import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
 class AnnotationInformationProvider @Inject()(
+    annotationDAO: AnnotationDAO,
     annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
     annotationStore: AnnotationStore)(implicit ec: ExecutionContext)
     extends play.api.http.Status
@@ -24,6 +26,19 @@ class AnnotationInformationProvider @Inject()(
       annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
       annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
     } yield annotation
+
+  def provideAnnotation(id: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+    // this function only supports task/explorational look ups, not compound annotations
+    for {
+      annotationIdValidated <- ObjectId.fromString(id)
+      _annotation <- annotationDAO.findOne(annotationIdValidated) ?~> "annotation.notFound"
+      typ = if (_annotation._task.isEmpty) AnnotationType.Explorational else AnnotationType.Task
+      annotationIdentifier = AnnotationIdentifier(typ, annotationIdValidated)
+      annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
+    } yield annotation
+
+  def provideAnnotation(id: String, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
+    provideAnnotation(id, Some(user))
 
   def provideAnnotation(annotationIdentifier: AnnotationIdentifier, userOpt: Option[User])(
       implicit ctx: DBAccessContext): Fox[Annotation] =

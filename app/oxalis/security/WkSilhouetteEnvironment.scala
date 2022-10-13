@@ -44,7 +44,7 @@ class WkSilhouetteEnvironment @Inject()(
   )
 
   private val fingerprintGenerator = new DefaultFingerprintGenerator(false)
-  private val idGenerator = new CompactRandomIDGenerator
+  private val idGenerator = new RandomIDGenerator
   private val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)
 
   val combinedAuthenticatorService: CombinedAuthenticatorService = CombinedAuthenticatorService(

@@ -72,13 +72,22 @@ case class Job(
           }
         case "export_tiff" =>
           Some(s"$dataStorePublicUrl/data/exports/${_id.id}/download")
-        case "infer_nuclei" =>
+        case "infer_nuclei" | "infer_neurons" | "materialize_volume_annotation" =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
           }
         case _ => None
       }
     }
+
+  def resultLinkSlackFormatted(organizationName: String,
+                               dataStorePublicUrl: String,
+                               webKnossosPublicUrl: String): Option[String] =
+    for {
+      resultLink <- resultLink(organizationName, dataStorePublicUrl)
+      resultLinkFormatted = if (resultLink.startsWith("/")) s" <$webKnossosPublicUrl$resultLink|Result>"
+      else s" <$resultLink|Result>"
+    } yield resultLinkFormatted
 }
 
 class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -266,11 +275,11 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
-  def trackStatusChange(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
-    if (jobBeforeChange.isEnded) return
-    if (jobAfterChange.state == JobState.SUCCESS) trackNewlySuccessful(jobBeforeChange, jobAfterChange)
-    if (jobAfterChange.state == JobState.FAILURE) trackNewlyFailed(jobBeforeChange, jobAfterChange)
-  }
+  def trackStatusChange(jobBeforeChange: Job, jobAfterChange: Job): Unit =
+    if (!jobBeforeChange.isEnded) {
+      if (jobAfterChange.state == JobState.SUCCESS) trackNewlySuccessful(jobBeforeChange, jobAfterChange)
+      if (jobAfterChange.state == JobState.FAILURE) trackNewlyFailed(jobBeforeChange, jobAfterChange)
+    }
 
   private def trackNewlyFailed(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {
@@ -295,12 +304,12 @@ class JobService @Inject()(wkConf: WkConf,
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       dataStore <- dataStoreDAO.findOneByName(jobBeforeChange._dataStore)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLink(organization.name, dataStore.publicUrl)
-      resultLinkMrkdwn = resultLink.map(l => s" <${wkConf.Http.uri}$l|Result>").getOrElse("")
+      resultLink = jobAfterChange.resultLinkSlackFormatted(organization.name, dataStore.publicUrl, wkConf.Http.uri)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
-      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.$resultLinkMrkdwn"
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.${resultLink
+        .getOrElse("")}"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",
@@ -361,7 +370,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   def assertTiffExportBoundingBoxLimits(bbox: String): Fox[Unit] =
     for {
-      boundingBox <- BoundingBox.createFrom(bbox).toFox ?~> "job.export.tiff.invalidBoundingBox"
+      boundingBox <- BoundingBox.fromLiteral(bbox).toFox ?~> "job.export.tiff.invalidBoundingBox"
       _ <- bool2Fox(boundingBox.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
       _ <- bool2Fox(boundingBox.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
     } yield ()

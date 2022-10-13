@@ -9,6 +9,7 @@ import models.annotation.AnnotationState._
 import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
 import models.organization.OrganizationDAO
+import models.user.UserDAO
 import models.user.time.TimeSpanService
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
@@ -23,6 +24,7 @@ class WKRemoteTracingStoreController @Inject()(
     timeSpanService: TimeSpanService,
     dataSetService: DataSetService,
     organizationDAO: OrganizationDAO,
+    userDAO: UserDAO,
     analyticsService: AnalyticsService,
     dataSetDAO: DataSetDAO,
     annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
@@ -34,19 +36,22 @@ class WKRemoteTracingStoreController @Inject()(
 
   def handleTracingUpdateReport(name: String, key: String): Action[TracingUpdatesReport] =
     Action.async(validateJson[TracingUpdatesReport]) { implicit request =>
+      implicit val ctx: DBAccessContext = GlobalAccessContext
       tracingStoreService.validateAccess(name, key) { _ =>
         val report = request.body
         for {
-          annotation <- annotationDAO.findOneByTracingId(report.tracingId)(GlobalAccessContext)
+          annotation <- annotationDAO.findOneByTracingId(report.tracingId)
           _ <- ensureAnnotationNotFinished(annotation)
           _ <- Fox.runOptional(report.statistics) { statistics =>
-            annotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
+            annotationDAO.updateStatistics(annotation._id, statistics)
           }
-          _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
-          userBox <- bearerTokenService.userForTokenOpt(report.userToken)(GlobalAccessContext).futureBox
+          _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)
+          userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
+          _ <- Fox.runOptional(userBox)(user => timeSpanService.logUserInteraction(report.timestamps, user, annotation))
           _ <- Fox.runOptional(userBox)(user =>
-            timeSpanService.logUserInteraction(report.timestamps, user, annotation)(GlobalAccessContext))
+            Fox.runIf(user._id != annotation._user)(annotationDAO.addContributor(annotation._id, user._id)))
           _ = userBox.map { user =>
+            userDAO.updateLastActivity(user._id)
             if (report.significantChangesCount > 0) {
               analyticsService.track(UpdateAnnotationEvent(user, annotation, report.significantChangesCount))
             }
@@ -68,6 +73,28 @@ class WKRemoteTracingStoreController @Inject()(
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
           organizationIdOpt <- Fox.runOptional(organizationName) {
+            organizationDAO.findOneByName(_).map(_._id)
+          } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
+          organizationId <- Fox.fillOption(organizationIdOpt) {
+            dataSetDAO.getOrganizationForDataSet(dataSetName)
+          } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
+            "dataSet.noAccess",
+            dataSetName) ~> FORBIDDEN
+          dataSource <- dataSetService.dataSourceFor(dataSet)
+        } yield Ok(Json.toJson(dataSource))
+      }
+    }
+
+  def dataStoreURIForDataSet(name: String,
+                             key: String,
+                             organizationName: Option[String],
+                             dataSetName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        for {
+          organizationIdOpt <- Fox.runOptional(organizationName) {
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
           } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
           organizationId <- Fox.fillOption(organizationIdOpt) {
@@ -76,8 +103,8 @@ class WKRemoteTracingStoreController @Inject()(
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
             "dataSet.noAccess",
             dataSetName) ~> FORBIDDEN
-          dataSource <- dataSetService.dataSourceFor(dataSet)
-        } yield Ok(Json.toJson(dataSource))
+          dataStore <- dataSetService.dataStoreFor(dataSet)
+        } yield Ok(Json.toJson(dataStore.url))
       }
     }
 }

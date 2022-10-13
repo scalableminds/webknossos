@@ -2,11 +2,13 @@ version: 2
 jobs:
   build_test_deploy:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-02
+      docker_layer_caching: true
+    resource_class: large
     environment:
       USER_NAME: circleci
-      USER_UID: 1001
-      USER_GID: 1001
+      USER_UID: 1000
+      USER_GID: 1000
       TZ: Europe/Berlin
     steps:
       - checkout
@@ -75,19 +77,15 @@ jobs:
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               docker-compose run compile sbt -no-colors clean compile stage
             else
-              docker-compose run compile sbt -no-colors compile stage
+              docker-compose run compile sbt -no-colors -DfailOnWarning compile stage
             fi
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt -no-colors "project webknossosDatastore" copyMessages compile stage
+          command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
 
       - run:
           name: Build webknossos-tracingstore (sbt)
-          command: docker-compose run base sbt -no-colors "project webknossosTracingstore" copyMessages compile stage
-
-      - run:
-          name: Assemble webknossos-datastore fat-jar (sbt)
-          command: docker-compose run base sbt -no-colors "project webknossosDatastore" assembly
+          command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
       - save_cache:
           name: Save target cache
@@ -128,7 +126,7 @@ jobs:
           command: docker-compose build --pull webknossos-tracingstore
 
       - run:
-          name: Lint frontend code
+          name: Lint frontend code and check formatting
           command: |
             .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
       - run:
@@ -136,7 +134,7 @@ jobs:
           command: |
             .circleci/not-on-master.sh docker-compose run base yarn test-verbose
       - run:
-          name: Lint backend code
+          name: Lint backend code and check formatting
           command: |
             .circleci/not-on-master.sh docker-compose run backend-lint-format
       - run:
@@ -151,9 +149,9 @@ jobs:
             done
             (exit $s)
       - run:
-          name: Validate frontend types with flow
+          name: Validate frontend types
           command: |
-            .circleci/not-on-master.sh docker-compose run base yarn flow
+            .circleci/not-on-master.sh docker-compose run base yarn typecheck
       - run:
           name: Start webknossos
           background: true
@@ -245,6 +243,7 @@ jobs:
   nightly:
     docker:
       - image: scalableminds/puppeteer:master
+    resource_class: large
     steps:
       - checkout
       - run:
@@ -253,7 +252,7 @@ jobs:
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Wait 3min
           command: sleep 180
@@ -263,7 +262,7 @@ jobs:
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Install dependencies and sleep at least 3min
           command: |
@@ -272,7 +271,7 @@ jobs:
             wait
       - run:
           name: Refresh datasets
-          command: curl https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretSampleUserToken
+          command: curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=$WK_AUTH_TOKEN
       - run:
           name: Run screenshot-tests
           command: |
@@ -281,6 +280,9 @@ jobs:
 
       - store_artifacts:
           path: frontend/javascripts/test/screenshots
+
+      - store_artifacts:
+          path: frontend/javascripts/test/snapshots/type-check
 
 workflows:
   version: 2

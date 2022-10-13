@@ -1,32 +1,43 @@
 package com.scalableminds.util.mvc
 
+import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
-import net.liftweb.common.{Full, _}
+import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common._
+import net.liftweb.util.Helpers.tryo
 import play.api.http.Status._
 import play.api.http.{HttpEntity, Status, Writeable}
 import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
 import play.api.libs.json._
-import play.api.mvc.{ResponseHeader, Result}
+import play.api.mvc.Results.BadRequest
+import play.api.mvc._
 import play.twirl.api._
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
+import java.io.FileInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
-trait ResultBox extends I18nSupport with Formatter {
+trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHelpers {
 
-  def asResult[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result = b match {
-    case Full(result) =>
-      result
-    case ParamFailure(msg, _, chain, statusCode: Int) =>
-      new JsonResult(statusCode)(Messages(msg), formatChainOpt(chain))
-    case ParamFailure(_, _, _, msgs: JsArray) =>
-      new JsonResult(BAD_REQUEST)(jsonMessages(msgs))
-    case Failure(msg, _, chain) =>
-      new JsonResult(BAD_REQUEST)(Messages(msg), formatChainOpt(chain))
-    case Empty =>
-      new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
+  protected def defaultErrorCode: Int = BAD_REQUEST
+
+  def asResult[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result = {
+    val result = b match {
+      case Full(result) =>
+        result
+      case ParamFailure(msg, _, chain, statusCode: Int) =>
+        new JsonResult(statusCode)(Messages(msg), formatChainOpt(chain))
+      case ParamFailure(_, _, _, msgs: JsArray) =>
+        new JsonResult(defaultErrorCode)(jsonMessages(msgs))
+      case Failure(msg, _, chain) =>
+        new JsonResult(defaultErrorCode)(Messages(msg), formatChainOpt(chain))
+      case Empty =>
+        new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
+    }
+    allowRemoteOriginIfSelected(result)
   }
 
-  def formatChainOpt(chain: Box[Failure])(implicit messages: MessagesProvider): Option[String] = chain match {
+  private def formatChainOpt(chain: Box[Failure])(implicit messages: MessagesProvider): Option[String] = chain match {
     case Full(_) => Some(formatChain(chain))
     case _       => None
   }
@@ -35,15 +46,38 @@ trait ResultBox extends I18nSupport with Formatter {
       implicit messages: MessagesProvider): String = chain match {
     case Full(failure) =>
       val serverTimeMsg = if (includeTime) "[Server Time " + formatDate(System.currentTimeMillis()) + "] " else ""
-      serverTimeMsg + " <~ " + Messages(failure.msg) + formatChain(failure.chain, includeTime = false)
+      serverTimeMsg + " <~ " + formatFailure(failure) + formatChain(failure.chain, includeTime = false)
     case _ => ""
   }
 
-  def jsonMessages(msgs: JsArray): JsObject =
+  private def formatFailure(failure: Failure)(implicit messages: MessagesProvider): String =
+    failure match {
+      case ParamFailure(msg, _, _, param) => Messages(msg) + " " + param.toString
+      case Failure(msg, _, _)             => Messages(msg)
+    }
+
+  private def jsonMessages(msgs: JsArray): JsObject =
     Json.obj("messages" -> msgs)
+
+  // Override this in your controller to add the CORS headers to thes results of its actions
+  def allowRemoteOrigin: Boolean = false
+
+  private def allowRemoteOriginIfSelected(result: Result): Result =
+    if (allowRemoteOrigin) {
+      addRemoteOriginHeaders(result)
+    } else result
+
 }
 
-trait ResultImplicits extends ResultBox with I18nSupport {
+trait RemoteOriginHelpers {
+  // The standard way is to extend BoxToResultHelpers and override allowRemoteOrigin to true in your Controller
+  // Use this directly only if your controller must contain some Actions with and some without remote origin allowed
+
+  def addRemoteOriginHeaders(result: Result): Result =
+    result.withHeaders("Access-Control-Allow-Origin" -> "*", "Access-Control-Max-Age" -> "600")
+}
+
+trait ResultImplicits extends BoxToResultHelpers with I18nSupport {
 
   implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext,
                                                         messages: MessagesProvider): Future[Result] =
@@ -77,7 +111,7 @@ class JsonResult(status: Int)
 
   val isSuccess: Boolean = List(OK) contains status
 
-  def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]): Result =
+  def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
     Result(header = ResponseHeader(status),
            body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
 
@@ -87,7 +121,7 @@ class JsonResult(status: Int)
     else
       jsonError
 
-  def apply(json: JsObject): Result =
+  def apply(json: JsValue): Result =
     createResult(json)
 
   def apply(json: JsObject, messages: Seq[(String, String)]): Result =
@@ -137,6 +171,14 @@ class JsonResult(status: Int)
     Json.obj("messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }
 
+trait MimeTypes {
+  val jpegMimeType: String = "image/jpeg"
+  val protobufMimeType: String = "application/x-protobuf"
+  val xmlMimeType: String = "application/xml"
+  val zipMimeType: String = "application/zip"
+  val jsonMimeType: String = "application/json"
+}
+
 trait JsonResults extends JsonResultAttribues {
   val JsonOk = new JsonResult(OK)
   val JsonBadRequest = new JsonResult(BAD_REQUEST)
@@ -147,12 +189,44 @@ trait JsonResultAttribues {
   val jsonError = "error"
 }
 
+trait ValidationHelpers {
+
+  def validateJson[A: Reads](implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext): BodyParser[A] =
+    bodyParsers.json.validate(
+      _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
+    )
+
+  def validateProto[A <: GeneratedMessage](implicit bodyParsers: PlayBodyParsers,
+                                           companion: GeneratedMessageCompanion[A],
+                                           ec: ExecutionContext): BodyParser[A] =
+    bodyParsers.raw.validate { raw =>
+      if (raw.size < raw.memoryThreshold) {
+        Box(raw.asBytes())
+          .flatMap(x => tryo(companion.parseFrom(x.toArray)))
+          .toRight[Result](BadRequest("invalid request body"))
+      } else {
+        tryo(companion.parseFrom(CodedInputStream.newInstance(new FileInputStream(raw.asFile))))
+          .toRight[Result](BadRequest("invalid request body"))
+      }
+    }
+
+}
+
+trait RequestTokenHelper {
+  protected def urlOrHeaderToken(token: Option[String], request: Request[Any]): Option[String] =
+    token.orElse(request.headers.get("X-Auth-Token"))
+}
+
 trait ExtendedController
     extends JsonResults
     with BoxImplicits
     with FoxImplicits
     with ResultImplicits
     with Status
-    with WithHighlightableResult
     with WithFilters
     with I18nSupport
+    with InjectedController
+    with MimeTypes
+    with ValidationHelpers
+    with LazyLogging
+    with RequestTokenHelper

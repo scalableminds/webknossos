@@ -1,20 +1,18 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.config.ConfigRenderOptions
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
-import models.user.{MultiUserDAO, User}
+import models.user.MultiUserDAO
 import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.jdbc.PostgresProfile.api._
 import utils.{SQLClient, SimpleSQLDAO, StoreModules, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 @Api
@@ -23,8 +21,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
                             storeModules: StoreModules,
-                            sil: Silhouette[WkEnv],
-                            rpc: RPC)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   @ApiOperation(value = "Information about the version of webKnossos")
@@ -33,31 +30,20 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       new ApiResponse(code = 200, message = "JSON object containing information about the version of webKnossos"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
-  def buildInfo: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
-      token <- webKnossosToken(request.identity)
     } yield {
-      Ok(
-        Json.obj(
+      addRemoteOriginHeaders(
+        Ok(Json.obj(
           "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
           "schemaVersion" -> schemaVersion.toOption,
-          "token" -> token,
           "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
           "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
-        ))
+        )))
     }
   }
-
-  private def webKnossosToken(issuingUserOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Option[String]] =
-    issuingUserOpt match {
-      case Some(user) =>
-        for {
-          multiUser <- multiUserDAO.findOne(user._multiUser)
-        } yield if (multiUser.isSuperUser) Some(RpcTokenHolder.webKnossosToken) else None
-      case _ => Fox.successful(None)
-    }
 
   @ApiOperation(hidden = true, value = "")
   def trackAnalyticsEvent(eventType: String): Action[JsObject] = sil.UserAwareAction(validateJson[JsObject]) {

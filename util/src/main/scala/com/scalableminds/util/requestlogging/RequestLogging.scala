@@ -1,5 +1,7 @@
 package com.scalableminds.util.requestlogging
 
+import java.io.{PrintWriter, StringWriter}
+
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
@@ -13,16 +15,14 @@ trait AbstractRequestLogging extends LazyLogging {
   def logRequestFormatted(request: Request[_],
                           result: Result,
                           notifier: Option[String => Unit],
-                          requesterId: Option[String] = None): Unit = {
-
-    if (Status.isSuccessful(result.header.status)) return
-
-    val userIdMsg = requesterId.map(id => s" for user $id").getOrElse("")
-    val resultMsg = s": ${resultBody(result)}"
-    val msg = s"Answering ${result.header.status} at ${request.uri}$userIdMsg$resultMsg"
-    logger.warn(msg)
-    notifier.foreach(_(msg))
-  }
+                          requesterId: Option[String] = None): Unit =
+    if (!Status.isSuccessful(result.header.status)) {
+      val userIdMsg = requesterId.map(id => s" for user $id").getOrElse("")
+      val resultMsg = s": ${resultBody(result)}"
+      val msg = s"Answering ${result.header.status} at ${request.uri}$userIdMsg$resultMsg"
+      logger.warn(msg)
+      notifier.foreach(_(msg))
+    }
 
   private def resultBody(result: Result): String =
     result.body match {
@@ -59,5 +59,24 @@ trait RequestLogging extends AbstractRequestLogging {
       _ = if (executionTime > durationThreshold.toNanos) logTimeFormatted(executionTime, request, result)
     } yield result
   }
+
+}
+
+trait RateLimitedErrorLogging extends LazyLogging {
+  // Allows to log errors that occur many times only once (per lifetime of the class)
+
+  private val loggedErrorMessages = scala.collection.mutable.Set[String]()
+
+  protected def logError(t: Throwable): Unit =
+    t match {
+      case e: Exception =>
+        if (!loggedErrorMessages.contains(e.getMessage)) {
+          loggedErrorMessages.add(e.getMessage)
+          val sw = new StringWriter
+          e.printStackTrace(new PrintWriter(sw))
+          logger.error(sw.toString)
+        }
+      case _ => ()
+    }
 
 }

@@ -99,8 +99,11 @@ dataSet.notFoundForAnnotation=The Dataset for this annotation does not exist or 
 dataSet.noAccess=Could not access DataSet {0}. Does your team have access?
 dataSet.noAccessById=Could not access the corresponding DataSet. This is likely because you are not a member of a team that has access to it.
 dataSet.notImported=Dataset {0} is not imported
-dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
-dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
+dataSet.name.invalid=The dataset name is invalid
+dataSet.name.invalid.characters=Dataset names may only contain letters, digits, dots, underscorees, dashes.
+dataSet.name.invalid.startsWithDot=Dataset names cannot start with a dot.
+dataSet.name.invalid.endsWithDot=Dataset names cannot end with a dot.
+dataSet.name.invalid.lessThanThreeCharacters=Dataset names must be at least three characters.
 dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.name.notInSamples=This dataset name is not one of the available sample datasets.
 dataSet.source.notFound=The data source for the data source couldn’t be found
@@ -133,9 +136,10 @@ dataSet.delete.webknossos.failed=Could not delete dataset from webKnossos databa
 dataSet.delete.failed=Could not delete the dataset on disk.
 dataSet.upload.Datastore.restricted=Your organization is not allowed to upload datasets to this datastore. Please choose another datastore.
 dataSet.upload.validation.failed=Failed to validate Dataset information for upload.
-dataSet.upload.linkPublicOnly=Only layers of existing public datasets can be linked
+dataSet.upload.linkRestricted=Can only link layers of datasets that are either public or allowed to be administrated by your account
 dataSet.upload.invalidLinkedLayers=Could not link all requested layers
 dataSet.upload.cancel.failed=Could not cancel the upload.
+dataSet.upload.noFiles=Tried to finish upload with no files. May be a retry of a failed finish request, see previous errors.
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -154,6 +158,13 @@ zip.file.notFound=No or invalid ZIP file specified
 
 dataLayer.notFound=DataLayer “{0}” not found
 dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
+
+dataLayer.wrongMag=DataLayer “{0}” does not have mag “{1}”
+dataLayer.invalidMag=Supplied “{0}” is not a valid mag format. Please use “x-y-z”
+
+zarr.invalidChunkCoordinates=The requested chunk coordinates are in an invalid format. Expected c.x.y.z
+zarr.invalidFirstChunkCoord="First Channel must be 0"
+zarr.chunkNotFound=Could not find the requested chunk
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"
@@ -213,10 +224,11 @@ role.added=Added role to {0}
 
 tracing=Annotation
 tracing.notFound=Tracing couldn’t be found
+tracing.wrongMag=Tracing “{0}” does not have mag “{1}”
 
 annotation.create.failed=Failed to create annotation.
 annotation.create.forbidden=You do not have permission to create annotations for this dataset.
-annotation.volume.uint64=Creating volume annotations with uint64 fallback layer is not supported by wK yet.
+annotation.volume.invalidLargestSegmentId=Cannot create tasks with fallback segmentation layers that do not have a valid largest segment id.
 annotation.volume.resolutionRestrictionsTooTight=Task type resolution restrictions are too tight, resulting annotation has no resolutions.
 annotation.volume.resolutionsDoNotMatch=Could not merge volume annotations, as their resolutions differ. Please ensure each annotation has the same set of resolutions.
 annotation.notFound=Annotation couldn’t be found
@@ -254,9 +266,6 @@ annotation.timelogging.read.failed=Time
 annotation.write.failed=Could not convert annotation to json
 annotation.noSkeleton=No skeleton tracing found for this annotation
 annotation.needsEitherSkeletonOrVolume=Annotation needs at least one of skeleton or volume
-annotation.unlinkFallback.explorationalsOnly=Could not unlink fallback segmentation (only allowed for explorational annotations).
-annotation.unlinkFallback.noVolume=Could not unlink fallback segmentation (only allowed for annotations with volume layer).
-annotation.unlinkFallback.layerNotFound=Could not unlink fallback segmentation (annotation layer not found)
 annotation.downsample.layerNotFound=Could not downsample volume annotation (annotation layer not found)
 annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid annotation because it is only allowed for explorational annotations.
 annotation.makeHybrid.failed=Could not convert to hybrid.
@@ -272,6 +281,8 @@ annotation.reopen.failed=Failed to reopen the annotation.
 annotation.sandbox.skeletonOnly=Sandbox annotations are currently available as skeleton only.
 annotation.multiLayers.skeleton.notImplemented=This feature is not implemented for annotations with more than one skeleton layer
 annotation.multiLayers.volume.notImplemented=This feature is not implemented for annotations with more than one volume layer
+annotation.noMappingSet=No mapping is pinned for this annotation, cannot generate agglomerate skeleton.
+annotation.volumeBucketsNotEmpty=Cannot make mapping editable in an annotation with mutated volume data
 
 mesh.notFound=Mesh couldn’t be found
 mesh.write.failed=Failed to convert mesh info to json
@@ -340,7 +351,9 @@ job.couldNotRunCubing = Failed to start WKW conversion job.
 job.couldNotRunTiffExport = Failed to start Tiff export job.
 job.couldNotRunComputeMeshFile = Failed to start mesh file computation job.
 job.couldNotRunNucleiInferral = Failed to start nuclei inferral job.
+job.couldNotRunNeuronInferral = Failed to start neuron inferral job.
 job.couldNotRunGlobalizeFloodfills = Failed to start job for globalizing floodfills.
+job.couldNotRunApplyMergerMode = Failed to start job to apply merger mode tracing.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 jobs.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
@@ -349,8 +362,21 @@ job.export.tiff.volumeExceeded = The volume of the selected bounding box is too 
 job.export.tiff.edgeLengthExceeded = An edge length of the selected bounding box is too large.
 job.export.notAllowed.organization = Currently tiff export is only allowed for datasets of your own organization.
 job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allowed for datasets of your own organization.
+job.inferNeurons.notAllowed.organization = Currently neuron inferral is only allowed for datasets of your own organization.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
+job.applyMergerMode.notAllowed.organization = Applying merger mode tracings is only allowed for datasets of your own organization.
+
+voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this webKnossos instance.
+voxelytics.runNotFound = Workflow runs not found
+voxelytics.taskNotFound = Task not found
+voxelytics.workflowNotFound = Workflow not found
+voxelytics.noTaskFound = No tasks found
+voxelytics.noWorkflowFound = No workflows found
+voxelytics.workflowUserMismatch = Workflow run already exists by other user
+voxelytics.zeroRunWorkflow = No run for this workflow found
+
+publication.notFound = Publication could not be found.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 

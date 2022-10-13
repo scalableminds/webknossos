@@ -8,6 +8,7 @@ import scala.reflect.ClassTag
 import scala.util.{Success, Try}
 
 trait FoxImplicits {
+
   implicit def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
 
@@ -33,7 +34,7 @@ trait FoxImplicits {
 
   implicit def try2Fox[T](t: Try[T])(implicit ec: ExecutionContext): Fox[T] = t match {
     case Success(result)       => Fox.successful(result)
-    case scala.util.Failure(e) => Fox.failure(e.getMessage)
+    case scala.util.Failure(e) => Fox.failure(e.toString)
   }
 
   implicit def fox2FutureBox[T](f: Fox[T]): Future[Box[T]] =
@@ -57,12 +58,28 @@ object Fox extends FoxImplicits {
       implicit ec: ExecutionContext): Fox[Nothing] =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
+  // run serially, fail on the first failure
   def serialSequence[A, B](l: List[A])(f: A => Future[B])(implicit ec: ExecutionContext): Future[List[B]] = {
     def runNext(remaining: List[A], results: List[B]): Future[List[B]] =
       remaining match {
         case head :: tail =>
           for {
             currentResult <- f(head)
+            results <- runNext(tail, currentResult :: results)
+          } yield results
+        case Nil =>
+          Future.successful(results.reverse)
+      }
+    runNext(l, Nil)
+  }
+
+  // run serially, return individual results in list of box
+  def serialSequenceBox[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Box[B]]] = {
+    def runNext(remaining: List[A], results: List[Box[B]]): Future[List[Box[B]]] =
+      remaining match {
+        case head :: tail =>
+          for {
+            currentResult <- f(head).futureBox
             results <- runNext(tail, currentResult :: results)
           } yield results
         case Nil =>
@@ -105,6 +122,7 @@ object Fox extends FoxImplicits {
     new Fox(r)
   }
 
+  // Run serially, fail on the first failure
   def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
     def runNext(remaining: List[A], results: List[B]): Fox[List[B]] =
       remaining match {

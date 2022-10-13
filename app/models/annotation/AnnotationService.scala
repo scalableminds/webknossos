@@ -1,18 +1,28 @@
 package models.annotation
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
-
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.Color
+import com.scalableminds.webknossos.datastore.geometry.{
+  ColorProto,
+  NamedBoundingBoxProto,
+  Vec3DoubleProto,
+  Vec3IntProto
+}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerType,
+  AnnotationSource,
+  FetchedAnnotationLayer
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   DataSourceLike => DataSource,
@@ -26,6 +36,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import controllers.AnnotationLayerParameters
+
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
@@ -36,13 +47,13 @@ import models.mesh.{MeshDAO, MeshService}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
-import models.team.{Team, TeamDAO}
+import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -53,7 +64,7 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               volumeTracingOpt: Option[VolumeTracing],
                               volumeDataOpt: Option[Array[Byte]],
                               name: String,
-                              scaleOpt: Option[Scale],
+                              scaleOpt: Option[Vec3Double],
                               annotation: Annotation,
                               user: User,
                               taskOpt: Option[Task],
@@ -62,10 +73,10 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
 // Used to pass duplicate properties when creating a new tracing to avoid masking them.
 // Uses the proto-generated geometry classes, hence the full qualifiers.
 case class RedundantTracingProperties(
-    editPosition: com.scalableminds.webknossos.datastore.geometry.Point3D,
-    editRotation: com.scalableminds.webknossos.datastore.geometry.Vector3D,
+    editPosition: Vec3IntProto,
+    editRotation: Vec3DoubleProto,
     zoomLevel: Double,
-    userBoundingBoxes: Seq[com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox]
+    userBoundingBoxes: Seq[NamedBoundingBoxProto]
 )
 
 class AnnotationService @Inject()(
@@ -84,6 +95,7 @@ class AnnotationService @Inject()(
     taskDAO: TaskDAO,
     teamDAO: TeamDAO,
     userService: UserService,
+    teamService: TeamService,
     dataStoreDAO: DataStoreDAO,
     projectDAO: ProjectDAO,
     organizationDAO: OrganizationDAO,
@@ -92,12 +104,15 @@ class AnnotationService @Inject()(
     temporaryFileCreator: TemporaryFileCreator,
     meshDAO: MeshDAO,
     meshService: MeshService,
-    sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext, val materializer: Materializer)
+    sharedAnnotationsDAO: SharedAnnotationsDAO
+)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
     with ProtoGeometryImplicits
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
+
+  val DefaultAnnotationListLimit = 1000
 
   private def selectSuitableTeam(user: User, dataSet: DataSet): Fox[ObjectId] =
     (for {
@@ -121,8 +136,8 @@ class AnnotationService @Inject()(
       organizationName: String,
       fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
-      startPosition: Option[Point3D] = None,
-      startRotation: Option[Vector3D] = None,
+      startPosition: Option[Vec3Int] = None,
+      startRotation: Option[Vec3Double] = None,
       resolutionRestrictions: ResolutionRestrictions
   ): Fox[VolumeTracing] = {
     val resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayer)
@@ -135,18 +150,32 @@ class AnnotationService @Inject()(
         boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
         System.currentTimeMillis(),
         dataSource.id.name,
-        point3DToProto(startPosition.getOrElse(dataSource.center)),
-        vector3DToProto(startRotation.getOrElse(vector3DFromProto(VolumeTracingDefaults.editRotation))),
+        vec3IntToProto(startPosition.getOrElse(dataSource.center)),
+        vec3DoubleToProto(startRotation.getOrElse(vec3DoubleFromProto(VolumeTracingDefaults.editRotation))),
         elementClassToProto(
           fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
         fallbackLayer.map(_.name),
-        fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId),
+        combineLargestSegmentIdsByPrecedence(fromNml = None, fromFallbackLayer = fallbackLayer.map(_.largestSegmentId)),
         0,
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(organizationName),
-        resolutions = resolutionsRestricted.map(point3DToProto)
+        resolutions = resolutionsRestricted.map(vec3IntToProto)
       )
   }
+
+  def combineLargestSegmentIdsByPrecedence(fromNml: Option[Long],
+                                           fromFallbackLayer: Option[Option[Long]]): Option[Long] =
+    if (fromNml.nonEmpty)
+      // This was called for an NML upload. The NML had an explicit largestSegmentId. Use that.
+      fromNml
+    else if (fromFallbackLayer.nonEmpty)
+      // There is a fallback layer. Use its largestSegmentId, even if it is None.
+      // Some tracing functionality will be disabled until a segment id is set by the user.
+      fromFallbackLayer.flatten
+    else {
+      // There is no fallback layer. Start at default segment id for fresh volume layers
+      VolumeTracingDefaults.largestSegmentId
+    }
 
   def addAnnotationLayer(annotation: Annotation,
                          organizationName: String,
@@ -160,7 +189,7 @@ class AnnotationService @Inject()(
                                                             List(annotationLayerParameters),
                                                             organizationName,
                                                             annotation.annotationLayers)
-      _ <- Fox.serialCombined(newAnnotationLayers)(l => annotationLayersDAO.insertOne(annotation._id, l))
+      _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
 
   private def createTracingsForExplorational(dataSet: DataSet,
@@ -180,7 +209,9 @@ class AnnotationService @Inject()(
           }
           .headOption
           .toFox
-        _ <- bool2Fox(fallbackLayer.elementClass != ElementClass.uint64) ?~> "annotation.volume.uint64"
+        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(
+          fallbackLayer.largestSegmentId,
+          fallbackLayer.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
       } yield fallbackLayer
 
     def createAndSaveAnnotationLayer(
@@ -248,7 +279,7 @@ class AnnotationService @Inject()(
             s.editRotation,
             s.zoomLevel,
             s.userBoundingBoxes ++ s.userBoundingBox.map(
-              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox(0, None, None, None, _))
+              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _))
           )
         case Right(v) =>
           RedundantTracingProperties(
@@ -256,7 +287,7 @@ class AnnotationService @Inject()(
             v.editRotation,
             v.zoomLevel,
             v.userBoundingBoxes ++ v.userBoundingBox.map(
-              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox(0, None, None, None, _))
+              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _))
           )
       }
 
@@ -321,10 +352,11 @@ class AnnotationService @Inject()(
         case _                    => Fox.failure("annotation.makeHybrid.alreadyHybrid")
       }
       usedFallbackLayerName = if (newAnnotationLayerType == AnnotationLayerType.Volume) fallbackLayerName else None
-      newAnnotationLayerParameters = AnnotationLayerParameters(newAnnotationLayerType,
-                                                               usedFallbackLayerName,
-                                                               Some(ResolutionRestrictions.empty),
-                                                               None)
+      newAnnotationLayerParameters = AnnotationLayerParameters(
+        newAnnotationLayerType,
+        usedFallbackLayerName,
+        Some(ResolutionRestrictions.empty),
+        AnnotationLayer.defaultNameForType(newAnnotationLayerType))
       _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
     } yield ()
 
@@ -430,14 +462,14 @@ class AnnotationService @Inject()(
 
   def createSkeletonTracingBase(dataSetName: String,
                                 boundingBox: Option[BoundingBox],
-                                startPosition: Point3D,
-                                startRotation: Vector3D): SkeletonTracing = {
+                                startPosition: Vec3Int,
+                                startRotation: Vec3Double): SkeletonTracing = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
       Seq(initialNode),
       Seq.empty,
-      Some(Color(1, 0, 0, 1)),
+      Some(ColorProto(1, 0, 0, 1)),
       Seq(BranchPoint(initialNode.id, System.currentTimeMillis())),
       Seq.empty,
       "",
@@ -458,8 +490,8 @@ class AnnotationService @Inject()(
   def createVolumeTracingBase(dataSetName: String,
                               organizationId: ObjectId,
                               boundingBox: Option[BoundingBox],
-                              startPosition: Point3D,
-                              startRotation: Vector3D,
+                              startPosition: Vec3Int,
+                              startRotation: Vec3Double,
                               volumeShowFallbackLayer: Boolean,
                               resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext,
                                                                               m: MessagesProvider): Fox[VolumeTracing] =
@@ -475,7 +507,7 @@ class AnnotationService @Inject()(
           case _                        => None
         }.headOption
       } else None
-      _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+      _ <- bool2Fox(fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))) ?~> "annotation.volume.invalidLargestSegmentId"
 
       volumeTracing <- createVolumeTracing(
         dataSource,
@@ -551,13 +583,6 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[Unit] =
     sharedAnnotationsDAO.updateTeamsForSharedAnnotation(annotationId, teams)
 
-  def sharedTeamsFor(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      teamIds <- sharedAnnotationsDAO.sharedTeamsFor(annotationId)
-      teamIdsValidated <- Fox.serialCombined(teamIds)(ObjectId.parse(_))
-      teams <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_))
-    } yield teams
-
   def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
       implicit
       ctx: DBAccessContext): Fox[TemporaryFile] =
@@ -595,7 +620,7 @@ class AnnotationService @Inject()(
   private def getTracingsScalesAndNamesFor(annotations: List[Annotation], skipVolumeData: Boolean)(
       implicit ctx: DBAccessContext): Fox[List[List[DownloadAnnotation]]] = {
 
-    def getSingleDownloadAnnotation(annotation: Annotation, scaleOpt: Option[Scale]) =
+    def getSingleDownloadAnnotation(annotation: Annotation, scaleOpt: Option[Vec3Double]) =
       for {
         user <- userService.findOneById(annotation._user, useCache = true) ?~> "user.notFound"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
@@ -774,7 +799,7 @@ class AnnotationService @Inject()(
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
-      userJson <- userJsonForAnnotation(annotation._user, requestingUser)
+      userJson <- userJsonForAnnotation(annotation._user)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
         restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)),
@@ -783,8 +808,12 @@ class AnnotationService @Inject()(
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       meshes <- meshDAO.findAllWithAnnotation(annotation._id)
       meshesJs <- Fox.serialCombined(meshes)(meshService.publicWrites)
+      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
+      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_))
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+      contributors <- userDAO.findContributorsForAnnotation(annotation._id)
+      contributorsJs <- Fox.serialCombined(contributors)(c => userJsonForAnnotation(c._id, Some(c)))
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -806,32 +835,78 @@ class AnnotationService @Inject()(
         "visibility" -> annotation.visibility,
         "settings" -> settings,
         "tracingTime" -> annotation.tracingTime,
+        "teams" -> teamsJson,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
         "user" -> userJson,
-        "meshes" -> meshesJs
+        "owner" -> userJson,
+        "meshes" -> meshesJs,
+        "contributors" -> contributorsJs,
+        "othersMayEdit" -> annotation.othersMayEdit
       )
     }
   }
 
-  private def userJsonForAnnotation(userId: ObjectId, requestingUser: Option[User]): Fox[Option[JsObject]] =
+  def writesWithDataset(annotation: Annotation): Fox[JsObject] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      tracingStore <- tracingStoreDAO.findFirst
+      tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
+      dataSetJs <- dataSetService.publicWrites(dataSet, None, None, None)
+    } yield
+      Json.obj(
+        "id" -> annotation._id.id,
+        "name" -> annotation.name,
+        "description" -> annotation.description,
+        "typ" -> annotation.typ,
+        "tracingStore" -> tracingStoreJs,
+        "dataSet" -> dataSetJs
+      )
+  }
+
+  def writesAsAnnotationSource(annotation: Annotation, accessViaPrivateLink: Boolean): Fox[JsValue] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
+      tracingStore <- tracingStoreDAO.findFirst
+      annotationSource = AnnotationSource(
+        id = annotation.id,
+        annotationLayers = annotation.annotationLayers,
+        dataSetName = dataSet.name,
+        organizationName = organization.name,
+        dataStoreUrl = dataStore.publicUrl,
+        tracingStoreUrl = tracingStore.publicUrl,
+        accessViaPrivateLink = accessViaPrivateLink,
+      )
+    } yield Json.toJson(annotationSource)
+  }
+
+  private def userJsonForAnnotation(userId: ObjectId, userOpt: Option[User] = None): Fox[Option[JsObject]] =
     if (userId == ObjectId.dummyId) {
       Fox.successful(None)
     } else {
       for {
-        user <- userService.findOneById(userId, useCache = true)(GlobalAccessContext)
-        isTeamManagerOrAdminOfOwner <- Fox.runOptional(requestingUser)(requester =>
-          userService.isTeamManagerOrAdminOf(requester, user))
-        userJson <- if (isTeamManagerOrAdminOfOwner.getOrElse(false)) userService.compactWrites(user).map(Some(_))
-        else Fox.successful(None)
-      } yield userJson
+        user <- Fox.fillOption(userOpt)(userService.findOneById(userId, useCache = true)(GlobalAccessContext))
+        userJson <- userService.compactWrites(user)
+      } yield Some(userJson)
     }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def compactWrites(annotation: Annotation): Fox[JsObject] = {
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
-      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      userBox <- userDAO.findOne(annotation._user).futureBox
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id) ?~> s"fetching sharedTeams for annotation ${annotation._id} failed"
+      teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_, Some(organization))) ?~> s"serializing sharedTeams for annotation ${annotation._id} failed"
+      user <- userDAO.findOne(annotation._user) ?~> s"fetching owner info for annotation ${annotation._id} failed"
+      userJson = Json.obj(
+        "id" -> user._id.toString,
+        "firstName" -> user.firstName,
+        "lastName" -> user.lastName
+      )
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -847,10 +922,11 @@ class AnnotationService @Inject()(
         "organization" -> organization.name,
         "visibility" -> annotation.visibility,
         "tracingTime" -> annotation.tracingTime,
+        "teams" -> teamsJson,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "owner" -> userBox.toOption.map { user =>
-          s"${user.firstName} ${user.lastName}"
-        }
+        "owner" -> userJson,
+        "othersMayEdit" -> annotation.othersMayEdit
       )
     }
+  }
 }

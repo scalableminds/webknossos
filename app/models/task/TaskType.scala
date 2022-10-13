@@ -33,12 +33,12 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
   def fromForm(
       summary: String,
       description: String,
-      team: String,
+      team: ObjectId,
       settings: AnnotationSettings,
       recommendedConfiguration: Option[JsValue],
       tracingType: TracingType
   ): TaskType =
-    TaskType(ObjectId.generate, ObjectId(team), summary, description, settings, recommendedConfiguration, tracingType)
+    TaskType(ObjectId.generate, team, summary, description, settings, recommendedConfiguration, tracingType)
 
   def publicWrites(taskType: TaskType): Fox[JsObject] =
     for {
@@ -59,11 +59,20 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
     Fox
       .serialCombined(taskTypeIds) { taskTypeId =>
         for {
-          taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+          taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
           taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         } yield taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid
       }
       .map(_.exists(_ == true))
+
+  def idOrSummaryToId(taskTypeIdOrSummary: String, organizationId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[String] =
+    (for {
+      taskType <- taskTypeDAO.findOneBySummaryAndOrganization(taskTypeIdOrSummary, organizationId)
+    } yield taskType._id.toString).orElse(for {
+      taskTypeId <- ObjectId.fromString(taskTypeIdOrSummary)
+      _ <- taskTypeDAO.findOne(taskTypeId)
+    } yield taskTypeId.toString)
 }
 
 class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -88,6 +97,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           r.settingsPreferredmode,
           r.settingsBranchpointsallowed,
           r.settingsSomaclickingallowed,
+          r.settingsVolumeinterpolationallowed,
           r.settingsMergermode,
           ResolutionRestrictions(r.settingsResolutionrestrictionsMin, r.settingsResolutionrestrictionsMax)
         ),
@@ -134,14 +144,15 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(sqlu"""insert into webknossos.taskTypes(
                           _id, _organization, _team, summary, description, settings_allowedModes, settings_preferredMode,
-                          settings_branchPointsAllowed, settings_somaClickingAllowed, settings_mergerMode,
+                          settings_branchPointsAllowed, settings_somaClickingAllowed, settings_volumeInterpolationAllowed, settings_mergerMode,
                           settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
                        values(${t._id.id}, $organizationId, ${t._team.id}, ${t.summary}, ${t.description},
-                              '#${sanitize(writeArrayTuple(t.settings.allowedModes.map(_.toString)))}',
+                              '#${writeArrayTuple(t.settings.allowedModes.map(_.toString))}',
                               #${optionLiteral(t.settings.preferredMode.map(sanitize))},
                               ${t.settings.branchPointsAllowed},
                               ${t.settings.somaClickingAllowed},
+                              ${t.settings.volumeInterpolationAllowed},
                               ${t.settings.mergerMode},
                               #${optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))},
                               #${optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))},
@@ -167,6 +178,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                          settings_preferredMode = #${optionLiteral(t.settings.preferredMode.map(sanitize))},
                          settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
                          settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
+                         settings_volumeInterpolationAllowed = ${t.settings.volumeInterpolationAllowed},
                          settings_mergerMode = ${t.settings.mergerMode},
                          settings_resolutionRestrictions_min = #$resolutionMinLiteral,
                            settings_resolutionRestrictions_max = #$resolutionMaxLiteral,

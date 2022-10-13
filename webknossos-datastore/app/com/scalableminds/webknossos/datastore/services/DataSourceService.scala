@@ -7,6 +7,7 @@ import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
@@ -120,25 +121,29 @@ class DataSourceService @Inject()(
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
 
-    // Check, that each dimension increases monotonically between different resolutions.
-    val resolutionsByX = dataSource.dataLayers.map(_.resolutions.sortBy(_.x))
-    val resolutionsByY = dataSource.dataLayers.map(_.resolutions.sortBy(_.y))
-    val resolutionsByZ = dataSource.dataLayers.map(_.resolutions.sortBy(_.z))
+    // Check that when mags are sorted by max dimension, all dimensions are sorted.
+    // This means each dimension increases monotonically.
+    val magsSorted = dataSource.dataLayers.map(_.resolutions.sortBy(_.maxDim))
+    val magsXIsSorted = magsSorted.map(_.map(_.x)) == magsSorted.map(_.map(_.x).sorted)
+    val magsYIsSorted = magsSorted.map(_.map(_.y)) == magsSorted.map(_.map(_.y).sorted)
+    val magsZIsSorted = magsSorted.map(_.map(_.z)) == magsSorted.map(_.map(_.z).sorted)
 
     val errors = List(
-      Check(dataSource.scale.isValid, "DataSource scale is invalid"),
-      Check(resolutionsByX == resolutionsByY && resolutionsByX == resolutionsByZ,
-            "Scales do not monotonically increase in all dimensions"),
+      Check(dataSource.scale.isStrictlyPositive, "DataSource scale is invalid"),
+      Check(magsXIsSorted && magsYIsSorted && magsZIsSorted, "Mags do not monotonically increase in all dimensions"),
       Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
       Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
       Check(
-        dataSource.dataLayers.forall {
-          case layer: SegmentationLayer =>
-            layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxSegmentIdValue(layer.elementClass)
-          case _ =>
-            true
+        dataSource.segmentationLayers.forall { layer =>
+          ElementClass.segmentationElementClasses.contains(layer.elementClass)
         },
-        "Largest segment ID invalid"
+        s"Invalid element class for segmentation layer"
+      ),
+      Check(
+        dataSource.segmentationLayers.forall { layer =>
+          ElementClass.largestSegmentIdIsInRange(layer.largestSegmentId, layer.elementClass)
+        },
+        "Largest segment id exceeds range (must be nonnegative, within element class range, and < 2^53)"
       ),
       Check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
@@ -153,12 +158,14 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource): Fox[Unit] =
+  def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] =
     for {
       _ <- validateDataSource(dataSource).toFox
       dataSourcePath = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
-      _ <- backupPreviousProperties(dataSourcePath) ?~> "Could not update datasource-properties.json"
+      _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath))
+      _ <- Fox.runIf(!expectExisting)(bool2Fox(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
+      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath)) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()

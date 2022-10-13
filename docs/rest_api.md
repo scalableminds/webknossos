@@ -344,12 +344,16 @@ Download an annotation as NML/ZIP
 
 #### Returns
  - As chunked file stream:
-   - In case of a volume annotation:
-     - A ZIP file containing both an NML file and a data.zip file with the volume data
-   - In case of a single explorative or task annotation with no volume annotation:
+   - In case of a single skeleton-only annotation:
      - A single NML file
+   - In case of a single annotation with volume layers
+     - A ZIP file containing both an NML file and data zip files with the volume data for each volume layer. The data zip file names are referenced in the `<volume>` tags in the NML file.
    - In case of compound downloads (CompoundTask/CompoundProject/CompoundTaskType):
      - A ZIP file containing individual NML files for all associated annotations
+
+
+#### Note
+ - The volume data zip file name used to always be `data.zip`, when wk supported only a single volume layer per annotation. Please use the file names referenced in the `<volume>` tags in the NML file instead.
 
 ---
 ### `POST /annotations/upload`
@@ -540,7 +544,7 @@ List tasks matching search criteria
    - `"project"` `[STRING]` show only tasks of the project with this id
    - `"ids"` `[JSON LIST OF STRINGS]` show only tasks with these ids
    - `"tasktype"` `[STRING]` show only tasks matching the task type with this id
-   - `"random"` `[BOOLEAN]` if true, return randomized subset of the results, rather than the first 1000 matches in the database
+   - `"random"` `[BOOLEAN]` if true, return a randomized subset of the results, rather than the first 1000 matches in the database
 
 #### Returns
  - JSON list of objects containing task information

@@ -1,14 +1,19 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import com.scalableminds.webknossos.datastore.controllers.Controller
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, InjectedController}
+import play.api.mvc.{Action, AnyContent}
 
-class StandaloneTracingstore extends InjectedController {
+import javax.inject.Inject
+
+class StandaloneTracingstore @Inject()() extends Controller {
 
   def buildInfo: Action[AnyContent] = Action {
-    Ok(
-      Json.obj(
-        "webknossosTracingstore" -> webknossosTracingstore.BuildInfo.toMap.mapValues(_.toString)
+    addRemoteOriginHeaders(
+      Ok(
+        Json.obj(
+          "webknossosTracingstore" -> webknossosTracingstore.BuildInfo.toMap.mapValues(_.toString)
+        )
       ))
   }
 }

@@ -2,11 +2,11 @@ package models.mesh
 
 import com.google.common.io.BaseEncoding
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+
 import javax.inject.Inject
-import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
@@ -19,7 +19,7 @@ case class MeshInfo(
     _id: ObjectId,
     _annotation: ObjectId,
     description: String,
-    position: Point3D,
+    position: Vec3Int,
     created: Long = System.currentTimeMillis,
     isDeleted: Boolean = false
 )
@@ -27,14 +27,10 @@ case class MeshInfo(
 case class MeshInfoParameters(
     annotationId: ObjectId,
     description: String,
-    position: Point3D,
+    position: Vec3Int,
 )
 object MeshInfoParameters {
-  implicit val meshInfoParametersReads: Reads[MeshInfoParameters] =
-    ((__ \ "annotationId").read[String](ObjectId.stringObjectIdReads("teamId")) and
-      (__ \ "description").read[String] and
-      (__ \ "position").read[Point3D])((annotationId, description, position) =>
-      MeshInfoParameters(ObjectId(annotationId), description, position))
+  implicit val jsonFormat: OFormat[MeshInfoParameters] = Json.format[MeshInfoParameters]
 }
 
 class MeshService @Inject()()(implicit ec: ExecutionContext) {
@@ -72,7 +68,7 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def parseInfo(r: InfoTuple): Fox[MeshInfo] =
     for {
-      position <- Point3D.fromList(parseArrayTuple(r._4).map(_.toInt)) ?~> "could not parse mesh position"
+      position <- Vec3Int.fromList(parseArrayTuple(r._4).map(_.toInt)) ?~> "could not parse mesh position"
     } yield {
       MeshInfo(
         ObjectId(r._1), //_id
@@ -111,7 +107,7 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         """)
     } yield ()
 
-  def updateOne(id: ObjectId, _annotation: ObjectId, description: String, position: Point3D)(
+  def updateOne(id: ObjectId, _annotation: ObjectId, description: String, position: Vec3Int)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)

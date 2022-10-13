@@ -3,20 +3,20 @@ package backend
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
-import com.scalableminds.webknossos.datastore.geometry.{BoundingBox, Color, Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec3DoubleProto, Vec3IntProto}
 
 object Dummies {
   val timestamp = 123456789
   val timestampLong = 123456789L
 
   def createDummyNode(id: Int): Node =
-    Node(id, Point3D(id, id + 1, id + 2), Vector3D(id, id + 1, id + 2), id, 1, 10, 8, id % 2 == 0, timestamp)
+    Node(id, Vec3IntProto(id, id + 1, id + 2), Vec3DoubleProto(id, id + 1, id + 2), id, 1, 10, 8, id % 2 == 0, timestamp)
 
   val tree1: Tree = Tree(
     1,
     Seq(createDummyNode(0), createDummyNode(1), createDummyNode(2), createDummyNode(7)),
     Seq(Edge(0, 1), Edge(2, 1), Edge(1, 7)),
-    Some(Color(23, 23, 23, 1)),
+    Some(ColorProto(23, 23, 23, 1)),
     Seq(BranchPoint(1, 0), BranchPoint(7, 0)),
     Seq(Comment(0, "comment")),
     "TestTree-1",
@@ -29,7 +29,7 @@ object Dummies {
     2,
     Seq(createDummyNode(4), createDummyNode(5), createDummyNode(6)),
     Seq(Edge(4, 5), Edge(5, 6)),
-    Some(Color(30, 30, 30, 1)),
+    Some(ColorProto(30, 30, 30, 1)),
     Seq[BranchPoint](),
     Seq[Comment](),
     "TestTree-2",
@@ -46,8 +46,8 @@ object Dummies {
                                 timestamp,
                                 None,
                                 Some(1),
-                                Point3D(1, 1, 1),
-                                Vector3D(1.0, 1.0, 1.0),
+                                Vec3IntProto(1, 1, 1),
+                                Vec3DoubleProto(1.0, 1.0, 1.0),
                                 1.0,
                                 0,
                                 None,
@@ -70,8 +70,8 @@ object Dummies {
                                          timestamp,
                                          None,
                                          None,
-                                         Point3D(1, 1, 1),
-                                         Vector3D(1.0, 1.0, 1.0),
+                                         Vec3IntProto(1, 1, 1),
+                                         Vec3DoubleProto(1.0, 1.0, 1.0),
                                          1.0,
                                          0,
                                          None,
@@ -79,16 +79,16 @@ object Dummies {
 
   val volumeTracing: VolumeTracing = VolumeTracing(
     None,
-    BoundingBox(Point3D(0,0,0), 10, 10, 10),
+    BoundingBoxProto(Vec3IntProto(0,0,0), 10, 10, 10),
     timestamp,
     "dummy_dataset",
-    Point3D(1, 1, 1),
-    Vector3D(1.0, 1.0, 1.0),
+    Vec3IntProto(1, 1, 1),
+    Vec3DoubleProto(1.0, 1.0, 1.0),
     ElementClass.uint16,
     None,
-    5,
+    Some(5L),
     0,
     1.0,
-    segments = Seq(Segment(5, Some(Point3D(7,7,7))))
+    segments = Seq(Segment(5, Some(Vec3IntProto(7,7,7))))
   )
 }

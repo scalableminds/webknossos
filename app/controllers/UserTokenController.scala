@@ -17,6 +17,7 @@ import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreService}
 import models.job.JobDAO
+import models.organization.OrganizationDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
@@ -33,14 +34,16 @@ object RpcTokenHolder {
    * The token is refreshed on every wK restart.
    * Keep it secret!
    */
-  lazy val webKnossosToken: String = CompactRandomIDGenerator.generateBlocking()
+  lazy val webKnossosToken: String = RandomIDGenerator.generateBlocking()
 }
 
 @Api
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataSetService: DataSetService,
                                     annotationDAO: AnnotationDAO,
+                                    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
                                     userService: UserService,
+                                    organizationDAO: OrganizationDAO,
                                     annotationStore: AnnotationStore,
                                     annotationInformationProvider: AnnotationInformationProvider,
                                     dataStoreService: DataStoreService,
@@ -93,21 +96,19 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
-        userBox <- bearerTokenService.userForTokenOpt(token)(GlobalAccessContext).futureBox
+        userBox <- bearerTokenService.userForTokenOpt(token).futureBox
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
+            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox, token)
           case AccessResourceType.jobExport =>
             handleJobExportAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
-      } yield {
-        Ok(Json.toJson(answer))
-      }
+      } yield Ok(Json.toJson(answer))
     }
 
   private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(
@@ -129,15 +130,17 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
         isAllowed <- dataSetService.isEditableBy(dataset, Some(user))
-      } yield {
-        UserAccessAnswer(isAllowed)
-      }
+      } yield UserAccessAnswer(isAllowed)
 
     def tryAdministrate: Fox[UserAccessAnswer] =
       userBox match {
         case Full(user) =>
           for {
-            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+            // if dataSourceId is empty, the request asks if the user may administrate in *any* (i.e. their own) organization
+            relevantOrganization <- if (dataSourceId.team.isEmpty)
+              Fox.successful(user._organization)
+            else organizationDAO.findOneByName(dataSourceId.team).map(_._id)
+            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, relevantOrganization)
           } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
         case _ => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
       }
@@ -159,8 +162,12 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  private def handleTracingAccess(tracingId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] = {
+  private def handleTracingAccess(tracingId: String,
+                                  mode: AccessMode,
+                                  userBox: Box[User],
+                                  token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
+    // Optionally, a accessToken can be provided which explicitly looks up the read right the private link table
 
     def findAnnotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
       val annotationFox = annotationDAO.findOneByTracingId(tracingId)
@@ -181,15 +188,25 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         case _                => Fox.successful(false)
       }
 
-    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(UserAccessAnswer(granted = true))
-    for {
-      annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
-      restrictions <- annotationInformationProvider.restrictionsFor(
-        AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
-      allowed <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
-    } yield {
-      if (allowed) UserAccessAnswer(granted = true)
-      else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
+    if (tracingId == TracingIds.dummyTracingId)
+      Fox.successful(UserAccessAnswer(granted = true))
+    else {
+      for {
+        annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+        annotationAccessByToken <- token
+          .map(annotationPrivateLinkDAO.findOneByAccessToken)
+          .getOrElse(Fox.empty)
+          .futureBox
+
+        allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
+        restrictions <- annotationInformationProvider.restrictionsFor(
+          AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
+        allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+        allowed = allowedByToken || allowedByUser
+      } yield {
+        if (allowed) UserAccessAnswer(granted = true)
+        else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
+      }
     }
   }
 
@@ -198,7 +215,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
     else {
       for {
-        jobIdValidated <- ObjectId.parse(jobId)
+        jobIdValidated <- ObjectId.fromString(jobId)
         jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox
         answer = jobBox match {
           case Full(_) => UserAccessAnswer(granted = true)

@@ -1,9 +1,10 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
@@ -48,7 +49,7 @@ class SkeletonTracingService @Inject()(
       tracingId,
       updateActionGroup.version,
       updateActionGroup.actions
-        .map(_.addTimestamp(updateActionGroup.timestamp)) match { //to the first action in the group, attach the group's info
+        .map(_.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)) match { //to the first action in the group, attach the group's info
         case Nil           => Nil
         case first :: rest => first.addInfo(updateActionGroup.info) :: rest
       }
@@ -64,9 +65,7 @@ class SkeletonTracingService @Inject()(
           pendingUpdates <- findPendingUpdates(tracingId, existingVersion, newVersion)
           updatedTracing <- update(tracing, tracingId, pendingUpdates, newVersion)
           _ <- save(updatedTracing, Some(tracingId), newVersion)
-        } yield {
-          updatedTracing
-        }
+        } yield updatedTracing
       } else {
         Full(tracing)
       }
@@ -101,10 +100,8 @@ class SkeletonTracingService @Inject()(
         updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(
           tracingId,
           Some(desiredVersion),
-          Some(existingVersion + 1))(fromJson[List[SkeletonUpdateAction]])
-      } yield {
-        updateActionGroups.reverse.flatten
-      }
+          Some(existingVersion + 1))(fromJsonBytes[List[SkeletonUpdateAction]])
+      } yield updateActionGroups.reverse.flatten
     }
 
   private def update(tracing: SkeletonTracing,
@@ -118,7 +115,7 @@ class SkeletonTracingService @Inject()(
         case Full(tracing) =>
           remainingUpdates match {
             case List() => Fox.successful(tracing)
-            case RevertToVersionAction(sourceVersion, _, _) :: tail =>
+            case RevertToVersionAction(sourceVersion, _, _, _) :: tail =>
               val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
               updateIter(sourceTracing, tail)
             case update :: tail => updateIter(Full(update.applyOn(tracing)), tail)
@@ -135,16 +132,28 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  def duplicate(tracing: SkeletonTracing, fromTask: Boolean): Fox[String] = {
+  def duplicate(tracing: SkeletonTracing,
+                fromTask: Boolean,
+                editPosition: Option[Vec3Int],
+                editRotation: Option[Vec3Double],
+                boundingBox: Option[BoundingBox]): Fox[String] = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-        NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
+        NamedBoundingBoxProto(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
       }
     } else None
 
     val newTracing =
-      tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0).addAllUserBoundingBoxes(taskBoundingBox)
+      tracing
+        .copy(
+          createdTimestamp = System.currentTimeMillis(),
+          editPosition = editPosition.map(vec3IntToProto).getOrElse(tracing.editPosition),
+          editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracing.editRotation),
+          boundingBox = boundingBoxOptToProto(boundingBox).orElse(tracing.boundingBox),
+          version = 0
+        )
+        .addAllUserBoundingBoxes(taskBoundingBox)
     val finalTracing = if (fromTask) newTracing.clearBoundingBox else newTracing
     save(finalTracing, None, finalTracing.version)
   }
@@ -190,15 +199,17 @@ class SkeletonTracingService @Inject()(
                       newTracing: SkeletonTracing,
                       toCache: Boolean): Fox[Unit] = Fox.successful(())
 
-  def updateActionLog(tracingId: String): Fox[JsValue] = {
+  def updateActionLog(tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
         "value" -> Json.toJson(tuple._2)
       )
     for {
-      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
-        fromJson[List[SkeletonUpdateAction]])
+      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(
+        tracingId,
+        newestVersion,
+        oldestVersion)(fromJsonBytes[List[SkeletonUpdateAction]])
       updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
@@ -206,7 +217,7 @@ class SkeletonTracingService @Inject()(
   def updateActionStatistics(tracingId: String): Fox[JsObject] =
     for {
       updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(
-        fromJson[List[SkeletonUpdateAction]])
+        fromJsonBytes[List[SkeletonUpdateAction]])
       updateActions = updateActionGroups.flatten
     } yield {
       Json.obj(

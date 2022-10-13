@@ -5,12 +5,6 @@ These shortcut hints depend on the active tool and also change when modifiers ar
 
 A complete listing of all available keyboard & mouse shortcuts for webKnossos can be found below.
 
-## Classic Controls
-
-Note that you can enable *Classic Controls* in the left sidebar.
-Without classic controls (which is the default), a more intuitive behavior is used which assigns the most important functionality to the left mouse button (e.g., moving around, selecting/creating/moving nodes) while the right mouse button always opens a context-sensitive menu for more complex actions, such as merging two trees.
-With classic controls, several mouse controls are modifier-driven and may also use the right-click for actions, such as erasing volume data.
-
 ## General
 
 | Key Binding                   | Operation                                   |
@@ -55,6 +49,7 @@ Note that skeleton-specific mouse actions are usually only available when the sk
 | Left Click                            | Create New Node                             |
 | Left Click                            | Select Node (Mark as Active Node) under cursor  |
 | Left Drag                             | Move node under cursor                |
+| Right Click (on node)                 | Bring up the context-menu with further actions                |
 | C                                     | Create New Tree                             |
 | CTRL + .                              | Navigate to the next Node (Mark as Active)|
 | CTRL + ,                              | Navigate to previous Node (Mark as Active) |
@@ -98,16 +93,17 @@ Note that you can enable *Classic Controls* which will behave slightly different
 
 | Key Binding                       | Operation                                                   |
 | --------------------------------- | ----------------------------------------------------------- |
-| Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Cell (Trace / Brush Mode) |
-| SHIFT + Left Click                | Select Active Cell                                          |
-| CTRL + Left Mouse Drag            | Add Voxels To Current Cell while inverting the overwrite-mode (see toolbar for overwrite-mode) |
-| CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Cell                                     |
+| Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Segment (Trace / Brush Mode) |
+| Right Click                       | Bring up context-menu with further actions                     |
+| SHIFT + Left Click                | Select Active Segment                                          |
+| CTRL + Left Mouse Drag            | Add Voxels To Current Segment while inverting the overwrite-mode (see toolbar for overwrite-mode) |
+| CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Segment                                     |
 | Alt + Mouse Move                  | Move                                                        |
-| C                                 | Create New Cell                                             |
-| W                                 | Toggle Modes (Move / Skeleton / Trace / Brush / ...)        |
+| C                                 | Create New Segment                                             |
+| W                                 | Cycle Through Tools (Move / Skeleton / Trace / Brush / ...)    |
+| SHIFT + W                         | Cycle Backwards Through Tools (Move / Proofread / Bounding Box / Pick Cell / ...) |
 | SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                             |
-| V                                 | Copy Segmentation of Current Cell From Previous Slice       |
-| SHIFT + V                         | Copy Segmentation of Current Cell From Next Slice           |
+| V                                 | Interpolate current segment between last labeled and current slice |
 
 Note that you can enable *Classic Controls* which won't open a context menu on right-click, but instead erases when the brush/trace tool is activated.
 
@@ -118,12 +114,10 @@ Note that you can enable *Classic Controls* which won't open a context menu on r
 
 ## Mesh Related Shortcuts
 
-The following bindings only work if isosurface rendering is activated in the settings and a segmentation exists.
-
 | Key Binding                                            | Operation                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------- |
-| Shift + Click on a segment in the 3D viewport          | Change the active position to the clicked position          |
-| Ctrl + Click on a segment in the 3D viewport           | Remove the isosurface of the clicked cell                   |
+| Shift + Click on a mesh in the 3D viewport          | Move the camera to the clicked position          |
+| Ctrl + Click on a mesh in the 3D viewport           | Unload the mesh from webKnossos
 
 ## Agglomerate File Mapping Skeleton
 
@@ -132,3 +126,10 @@ The following binding only works in skeleton/hybrid annotations and if an agglom
 | Key Binding                     | Operation                                 |
 | ------------------------------- | ----------------------------------------- |
 | SHIFT + Middle Click            | Import Skeleton for Selected Segment      |
+
+## Classic Controls
+
+Note that you can enable *Classic Controls* in the left sidebar. 
+Classic controls are provided for backward compatibility for long-time users and are not recommended for new user accounts.
+Hence, Classic controls are disabled by default, and webKnossos uses a more intuitive behavior which assigns the most important functionality to the left mouse button (e.g., moving around, selecting/creating/moving nodes). The right mouse button always opens a context-sensitive menu for more complex actions, such as merging two trees.
+With classic controls, several mouse controls are modifier-driven and may also use the right-click for actions, such as erasing volume data.

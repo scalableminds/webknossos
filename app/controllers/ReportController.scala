@@ -132,7 +132,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
 
   def projectProgressOverview(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      teamIdValidated <- ObjectId.parse(teamId)
+      teamIdValidated <- ObjectId.fromString(teamId)
       _ <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
       entries <- reportDAO.projectProgress(teamIdValidated)
     } yield Ok(Json.toJson(entries))
@@ -140,9 +140,9 @@ class ReportController @Inject()(reportDAO: ReportDAO,
 
   def openTasksOverview(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      teamIdValidated <- ObjectId.parse(teamId)
+      teamIdValidated <- ObjectId.fromString(teamId)
       team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
-      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)
+      users <- userDAO.findAllByTeams(List(team._id))
       nonUnlistedUsers = users.filter(!_.isUnlisted)
       nonAdminUsers <- Fox.filterNot(nonUnlistedUsers)(u => userService.isTeamManagerOrAdminOf(u, teamIdValidated))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)

@@ -1,11 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
-import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.services.DataConverter
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.RemoteFallbackLayer
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreImplicits,
@@ -18,6 +19,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.duration._
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
+import net.liftweb.common.{Full, Empty, Failure}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -61,24 +63,16 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 
   def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int = {
-    // frontend treats 8-byte segmentations as 4-byte segmentations,
-    // truncating high IDs. Volume buckets will have at most 4-byte voxels
-    val bytesPerVoxel = scala.math.min(ElementClass.bytesPerElement(dataLayer.elementClass), 4)
+    val bytesPerVoxel = ElementClass.bytesPerElement(dataLayer.elementClass)
     bytesPerVoxel * scala.math.pow(DataLayer.bucketLength, 3).intValue
   }
 }
 
 trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
   protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
-    val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
-    s"$dataLayerName/${formatResolution(bucket.resolution)}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
+    val mortonIndex = mortonEncode(bucket.bucketX, bucket.bucketY, bucket.bucketZ)
+    s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/$mortonIndex-[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
   }
-
-  protected def formatResolution(resolution: Point3D): String =
-    if (resolution.x == resolution.y && resolution.x == resolution.z)
-      s"${resolution.maxDim}"
-    else
-      s"${resolution.x}-${resolution.y}-${resolution.z}"
 
   protected def buildKeyPrefix(dataLayerName: String): String =
     s"$dataLayerName/"
@@ -88,7 +82,7 @@ trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLoggi
 
     key match {
       case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
-        val resolutionOpt = parseResolution(resolutionStr)
+        val resolutionOpt = Vec3Int.fromMagLiteral(resolutionStr, allowScalar = true)
         resolutionOpt match {
           case Some(resolution) =>
             val x = xStr.toInt
@@ -134,7 +128,7 @@ trait VolumeTracingBucketHelper
       case Some(data) => Fox.successful(data)
       case None       => volumeDataStore.get(key, version, mayBeEmpty = Some(true))
     }
-    dataFox.flatMap { versionedVolumeBucket =>
+    val unpackedDataFox = dataFox.flatMap { versionedVolumeBucket =>
       if (isRevertedBucket(versionedVolumeBucket)) Fox.empty
       else {
         val debugInfo =
@@ -143,6 +137,32 @@ trait VolumeTracingBucketHelper
           decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo))
       }
     }
+    unpackedDataFox.futureBox.flatMap {
+      case Full(unpackedData) => Fox.successful(unpackedData)
+      case Empty =>
+        if (dataLayer.includeFallbackDataIfAvailable && dataLayer.tracing.fallbackLayer.nonEmpty) {
+          loadFallbackBucket(dataLayer, bucket)
+        } else Fox.empty
+      case f: Failure => f.toFox
+    }
+  }
+
+  private def loadFallbackBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
+    val dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
+      position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
+      mag = bucket.mag,
+      cubeSize = dataLayer.lengthOfUnderlyingCubes(bucket.mag),
+      fourBit = None,
+      applyAgglomerate = dataLayer.tracing.mappingName,
+      version = None
+    )
+    for {
+      remoteFallbackLayer <- RemoteFallbackLayer.fromVolumeTracing(dataLayer.tracing)
+      (unmappedData, indices) <- dataLayer.volumeTracingService.getFallbackDataFromDatastore(remoteFallbackLayer,
+                                                                                             List(dataRequest),
+                                                                                             dataLayer.userToken)
+      unmappedDataOrEmpty <- if (indices.isEmpty) Fox.successful(unmappedData) else Fox.empty
+    } yield unmappedDataOrEmpty
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer,

@@ -1,22 +1,20 @@
 package utils
 
-import com.github.ghik.silencer.silent
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
 import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
-import play.api.libs.json.{Json, JsonValidationError, OFormat, Reads}
-import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 
+import javax.inject.Inject
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
@@ -25,26 +23,13 @@ class SQLClient @Inject()(configuration: Configuration, slackNotificationService
   def getSlackNotificationService: SlackNotificationService = slackNotificationService
 }
 
-case class ObjectId(id: String) {
-  override def toString: String = id
-}
-
-object ObjectId extends FoxImplicits {
-  implicit val jsonFormat: OFormat[ObjectId] = Json.format[ObjectId]
-  def generate: ObjectId = fromBsonId(BSONObjectID.generate)
-  def parse(input: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
-    parseSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
-  private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
-  private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
-  def dummyId: ObjectId = ObjectId("dummyObjectId")
-
-  def stringObjectIdReads(key: String): Reads[String] =
-    Reads.filter[String](JsonValidationError("bsonid.invalid", key))(parseSync(_).isDefined)
-}
-
 trait SQLTypeImplicits {
   implicit object SetObjectId extends SetParameter[ObjectId] {
-    def apply(v: ObjectId, pp: PositionedParameters) { pp.setString(v.id) }
+    def apply(v: ObjectId, pp: PositionedParameters): Unit = pp.setString(v.id)
+  }
+
+  implicit object SetObjectIdOpt extends SetParameter[Option[ObjectId]] {
+    def apply(v: Option[ObjectId], pp: PositionedParameters): Unit = pp.setStringOption(v.map(_.id))
   }
 }
 
@@ -91,7 +76,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     )
 
   def writeArrayTuple(elements: List[String]): String = {
-    val commaSeparated = elements.mkString(",")
+    val commaSeparated = elements.map(sanitizeInArrayTuple).map(e => s""""$e"""").mkString(",")
     s"{$commaSeparated}"
   }
 
@@ -106,13 +91,54 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   }
 
   def parseArrayTuple(literal: String): List[String] = {
-    //TODO: error handling, escape handling. copy from js parser?
     val trimmed = literal.drop(1).dropRight(1)
-    if (trimmed.isEmpty) List()
-    else trimmed.split(",", -1).toList
+    if (trimmed.isEmpty)
+      List.empty
+    else {
+      val split = trimmed.split(",", -1).toList.map(desanitizeFromArrayTuple)
+      split.map { item =>
+        if (item.startsWith("\"") && item.endsWith("\"")) {
+          item.drop(1).dropRight(1)
+        } else item
+      }
+    }
   }
 
+  def escapeLiteral(aString: String): String = {
+    // Ported from PostgreSQL 9.2.4 source code in src/interfaces/libpq/fe-exec.c
+    var hasBackslash = false
+    val escaped = new StringBuffer("'")
+
+    aString.foreach { c =>
+      if (c == '\'') {
+        escaped.append(c).append(c)
+      } else if (c == '\\') {
+        escaped.append(c).append(c)
+        hasBackslash = true
+      } else {
+        escaped.append(c)
+      }
+    }
+    escaped.append('\'')
+
+    if (hasBackslash) {
+      "E" + escaped.toString
+    } else {
+      escaped.toString
+    }
+  }
+
+  def writeEscapedTuple(seq: List[String]): String =
+    "(" + seq.map(escapeLiteral).mkString(", ") + ")"
+
   def sanitize(aString: String): String = aString.replaceAll("'", "")
+
+  // escape ' by doubling it, escape " with backslash, drop commas
+  def sanitizeInArrayTuple(aString: String): String =
+    aString.replaceAll("'", """''""").replaceAll(""""""", """\\"""").replaceAll(""",""", "")
+
+  def desanitizeFromArrayTuple(aString: String): String =
+    aString.replaceAll("""\\"""", """"""").replaceAll("""\\,""", ",")
 
   def optionLiteral(aStringOpt: Option[String]): String = aStringOpt match {
     case Some(aString) => "'" + aString + "'"
@@ -231,13 +257,13 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
   def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: String): Fox[C] =
     for {
       firstRow <- rowSeq.headOption.toFox // No error chain here, as this should stay Fox.Empty
-      parsed <- parse(firstRow) ?~> s"Parsing failed for row in ${collectionName} queried by $queryLabel"
+      parsed <- parse(firstRow) ?~> s"Parsing failed for row in $collectionName queried by $queryLabel"
     } yield parsed
 
   def parseAll(rowSeq: Seq[X#TableElementType]): Fox[List[C]] =
     Fox.combined(rowSeq.toList.map(parse)) ?~> s"Parsing failed for a row in $collectionName during list query"
 
-  @silent // suppress warning about unused implicit ctx, as it is used in subclasses
+  @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
     run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {
       case Some(r) =>
@@ -246,7 +272,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
         Fox.failure("sql: could not find object " + id)
     }.flatten
 
-  @silent // suppress warning about unused implicit ctx, as it is used in subclasses
+  @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
   def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
     for {
       r <- run(collection.filter(row => notdel(row)).result)

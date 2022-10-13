@@ -1,120 +1,125 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.util.geometry.{BoundingBox, GenericPosition, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
-class VoxelPosition(
-    protected val globalX: Int,
-    protected val globalY: Int,
-    protected val globalZ: Int,
-    val resolution: Point3D
-) extends GenericPosition {
+case class VoxelPosition(
+    mag1X: Int,
+    mag1Y: Int,
+    mag1Z: Int,
+    mag: Vec3Int
+) {
 
-  val x: Int = globalX / resolution.x
+  val voxelXInMag: Int = mag1X / mag.x
 
-  val y: Int = globalY / resolution.y
+  val voxelYInMag: Int = mag1Y / mag.y
 
-  val z: Int = globalZ / resolution.z
+  val voxelZInMag: Int = mag1Z / mag.z
 
   def toBucket: BucketPosition =
-    BucketPosition(globalX, globalY, globalZ, resolution)
+    BucketPosition(mag1X, mag1Y, mag1Z, mag)
 
   def move(dx: Int, dy: Int, dz: Int) =
-    new VoxelPosition(globalX + dx, globalY + dy, globalZ + dz, resolution)
+    VoxelPosition(mag1X + dx, mag1Y + dy, mag1Z + dz, mag)
 
-  override def toString = s"($globalX, $globalY, $globalZ) / $resolution"
+  override def toString = s"($mag1X, $mag1Y, $mag1Z) / $mag"
 
   override def equals(obj: scala.Any): Boolean =
     obj match {
       case other: VoxelPosition =>
-        other.globalX == globalX &&
-          other.globalY == globalY &&
-          other.globalZ == globalZ &&
-          other.resolution == resolution
+        other.mag1X == mag1X &&
+          other.mag1Y == mag1Y &&
+          other.mag1Z == mag1Z &&
+          other.mag == mag
       case _ =>
         false
     }
 
   override def hashCode(): Int =
-    new HashCodeBuilder(17, 31).append(globalX).append(globalY).append(globalZ).append(resolution).toHashCode
+    new HashCodeBuilder(17, 31).append(mag1X).append(mag1Y).append(mag1Z).append(mag).toHashCode
 }
 
 case class BucketPosition(
-    globalX: Int,
-    globalY: Int,
-    globalZ: Int,
-    resolution: Point3D
-) extends GenericPosition {
+    voxelMag1X: Int,
+    voxelMag1Y: Int,
+    voxelMag1Z: Int,
+    mag: Vec3Int
+) {
 
   val bucketLength: Int = DataLayer.bucketLength
 
-  val x: Int = globalX / bucketLength / resolution.x
+  val bucketX: Int = voxelMag1X / bucketLength / mag.x
 
-  val y: Int = globalY / bucketLength / resolution.y
+  val bucketY: Int = voxelMag1Y / bucketLength / mag.y
 
-  val z: Int = globalZ / bucketLength / resolution.z
+  val bucketZ: Int = voxelMag1Z / bucketLength / mag.z
+
+  val voxelXInMag: Int = voxelMag1X / mag.x
+
+  val voxelYInMag: Int = voxelMag1Y / mag.y
+
+  val voxelZInMag: Int = voxelMag1Z / mag.z
 
   def volume: Int = bucketLength * bucketLength * bucketLength
 
   def toCube(cubeLength: Int): CubePosition =
-    new CubePosition(globalX, globalY, globalZ, resolution, cubeLength)
+    new CubePosition(voxelMag1X, voxelMag1Y, voxelMag1Z, mag, cubeLength)
 
   def topLeft: VoxelPosition = {
-    val tlx: Int = globalX - globalX % (bucketLength * resolution.x)
-    val tly: Int = globalY - globalY % (bucketLength * resolution.y)
-    val tlz: Int = globalZ - globalZ % (bucketLength * resolution.z)
+    val tlx: Int = voxelMag1X - Math.floorMod(voxelMag1X, bucketLength * mag.x)
+    val tly: Int = voxelMag1Y - Math.floorMod(voxelMag1Y, bucketLength * mag.y)
+    val tlz: Int = voxelMag1Z - Math.floorMod(voxelMag1Z, bucketLength * mag.z)
 
-    new VoxelPosition(tlx, tly, tlz, resolution)
+    VoxelPosition(tlx, tly, tlz, mag)
   }
 
   def nextBucketInX: BucketPosition =
-    BucketPosition(globalX + (bucketLength * resolution.x), globalY, globalZ, resolution)
+    BucketPosition(voxelMag1X + (bucketLength * mag.x), voxelMag1Y, voxelMag1Z, mag)
 
   def nextBucketInY: BucketPosition =
-    BucketPosition(globalX, globalY + (bucketLength * resolution.y), globalZ, resolution)
+    BucketPosition(voxelMag1X, voxelMag1Y + (bucketLength * mag.y), voxelMag1Z, mag)
 
   def nextBucketInZ: BucketPosition =
-    BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution.z), resolution)
+    BucketPosition(voxelMag1X, voxelMag1Y, voxelMag1Z + (bucketLength * mag.z), mag)
 
-  def toHighestResBoundingBox: BoundingBox =
-    new BoundingBox(Point3D(globalX, globalY, globalZ),
-                    bucketLength * resolution.x,
-                    bucketLength * resolution.y,
-                    bucketLength * resolution.z)
+  def toMag1BoundingBox: BoundingBox =
+    new BoundingBox(
+      Vec3Int(topLeft.mag1X, topLeft.mag1Y, topLeft.mag1Z),
+      bucketLength * mag.x,
+      bucketLength * mag.y,
+      bucketLength * mag.z
+    )
 
   override def toString: String =
-    s"BucketPosition($globalX, $globalY, $globalZ, mag$resolution)"
+    s"BucketPosition(voxelMag1 at ($voxelMag1X, $voxelMag1Y, $voxelMag1Z), bucket at ($bucketX,$bucketY,$bucketZ), mag$mag)"
 }
 
 class CubePosition(
-    protected val globalX: Int,
-    protected val globalY: Int,
-    protected val globalZ: Int,
-    val resolution: Point3D,
+    protected val mag1X: Int,
+    protected val mag1Y: Int,
+    protected val mag1Z: Int,
+    val mag: Vec3Int,
     val cubeLength: Int
-) extends GenericPosition {
+) {
 
-  val x: Int = globalX / cubeLength / resolution.x
+  val x: Int = mag1X / cubeLength / mag.x
 
-  val y: Int = globalY / cubeLength / resolution.y
+  val y: Int = mag1Y / cubeLength / mag.y
 
-  val z: Int = globalZ / cubeLength / resolution.z
+  val z: Int = mag1Z / cubeLength / mag.z
 
   def topLeft: VoxelPosition = {
-    val tlx: Int = globalX - globalX % (cubeLength * resolution.x)
-    val tly: Int = globalY - globalY % (cubeLength * resolution.y)
-    val tlz: Int = globalZ - globalZ % (cubeLength * resolution.z)
+    val tlx: Int = mag1X - mag1X % (cubeLength * mag.x)
+    val tly: Int = mag1Y - mag1Y % (cubeLength * mag.y)
+    val tlz: Int = mag1Z - mag1Z % (cubeLength * mag.z)
 
-    new VoxelPosition(tlx, tly, tlz, resolution)
+    VoxelPosition(tlx, tly, tlz, mag)
   }
 
-  def toHighestResBoundingBox: BoundingBox =
-    new BoundingBox(Point3D(globalX, globalY, globalZ),
-                    cubeLength * resolution.x,
-                    cubeLength * resolution.y,
-                    cubeLength * resolution.z)
+  def toMag1BoundingBox: BoundingBox =
+    new BoundingBox(Vec3Int(mag1X, mag1Y, mag1Z), cubeLength * mag.x, cubeLength * mag.y, cubeLength * mag.z)
 
   override def toString: String =
-    s"CPos($x,$y,$z,res=$resolution)"
+    s"CubePos($x,$y,$z,mag=$mag)"
 }

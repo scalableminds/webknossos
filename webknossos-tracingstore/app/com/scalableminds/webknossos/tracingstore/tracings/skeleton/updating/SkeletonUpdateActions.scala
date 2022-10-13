@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
-import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
 import play.api.libs.json._
 
@@ -16,6 +16,7 @@ case class CreateTreeSkeletonAction(id: Int,
                                     groupId: Option[Int],
                                     isVisible: Option[Boolean],
                                     actionTimestamp: Option[Long] = None,
+                                    actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -23,7 +24,7 @@ case class CreateTreeSkeletonAction(id: Int,
     val newTree = Tree(id,
                        Nil,
                        Nil,
-                       convertColorOpt(color),
+                       colorOptToProto(color),
                        branchPoints.map(convertBranchPoint),
                        comments.map(convertComment),
                        name,
@@ -36,9 +37,14 @@ case class CreateTreeSkeletonAction(id: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
-case class DeleteTreeSkeletonAction(id: Int, actionTimestamp: Option[Long] = None, info: Option[String] = None)
+case class DeleteTreeSkeletonAction(id: Int,
+                                    actionTimestamp: Option[Long] = None,
+                                    actionAuthorId: Option[String] = None,
+                                    info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withTrees(tracing.trees.filter(_.treeId != id))
@@ -46,6 +52,8 @@ case class DeleteTreeSkeletonAction(id: Int, actionTimestamp: Option[Long] = Non
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
 case class UpdateTreeSkeletonAction(id: Int,
@@ -56,13 +64,14 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     comments: List[UpdateActionComment],
                                     groupId: Option[Int],
                                     actionTimestamp: Option[Long] = None,
+                                    actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(tree: Tree) =
       tree.copy(
-        color = if (color.isDefined) convertColorOpt(color) else tree.color,
+        color = colorOptToProto(color).orElse(tree.color),
         treeId = updatedId.getOrElse(tree.treeId),
         branchPoints = branchPoints.map(convertBranchPoint),
         comments = comments.map(convertComment),
@@ -76,11 +85,14 @@ case class UpdateTreeSkeletonAction(id: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
 case class MergeTreeSkeletonAction(sourceId: Int,
                                    targetId: Int,
                                    actionTimestamp: Option[Long] = None,
+                                   actionAuthorId: Option[String] = None,
                                    info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -99,12 +111,15 @@ case class MergeTreeSkeletonAction(sourceId: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
 case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
                                            sourceId: Int,
                                            targetId: Int,
                                            actionTimestamp: Option[Long] = None,
+                                           actionAuthorId: Option[String] = None,
                                            info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -134,12 +149,15 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
 case class CreateEdgeSkeletonAction(source: Int,
                                     target: Int,
                                     treeId: Int,
                                     actionTimestamp: Option[Long] = None,
+                                    actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -151,12 +169,15 @@ case class CreateEdgeSkeletonAction(source: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
 case class DeleteEdgeSkeletonAction(source: Int,
                                     target: Int,
                                     treeId: Int,
                                     actionTimestamp: Option[Long] = None,
+                                    actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -168,11 +189,13 @@ case class DeleteEdgeSkeletonAction(source: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
 case class CreateNodeSkeletonAction(id: Int,
-                                    position: Point3D,
-                                    rotation: Option[Vector3D],
+                                    position: Vec3Int,
+                                    rotation: Option[Vec3Double],
                                     radius: Option[Float],
                                     viewport: Option[Int],
                                     resolution: Option[Int],
@@ -181,6 +204,7 @@ case class CreateNodeSkeletonAction(id: Int,
                                     treeId: Int,
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
+                                    actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
@@ -207,11 +231,13 @@ case class CreateNodeSkeletonAction(id: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
 case class UpdateNodeSkeletonAction(id: Int,
-                                    position: Point3D,
-                                    rotation: Option[Vector3D],
+                                    position: Vec3Int,
+                                    rotation: Option[Vec3Double],
                                     radius: Option[Float],
                                     viewport: Option[Int],
                                     resolution: Option[Int],
@@ -220,6 +246,7 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     treeId: Int,
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
+                                    actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
@@ -248,12 +275,15 @@ case class UpdateNodeSkeletonAction(id: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 
 }
 
 case class DeleteNodeSkeletonAction(nodeId: Int,
                                     treeId: Int,
                                     actionTimestamp: Option[Long] = None,
+                                    actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -267,11 +297,14 @@ case class DeleteNodeSkeletonAction(nodeId: Int,
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
 }
 
 case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup],
                                           actionTimestamp: Option[Long] = None,
+                                          actionAuthorId: Option[String] = None,
                                           info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -280,15 +313,18 @@ case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
 }
 
 case class UpdateTracingSkeletonAction(activeNode: Option[Int],
-                                       editPosition: com.scalableminds.util.geometry.Point3D,
-                                       editRotation: com.scalableminds.util.geometry.Vector3D,
+                                       editPosition: com.scalableminds.util.geometry.Vec3Int,
+                                       editRotation: com.scalableminds.util.geometry.Vec3Double,
                                        zoomLevel: Double,
                                        userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
                                        actionTimestamp: Option[Long] = None,
+                                       actionAuthorId: Option[String] = None,
                                        info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with ProtoGeometryImplicits {
@@ -302,10 +338,15 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
   override def isViewOnlyChange: Boolean = true
 }
 
-case class RevertToVersionAction(sourceVersion: Long, actionTimestamp: Option[Long] = None, info: Option[String] = None)
+case class RevertToVersionAction(sourceVersion: Long,
+                                 actionTimestamp: Option[Long] = None,
+                                 actionAuthorId: Option[String] = None,
+                                 info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     throw new Exception("RevertToVersionAction applied on unversioned tracing")
@@ -313,11 +354,14 @@ case class RevertToVersionAction(sourceVersion: Long, actionTimestamp: Option[Lo
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
 case class UpdateTreeVisibility(treeId: Int,
                                 isVisible: Boolean,
                                 actionTimestamp: Option[Long] = None,
+                                actionAuthorId: Option[String] = None,
                                 info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -330,12 +374,15 @@ case class UpdateTreeVisibility(treeId: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
   override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
                                      isVisible: Boolean,
                                      actionTimestamp: Option[Long] = None,
+                                     actionAuthorId: Option[String] = None,
                                      info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -364,11 +411,14 @@ case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
   override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
                                    actionTimestamp: Option[Long] = None,
+                                   actionAuthorId: Option[String] = None,
                                    info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
@@ -377,11 +427,14 @@ case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
 }
 
 case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
                                            isVisible: Boolean,
                                            actionTimestamp: Option[Long] = None,
+                                           actionAuthorId: Option[String] = None,
                                            info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -399,10 +452,14 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[String] = None)
+case class UpdateTdCamera(actionTimestamp: Option[Long] = None,
+                          actionAuthorId: Option[String] = None,
+                          info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction {
 
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = tracing
@@ -410,6 +467,8 @@ case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[Str
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction[SkeletonTracing] =
+    this.copy(actionAuthorId = authorId)
   override def isViewOnlyChange: Boolean = true
 }
 

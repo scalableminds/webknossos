@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ES2022",
+    "noImplicitAny": true,
+    "removeComments": true,
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "outDir": "build",
+    "jsx": "react",
+    "strict": true,
+    "target": "es2020",
+    "types": [], //reconsider this later
+    "skipLibCheck": true, //reconsider this later
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "./frontend/javascripts",
+    "paths": {
+      "oxalis/*": ["./oxalis/*"],
+      "libs/*": ["./libs/*"],
+      "dashboard/*": ["./dashboard/*"],
+      "components/*": ["./components/*"],
+      "admin/*": ["./admin/*"],
+      "types/*": ["./types/*"],
+      "test/*": ["./test/*"],
+      "features": ["./features.ts"]
+    }
+  },
+  "include": [
+    "frontend/javascripts/**/*.ts",
+    "frontend/javascripts/**/*.d.ts",
+    "frontend/javascripts/**/*.tsx"
+  ],
+  "exclude": ["node_modules/**/*"]
+}

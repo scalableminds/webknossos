@@ -1,13 +1,14 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.SecuredRequest
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
-import models.annotation.{AnnotationLayer, AnnotationLayerType}
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
+import models.user.User
 import oxalis.security.WkEnv
 import play.api.http.HttpEntity
 import play.api.libs.json._
@@ -25,7 +26,6 @@ object LegacyCreateExplorationalParameters {
 }
 
 class LegacyApiController @Inject()(annotationController: AnnotationController,
-                                    taskController: TaskController,
                                     userController: UserController,
                                     projectController: ProjectController,
                                     projectDAO: ProjectDAO,
@@ -41,6 +41,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationEditV4(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- annotationController.editAnnotation(typ, id)(request)
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -48,6 +49,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationDuplicateV4(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.duplicate(typ, id)(request)
       adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -56,6 +58,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationInfoV4(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- annotationController.info(typ, id, timestamp)(request)
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -64,6 +67,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationMergeV4(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -72,6 +76,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationFinishV4(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- annotationController.finish(typ, id, timestamp)(request)
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -79,6 +84,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationReopenV4(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.reopen(typ, id)(request)
       adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -86,6 +92,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationResetV4(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.reset(typ, id)(request)
       adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -97,6 +104,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                      includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- userController.annotations(isFinished, limit, pageNumber, includeTotalCount)(request)
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -108,6 +116,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                         includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- userController.tasks(isFinished, limit, pageNumber, includeTotalCount)(request)
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -120,6 +129,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                              includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- userController.userAnnotations(id, isFinished, limit, pageNumber, includeTotalCount)(request)
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -132,6 +142,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                               includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- userController.userTasks(id, isFinished, limit, pageNumber, includeTotalCount)(request)
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -139,6 +150,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationsForTaskV4(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.annotationsForTask(id)(request)
       adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -148,6 +160,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                       dataSetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- annotationController.createExplorational(organizationName, dataSetName)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
@@ -158,6 +171,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def projectRead(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
       result <- projectController.read(project._id.toString)(request)
     } yield result
@@ -165,6 +179,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def projectDelete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
       result <- projectController.delete(project._id.toString)(request)
     } yield result
@@ -172,6 +187,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def projectUpdate(name: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
       result <- projectController.update(project._id.toString)(request)
     } yield result
@@ -183,6 +199,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                              includeTotalCount: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
         result <- projectController.tasksForProject(project._id.toString, limit, pageNumber, includeTotalCount)(request)
       } yield result
@@ -191,6 +208,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def projectIncrementEachTasksInstances(name: String, delta: Option[Long]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
         result <- projectController.incrementEachTasksInstances(project._id.toString, delta)(request)
       } yield result
@@ -198,6 +216,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def projectPause(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
       result <- projectController.pause(project._id.toString)(request)
     } yield result
@@ -205,6 +224,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def projectResume(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
       result <- projectController.resume(project._id.toString)(request)
     } yield result
@@ -212,13 +232,14 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def taskListTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
-      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
+      _ <- Fox.successful(logVersioned(request))
+      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.fromString)
       projectNameOpt = (request.body \ "project").asOpt[String]
       projectOpt <- Fox.runOptional(projectNameOpt)(projectName =>
         projectDAO.findOneByNameAndOrganization(projectName, request.identity._organization))
       taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids =>
-        Fox.serialCombined(ids)(ObjectId.parse))
-      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse)
+        Fox.serialCombined(ids)(ObjectId.fromString))
+      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.fromString)
       randomizeOpt = (request.body \ "random").asOpt[Boolean]
       tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectOpt.map(_._id),
                                                                 taskTypeIdOpt,
@@ -236,6 +257,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationFinishV2(typ: String, id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.finish(typ, id, System.currentTimeMillis)(request)
       adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -243,6 +265,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationInfoV2(typ: String, id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.info(typ, id, System.currentTimeMillis)(request)
       adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -256,6 +279,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationDuplicateV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.duplicate(typ, id)(request)
       adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -263,6 +287,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationFinishV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.finish(typ, id, System.currentTimeMillis)(request)
       adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -270,6 +295,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationReopenV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.reopen(typ, id)(request)
       adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -277,6 +303,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationResetV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.reset(typ, id)(request)
       adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -284,6 +311,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationInfoV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.info(typ, id, System.currentTimeMillis)(request)
       adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -292,6 +320,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationMakeHybridV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- annotationController.makeHybrid(typ, id, None)(request)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -300,6 +329,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationMergeV1(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -309,6 +339,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                       dataSetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- annotationController.createExplorational(organizationName, dataSetName)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
@@ -321,6 +352,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                      includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- userController.annotations(isFinished, limit, pageNumber, includeTotalCount)(request)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -333,6 +365,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                              includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- userController.userAnnotations(id, isFinished, limit, pageNumber, includeTotalCount)(request)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -340,6 +373,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationsForTaskV1(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- Fox.successful(logVersioned(request))
       result <- annotationController.annotationsForTask(id)(request)
       adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
@@ -351,6 +385,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                         includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- userController.tasks(isFinished, limit, pageNumber, includeTotalCount)(request)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -363,6 +398,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                               includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
+        _ <- Fox.successful(logVersioned(request))
         result <- userController.userTasks(id, isFinished, limit, pageNumber, includeTotalCount)(request)
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -370,6 +406,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
+      logVersioned(request)
       val oldRequest = request.request
       val newRequest =
         if (request.body.as[JsObject].keys.contains("isPublic"))
@@ -392,7 +429,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
           AnnotationLayerParameters(AnnotationLayerType.Skeleton,
                                     request.body.fallbackLayerName,
                                     request.body.resolutionRestrictions,
-                                    name = None))
+                                    name = AnnotationLayer.defaultSkeletonLayerName))
     val volumeParameters =
       if (request.body.typ == "skeleton") None
       else
@@ -400,7 +437,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
           AnnotationLayerParameters(AnnotationLayerType.Volume,
                                     request.body.fallbackLayerName,
                                     request.body.resolutionRestrictions,
-                                    name = None))
+                                    name = AnnotationLayer.defaultVolumeLayerName))
     List(skeletonParameters, volumeParameters).flatten
   }
 
@@ -434,22 +471,30 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   private def replaceInResult(replacement: JsObject => Fox[JsObject])(result: Result): Fox[Result] =
     if (result.header.status == 200) {
-      val bodyJsonValue = result.body match {
-        case HttpEntity.Strict(data, _) => Json.parse(data.decodeString("utf-8"))
-        case _                          => return Fox.successful(BadRequest)
+      result.body match {
+        case HttpEntity.Strict(data, _) =>
+          val bodyJsonValue: JsValue = Json.parse(data.decodeString("utf-8"))
+          val newJsonFox: Fox[JsValue] = bodyJsonValue match {
+            case JsArray(value) =>
+              for { valueList <- Fox.serialCombined(value.toList)(el => replacement(el.as[JsObject])) } yield
+                Json.toJson(valueList)
+            case jsObj: JsObject => replacement(jsObj)
+            case v: JsValue      => Fox.successful(v)
+          }
+          for {
+            newJson <- newJsonFox
+          } yield Ok(Json.toJson(newJson)).copy(header = result.header)
+        case _ => Fox.successful(BadRequest)
       }
-
-      val newJsonFox = bodyJsonValue match {
-        case JsArray(value) =>
-          for { valueList <- Fox.serialCombined(value.toList)(el => replacement(el.as[JsObject])) } yield
-            Json.toJson(valueList)
-        case jsObj: JsObject => replacement(jsObj)
-        case _               => return Fox.successful(BadRequest)
-      }
-
-      for {
-        newJson <- newJsonFox
-      } yield Ok(Json.toJson(newJson)).copy(header = result.header)
     } else Fox.successful(result)
+
+  private def logVersioned(request: SecuredRequest[WkEnv, _]): Unit =
+    logVersioned(request.identity, request.uri)
+
+  private def logVersioned(request: UserAwareRequest[WkEnv, _]): Unit =
+    request.identity.foreach(user => logVersioned(user, request.uri))
+
+  private def logVersioned(user: User, uri: String): Unit =
+    logger.info(s"Noted usage of legacy route $uri by user ${user._id}")
 
 }

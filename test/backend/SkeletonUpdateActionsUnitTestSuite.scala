@@ -1,6 +1,6 @@
 package backend
 
-import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
@@ -14,8 +14,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
   def listConsistsOfLists[T](joinedList: Seq[T], sublist1: Seq[T], sublist2: Seq[T]): Boolean = {
     // assuming sublist1 & sublist2 are different
     if (joinedList.length != sublist1.length + sublist2.length)
-      return false
-    joinedList.forall(el => sublist1.contains(el) || sublist2.contains(el))
+      false
+    else
+      joinedList.forall(el => sublist1.contains(el) || sublist2.contains(el))
   }
 
   "CreateTreeSkeletonAction" should {
@@ -143,8 +144,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val newNode = Dummies.createDummyNode(100)
       val createNodeSkeletonAction = new CreateNodeSkeletonAction(
         newNode.id,
-        Point3D(newNode.position.x, newNode.position.y, newNode.position.z),
-        Option(Vector3D(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+        Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
+        Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
         Option(newNode.radius),
         Option(newNode.viewport),
         Option(newNode.resolution),
@@ -167,8 +168,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val newNode = Dummies.createDummyNode(1)
       val updateNodeSkeletonAction = new UpdateNodeSkeletonAction(
         newNode.id,
-        Point3D(newNode.position.x, newNode.position.y, newNode.position.z),
-        Option(Vector3D(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+        Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
+        Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
         Option(newNode.radius),
         Option(newNode.viewport),
         Option(newNode.resolution),
@@ -191,8 +192,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val newNode = Dummies.createDummyNode(100)
       val createNodeSkeletonAction = new CreateNodeSkeletonAction(
         newNode.id,
-        Point3D(newNode.position.x, newNode.position.y, newNode.position.z),
-        Option(Vector3D(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+        Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
+        Option(Vec3Double(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
         Option(newNode.radius),
         Option(newNode.viewport),
         Option(newNode.resolution),
@@ -236,8 +237,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
   "UpdateTracingSkeletonAction" should {
     "update a top level tree group" in {
       val activeNode = Some(1)
-      val editPosition = Point3D(11, 12, 13)
-      val editRotation = Vector3D(21, 22, 23)
+      val editPosition = Vec3Int(11, 12, 13)
+      val editRotation = Vec3Double(21, 22, 23)
       val zoomLevel = 99
       val userBoundingBox = None
       val updateTreeGroupsSkeletonAction = new UpdateTracingSkeletonAction(

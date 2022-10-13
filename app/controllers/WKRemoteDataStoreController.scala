@@ -16,7 +16,7 @@ import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
 import models.job.JobDAO
 import models.organization.OrganizationDAO
-import models.user.{User, UserDAO}
+import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.Full
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
@@ -32,6 +32,7 @@ class WKRemoteDataStoreController @Inject()(
     dataStoreService: DataStoreService,
     dataStoreDAO: DataStoreDAO,
     analyticsService: AnalyticsService,
+    userService: UserService,
     organizationDAO: OrganizationDAO,
     dataSetDAO: DataSetDAO,
     userDAO: UserDAO,
@@ -49,18 +50,17 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { dataStore =>
         val uploadInfo = request.body
         for {
-          user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
+          user <- bearerTokenService.userForToken(token)
           organization <- organizationDAO.findOneByName(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             uploadInfo.organization) ~> NOT_FOUND
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
+          _ <- dataSetService.assertValidDataSetName(uploadInfo.name) ?~> "dataSet.name.invalid"
           _ <- dataSetService.assertNewDataSetName(uploadInfo.name, organization._id) ?~> "dataSet.name.alreadyTaken"
           _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataSet.upload.invalidLinkedLayers"
           dataSet <- dataSetService.reserveDataSetName(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataSet.name.alreadyTaken"
-          _ <- dataSetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user),
-                                                                                request.messages)
+          _ <- dataSetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user))
           _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
         } yield Ok
       }
@@ -74,7 +74,8 @@ class WKRemoteDataStoreController @Inject()(
         layerIdentifier.organizationName) ~> NOT_FOUND
       dataSet <- dataSetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataSet.notFound", layerIdentifier.dataSetName)
-      _ <- bool2Fox(dataSet.isPublic) ?~> Messages("dataSet.upload.linkPublicOnly")
+      isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataSet._organization)
+      _ <- Fox.bool2Fox(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataSet.isPublic) ?~> "dataSet.upload.linkRestricted"
     } yield ()
 
   def reportDatasetUpload(name: String,
@@ -85,7 +86,7 @@ class WKRemoteDataStoreController @Inject()(
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         for {
-          user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
+          user <- bearerTokenService.userForToken(token)
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
@@ -164,7 +165,7 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          jobIdValidated <- ObjectId.parse(jobId)
+          jobIdValidated <- ObjectId.fromString(jobId)
           job <- jobDAO.findOne(jobIdValidated)(GlobalAccessContext)
           jobOwner <- userDAO.findOne(job._owner)(GlobalAccessContext)
           organization <- organizationDAO.findOne(jobOwner._organization)(GlobalAccessContext)

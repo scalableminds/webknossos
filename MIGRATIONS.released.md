@@ -5,6 +5,102 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [22.10.0](https://github.com/scalableminds/webknossos/releases/tag/22.10.0) - 2022-09-27
+[Commits](https://github.com/scalableminds/webknossos/compare/22.09.0...22.10.0)
+
+- To use the Voxelytics reporting features in webKnossos, the config field `features.voxelyticsEnabled` needs to be set to true. When also using the logging features, an Elasticsearch instance needs to be running and configured in the config field `voxelytics.elasticsearch.uri`.
+
+### Postgres Evolutions:
+- [088-shortlinks.sql](conf/evolutions/088-shortlinks.sql)
+- [089-voxelytics.sql](conf/evolutions/089-voxelytics.sql)
+- [090-cleanup.sql](conf/evolutions/090-cleanup.sql)
+
+
+## [22.09.0](https://github.com/scalableminds/webknossos/releases/tag/22.09.0) - 2022-08-25
+[Commits](https://github.com/scalableminds/webknossos/compare/22.08.0...22.09.0)
+
+- webKnossos requires node 16 now. [#6350](https://github.com/scalableminds/webknossos/pull/6350)
+- Removed the foreign datastore feature. If you have any foreign datastores registered in your webKnossos, running this upgrade may result in undefined behavior. [#6392](https://github.com/scalableminds/webknossos/pull/6392)
+
+### Postgres Evolutions:
+- [084-annotation-contributors.sql](conf/evolutions/084-annotation-contributors.sql)
+- [085-annotation-publication.sql](conf/evolutions/085-annotation-publication.sql)
+- [086-drop-foreign-datastores.sql](conf/evolutions/086-drop-foreign-datastores.sql)
+- [087-zarr-private-links.sql](conf/evolutions/087-zarr-private-links.sql)
+
+
+## [22.08.0](https://github.com/scalableminds/webknossos/releases/tag/22.08.0) - 2022-07-20
+[Commits](https://github.com/scalableminds/webknossos/compare/22.07.0...22.08.0)
+
+ - Postgres evolution 83 (see below) introduces unique and url-safe constraints for annotation layer names. If the database contains entries violating those new constraints, they need to be fixed manually, otherwise the evolution will abort:
+    - change null names to the front-end-side defaults:
+        ```
+        update webknossos.annotation_layers set name = 'Volume' where name is null and typ = 'Volume'
+        update webknossos.annotation_layers set name = 'Skeleton' where name is null and typ = 'Skeleton'
+        ```
+
+    - find annotations with multiple layers, make unique manually
+        ```
+        select _annotation, name from webknossos.annotation_layers where _annotation in (select s._annotation from
+        (select _annotation, count(_annotation) from webknossos.annotation_layers where typ = 'Volume' group by _annotation order by count(_annotation) desc limit 1000) as s
+        where count > 1) and typ = 'Volume' order by _annotation
+        ```
+
+   - find layers with interesting names, manually remove spaces and special characters
+        ```
+        select * from webknossos.annotation_layers where not name ~* '^[A-Za-z0-9\-_\.]+$'
+        ```
+
+### Postgres Evolutions:
+
+- [083-unique-layer-names.sql](conf/evolutions/083-unique-layer-names.sql) Note: Note that this evolution introduces constraints which may not be met by existing data. See above for manual steps
+
+
+## [22.07.0](https://github.com/scalableminds/webknossos/releases/tag/22.07.0) - 2022-06-28
+[Commits](https://github.com/scalableminds/webknossos/compare/22.06.1...22.07.0)
+
+ - FossilDB now has to be started with two new additional column families: editableMappings,editableMappingUpdates. Note that this upgrade can not be trivially rolled back, since new rocksDB column families are added and it is not easy to remove them again from an existing database. In case webKnossos needs to be rolled back, it is recommended to still keep the new column families in FossilDB. [#6195](https://github.com/scalableminds/webknossos/pull/6195)
+
+### Postgres Evolutions:
+
+
+## [22.06.1](https://github.com/scalableminds/webknossos/releases/tag/22.06.1) - 2022-06-16
+[Commits](https://github.com/scalableminds/webknossos/compare/22.06.0...22.06.1)
+
+### Postgres Evolutions:
+
+
+## [22.06.0](https://github.com/scalableminds/webknossos/releases/tag/22.06.0) - 2022-05-27
+[Commits](https://github.com/scalableminds/webknossos/compare/22.05.1...22.06.0)
+
+ - Note that the datastore API version has changed to 2.0. If you use webknossos-connect alongside your webKnossos instance, you will need to upgrade that one as well, compare [webknossos-connect#129](https://github.com/scalableminds/webknossos-connect/pull/129). [#6159](https://github.com/scalableminds/webknossos/pull/6159)
+
+### Postgres Evolutions:
+- [082-annotationsettings-volumeInterpolationAllowed.sql](conf/evolutions/082-annotationsettings-volumeInterpolationAllowed.sql)
+
+
+## [22.05.1](https://github.com/scalableminds/webknossos/releases/tag/22.05.1) - 2022-04-29
+[Commits](https://github.com/scalableminds/webknossos/compare/22.05.0...22.05.1)
+
+### Postgres Evolutions:
+
+
+## [22.05.0](https://github.com/scalableminds/webknossos/releases/tag/22.05.0) - 2022-04-26
+[Commits](https://github.com/scalableminds/webknossos/compare/22.04.0...22.05.0)
+
+### Postgres Evolutions:
+
+
+## [22.04.0](https://github.com/scalableminds/webknossos/releases/tag/22.04.0) - 2022-03-22
+[Commits](https://github.com/scalableminds/webknossos/compare/22.03.0...22.04.0)
+
+## [22.03.0](https://github.com/scalableminds/webknossos/releases/tag/22.03.0) - 2022-02-21
+[Commits](https://github.com/scalableminds/webknossos/compare/22.02.0...22.03.0)
+- The config field `googleAnalytics.trackingId` needs to be changed to [GA4 measurement id](https://support.google.com/analytics/answer/10089681), if used.
+
+### Postgres Evolutions:
+- [081-annotation-viewconfiguration.sql](conf/evolutions/081-annotation-viewconfiguration.sql)
+
 ## [22.02.0](https://github.com/scalableminds/webknossos/releases/tag/22.02.0) - 2022-01-24
 [Commits](https://github.com/scalableminds/webknossos/compare/22.01.0...22.02.0)
 

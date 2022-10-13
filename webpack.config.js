@@ -1,18 +1,14 @@
-module.exports = function(env = {}) {
+module.exports = function (env = {}) {
   /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   const webpack = require("webpack");
-  const fs = require("fs");
   const path = require("path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const TerserPlugin = require("terser-webpack-plugin");
-  const CopyWebpackPlugin = require("copy-webpack-plugin");
 
   const srcPath = path.resolve(__dirname, "frontend/javascripts/");
   const nodePath = "node_modules";
   const protoPath = path.join(__dirname, "webknossos-datastore/proto/");
   const publicPath = "/assets/bundle/";
-
-  fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), String(process.pid), "utf8");
 
   const plugins = [
     new webpack.DefinePlugin({
@@ -28,17 +24,6 @@ module.exports = function(env = {}) {
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[name].css",
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: "./public/tf-models/**",
-          to: "tf-models/[name][ext]",
-          globOptions: {
-            dot: true,
-          },
-        },
-      ],
     }),
   ];
 
@@ -58,14 +43,14 @@ module.exports = function(env = {}) {
 
   const cssLoaderUrlFilter = {
     // Don't try to handle urls that already point to the assets directory
-    filter: url => !url.startsWith("/assets/"),
+    filter: (url) => !url.startsWith("/assets/"),
   };
 
   return {
     entry: {
-      main: "main.js",
-      light: "style_light.js",
-      dark: "style_dark.js",
+      main: "main.tsx",
+      light: "style_light.ts",
+      dark: "style_dark.ts",
     },
     mode: env.production ? "production" : "development",
     output: {
@@ -77,16 +62,19 @@ module.exports = function(env = {}) {
     module: {
       rules: [
         {
-          test: /\.worker\.js$/,
-          use: {
-            loader: "worker-loader",
-            options: {
-              filename: "[name].[contenthash].worker.js",
+          test: /\.worker\.ts$/,
+          use: [
+            {
+              loader: "worker-loader",
+              options: {
+                // This property crashes webpack for some reason:
+                // filename: "[name].[contenthash].worker.ts",
+              },
             },
-          },
+          ],
         },
         {
-          test: /\.js$/,
+          test: /\.tsx?$/,
           exclude: /(node_modules|bower_components)/,
           use: "babel-loader",
         },
@@ -144,6 +132,7 @@ module.exports = function(env = {}) {
       alias: {
         react: path.resolve("./node_modules/react"),
       },
+      extensions: [".ts", ".tsx", ".js", ".json"],
       fallback: {
         // Needed for jsonschema
         url: require.resolve("url/"),

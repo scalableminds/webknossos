@@ -42,6 +42,7 @@ class TaskService @Inject()(conf: WkConf,
       Json.obj(
         "id" -> task._id.toString,
         "formattedHash" -> Formatter.formatHash(task._id.toString),
+        "projectId" -> project._id.id,
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskTypeJs,
@@ -58,16 +59,17 @@ class TaskService @Inject()(conf: WkConf,
       )
     }
 
-  def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext,
-                                             m: MessagesProvider): Fox[List[ObjectId]] = {
-    if (user.isAdmin) return teamDAO.findAllIdsByOrganization(user._organization)
-    for {
-      numberOfOpen <- countOpenNonAdminTasks(user)
-      teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
-      else userService.teamManagerTeamIdsFor(user._id)
-      _ <- bool2Fox(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
-    } yield teams
-  }
+  def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[ObjectId]] =
+    if (user.isAdmin)
+      teamDAO.findAllIdsByOrganization(user._organization)
+    else {
+      for {
+        numberOfOpen <- countOpenNonAdminTasks(user)
+        teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
+        else userService.teamManagerTeamIdsFor(user._id)
+        _ <- bool2Fox(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
+      } yield teams
+    }
 
   private def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
     for {
@@ -82,10 +84,7 @@ class TaskService @Inject()(conf: WkConf,
 
   def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[CompletionStatus] =
     for {
-      active <- countActiveAnnotationsFor(task._id).getOrElse(0)
-    } yield CompletionStatus(task.openInstances, active, task.totalInstances - (active + task.openInstances))
-
-  def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
-    annotationDAO.countActiveByTask(taskId, AnnotationType.Task)
+      activeCount <- annotationDAO.countActiveByTask(task._id, AnnotationType.Task).getOrElse(0)
+    } yield CompletionStatus(task.openInstances, activeCount, task.totalInstances - (activeCount + task.openInstances))
 
 }

@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
 import models.annotation.AnnotationState._
-import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationInformationProvider, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
 import models.organization.OrganizationDAO
 import models.user.UserDAO
@@ -27,6 +27,7 @@ class WKRemoteTracingStoreController @Inject()(
     dataSetService: DataSetService,
     organizationDAO: OrganizationDAO,
     userDAO: UserDAO,
+    annotationInformationProvider: AnnotationInformationProvider,
     analyticsService: AnalyticsService,
     dataSetDAO: DataSetDAO,
     annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
@@ -74,7 +75,7 @@ class WKRemoteTracingStoreController @Inject()(
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          annotation <- annotationDAO.findOneByTracingId(tracingId) ?~> "No annotation for this tracing id"
+          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> "No annotation for this tracing id"
           dataSet <- dataSetDAO.findOne(annotation._dataSet)
           dataSource <- dataSetService.dataSourceFor(dataSet)
         } yield Ok(Json.toJson(dataSource))
@@ -86,7 +87,7 @@ class WKRemoteTracingStoreController @Inject()(
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          annotation <- annotationDAO.findOneByTracingId(tracingId) ?~> "No annotation for this tracing id"
+          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> "No annotation for this tracing id"
           dataSet <- dataSetDAO.findOne(annotation._dataSet)
           organization <- organizationDAO.findOne(dataSet._organization)
         } yield Ok(Json.toJson(DataSourceId(dataSet.name, organization.name)))

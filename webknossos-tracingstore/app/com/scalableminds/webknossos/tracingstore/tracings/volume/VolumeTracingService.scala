@@ -1,8 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import java.io._
-import java.nio.file.Paths
-import java.util.zip.Deflater
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -18,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossos
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{FallbackDataHelper, RemoteFallbackLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebKnossosClient,
@@ -31,6 +28,9 @@ import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsValue, Json}
 
+import java.io._
+import java.nio.file.Paths
+import java.util.zip.Deflater
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -46,7 +46,7 @@ class VolumeTracingService @Inject()(
     val uncommittedUpdatesStore: TracingStoreRedisStore,
     val temporaryTracingIdStore: TracingStoreRedisStore,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
-    val remoteWebknossosClient: TSRemoteWebKnossosClient,
+    val remoteWebKnossosClient: TSRemoteWebKnossosClient,
     val temporaryFileCreator: TemporaryFileCreator
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
@@ -172,7 +172,7 @@ class VolumeTracingService @Inject()(
       }
       // if none of the tracings contained any volume data do not save buckets, use full resolution list
       if (resolutionSets.isEmpty)
-        getRequiredMags(tracing).map(_.toSet)
+        getRequiredMags(tracing, tracingId).map(_.toSet)
       else {
         val resolutionsDoMatch = resolutionSets.headOption.forall { head =>
           resolutionSets.forall(_ == head)

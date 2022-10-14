@@ -506,10 +506,7 @@ export async function getUsersWithActiveTasks(projectId: string): Promise<Array<
 }
 
 export async function assignTaskToUser(taskId: string, userId: string): Promise<APITask> {
-  return Request.sendJSONReceiveJSON(`/api/tasks/${taskId}/assign`, {
-    data: {
-      userId,
-    },
+  return Request.receiveJSON(`/api/tasks/${taskId}/assign?userId=${userId}`, {
     method: "POST",
   });
 }

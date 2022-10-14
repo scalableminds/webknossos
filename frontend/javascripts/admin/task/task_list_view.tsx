@@ -151,7 +151,6 @@ class TaskListView extends React.PureComponent<Props, State> {
         </>
       ),
       onOk: () => {
-        debugger;
         const userId = this.state.selectedUserIdForAssignment;
         if (userId != null) {
           assignTaskToUser(task.id, userId)
